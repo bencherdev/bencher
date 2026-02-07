@@ -99,6 +99,7 @@ impl TestServer {
                 None,
                 std::path::Path::new(&db_path),
                 None, // Use default upload timeout
+                None, // Use default max body size
             )
             .expect("Failed to create OCI storage"),
         };

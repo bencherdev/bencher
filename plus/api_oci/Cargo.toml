@@ -57,8 +57,6 @@ bencher_token.workspace = true
 http.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 serde_json.workspace = true
-sha2.workspace = true
-hex.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 
 [lints]

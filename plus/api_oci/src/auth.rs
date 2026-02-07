@@ -55,7 +55,7 @@ pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jw
         )
     })?;
 
-    if scheme != "Bearer" {
+    if !scheme.eq_ignore_ascii_case("bearer") {
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::UNAUTHORIZED,
@@ -379,9 +379,13 @@ async fn handle_nonexistent_project(
             );
 
             let slug_str: &str = slug.as_ref();
-            let project_name: ResourceName = slug_str
-                .parse()
-                .map_err(|e| HttpError::for_internal_error(format!("Invalid project name: {e}")))?;
+            let project_name: ResourceName = slug_str.parse().map_err(|e| {
+                HttpError::for_client_error(
+                    None,
+                    ClientErrorStatusCode::BAD_REQUEST,
+                    format!("Invalid project name: {e}"),
+                )
+            })?;
 
             let project =
                 QueryProject::get_or_create(log, context, public_user, repository, || {

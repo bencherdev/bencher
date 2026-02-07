@@ -8,16 +8,8 @@
 //! Integration tests for OCI upload session endpoints.
 
 use bencher_api_tests::TestServer;
+use bencher_api_tests::oci::compute_digest;
 use http::StatusCode;
-use sha2::{Digest as _, Sha256};
-
-/// Helper to compute SHA256 digest in OCI format
-fn compute_digest(data: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    let hash = hasher.finalize();
-    format!("sha256:{}", hex::encode(hash))
-}
 
 /// Helper to extract session ID from Location header
 fn extract_session_id(location: &str) -> Option<String> {
@@ -487,6 +479,181 @@ async fn test_upload_cancel() {
         .expect("Request failed");
 
     assert_eq!(check_resp.status(), StatusCode::NOT_FOUND);
+}
+
+// Upload to a cancelled session should return 404
+#[tokio::test]
+async fn test_upload_to_cancelled_session() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Cancelled User", "uploadcancelled@example.com")
+        .await;
+    let org = server.create_org(&user, "Cancelled Org").await;
+    let project = server
+        .create_project(&user, &org, "Cancelled Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload failed");
+
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header");
+    let session_id = extract_session_id(location).expect("Invalid location format");
+
+    // Cancel the upload
+    let cancel_resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .send()
+        .await
+        .expect("Cancel failed");
+    assert_eq!(cancel_resp.status(), StatusCode::ACCEPTED);
+
+    // Try to upload a chunk to the cancelled session
+    let chunk = b"data after cancel";
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(chunk.to_vec())
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::NOT_FOUND,
+        "Upload to cancelled session should return 404"
+    );
+}
+
+// PATCH with malformed Content-Range (not parseable)
+#[tokio::test]
+async fn test_upload_malformed_content_range() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("MalformedRange User", "uploadmalformedrange@example.com")
+        .await;
+    let org = server.create_org(&user, "MalformedRange Org").await;
+    let project = server
+        .create_project(&user, &org, "MalformedRange Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload failed");
+
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header");
+    let session_id = extract_session_id(location).expect("Invalid location format");
+
+    // Upload with a completely unparseable Content-Range
+    let chunk = b"some data";
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .header("Content-Range", "garbage-value")
+        .body(chunk.to_vec())
+        .send()
+        .await
+        .expect("Request failed");
+
+    // Malformed Content-Range without a '-' separator should be ignored (no range validation)
+    // and the upload should proceed normally
+    assert_eq!(
+        resp.status(),
+        StatusCode::ACCEPTED,
+        "Unparseable Content-Range should be ignored and upload should succeed"
+    );
+}
+
+// PATCH with Content-Range including "bytes " prefix (standard HTTP format)
+#[tokio::test]
+async fn test_upload_content_range_bytes_prefix() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("BytesPrefix User", "uploadbytesprefix@example.com")
+        .await;
+    let org = server.create_org(&user, "BytesPrefix Org").await;
+    let project = server
+        .create_project(&user, &org, "BytesPrefix Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload failed");
+
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header");
+    let session_id = extract_session_id(location).expect("Invalid location format");
+
+    // Upload with standard HTTP Content-Range format: "bytes 0-9/*"
+    let chunk = b"0123456789";
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .header("Content-Range", format!("bytes 0-{}/*", chunk.len() - 1))
+        .body(chunk.to_vec())
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::ACCEPTED,
+        "Content-Range with 'bytes ' prefix should be accepted"
+    );
 }
 
 // OPTIONS /v2/{name}/blobs/uploads/{session_id} - CORS preflight

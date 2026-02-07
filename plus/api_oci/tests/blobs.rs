@@ -8,17 +8,9 @@
 //! Integration tests for OCI blob endpoints.
 
 use bencher_api_tests::TestServer;
+use bencher_api_tests::oci::compute_digest;
 use bencher_token::OciAction;
 use http::StatusCode;
-use sha2::{Digest as _, Sha256};
-
-/// Helper to compute SHA256 digest in OCI format
-fn compute_digest(data: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    let hash = hasher.finalize();
-    format!("sha256:{}", hex::encode(hash))
-}
 
 // POST /v2/{name}/blobs/uploads - Start upload (authenticated)
 #[tokio::test]
@@ -509,4 +501,79 @@ async fn test_blob_monolithic_upload_unauthenticated_to_claimed() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+// PUT /v2/{name}/blobs/uploads?digest= - Monolithic upload with wrong digest
+#[tokio::test]
+async fn test_blob_monolithic_upload_digest_mismatch() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("DigestMismatch User", "blobdigestmismatch@example.com")
+        .await;
+    let org = server.create_org(&user, "DigestMismatch Org").await;
+    let project = server
+        .create_project(&user, &org, "DigestMismatch Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let blob_data = b"actual blob content";
+    let wrong_digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, wrong_digest
+        )))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Digest mismatch should be rejected"
+    );
+}
+
+// PUT /v2/{name}/blobs/uploads?digest= - Monolithic upload with zero-length body
+#[tokio::test]
+async fn test_blob_monolithic_upload_zero_length() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("ZeroLen User", "blobzerolen@example.com")
+        .await;
+    let org = server.create_org(&user, "ZeroLen Org").await;
+    let project = server.create_project(&user, &org, "ZeroLen Project").await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let blob_data = b"";
+    let digest = compute_digest(blob_data);
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Request failed");
+
+    // Zero-length blob upload is rejected by the storage layer
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Zero-length monolithic upload should be rejected"
+    );
 }

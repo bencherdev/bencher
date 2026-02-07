@@ -33,7 +33,7 @@ use libsqlite3_sys as _;
 use bencher_config as _;
 
 mod context;
-mod oci;
+pub mod oci;
 mod seed;
 
 pub use context::TestServer;

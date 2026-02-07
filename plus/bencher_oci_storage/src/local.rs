@@ -113,6 +113,8 @@ pub(crate) struct OciLocalStorage {
     base_dir: PathBuf,
     /// Upload timeout in seconds for stale upload cleanup
     upload_timeout: u64,
+    /// Maximum body size in bytes for uploads
+    max_body_size: u64,
     /// Logger for error reporting
     log: Logger,
 }
@@ -122,7 +124,7 @@ impl OciLocalStorage {
     ///
     /// The `database_path` is the path to the `SQLite` database file.
     /// OCI data will be stored in an `oci` subdirectory next to it.
-    pub fn new(log: Logger, database_path: &Path, upload_timeout: u64) -> Self {
+    pub fn new(log: Logger, database_path: &Path, upload_timeout: u64, max_body_size: u64) -> Self {
         let base_dir = database_path
             .parent()
             .map_or_else(|| PathBuf::from("oci"), |p| p.join("oci"));
@@ -130,8 +132,14 @@ impl OciLocalStorage {
         Self {
             base_dir,
             upload_timeout,
+            max_body_size,
             log,
         }
+    }
+
+    /// Returns the configured maximum body size in bytes
+    pub(crate) fn max_body_size(&self) -> u64 {
+        self.max_body_size
     }
 
     // ==================== Path Generation ====================
@@ -595,46 +603,9 @@ impl OciLocalStorage {
         }
 
         // Check if manifest has a subject field (for referrers API)
-        if let Ok(manifest) = serde_json::from_slice::<serde_json::Value>(&content)
-            && let Some(subject) = manifest.get("subject")
-            && let Some(subject_digest_str) = subject.get("digest").and_then(|d| d.as_str())
-            && let Ok(subject_digest) = subject_digest_str.parse::<Digest>()
+        if let Some((subject_digest, descriptor)) =
+            crate::types::build_referrer_descriptor(&content, &digest)
         {
-            // Extract descriptor info for the referrer
-            let media_type = manifest
-                .get("mediaType")
-                .and_then(|m| m.as_str())
-                .unwrap_or("application/vnd.oci.image.manifest.v1+json");
-            let artifact_type = manifest
-                .get("artifactType")
-                .and_then(|a| a.as_str())
-                .or_else(|| {
-                    manifest
-                        .get("config")
-                        .and_then(|c| c.get("mediaType"))
-                        .and_then(|m| m.as_str())
-                });
-
-            // Create referrer descriptor
-            let mut descriptor = serde_json::json!({
-                "mediaType": media_type,
-                "digest": digest.to_string(),
-                "size": content.len()
-            });
-            if let Some(at) = artifact_type
-                && let Some(obj) = descriptor.as_object_mut()
-            {
-                obj.insert(
-                    "artifactType".to_owned(),
-                    serde_json::Value::String(at.to_owned()),
-                );
-            }
-            if let Some(annotations) = manifest.get("annotations")
-                && let Some(obj) = descriptor.as_object_mut()
-            {
-                obj.insert("annotations".to_owned(), annotations.clone());
-            }
-
             // Store referrer link
             let referrer_path = self.referrer_path(repository, &subject_digest, &digest);
             if let Some(parent) = referrer_path.parent() {
@@ -760,12 +731,8 @@ impl OciLocalStorage {
         // Try to read the manifest first to check for subject field
         // If we can read it and it has a subject, clean up the referrer link
         if let Ok(data) = fs::read(&path).await
-            && let Ok(manifest) = serde_json::from_slice::<serde_json::Value>(&data)
-            && let Some(subject) = manifest.get("subject")
-            && let Some(subject_digest_str) = subject.get("digest").and_then(|d| d.as_str())
-            && let Ok(subject_digest) = subject_digest_str.parse::<Digest>()
+            && let Some(subject_digest) = crate::types::extract_subject_digest(&data)
         {
-            // Delete the referrer link
             let referrer_path = self.referrer_path(repository, &subject_digest, digest);
             // Ignore errors - the referrer link may not exist or may have already been deleted
             drop(fs::remove_file(&referrer_path).await);

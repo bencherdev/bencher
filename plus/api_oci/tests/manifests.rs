@@ -8,17 +8,9 @@
 //! Integration tests for OCI manifest endpoints.
 
 use bencher_api_tests::TestServer;
+use bencher_api_tests::oci::compute_digest;
 use bencher_token::OciAction;
 use http::StatusCode;
-use sha2::{Digest as _, Sha256};
-
-/// Helper to compute SHA256 digest in OCI format
-fn compute_digest(data: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    let hash = hasher.finalize();
-    format!("sha256:{}", hex::encode(hash))
-}
 
 /// Create a minimal OCI manifest JSON for testing
 fn create_test_manifest(config_digest: &str, layer_digest: &str) -> String {
@@ -673,4 +665,110 @@ async fn test_manifest_put_invalid_media_type() {
         StatusCode::BAD_REQUEST,
         "Unsupported manifest media type should be rejected"
     );
+}
+
+// PUT /v2/{name}/manifests/{tag} - Tag overwrite should succeed and update the tag
+#[tokio::test]
+async fn test_manifest_tag_overwrite() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("TagOverwrite User", "manifesttagoverwrite@example.com")
+        .await;
+    let org = server.create_org(&user, "TagOverwrite Org").await;
+    let project = server
+        .create_project(&user, &org, "TagOverwrite Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload first manifest as "latest"
+    let manifest1 = create_test_manifest(
+        "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    );
+    let digest1 = compute_digest(manifest1.as_bytes());
+
+    let resp1 = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest1)
+        .send()
+        .await
+        .expect("Upload 1 failed");
+    assert_eq!(resp1.status(), StatusCode::CREATED);
+
+    // Upload second manifest as "latest" (overwrite)
+    let manifest2 = create_test_manifest(
+        "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    );
+    let digest2 = compute_digest(manifest2.as_bytes());
+
+    let resp2 = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest2)
+        .send()
+        .await
+        .expect("Upload 2 failed");
+    assert_eq!(resp2.status(), StatusCode::CREATED);
+
+    // Verify "latest" now resolves to digest2, not digest1
+    let resp = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("HEAD failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let returned_digest = resp
+        .headers()
+        .get("docker-content-digest")
+        .expect("Missing digest header")
+        .to_str()
+        .expect("Invalid digest header");
+    assert_eq!(
+        returned_digest, digest2,
+        "Tag should point to the new manifest"
+    );
+    assert_ne!(
+        returned_digest, digest1,
+        "Tag should no longer point to the old manifest"
+    );
+}
+
+// GET /v2/{name}/manifests/{digest} - Non-existent digest should return 404
+#[tokio::test]
+async fn test_manifest_get_nonexistent_digest() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("ManifestNotFound User", "manifestnotfound@example.com")
+        .await;
+    let org = server.create_org(&user, "ManifestNotFound Org").await;
+    let project = server
+        .create_project(&user, &org, "ManifestNotFound Project")
+        .await;
+
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let fake_digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/manifests/{}", project_slug, fake_digest)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }

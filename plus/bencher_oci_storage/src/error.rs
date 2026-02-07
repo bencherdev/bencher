@@ -66,12 +66,12 @@ impl OciError {
                 OciStorageError::DigestMismatch { .. } => "DIGEST_INVALID",
                 OciStorageError::UploadNotFound(_) => "BLOB_UPLOAD_UNKNOWN",
                 OciStorageError::InvalidContent(_) => "MANIFEST_INVALID",
-                OciStorageError::BlobNotFound(_)
-                | OciStorageError::S3(_)
+                OciStorageError::BlobNotFound(_) => "BLOB_UNKNOWN",
+                OciStorageError::S3(_)
                 | OciStorageError::LocalStorage(_)
                 | OciStorageError::InvalidArn(_)
                 | OciStorageError::Config(_)
-                | OciStorageError::Json(_) => "BLOB_UNKNOWN",
+                | OciStorageError::Json(_) => "UNKNOWN",
             },
             Self::BlobUploadInvalid { .. } | Self::RangeNotSatisfiable(_) => "BLOB_UPLOAD_INVALID",
             Self::BlobUploadUnknown { .. } => "BLOB_UPLOAD_UNKNOWN",
@@ -152,15 +152,15 @@ mod tests {
         );
         assert_eq!(
             OciError::from(OciStorageError::S3("s3".into())).code(),
-            "BLOB_UNKNOWN"
+            "UNKNOWN"
         );
         assert_eq!(
             OciError::from(OciStorageError::LocalStorage("fs".into())).code(),
-            "BLOB_UNKNOWN"
+            "UNKNOWN"
         );
         assert_eq!(
             OciError::from(OciStorageError::Json("json".into())).code(),
-            "BLOB_UNKNOWN"
+            "UNKNOWN"
         );
     }
 

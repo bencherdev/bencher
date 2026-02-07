@@ -9,16 +9,8 @@
 //! Integration tests for OCI referrers endpoint.
 
 use bencher_api_tests::TestServer;
+use bencher_api_tests::oci::compute_digest;
 use http::StatusCode;
-use sha2::{Digest as _, Sha256};
-
-/// Helper to compute SHA256 digest in OCI format
-fn compute_digest(data: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    let hash = hasher.finalize();
-    format!("sha256:{}", hex::encode(hash))
-}
 
 /// Create a base manifest (the subject that will be referenced)
 fn create_base_manifest() -> String {
@@ -27,7 +19,7 @@ fn create_base_manifest() -> String {
         "mediaType": "application/vnd.oci.image.manifest.v1+json",
         "config": {
             "mediaType": "application/vnd.oci.image.config.v1+json",
-            "digest": "sha256:baseconfig00000000000000000000000000000000000000000000000000",
+            "digest": "sha256:baseconfig000000000000000000000000000000000000000000000000000000",
             "size": 100
         },
         "layers": []
@@ -348,6 +340,50 @@ async fn test_referrers_options() {
 
     assert_eq!(resp.status(), StatusCode::OK);
     assert!(resp.headers().contains_key("access-control-allow-origin"));
+}
+
+// GET /v2/{name}/referrers/{digest} - Referrers for a non-existent subject should return empty list
+#[tokio::test]
+async fn test_referrers_nonexistent_subject() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("ReferrersNoSubject User", "referrersnosubject@example.com")
+        .await;
+    let org = server.create_org(&user, "ReferrersNoSubject Org").await;
+    let project = server
+        .create_project(&user, &org, "ReferrersNoSubject Project")
+        .await;
+
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Query referrers for a digest that has never had any manifest uploaded
+    let nonexistent_digest =
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v2/{}/referrers/{}",
+            project_slug, nonexistent_digest
+        )))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse response");
+    assert_eq!(body["schemaVersion"], 2);
+    assert_eq!(body["mediaType"], "application/vnd.oci.image.index.v1+json");
+    assert!(
+        body["manifests"]
+            .as_array()
+            .expect("manifests should be array")
+            .is_empty(),
+        "Referrers for non-existent subject should return empty list"
+    );
 }
 
 // DELETE /v2/{name}/manifests/{digest} - Verify referrer link cleanup

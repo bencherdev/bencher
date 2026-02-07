@@ -18,7 +18,7 @@ fn create_test_manifest(suffix: &str) -> String {
         "mediaType": "application/vnd.oci.image.manifest.v1+json",
         "config": {
             "mediaType": "application/vnd.oci.image.config.v1+json",
-            "digest": format!("sha256:config{}{}", suffix, "0".repeat(56)),
+            "digest": format!("sha256:config{}{}", suffix, "0".repeat(64 - 6 - suffix.len())),
             "size": 100
         },
         "layers": []
@@ -636,5 +636,57 @@ async fn test_tags_list_invalid_last_cursor() {
         resp.status(),
         StatusCode::BAD_REQUEST,
         "Invalid last cursor should be rejected"
+    );
+}
+
+// GET /v2/{name}/tags/list?n=-1 - Negative n should be rejected (u32 can't be negative)
+#[tokio::test]
+async fn test_tags_list_pagination_n_negative() {
+    let server = TestServer::new().await;
+    let user = server.signup("TagsNNeg User", "tagsnneg@example.com").await;
+    let org = server.create_org(&user, "TagsNNeg Org").await;
+    let project = server.create_project(&user, &org, "TagsNNeg Project").await;
+
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/tags/list?n=-1", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Negative n should be rejected"
+    );
+}
+
+// GET /v2/{name}/tags/list?n=abc - Non-integer n should be rejected
+#[tokio::test]
+async fn test_tags_list_pagination_n_non_integer() {
+    let server = TestServer::new().await;
+    let user = server.signup("TagsNStr User", "tagsnstr@example.com").await;
+    let org = server.create_org(&user, "TagsNStr Org").await;
+    let project = server.create_project(&user, &org, "TagsNStr Project").await;
+
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/tags/list?n=abc", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Non-integer n should be rejected"
     );
 }

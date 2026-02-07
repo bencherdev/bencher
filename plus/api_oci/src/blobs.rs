@@ -400,15 +400,19 @@ pub async fn oci_upload_monolithic(
     let push_access = validate_push_access(&rqctx.log, &rqctx, &path.name).await?;
     let project_slug = &push_access.project.slug;
 
+    // Get storage and enforce max body size
+    let storage = context.oci_storage();
+    let max = storage.max_body_size();
+    if data.len() as u64 > max {
+        return Err(crate::error::payload_too_large(data.len() as u64, max));
+    }
+
     // Parse digest
     let expected_digest: Digest = query.digest.parse().map_err(|_err| {
         crate::error::into_http_error(OciError::DigestInvalid {
             digest: query.digest.clone(),
         })
     })?;
-
-    // Get storage
-    let storage = context.oci_storage();
 
     // Start upload, append data, and complete in one operation
     let upload_id = storage

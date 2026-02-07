@@ -1,8 +1,17 @@
 //! OCI-specific test helpers
 
 use bencher_token::OciAction;
+use sha2::{Digest as _, Sha256};
 
 use crate::{TestProject, TestServer, TestUser};
+
+/// Compute the SHA-256 digest of the given data, returning an OCI-format digest string.
+pub fn compute_digest(data: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let hash = hasher.finalize();
+    format!("sha256:{}", hex::encode(hash))
+}
 
 impl TestServer {
     /// Generate an OCI token for a user with the specified repository and actions.

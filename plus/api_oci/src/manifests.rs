@@ -213,8 +213,15 @@ pub async fn oci_manifest_put(
         crate::error::into_http_error(OciError::ManifestInvalid(path.reference.clone()))
     })?;
 
-    // Get storage
+    // Get storage and enforce max body size
     let storage = context.oci_storage();
+    let max = storage.max_body_size();
+    if body_bytes.len() as u64 > max {
+        return Err(crate::error::payload_too_large(
+            body_bytes.len() as u64,
+            max,
+        ));
+    }
 
     // Determine tag from reference (if it's a tag)
     let tag = match &reference {
@@ -222,8 +229,11 @@ pub async fn oci_manifest_put(
         Reference::Digest(_) => None,
     };
 
+    // Parse manifest JSON once for validation and subject extraction
+    let parsed_manifest = serde_json::from_slice::<serde_json::Value>(body_bytes).ok();
+
     // Validate manifest mediaType if present
-    if let Ok(parsed) = serde_json::from_slice::<serde_json::Value>(body_bytes)
+    if let Some(parsed) = parsed_manifest.as_ref()
         && let Some(media_type) = parsed.get("mediaType").and_then(|m| m.as_str())
         && !VALID_MANIFEST_MEDIA_TYPES.contains(&media_type)
     {
@@ -233,15 +243,13 @@ pub async fn oci_manifest_put(
     }
 
     // Extract subject digest from manifest if present (for OCI-Subject header)
-    let subject_digest = serde_json::from_slice::<serde_json::Value>(body_bytes)
-        .ok()
-        .and_then(|manifest| {
-            manifest
-                .get("subject")
-                .and_then(|s| s.get("digest"))
-                .and_then(|d| d.as_str())
-                .map(ToOwned::to_owned)
-        });
+    let subject_digest = parsed_manifest.as_ref().and_then(|manifest| {
+        manifest
+            .get("subject")
+            .and_then(|s| s.get("digest"))
+            .and_then(|d| d.as_str())
+            .map(ToOwned::to_owned)
+    });
 
     // Store the manifest
     // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]

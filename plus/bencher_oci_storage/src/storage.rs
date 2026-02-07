@@ -23,7 +23,7 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::CompletedMultipartUpload;
 use bencher_json::{
     ProjectResourceId, Secret,
-    system::config::{DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
+    system::config::{DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
 };
 use bytes::Bytes;
 use chrono::Utc;
@@ -208,6 +208,8 @@ pub(crate) struct OciS3Storage {
     config: OciStorageConfig,
     /// Upload timeout in seconds for stale upload cleanup
     upload_timeout: u64,
+    /// Maximum body size in bytes for uploads
+    max_body_size: u64,
 }
 
 /// OCI Storage backend - supports S3 or local filesystem
@@ -230,25 +232,44 @@ impl OciStorage {
     ///
     /// The `upload_timeout` specifies how long (in seconds) before stale uploads
     /// are cleaned up. Pass `None` to use the default (1 hour).
+    /// The `max_body_size` specifies the maximum body size in bytes.
+    /// Pass `None` to use the default (1 GiB).
     pub fn try_from_config(
         log: Logger,
         data_store: Option<RegistryDataStore>,
         database_path: &Path,
         upload_timeout: Option<u64>,
+        max_body_size: Option<u64>,
     ) -> Result<Self, OciStorageError> {
         let timeout = upload_timeout.unwrap_or(DEFAULT_UPLOAD_TIMEOUT_SECS);
+        let body_size = max_body_size.unwrap_or(DEFAULT_MAX_BODY_SIZE);
         match data_store {
             Some(RegistryDataStore::AwsS3 {
                 access_key_id,
                 secret_access_key,
                 access_point,
-            }) => OciS3Storage::new(access_key_id, secret_access_key, &access_point, timeout)
-                .map(OciStorage::S3),
+            }) => OciS3Storage::new(
+                access_key_id,
+                secret_access_key,
+                &access_point,
+                timeout,
+                body_size,
+            )
+            .map(OciStorage::S3),
             None => Ok(OciStorage::Local(OciLocalStorage::new(
                 log,
                 database_path,
                 timeout,
+                body_size,
             ))),
+        }
+    }
+
+    /// Returns the configured maximum body size in bytes
+    pub fn max_body_size(&self) -> u64 {
+        match self {
+            Self::S3(s3) => s3.max_body_size,
+            Self::Local(local) => local.max_body_size(),
         }
     }
 
@@ -521,6 +542,7 @@ impl OciS3Storage {
         secret_access_key: Secret,
         access_point: &str,
         upload_timeout: u64,
+        max_body_size: u64,
     ) -> Result<Self, OciStorageError> {
         // Parse the S3 ARN
         let arn = S3Arn::from_str(access_point)
@@ -553,6 +575,7 @@ impl OciS3Storage {
             client,
             config,
             upload_timeout,
+            max_body_size,
         })
     }
 
@@ -1341,33 +1364,36 @@ impl OciS3Storage {
     }
 
     /// Mounts a blob from another repository (cross-repo blob mount)
+    ///
+    /// Attempts the copy directly and handles not-found, avoiding a TOCTOU race
+    /// between checking existence and copying.
     pub async fn mount_blob(
         &self,
         from_repository: &ProjectResourceId,
         to_repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
-        // Check if blob exists in source
-        if !self.blob_exists(from_repository, digest).await? {
-            return Ok(false);
-        }
-
-        // Copy the blob to the new repository
-        // For S3 Access Points, copy source must use the format:
-        // arn:aws:s3:region:account-id:accesspoint/accesspoint-name/object/key
         let source_key = self.blob_key(from_repository, digest);
         let dest_key = self.blob_key(to_repository, digest);
 
-        self.client
+        match self
+            .client
             .copy_object()
             .bucket(&self.config.bucket_arn)
             .copy_source(format!("{}/object/{}", self.config.bucket_arn, source_key))
             .key(&dest_key)
             .send()
             .await
-            .map_err(|e| OciStorageError::S3(e.to_string()))?;
-
-        Ok(true)
+        {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
+                    Ok(false)
+                } else {
+                    Err(OciStorageError::S3(e.to_string()))
+                }
+            },
+        }
     }
 
     // ==================== Manifest Operations ====================
@@ -1412,46 +1438,9 @@ impl OciS3Storage {
         }
 
         // Check if manifest has a subject field (for referrers API)
-        if let Ok(manifest) = serde_json::from_slice::<serde_json::Value>(&content)
-            && let Some(subject) = manifest.get("subject")
-            && let Some(subject_digest_str) = subject.get("digest").and_then(|d| d.as_str())
-            && let Ok(subject_digest) = subject_digest_str.parse::<Digest>()
+        if let Some((subject_digest, descriptor)) =
+            crate::types::build_referrer_descriptor(&content, &digest)
         {
-            // Extract descriptor info for the referrer
-            let media_type = manifest
-                .get("mediaType")
-                .and_then(|m| m.as_str())
-                .unwrap_or("application/vnd.oci.image.manifest.v1+json");
-            let artifact_type = manifest
-                .get("artifactType")
-                .and_then(|a| a.as_str())
-                .or_else(|| {
-                    manifest
-                        .get("config")
-                        .and_then(|c| c.get("mediaType"))
-                        .and_then(|m| m.as_str())
-                });
-
-            // Create referrer descriptor
-            let mut descriptor = serde_json::json!({
-                "mediaType": media_type,
-                "digest": digest.to_string(),
-                "size": content.len()
-            });
-            if let Some(at) = artifact_type
-                && let Some(obj) = descriptor.as_object_mut()
-            {
-                obj.insert(
-                    "artifactType".to_owned(),
-                    serde_json::Value::String(at.to_owned()),
-                );
-            }
-            if let Some(annotations) = manifest.get("annotations")
-                && let Some(obj) = descriptor.as_object_mut()
-            {
-                obj.insert("annotations".to_owned(), annotations.clone());
-            }
-
             // Store referrer link
             let referrer_key = self.referrer_key(repository, &subject_digest, &digest);
             self.client
@@ -1630,12 +1619,8 @@ impl OciS3Storage {
         // Try to read the manifest first to check for subject field
         // If we can read it and it has a subject, clean up the referrer link
         if let Ok(data) = self.get_manifest_by_digest(repository, digest).await
-            && let Ok(manifest) = serde_json::from_slice::<serde_json::Value>(&data)
-            && let Some(subject) = manifest.get("subject")
-            && let Some(subject_digest_str) = subject.get("digest").and_then(|d| d.as_str())
-            && let Ok(subject_digest) = subject_digest_str.parse::<Digest>()
+            && let Some(subject_digest) = crate::types::extract_subject_digest(&data)
         {
-            // Delete the referrer link
             let referrer_key = self.referrer_key(repository, &subject_digest, digest);
             // Ignore errors - the referrer link may not exist or may have already been deleted
             drop(
