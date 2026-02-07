@@ -112,7 +112,7 @@ pub async fn oci_tags_list(
     // Validate the `last` cursor if provided
     let last_tag = if let Some(last) = &query.last {
         let _tag: bencher_oci_storage::Tag = last.parse().map_err(|_err| {
-            crate::error::into_http_error(OciError::NameInvalid { name: last.clone() })
+            crate::error::into_http_error(OciError::TagInvalid { tag: last.clone() })
         })?;
         Some(last.as_str())
     } else {

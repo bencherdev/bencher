@@ -79,7 +79,7 @@ jobs:
           cargo test-api oci \
           --api-url https://bencher-api-dev.fly.dev \
           --username eustace.bagge@nowhere.com \
-          --password "${{ secrets.TEST_BENCHER_API_TOKEN_ADMIN }}""
+          --password "${{ secrets.TEST_BENCHER_API_TOKEN_ADMIN }}"
       - name: Scale down Dev Machines
         if: always()
         working-directory: ./services/api

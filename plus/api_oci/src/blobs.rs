@@ -35,7 +35,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::auth::{require_pull_access, require_push_access, validate_push_access};
-use crate::response::oci_cors_headers;
+use crate::response::{DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers};
 
 /// Path parameters for blob/upload-start endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -130,8 +130,8 @@ pub async fn oci_blob_exists(
             .status(http::StatusCode::OK)
             .header(http::header::CONTENT_TYPE, "application/octet-stream")
             .header(http::header::CONTENT_LENGTH, size)
-            .header("Docker-Content-Digest", digest.to_string()),
-        "HEAD, GET",
+            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
+        &[http::Method::HEAD, http::Method::GET],
     )
     .body(Body::empty())
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
@@ -194,8 +194,8 @@ pub async fn oci_blob_get(
             .status(http::StatusCode::OK)
             .header(http::header::CONTENT_TYPE, "application/octet-stream")
             .header(http::header::CONTENT_LENGTH, size)
-            .header("Docker-Content-Digest", digest.to_string()),
-        "GET",
+            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
+        &[http::Method::GET],
     )
     .body(Body::wrap(blob_body))
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
@@ -248,7 +248,7 @@ pub async fn oci_blob_delete(
     // OCI spec requires 202 Accepted for DELETE
     let response = oci_cors_headers(
         Response::builder().status(http::StatusCode::ACCEPTED),
-        "DELETE",
+        &[http::Method::DELETE],
     )
     .body(Body::empty())
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
@@ -323,8 +323,8 @@ pub async fn oci_upload_start(
                     Response::builder()
                         .status(http::StatusCode::CREATED)
                         .header(http::header::LOCATION, location)
-                        .header("Docker-Content-Digest", digest.to_string()),
-                    "POST",
+                        .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
+                    &[http::Method::POST],
                 )
                 .body(Body::empty())
                 .map_err(|e| {
@@ -359,8 +359,8 @@ pub async fn oci_upload_start(
             .status(http::StatusCode::ACCEPTED)
             .header(http::header::LOCATION, location)
             .header("Range", "0-0")
-            .header("Docker-Upload-UUID", upload_id.to_string()),
-        "POST",
+            .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
+        &[http::Method::POST],
     )
     .body(Body::empty())
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
@@ -459,8 +459,8 @@ pub async fn oci_upload_monolithic(
         Response::builder()
             .status(http::StatusCode::CREATED)
             .header(http::header::LOCATION, location)
-            .header("Docker-Content-Digest", actual_digest.to_string()),
-        "PUT",
+            .header(DOCKER_CONTENT_DIGEST, actual_digest.to_string()),
+        &[http::Method::PUT],
     )
     .body(Body::empty())
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;

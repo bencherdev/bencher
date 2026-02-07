@@ -106,7 +106,7 @@ pub async fn oci_referrers_list(
                 "application/vnd.oci.image.index.v1+json",
             )
             .header(http::header::CONTENT_LENGTH, body.len()),
-        "GET",
+        &[http::Method::GET],
     );
 
     // Only add OCI-Filters-Applied header when a filter was actually applied

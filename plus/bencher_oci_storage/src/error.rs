@@ -34,6 +34,9 @@ pub enum OciError {
     #[error("Name unknown: {name}")]
     NameUnknown { name: String },
 
+    #[error("Tag invalid: {tag}")]
+    TagInvalid { tag: String },
+
     #[error("Size invalid: {0}")]
     SizeInvalid(String),
 
@@ -82,6 +85,7 @@ impl OciError {
             Self::ManifestUnknown { .. } => "MANIFEST_UNKNOWN",
             Self::NameInvalid { .. } => "NAME_INVALID",
             Self::NameUnknown { .. } => "NAME_UNKNOWN",
+            Self::TagInvalid { .. } => "TAG_INVALID",
             Self::SizeInvalid(_) => "SIZE_INVALID",
             Self::Unauthorized(_) => "UNAUTHORIZED",
             Self::Denied(_) => "DENIED",
@@ -103,6 +107,7 @@ impl OciError {
             | Self::ManifestBlobUnknown { .. }
             | Self::ManifestInvalid(_)
             | Self::NameInvalid { .. }
+            | Self::TagInvalid { .. }
             | Self::SizeInvalid(_) => http::StatusCode::BAD_REQUEST,
 
             Self::Unauthorized(_) => http::StatusCode::UNAUTHORIZED,
@@ -185,6 +190,10 @@ mod tests {
         assert_eq!(
             OciError::NameInvalid { name: "n".into() }.code(),
             "NAME_INVALID"
+        );
+        assert_eq!(
+            OciError::TagInvalid { tag: "t".into() }.code(),
+            "TAG_INVALID"
         );
         assert_eq!(OciError::Unauthorized("u".into()).code(), "UNAUTHORIZED");
         assert_eq!(OciError::TooManyRequests.code(), "TOOMANYREQUESTS");

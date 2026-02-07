@@ -478,10 +478,11 @@ impl OciStorage {
         repository: &ProjectResourceId,
         content: Bytes,
         tag: Option<&crate::types::Tag>,
+        manifest: &bencher_json::oci::Manifest,
     ) -> Result<Digest, OciStorageError> {
         match self {
-            Self::S3(s3) => s3.put_manifest(repository, content, tag).await,
-            Self::Local(local) => local.put_manifest(repository, content, tag).await,
+            Self::S3(s3) => s3.put_manifest(repository, content, tag, manifest).await,
+            Self::Local(local) => local.put_manifest(repository, content, tag, manifest).await,
         }
     }
 
@@ -1472,6 +1473,7 @@ impl OciS3Storage {
         repository: &ProjectResourceId,
         content: Bytes,
         tag: Option<&crate::types::Tag>,
+        manifest: &bencher_json::oci::Manifest,
     ) -> Result<Digest, OciStorageError> {
         // Compute digest
         let mut hasher = Sha256::new();
@@ -1507,7 +1509,7 @@ impl OciS3Storage {
 
         // Check if manifest has a subject field (for referrers API)
         if let Some((subject_digest, descriptor)) =
-            crate::types::build_referrer_descriptor(&content, &digest)
+            crate::types::build_referrer_descriptor(manifest, &digest, content.len())
         {
             // Store referrer link
             let referrer_key = self.referrer_key(repository, &subject_digest, &digest);
