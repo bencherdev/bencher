@@ -33,4 +33,8 @@ pub enum FirecrackerError {
     /// Failed to collect results via vsock.
     #[error("Vsock result collection failed: {0}")]
     VsockCollection(String),
+
+    /// Job was cancelled.
+    #[error("Job cancelled")]
+    Cancelled,
 }

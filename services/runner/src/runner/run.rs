@@ -33,6 +33,7 @@ impl TryFrom<TaskRun> for Run {
                 memory_mib: task.memory,
                 timeout_secs: task.timeout,
                 output_file: task.output,
+                max_output_size: task.max_output_size,
                 tuning,
             },
         })

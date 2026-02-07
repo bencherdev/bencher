@@ -7,6 +7,8 @@
 
 use std::io::Read;
 use std::os::unix::net::UnixListener;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use crate::firecracker::error::FirecrackerError;
@@ -95,7 +97,14 @@ impl VsockListener {
     ///
     /// Waits up to `timeout` for the guest to send results on all ports.
     /// The exit code port is mandatory; stdout, stderr, and output file are optional.
-    pub fn collect_results(&self, timeout: Duration) -> Result<VsockResults, FirecrackerError> {
+    ///
+    /// If `cancel_flag` is provided and set to `true`, collection stops early
+    /// and returns a cancellation error.
+    pub fn collect_results(
+        &self,
+        timeout: Duration,
+        cancel_flag: Option<&Arc<AtomicBool>>,
+    ) -> Result<VsockResults, FirecrackerError> {
         let start = std::time::Instant::now();
         let poll_interval = Duration::from_millis(50);
 
@@ -106,6 +115,12 @@ impl VsockListener {
 
         // Poll until we have the exit code (required) or timeout
         while start.elapsed() < timeout {
+            // Check for cancellation
+            if let Some(flag) = cancel_flag {
+                if flag.load(Ordering::SeqCst) {
+                    return Err(FirecrackerError::Cancelled);
+                }
+            }
             // Try to accept and read from each listener
             if stdout_data.is_none() {
                 stdout_data = try_accept_and_read(&self.stdout_listener);
@@ -279,7 +294,9 @@ mod tests {
             send_to_port(&base_clone, ports::EXIT_CODE, b"0");
         });
 
-        let results = listener.collect_results(Duration::from_secs(5)).unwrap();
+        let results = listener
+            .collect_results(Duration::from_secs(5), None)
+            .unwrap();
         sender.join().unwrap();
 
         assert_eq!(results.stdout, "benchmark output");
@@ -299,7 +316,9 @@ mod tests {
             send_to_port(&base_clone, ports::EXIT_CODE, b"1");
         });
 
-        let results = listener.collect_results(Duration::from_secs(5)).unwrap();
+        let results = listener
+            .collect_results(Duration::from_secs(5), None)
+            .unwrap();
         sender.join().unwrap();
 
         assert_eq!(results.exit_code, "1");
@@ -313,7 +332,7 @@ mod tests {
         let (_dir, listener) = listener_in_tmpdir();
 
         // No data sent — should timeout with an error
-        let result = listener.collect_results(Duration::from_millis(200));
+        let result = listener.collect_results(Duration::from_millis(200), None);
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -336,7 +355,9 @@ mod tests {
             send_to_port(&base_clone, ports::EXIT_CODE, b"0");
         });
 
-        let results = listener.collect_results(Duration::from_secs(5)).unwrap();
+        let results = listener
+            .collect_results(Duration::from_secs(5), None)
+            .unwrap();
         sender.join().unwrap();
 
         // Should use lossy conversion, not panic
@@ -360,7 +381,9 @@ mod tests {
             send_to_port(&base_clone, ports::STDOUT, b"late output");
         });
 
-        let results = listener.collect_results(Duration::from_secs(5)).unwrap();
+        let results = listener
+            .collect_results(Duration::from_secs(5), None)
+            .unwrap();
         sender.join().unwrap();
 
         assert_eq!(results.exit_code, "0");
@@ -412,5 +435,22 @@ mod tests {
 
         let data = try_accept_and_read(&listener).unwrap();
         assert!(data.is_empty());
+    }
+
+    #[test]
+    fn collect_cancelled_returns_error() {
+        let (_dir, listener) = listener_in_tmpdir();
+
+        // Set the cancel flag before collecting
+        let cancel_flag = Arc::new(AtomicBool::new(true));
+
+        let result = listener.collect_results(Duration::from_secs(5), Some(&cancel_flag));
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, FirecrackerError::Cancelled),
+            "error should be Cancelled, got: {err}"
+        );
     }
 }

@@ -212,7 +212,7 @@ fn run_benchmark() -> anyhow::Result<()> {
     println!();
 
     println!("Running benchmark...");
-    let output = bencher_runner::execute(&config)?;
+    let output = bencher_runner::execute(&config, None)?;
 
     println!();
     println!("=== Benchmark Output (exit code: {}) ===", output.exit_code);

@@ -29,12 +29,6 @@ pub struct Config {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
 
-    /// Cache directory for pulled OCI images.
-    ///
-    /// Defaults to `/var/cache/bencher/oci` if not specified.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cache_dir: Option<Utf8PathBuf>,
-
     /// Number of vCPUs to allocate to the VM.
     #[serde(default = "default_vcpus")]
     pub vcpus: u8,
@@ -81,6 +75,14 @@ pub struct Config {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub env: Option<HashMap<String, String>>,
 
+    /// Maximum size in bytes for collected stdout/stderr inside the guest VM.
+    ///
+    /// If a benchmark produces more output than this limit, the excess is
+    /// silently dropped. Defaults to 10 MiB, matching the host-side vsock
+    /// `MAX_DATA_SIZE`.
+    #[serde(default = "default_max_output_size")]
+    pub max_output_size: usize,
+
     /// CPU layout for isolating benchmark cores from housekeeping tasks.
     ///
     /// When set, the Firecracker process will be pinned to benchmark cores
@@ -109,6 +111,10 @@ const fn default_timeout_secs() -> u64 {
     300 // 5 minutes
 }
 
+const fn default_max_output_size() -> usize {
+    10 * 1024 * 1024 // 10 MiB
+}
+
 impl Config {
     /// Create a new configuration with the bundled kernel.
     ///
@@ -121,7 +127,6 @@ impl Config {
             oci_image: oci_image.into(),
             kernel: None,
             token: None,
-            cache_dir: None,
             vcpus: default_vcpus(),
             memory_mib: default_memory_mib(),
             disk_mib: default_disk_mib(),
@@ -132,6 +137,7 @@ impl Config {
             entrypoint: None,
             cmd: None,
             env: None,
+            max_output_size: default_max_output_size(),
             cpu_layout: None,
         }
     }
@@ -148,7 +154,6 @@ impl Config {
             oci_image: oci_image.into(),
             kernel: Some(kernel),
             token: None,
-            cache_dir: None,
             vcpus: default_vcpus(),
             memory_mib: default_memory_mib(),
             disk_mib: default_disk_mib(),
@@ -159,6 +164,7 @@ impl Config {
             entrypoint: None,
             cmd: None,
             env: None,
+            max_output_size: default_max_output_size(),
             cpu_layout: None,
         }
     }
@@ -167,13 +173,6 @@ impl Config {
     #[must_use]
     pub fn with_token<S: Into<String>>(mut self, token: S) -> Self {
         self.token = Some(token.into());
-        self
-    }
-
-    /// Set the cache directory for pulled images.
-    #[must_use]
-    pub fn with_cache_dir(mut self, cache_dir: Utf8PathBuf) -> Self {
-        self.cache_dir = Some(cache_dir);
         self
     }
 
@@ -272,6 +271,13 @@ impl Config {
         self
     }
 
+    /// Set the maximum output size in bytes for stdout/stderr collection.
+    #[must_use]
+    pub fn with_max_output_size(mut self, max_output_size: usize) -> Self {
+        self.max_output_size = max_output_size;
+        self
+    }
+
     /// Set the CPU layout for core isolation.
     ///
     /// When set, the Firecracker process will be pinned to benchmark cores
@@ -280,14 +286,6 @@ impl Config {
     pub fn with_cpu_layout(mut self, layout: CpuLayout) -> Self {
         self.cpu_layout = Some(layout);
         self
-    }
-
-    /// Get the cache directory, using the default if not set.
-    #[must_use]
-    pub fn cache_dir(&self) -> Utf8PathBuf {
-        self.cache_dir
-            .clone()
-            .unwrap_or_else(|| Utf8PathBuf::from("/var/cache/bencher/oci"))
     }
 }
 
@@ -306,7 +304,6 @@ mod tests {
         assert!(!config.network);
         assert!(config.kernel.is_none());
         assert!(config.token.is_none());
-        assert!(config.cache_dir.is_none());
         assert!(config.output_file.is_none());
         assert!(config.entrypoint.is_none());
         assert!(config.cmd.is_none());
@@ -330,7 +327,6 @@ mod tests {
             .with_disk_mib(4096)
             .with_timeout_secs(600)
             .with_output_file("/tmp/results.json")
-            .with_cache_dir(Utf8PathBuf::from("/cache"))
             .with_network(true)
             .with_entrypoint(vec!["/bin/sh".to_owned()])
             .with_cmd(vec!["-c".to_owned(), "echo hello".to_owned()])
@@ -342,23 +338,10 @@ mod tests {
         assert_eq!(config.disk_mib, 4096);
         assert_eq!(config.timeout_secs, 600);
         assert_eq!(config.output_file.unwrap(), "/tmp/results.json");
-        assert_eq!(config.cache_dir.unwrap().as_str(), "/cache");
         assert!(config.network);
         assert_eq!(config.entrypoint.unwrap(), vec!["/bin/sh"]);
         assert_eq!(config.cmd.unwrap(), vec!["-c", "echo hello"]);
         assert_eq!(config.env.unwrap(), env);
-    }
-
-    #[test]
-    fn cache_dir_default() {
-        let config = Config::new("img");
-        assert_eq!(config.cache_dir().as_str(), "/var/cache/bencher/oci");
-    }
-
-    #[test]
-    fn cache_dir_custom() {
-        let config = Config::new("img").with_cache_dir(Utf8PathBuf::from("/my/cache"));
-        assert_eq!(config.cache_dir().as_str(), "/my/cache");
     }
 
     #[test]

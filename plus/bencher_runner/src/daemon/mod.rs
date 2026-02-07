@@ -2,10 +2,9 @@
 // where `Daemon::run()` is a stub.
 #![cfg_attr(not(target_os = "linux"), allow(dead_code))]
 
-#[cfg(not(target_os = "linux"))]
 use std::sync::atomic::AtomicBool;
 #[cfg(target_os = "linux")]
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 
 use url::Url;
 
@@ -44,6 +43,8 @@ pub struct DaemonConfig {
     pub tuning: TuningConfig,
     /// CPU layout for isolating benchmark cores from housekeeping tasks.
     pub cpu_layout: CpuLayout,
+    /// Maximum size in bytes for collected stdout/stderr.
+    pub max_output_size: Option<usize>,
 }
 
 pub struct Daemon {

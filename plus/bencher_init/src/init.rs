@@ -29,6 +29,11 @@ const CONFIG_PATH: &str = "/etc/bencher/config.json";
 /// Signal flag for graceful shutdown.
 static SHUTDOWN_REQUESTED: AtomicBool = AtomicBool::new(false);
 
+/// Default maximum output size: 10 MiB, matching the host-side vsock `MAX_DATA_SIZE`.
+const fn default_max_output_size() -> usize {
+    10 * 1024 * 1024
+}
+
 /// Benchmark configuration read from config file.
 #[derive(Debug, Deserialize)]
 struct Config {
@@ -42,6 +47,9 @@ struct Config {
     env: Vec<(String, String)>,
     /// Optional output file to send back.
     output_file: Option<String>,
+    /// Maximum size in bytes for collected stdout/stderr.
+    #[serde(default = "default_max_output_size")]
+    max_output_size: usize,
 }
 
 fn default_workdir() -> String {
@@ -445,7 +453,7 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
             }
 
             // Wait for child while collecting output and reaping zombies
-            wait_for_child(child_pid, stdout_read, stderr_read)
+            wait_for_child(child_pid, stdout_read, stderr_read, config.max_output_size)
         },
     }
 }
@@ -467,6 +475,7 @@ fn wait_for_child(
     child_pid: libc::pid_t,
     stdout_fd: RawFd,
     stderr_fd: RawFd,
+    max_output_size: usize,
 ) -> Result<BenchmarkResult, InitError> {
     use std::os::unix::io::FromRawFd;
 
@@ -496,13 +505,19 @@ fn wait_for_child(
         let mut buf = [0u8; 4096];
         match stdout_file.read(&mut buf) {
             Ok(0) => {},
-            Ok(n) => stdout_buf.extend_from_slice(&buf[..n]),
+            Ok(n) => {
+                let remaining = max_output_size.saturating_sub(stdout_buf.len());
+                stdout_buf.extend_from_slice(&buf[..n.min(remaining)]);
+            },
             Err(e) if e.kind() == io::ErrorKind::WouldBlock => {},
             Err(e) => eprintln!("stdout read error: {e}"),
         }
         match stderr_file.read(&mut buf) {
             Ok(0) => {},
-            Ok(n) => stderr_buf.extend_from_slice(&buf[..n]),
+            Ok(n) => {
+                let remaining = max_output_size.saturating_sub(stderr_buf.len());
+                stderr_buf.extend_from_slice(&buf[..n.min(remaining)]);
+            },
             Err(e) if e.kind() == io::ErrorKind::WouldBlock => {},
             Err(e) => eprintln!("stderr read error: {e}"),
         }
@@ -541,13 +556,19 @@ fn wait_for_child(
             loop {
                 match stdout_file.read(&mut buf) {
                     Ok(0) | Err(_) => break,
-                    Ok(n) => stdout_buf.extend_from_slice(&buf[..n]),
+                    Ok(n) => {
+                        let remaining = max_output_size.saturating_sub(stdout_buf.len());
+                        stdout_buf.extend_from_slice(&buf[..n.min(remaining)]);
+                    },
                 }
             }
             loop {
                 match stderr_file.read(&mut buf) {
                     Ok(0) | Err(_) => break,
-                    Ok(n) => stderr_buf.extend_from_slice(&buf[..n]),
+                    Ok(n) => {
+                        let remaining = max_output_size.saturating_sub(stderr_buf.len());
+                        stderr_buf.extend_from_slice(&buf[..n.min(remaining)]);
+                    },
                 }
             }
             break;
@@ -589,34 +610,8 @@ fn send_results(result: &BenchmarkResult, output_file: Option<&str>) -> Result<(
 /// Vsock connect/send timeout in seconds.
 const VSOCK_TIMEOUT_SECS: i64 = 2;
 
-/// Maximum number of retries for transient vsock errors.
-const VSOCK_MAX_RETRIES: usize = 1;
-
 /// Send data via vsock to the host.
 fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
-    let mut last_err = None;
-
-    for attempt in 0..VSOCK_MAX_RETRIES {
-        match send_vsock_once(port, data) {
-            Ok(()) => return Ok(()),
-            Err(e) => {
-                console_log(&format!(
-                    "vsock send to port {port} failed (attempt {}/{}): {e}",
-                    attempt + 1,
-                    VSOCK_MAX_RETRIES
-                ));
-                last_err = Some(e);
-                // Brief backoff before retry
-                std::thread::sleep(std::time::Duration::from_millis(100 * (attempt as u64 + 1)));
-            },
-        }
-    }
-
-    Err(last_err.unwrap_or_else(|| InitError::Vsock("send_vsock: no attempts made".into())))
-}
-
-/// Single attempt to send data via vsock.
-fn send_vsock_once(port: u32, data: &[u8]) -> Result<(), InitError> {
     // Create vsock socket
     let fd = unsafe { libc::socket(libc::AF_VSOCK, libc::SOCK_STREAM, 0) };
     if fd < 0 {
@@ -707,6 +702,7 @@ fn send_vsock_once(port: u32, data: &[u8]) -> Result<(), InitError> {
 /// ---BENCHER_STDERR_END---
 /// ---BENCHER_EXIT_CODE:<code>---
 /// ```
+#[cfg(target_arch = "x86_64")]
 fn output_results_serial(result: &BenchmarkResult) {
     serial_write(b"---BENCHER_STDOUT_BEGIN---\n");
     serial_write(&result.stdout);
@@ -722,6 +718,22 @@ fn output_results_serial(result: &BenchmarkResult) {
     // Write the done marker LAST. The VMM uses this (not the exit code marker)
     // as the shutdown trigger, ensuring all preceding data is captured.
     serial_write(b"---BENCHER_DONE---\n");
+}
+
+/// Output benchmark results via stderr (non-x86_64 fallback).
+///
+/// On non-x86_64, we don't have direct serial port access, so fall back
+/// to stderr with the same marker format.
+#[cfg(not(target_arch = "x86_64"))]
+fn output_results_serial(result: &BenchmarkResult) {
+    eprintln!("---BENCHER_STDOUT_BEGIN---");
+    eprint!("{}", String::from_utf8_lossy(&result.stdout));
+    eprintln!("\n---BENCHER_STDOUT_END---");
+    eprintln!("---BENCHER_STDERR_BEGIN---");
+    eprint!("{}", String::from_utf8_lossy(&result.stderr));
+    eprintln!("\n---BENCHER_STDERR_END---");
+    eprintln!("---BENCHER_EXIT_CODE:{}---", result.exit_code);
+    eprintln!("---BENCHER_DONE---");
 }
 
 /// Shut down the system.

@@ -64,4 +64,8 @@ pub struct TaskDaemon {
     /// Set `perf_event_paranoid` value (default: -1).
     #[arg(long, allow_hyphen_values = true)]
     pub perf_event_paranoid: Option<i32>,
+
+    /// Maximum size in bytes for collected stdout/stderr (default: 10 MiB).
+    #[arg(long)]
+    pub max_output_size: Option<usize>,
 }
