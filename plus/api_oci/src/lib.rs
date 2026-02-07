@@ -34,6 +34,7 @@ mod blobs;
 mod error;
 mod manifests;
 mod referrers;
+mod response;
 mod tags;
 mod uploads;
 

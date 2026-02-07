@@ -35,6 +35,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::auth::{require_pull_access, require_push_access, validate_push_access};
+use crate::response::oci_cors_headers;
 
 /// Path parameters for blob/upload-start endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -124,16 +125,16 @@ pub async fn oci_blob_exists(
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Build response with OCI-compliant headers (no body for HEAD)
-    let response = Response::builder()
-        .status(http::StatusCode::OK)
-        .header(http::header::CONTENT_TYPE, "application/octet-stream")
-        .header(http::header::CONTENT_LENGTH, size)
-        .header("Docker-Content-Digest", digest.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .header(http::header::ACCESS_CONTROL_ALLOW_METHODS, "HEAD, GET")
-        .header(http::header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::OK)
+            .header(http::header::CONTENT_TYPE, "application/octet-stream")
+            .header(http::header::CONTENT_LENGTH, size)
+            .header("Docker-Content-Digest", digest.to_string()),
+        "HEAD, GET",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -188,16 +189,16 @@ pub async fn oci_blob_get(
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciBlobPull);
 
     // Build response with OCI-compliant headers and streaming body
-    let response = Response::builder()
-        .status(http::StatusCode::OK)
-        .header(http::header::CONTENT_TYPE, "application/octet-stream")
-        .header(http::header::CONTENT_LENGTH, size)
-        .header("Docker-Content-Digest", digest.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .header(http::header::ACCESS_CONTROL_ALLOW_METHODS, "GET")
-        .header(http::header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type")
-        .body(Body::wrap(blob_body))
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::OK)
+            .header(http::header::CONTENT_TYPE, "application/octet-stream")
+            .header(http::header::CONTENT_LENGTH, size)
+            .header("Docker-Content-Digest", digest.to_string()),
+        "GET",
+    )
+    .body(Body::wrap(blob_body))
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -245,11 +246,12 @@ pub async fn oci_blob_delete(
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // OCI spec requires 202 Accepted for DELETE
-    let response = Response::builder()
-        .status(http::StatusCode::ACCEPTED)
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder().status(http::StatusCode::ACCEPTED),
+        "DELETE",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -316,15 +318,17 @@ pub async fn oci_upload_start(
             if mounted {
                 // Mount successful - return 201 Created
                 let location = format!("/v2/{project_slug}/blobs/{digest}");
-                let response = Response::builder()
-                    .status(http::StatusCode::CREATED)
-                    .header(http::header::LOCATION, location)
-                    .header("Docker-Content-Digest", digest.to_string())
-                    .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-                    .body(Body::empty())
-                    .map_err(|e| {
-                        HttpError::for_internal_error(format!("Failed to build response: {e}"))
-                    })?;
+                let response = oci_cors_headers(
+                    Response::builder()
+                        .status(http::StatusCode::CREATED)
+                        .header(http::header::LOCATION, location)
+                        .header("Docker-Content-Digest", digest.to_string()),
+                    "POST",
+                )
+                .body(Body::empty())
+                .map_err(|e| {
+                    HttpError::for_internal_error(format!("Failed to build response: {e}"))
+                })?;
                 return Ok(response);
             }
         }
@@ -338,14 +342,16 @@ pub async fn oci_upload_start(
 
     // Build 202 Accepted response
     let location = format!("/v2/{project_slug}/blobs/uploads/{upload_id}");
-    let response = Response::builder()
-        .status(http::StatusCode::ACCEPTED)
-        .header(http::header::LOCATION, location)
-        .header("Range", "0-0")
-        .header("Docker-Upload-UUID", upload_id.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::ACCEPTED)
+            .header(http::header::LOCATION, location)
+            .header("Range", "0-0")
+            .header("Docker-Upload-UUID", upload_id.to_string()),
+        "POST",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -437,13 +443,15 @@ pub async fn oci_upload_monolithic(
 
     // Build 201 Created response
     let location = format!("/v2/{project_slug}/blobs/{actual_digest}");
-    let response = Response::builder()
-        .status(http::StatusCode::CREATED)
-        .header(http::header::LOCATION, location)
-        .header("Docker-Content-Digest", actual_digest.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::CREATED)
+            .header(http::header::LOCATION, location)
+            .header("Docker-Content-Digest", actual_digest.to_string()),
+        "PUT",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }

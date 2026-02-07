@@ -301,10 +301,7 @@ fn handle_claimed_project(
             HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::FORBIDDEN,
-                format!(
-                    "Access denied to repository: {}. You need Create permission.",
-                    project.slug
-                ),
+                "Insufficient permissions".to_owned(),
             )
         })?;
 
@@ -361,7 +358,7 @@ async fn handle_nonexistent_project(
     public_user: &PublicUser,
     claims: Option<OciClaims>,
 ) -> Result<PushAccess, HttpError> {
-    match repository.clone() {
+    match repository {
         ProjectResourceId::Uuid(uuid) => {
             slog::debug!(log, "OCI push to non-existent project by UUID"; "uuid" => %uuid);
             Err(HttpError::for_client_error(

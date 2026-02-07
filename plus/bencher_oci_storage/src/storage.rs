@@ -855,30 +855,17 @@ impl OciS3Storage {
     }
 
     /// Deletes all upload-related objects from S3
+    ///
+    /// Cleanup order: buffer chunks first, then data object, then state file last.
+    /// This ordering ensures that if a crash occurs mid-cleanup, the state file
+    /// still exists for discovery by `cleanup_stale_uploads_s3`, preventing
+    /// permanently orphaned chunk objects.
     async fn cleanup_upload(&self, upload_id: &UploadId) {
         // Best effort cleanup - ignore errors
         let state_key = self.upload_state_key(upload_id);
         let data_key = self.upload_data_key(upload_id);
 
-        // Delete state
-        let _unused = self
-            .client
-            .delete_object()
-            .bucket(&self.config.bucket_arn)
-            .key(&state_key)
-            .send()
-            .await;
-
-        // Delete multipart data object
-        let _unused = self
-            .client
-            .delete_object()
-            .bucket(&self.config.bucket_arn)
-            .key(&data_key)
-            .send()
-            .await;
-
-        // Delete all buffer chunks by listing them first
+        // Delete all buffer chunks first (while state still exists for discovery)
         if let Ok(chunks) = self.list_buffer_chunks(upload_id).await {
             for (chunk_key, _size) in chunks {
                 let _unused = self
@@ -890,6 +877,24 @@ impl OciS3Storage {
                     .await;
             }
         }
+
+        // Delete multipart data object
+        let _unused = self
+            .client
+            .delete_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&data_key)
+            .send()
+            .await;
+
+        // Delete state last (so discovery still works if crash occurs above)
+        let _unused = self
+            .client
+            .delete_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&state_key)
+            .send()
+            .await;
     }
 
     /// Spawns a background task to clean up all stale uploads that have exceeded the timeout.

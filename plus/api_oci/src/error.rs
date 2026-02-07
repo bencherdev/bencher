@@ -3,51 +3,71 @@
 use bencher_oci_storage::OciError;
 use dropshot::{ClientErrorStatusCode, ErrorStatusCode, HttpError};
 
-/// Converts an `OciError` into an `HttpError`
+/// Formats an OCI-compliant JSON error body
+///
+/// Per the OCI Distribution Spec, if the response body is JSON it MUST follow:
+/// `{"errors": [{"code": "<CODE>", "message": "<msg>"}]}`
+fn oci_error_body(code: &str, message: &str) -> String {
+    serde_json::json!({
+        "errors": [{
+            "code": code,
+            "message": message
+        }]
+    })
+    .to_string()
+}
+
+/// Converts an `OciError` into an `HttpError` with OCI-compliant JSON error body
 #[expect(
     clippy::needless_pass_by_value,
     reason = "consumes error for API consistency"
 )]
 pub fn into_http_error(error: OciError) -> HttpError {
     let status_code = error.status_code();
+    let code = error.code();
     let message = error.to_string();
+    let external_message = oci_error_body(code, &message);
     match status_code {
         http::StatusCode::NOT_FOUND => {
-            HttpError::for_client_error(None, ClientErrorStatusCode::NOT_FOUND, message)
+            HttpError::for_client_error(None, ClientErrorStatusCode::NOT_FOUND, external_message)
         },
         http::StatusCode::BAD_REQUEST => {
-            HttpError::for_client_error(None, ClientErrorStatusCode::BAD_REQUEST, message)
+            HttpError::for_client_error(None, ClientErrorStatusCode::BAD_REQUEST, external_message)
         },
         http::StatusCode::UNAUTHORIZED => {
-            HttpError::for_client_error(None, ClientErrorStatusCode::UNAUTHORIZED, message)
+            HttpError::for_client_error(None, ClientErrorStatusCode::UNAUTHORIZED, external_message)
         },
         http::StatusCode::FORBIDDEN => {
-            HttpError::for_client_error(None, ClientErrorStatusCode::FORBIDDEN, message)
+            HttpError::for_client_error(None, ClientErrorStatusCode::FORBIDDEN, external_message)
         },
-        http::StatusCode::TOO_MANY_REQUESTS => {
-            HttpError::for_client_error(None, ClientErrorStatusCode::TOO_MANY_REQUESTS, message)
-        },
-        http::StatusCode::RANGE_NOT_SATISFIABLE => {
-            HttpError::for_client_error(None, ClientErrorStatusCode::RANGE_NOT_SATISFIABLE, message)
-        },
+        http::StatusCode::TOO_MANY_REQUESTS => HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::TOO_MANY_REQUESTS,
+            external_message,
+        ),
+        http::StatusCode::RANGE_NOT_SATISFIABLE => HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::RANGE_NOT_SATISFIABLE,
+            external_message,
+        ),
         http::StatusCode::NOT_IMPLEMENTED => HttpError {
             status_code: ErrorStatusCode::NOT_IMPLEMENTED,
             error_code: None,
-            external_message: "Not implemented".to_owned(),
+            external_message,
             internal_message: message,
             headers: None,
         },
         _ => HttpError {
             status_code: ErrorStatusCode::INTERNAL_SERVER_ERROR,
             error_code: None,
-            external_message: "Internal server error".to_owned(),
+            external_message: oci_error_body("UNKNOWN", "Internal server error"),
             internal_message: message,
             headers: None,
         },
     }
 }
 
-/// Returns a 413 Payload Too Large error.
+/// Returns a 413 Payload Too Large error with OCI-compliant JSON body.
 ///
 /// Dropshot's `ClientErrorStatusCode` does not include 413,
 /// so we construct the `HttpError` manually.
@@ -56,7 +76,7 @@ pub fn payload_too_large(size: u64, max: u64) -> HttpError {
     HttpError {
         status_code: ErrorStatusCode::PAYLOAD_TOO_LARGE,
         error_code: None,
-        external_message: message.clone(),
+        external_message: oci_error_body("SIZE_INVALID", &message),
         internal_message: message,
         headers: None,
     }

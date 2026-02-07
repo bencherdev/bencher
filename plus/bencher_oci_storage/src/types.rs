@@ -19,9 +19,16 @@ pub enum DigestError {
 }
 
 impl Digest {
+    /// Expected hex hash length for SHA-256 (64 hex characters = 32 bytes)
+    const SHA256_HEX_LEN: usize = 64;
+    /// Expected hex hash length for SHA-512 (128 hex characters = 64 bytes)
+    const SHA512_HEX_LEN: usize = 128;
+
     /// Creates a new SHA-256 digest from the given hex-encoded hash
     pub fn sha256(hex_hash: &str) -> Result<Self, DigestError> {
-        if hex_hash.is_empty() || !hex_hash.chars().all(|c| c.is_ascii_hexdigit()) {
+        if hex_hash.len() != Self::SHA256_HEX_LEN
+            || !hex_hash.chars().all(|c| c.is_ascii_hexdigit())
+        {
             return Err(DigestError::InvalidFormat(format!("sha256:{hex_hash}")));
         }
         Ok(Self(format!("sha256:{hex_hash}")))
@@ -62,13 +69,13 @@ impl FromStr for Digest {
             .split_once(':')
             .ok_or_else(|| DigestError::InvalidFormat(s.to_owned()))?;
 
-        // Validate algorithm - only sha256 and sha512 are commonly used
-        if algorithm != "sha256" && algorithm != "sha512" {
-            return Err(DigestError::UnsupportedAlgorithm(algorithm.to_owned()));
-        }
-
-        // Validate encoded hash is hex
-        if encoded.is_empty() || !encoded.chars().all(|c| c.is_ascii_hexdigit()) {
+        // Validate algorithm and get expected hash length
+        let expected_len = match algorithm {
+            "sha256" => Self::SHA256_HEX_LEN,
+            "sha512" => Self::SHA512_HEX_LEN,
+            _ => return Err(DigestError::UnsupportedAlgorithm(algorithm.to_owned())),
+        };
+        if encoded.len() != expected_len || !encoded.chars().all(|c| c.is_ascii_hexdigit()) {
             return Err(DigestError::InvalidFormat(s.to_owned()));
         }
 
@@ -328,6 +335,38 @@ mod tests {
         assert!(Digest::sha256("").is_err());
         assert!(Digest::sha256("not-hex!").is_err());
         assert!(Digest::sha256("ZZZZ").is_err());
+        // Too short
+        assert!(Digest::sha256("abc123").is_err());
+        // Too long (65 chars)
+        assert!(
+            Digest::sha256("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8550")
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn digest_sha512_valid() {
+        let hash = "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e";
+        let digest: Digest = format!("sha512:{hash}").parse().unwrap();
+        assert_eq!(digest.algorithm(), "sha512");
+        assert_eq!(digest.hex_hash(), hash);
+    }
+
+    #[test]
+    fn digest_sha512_invalid_length() {
+        // Too short
+        assert!("sha512:abc123".parse::<Digest>().is_err());
+        // sha256-length hash with sha512 algorithm
+        assert!(
+            "sha512:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                .parse::<Digest>()
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn digest_from_str_rejects_short_sha256() {
+        assert!("sha256:abc".parse::<Digest>().is_err());
     }
 
     #[test]
