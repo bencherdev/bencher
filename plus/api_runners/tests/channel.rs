@@ -33,6 +33,7 @@ enum RunnerMessage {
         exit_code: Option<i32>,
         error: String,
     },
+    Cancelled,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -397,7 +398,7 @@ async fn test_channel_lifecycle_failed() {
 }
 
 // =============================================================================
-// Cancellation Test
+// Cancellation Tests
 // =============================================================================
 
 /// Heartbeat detects a canceled job and receives Cancel.
@@ -423,6 +424,113 @@ async fn test_channel_heartbeat_cancel() {
 
     // Server closes the connection after sending Cancel
     assert_ws_closed(&mut ws).await;
+}
+
+/// Runner acknowledges cancellation with Cancelled message.
+#[tokio::test]
+async fn test_channel_runner_acknowledges_cancel() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "cancelack").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Runner proactively sends Cancelled (e.g., it detected cancellation itself)
+    send_msg(&mut ws, &RunnerMessage::Cancelled).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Job should be in Canceled state
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// Cancel a job while Running, detect on next Running message (reconnection).
+#[tokio::test]
+async fn test_channel_cancel_detected_on_reconnect() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "cancelrecon").await;
+
+    // Set job to Running and then Canceled directly in DB
+    // (simulates: runner was Running, connection dropped, job was canceled,
+    // runner reconnects)
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
+
+    // Runner reconnects and tries to open channel
+    // The channel handler should detect that the job is canceled
+    let request = ws_request(&server, runner_uuid, &runner_token, job_uuid);
+    match tokio_tungstenite::connect_async(request).await {
+        Err(_) => {}, // Connection rejected
+        Ok((mut ws, _)) => {
+            // Connection opened but server should close it since job is Canceled
+            // (only Claimed or Running jobs can use the channel)
+            assert_ws_closed(&mut ws).await;
+        },
+    }
+}
+
+/// Multiple heartbeats, then cancel mid-stream.
+#[tokio::test]
+async fn test_channel_cancel_after_multiple_heartbeats() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "cancelmulti").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Send several heartbeats successfully
+    for _ in 0..3 {
+        send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+        let resp = recv_msg(&mut ws).await;
+        assert!(matches!(resp, ServerMessage::Ack));
+    }
+
+    // Cancel the job mid-stream
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
+
+    // Next heartbeat should detect cancellation
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Cancel));
+
+    assert_ws_closed(&mut ws).await;
+}
+
+/// Cancelling an already-canceled job is idempotent (Cancelled message on already-Canceled job).
+#[tokio::test]
+async fn test_channel_cancel_idempotent() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "cancelidem").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Cancel the job in DB
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
+
+    // Runner sends Cancelled (acknowledging external cancellation)
+    // Should succeed since the job is already Canceled
+    send_msg(&mut ws, &RunnerMessage::Cancelled).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 // =============================================================================

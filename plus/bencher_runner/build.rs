@@ -85,7 +85,7 @@ fn main() {
 
     // --- bencher-init ---
     let init_path = find_init_binary()
-        .unwrap_or_else(|| panic!("bencher-init binary not found. Build it first with: cargo build --release -p bencher_init\nOr set BENCHER_INIT_PATH to a pre-built binary."));
+        .unwrap_or_else(|| panic!("bencher-init binary not found. Build it first with: cargo build --release --target x86_64-unknown-linux-musl -p bencher_init\nOr set BENCHER_INIT_PATH to a pre-built binary.\nThe init binary MUST be statically linked (musl) to run inside the Firecracker VM."));
     generate_binary_module("init", &init_path, is_release, &out_dir);
 
     // --- firecracker ---

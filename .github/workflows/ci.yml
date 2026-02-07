@@ -67,7 +67,6 @@ jobs:
               - 'plus/bencher_runner/**'
               - 'plus/bencher_oci/**'
               - 'plus/bencher_rootfs/**'
-              - 'plus/bencher_guest/**'
               - 'plus/bencher_init/**'
               - 'services/runner/**'
               - 'tasks/test_runner/**'

@@ -2,8 +2,8 @@ use std::time::{Duration, Instant};
 
 use bencher_endpoint::{CorsResponse, Endpoint, Patch, Post, ResponseOk};
 use bencher_json::{
-    DEFAULT_POLL_TIMEOUT, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, DateTime, JobStatus, JobUuid,
-    JsonClaimJob, JsonJob, JsonUpdateJob, JsonUpdateJobResponse, RunnerResourceId,
+    DEFAULT_POLL_TIMEOUT, DateTime, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonUpdateJob,
+    JsonUpdateJobResponse, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, RunnerResourceId,
 };
 use bencher_schema::{
     auth_conn,

@@ -220,14 +220,24 @@ fn run_benchmark() -> anyhow::Result<()> {
     println!("========================");
     println!();
 
-    // Verify the output contains expected benchmark results
-    if output.stdout.contains("bencher") || output.stdout.contains("mock") || output.stdout.contains("latency") {
+    // Verify the benchmark ran successfully
+    if output.exit_code != 0 {
+        anyhow::bail!(
+            "Benchmark failed with exit code {}. Stderr: {}",
+            output.exit_code,
+            output.stdout
+        );
+    }
+
+    if output.stdout.contains("bencher")
+        || output.stdout.contains("mock")
+        || output.stdout.contains("latency")
+    {
         println!("Test PASSED: Benchmark output looks valid");
-    } else if output.stdout.contains("error") || output.stdout.contains("Error") {
-        println!("Test FAILED: Errors in output");
-        anyhow::bail!("Benchmark execution failed");
+    } else if output.stdout.trim().is_empty() {
+        anyhow::bail!("Test FAILED: No benchmark output produced");
     } else {
-        println!("Test PASSED: VM ran successfully");
+        println!("Test PASSED: VM ran successfully (exit code 0)");
     }
 
     // Cleanup

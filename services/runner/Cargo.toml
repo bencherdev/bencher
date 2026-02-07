@@ -15,6 +15,7 @@ anyhow = { workspace = true }
 clap = { workspace = true, features = ["env"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
+url = { workspace = true }
 bencher_runner = { workspace = true, optional = true, features = ["plus"] }
 
 [lints]

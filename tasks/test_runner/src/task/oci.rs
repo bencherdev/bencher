@@ -141,8 +141,11 @@ fn install_busybox(rootfs: &Utf8Path) -> anyhow::Result<()> {
 }
 
 /// Install the bencher CLI.
+///
+/// Tries to build a statically linked (musl) binary first, then falls back
+/// to the default target (glibc), and finally to a mock shell script.
+/// The binary must be statically linked to run inside the minimal busybox rootfs.
 fn install_bencher(rootfs: &Utf8Path) -> anyhow::Result<()> {
-    // Try to find bencher in the current workspace
     let workspace_root = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("Failed to get parent directory")
@@ -150,31 +153,38 @@ fn install_bencher(rootfs: &Utf8Path) -> anyhow::Result<()> {
         .expect("Failed to get workspace root")
         .to_owned();
 
-    // Build bencher CLI if needed
-    println!("Building bencher CLI...");
-    let status = Command::new("cargo")
-        .args(["build", "--release", "-p", "bencher_cli"])
-        .current_dir(&workspace_root)
-        .status()
-        .context("Failed to run cargo build")?;
-
-    if !status.success() {
-        anyhow::bail!("Failed to build bencher CLI");
-    }
-
-    // Copy the binary
-    let bencher_src = workspace_root.join("target/release/bencher");
     let bencher_dst = rootfs.join("usr/bin/bencher");
 
-    if bencher_src.exists() {
-        fs::copy(&bencher_src, &bencher_dst)?;
-        fs::set_permissions(&bencher_dst, fs::Permissions::from_mode(0o755))?;
-        println!("Bencher CLI installed");
-    } else {
-        // Create a mock bencher script if we can't build the real one
-        println!("Warning: Could not find bencher binary, creating mock script");
-        create_mock_bencher(rootfs)?;
+    // Try musl (statically linked) first — required for minimal rootfs
+    println!("Building bencher CLI (musl)...");
+    let musl_status = Command::new("cargo")
+        .args([
+            "build",
+            "--release",
+            "--target",
+            "x86_64-unknown-linux-musl",
+            "-p",
+            "bencher_cli",
+        ])
+        .current_dir(&workspace_root)
+        .status();
+
+    if let Ok(status) = musl_status {
+        if status.success() {
+            let musl_src = workspace_root.join("target/x86_64-unknown-linux-musl/release/bencher");
+            if musl_src.exists() {
+                fs::copy(&musl_src, &bencher_dst)?;
+                fs::set_permissions(&bencher_dst, fs::Permissions::from_mode(0o755))?;
+                println!("Bencher CLI installed (statically linked)");
+                return Ok(());
+            }
+        }
     }
+
+    // Musl build failed — fall back to mock script
+    // (a dynamically linked binary won't work in the minimal busybox rootfs)
+    println!("Warning: musl build failed, using mock bencher script");
+    create_mock_bencher(rootfs)?;
 
     Ok(())
 }

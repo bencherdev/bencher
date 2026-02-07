@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 pub mod job;
 
 pub use job::{
-    DEFAULT_POLL_TIMEOUT, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimJob,
-    JsonJob, JsonJobSpec, JsonJobs, JsonUpdateJob, JsonUpdateJobResponse,
+    DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonJobSpec, JsonJobs,
+    JsonUpdateJob, JsonUpdateJobResponse, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT,
 };
 
 crate::typed_uuid::typed_uuid!(RunnerUuid);

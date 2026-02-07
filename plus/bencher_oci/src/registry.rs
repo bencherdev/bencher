@@ -413,8 +413,7 @@ impl RegistryClient {
 
         // If we have a base token, use it as Basic auth password
         if let Some(base_token) = &self.base_token {
-            let credentials =
-                BASE64_STANDARD.encode(format!("_token:{}", base_token.as_ref()));
+            let credentials = BASE64_STANDARD.encode(format!("_token:{}", base_token.as_ref()));
             request = request.header("Authorization", &format!("Basic {credentials}"));
         }
 
