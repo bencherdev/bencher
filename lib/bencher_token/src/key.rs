@@ -87,6 +87,11 @@ impl TokenKey {
         repository: Option<String>,
         actions: Vec<OciAction>,
     ) -> Result<Jwt, TokenError> {
+        if actions.is_empty() {
+            return Err(TokenError::Oci {
+                error: JsonWebTokenErrorKind::MissingRequiredClaim("actions".into()).into(),
+            });
+        }
         let oci_claims = OciScopeClaims {
             repository,
             actions,
@@ -291,7 +296,9 @@ mod tests {
     fn jwt_oci_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
-        let token = secret_key.new_oci(EMAIL.clone(), 0, None, vec![]).unwrap();
+        let token = secret_key
+            .new_oci(EMAIL.clone(), 0, None, vec![OciAction::Pull])
+            .unwrap();
 
         sleep_for_a_second();
 
@@ -312,5 +319,41 @@ mod tests {
         sleep_for_a_second();
 
         assert!(secret_key.validate_invite(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_oci_empty_actions() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        assert!(secret_key.new_oci(EMAIL.clone(), TTL, None, vec![]).is_err());
+    }
+
+    #[test]
+    fn jwt_auth_token_rejected_as_oci() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
+
+        assert!(secret_key.validate_oci(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_api_key_rejected_as_oci() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
+
+        assert!(secret_key.validate_oci(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_oci_token_rejected_as_auth() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key
+            .new_oci(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
+            .unwrap();
+
+        assert!(secret_key.validate_auth(&token).is_err());
     }
 }
