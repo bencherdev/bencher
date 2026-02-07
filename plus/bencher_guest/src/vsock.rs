@@ -16,6 +16,12 @@ use crate::protocol::{BenchmarkParams, BenchmarkResults};
 /// CID 2 is always the host in the vsock address space.
 pub const HOST_CID: u32 = 2;
 
+/// Maximum size for incoming parameters (1 MiB).
+const MAX_RECEIVE_SIZE: u64 = 1024 * 1024;
+
+/// Maximum size for outgoing results (10 MiB, accommodates stdout/stderr).
+const MAX_SEND_SIZE: usize = 10 * 1024 * 1024;
+
 /// Default port for Bencher communication.
 pub const DEFAULT_PORT: u32 = 5000;
 
@@ -79,10 +85,19 @@ impl VsockConnection {
     }
 
     /// Send benchmark results to the host.
+    ///
+    /// Rejects payloads exceeding [`MAX_SEND_SIZE`] bytes to prevent runaway output.
     pub fn send_results(&mut self, results: &BenchmarkResults) -> Result<(), VsockError> {
         use std::io::Write as _;
 
         let json = serde_json::to_vec(results)?;
+        if json.len() > MAX_SEND_SIZE {
+            return Err(VsockError::Protocol(format!(
+                "Results size {} exceeds {} byte limit",
+                json.len(),
+                MAX_SEND_SIZE
+            )));
+        }
         self.inner.write_all(&json)?;
         self.inner.write_all(b"\n")?;
         self.inner.flush()?;
@@ -90,10 +105,23 @@ impl VsockConnection {
     }
 
     /// Receive benchmark parameters from the host.
+    ///
+    /// Limits input to [`MAX_RECEIVE_SIZE`] bytes to prevent memory exhaustion.
     pub fn receive_params(&mut self) -> Result<BenchmarkParams, VsockError> {
-        let mut reader = BufReader::new(&self.inner);
+        use std::io::Read as _;
+
+        let limited = (&self.inner).take(MAX_RECEIVE_SIZE);
+        let mut reader = BufReader::new(limited);
         let mut line = String::new();
-        reader.read_line(&mut line)?;
+        let bytes_read = reader.read_line(&mut line)?;
+        if bytes_read == 0 {
+            return Err(VsockError::Protocol("Empty params received".to_owned()));
+        }
+        if !line.ends_with('\n') {
+            return Err(VsockError::Protocol(format!(
+                "Params exceeded {MAX_RECEIVE_SIZE} byte limit"
+            )));
+        }
         let params = serde_json::from_str(&line)?;
         Ok(params)
     }

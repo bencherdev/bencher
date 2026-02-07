@@ -62,9 +62,8 @@ impl QueryJob {
 
     /// Parse the job spec from JSON string.
     pub fn parse_spec(&self) -> Result<JsonJobSpec, HttpError> {
-        serde_json::from_str(&self.spec).map_err(|e| {
-            bad_request_error(format!("Failed to parse job spec: {e}"))
-        })
+        serde_json::from_str(&self.spec)
+            .map_err(|e| bad_request_error(format!("Failed to parse job spec: {e}")))
     }
 
     /// Convert to JSON for public API (spec is not included).

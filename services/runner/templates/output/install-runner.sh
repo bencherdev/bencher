@@ -152,6 +152,8 @@ download_binary_and_run_installer() {
       exit 1
     fi
 
+    verify_checksum "$_url" "$_file"
+
     install "$_dir" "$_bin" "$@"
     local _retval=$?
 
@@ -385,6 +387,55 @@ ensure() {
 
 ignore() {
     "$@"
+}
+
+verify_checksum() {
+    local _url="$1"
+    local _file="$2"
+    local _checksum_url="${_url}.sha256"
+    local _checksum_file
+    _checksum_file="$(mktemp)" || return 0
+
+    # Determine which sha256 tool is available
+    local _sha_cmd=""
+    if check_cmd sha256sum; then
+        _sha_cmd="sha256sum"
+    elif check_cmd shasum; then
+        _sha_cmd="shasum -a 256"
+    else
+        say_verbose "No sha256sum or shasum found, skipping checksum verification"
+        rm -f "$_checksum_file"
+        return 0
+    fi
+
+    # Download the checksum file (best-effort)
+    if ! downloader "$_checksum_url" "$_checksum_file" 2>/dev/null; then
+        say_verbose "No checksum file available at $_checksum_url, skipping verification"
+        rm -f "$_checksum_file"
+        return 0
+    fi
+
+    local _expected
+    _expected="$(awk '{print $1}' < "$_checksum_file")"
+    rm -f "$_checksum_file"
+
+    if [ -z "$_expected" ]; then
+        say_verbose "Checksum file was empty, skipping verification"
+        return 0
+    fi
+
+    local _actual
+    _actual="$($_sha_cmd "$_file" | awk '{print $1}')"
+
+    if [ "$_expected" != "$_actual" ]; then
+        err "Checksum verification failed!
+  Expected: $_expected
+  Actual:   $_actual
+  File:     $_file
+  This could indicate a corrupted download or a tampered binary."
+    fi
+
+    say_verbose "Checksum verified: $_actual"
 }
 
 downloader() {

@@ -31,4 +31,7 @@ pub enum OciError {
 
     #[error("Invalid image reference: {0}")]
     InvalidReference(String),
+
+    #[error("Path traversal detected: {0}")]
+    PathTraversal(String),
 }

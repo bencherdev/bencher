@@ -147,7 +147,7 @@ pub fn get_manifest(image_dir: &Utf8Path, index: &ImageIndex) -> Result<ImageMan
 
     // Parse the digest to get the blob path
     let digest = manifest_desc.digest().to_string();
-    let blob_path = digest_to_blob_path(image_dir, &digest);
+    let blob_path = digest_to_blob_path(image_dir, &digest)?;
 
     // Read and parse the manifest
     let file = File::open(&blob_path)
@@ -174,7 +174,7 @@ pub fn get_manifest(image_dir: &Utf8Path, index: &ImageIndex) -> Result<ImageMan
 
 /// Parse the image configuration.
 pub fn parse_config(image_dir: &Utf8Path, config_digest: &str) -> Result<ImageConfig, OciError> {
-    let blob_path = digest_to_blob_path(image_dir, config_digest);
+    let blob_path = digest_to_blob_path(image_dir, config_digest)?;
 
     let file = File::open(&blob_path).map_err(|e| {
         OciError::MissingBlob(format!("Cannot open config blob {config_digest}: {e}"))
@@ -190,13 +190,37 @@ pub fn parse_config(image_dir: &Utf8Path, config_digest: &str) -> Result<ImageCo
 ///
 /// Digest format: `algorithm:hex`
 /// Blob path: `blobs/algorithm/hex`
-pub fn digest_to_blob_path(image_dir: &Utf8Path, digest: &str) -> camino::Utf8PathBuf {
-    if let Some((algorithm, hex)) = digest.split_once(':') {
-        image_dir.join("blobs").join(algorithm).join(hex)
-    } else {
-        // Fallback for malformed digest
-        image_dir.join("blobs").join("sha256").join(digest)
+///
+/// Validates that the algorithm is alphanumeric (plus `+`, `-`, `.`) per OCI spec
+/// and the hex portion contains only hexadecimal characters, preventing path traversal.
+pub fn digest_to_blob_path(
+    image_dir: &Utf8Path,
+    digest: &str,
+) -> Result<camino::Utf8PathBuf, OciError> {
+    let (algorithm, hex) = digest
+        .split_once(':')
+        .ok_or_else(|| OciError::PathTraversal(format!("Invalid digest format: {digest}")))?;
+
+    // OCI digest algorithm: [a-z][a-z0-9]*([+.-_][a-z][a-z0-9]*)*
+    // We accept alphanumeric plus `+`, `-`, `.`, `_` which covers all valid algorithms.
+    if algorithm.is_empty()
+        || !algorithm
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'+' || b == b'-' || b == b'.' || b == b'_')
+    {
+        return Err(OciError::PathTraversal(format!(
+            "Invalid digest algorithm: {algorithm}"
+        )));
     }
+
+    // Hex portion: only hexadecimal characters
+    if hex.is_empty() || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err(OciError::PathTraversal(format!(
+            "Invalid digest hex: {hex}"
+        )));
+    }
+
+    Ok(image_dir.join("blobs").join(algorithm).join(hex))
 }
 
 /// Full parsed OCI image information.
@@ -260,5 +284,75 @@ pub fn detect_layer_media_type(
             Ok(super::LayerCompression::None)
         },
         other => Err(OciError::UnsupportedMediaType(format!("{other:?}"))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use camino::Utf8Path;
+
+    #[test]
+    fn digest_valid_sha256() {
+        let dir = Utf8Path::new("/oci");
+        let result = digest_to_blob_path(dir, "sha256:abcdef0123456789").unwrap();
+        assert_eq!(result, Utf8Path::new("/oci/blobs/sha256/abcdef0123456789"));
+    }
+
+    #[test]
+    fn digest_valid_sha512() {
+        let dir = Utf8Path::new("/oci");
+        let result = digest_to_blob_path(dir, "sha512:abcdef0123456789").unwrap();
+        assert_eq!(result, Utf8Path::new("/oci/blobs/sha512/abcdef0123456789"));
+    }
+
+    #[test]
+    fn digest_rejects_traversal_in_algorithm() {
+        let dir = Utf8Path::new("/oci");
+        assert!(digest_to_blob_path(dir, "../etc:passwd").is_err());
+    }
+
+    #[test]
+    fn digest_rejects_traversal_in_hex() {
+        let dir = Utf8Path::new("/oci");
+        assert!(digest_to_blob_path(dir, "sha256:../../etc/passwd").is_err());
+    }
+
+    #[test]
+    fn digest_rejects_slash_in_algorithm() {
+        let dir = Utf8Path::new("/oci");
+        assert!(digest_to_blob_path(dir, "sha256/../../blobs:abc").is_err());
+    }
+
+    #[test]
+    fn digest_rejects_no_colon() {
+        let dir = Utf8Path::new("/oci");
+        assert!(digest_to_blob_path(dir, "sha256abcdef").is_err());
+    }
+
+    #[test]
+    fn digest_rejects_empty_algorithm() {
+        let dir = Utf8Path::new("/oci");
+        assert!(digest_to_blob_path(dir, ":abcdef").is_err());
+    }
+
+    #[test]
+    fn digest_rejects_empty_hex() {
+        let dir = Utf8Path::new("/oci");
+        assert!(digest_to_blob_path(dir, "sha256:").is_err());
+    }
+
+    #[test]
+    fn digest_rejects_non_hex_chars() {
+        let dir = Utf8Path::new("/oci");
+        assert!(digest_to_blob_path(dir, "sha256:xyz123").is_err());
+    }
+
+    #[test]
+    fn digest_algorithm_with_special_chars() {
+        let dir = Utf8Path::new("/oci");
+        // OCI spec allows +, -, . in algorithm names (e.g., sha256+b64)
+        let result = digest_to_blob_path(dir, "sha256+b64:abcdef").unwrap();
+        assert_eq!(result, Utf8Path::new("/oci/blobs/sha256+b64/abcdef"));
     }
 }

@@ -522,9 +522,7 @@ async fn test_channel_ping_pong() {
 #[tokio::test]
 async fn test_channel_lifecycle_with_full_spec() {
     let server = TestServer::new().await;
-    let admin = server
-        .signup("Admin", "ws-fullspec@example.com")
-        .await;
+    let admin = server.signup("Admin", "ws-fullspec@example.com").await;
     let org = server.create_org(&admin, "Ws fullspec").await;
     let project = server
         .create_project(&admin, &org, "Ws fullspec proj")

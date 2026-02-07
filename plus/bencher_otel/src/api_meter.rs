@@ -474,7 +474,9 @@ impl ApiHistogram {
 
     fn description(&self) -> &str {
         match self {
-            Self::JobQueueDuration(_) => "Time a job spent waiting in the queue before being claimed",
+            Self::JobQueueDuration(_) => {
+                "Time a job spent waiting in the queue before being claimed"
+            },
         }
     }
 

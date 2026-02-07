@@ -47,8 +47,6 @@ pub use organization::{
     usage::JsonUsage,
 };
 pub use pagination::{JsonDirection, JsonPagination};
-#[cfg(feature = "plus")]
-pub use project::job::{JobStatus, JobUuid, JsonJobSpec};
 pub use project::{
     JsonNewProject, JsonProject, JsonProjects, ProjectResourceId, ProjectSlug, ProjectUuid,
     alert::{AlertUuid, JsonAlert, JsonAlerts},
@@ -97,7 +95,6 @@ pub use system::{
 #[cfg(feature = "plus")]
 pub use system::{
     auth::{JsonOAuth, JsonOAuthUrl, JsonOAuthUser},
-    runner::RunnerUuid,
     server::{
         BooleanParam, JsonServer, JsonServerStats, SelfHostedStartup, SelfHostedStats, ServerUuid,
     },

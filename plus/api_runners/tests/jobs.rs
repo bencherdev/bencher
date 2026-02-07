@@ -672,7 +672,10 @@ mod job_spec {
         let claimed_job = claimed_job.expect("Expected to claim a job");
 
         // Verify spec is present and has correct values
-        let spec: &JsonJobSpec = claimed_job.spec.as_ref().expect("Expected spec to be present");
+        let spec: &JsonJobSpec = claimed_job
+            .spec
+            .as_ref()
+            .expect("Expected spec to be present");
         assert_eq!(spec.project, project.uuid);
         assert_eq!(
             spec.digest.as_ref(),
@@ -720,7 +723,10 @@ mod job_spec {
         let claimed_job = claimed_job.expect("Expected to claim a job");
         assert_eq!(claimed_job.uuid, job_uuid);
 
-        let spec = claimed_job.spec.as_ref().expect("Expected spec to be present");
+        let spec = claimed_job
+            .spec
+            .as_ref()
+            .expect("Expected spec to be present");
 
         // Verify optional fields
         let entrypoint = spec.entrypoint.as_ref().expect("Expected entrypoint");
@@ -799,9 +805,7 @@ mod job_spec {
         let project_slug: &str = project.slug.as_ref();
         let resp = server
             .client
-            .get(server.api_url(&format!(
-                "/v0/projects/{project_slug}/jobs/{job_uuid}"
-            )))
+            .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
             .header("Authorization", server.bearer(&admin.token))
             .send()
             .await
@@ -895,7 +899,8 @@ mod priority_scheduling {
         let report_id = create_test_report(&server, project_id);
 
         // Insert jobs with different priorities (lower priority first to test ordering)
-        let low_job = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 50);
+        let low_job =
+            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 50);
         let high_job =
             insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 300);
         let medium_job =
@@ -915,7 +920,10 @@ mod priority_scheduling {
         assert_eq!(resp.status(), StatusCode::OK);
         let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
-        assert_eq!(claimed.uuid, high_job, "Expected high priority job to be claimed first");
+        assert_eq!(
+            claimed.uuid, high_job,
+            "Expected high priority job to be claimed first"
+        );
 
         // Mark as completed so we can claim the next one
         let body = serde_json::json!({ "status": "running" });
@@ -988,7 +996,10 @@ mod priority_scheduling {
 
         let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
-        assert_eq!(claimed.uuid, low_job, "Expected low priority job to be claimed last");
+        assert_eq!(
+            claimed.uuid, low_job,
+            "Expected low priority job to be claimed last"
+        );
     }
 
     // Test Free tier concurrency limit (1 per organization)
@@ -1443,7 +1454,10 @@ mod priority_scheduling {
 
         let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
-        assert_eq!(claimed.uuid, first_job, "Expected first created job to be claimed first");
+        assert_eq!(
+            claimed.uuid, first_job,
+            "Expected first created job to be claimed first"
+        );
 
         // Complete the job
         let body = serde_json::json!({ "status": "running" });
@@ -1478,7 +1492,10 @@ mod priority_scheduling {
 
         let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
-        assert_eq!(claimed.uuid, second_job, "Expected second created job to be claimed second");
+        assert_eq!(
+            claimed.uuid, second_job,
+            "Expected second created job to be claimed second"
+        );
 
         // Complete second job
         let body = serde_json::json!({ "status": "running" });
@@ -1513,7 +1530,10 @@ mod priority_scheduling {
 
         let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
-        assert_eq!(claimed.uuid, third_job, "Expected third created job to be claimed third");
+        assert_eq!(
+            claimed.uuid, third_job,
+            "Expected third created job to be claimed third"
+        );
     }
 
     // Test Free tier with different organizations can run concurrently
@@ -1605,9 +1625,7 @@ mod priority_scheduling {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "unblock1@example.com").await;
         let org = server.create_org(&admin, "Unblock Org").await;
-        let project = server
-            .create_project(&admin, &org, "Unblock Project")
-            .await;
+        let project = server.create_project(&admin, &org, "Unblock Project").await;
 
         let runner = create_runner(&server, &admin.token, "Unblock Runner").await;
         let runner_token: &str = runner.token.as_ref();
@@ -1659,7 +1677,10 @@ mod priority_scheduling {
             .expect("Request failed");
 
         let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
-        assert!(claimed.is_none(), "Second job should be blocked while first is running");
+        assert!(
+            claimed.is_none(),
+            "Second job should be blocked while first is running"
+        );
 
         // Complete the first job
         let body = serde_json::json!({ "status": "completed", "exit_code": 0 });
@@ -1690,7 +1711,11 @@ mod priority_scheduling {
         let second_claimed = claimed.expect("Second job should be claimable after first completes");
 
         // Verify we got the second job (not the completed first one)
-        let expected_second = if first_claimed.uuid == job1 { job2 } else { job1 };
+        let expected_second = if first_claimed.uuid == job1 {
+            job2
+        } else {
+            job1
+        };
         assert_eq!(
             second_claimed.uuid, expected_second,
             "Expected second job to be claimed after first completes"
@@ -1834,8 +1859,14 @@ mod priority_scheduling {
         let org2_id = get_organization_id(&server, project2_id);
         let report2_id = create_test_report(&server, project2_id);
 
-        let free_unblocked =
-            insert_test_job_full(&server, report2_id, project2.uuid, org2_id, "10.0.0.99", 100);
+        let free_unblocked = insert_test_job_full(
+            &server,
+            report2_id,
+            project2.uuid,
+            org2_id,
+            "10.0.0.99",
+            100,
+        );
 
         // Try to claim - should get the Free tier job from different org
         let body = serde_json::json!({ "poll_timeout": 1 });

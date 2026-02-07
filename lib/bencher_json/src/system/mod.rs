@@ -3,8 +3,6 @@ pub mod backup;
 pub mod config;
 pub mod payment;
 pub mod restart;
-#[cfg(feature = "plus")]
-pub mod runner;
 pub mod server;
 pub mod spec;
 pub mod version;

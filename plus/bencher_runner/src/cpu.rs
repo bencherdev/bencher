@@ -85,13 +85,10 @@ impl CpuLayout {
             }
         }
 
-        // Fallback to libc
-        // SAFETY: sysconf is safe to call with _SC_NPROCESSORS_ONLN
-        let result = unsafe { libc::sysconf(libc::_SC_NPROCESSORS_ONLN) };
-        if result > 0 {
-            result as usize
-        } else {
-            1 // Ultimate fallback
+        // Fallback to nix sysconf
+        match nix::unistd::sysconf(nix::unistd::SysconfVar::_SC_NPROCESSORS_ONLN) {
+            Ok(Some(n)) if n > 0 => n as usize,
+            _ => 1, // Ultimate fallback
         }
     }
 
@@ -202,33 +199,23 @@ fn format_cpuset(cpus: &[usize]) -> String {
 
 /// Pin the current thread to the specified CPU cores.
 ///
-/// Uses `sched_setaffinity` on Linux.
+/// Uses `sched_setaffinity` on Linux via the `nix` crate.
 #[cfg(target_os = "linux")]
 pub fn pin_current_thread(cpus: &[usize]) -> io::Result<()> {
+    use nix::sched::{CpuSet, sched_setaffinity};
+    use nix::unistd::Pid;
+
     if cpus.is_empty() {
         return Ok(());
     }
 
-    // SAFETY: We're creating a zeroed cpu_set_t and then setting bits for valid CPU IDs.
-    // The libc functions are safe to call with valid arguments.
-    unsafe {
-        let mut set: libc::cpu_set_t = std::mem::zeroed();
-        libc::CPU_ZERO(&mut set);
-
-        for &cpu in cpus {
-            if cpu < libc::CPU_SETSIZE as usize {
-                libc::CPU_SET(cpu, &mut set);
-            }
-        }
-
-        let result = libc::sched_setaffinity(0, std::mem::size_of::<libc::cpu_set_t>(), &set);
-
-        if result == 0 {
-            Ok(())
-        } else {
-            Err(io::Error::last_os_error())
-        }
+    let mut set = CpuSet::new();
+    for &cpu in cpus {
+        set.set(cpu)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
     }
+
+    sched_setaffinity(Pid::from_raw(0), &set).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
 
 /// Pin the current thread to the specified CPU cores.

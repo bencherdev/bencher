@@ -28,6 +28,7 @@
     clippy::expect_used,
     clippy::panic,
     clippy::print_stderr,
+    clippy::unreachable,
     clippy::unwrap_used
 )]
 
@@ -35,6 +36,8 @@ use std::env;
 use std::fs;
 use std::io::Read as _;
 use std::path::{Path, PathBuf};
+
+use sha2::{Digest as _, Sha256};
 
 /// Default Firecracker version to download.
 const DEFAULT_FIRECRACKER_VERSION: &str = "v1.12.0";
@@ -44,6 +47,24 @@ const DEFAULT_FIRECRACKER_VERSION: &str = "v1.12.0";
 /// Uses versioned CI build artifacts from the Firecracker project.
 const DEFAULT_KERNEL_URL_X86_64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/x86_64/vmlinux-5.10.245";
 const DEFAULT_KERNEL_URL_AARCH64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/aarch64/vmlinux-5.10.245";
+
+/// Expected SHA256 hashes for Firecracker `.tgz` archives.
+///
+/// These MUST be updated whenever `DEFAULT_FIRECRACKER_VERSION` changes.
+/// Source: `firecracker-{version}-{arch}.tgz.sha256.txt` from the GitHub release.
+const FIRECRACKER_TGZ_SHA256_X86_64: &str =
+    "392b5f7e4bf12871d1e8377a60ed3b384a46bc2f7d3771caf202aa7a63e32676";
+const FIRECRACKER_TGZ_SHA256_AARCH64: &str =
+    "55f3e76c6a16128e91aea1d2ed3d436f5d4e2e9547bfdd226ce570a89cd48921";
+
+/// Expected SHA256 hashes for vmlinux kernel binaries.
+///
+/// These MUST be updated whenever `DEFAULT_KERNEL_URL_*` changes.
+/// Compute with: `curl -sL <url> | sha256sum`
+const KERNEL_SHA256_X86_64: &str =
+    "02cd0f40652b023614b87638de2e5cc53655b88ba82e57eab642adc5a9384c30";
+const KERNEL_SHA256_AARCH64: &str =
+    "cd752664f99ffa2e460d0fd55846b2394f06a6fce28c7d1d497c8815844a57ff";
 
 fn main() {
     // Only bundle on Linux where we actually use the binaries
@@ -197,8 +218,14 @@ fn find_or_download_firecracker(out_dir: &Path) -> Option<PathBuf> {
         "release-{DEFAULT_FIRECRACKER_VERSION}-{arch}/firecracker-{DEFAULT_FIRECRACKER_VERSION}-{arch}",
     );
 
+    let expected_hash = match arch {
+        "x86_64" => FIRECRACKER_TGZ_SHA256_X86_64,
+        "aarch64" => FIRECRACKER_TGZ_SHA256_AARCH64,
+        _ => unreachable!(),
+    };
+
     eprintln!("Downloading firecracker from: {url}");
-    match download_and_extract_tgz(&url, &entry_name, &dest) {
+    match download_and_extract_tgz(&url, &entry_name, &dest, Some(expected_hash)) {
         Ok(()) => {
             eprintln!("Extracted firecracker to: {}", dest.display());
             Some(dest)
@@ -245,8 +272,14 @@ fn find_or_download_kernel(out_dir: &Path) -> Option<PathBuf> {
         return Some(dest);
     }
 
+    let expected_hash = match target_arch.as_str() {
+        "x86_64" => KERNEL_SHA256_X86_64,
+        "aarch64" => KERNEL_SHA256_AARCH64,
+        _ => unreachable!(),
+    };
+
     eprintln!("Downloading vmlinux kernel from: {kernel_url}");
-    match download_file(kernel_url, &dest) {
+    match download_file(kernel_url, &dest, Some(expected_hash)) {
         Ok(()) => {
             eprintln!("Downloaded vmlinux to: {}", dest.display());
             Some(dest)
@@ -259,7 +292,9 @@ fn find_or_download_kernel(out_dir: &Path) -> Option<PathBuf> {
 }
 
 /// Download a file from `url` to `dest` using ureq (sync HTTP).
-fn download_file(url: &str, dest: &Path) -> Result<(), String> {
+///
+/// If `expected_sha256` is provided, the downloaded content is verified before writing.
+fn download_file(url: &str, dest: &Path, expected_sha256: Option<&str>) -> Result<(), String> {
     let response = ureq::get(url)
         .call()
         .map_err(|e| format!("HTTP request failed: {e}"))?;
@@ -269,6 +304,17 @@ fn download_file(url: &str, dest: &Path) -> Result<(), String> {
     reader
         .read_to_end(&mut bytes)
         .map_err(|e| format!("Failed to read response body: {e}"))?;
+
+    if let Some(expected) = expected_sha256 {
+        let hash = Sha256::digest(&bytes);
+        let actual = format!("{hash:x}");
+        if actual != expected {
+            return Err(format!(
+                "SHA256 mismatch: expected {expected}, got {actual}"
+            ));
+        }
+        eprintln!("SHA256 verified: {expected}");
+    }
 
     fs::write(dest, &bytes).map_err(|e| format!("Failed to write to {}: {e}", dest.display()))?;
 
@@ -282,13 +328,38 @@ fn download_file(url: &str, dest: &Path) -> Result<(), String> {
 /// * `url` - URL of the `.tgz` archive
 /// * `entry_name` - Path of the entry to extract (e.g., `release-v1.12.0-x86_64/firecracker-v1.12.0-x86_64`)
 /// * `dest` - Destination path for the extracted file
-fn download_and_extract_tgz(url: &str, entry_name: &str, dest: &Path) -> Result<(), String> {
+/// * `expected_sha256` - If `Some`, verify the archive's SHA256 before extracting
+fn download_and_extract_tgz(
+    url: &str,
+    entry_name: &str,
+    dest: &Path,
+    expected_sha256: Option<&str>,
+) -> Result<(), String> {
     let response = ureq::get(url)
         .call()
         .map_err(|e| format!("HTTP request failed: {e}"))?;
 
-    let reader = response.into_body().into_reader();
-    let gz = flate2::read::GzDecoder::new(reader);
+    // Read entire archive into memory for hash verification
+    let mut archive_bytes = Vec::new();
+    response
+        .into_body()
+        .into_reader()
+        .read_to_end(&mut archive_bytes)
+        .map_err(|e| format!("Failed to read response body: {e}"))?;
+
+    // Verify SHA256 if expected hash is provided
+    if let Some(expected) = expected_sha256 {
+        let hash = Sha256::digest(&archive_bytes);
+        let actual = format!("{hash:x}");
+        if actual != expected {
+            return Err(format!(
+                "SHA256 mismatch for archive: expected {expected}, got {actual}"
+            ));
+        }
+        eprintln!("SHA256 verified: {expected}");
+    }
+
+    let gz = flate2::read::GzDecoder::new(archive_bytes.as_slice());
     let mut archive = tar::Archive::new(gz);
 
     for entry in archive

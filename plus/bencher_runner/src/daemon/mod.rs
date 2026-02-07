@@ -155,11 +155,16 @@ impl Daemon {
 /// async-signal-safe, so this is safe to call from a signal handler context.
 #[cfg(target_os = "linux")]
 fn install_signal_handlers() {
+    use nix::sys::signal::{SaFlags, SigAction, SigHandler, SigSet, Signal, sigaction};
+
+    let handler = SigHandler::Handler(signal_handler);
+    let action = SigAction::new(handler, SaFlags::empty(), SigSet::empty());
+
     // SAFETY: `signal_handler` only performs `AtomicBool::store` with
     // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
     unsafe {
-        libc::signal(libc::SIGINT, signal_handler as libc::sighandler_t);
-        libc::signal(libc::SIGTERM, signal_handler as libc::sighandler_t);
+        let _ = sigaction(Signal::SIGINT, &action);
+        let _ = sigaction(Signal::SIGTERM, &action);
     }
 }
 
