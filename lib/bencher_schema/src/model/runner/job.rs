@@ -214,7 +214,7 @@ pub fn spawn_heartbeat_timeout(
             // If the runner reconnected and sent a recent heartbeat, don't fail the job
             if let Some(last_heartbeat) = job.last_heartbeat {
                 let now = DateTime::now();
-                let elapsed = now.timestamp() - last_heartbeat.timestamp();
+                let elapsed = (now.timestamp() - last_heartbeat.timestamp()).max(0);
                 if elapsed < i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) {
                     // Heartbeat is recent, runner reconnected — schedule another timeout
                     let remaining = std::time::Duration::from_secs(

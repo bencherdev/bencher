@@ -3,6 +3,7 @@
 
 use bencher_api_tests::TestServer;
 use bencher_json::JsonRunnerToken;
+use futures_concurrency::future::Join as _;
 use http::StatusCode;
 
 // POST /v0/runners/{runner}/token - admin can rotate token
@@ -159,7 +160,7 @@ async fn test_concurrent_token_rotation() {
     let bearer = server.bearer(&admin.token);
     let client = &server.client;
 
-    let (resp1, resp2) = tokio::join!(
+    let (resp1, resp2) = (
         async {
             client
                 .post(&url)
@@ -176,7 +177,9 @@ async fn test_concurrent_token_rotation() {
                 .await
                 .expect("Request 2 failed")
         },
-    );
+    )
+        .join()
+        .await;
 
     assert_eq!(resp1.status(), StatusCode::CREATED);
     assert_eq!(resp2.status(), StatusCode::CREATED);

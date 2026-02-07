@@ -153,6 +153,10 @@ pub async fn runner_job_channel(
 }
 
 /// Handle WebSocket messages for a job.
+///
+/// The heartbeat timeout only resets on valid protocol messages from the runner
+/// (Running, Heartbeat, Completed, Failed, Cancelled). Ping/Pong frames, invalid
+/// JSON, and other non-protocol messages do NOT reset the timeout.
 async fn handle_websocket(
     log: &slog::Logger,
     context: &ApiContext,
@@ -161,9 +165,14 @@ async fn handle_websocket(
     heartbeat_timeout: Duration,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (mut tx, mut rx) = ws_stream.split();
+    let mut last_heartbeat = tokio::time::Instant::now();
 
     loop {
-        let msg_result = match tokio::time::timeout(heartbeat_timeout, rx.next()).await {
+        let remaining = heartbeat_timeout
+            .checked_sub(last_heartbeat.elapsed())
+            .unwrap_or(Duration::ZERO);
+
+        let msg_result = match tokio::time::timeout(remaining, rx.next()).await {
             Ok(Some(msg_result)) => msg_result,
             Ok(None) => {
                 // Stream ended (client disconnected cleanly)
@@ -199,11 +208,15 @@ async fn handle_websocket(
                     Ok(msg) => msg,
                     Err(e) => {
                         slog::warn!(log, "Invalid message"; "error" => %e, "text" => text.to_string());
+                        // Do NOT reset heartbeat for invalid JSON
                         continue;
                     },
                 };
 
                 let response = handle_runner_message(log, context, job_id, runner_msg).await?;
+
+                // Reset heartbeat only on valid protocol messages
+                last_heartbeat = tokio::time::Instant::now();
 
                 let response_text = serde_json::to_string(&response)?;
                 tx.send(Message::Text(response_text.into())).await?;
@@ -218,10 +231,12 @@ async fn handle_websocket(
                 break;
             },
             Message::Ping(data) => {
+                // Respond to Ping but do NOT reset heartbeat timeout
                 tx.send(Message::Pong(data)).await?;
             },
             Message::Binary(_) | Message::Pong(_) | Message::Frame(_) => {
                 // Ignore binary messages, pong responses, and raw frames
+                // Do NOT reset heartbeat timeout
             },
         }
     }
