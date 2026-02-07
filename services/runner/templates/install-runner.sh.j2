@@ -13,7 +13,7 @@ if [ "$KSH_VERSION" = 'Version JM 93t+ 2010-03-05' ]; then
     exit 1
 fi
 
-set -u
+set -uo pipefail
 
 APP_NAME=bencher-runner
 APP_VERSION="${BENCHER_RUNNER_VERSION:-{{ app_version }}}"
@@ -446,7 +446,7 @@ downloader() {
     else _dld='curl or wget'
     fi
 
-    if [ "$1" = --check
+    if [ "$1" = --check ]
     then need_cmd "$_dld"
     elif [ "$_dld" = curl ]
     then curl -sSfL "$1" -o "$2"

@@ -191,8 +191,12 @@ async fn try_claim_job(
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
 
             // Record queue duration (time from creation to claim)
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "Queue duration in seconds doesn't need sub-second precision"
+            )]
             let queue_duration_secs =
-                f64::from(now.timestamp() - query_job.created.timestamp()).max(0.0);
+                ((now.timestamp() - query_job.created.timestamp()) as f64).max(0.0);
             let tier = bencher_otel::PriorityTier::from_priority(query_job.priority);
             bencher_otel::ApiMeter::record(
                 bencher_otel::ApiHistogram::JobQueueDuration(tier),

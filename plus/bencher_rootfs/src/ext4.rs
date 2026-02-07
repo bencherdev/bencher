@@ -94,31 +94,10 @@ fn create_sparse_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError>
     Ok(())
 }
 
-/// Options for ext4 creation.
-#[derive(Debug, Clone)]
-pub struct Ext4Options {
-    /// Size of the image in MiB.
-    pub size_mib: u64,
-}
-
-impl Default for Ext4Options {
-    fn default() -> Self {
-        Self {
-            size_mib: DEFAULT_IMAGE_SIZE_MIB,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::fs;
-
-    #[test]
-    fn default_options() {
-        let options = Ext4Options::default();
-        assert_eq!(options.size_mib, DEFAULT_IMAGE_SIZE_MIB);
-    }
 
     #[test]
     fn sparse_file_creation() {

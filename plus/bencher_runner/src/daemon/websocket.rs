@@ -152,8 +152,9 @@ impl JobChannel {
 fn get_tcp_stream(stream: &MaybeTlsStream<TcpStream>) -> Result<&TcpStream, WebSocketError> {
     match stream {
         MaybeTlsStream::Plain(s) => Ok(s),
+        MaybeTlsStream::Rustls(s) => Ok(s.get_ref()),
         _ => Err(WebSocketError::Connection(
-            "TLS streams are not supported for non-blocking operations".to_owned(),
+            "Unsupported TLS stream type".to_owned(),
         )),
     }
 }

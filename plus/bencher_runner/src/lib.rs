@@ -38,5 +38,5 @@ pub mod units;
 pub use config::Config;
 pub use error::RunnerError;
 pub use jail::ResourceLimits;
-pub use run::{RunArgs, execute, resolve_oci_image, run, run_with_args};
+pub use run::{RunArgs, RunOutput, execute, resolve_oci_image, run, run_with_args};
 pub use tuning::TuningConfig;
