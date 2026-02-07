@@ -198,9 +198,9 @@ pub async fn validate_push_access(
     let repository_str = repository.to_string();
 
     // Build authentication context (optional for unclaimed projects)
-    let token_result = extract_oci_bearer_token(rqctx);
+    let token = extract_oci_bearer_token(rqctx).ok();
     let (public_user, claims) =
-        build_public_user(log, context, rqctx, &token_result, &repository_str).await?;
+        build_public_user(log, context, rqctx, token, &repository_str).await?;
 
     // Apply rate limiting based on authentication status
     #[cfg(feature = "plus")]
@@ -437,12 +437,12 @@ async fn build_public_user(
     log: &Logger,
     context: &ApiContext,
     rqctx: &RequestContext<ApiContext>,
-    token_result: &Result<Jwt, HttpError>,
+    token: Option<Jwt>,
     repository_str: &str,
 ) -> Result<(PublicUser, Option<OciClaims>), HttpError> {
-    if let Ok(token) = token_result {
+    if let Some(token) = token {
         // Token was provided -- it MUST be valid; don't silently downgrade to public
-        let claims = validate_oci_access(context, token, repository_str, &OciAction::Push)
+        let claims = validate_oci_access(context, &token, repository_str, &OciAction::Push)
             .map_err(|e| {
                 slog::warn!(log, "OCI push with invalid token"; "error" => %e);
                 e

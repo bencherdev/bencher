@@ -93,10 +93,10 @@ pub async fn oci_manifest_exists(
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Determine content type from typed manifest
-    let content_type = Manifest::from_bytes(&manifest).map_or_else(
-        |_| "application/vnd.oci.image.manifest.v1+json".to_owned(),
-        |m| m.media_type().to_owned(),
-    );
+    let parsed = Manifest::from_bytes(&manifest).map_err(|e| {
+        HttpError::for_internal_error(format!("Failed to parse stored manifest: {e}"))
+    })?;
+    let content_type = parsed.media_type().to_owned();
 
     // Build response with OCI-compliant headers (no body for HEAD)
     let response = oci_cors_headers(
@@ -154,10 +154,10 @@ pub async fn oci_manifest_get(
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciManifestPull);
 
     // Determine content type from typed manifest
-    let content_type = Manifest::from_bytes(&manifest).map_or_else(
-        |_| "application/vnd.oci.image.manifest.v1+json".to_owned(),
-        |m| m.media_type().to_owned(),
-    );
+    let parsed = Manifest::from_bytes(&manifest).map_err(|e| {
+        HttpError::for_internal_error(format!("Failed to parse stored manifest: {e}"))
+    })?;
+    let content_type = parsed.media_type().to_owned();
 
     // Build response with OCI-compliant headers
     let response = oci_cors_headers(

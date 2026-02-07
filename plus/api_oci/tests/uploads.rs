@@ -593,8 +593,8 @@ async fn test_upload_malformed_content_range() {
         .await
         .expect("Request failed");
 
-    // Malformed Content-Range without a '-' separator should be ignored (no range validation)
-    // and the upload should proceed normally
+    // Content-Range with completely unparseable values on both sides should be ignored
+    // (no range validation) and the upload should proceed normally
     assert_eq!(
         resp.status(),
         StatusCode::ACCEPTED,
@@ -673,4 +673,108 @@ async fn test_upload_session_options() {
 
     assert_eq!(resp.status(), StatusCode::OK);
     assert!(resp.headers().contains_key("access-control-allow-origin"));
+}
+
+// PATCH with Content-Range where only end is unparseable (e.g., "0-abc") should return 416
+#[tokio::test]
+async fn test_upload_partial_content_range_bad_end() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("BadEnd User", "uploadbadend@example.com")
+        .await;
+    let org = server.create_org(&user, "BadEnd Org").await;
+    let project = server.create_project(&user, &org, "BadEnd Project").await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload failed");
+
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header");
+    let session_id = extract_session_id(location).expect("Invalid location format");
+
+    // Upload with partially unparseable Content-Range (valid start, invalid end)
+    let chunk = b"some data";
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .header("Content-Range", "0-abc")
+        .body(chunk.to_vec())
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::RANGE_NOT_SATISFIABLE,
+        "Partially unparseable Content-Range (bad end) should return 416"
+    );
+}
+
+// PATCH with Content-Range where only start is unparseable (e.g., "abc-10") should return 416
+#[tokio::test]
+async fn test_upload_partial_content_range_bad_start() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("BadStart User", "uploadbadstart@example.com")
+        .await;
+    let org = server.create_org(&user, "BadStart Org").await;
+    let project = server.create_project(&user, &org, "BadStart Project").await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload failed");
+
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header");
+    let session_id = extract_session_id(location).expect("Invalid location format");
+
+    // Upload with partially unparseable Content-Range (invalid start, valid end)
+    let chunk = b"some data";
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .header("Content-Range", "abc-10")
+        .body(chunk.to_vec())
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::RANGE_NOT_SATISFIABLE,
+        "Partially unparseable Content-Range (bad start) should return 416"
+    );
 }

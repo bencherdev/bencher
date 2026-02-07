@@ -203,7 +203,7 @@ impl UploadState {
 }
 
 /// OCI Storage implementation using S3 with multipart uploads
-pub(crate) struct OciS3Storage {
+pub struct OciS3Storage {
     client: Client,
     config: OciStorageConfig,
     /// Upload timeout in seconds for stale upload cleanup
@@ -213,10 +213,6 @@ pub(crate) struct OciS3Storage {
 }
 
 /// OCI Storage backend - supports S3 or local filesystem
-#[expect(
-    private_interfaces,
-    reason = "Users interact via methods, not variants"
-)]
 pub enum OciStorage {
     /// S3-based storage (recommended for production)
     S3(OciS3Storage),

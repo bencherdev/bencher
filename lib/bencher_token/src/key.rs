@@ -325,7 +325,11 @@ mod tests {
     fn jwt_oci_empty_actions() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
-        assert!(secret_key.new_oci(EMAIL.clone(), TTL, None, vec![]).is_err());
+        assert!(
+            secret_key
+                .new_oci(EMAIL.clone(), TTL, None, vec![])
+                .is_err()
+        );
     }
 
     #[test]

@@ -108,7 +108,7 @@ struct UploadState {
 }
 
 /// OCI Storage implementation using local filesystem
-pub(crate) struct OciLocalStorage {
+pub struct OciLocalStorage {
     /// Base directory for OCI storage (e.g., `data/oci`)
     base_dir: PathBuf,
     /// Upload timeout in seconds for stale upload cleanup

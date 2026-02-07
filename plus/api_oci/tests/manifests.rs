@@ -745,6 +745,80 @@ async fn test_manifest_tag_overwrite() {
     );
 }
 
+// HEAD and GET should return the correct content-type header matching the manifest media type
+#[tokio::test]
+async fn test_manifest_content_type_round_trip() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("ContentType User", "manifestcontenttype@example.com")
+        .await;
+    let org = server.create_org(&user, "ContentType Org").await;
+    let project = server
+        .create_project(&user, &org, "ContentType Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload a manifest
+    let config_digest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    let layer_digest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    let manifest = create_test_manifest(config_digest, layer_digest);
+
+    let upload_resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/ct-test", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Upload failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    let pull_token = server.oci_pull_token(&user, &project);
+
+    // HEAD should return the correct content-type
+    let head_resp = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/manifests/ct-test", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("HEAD request failed");
+    assert_eq!(head_resp.status(), StatusCode::OK);
+    let head_ct = head_resp
+        .headers()
+        .get("content-type")
+        .expect("Missing content-type on HEAD")
+        .to_str()
+        .expect("Invalid content-type header");
+    assert_eq!(
+        head_ct, "application/vnd.oci.image.manifest.v1+json",
+        "HEAD content-type should match manifest media type"
+    );
+
+    // GET should return the correct content-type
+    let get_resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/manifests/ct-test", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("GET request failed");
+    assert_eq!(get_resp.status(), StatusCode::OK);
+    let get_ct = get_resp
+        .headers()
+        .get("content-type")
+        .expect("Missing content-type on GET")
+        .to_str()
+        .expect("Invalid content-type header");
+    assert_eq!(
+        get_ct, "application/vnd.oci.image.manifest.v1+json",
+        "GET content-type should match manifest media type"
+    );
+}
+
 // GET /v2/{name}/manifests/{digest} - Non-existent digest should return 404
 #[tokio::test]
 async fn test_manifest_get_nonexistent_digest() {
