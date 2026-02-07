@@ -17,6 +17,11 @@ pub async fn create_runner(server: &TestServer, admin_token: &str, name: &str) -
         .send()
         .await
         .expect("Request failed");
+    assert_eq!(
+        resp.status(),
+        http::StatusCode::CREATED,
+        "Failed to create runner"
+    );
     resp.json().await.expect("Failed to parse response")
 }
 

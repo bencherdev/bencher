@@ -48,10 +48,14 @@ CREATE TABLE job (
 CREATE INDEX index_job_pending ON job(status, priority DESC, created ASC)
 WHERE status = 0;
 -- Indexes for concurrency limit checks (used in claim subqueries)
-CREATE INDEX index_job_org_running ON job(organization_id)
-WHERE status = 2;
-CREATE INDEX index_job_source_ip_running ON job(source_ip)
-WHERE status = 2;
+-- Cover both Claimed (1) and Running (2) statuses for in-flight job checks
+CREATE INDEX index_job_org_in_flight ON job(organization_id)
+WHERE status = 1 OR status = 2;
+CREATE INDEX index_job_source_ip_in_flight ON job(source_ip)
+WHERE status = 1 OR status = 2;
+-- Index for in-flight job recovery queries
+CREATE INDEX index_job_in_flight ON job(status)
+WHERE status = 1 OR status = 2;
 CREATE INDEX index_job_runner_id ON job(runner_id)
 WHERE runner_id IS NOT NULL;
 CREATE INDEX index_runner_token_hash ON runner(token_hash);

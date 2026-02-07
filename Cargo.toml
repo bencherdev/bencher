@@ -88,6 +88,7 @@ dotenvy = "0.15"
 email_address = "0.2"
 fs-err = "3.2"
 futures = "0.3"
+futures-concurrency = "7"
 futures-util = "0.3"
 gix = { version = "0.75", default-features = false }
 gix-hash = "0.20"

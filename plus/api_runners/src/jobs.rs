@@ -135,21 +135,31 @@ async fn try_claim_job(
     let tier_unlimited = priority.ge(PRIORITY_UNLIMITED);
 
     // Tier 2: Free (priority 100-199) - one concurrent job per organization
-    // Block if the same org already has a Running job
+    // Block if the same org already has a Claimed or Running job
     let tier_free_eligible = priority
         .ge(PRIORITY_FREE)
         .and(priority.lt(PRIORITY_UNLIMITED))
         .and(not(exists(
             job_org
-                .filter(job_org.field(status).eq(JobStatus::Running))
+                .filter(
+                    job_org
+                        .field(status)
+                        .eq(JobStatus::Claimed)
+                        .or(job_org.field(status).eq(JobStatus::Running)),
+                )
                 .filter(job_org.field(organization_id).eq(organization_id)),
         )));
 
     // Tier 3: Unclaimed (priority < 100) - one concurrent job per source IP
-    // Block if the same source_ip already has a Running job
+    // Block if the same source_ip already has a Claimed or Running job
     let tier_unclaimed_eligible = priority.lt(PRIORITY_FREE).and(not(exists(
         job_ip
-            .filter(job_ip.field(status).eq(JobStatus::Running))
+            .filter(
+                job_ip
+                    .field(status)
+                    .eq(JobStatus::Claimed)
+                    .or(job_ip.field(status).eq(JobStatus::Running)),
+            )
             .filter(job_ip.field(source_ip).eq(source_ip)),
     )));
 
@@ -158,12 +168,16 @@ async fn try_claim_job(
         .or(tier_free_eligible)
         .or(tier_unclaimed_eligible);
 
+    // Acquire write lock for the entire read-check-update to prevent TOCTOU races
+    // where concurrent runners could bypass concurrency limits.
+    let mut conn = context.database.connection.lock().await;
+
     // Find the highest-priority eligible pending job
     let pending_job: Option<QueryJob> = schema::job::table
         .filter(status.eq(JobStatus::Pending))
         .filter(eligible)
         .order((priority.desc(), created.asc(), id.asc()))
-        .first(auth_conn!(context))
+        .first(&mut *conn)
         .optional()
         .map_err(resource_not_found_err!(Job))?;
 
@@ -171,7 +185,7 @@ async fn try_claim_job(
         return Ok(None);
     };
 
-    // Atomically claim the job
+    // Claim the job under the same lock
     let now = DateTime::now();
     let update_job = UpdateJob {
         status: Some(JobStatus::Claimed),
@@ -188,8 +202,11 @@ async fn try_claim_job(
             .filter(status.eq(JobStatus::Pending)),
     )
     .set(&update_job)
-    .execute(write_conn!(context))
+    .execute(&mut *conn)
     .map_err(resource_conflict_err!(Job, query_job))?;
+
+    // Release the lock before doing non-DB work
+    drop(conn);
 
     if updated > 0 {
         #[cfg(feature = "otel")]

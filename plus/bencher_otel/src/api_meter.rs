@@ -1,23 +1,18 @@
 use core::fmt;
+use std::sync::LazyLock;
 
 use opentelemetry::metrics::Meter;
 use uuid::Uuid;
 
-pub struct ApiMeter {
-    meter: Meter,
-}
+static METER: LazyLock<Meter> = LazyLock::new(|| opentelemetry::global::meter(ApiMeter::NAME));
+
+pub struct ApiMeter;
 
 impl ApiMeter {
     const NAME: &str = "bencher_api";
 
-    fn new() -> Self {
-        let meter = opentelemetry::global::meter(Self::NAME);
-        ApiMeter { meter }
-    }
-
     pub fn increment(api_counter: ApiCounter) {
-        let counter = Self::new()
-            .meter
+        let counter = METER
             .u64_counter(api_counter.name().to_owned())
             .with_description(api_counter.description().to_owned())
             .build();
@@ -26,8 +21,7 @@ impl ApiMeter {
     }
 
     pub fn record(api_histogram: ApiHistogram, value: f64) {
-        let histogram = Self::new()
-            .meter
+        let histogram = METER
             .f64_histogram(api_histogram.name().to_owned())
             .with_description(api_histogram.description().to_owned())
             .with_unit(api_histogram.unit().to_owned())

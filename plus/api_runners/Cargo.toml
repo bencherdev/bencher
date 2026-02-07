@@ -36,6 +36,7 @@ bencher_api_tests.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_schema.workspace = true
 diesel.workspace = true
+futures-concurrency.workspace = true
 http.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util"] }

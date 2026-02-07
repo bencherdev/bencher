@@ -236,3 +236,42 @@ async fn test_jobs_list_by_uuid() {
 
     assert_eq!(resp.status(), StatusCode::OK);
 }
+
+// GET /v0/projects/{project}/jobs - private project, no auth, should be denied
+#[tokio::test]
+async fn test_private_project_jobs_denied_unauthenticated() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "jobprivate@example.com").await;
+    let org = server.create_org(&user, "Job Private Org").await;
+    let project = server
+        .create_project(&user, &org, "Job Private Project")
+        .await;
+
+    // Make the project private by updating visibility directly in the database
+    {
+        use bencher_schema::schema;
+        use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+        let mut conn = server.db_conn();
+        diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+            .set(schema::project::visibility.eq(1_i32))
+            .execute(&mut conn)
+            .expect("Failed to update project visibility");
+    }
+
+    // Request jobs without auth - should be denied
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs")))
+        .send()
+        .await
+        .expect("Request failed");
+
+    // Private project should deny unauthenticated access
+    assert!(
+        resp.status() == StatusCode::NOT_FOUND || resp.status() == StatusCode::FORBIDDEN,
+        "Expected NOT_FOUND or FORBIDDEN for private project, got {}",
+        resp.status()
+    );
+}

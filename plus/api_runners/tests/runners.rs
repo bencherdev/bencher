@@ -449,3 +449,29 @@ async fn test_runner_delete_restricted_by_fk() {
         "Expected FK constraint to prevent runner deletion while jobs reference it"
     );
 }
+
+// A runner token should be rejected on user endpoints (e.g., project listing)
+#[tokio::test]
+async fn test_runner_token_rejected_on_user_endpoint() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "runnertokusr@example.com").await;
+
+    let runner = common::create_runner(&server, &admin.token, "Cross Auth Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+
+    // Use runner token on a user endpoint that requires authentication
+    let resp = server
+        .client
+        .get(server.api_url("/v0/users"))
+        .header("Authorization", format!("Bearer {runner_token}"))
+        .send()
+        .await
+        .expect("Request failed");
+
+    // Runner tokens should not work on user endpoints
+    assert_ne!(
+        resp.status(),
+        StatusCode::OK,
+        "Runner token should not authenticate on user endpoints"
+    );
+}

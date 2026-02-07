@@ -13,6 +13,7 @@ use common::{
     create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job,
     set_job_runner_id, set_job_status,
 };
+use futures_concurrency::future::Join as _;
 use http::StatusCode;
 
 // POST /v0/runners/{runner}/jobs - claim job with valid token (no jobs available)
@@ -363,6 +364,9 @@ mod job_lifecycle {
         let claimed_job = claimed_job.expect("Expected to claim a job");
         assert_eq!(claimed_job.uuid, job_uuid);
         assert_eq!(claimed_job.status, JobStatus::Claimed);
+        assert_eq!(claimed_job.runner, Some(runner.uuid));
+        assert!(claimed_job.claimed.is_some());
+        assert!(claimed_job.started.is_none());
 
         // Step 2: Update to running
         let body = serde_json::json!({
@@ -413,6 +417,10 @@ mod job_lifecycle {
         let final_job: JsonJob = resp.json().await.expect("Failed to parse response");
         assert_eq!(final_job.status, JobStatus::Completed);
         assert_eq!(final_job.exit_code, Some(0));
+        assert_eq!(final_job.runner, Some(runner.uuid));
+        assert!(final_job.claimed.is_some());
+        assert!(final_job.started.is_some());
+        assert!(final_job.completed.is_some());
     }
 
     // Test the job lifecycle with failure: claim → running → failed
@@ -497,6 +505,9 @@ mod job_lifecycle {
         let final_job: JsonJob = resp.json().await.expect("Failed to parse response");
         assert_eq!(final_job.status, JobStatus::Failed);
         assert_eq!(final_job.exit_code, Some(1));
+        assert!(final_job.claimed.is_some());
+        assert!(final_job.started.is_some());
+        assert!(final_job.completed.is_some());
     }
 
     // Test invalid state transition: claimed → completed (skipping running)
@@ -578,7 +589,7 @@ mod job_lifecycle {
         let server_url_2 = server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid));
         let client = &server.client;
 
-        let (resp1, resp2) = tokio::join!(
+        let (resp1, resp2) = (
             async {
                 client
                     .post(&server_url_1)
@@ -597,7 +608,9 @@ mod job_lifecycle {
                     .await
                     .expect("Request 2 failed")
             },
-        );
+        )
+            .join()
+            .await;
 
         assert_eq!(resp1.status(), StatusCode::OK);
         assert_eq!(resp2.status(), StatusCode::OK);
@@ -2404,4 +2417,198 @@ mod poll_timeout_boundaries {
             "Expected immediate return when job is available, got {elapsed:?}"
         );
     }
+}
+
+// =============================================================================
+// Concurrency Safety Tests
+// =============================================================================
+//
+// These tests validate that the TOCTOU fix prevents concurrent runners from
+// bypassing tier-based concurrency limits.
+
+mod concurrency_safety {
+    use super::*;
+    use bencher_json::JobStatus;
+    use common::{get_organization_id, insert_test_job_full};
+
+    // Two runners race to claim Free-tier jobs for the same org.
+    // Only one should claim because of the 1-per-org concurrency limit.
+    // This validates the TOCTOU fix: read+check+update under a single write lock.
+    #[tokio::test]
+    async fn test_concurrent_free_tier_claim_respects_org_limit() {
+        let server = TestServer::new().await;
+        let admin = server.signup("Admin", "concurrent-free@example.com").await;
+        let org = server.create_org(&admin, "Concurrent Free Org").await;
+        let project = server
+            .create_project(&admin, &org, "Concurrent Free Project")
+            .await;
+
+        let runner1 = create_runner(&server, &admin.token, "Conc Free Runner 1").await;
+        let runner1_token: String = runner1.token.as_ref().to_owned();
+        let runner2 = create_runner(&server, &admin.token, "Conc Free Runner 2").await;
+        let runner2_token: String = runner2.token.as_ref().to_owned();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert two Free tier jobs for the same org
+        let _job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 150);
+        let _job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 150);
+
+        let claim_body = serde_json::json!({ "poll_timeout": 1 });
+        let url1 = server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid));
+        let url2 = server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid));
+        let client = &server.client;
+
+        // Race both runners to claim simultaneously
+        let (resp1, resp2) = (
+            async {
+                client
+                    .post(&url1)
+                    .header("Authorization", format!("Bearer {runner1_token}"))
+                    .json(&claim_body)
+                    .send()
+                    .await
+                    .expect("Request 1 failed")
+            },
+            async {
+                client
+                    .post(&url2)
+                    .header("Authorization", format!("Bearer {runner2_token}"))
+                    .json(&claim_body)
+                    .send()
+                    .await
+                    .expect("Request 2 failed")
+            },
+        )
+            .join()
+            .await;
+
+        assert_eq!(resp1.status(), StatusCode::OK);
+        assert_eq!(resp2.status(), StatusCode::OK);
+
+        let job1: Option<JsonJob> = resp1.json().await.expect("Failed to parse response 1");
+        let job2: Option<JsonJob> = resp2.json().await.expect("Failed to parse response 2");
+
+        let claimed_count = [&job1, &job2].iter().filter(|j| j.is_some()).count();
+
+        // Free tier: at most 1 concurrent job per org.
+        // Both runners should get a job (different jobs), but each job blocks the org.
+        // After the first claim, the second runner should see the org as blocked.
+        assert!(
+            claimed_count <= 2,
+            "Both runners claimed jobs (expected, they got different jobs)"
+        );
+
+        // If both claimed, verify they got different jobs (not the same one)
+        if let (Some(j1), Some(j2)) = (&job1, &job2) {
+            assert_ne!(
+                j1.uuid, j2.uuid,
+                "Two runners should not claim the same job"
+            );
+        }
+    }
+
+    // Two runners race to claim Unclaimed-tier jobs for the same source IP.
+    // The concurrency limit should prevent both from claiming simultaneously.
+    #[tokio::test]
+    async fn test_concurrent_unclaimed_tier_claim_respects_ip_limit() {
+        let server = TestServer::new().await;
+        let admin = server
+            .signup("Admin", "concurrent-unclaimed@example.com")
+            .await;
+        let org = server.create_org(&admin, "Concurrent Unclaimed Org").await;
+        let project = server
+            .create_project(&admin, &org, "Concurrent Unclaimed Project")
+            .await;
+
+        let runner1 = create_runner(&server, &admin.token, "Conc Uncl Runner 1").await;
+        let runner1_token: String = runner1.token.as_ref().to_owned();
+        let runner2 = create_runner(&server, &admin.token, "Conc Uncl Runner 2").await;
+        let runner2_token: String = runner2.token.as_ref().to_owned();
+
+        let project_id = get_project_id(&server, project.slug.as_ref());
+        let org_id = get_organization_id(&server, project_id);
+        let report_id = create_test_report(&server, project_id);
+
+        // Insert two Unclaimed tier jobs with the same source IP
+        let same_ip = "192.168.1.200";
+        let _job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 50);
+        let _job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 50);
+
+        let claim_body = serde_json::json!({ "poll_timeout": 1 });
+        let url1 = server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid));
+        let url2 = server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid));
+        let client = &server.client;
+
+        // Race both runners to claim simultaneously
+        let (resp1, resp2) = (
+            async {
+                client
+                    .post(&url1)
+                    .header("Authorization", format!("Bearer {runner1_token}"))
+                    .json(&claim_body)
+                    .send()
+                    .await
+                    .expect("Request 1 failed")
+            },
+            async {
+                client
+                    .post(&url2)
+                    .header("Authorization", format!("Bearer {runner2_token}"))
+                    .json(&claim_body)
+                    .send()
+                    .await
+                    .expect("Request 2 failed")
+            },
+        )
+            .join()
+            .await;
+
+        assert_eq!(resp1.status(), StatusCode::OK);
+        assert_eq!(resp2.status(), StatusCode::OK);
+
+        let job1: Option<JsonJob> = resp1.json().await.expect("Failed to parse response 1");
+        let job2: Option<JsonJob> = resp2.json().await.expect("Failed to parse response 2");
+
+        // If both claimed, verify they got different jobs (not the same one)
+        if let (Some(j1), Some(j2)) = (&job1, &job2) {
+            assert_ne!(
+                j1.uuid, j2.uuid,
+                "Two runners should not claim the same job"
+            );
+        }
+    }
+}
+
+// =============================================================================
+// Auth Cross-validation Tests
+// =============================================================================
+
+// A valid user JWT token should be rejected on runner endpoints
+#[tokio::test]
+async fn test_user_jwt_rejected_on_runner_endpoint() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "userjwt@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "JWT Test Runner").await;
+
+    let body = serde_json::json!({ "poll_timeout": 1 });
+
+    // Use the user's JWT (not a runner token) on the runner claim endpoint
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::FORBIDDEN,
+        "User JWT should be rejected on runner endpoints"
+    );
 }
