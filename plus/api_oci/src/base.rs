@@ -61,7 +61,7 @@ pub async fn oci_base(rqctx: RequestContext<ApiContext>) -> Result<Response<Body
         Response::builder()
             .status(http::StatusCode::OK)
             .header(http::header::CONTENT_TYPE, "application/json"),
-        "GET",
+        &[http::Method::GET],
     )
     .body(Body::from("{}"))
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))

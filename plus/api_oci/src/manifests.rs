@@ -16,7 +16,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::auth::{require_pull_access, require_push_access, validate_push_access};
-use crate::response::oci_cors_headers;
+use crate::response::{DOCKER_CONTENT_DIGEST, oci_cors_headers};
 
 /// Resolve a reference (tag or digest) to a digest
 async fn resolve_reference(
@@ -104,8 +104,8 @@ pub async fn oci_manifest_exists(
             .status(http::StatusCode::OK)
             .header(http::header::CONTENT_TYPE, content_type)
             .header(http::header::CONTENT_LENGTH, manifest.len())
-            .header("Docker-Content-Digest", digest.to_string()),
-        "HEAD, GET",
+            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
+        &[http::Method::HEAD, http::Method::GET],
     )
     .body(Body::empty())
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
@@ -165,8 +165,8 @@ pub async fn oci_manifest_get(
             .status(http::StatusCode::OK)
             .header(http::header::CONTENT_TYPE, content_type)
             .header(http::header::CONTENT_LENGTH, manifest.len())
-            .header("Docker-Content-Digest", digest.to_string()),
-        "GET",
+            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
+        &[http::Method::GET],
     )
     .body(Body::from(manifest))
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
@@ -242,10 +242,15 @@ pub async fn oci_manifest_put(
     // Extract subject digest from manifest if present (for OCI-Subject header)
     let subject_digest = parsed_manifest.subject().map(|s| s.digest.clone());
 
-    // Store the manifest
+    // Store the manifest, passing the already-parsed manifest to avoid re-parsing
     // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
     let digest = storage
-        .put_manifest(&path.name, bytes::Bytes::copy_from_slice(body_bytes), tag)
+        .put_manifest(
+            &path.name,
+            bytes::Bytes::copy_from_slice(body_bytes),
+            tag,
+            &parsed_manifest,
+        )
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -260,8 +265,8 @@ pub async fn oci_manifest_put(
         Response::builder()
             .status(http::StatusCode::CREATED)
             .header(http::header::LOCATION, location)
-            .header("Docker-Content-Digest", digest.to_string()),
-        "PUT",
+            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
+        &[http::Method::PUT],
     );
 
     // Add OCI-Subject header if manifest has a subject field
@@ -323,7 +328,7 @@ pub async fn oci_manifest_delete(
     // OCI spec requires 202 Accepted for DELETE
     let response = oci_cors_headers(
         Response::builder().status(http::StatusCode::ACCEPTED),
-        "DELETE",
+        &[http::Method::DELETE],
     )
     .body(Body::empty())
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;

@@ -580,6 +580,7 @@ impl OciLocalStorage {
         repository: &ProjectResourceId,
         content: Bytes,
         tag: Option<&crate::types::Tag>,
+        manifest: &bencher_json::oci::Manifest,
     ) -> Result<Digest, OciStorageError> {
         // Compute digest
         let mut hasher = Sha256::new();
@@ -615,7 +616,7 @@ impl OciLocalStorage {
 
         // Check if manifest has a subject field (for referrers API)
         if let Some((subject_digest, descriptor)) =
-            crate::types::build_referrer_descriptor(&content, &digest)
+            crate::types::build_referrer_descriptor(manifest, &digest, content.len())
         {
             // Store referrer link
             let referrer_path = self.referrer_path(repository, &subject_digest, &digest);

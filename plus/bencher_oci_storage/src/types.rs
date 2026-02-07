@@ -229,39 +229,28 @@ pub(crate) fn extract_subject_digest(manifest_bytes: &[u8]) -> Option<Digest> {
     subject_digest_str.parse::<Digest>().ok()
 }
 
-/// Builds a referrer descriptor JSON from manifest content.
+/// Builds a referrer descriptor JSON from an already-parsed manifest.
 ///
-/// This extracts `mediaType`, `artifactType`, `annotations`, and `size` from the manifest,
-/// combined with the provided `digest`, to produce an OCI descriptor suitable for the
-/// referrers API.
+/// Uses the typed `Manifest` fields (`media_type`, `artifact_type`, `annotations`,
+/// `subject`) combined with the provided `digest` and `content_size` to produce an OCI
+/// descriptor suitable for the referrers API.
 ///
 /// Returns `None` if the manifest has no `subject` field.
 pub(crate) fn build_referrer_descriptor(
-    content: &[u8],
+    manifest: &bencher_json::oci::Manifest,
     digest: &Digest,
+    content_size: usize,
 ) -> Option<(Digest, serde_json::Value)> {
-    let manifest = serde_json::from_slice::<serde_json::Value>(content).ok()?;
-    let subject_digest_str = manifest.get("subject")?.get("digest")?.as_str()?;
-    let subject_digest = subject_digest_str.parse::<Digest>().ok()?;
+    let subject = manifest.subject()?;
+    let subject_digest = subject.digest.parse::<Digest>().ok()?;
 
-    let media_type = manifest
-        .get("mediaType")
-        .and_then(|m| m.as_str())
-        .unwrap_or("application/vnd.oci.image.manifest.v1+json");
-    let artifact_type = manifest
-        .get("artifactType")
-        .and_then(|a| a.as_str())
-        .or_else(|| {
-            manifest
-                .get("config")
-                .and_then(|c| c.get("mediaType"))
-                .and_then(|m| m.as_str())
-        });
+    let media_type = manifest.media_type();
+    let artifact_type = manifest.artifact_type();
 
     let mut descriptor = serde_json::json!({
         "mediaType": media_type,
         "digest": digest.to_string(),
-        "size": content.len()
+        "size": content_size
     });
     if let Some(at) = artifact_type
         && let Some(obj) = descriptor.as_object_mut()
@@ -271,10 +260,13 @@ pub(crate) fn build_referrer_descriptor(
             serde_json::Value::String(at.to_owned()),
         );
     }
-    if let Some(annotations) = manifest.get("annotations")
+    if let Some(annotations) = manifest.annotations()
         && let Some(obj) = descriptor.as_object_mut()
     {
-        obj.insert("annotations".to_owned(), annotations.clone());
+        obj.insert(
+            "annotations".to_owned(),
+            serde_json::to_value(annotations).ok()?,
+        );
     }
 
     Some((subject_digest, descriptor))

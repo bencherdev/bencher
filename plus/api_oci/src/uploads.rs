@@ -30,7 +30,7 @@
 
 #[cfg(feature = "plus")]
 use crate::auth::apply_public_rate_limit;
-use crate::response::oci_cors_headers;
+use crate::response::{DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers};
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
 use bencher_json::ProjectResourceId;
 use bencher_oci_storage::{Digest, OciError, UploadId};
@@ -156,8 +156,8 @@ pub async fn oci_upload_status(
             .status(http::StatusCode::NO_CONTENT)
             .header(http::header::LOCATION, location)
             .header("Range", format_upload_range(size))
-            .header("Docker-Upload-UUID", upload_id.to_string()),
-        "GET",
+            .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
+        &[http::Method::GET],
     )
     .body(Body::empty())
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
@@ -271,8 +271,8 @@ pub async fn oci_upload_chunk(
                         .status(http::StatusCode::RANGE_NOT_SATISFIABLE)
                         .header(http::header::LOCATION, location)
                         .header("Range", format_upload_range(current_size))
-                        .header("Docker-Upload-UUID", upload_id.to_string()),
-                    "PATCH",
+                        .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
+                    &[http::Method::PATCH],
                 )
                 .body(Body::empty())
                 .map_err(|e| {
@@ -298,8 +298,8 @@ pub async fn oci_upload_chunk(
             .status(http::StatusCode::ACCEPTED)
             .header(http::header::LOCATION, location)
             .header("Range", format_upload_range(new_size))
-            .header("Docker-Upload-UUID", upload_id.to_string()),
-        "PATCH",
+            .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
+        &[http::Method::PATCH],
     )
     .body(Body::empty())
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
@@ -392,8 +392,8 @@ pub async fn oci_upload_complete(
         Response::builder()
             .status(http::StatusCode::CREATED)
             .header(http::header::LOCATION, location)
-            .header("Docker-Content-Digest", actual_digest.to_string()),
-        "PUT",
+            .header(DOCKER_CONTENT_DIGEST, actual_digest.to_string()),
+        &[http::Method::PUT],
     )
     .body(Body::empty())
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
@@ -447,7 +447,7 @@ pub async fn oci_upload_cancel(
     // OCI spec requires 202 Accepted for DELETE (or 204 No Content)
     let response = oci_cors_headers(
         Response::builder().status(http::StatusCode::ACCEPTED),
-        "DELETE",
+        &[http::Method::DELETE],
     )
     .body(Body::empty())
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
