@@ -68,9 +68,20 @@ jobs:
         env:
           RUST_BACKTRACE: full
         run: cargo test-api smoke dev
+      - name: Scale up Dev Machines
+        working-directory: ./services/api
+        run: flyctl scale vm performance-8x --app bencher-api-dev
       - name: Run OCI Conformance Test
         continue-on-error: true
-        run: cargo test-api oci --admin
+        run: |
+          cargo test-api oci \
+          --api-url https://bencher-api-dev.fly.dev \
+          --username eustace.bagge@nowhere.com \
+          --password "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo2MDYwMDI5NDE0LCJpYXQiOjE3NjUwNjIxMTksImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoiZXVzdGFjZS5iYWdnZUBub3doZXJlLmNvbSIsIm9yZyI6bnVsbCwic3RhdGUiOm51bGx9.jY6749lVWe3pJ53LBXoNSl19b59xifOLdwMwQUNMZ5g"
+      - name: Scale down Dev Machines
+        if: always()
+        working-directory: ./services/api
+        run: flyctl scale vm shared-cpu-1x --app bencher-api-dev
 
   deploy_console_netlify_dev:
     name: Deploy Console UI to Netlify Dev
