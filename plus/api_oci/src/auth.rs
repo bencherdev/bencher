@@ -453,14 +453,14 @@ async fn build_public_user(
             HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::UNAUTHORIZED,
-                "User not found for token".to_owned(),
+                "Invalid token".to_owned(),
             )
         })?;
         let auth_user = AuthUser::load(conn, query_user).map_err(|_err| {
             HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::UNAUTHORIZED,
-                "Failed to load user".to_owned(),
+                "Invalid token".to_owned(),
             )
         })?;
         slog::debug!(

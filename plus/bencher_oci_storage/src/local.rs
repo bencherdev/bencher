@@ -14,7 +14,7 @@ use chrono::Utc;
 use http_body_util::StreamBody;
 use hyper::body::Frame;
 use sha2::{Digest as _, Sha256};
-use slog::{Logger, error};
+use slog::{Logger, error, warn};
 use tokio::fs;
 use tokio::io::AsyncWriteExt as _;
 use tokio_util::io::ReaderStream;
@@ -752,10 +752,7 @@ impl OciLocalStorage {
             if let Err(e) = fs::remove_file(&referrer_path).await
                 && e.kind() != io::ErrorKind::NotFound
             {
-                crate::storage::report_cleanup_error(
-                    "delete_manifest: referrer link delete",
-                    &e,
-                );
+                crate::storage::report_cleanup_error("delete_manifest: referrer link delete", &e);
             }
         }
 
@@ -809,9 +806,11 @@ impl OciLocalStorage {
             OciStorageError::LocalStorage(format!("Failed to read referrer entry: {e}"))
         })? {
             let Ok(data) = fs::read(entry.path()).await else {
+                warn!(self.log, "Failed to read referrer file"; "path" => %entry.path().display());
                 continue;
             };
             let Ok(descriptor) = serde_json::from_slice::<serde_json::Value>(&data) else {
+                warn!(self.log, "Failed to parse referrer JSON"; "path" => %entry.path().display());
                 continue;
             };
 

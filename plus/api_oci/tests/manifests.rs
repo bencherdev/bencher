@@ -1345,6 +1345,44 @@ async fn test_manifest_put_content_type_mismatch() {
     );
 }
 
+// PUT /v2/{name}/manifests/{reference} - Manifest referencing blobs that were never uploaded
+// The OCI Distribution Spec does NOT require registries to validate blob existence before
+// storing a manifest. This test documents that our registry accepts such manifests (consistent
+// with Docker Hub, ghcr.io, and other production registries).
+#[tokio::test]
+async fn test_manifest_put_missing_blobs() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("MissingBlobs User", "missingblobs@example.com")
+        .await;
+    let org = server.create_org(&user, "MissingBlobs Org").await;
+    let project = server
+        .create_project(&user, &org, "MissingBlobs Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Reference digests for blobs that were NEVER uploaded
+    let config_digest = "sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+    let layer_digest = "sha256:cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe";
+    let manifest = create_test_manifest(config_digest, layer_digest);
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/missing-blobs", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    // Registry accepts manifests with missing blobs (spec-compliant behavior)
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    assert!(resp.headers().contains_key("docker-content-digest"));
+}
+
 // Matching Content-Type should succeed (sanity check)
 #[tokio::test]
 async fn test_manifest_put_content_type_match() {

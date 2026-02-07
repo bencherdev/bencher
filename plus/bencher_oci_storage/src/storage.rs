@@ -204,6 +204,9 @@ struct CompletedPartInfo {
     size: u64,
 }
 
+/// Maximum number of parts allowed in an S3 multipart upload
+const MAX_S3_PARTS: usize = 10_000;
+
 impl UploadState {
     /// Total bytes in completed parts
     fn completed_parts_size(&self) -> u64 {
@@ -211,10 +214,17 @@ impl UploadState {
     }
 
     /// Next part number to use
-    fn next_part_number(&self) -> i32 {
+    fn next_part_number(&self) -> Result<i32, OciStorageError> {
         // S3 part numbers are 1-indexed and max 10,000 parts
-        // Safe to cast since we won't exceed 10,000 parts
-        i32::try_from(self.parts.len()).unwrap_or(i32::MAX - 1) + 1
+        if self.parts.len() >= MAX_S3_PARTS {
+            return Err(OciStorageError::S3(format!(
+                "Maximum number of S3 parts ({MAX_S3_PARTS}) exceeded"
+            )));
+        }
+        // Safe to cast: parts.len() < 10,000 which fits in i32
+        let len = i32::try_from(self.parts.len())
+            .map_err(|e| OciStorageError::S3(format!("Part count overflow: {e}")))?;
+        Ok(len + 1)
     }
 }
 
@@ -234,6 +244,10 @@ pub struct OciS3Storage {
     upload_timeout: u64,
     /// Maximum body size in bytes for uploads
     max_body_size: u64,
+    /// Logger for error/warning reporting
+    log: Logger,
+    /// Concurrency limit for parallel referrer fetches
+    concurrency: usize,
 }
 
 /// OCI Storage backend - supports S3 or local filesystem
@@ -269,6 +283,7 @@ impl OciStorage {
                 secret_access_key,
                 access_point,
             }) => OciS3Storage::new(
+                log,
                 access_key_id,
                 secret_access_key,
                 &access_point,
@@ -558,6 +573,7 @@ impl OciStorage {
 impl OciS3Storage {
     /// Creates a new S3 storage instance
     fn new(
+        log: Logger,
         access_key_id: String,
         secret_access_key: Secret,
         access_point: &str,
@@ -591,11 +607,18 @@ impl OciS3Storage {
             prefix: arn.bucket_path.clone(),
         };
 
+        let concurrency = std::thread::available_parallelism()
+            .map(std::num::NonZeroUsize::get)
+            .unwrap_or(1)
+            .clamp(1, 64);
+
         Ok(Self {
             client,
             config,
             upload_timeout,
             max_body_size,
+            log,
+            concurrency,
         })
     }
 
@@ -1218,7 +1241,7 @@ impl OciS3Storage {
         data_key: &str,
         data: Vec<u8>,
     ) -> Result<(), OciStorageError> {
-        let part_number = state.next_part_number();
+        let part_number = state.next_part_number()?;
         let part_size = data.len() as u64;
 
         let response = self
@@ -1764,8 +1787,9 @@ impl OciS3Storage {
             }
         }
 
-        // Fetch referrer descriptors in parallel (up to 10 concurrent)
+        // Fetch referrer descriptors in parallel
         let filter = artifact_type_filter.map(ToOwned::to_owned);
+        let log = &self.log;
         let referrers: Vec<serde_json::Value> = stream::iter(keys)
             .map(|key| {
                 let client = &self.client;
@@ -1774,14 +1798,17 @@ impl OciS3Storage {
                 async move {
                     // Get the referrer descriptor
                     let Ok(resp) = client.get_object().bucket(bucket).key(&key).send().await else {
+                        slog::warn!(log, "Failed to fetch referrer from S3"; "key" => &key);
                         return None;
                     };
                     let Ok(data) = resp.body.collect().await else {
+                        slog::warn!(log, "Failed to collect referrer body from S3"; "key" => &key);
                         return None;
                     };
                     let Ok(descriptor) =
                         serde_json::from_slice::<serde_json::Value>(&data.into_bytes())
                     else {
+                        slog::warn!(log, "Failed to parse referrer JSON from S3"; "key" => &key);
                         return None;
                     };
                     // Apply artifact type filter if specified
@@ -1797,7 +1824,7 @@ impl OciS3Storage {
                     Some(descriptor)
                 }
             })
-            .buffer_unordered(10)
+            .buffer_unordered(self.concurrency)
             .filter_map(|x| async move { x })
             .collect()
             .await;
