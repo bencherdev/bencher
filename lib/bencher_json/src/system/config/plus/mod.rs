@@ -43,6 +43,7 @@ pub struct JsonPlus {
 impl Sanitize for JsonPlus {
     fn sanitize(&mut self) {
         self.github.sanitize();
+        self.google.sanitize();
         self.litestream.sanitize();
         self.cloud.sanitize();
         self.registry.sanitize();

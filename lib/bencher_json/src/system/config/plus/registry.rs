@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 /// Default upload timeout: 1 hour (3600 seconds)
 pub const DEFAULT_UPLOAD_TIMEOUT_SECS: u64 = 3600;
 
+/// Default maximum body size: 1 GiB (1,073,741,824 bytes)
+pub const DEFAULT_MAX_BODY_SIZE: u64 = 0x4000_0000;
+
 /// Container registry configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -17,10 +20,19 @@ pub struct JsonRegistry {
     /// Defaults to 3600 (1 hour).
     #[serde(default = "default_upload_timeout")]
     pub upload_timeout: u64,
+    /// Maximum body size in bytes for blob and manifest uploads.
+    /// Requests exceeding this limit are rejected with 413 Payload Too Large.
+    /// Defaults to 1 GiB (1,073,741,824 bytes).
+    #[serde(default = "default_max_body_size")]
+    pub max_body_size: u64,
 }
 
 fn default_upload_timeout() -> u64 {
     DEFAULT_UPLOAD_TIMEOUT_SECS
+}
+
+fn default_max_body_size() -> u64 {
+    DEFAULT_MAX_BODY_SIZE
 }
 
 impl Sanitize for JsonRegistry {

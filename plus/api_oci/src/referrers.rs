@@ -15,6 +15,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::auth::require_pull_access;
+use crate::response::oci_cors_headers;
 
 /// Path parameters for referrers endpoint
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -97,13 +98,23 @@ pub async fn oci_referrers_list(
         .map_err(|e| HttpError::for_internal_error(format!("Failed to serialize index: {e}")))?;
 
     // Build response with OCI-compliant headers
-    let response = Response::builder()
-        .status(http::StatusCode::OK)
-        .header(http::header::CONTENT_TYPE, "application/vnd.oci.image.index.v1+json")
-        .header(http::header::CONTENT_LENGTH, body.len())
-        // OCI-Filters-Applied header indicates which filters were applied
-        .header("OCI-Filters-Applied", if query.artifact_type.is_some() { "artifactType" } else { "" })
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+    let mut builder = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::OK)
+            .header(
+                http::header::CONTENT_TYPE,
+                "application/vnd.oci.image.index.v1+json",
+            )
+            .header(http::header::CONTENT_LENGTH, body.len()),
+        "GET",
+    );
+
+    // Only add OCI-Filters-Applied header when a filter was actually applied
+    if query.artifact_type.is_some() {
+        builder = builder.header("OCI-Filters-Applied", "artifactType");
+    }
+
+    let response = builder
         .body(Body::from(body))
         .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 

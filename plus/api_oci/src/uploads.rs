@@ -30,6 +30,7 @@
 
 #[cfg(feature = "plus")]
 use crate::auth::apply_public_rate_limit;
+use crate::response::oci_cors_headers;
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
 use bencher_json::ProjectResourceId;
 use bencher_oci_storage::{Digest, OciError, UploadId};
@@ -70,6 +71,17 @@ fn validate_uploads_ref(reference: &str) -> Result<(), HttpError> {
         ));
     }
     Ok(())
+}
+
+/// Format a Range header value for upload progress.
+///
+/// Per OCI spec, Range is `0-0` when empty, or `0-{size-1}` when data exists.
+fn format_upload_range(size: u64) -> String {
+    if size > 0 {
+        format!("0-{}", size - 1)
+    } else {
+        "0-0".to_owned()
+    }
 }
 
 /// CORS preflight for upload session operations
@@ -124,6 +136,12 @@ pub async fn oci_upload_status(
     // Get storage
     let storage = context.oci_storage();
 
+    // Validate upload belongs to this repository
+    storage
+        .validate_upload_repository(&upload_id, &path.name)
+        .await
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
     // Get current upload size
     let size = storage
         .get_upload_size(&upload_id)
@@ -132,20 +150,17 @@ pub async fn oci_upload_status(
 
     // Build 204 No Content response with Range header (OCI spec)
     let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
-    let range = if size > 0 {
-        format!("0-{}", size - 1)
-    } else {
-        "0-0".to_owned()
-    };
 
-    let response = Response::builder()
-        .status(http::StatusCode::NO_CONTENT)
-        .header(http::header::LOCATION, location)
-        .header("Range", range)
-        .header("Docker-Upload-UUID", upload_id.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::NO_CONTENT)
+            .header(http::header::LOCATION, location)
+            .header("Range", format_upload_range(size))
+            .header("Docker-Upload-UUID", upload_id.to_string()),
+        "GET",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -195,11 +210,26 @@ pub async fn oci_upload_chunk(
     // Get storage
     let storage = context.oci_storage();
 
+    // Validate upload belongs to this repository
+    storage
+        .validate_upload_repository(&upload_id, &path.name)
+        .await
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
     // Get current upload size for Content-Range validation
     let current_size = storage
         .get_upload_size(&upload_id)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
+    // Enforce max body size on cumulative upload
+    let max = storage.max_body_size();
+    if current_size + data.len() as u64 > max {
+        return Err(crate::error::payload_too_large(
+            current_size + data.len() as u64,
+            max,
+        ));
+    }
 
     // Validate Content-Range header if present
     // Content-Range format can be:
@@ -213,32 +243,48 @@ pub async fn oci_upload_chunk(
         // Remove trailing /total if present
         let range_nums = range_part.split_once('/').map_or(range_part, |(r, _)| r);
 
-        if let Some((start_str, _end_str)) = range_nums.split_once('-')
-            && let Ok(start) = start_str.parse::<u64>()
-            && start != current_size
-        {
-            // Return 416 with Location and Range headers per OCI spec
-            let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
-            let range = if current_size > 0 {
-                format!("0-{}", current_size - 1)
-            } else {
-                "0-0".to_owned()
+        if let Some((start_str, end_str)) = range_nums.split_once('-') {
+            let start_ok = start_str.parse::<u64>().ok();
+            let end_ok = end_str.parse::<u64>().ok();
+
+            // If exactly one side parses, the range is malformed
+            let partial_parse = start_ok.is_some() != end_ok.is_some();
+
+            // Validate start offset matches current upload size
+            let start_mismatch = start_ok.is_some_and(|start| start != current_size);
+
+            // Validate end value is consistent with data length:
+            // end - start + 1 should equal the body length
+            let end_mismatch = match (start_ok, end_ok) {
+                (Some(start), Some(end)) => {
+                    let expected_len = end.saturating_sub(start) + 1;
+                    expected_len != data.len() as u64
+                },
+                _ => false,
             };
-            let response = Response::builder()
-                .status(http::StatusCode::RANGE_NOT_SATISFIABLE)
-                .header(http::header::LOCATION, location)
-                .header("Range", range)
-                .header("Docker-Upload-UUID", upload_id.to_string())
-                .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+
+            if partial_parse || start_mismatch || end_mismatch {
+                // Return 416 with Location and Range headers per OCI spec
+                let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
+                let response = oci_cors_headers(
+                    Response::builder()
+                        .status(http::StatusCode::RANGE_NOT_SATISFIABLE)
+                        .header(http::header::LOCATION, location)
+                        .header("Range", format_upload_range(current_size))
+                        .header("Docker-Upload-UUID", upload_id.to_string()),
+                    "PATCH",
+                )
                 .body(Body::empty())
                 .map_err(|e| {
                     HttpError::for_internal_error(format!("Failed to build response: {e}"))
                 })?;
-            return Ok(response);
+                return Ok(response);
+            }
         }
     }
 
     // Append data to upload
+    // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
     let new_size = storage
         .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
         .await
@@ -246,20 +292,17 @@ pub async fn oci_upload_chunk(
 
     // Build 202 Accepted response
     let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
-    let range = if new_size > 0 {
-        format!("0-{}", new_size - 1)
-    } else {
-        "0-0".to_owned()
-    };
 
-    let response = Response::builder()
-        .status(http::StatusCode::ACCEPTED)
-        .header(http::header::LOCATION, location)
-        .header("Range", range)
-        .header("Docker-Upload-UUID", upload_id.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::ACCEPTED)
+            .header(http::header::LOCATION, location)
+            .header("Range", format_upload_range(new_size))
+            .header("Docker-Upload-UUID", upload_id.to_string()),
+        "PATCH",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -306,8 +349,26 @@ pub async fn oci_upload_complete(
     // Get storage
     let storage = context.oci_storage();
 
-    // If there's data in the body, append it first
+    // Validate upload belongs to this repository
+    storage
+        .validate_upload_repository(&upload_id, &path.name)
+        .await
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
+    // If there's data in the body, check size limit and append
+    // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
     if !data.is_empty() {
+        let current_size = storage
+            .get_upload_size(&upload_id)
+            .await
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        let max = storage.max_body_size();
+        if current_size + data.len() as u64 > max {
+            return Err(crate::error::payload_too_large(
+                current_size + data.len() as u64,
+                max,
+            ));
+        }
         storage
             .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
             .await
@@ -327,13 +388,15 @@ pub async fn oci_upload_complete(
     // Build 201 Created response
     let location = format!("/v2/{repository_name}/blobs/{actual_digest}");
 
-    let response = Response::builder()
-        .status(http::StatusCode::CREATED)
-        .header(http::header::LOCATION, location)
-        .header("Docker-Content-Digest", actual_digest.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::CREATED)
+            .header(http::header::LOCATION, location)
+            .header("Docker-Content-Digest", actual_digest.to_string()),
+        "PUT",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -369,6 +432,12 @@ pub async fn oci_upload_cancel(
     // Get storage
     let storage = context.oci_storage();
 
+    // Validate upload belongs to this repository
+    storage
+        .validate_upload_repository(&upload_id, &path.name)
+        .await
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
     // Cancel the upload
     storage
         .cancel_upload(&upload_id)
@@ -376,11 +445,12 @@ pub async fn oci_upload_cancel(
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // OCI spec requires 202 Accepted for DELETE (or 204 No Content)
-    let response = Response::builder()
-        .status(http::StatusCode::ACCEPTED)
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder().status(http::StatusCode::ACCEPTED),
+        "DELETE",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }

@@ -12,7 +12,7 @@
 //!
 //! 2. Run the conformance tests:
 //!    ```sh
-//!    cargo test-oci
+//!    cargo test-api oci
 //!    ```
 //!
 //! # Test Categories
@@ -26,7 +26,7 @@
 #![cfg(test)]
 #![cfg(feature = "plus")]
 // Test files link main crate dependencies even when not directly used
-#![allow(unused_crate_dependencies)]
+#![expect(unused_crate_dependencies)]
 // Tests use print statements for user-facing output
 #![expect(clippy::print_stdout, clippy::print_stderr)]
 
@@ -57,8 +57,8 @@ fn oci_base_endpoint() {
 
     assert_eq!(
         response.status(),
-        200,
-        "OCI base endpoint should return 200"
+        401,
+        "OCI base endpoint should return 401 for unauthenticated access"
     );
 }
 
@@ -81,9 +81,10 @@ fn oci_blob_upload_smoke() {
         .send()
         .expect("Failed to start blob upload");
 
-    assert!(
-        response.status().is_success() || response.status().as_u16() == 202,
-        "Blob upload start should succeed"
+    assert_eq!(
+        response.status().as_u16(),
+        202,
+        "Blob upload start should return 202 Accepted"
     );
 
     // Check for Location header
@@ -104,7 +105,7 @@ fn print_conformance_instructions() {
     println!("2. Start the Bencher API server:");
     println!("   cargo run -p bencher_api --features plus\n");
     println!("3. Run the conformance tests:");
-    println!("   cargo test-oci\n");
+    println!("   cargo test-api oci\n");
     println!("4. Check results in ./oci-conformance-results/\n");
     println!("=============================================\n");
 }

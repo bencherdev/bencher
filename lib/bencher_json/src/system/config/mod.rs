@@ -26,7 +26,7 @@ pub use plus::{
     },
     litestream::{JsonLitestream, JsonReplica},
     rate_limiting::{JsonPublicRateLimiter, JsonRateLimiting, JsonUserRateLimiter},
-    registry::{DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
+    registry::{DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
     stats::JsonStats,
 };
 pub use security::JsonSecurity;

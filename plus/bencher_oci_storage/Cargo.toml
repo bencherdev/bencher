@@ -30,7 +30,7 @@ plus = [
     "dep:tokio-util",
     "dep:uuid",
 ]
-sentry = []
+sentry = ["dep:sentry"]
 otel = []
 
 [dependencies]
@@ -40,6 +40,8 @@ bencher_json = { workspace = true, optional = true, features = ["server", "plus"
 # AWS S3 (same as database backup)
 aws-credential-types = { workspace = true, optional = true }
 aws-sdk-s3 = { workspace = true, optional = true }
+
+sentry = { workspace = true, optional = true }
 
 # External dependencies
 bytes = { workspace = true, optional = true }

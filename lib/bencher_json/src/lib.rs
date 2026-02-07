@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 use serde_yaml as _;
 
 pub mod big_int;
+#[cfg(feature = "plus")]
+pub mod oci;
 pub mod organization;
 pub mod pagination;
 pub mod project;

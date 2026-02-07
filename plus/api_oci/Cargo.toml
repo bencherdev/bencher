@@ -29,7 +29,7 @@ plus = [
     "dep:slog",
     "dep:urlencoding",
 ]
-sentry = []
+sentry = ["dep:sentry"]
 otel = ["dep:bencher_otel"]
 
 [dependencies]
@@ -42,6 +42,8 @@ bencher_rbac = { workspace = true, optional = true }
 bencher_schema = { workspace = true, optional = true }
 bencher_token = { workspace = true, optional = true }
 
+sentry = { workspace = true, optional = true }
+
 bytes = { workspace = true, optional = true }
 dropshot = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
@@ -53,11 +55,10 @@ urlencoding = { workspace = true, optional = true }
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
+bencher_token.workspace = true
 http.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 serde_json.workspace = true
-sha2.workspace = true
-hex.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 
 [lints]

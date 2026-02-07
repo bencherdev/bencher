@@ -35,6 +35,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::auth::{require_pull_access, require_push_access, validate_push_access};
+use crate::response::oci_cors_headers;
 
 /// Path parameters for blob/upload-start endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -124,16 +125,16 @@ pub async fn oci_blob_exists(
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Build response with OCI-compliant headers (no body for HEAD)
-    let response = Response::builder()
-        .status(http::StatusCode::OK)
-        .header(http::header::CONTENT_TYPE, "application/octet-stream")
-        .header(http::header::CONTENT_LENGTH, size)
-        .header("Docker-Content-Digest", digest.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .header(http::header::ACCESS_CONTROL_ALLOW_METHODS, "HEAD, GET")
-        .header(http::header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::OK)
+            .header(http::header::CONTENT_TYPE, "application/octet-stream")
+            .header(http::header::CONTENT_LENGTH, size)
+            .header("Docker-Content-Digest", digest.to_string()),
+        "HEAD, GET",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -188,16 +189,16 @@ pub async fn oci_blob_get(
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciBlobPull);
 
     // Build response with OCI-compliant headers and streaming body
-    let response = Response::builder()
-        .status(http::StatusCode::OK)
-        .header(http::header::CONTENT_TYPE, "application/octet-stream")
-        .header(http::header::CONTENT_LENGTH, size)
-        .header("Docker-Content-Digest", digest.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .header(http::header::ACCESS_CONTROL_ALLOW_METHODS, "GET")
-        .header(http::header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type")
-        .body(Body::wrap(blob_body))
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::OK)
+            .header(http::header::CONTENT_TYPE, "application/octet-stream")
+            .header(http::header::CONTENT_LENGTH, size)
+            .header("Docker-Content-Digest", digest.to_string()),
+        "GET",
+    )
+    .body(Body::wrap(blob_body))
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -245,11 +246,12 @@ pub async fn oci_blob_delete(
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // OCI spec requires 202 Accepted for DELETE
-    let response = Response::builder()
-        .status(http::StatusCode::ACCEPTED)
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder().status(http::StatusCode::ACCEPTED),
+        "DELETE",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -302,25 +304,45 @@ pub async fn oci_upload_start(
             })
         })?;
 
-        // Try to mount the blob
-        let mounted = storage
-            .mount_blob(&from_repo, &path.name, &digest)
-            .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        // Only attempt mount if caller has pull access to source repository.
+        // If pull access is denied, fall through to normal upload
+        // to avoid revealing whether the source repository exists.
+        let from_repo_str = from_repo.to_string();
+        let pull_result = require_pull_access(&rqctx, &from_repo_str).await;
+        if pull_result.is_ok() {
+            // Try to mount the blob
+            let mounted = storage
+                .mount_blob(&from_repo, &path.name, &digest)
+                .await
+                .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
-        if mounted {
-            // Mount successful - return 201 Created
-            let location = format!("/v2/{project_slug}/blobs/{digest}");
-            let response = Response::builder()
-                .status(http::StatusCode::CREATED)
-                .header(http::header::LOCATION, location)
-                .header("Docker-Content-Digest", digest.to_string())
-                .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+            if mounted {
+                // Mount successful - return 201 Created
+                let location = format!("/v2/{project_slug}/blobs/{digest}");
+                let response = oci_cors_headers(
+                    Response::builder()
+                        .status(http::StatusCode::CREATED)
+                        .header(http::header::LOCATION, location)
+                        .header("Docker-Content-Digest", digest.to_string()),
+                    "POST",
+                )
                 .body(Body::empty())
                 .map_err(|e| {
                     HttpError::for_internal_error(format!("Failed to build response: {e}"))
                 })?;
-            return Ok(response);
+                return Ok(response);
+            }
+        } else {
+            slog::info!(rqctx.log, "Cross-repository mount access denied, falling through to upload";
+                "from_repo" => &from_repo_str, "to_repo" => %path.name, "digest" => %digest);
+            #[cfg(feature = "sentry")]
+            sentry::capture_message(
+                &format!(
+                    "OCI cross-repo mount denied: from={from_repo_str} to={} digest={digest}",
+                    path.name
+                ),
+                sentry::Level::Warning,
+            );
         }
     }
 
@@ -332,14 +354,16 @@ pub async fn oci_upload_start(
 
     // Build 202 Accepted response
     let location = format!("/v2/{project_slug}/blobs/uploads/{upload_id}");
-    let response = Response::builder()
-        .status(http::StatusCode::ACCEPTED)
-        .header(http::header::LOCATION, location)
-        .header("Range", "0-0")
-        .header("Docker-Upload-UUID", upload_id.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::ACCEPTED)
+            .header(http::header::LOCATION, location)
+            .header("Range", "0-0")
+            .header("Docker-Upload-UUID", upload_id.to_string()),
+        "POST",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -394,6 +418,13 @@ pub async fn oci_upload_monolithic(
     let push_access = validate_push_access(&rqctx.log, &rqctx, &path.name).await?;
     let project_slug = &push_access.project.slug;
 
+    // Get storage and enforce max body size
+    let storage = context.oci_storage();
+    let max = storage.max_body_size();
+    if data.len() as u64 > max {
+        return Err(crate::error::payload_too_large(data.len() as u64, max));
+    }
+
     // Parse digest
     let expected_digest: Digest = query.digest.parse().map_err(|_err| {
         crate::error::into_http_error(OciError::DigestInvalid {
@@ -401,15 +432,13 @@ pub async fn oci_upload_monolithic(
         })
     })?;
 
-    // Get storage
-    let storage = context.oci_storage();
-
     // Start upload, append data, and complete in one operation
     let upload_id = storage
         .start_upload(&path.name)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
+    // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
     storage
         .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
         .await
@@ -426,13 +455,15 @@ pub async fn oci_upload_monolithic(
 
     // Build 201 Created response
     let location = format!("/v2/{project_slug}/blobs/{actual_digest}");
-    let response = Response::builder()
-        .status(http::StatusCode::CREATED)
-        .header(http::header::LOCATION, location)
-        .header("Docker-Content-Digest", actual_digest.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::CREATED)
+            .header(http::header::LOCATION, location)
+            .header("Docker-Content-Digest", actual_digest.to_string()),
+        "PUT",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }

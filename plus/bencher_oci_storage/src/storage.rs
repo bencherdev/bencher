@@ -23,7 +23,7 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::CompletedMultipartUpload;
 use bencher_json::{
     ProjectResourceId, Secret,
-    system::config::{DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
+    system::config::{DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
 };
 use bytes::Bytes;
 use chrono::Utc;
@@ -36,6 +36,18 @@ use thiserror::Error;
 
 use crate::local::{LocalBlobBody, OciLocalStorage};
 use crate::types::{Digest, UploadId};
+
+pub(crate) fn report_cleanup_error(context: &str, error: &impl std::fmt::Display) {
+    #[cfg(feature = "sentry")]
+    sentry::capture_message(
+        &format!("OCI cleanup error ({context}): {error}"),
+        sentry::Level::Error,
+    );
+    #[cfg(not(feature = "sentry"))]
+    {
+        let _ = (context, error);
+    }
+}
 
 /// A streaming body for blob content from S3
 pub struct S3BlobBody {
@@ -131,6 +143,9 @@ pub enum OciStorageError {
 
     #[error("JSON serialization error: {0}")]
     Json(String),
+
+    #[error("Size exceeded: {size} bytes exceeds maximum {max} bytes")]
+    SizeExceeded { size: u64, max: u64 },
 }
 
 impl OciStorageError {
@@ -141,6 +156,7 @@ impl OciStorageError {
                 http::StatusCode::NOT_FOUND
             },
             Self::DigestMismatch { .. } | Self::InvalidContent(_) => http::StatusCode::BAD_REQUEST,
+            Self::SizeExceeded { .. } => http::StatusCode::PAYLOAD_TOO_LARGE,
             Self::S3(_)
             | Self::LocalStorage(_)
             | Self::InvalidArn(_)
@@ -188,6 +204,9 @@ struct CompletedPartInfo {
     size: u64,
 }
 
+/// Maximum number of parts allowed in an S3 multipart upload
+const MAX_S3_PARTS: usize = 10_000;
+
 impl UploadState {
     /// Total bytes in completed parts
     fn completed_parts_size(&self) -> u64 {
@@ -195,26 +214,43 @@ impl UploadState {
     }
 
     /// Next part number to use
-    fn next_part_number(&self) -> i32 {
+    fn next_part_number(&self) -> Result<i32, OciStorageError> {
         // S3 part numbers are 1-indexed and max 10,000 parts
-        // Safe to cast since we won't exceed 10,000 parts
-        i32::try_from(self.parts.len()).unwrap_or(i32::MAX - 1) + 1
+        if self.parts.len() >= MAX_S3_PARTS {
+            return Err(OciStorageError::S3(format!(
+                "Maximum number of S3 parts ({MAX_S3_PARTS}) exceeded"
+            )));
+        }
+        // Safe to cast: parts.len() < 10,000 which fits in i32
+        let len = i32::try_from(self.parts.len())
+            .map_err(|e| OciStorageError::S3(format!("Part count overflow: {e}")))?;
+        Ok(len + 1)
     }
 }
 
+/// Result of listing tags with pagination support
+pub struct ListTagsResult {
+    /// The tags returned
+    pub tags: Vec<String>,
+    /// Whether more tags exist beyond the requested limit
+    pub has_more: bool,
+}
+
 /// OCI Storage implementation using S3 with multipart uploads
-pub(crate) struct OciS3Storage {
+pub struct OciS3Storage {
     client: Client,
     config: OciStorageConfig,
     /// Upload timeout in seconds for stale upload cleanup
     upload_timeout: u64,
+    /// Maximum body size in bytes for uploads
+    max_body_size: u64,
+    /// Logger for error/warning reporting
+    log: Logger,
+    /// Concurrency limit for parallel referrer fetches
+    concurrency: usize,
 }
 
 /// OCI Storage backend - supports S3 or local filesystem
-#[expect(
-    private_interfaces,
-    reason = "Users interact via methods, not variants"
-)]
 pub enum OciStorage {
     /// S3-based storage (recommended for production)
     S3(OciS3Storage),
@@ -230,25 +266,45 @@ impl OciStorage {
     ///
     /// The `upload_timeout` specifies how long (in seconds) before stale uploads
     /// are cleaned up. Pass `None` to use the default (1 hour).
+    /// The `max_body_size` specifies the maximum body size in bytes.
+    /// Pass `None` to use the default (1 GiB).
     pub fn try_from_config(
         log: Logger,
         data_store: Option<RegistryDataStore>,
         database_path: &Path,
         upload_timeout: Option<u64>,
+        max_body_size: Option<u64>,
     ) -> Result<Self, OciStorageError> {
         let timeout = upload_timeout.unwrap_or(DEFAULT_UPLOAD_TIMEOUT_SECS);
+        let body_size = max_body_size.unwrap_or(DEFAULT_MAX_BODY_SIZE);
         match data_store {
             Some(RegistryDataStore::AwsS3 {
                 access_key_id,
                 secret_access_key,
                 access_point,
-            }) => OciS3Storage::new(access_key_id, secret_access_key, &access_point, timeout)
-                .map(OciStorage::S3),
+            }) => OciS3Storage::new(
+                log,
+                access_key_id,
+                secret_access_key,
+                &access_point,
+                timeout,
+                body_size,
+            )
+            .map(OciStorage::S3),
             None => Ok(OciStorage::Local(OciLocalStorage::new(
                 log,
                 database_path,
                 timeout,
+                body_size,
             ))),
+        }
+    }
+
+    /// Returns the configured maximum body size in bytes
+    pub fn max_body_size(&self) -> u64 {
+        match self {
+            Self::S3(s3) => s3.max_body_size,
+            Self::Local(local) => local.max_body_size(),
         }
     }
 
@@ -294,6 +350,25 @@ impl OciStorage {
         match self {
             Self::S3(s3) => s3.complete_upload(upload_id, expected_digest).await,
             Self::Local(local) => local.complete_upload(upload_id, expected_digest).await,
+        }
+    }
+
+    /// Validates that the upload session belongs to the expected repository
+    pub async fn validate_upload_repository(
+        &self,
+        upload_id: &UploadId,
+        expected_repository: &ProjectResourceId,
+    ) -> Result<(), OciStorageError> {
+        match self {
+            Self::S3(s3) => {
+                s3.validate_upload_repository(upload_id, expected_repository)
+                    .await
+            },
+            Self::Local(local) => {
+                local
+                    .validate_upload_repository(upload_id, expected_repository)
+                    .await
+            },
         }
     }
 
@@ -402,7 +477,7 @@ impl OciStorage {
         &self,
         repository: &ProjectResourceId,
         content: Bytes,
-        tag: Option<&str>,
+        tag: Option<&crate::types::Tag>,
     ) -> Result<Digest, OciStorageError> {
         match self {
             Self::S3(s3) => s3.put_manifest(repository, content, tag).await,
@@ -426,7 +501,7 @@ impl OciStorage {
     pub async fn resolve_tag(
         &self,
         repository: &ProjectResourceId,
-        tag: &str,
+        tag: &crate::types::Tag,
     ) -> Result<Digest, OciStorageError> {
         match self {
             Self::S3(s3) => s3.resolve_tag(repository, tag).await,
@@ -436,14 +511,14 @@ impl OciStorage {
 
     /// Lists tags for a repository with optional pagination
     ///
-    /// - `limit`: Maximum number of tags to return (fetches limit + 1 to detect if more exist)
+    /// - `limit`: Maximum number of tags to return
     /// - `start_after`: Tag to start listing after (for cursor-based pagination)
     pub async fn list_tags(
         &self,
         repository: &ProjectResourceId,
         limit: Option<usize>,
         start_after: Option<&str>,
-    ) -> Result<Vec<String>, OciStorageError> {
+    ) -> Result<ListTagsResult, OciStorageError> {
         match self {
             Self::S3(s3) => s3.list_tags(repository, limit, start_after).await,
             Self::Local(local) => local.list_tags(repository, limit, start_after).await,
@@ -466,7 +541,7 @@ impl OciStorage {
     pub async fn delete_tag(
         &self,
         repository: &ProjectResourceId,
-        tag: &str,
+        tag: &crate::types::Tag,
     ) -> Result<(), OciStorageError> {
         match self {
             Self::S3(s3) => s3.delete_tag(repository, tag).await,
@@ -498,10 +573,12 @@ impl OciStorage {
 impl OciS3Storage {
     /// Creates a new S3 storage instance
     fn new(
+        log: Logger,
         access_key_id: String,
         secret_access_key: Secret,
         access_point: &str,
         upload_timeout: u64,
+        max_body_size: u64,
     ) -> Result<Self, OciStorageError> {
         // Parse the S3 ARN
         let arn = S3Arn::from_str(access_point)
@@ -530,11 +607,36 @@ impl OciS3Storage {
             prefix: arn.bucket_path.clone(),
         };
 
+        let concurrency = std::thread::available_parallelism()
+            .map(std::num::NonZeroUsize::get)
+            .unwrap_or(1)
+            .clamp(1, 64);
+
         Ok(Self {
             client,
             config,
             upload_timeout,
+            max_body_size,
+            log,
+            concurrency,
         })
+    }
+
+    // ==================== S3 Error Helpers ====================
+
+    /// Maps an S3 SDK error, converting 404 responses to the provided not-found error
+    fn map_s3_error<E: std::fmt::Display>(
+        err: &aws_sdk_s3::error::SdkError<E>,
+        not_found_error: OciStorageError,
+    ) -> OciStorageError {
+        if err
+            .raw_response()
+            .is_some_and(|r| r.status().as_u16() == 404)
+        {
+            not_found_error
+        } else {
+            OciStorageError::S3(err.to_string())
+        }
     }
 
     // ==================== Key Generation ====================
@@ -639,6 +741,19 @@ impl OciS3Storage {
 
     // ==================== Upload State Management ====================
 
+    /// Validates that the upload session belongs to the expected repository
+    async fn validate_upload_repository(
+        &self,
+        upload_id: &UploadId,
+        expected_repository: &ProjectResourceId,
+    ) -> Result<(), OciStorageError> {
+        let state = self.load_upload_state(upload_id).await?;
+        if state.repository != expected_repository.to_string() {
+            return Err(OciStorageError::UploadNotFound(upload_id.to_string()));
+        }
+        Ok(())
+    }
+
     /// Loads upload state from S3
     async fn load_upload_state(
         &self,
@@ -653,11 +768,7 @@ impl OciS3Storage {
             .send()
             .await
             .map_err(|e| {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
-                    OciStorageError::UploadNotFound(upload_id.to_string())
-                } else {
-                    OciStorageError::S3(e.to_string())
-                }
+                Self::map_s3_error(&e, OciStorageError::UploadNotFound(upload_id.to_string()))
             })?;
 
         let data = response
@@ -787,40 +898,54 @@ impl OciS3Storage {
     }
 
     /// Deletes all upload-related objects from S3
+    ///
+    /// Cleanup order: buffer chunks first, then data object, then state file last.
+    /// This ordering ensures that if a crash occurs mid-cleanup, the state file
+    /// still exists for discovery by `cleanup_stale_uploads_s3`, preventing
+    /// permanently orphaned chunk objects.
     async fn cleanup_upload(&self, upload_id: &UploadId) {
         // Best effort cleanup - ignore errors
         let state_key = self.upload_state_key(upload_id);
         let data_key = self.upload_data_key(upload_id);
 
-        // Delete state
-        let _unused = self
-            .client
-            .delete_object()
-            .bucket(&self.config.bucket_arn)
-            .key(&state_key)
-            .send()
-            .await;
-
-        // Delete multipart data object
-        let _unused = self
-            .client
-            .delete_object()
-            .bucket(&self.config.bucket_arn)
-            .key(&data_key)
-            .send()
-            .await;
-
-        // Delete all buffer chunks by listing them first
+        // Delete all buffer chunks first (while state still exists for discovery)
         if let Ok(chunks) = self.list_buffer_chunks(upload_id).await {
             for (chunk_key, _size) in chunks {
-                let _unused = self
+                if let Err(e) = self
                     .client
                     .delete_object()
                     .bucket(&self.config.bucket_arn)
                     .key(&chunk_key)
                     .send()
-                    .await;
+                    .await
+                {
+                    report_cleanup_error("cleanup_upload: chunk delete", &e);
+                }
             }
+        }
+
+        // Delete multipart data object
+        if let Err(e) = self
+            .client
+            .delete_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&data_key)
+            .send()
+            .await
+        {
+            report_cleanup_error("cleanup_upload: data delete", &e);
+        }
+
+        // Delete state last (so discovery still works if crash occurs above)
+        if let Err(e) = self
+            .client
+            .delete_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&state_key)
+            .send()
+            .await
+        {
+            report_cleanup_error("cleanup_upload: state delete", &e);
         }
     }
 
@@ -886,6 +1011,11 @@ impl OciS3Storage {
     /// create independent objects rather than modifying shared state.
     ///
     /// Chunks are listed, sorted, and combined at completion time.
+    ///
+    /// Note: This method re-lists all buffer chunks to compute the current size.
+    /// While this is O(n) in the number of chunks, it is intentionally chosen
+    /// over tracking cumulative size in upload state to avoid race conditions
+    /// with concurrent appends.
     pub async fn append_upload(
         &self,
         upload_id: &UploadId,
@@ -902,7 +1032,15 @@ impl OciS3Storage {
         let chunks = self.list_buffer_chunks(upload_id).await?;
         let buffer_total_size: u64 = chunks.iter().map(|(_key, size)| size).sum();
 
-        Ok(state.completed_parts_size() + buffer_total_size)
+        let total_size = state.completed_parts_size() + buffer_total_size;
+        if total_size > self.max_body_size {
+            return Err(OciStorageError::SizeExceeded {
+                size: total_size,
+                max: self.max_body_size,
+            });
+        }
+
+        Ok(total_size)
     }
 
     /// Gets the current size of an in-progress upload
@@ -1019,7 +1157,9 @@ impl OciS3Storage {
 
         // Compute actual digest from incremental hash
         let hash = hasher.finalize();
-        let actual_digest = Digest::sha256(&hex::encode(hash));
+        // hex::encode always produces valid hex, so this is infallible in practice
+        let actual_digest = Digest::sha256(&hex::encode(hash))
+            .map_err(|e| OciStorageError::InvalidContent(e.to_string()))?;
 
         // Verify digest matches BEFORE completing multipart (fail fast)
         if actual_digest.as_str() != expected_digest.as_str() {
@@ -1101,7 +1241,7 @@ impl OciS3Storage {
         data_key: &str,
         data: Vec<u8>,
     ) -> Result<(), OciStorageError> {
-        let part_number = state.next_part_number();
+        let part_number = state.next_part_number()?;
         let part_size = data.len() as u64;
 
         let response = self
@@ -1137,14 +1277,17 @@ impl OciS3Storage {
         let data_key = self.upload_data_key(upload_id);
 
         // Abort the S3 multipart upload
-        let _unused = self
+        if let Err(e) = self
             .client
             .abort_multipart_upload()
             .bucket(&self.config.bucket_arn)
             .key(&data_key)
             .upload_id(&state.s3_upload_id)
             .send()
-            .await;
+            .await
+        {
+            report_cleanup_error("cancel_upload: abort multipart", &e);
+        }
 
         // Clean up (lists and deletes all buffer chunks)
         self.cleanup_upload(upload_id).await;
@@ -1197,11 +1340,7 @@ impl OciS3Storage {
             .send()
             .await
             .map_err(|e| {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
-                    OciStorageError::BlobNotFound(digest.to_string())
-                } else {
-                    OciStorageError::S3(e.to_string())
-                }
+                Self::map_s3_error(&e, OciStorageError::BlobNotFound(digest.to_string()))
             })?;
 
         let size = response
@@ -1235,11 +1374,7 @@ impl OciS3Storage {
             .send()
             .await
             .map_err(|e| {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
-                    OciStorageError::BlobNotFound(digest.to_string())
-                } else {
-                    OciStorageError::S3(e.to_string())
-                }
+                Self::map_s3_error(&e, OciStorageError::BlobNotFound(digest.to_string()))
             })?;
 
         let size = response
@@ -1270,11 +1405,7 @@ impl OciS3Storage {
             .send()
             .await
             .map_err(|e| {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
-                    OciStorageError::BlobNotFound(digest.to_string())
-                } else {
-                    OciStorageError::S3(e.to_string())
-                }
+                Self::map_s3_error(&e, OciStorageError::BlobNotFound(digest.to_string()))
             })?;
 
         Ok(response
@@ -1301,33 +1432,36 @@ impl OciS3Storage {
     }
 
     /// Mounts a blob from another repository (cross-repo blob mount)
+    ///
+    /// Attempts the copy directly and handles not-found, avoiding a TOCTOU race
+    /// between checking existence and copying.
     pub async fn mount_blob(
         &self,
         from_repository: &ProjectResourceId,
         to_repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
-        // Check if blob exists in source
-        if !self.blob_exists(from_repository, digest).await? {
-            return Ok(false);
-        }
-
-        // Copy the blob to the new repository
-        // For S3 Access Points, copy source must use the format:
-        // arn:aws:s3:region:account-id:accesspoint/accesspoint-name/object/key
         let source_key = self.blob_key(from_repository, digest);
         let dest_key = self.blob_key(to_repository, digest);
 
-        self.client
+        match self
+            .client
             .copy_object()
             .bucket(&self.config.bucket_arn)
             .copy_source(format!("{}/object/{}", self.config.bucket_arn, source_key))
             .key(&dest_key)
             .send()
             .await
-            .map_err(|e| OciStorageError::S3(e.to_string()))?;
-
-        Ok(true)
+        {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
+                    Ok(false)
+                } else {
+                    Err(OciStorageError::S3(e.to_string()))
+                }
+            },
+        }
     }
 
     // ==================== Manifest Operations ====================
@@ -1337,13 +1471,15 @@ impl OciS3Storage {
         &self,
         repository: &ProjectResourceId,
         content: Bytes,
-        tag: Option<&str>,
+        tag: Option<&crate::types::Tag>,
     ) -> Result<Digest, OciStorageError> {
         // Compute digest
         let mut hasher = Sha256::new();
         hasher.update(&content);
         let hash = hasher.finalize();
-        let digest = Digest::sha256(&hex::encode(hash));
+        // hex::encode always produces valid hex, so this is infallible in practice
+        let digest = Digest::sha256(&hex::encode(hash))
+            .map_err(|e| OciStorageError::InvalidContent(e.to_string()))?;
 
         // Store manifest by digest
         let manifest_key = self.manifest_key_by_digest(repository, &digest);
@@ -1358,7 +1494,7 @@ impl OciS3Storage {
 
         // If a tag was provided, create a tag link
         if let Some(tag) = tag {
-            let tag_key = self.tag_link_key(repository, tag);
+            let tag_key = self.tag_link_key(repository, tag.as_str());
             self.client
                 .put_object()
                 .bucket(&self.config.bucket_arn)
@@ -1370,53 +1506,20 @@ impl OciS3Storage {
         }
 
         // Check if manifest has a subject field (for referrers API)
-        if let Ok(manifest) = serde_json::from_slice::<serde_json::Value>(&content)
-            && let Some(subject) = manifest.get("subject")
-            && let Some(subject_digest_str) = subject.get("digest").and_then(|d| d.as_str())
-            && let Ok(subject_digest) = subject_digest_str.parse::<Digest>()
+        if let Some((subject_digest, descriptor)) =
+            crate::types::build_referrer_descriptor(&content, &digest)
         {
-            // Extract descriptor info for the referrer
-            let media_type = manifest
-                .get("mediaType")
-                .and_then(|m| m.as_str())
-                .unwrap_or("application/vnd.oci.image.manifest.v1+json");
-            let artifact_type = manifest
-                .get("artifactType")
-                .and_then(|a| a.as_str())
-                .or_else(|| {
-                    manifest
-                        .get("config")
-                        .and_then(|c| c.get("mediaType"))
-                        .and_then(|m| m.as_str())
-                });
-
-            // Create referrer descriptor
-            let mut descriptor = serde_json::json!({
-                "mediaType": media_type,
-                "digest": digest.to_string(),
-                "size": content.len()
-            });
-            if let Some(at) = artifact_type
-                && let Some(obj) = descriptor.as_object_mut()
-            {
-                obj.insert(
-                    "artifactType".to_owned(),
-                    serde_json::Value::String(at.to_owned()),
-                );
-            }
-            if let Some(annotations) = manifest.get("annotations")
-                && let Some(obj) = descriptor.as_object_mut()
-            {
-                obj.insert("annotations".to_owned(), annotations.clone());
-            }
-
             // Store referrer link
             let referrer_key = self.referrer_key(repository, &subject_digest, &digest);
             self.client
                 .put_object()
                 .bucket(&self.config.bucket_arn)
                 .key(&referrer_key)
-                .body(serde_json::to_vec(&descriptor).unwrap_or_default().into())
+                .body(
+                    serde_json::to_vec(&descriptor)
+                        .map_err(|e| OciStorageError::Json(e.to_string()))?
+                        .into(),
+                )
                 .send()
                 .await
                 .map_err(|e| OciStorageError::S3(e.to_string()))?;
@@ -1440,11 +1543,7 @@ impl OciS3Storage {
             .send()
             .await
             .map_err(|e| {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
-                    OciStorageError::ManifestNotFound(digest.to_string())
-                } else {
-                    OciStorageError::S3(e.to_string())
-                }
+                Self::map_s3_error(&e, OciStorageError::ManifestNotFound(digest.to_string()))
             })?;
 
         let data = response
@@ -1461,9 +1560,9 @@ impl OciS3Storage {
     pub async fn resolve_tag(
         &self,
         repository: &ProjectResourceId,
-        tag: &str,
+        tag: &crate::types::Tag,
     ) -> Result<Digest, OciStorageError> {
-        let key = self.tag_link_key(repository, tag);
+        let key = self.tag_link_key(repository, tag.as_str());
         let response = self
             .client
             .get_object()
@@ -1472,11 +1571,7 @@ impl OciS3Storage {
             .send()
             .await
             .map_err(|e| {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
-                    OciStorageError::ManifestNotFound(tag.to_owned())
-                } else {
-                    OciStorageError::S3(e.to_string())
-                }
+                Self::map_s3_error(&e, OciStorageError::ManifestNotFound(tag.to_string()))
             })?;
 
         let data = response
@@ -1497,7 +1592,7 @@ impl OciS3Storage {
 
     /// Lists tags for a repository with optional pagination
     ///
-    /// - `limit`: Maximum number of tags to return (fetches limit + 1 to detect if more exist)
+    /// - `limit`: Maximum number of tags to return
     /// - `start_after`: Tag to start listing after (for cursor-based pagination)
     ///
     /// Returns tags sorted lexicographically by S3.
@@ -1506,7 +1601,7 @@ impl OciS3Storage {
         repository: &ProjectResourceId,
         limit: Option<usize>,
         start_after: Option<&str>,
-    ) -> Result<Vec<String>, OciStorageError> {
+    ) -> Result<ListTagsResult, OciStorageError> {
         let prefix = format!("{}/tags/", self.key_prefix(repository));
 
         let mut tags = Vec::new();
@@ -1551,11 +1646,15 @@ impl OciS3Storage {
                     {
                         tags.push(tag.to_owned());
 
-                        // Check if we've collected enough
-                        if let Some(limit) = fetch_limit
-                            && tags.len() >= limit
+                        // Check if we've collected enough (fetch_limit = limit + 1)
+                        if let Some(fl) = fetch_limit
+                            && tags.len() >= fl
                         {
-                            return Ok(tags);
+                            let has_more = limit.is_some_and(|l| tags.len() > l);
+                            if let Some(l) = limit {
+                                tags.truncate(l);
+                            }
+                            return Ok(ListTagsResult { tags, has_more });
                         }
                     }
                 }
@@ -1577,7 +1676,11 @@ impl OciS3Storage {
             }
         }
 
-        Ok(tags)
+        let has_more = limit.is_some_and(|l| tags.len() > l);
+        if let Some(l) = limit {
+            tags.truncate(l);
+        }
+        Ok(ListTagsResult { tags, has_more })
     }
 
     /// Deletes a manifest by digest
@@ -1592,22 +1695,19 @@ impl OciS3Storage {
         // Try to read the manifest first to check for subject field
         // If we can read it and it has a subject, clean up the referrer link
         if let Ok(data) = self.get_manifest_by_digest(repository, digest).await
-            && let Ok(manifest) = serde_json::from_slice::<serde_json::Value>(&data)
-            && let Some(subject) = manifest.get("subject")
-            && let Some(subject_digest_str) = subject.get("digest").and_then(|d| d.as_str())
-            && let Ok(subject_digest) = subject_digest_str.parse::<Digest>()
+            && let Some(subject_digest) = crate::types::extract_subject_digest(&data)
         {
-            // Delete the referrer link
             let referrer_key = self.referrer_key(repository, &subject_digest, digest);
-            // Ignore errors - the referrer link may not exist or may have already been deleted
-            drop(
-                self.client
-                    .delete_object()
-                    .bucket(&self.config.bucket_arn)
-                    .key(&referrer_key)
-                    .send()
-                    .await,
-            );
+            if let Err(e) = self
+                .client
+                .delete_object()
+                .bucket(&self.config.bucket_arn)
+                .key(&referrer_key)
+                .send()
+                .await
+            {
+                report_cleanup_error("delete_manifest: referrer link delete", &e);
+            }
         }
 
         // Delete the manifest itself
@@ -1627,9 +1727,9 @@ impl OciS3Storage {
     pub async fn delete_tag(
         &self,
         repository: &ProjectResourceId,
-        tag: &str,
+        tag: &crate::types::Tag,
     ) -> Result<(), OciStorageError> {
-        let key = self.tag_link_key(repository, tag);
+        let key = self.tag_link_key(repository, tag.as_str());
         self.client
             .delete_object()
             .bucket(&self.config.bucket_arn)
@@ -1687,8 +1787,9 @@ impl OciS3Storage {
             }
         }
 
-        // Fetch referrer descriptors in parallel (up to 10 concurrent)
+        // Fetch referrer descriptors in parallel
         let filter = artifact_type_filter.map(ToOwned::to_owned);
+        let log = &self.log;
         let referrers: Vec<serde_json::Value> = stream::iter(keys)
             .map(|key| {
                 let client = &self.client;
@@ -1697,14 +1798,17 @@ impl OciS3Storage {
                 async move {
                     // Get the referrer descriptor
                     let Ok(resp) = client.get_object().bucket(bucket).key(&key).send().await else {
+                        slog::warn!(log, "Failed to fetch referrer from S3"; "key" => &key);
                         return None;
                     };
                     let Ok(data) = resp.body.collect().await else {
+                        slog::warn!(log, "Failed to collect referrer body from S3"; "key" => &key);
                         return None;
                     };
                     let Ok(descriptor) =
                         serde_json::from_slice::<serde_json::Value>(&data.into_bytes())
                     else {
+                        slog::warn!(log, "Failed to parse referrer JSON from S3"; "key" => &key);
                         return None;
                     };
                     // Apply artifact type filter if specified
@@ -1720,7 +1824,7 @@ impl OciS3Storage {
                     Some(descriptor)
                 }
             })
-            .buffer_unordered(10)
+            .buffer_unordered(self.concurrency)
             .filter_map(|x| async move { x })
             .collect()
             .await;
@@ -1849,27 +1953,41 @@ async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, uplo
         None => "_uploads".to_owned(),
     };
 
-    // List upload directories
+    // List upload directories (with pagination)
     let prefix = format!("{global_prefix}/");
-    let Ok(response) = client
-        .list_objects_v2()
-        .bucket(&config.bucket_arn)
-        .prefix(&prefix)
-        .delimiter("/")
-        .send()
-        .await
-    else {
-        return;
-    };
+    let mut all_prefixes = Vec::new();
+    let mut continuation_token: Option<String> = None;
+
+    loop {
+        let mut request = client
+            .list_objects_v2()
+            .bucket(&config.bucket_arn)
+            .prefix(&prefix)
+            .delimiter("/");
+
+        if let Some(token) = continuation_token.take() {
+            request = request.continuation_token(token);
+        }
+
+        let Ok(response) = request.send().await else {
+            return;
+        };
+
+        if let Some(prefixes) = response.common_prefixes {
+            all_prefixes.extend(prefixes);
+        }
+
+        if response.is_truncated == Some(true) {
+            continuation_token = response.next_continuation_token;
+        } else {
+            break;
+        }
+    }
 
     let now = Utc::now().timestamp();
     let timeout_secs = i64::try_from(upload_timeout).unwrap_or(i64::MAX);
 
-    let Some(prefixes) = response.common_prefixes else {
-        return;
-    };
-
-    for prefix in prefixes {
+    for prefix in all_prefixes {
         let Some(prefix_str) = prefix.prefix else {
             continue;
         };
@@ -1907,29 +2025,38 @@ async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, uplo
         if (now - state.created_at) > timeout_secs {
             // Abort the S3 multipart upload
             let data_key = format!("{global_prefix}/{upload_id}/data");
-            let _unused = client
+            if let Err(e) = client
                 .abort_multipart_upload()
                 .bucket(&config.bucket_arn)
                 .key(&data_key)
                 .upload_id(&state.s3_upload_id)
                 .send()
-                .await;
+                .await
+            {
+                report_cleanup_error("stale_upload: abort multipart", &e);
+            }
 
             // Delete state file
-            let _unused = client
+            if let Err(e) = client
                 .delete_object()
                 .bucket(&config.bucket_arn)
                 .key(&state_key)
                 .send()
-                .await;
+                .await
+            {
+                report_cleanup_error("stale_upload: state delete", &e);
+            }
 
             // Delete data file
-            let _unused = client
+            if let Err(e) = client
                 .delete_object()
                 .bucket(&config.bucket_arn)
                 .key(&data_key)
                 .send()
-                .await;
+                .await
+            {
+                report_cleanup_error("stale_upload: data delete", &e);
+            }
 
             // Delete all buffer chunks by listing them
             let chunks_prefix = format!("{global_prefix}/{upload_id}/chunks/");
@@ -1950,13 +2077,15 @@ async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, uplo
 
                 if let Some(contents) = response.contents {
                     for object in contents {
-                        if let Some(chunk_key) = object.key {
-                            let _unused = client
+                        if let Some(chunk_key) = object.key
+                            && let Err(e) = client
                                 .delete_object()
                                 .bucket(&config.bucket_arn)
                                 .key(&chunk_key)
                                 .send()
-                                .await;
+                                .await
+                        {
+                            report_cleanup_error("stale_upload: chunk delete", &e);
                         }
                     }
                 }

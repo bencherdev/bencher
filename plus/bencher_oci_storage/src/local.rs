@@ -14,7 +14,7 @@ use chrono::Utc;
 use http_body_util::StreamBody;
 use hyper::body::Frame;
 use sha2::{Digest as _, Sha256};
-use slog::{Logger, error};
+use slog::{Logger, error, warn};
 use tokio::fs;
 use tokio::io::AsyncWriteExt as _;
 use tokio_util::io::ReaderStream;
@@ -108,11 +108,13 @@ struct UploadState {
 }
 
 /// OCI Storage implementation using local filesystem
-pub(crate) struct OciLocalStorage {
+pub struct OciLocalStorage {
     /// Base directory for OCI storage (e.g., `data/oci`)
     base_dir: PathBuf,
     /// Upload timeout in seconds for stale upload cleanup
     upload_timeout: u64,
+    /// Maximum body size in bytes for uploads
+    max_body_size: u64,
     /// Logger for error reporting
     log: Logger,
 }
@@ -122,7 +124,7 @@ impl OciLocalStorage {
     ///
     /// The `database_path` is the path to the `SQLite` database file.
     /// OCI data will be stored in an `oci` subdirectory next to it.
-    pub fn new(log: Logger, database_path: &Path, upload_timeout: u64) -> Self {
+    pub fn new(log: Logger, database_path: &Path, upload_timeout: u64, max_body_size: u64) -> Self {
         let base_dir = database_path
             .parent()
             .map_or_else(|| PathBuf::from("oci"), |p| p.join("oci"));
@@ -130,8 +132,14 @@ impl OciLocalStorage {
         Self {
             base_dir,
             upload_timeout,
+            max_body_size,
             log,
         }
+    }
+
+    /// Returns the configured maximum body size in bytes
+    pub(crate) fn max_body_size(&self) -> u64 {
+        self.max_body_size
     }
 
     // ==================== Path Generation ====================
@@ -178,8 +186,10 @@ impl OciLocalStorage {
     }
 
     /// Returns the path for a tag link
-    fn tag_path(&self, repository: &ProjectResourceId, tag: &str) -> PathBuf {
-        self.repository_dir(repository).join("tags").join(tag)
+    fn tag_path(&self, repository: &ProjectResourceId, tag: &crate::types::Tag) -> PathBuf {
+        self.repository_dir(repository)
+            .join("tags")
+            .join(tag.as_str())
     }
 
     /// Returns the directory for referrers to a given digest
@@ -205,6 +215,19 @@ impl OciLocalStorage {
     }
 
     // ==================== Upload State Management ====================
+
+    /// Validates that the upload session belongs to the expected repository
+    pub async fn validate_upload_repository(
+        &self,
+        upload_id: &UploadId,
+        expected_repository: &ProjectResourceId,
+    ) -> Result<(), OciStorageError> {
+        let state = self.load_upload_state(upload_id).await?;
+        if state.repository != expected_repository.to_string() {
+            return Err(OciStorageError::UploadNotFound(upload_id.to_string()));
+        }
+        Ok(())
+    }
 
     /// Loads upload state from disk
     async fn load_upload_state(
@@ -307,7 +330,15 @@ impl OciLocalStorage {
             OciStorageError::LocalStorage(format!("Failed to get upload file metadata: {e}"))
         })?;
 
-        Ok(metadata.len())
+        let total_size = metadata.len();
+        if total_size > self.max_body_size {
+            return Err(OciStorageError::SizeExceeded {
+                size: total_size,
+                max: self.max_body_size,
+            });
+        }
+
+        Ok(total_size)
     }
 
     /// Gets the current size of an in-progress upload
@@ -350,7 +381,9 @@ impl OciLocalStorage {
         let mut hasher = Sha256::new();
         hasher.update(&data);
         let hash = hasher.finalize();
-        let actual_digest = Digest::sha256(&hex::encode(hash));
+        // hex::encode always produces valid hex, so this is infallible in practice
+        let actual_digest = Digest::sha256(&hex::encode(hash))
+            .map_err(|e| OciStorageError::InvalidContent(e.to_string()))?;
 
         // Verify digest matches
         if actual_digest.as_str() != expected_digest.as_str() {
@@ -398,7 +431,10 @@ impl OciLocalStorage {
     /// Cleans up upload files
     async fn cleanup_upload(&self, upload_id: &UploadId) {
         let upload_dir = self.upload_dir(upload_id);
-        let _unused = fs::remove_dir_all(&upload_dir).await;
+        if let Err(e) = fs::remove_dir_all(&upload_dir).await {
+            error!(self.log, "Failed to clean up upload directory"; "upload_id" => %upload_id, "error" => %e);
+            crate::storage::report_cleanup_error("cleanup_upload: remove_dir_all", &e);
+        }
     }
 
     /// Spawns a background task to clean up all stale uploads that have exceeded the timeout.
@@ -508,18 +544,16 @@ impl OciLocalStorage {
     }
 
     /// Mounts a blob from another repository (cross-repo blob mount)
+    ///
+    /// Attempts to copy the blob directly, avoiding a TOCTOU race between
+    /// checking existence and copying. If the source blob doesn't exist,
+    /// returns `Ok(false)`.
     pub async fn mount_blob(
         &self,
         from_repository: &ProjectResourceId,
         to_repository: &ProjectResourceId,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
-        // Check if blob exists in source
-        if !self.blob_exists(from_repository, digest).await? {
-            return Ok(false);
-        }
-
-        // Copy the blob to the new repository
         let source_path = self.blob_path(from_repository, digest);
         let dest_path = self.blob_path(to_repository, digest);
 
@@ -529,11 +563,13 @@ impl OciLocalStorage {
             })?;
         }
 
-        fs::copy(&source_path, &dest_path)
-            .await
-            .map_err(|e| OciStorageError::LocalStorage(format!("Failed to copy blob: {e}")))?;
-
-        Ok(true)
+        match fs::copy(&source_path, &dest_path).await {
+            Ok(_) => Ok(true),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
+            Err(e) => Err(OciStorageError::LocalStorage(format!(
+                "Failed to copy blob: {e}"
+            ))),
+        }
     }
 
     // ==================== Manifest Operations ====================
@@ -543,13 +579,15 @@ impl OciLocalStorage {
         &self,
         repository: &ProjectResourceId,
         content: Bytes,
-        tag: Option<&str>,
+        tag: Option<&crate::types::Tag>,
     ) -> Result<Digest, OciStorageError> {
         // Compute digest
         let mut hasher = Sha256::new();
         hasher.update(&content);
         let hash = hasher.finalize();
-        let digest = Digest::sha256(&hex::encode(hash));
+        // hex::encode always produces valid hex, so this is infallible in practice
+        let digest = Digest::sha256(&hex::encode(hash))
+            .map_err(|e| OciStorageError::InvalidContent(e.to_string()))?;
 
         // Store manifest by digest
         let manifest_path = self.manifest_path(repository, &digest);
@@ -576,46 +614,9 @@ impl OciLocalStorage {
         }
 
         // Check if manifest has a subject field (for referrers API)
-        if let Ok(manifest) = serde_json::from_slice::<serde_json::Value>(&content)
-            && let Some(subject) = manifest.get("subject")
-            && let Some(subject_digest_str) = subject.get("digest").and_then(|d| d.as_str())
-            && let Ok(subject_digest) = subject_digest_str.parse::<Digest>()
+        if let Some((subject_digest, descriptor)) =
+            crate::types::build_referrer_descriptor(&content, &digest)
         {
-            // Extract descriptor info for the referrer
-            let media_type = manifest
-                .get("mediaType")
-                .and_then(|m| m.as_str())
-                .unwrap_or("application/vnd.oci.image.manifest.v1+json");
-            let artifact_type = manifest
-                .get("artifactType")
-                .and_then(|a| a.as_str())
-                .or_else(|| {
-                    manifest
-                        .get("config")
-                        .and_then(|c| c.get("mediaType"))
-                        .and_then(|m| m.as_str())
-                });
-
-            // Create referrer descriptor
-            let mut descriptor = serde_json::json!({
-                "mediaType": media_type,
-                "digest": digest.to_string(),
-                "size": content.len()
-            });
-            if let Some(at) = artifact_type
-                && let Some(obj) = descriptor.as_object_mut()
-            {
-                obj.insert(
-                    "artifactType".to_owned(),
-                    serde_json::Value::String(at.to_owned()),
-                );
-            }
-            if let Some(annotations) = manifest.get("annotations")
-                && let Some(obj) = descriptor.as_object_mut()
-            {
-                obj.insert("annotations".to_owned(), annotations.clone());
-            }
-
             // Store referrer link
             let referrer_path = self.referrer_path(repository, &subject_digest, &digest);
             if let Some(parent) = referrer_path.parent() {
@@ -627,7 +628,8 @@ impl OciLocalStorage {
             }
             fs::write(
                 &referrer_path,
-                serde_json::to_vec(&descriptor).unwrap_or_default(),
+                serde_json::to_vec(&descriptor)
+                    .map_err(|e| OciStorageError::Json(e.to_string()))?,
             )
             .await
             .map_err(|e| OciStorageError::LocalStorage(format!("Failed to write referrer: {e}")))?;
@@ -656,12 +658,12 @@ impl OciLocalStorage {
     pub async fn resolve_tag(
         &self,
         repository: &ProjectResourceId,
-        tag: &str,
+        tag: &crate::types::Tag,
     ) -> Result<Digest, OciStorageError> {
         let path = self.tag_path(repository, tag);
         let data = map_io_error(
             fs::read_to_string(&path).await,
-            OciStorageError::ManifestNotFound(tag.to_owned()),
+            OciStorageError::ManifestNotFound(tag.to_string()),
             "Failed to read tag",
         )?;
 
@@ -672,7 +674,7 @@ impl OciLocalStorage {
 
     /// Lists tags for a repository with optional pagination
     ///
-    /// - `limit`: Maximum number of tags to return (fetches limit + 1 to detect if more exist)
+    /// - `limit`: Maximum number of tags to return
     /// - `start_after`: Tag to start listing after (for cursor-based pagination)
     ///
     /// Note: For local storage, we must read all directory entries first, then apply
@@ -682,11 +684,14 @@ impl OciLocalStorage {
         repository: &ProjectResourceId,
         limit: Option<usize>,
         start_after: Option<&str>,
-    ) -> Result<Vec<String>, OciStorageError> {
+    ) -> Result<crate::storage::ListTagsResult, OciStorageError> {
         let tags_dir = self.repository_dir(repository).join("tags");
 
         if !tags_dir.exists() {
-            return Ok(Vec::new());
+            return Ok(crate::storage::ListTagsResult {
+                tags: Vec::new(),
+                has_more: false,
+            });
         }
 
         let mut tags = Vec::new();
@@ -716,14 +721,15 @@ impl OciLocalStorage {
             tags
         };
 
-        // Apply limit (fetch limit + 1 to detect if more exist)
+        // Apply limit and detect if more exist
+        let has_more = limit.is_some_and(|l| tags.len() > l);
         let tags = if let Some(limit) = limit {
-            tags.into_iter().take(limit + 1).collect()
+            tags.into_iter().take(limit).collect()
         } else {
             tags
         };
 
-        Ok(tags)
+        Ok(crate::storage::ListTagsResult { tags, has_more })
     }
 
     /// Deletes a manifest by digest
@@ -740,15 +746,14 @@ impl OciLocalStorage {
         // Try to read the manifest first to check for subject field
         // If we can read it and it has a subject, clean up the referrer link
         if let Ok(data) = fs::read(&path).await
-            && let Ok(manifest) = serde_json::from_slice::<serde_json::Value>(&data)
-            && let Some(subject) = manifest.get("subject")
-            && let Some(subject_digest_str) = subject.get("digest").and_then(|d| d.as_str())
-            && let Ok(subject_digest) = subject_digest_str.parse::<Digest>()
+            && let Some(subject_digest) = crate::types::extract_subject_digest(&data)
         {
-            // Delete the referrer link
             let referrer_path = self.referrer_path(repository, &subject_digest, digest);
-            // Ignore errors - the referrer link may not exist or may have already been deleted
-            drop(fs::remove_file(&referrer_path).await);
+            if let Err(e) = fs::remove_file(&referrer_path).await
+                && e.kind() != io::ErrorKind::NotFound
+            {
+                crate::storage::report_cleanup_error("delete_manifest: referrer link delete", &e);
+            }
         }
 
         // Delete the manifest itself
@@ -766,7 +771,7 @@ impl OciLocalStorage {
     pub async fn delete_tag(
         &self,
         repository: &ProjectResourceId,
-        tag: &str,
+        tag: &crate::types::Tag,
     ) -> Result<(), OciStorageError> {
         let path = self.tag_path(repository, tag);
         match fs::remove_file(&path).await {
@@ -801,9 +806,11 @@ impl OciLocalStorage {
             OciStorageError::LocalStorage(format!("Failed to read referrer entry: {e}"))
         })? {
             let Ok(data) = fs::read(entry.path()).await else {
+                warn!(self.log, "Failed to read referrer file"; "path" => %entry.path().display());
                 continue;
             };
             let Ok(descriptor) = serde_json::from_slice::<serde_json::Value>(&data) else {
+                warn!(self.log, "Failed to parse referrer JSON"; "path" => %entry.path().display());
                 continue;
             };
 

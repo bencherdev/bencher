@@ -7,7 +7,8 @@
 
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Put};
 use bencher_json::ProjectResourceId;
-use bencher_oci_storage::{OciError, Reference};
+use bencher_json::oci::Manifest;
+use bencher_oci_storage::{Digest, OciError, OciStorage, Reference};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, RequestContext, UntypedBody, endpoint};
 use http::Response;
@@ -15,6 +16,22 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::auth::{require_pull_access, require_push_access, validate_push_access};
+use crate::response::oci_cors_headers;
+
+/// Resolve a reference (tag or digest) to a digest
+async fn resolve_reference(
+    storage: &OciStorage,
+    name: &ProjectResourceId,
+    reference: &Reference,
+) -> Result<Digest, HttpError> {
+    match reference {
+        Reference::Digest(d) => Ok(d.clone()),
+        Reference::Tag(t) => storage
+            .resolve_tag(name, t)
+            .await
+            .map_err(|e| crate::error::into_http_error(OciError::from(e))),
+    }
+}
 
 /// Path parameters for manifest endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -67,13 +84,7 @@ pub async fn oci_manifest_exists(
     let storage = context.oci_storage();
 
     // Resolve the reference to a digest
-    let digest = match &reference {
-        Reference::Digest(d) => d.clone(),
-        Reference::Tag(t) => storage
-            .resolve_tag(&path.name, t.as_str())
-            .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?,
-    };
+    let digest = resolve_reference(storage, &path.name, &reference).await?;
 
     // Get manifest to check existence and get size
     let manifest = storage
@@ -81,28 +92,23 @@ pub async fn oci_manifest_exists(
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
-    // Determine content type from manifest (parse to get mediaType field)
-    let content_type = serde_json::from_slice::<serde_json::Value>(&manifest)
-        .ok()
-        .and_then(|v| {
-            v.get("mediaType")
-                .and_then(|m| m.as_str())
-                .map(ToOwned::to_owned)
-        })
-        .unwrap_or_else(|| "application/vnd.oci.image.manifest.v1+json".to_owned());
+    // Determine content type from typed manifest
+    let parsed = Manifest::from_bytes(&manifest).map_err(|e| {
+        HttpError::for_internal_error(format!("Failed to parse stored manifest: {e}"))
+    })?;
+    let content_type = parsed.media_type().to_owned();
 
     // Build response with OCI-compliant headers (no body for HEAD)
-    let response = Response::builder()
-        .status(http::StatusCode::OK)
-        .header(http::header::CONTENT_TYPE, content_type)
-        .header(http::header::CONTENT_LENGTH, manifest.len())
-        .header("Docker-Content-Digest", digest.to_string())
-        // CORS headers
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .header(http::header::ACCESS_CONTROL_ALLOW_METHODS, "HEAD, GET")
-        .header(http::header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::OK)
+            .header(http::header::CONTENT_TYPE, content_type)
+            .header(http::header::CONTENT_LENGTH, manifest.len())
+            .header("Docker-Content-Digest", digest.to_string()),
+        "HEAD, GET",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -135,13 +141,7 @@ pub async fn oci_manifest_get(
     let storage = context.oci_storage();
 
     // Resolve the reference to a digest
-    let digest = match &reference {
-        Reference::Digest(d) => d.clone(),
-        Reference::Tag(t) => storage
-            .resolve_tag(&path.name, t.as_str())
-            .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?,
-    };
+    let digest = resolve_reference(storage, &path.name, &reference).await?;
 
     // Get manifest content
     let manifest = storage
@@ -153,28 +153,23 @@ pub async fn oci_manifest_get(
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciManifestPull);
 
-    // Determine content type from manifest (parse to get mediaType field)
-    let content_type = serde_json::from_slice::<serde_json::Value>(&manifest)
-        .ok()
-        .and_then(|v| {
-            v.get("mediaType")
-                .and_then(|m| m.as_str())
-                .map(ToOwned::to_owned)
-        })
-        .unwrap_or_else(|| "application/vnd.oci.image.manifest.v1+json".to_owned());
+    // Determine content type from typed manifest
+    let parsed = Manifest::from_bytes(&manifest).map_err(|e| {
+        HttpError::for_internal_error(format!("Failed to parse stored manifest: {e}"))
+    })?;
+    let content_type = parsed.media_type().to_owned();
 
     // Build response with OCI-compliant headers
-    let response = Response::builder()
-        .status(http::StatusCode::OK)
-        .header(http::header::CONTENT_TYPE, content_type)
-        .header(http::header::CONTENT_LENGTH, manifest.len())
-        .header("Docker-Content-Digest", digest.to_string())
-        // CORS headers
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .header(http::header::ACCESS_CONTROL_ALLOW_METHODS, "GET")
-        .header(http::header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type")
-        .body(Body::from(manifest))
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::OK)
+            .header(http::header::CONTENT_TYPE, content_type)
+            .header(http::header::CONTENT_LENGTH, manifest.len())
+            .header("Docker-Content-Digest", digest.to_string()),
+        "GET",
+    )
+    .body(Body::from(manifest))
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }
@@ -204,30 +199,51 @@ pub async fn oci_manifest_put(
 
     // Parse reference
     let reference: Reference = path.reference.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::ManifestInvalid(path.reference.clone()))
+        crate::error::into_http_error(OciError::ManifestUnknown {
+            reference: path.reference.clone(),
+        })
     })?;
 
-    // Get storage
+    // Get storage and enforce max body size
     let storage = context.oci_storage();
+    let max = storage.max_body_size();
+    if body_bytes.len() as u64 > max {
+        return Err(crate::error::payload_too_large(
+            body_bytes.len() as u64,
+            max,
+        ));
+    }
 
     // Determine tag from reference (if it's a tag)
     let tag = match &reference {
-        Reference::Tag(t) => Some(t.as_str()),
+        Reference::Tag(t) => Some(t),
         Reference::Digest(_) => None,
     };
 
+    // Parse and validate manifest using typed schemas
+    let parsed_manifest = Manifest::from_bytes(body_bytes).map_err(|e| {
+        crate::error::into_http_error(OciError::ManifestInvalid(format!("Invalid manifest: {e}")))
+    })?;
+
+    // Validate Content-Type header matches manifest mediaType if present
+    if let Some(content_type) = rqctx.request.headers().get(http::header::CONTENT_TYPE)
+        && let Ok(ct_str) = content_type.to_str()
+    {
+        let manifest_media_type = parsed_manifest.media_type();
+        if ct_str != manifest_media_type {
+            return Err(crate::error::into_http_error(OciError::ManifestInvalid(
+                format!(
+                    "Content-Type '{ct_str}' does not match manifest mediaType '{manifest_media_type}'"
+                ),
+            )));
+        }
+    }
+
     // Extract subject digest from manifest if present (for OCI-Subject header)
-    let subject_digest = serde_json::from_slice::<serde_json::Value>(body_bytes)
-        .ok()
-        .and_then(|manifest| {
-            manifest
-                .get("subject")
-                .and_then(|s| s.get("digest"))
-                .and_then(|d| d.as_str())
-                .map(ToOwned::to_owned)
-        });
+    let subject_digest = parsed_manifest.subject().map(|s| s.digest.clone());
 
     // Store the manifest
+    // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
     let digest = storage
         .put_manifest(&path.name, bytes::Bytes::copy_from_slice(body_bytes), tag)
         .await
@@ -240,16 +256,13 @@ pub async fn oci_manifest_put(
     // Build 201 Created response with Location and Docker-Content-Digest headers
     let location = format!("/v2/{project_slug}/manifests/{digest}");
 
-    let mut builder = Response::builder()
-        .status(http::StatusCode::CREATED)
-        .header(http::header::LOCATION, location)
-        .header("Docker-Content-Digest", digest.to_string())
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .header(http::header::ACCESS_CONTROL_ALLOW_METHODS, "PUT")
-        .header(
-            http::header::ACCESS_CONTROL_ALLOW_HEADERS,
-            "Content-Type, Authorization",
-        );
+    let mut builder = oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::CREATED)
+            .header(http::header::LOCATION, location)
+            .header("Docker-Content-Digest", digest.to_string()),
+        "PUT",
+    );
 
     // Add OCI-Subject header if manifest has a subject field
     if let Some(subject) = subject_digest {
@@ -301,18 +314,19 @@ pub async fn oci_manifest_delete(
         Reference::Tag(tag) => {
             // Delete by tag - delete the tag link only (manifest may still exist)
             storage
-                .delete_tag(&path.name, tag.as_str())
+                .delete_tag(&path.name, &tag)
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
         },
     }
 
     // OCI spec requires 202 Accepted for DELETE
-    let response = Response::builder()
-        .status(http::StatusCode::ACCEPTED)
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::empty())
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+    let response = oci_cors_headers(
+        Response::builder().status(http::StatusCode::ACCEPTED),
+        "DELETE",
+    )
+    .body(Body::empty())
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
 }

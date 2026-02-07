@@ -9,8 +9,8 @@ use jsonwebtoken::{
 };
 
 use crate::{
-    Audience, Claims, InviteClaims, OAuthClaims, OciClaims, OciScopeClaims, OrgClaims, StateClaims,
-    TokenError,
+    Audience, Claims, InviteClaims, OAuthClaims, OciAction, OciClaims, OciScopeClaims, OrgClaims,
+    StateClaims, TokenError,
 };
 
 static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
@@ -41,12 +41,10 @@ impl TokenKey {
         oci: Option<OciScopeClaims>,
     ) -> Result<Jwt, TokenError> {
         let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org, state, oci);
-        Jwt::from_str(&encode(&HEADER, &claims, &self.encoding).map_err(|e| {
-            TokenError::Encode {
-                claims: Box::new(claims),
-                error: e,
-            }
-        })?)
+        Jwt::from_str(
+            &encode(&HEADER, &claims, &self.encoding)
+                .map_err(|e| TokenError::Encode { error: e })?,
+        )
         .map_err(TokenError::Parse)
     }
 
@@ -85,8 +83,13 @@ impl TokenKey {
         email: Email,
         ttl: u32,
         repository: Option<String>,
-        actions: Vec<String>,
+        actions: Vec<OciAction>,
     ) -> Result<Jwt, TokenError> {
+        if actions.is_empty() {
+            return Err(TokenError::Oci {
+                error: JsonWebTokenErrorKind::MissingRequiredClaim("actions".into()).into(),
+            });
+        }
         let oci_claims = OciScopeClaims {
             repository,
             actions,
@@ -105,10 +108,7 @@ impl TokenKey {
         validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
 
         let token_data: TokenData<Claims> = decode(token.as_ref(), &self.decoding, &validation)
-            .map_err(|error| TokenError::Decode {
-                token: token.clone(),
-                error,
-            })?;
+            .map_err(|error| TokenError::Decode { error })?;
         let exp = token_data.claims.exp;
         let now = Utc::now().timestamp();
         if exp < now {
@@ -155,7 +155,7 @@ mod tests {
 
     use bencher_json::{Email, OrganizationUuid, organization::member::OrganizationRole};
 
-    use crate::{Audience, DEFAULT_SECRET_KEY};
+    use crate::{Audience, DEFAULT_SECRET_KEY, OciAction};
 
     use super::TokenKey;
 
@@ -267,6 +267,40 @@ mod tests {
     }
 
     #[test]
+    fn jwt_oci() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let repository = Some("test-org/test-project".to_owned());
+        let actions = vec![OciAction::Pull, OciAction::Push];
+
+        let token = secret_key
+            .new_oci(EMAIL.clone(), TTL, repository.clone(), actions.clone())
+            .unwrap();
+
+        let claims = secret_key.validate_oci(&token).unwrap();
+
+        assert_eq!(claims.aud, Audience::Oci.to_string());
+        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
+        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
+        assert_eq!(claims.sub, *EMAIL);
+        assert_eq!(claims.oci.repository, repository);
+        assert_eq!(claims.oci.actions, actions);
+    }
+
+    #[test]
+    fn jwt_oci_expired() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key
+            .new_oci(EMAIL.clone(), 0, None, vec![OciAction::Pull])
+            .unwrap();
+
+        sleep_for_a_second();
+
+        assert!(secret_key.validate_oci(&token).is_err());
+    }
+
+    #[test]
     fn jwt_invite_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
@@ -280,5 +314,45 @@ mod tests {
         sleep_for_a_second();
 
         assert!(secret_key.validate_invite(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_oci_empty_actions() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        assert!(
+            secret_key
+                .new_oci(EMAIL.clone(), TTL, None, vec![])
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn jwt_auth_token_rejected_as_oci() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
+
+        assert!(secret_key.validate_oci(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_api_key_rejected_as_oci() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
+
+        assert!(secret_key.validate_oci(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_oci_token_rejected_as_auth() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key
+            .new_oci(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
+            .unwrap();
+
+        assert!(secret_key.validate_auth(&token).is_err());
     }
 }
