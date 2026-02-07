@@ -60,7 +60,6 @@ COPY plus/bencher_bing_index bencher_bing_index
 COPY plus/bencher_github_client bencher_github_client
 COPY plus/bencher_google_client bencher_google_client
 COPY plus/bencher_google_index bencher_google_index
-COPY plus/bencher_guest bencher_guest
 COPY plus/bencher_license bencher_license
 COPY plus/bencher_oci bencher_oci
 COPY plus/bencher_oci_storage bencher_oci_storage

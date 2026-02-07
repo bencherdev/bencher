@@ -14,6 +14,9 @@ plus = [
     "bencher_rootfs/plus",
 ]
 
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
 [dependencies]
 anyhow.workspace = true
 bencher_runner.workspace = true

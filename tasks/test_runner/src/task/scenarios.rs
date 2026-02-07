@@ -16,6 +16,7 @@
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+use std::time::Duration;
 
 use anyhow::{Context as _, Result, bail};
 use camino::{Utf8Path, Utf8PathBuf};
@@ -28,6 +29,8 @@ struct Scenario {
     description: &'static str,
     dockerfile: &'static str,
     extra_args: &'static [&'static str],
+    /// If set, send SIGTERM to the runner after this many seconds.
+    cancel_after_secs: Option<u64>,
     validate: fn(&ScenarioOutput) -> Result<()>,
 }
 
@@ -154,9 +157,13 @@ fn run_scenario(scenario: &Scenario) -> Result<()> {
     let image_path = build_test_image(scenario.name, scenario.dockerfile)
         .with_context(|| format!("Failed to build image for {}", scenario.name))?;
 
-    // Run the runner
-    let output = run_runner(&image_path, scenario.extra_args)
-        .with_context(|| format!("Failed to run scenario {}", scenario.name))?;
+    // Run the runner (with optional cancellation)
+    let output = if let Some(secs) = scenario.cancel_after_secs {
+        run_runner_with_cancel(&image_path, scenario.extra_args, Duration::from_secs(secs))
+    } else {
+        run_runner(&image_path, scenario.extra_args)
+    }
+    .with_context(|| format!("Failed to run scenario {}", scenario.name))?;
 
     // Validate the output
     (scenario.validate)(&output)
@@ -182,6 +189,7 @@ fn all_scenarios() -> Vec<Scenario> {
             description: "Simple echo command",
             dockerfile: r#"FROM busybox
 CMD ["echo", "hello from vm"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("hello from vm") {
@@ -197,6 +205,7 @@ CMD ["echo", "hello from vm"]"#,
             dockerfile: r#"FROM busybox
 ENV MY_VAR=test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("test_value") {
@@ -217,6 +226,7 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
             dockerfile: r#"FROM busybox
 WORKDIR /myapp
 CMD ["pwd"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("/myapp") {
@@ -231,6 +241,7 @@ CMD ["pwd"]"#,
             description: "Output file collection via vsock",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo '{\"result\": 42}' > /tmp/output.json && cat /tmp/output.json"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
             validate: |output| {
                 if output.stdout.contains("\"result\"") || output.stdout.contains("42") {
@@ -245,6 +256,7 @@ CMD ["sh", "-c", "echo '{\"result\": 42}' > /tmp/output.json && cat /tmp/output.
             description: "Non-zero exit codes captured",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "exit 42"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -260,6 +272,7 @@ CMD ["sh", "-c", "exit 42"]"#,
             description: "VM killed after timeout",
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr).to_lowercase();
@@ -275,6 +288,7 @@ CMD ["sleep", "3600"]"#,
             description: "Guest can write to ext4 rootfs",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo test > /data.txt && cat /data.txt"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("test") {
@@ -292,6 +306,7 @@ CMD ["sh", "-c", "echo test > /data.txt && cat /data.txt"]"#,
             description: "Stderr captured separately",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo stdout && echo stderr >&2"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -307,6 +322,7 @@ CMD ["sh", "-c", "echo stdout && echo stderr >&2"]"#,
             description: "Multiple vCPUs work (expected: timeout, SMP boot unsupported)",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "10", "--vcpus", "4"],
             validate: |output| {
                 // SMP boot is not yet supported (requires LAPIC/APIC emulation).
@@ -332,6 +348,7 @@ CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo"]
 CMD ["hello", "world"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("hello world") {
@@ -346,6 +363,7 @@ CMD ["hello", "world"]"#,
             description: "Guest has no network",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -368,6 +386,7 @@ CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
             // Generate ~20MB of output - should be truncated to ~10MB limit
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && echo DONE"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "120"],
             validate: |output| {
                 // The key test: the runner completes without OOM and output is bounded.
@@ -388,6 +407,7 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && e
             // This process ignores signals and runs forever
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 // The VM should be killed after 5 seconds due to timeout
@@ -417,6 +437,7 @@ CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]
             // causing uid_map writes to fail with EPERM.
             dockerfile: r#"FROM busybox
 CMD ["id"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The runner should not fail with uid_map errors.
@@ -442,6 +463,7 @@ CMD ["id"]"#,
             // the bind-mounted /dev/kvm.
             dockerfile: r#"FROM busybox
 CMD ["echo", "kvm_test_ok"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -465,6 +487,7 @@ CMD ["echo", "kvm_test_ok"]"#,
             // which we fixed by bind-mounting the host's /proc instead.
             dockerfile: r#"FROM busybox
 CMD ["cat", "/proc/version"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -488,6 +511,7 @@ CMD ["cat", "/proc/version"]"#,
             // when trying to write to the filesystem.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("write_ok") {
@@ -512,6 +536,7 @@ CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
             // short-circuited before serial output extraction.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "10"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -536,6 +561,7 @@ CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
             // This scenario exercises the timeout path which requires kill().
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 // SIGSYS from seccomp violation produces exit code 159 (128 + 31)
@@ -562,6 +588,7 @@ CMD ["sleep", "3600"]"#,
             // never appear in runner logs.
             dockerfile: r#"FROM busybox
 CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // This unique string should only appear if the VM actually ran
@@ -588,6 +615,7 @@ CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
             // The init process should be PID 1, and there should be very few processes.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The guest should see a small number of PIDs (1-5), not hundreds
@@ -619,6 +647,7 @@ CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
             // should be accessible and /proc/1/cmdline should show the init process.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0' ' ')"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -644,6 +673,7 @@ CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0
             // Verifies the runner outputs ---BENCHER_METRICS:{json}--- on stderr.
             dockerfile: r#"FROM busybox
 CMD ["echo", "metrics_test"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stderr.contains("---BENCHER_METRICS:") && output.stderr.contains("---") {
@@ -664,6 +694,7 @@ CMD ["echo", "metrics_test"]"#,
             // This catches cases where timing is broken (e.g., always 0 or absurdly large).
             dockerfile: r#"FROM busybox
 CMD ["echo", "fast_benchmark"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // Parse metrics from stderr
@@ -699,6 +730,7 @@ CMD ["echo", "fast_benchmark"]"#,
             // When a VM times out, the metrics should include timed_out: true.
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 // The stderr should contain metrics with timed_out: true
@@ -737,6 +769,7 @@ CMD ["sleep", "3600"]"#,
             // The vmm child process should log [HMAC] status on stderr.
             dockerfile: r#"FROM busybox
 CMD ["echo", "hmac_test_output"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -767,6 +800,7 @@ CMD ["echo", "hmac_test_output"]"#,
             // Verifies the metrics include the transport type (vsock or serial).
             dockerfile: r#"FROM busybox
 CMD ["echo", "transport_test"]"#,
+            cancel_after_secs: None,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let metrics_line = output
@@ -788,6 +822,324 @@ CMD ["echo", "transport_test"]"#,
                     }
                 }
                 bail!("Could not find transport in metrics: {json_str}")
+            },
+        },
+        // =======================================================================
+        // Cancellation scenarios
+        // =======================================================================
+        Scenario {
+            name: "job_cancelled",
+            description: "SIGTERM cancels a running VM cleanly",
+            // Start a long-running process, then send SIGTERM after 5 seconds.
+            // The runner should shut down the VM and exit without hanging.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo started && sleep 3600"]"#,
+            cancel_after_secs: Some(5),
+            extra_args: &["--timeout", "120"],
+            validate: |output| {
+                // The runner should exit with a non-zero code (killed by signal)
+                // and should NOT run for the full 120s timeout.
+                // The key property: the runner didn't hang — it exited promptly
+                // after receiving SIGTERM.
+                if output.exit_code == 0 {
+                    bail!(
+                        "Expected non-zero exit code after cancellation, got 0.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                Ok(())
+            },
+        },
+        // =======================================================================
+        // Output edge-case scenarios
+        // =======================================================================
+        Scenario {
+            name: "stderr_only",
+            description: "Stderr captured when stdout is empty",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo error_output >&2"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.stderr.contains("error_output") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'error_output' in stderr.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+            },
+        },
+        Scenario {
+            name: "empty_output",
+            description: "Process exits 0 with no output",
+            dockerfile: r#"FROM busybox
+CMD ["true"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    bail!(
+                        "Expected exit code 0, got {}.\nstdout: {}\nstderr: {}",
+                        output.exit_code,
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "binary_output",
+            description: "Non-UTF8 stdout handled gracefully",
+            // Write raw bytes 0x80-0xFF which are invalid UTF-8.
+            // The runner should not panic — it should lossy-convert or pass through.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                // The runner must not crash. Exit code 0 and "done" somewhere
+                // in stdout (possibly after replacement characters) means success.
+                if output.exit_code != 0 {
+                    bail!(
+                        "Expected exit code 0, got {}.\nstderr: {}",
+                        output.exit_code,
+                        output.stderr
+                    )
+                }
+                if output.stdout.contains("done") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'done' in stdout after binary bytes.\nstdout bytes: {}\nstderr: {}",
+                        output.stdout.len(),
+                        output.stderr
+                    )
+                }
+            },
+        },
+        // =======================================================================
+        // OCI config parsing scenarios
+        // =======================================================================
+        Scenario {
+            name: "shell_form_cmd",
+            description: "Shell-form CMD (string, not array) works",
+            // Shell form in Dockerfile: CMD echo hello
+            // OCI config stores this as ["/bin/sh", "-c", "echo shell_form_works"]
+            // which differs from exec form ["echo", "shell_form_works"].
+            dockerfile: "FROM busybox\nCMD echo shell_form_works",
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.stdout.contains("shell_form_works") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'shell_form_works' in output.\nstdout: {}\nstderr: {}\nexit_code: {}",
+                        output.stdout,
+                        output.stderr,
+                        output.exit_code
+                    )
+                }
+            },
+        },
+        Scenario {
+            name: "entrypoint_only",
+            description: "ENTRYPOINT exec form with no CMD",
+            // When only ENTRYPOINT is set (exec form), it runs as-is with no
+            // CMD args appended. The runner must not fail when Cmd is null/empty.
+            dockerfile: r#"FROM busybox
+ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.stdout.contains("entrypoint_only_works") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'entrypoint_only_works' in output.\nstdout: {}\nstderr: {}\nexit_code: {}",
+                        output.stdout,
+                        output.stderr,
+                        output.exit_code
+                    )
+                }
+            },
+        },
+        Scenario {
+            name: "shell_form_entrypoint",
+            description: "ENTRYPOINT shell form (string, not array)",
+            // Shell form ENTRYPOINT: stored as ["/bin/sh", "-c", "echo ..."]
+            // in OCI config. CMD is ignored when ENTRYPOINT uses shell form.
+            dockerfile: "FROM busybox\nENTRYPOINT echo shell_entrypoint_works",
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.stdout.contains("shell_entrypoint_works") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'shell_entrypoint_works' in output.\nstdout: {}\nstderr: {}\nexit_code: {}",
+                        output.stdout,
+                        output.stderr,
+                        output.exit_code
+                    )
+                }
+            },
+        },
+        Scenario {
+            name: "entrypoint_shell_with_cmd",
+            description: "Shell-form ENTRYPOINT with CMD args (CMD becomes $0)",
+            // When ENTRYPOINT is shell form, Docker wraps it as:
+            //   ["/bin/sh", "-c", "echo ep_marker"]
+            // Per OCI spec, CMD args are appended: the final exec is
+            //   ["/bin/sh", "-c", "echo ep_marker", "cmd_arg"]
+            // In sh -c semantics, "cmd_arg" becomes $0 (unused by echo).
+            // The VM output should contain only "ep_marker", proving
+            // that CMD args don't interfere with the entrypoint command.
+            dockerfile: r#"FROM busybox
+ENTRYPOINT echo ep_marker
+CMD ["cmd_arg"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    bail!(
+                        "Expected exit code 0, got {}.\nstdout: {}\nstderr: {}",
+                        output.exit_code,
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                if !output.stdout.contains("ep_marker") {
+                    bail!(
+                        "Expected 'ep_marker' in output.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "no_cmd_no_entrypoint",
+            description: "No CMD or ENTRYPOINT fails gracefully",
+            // An image with no CMD and no ENTRYPOINT should cause the runner
+            // to fail with a clear error, not crash or hang.
+            dockerfile: r#"FROM busybox
+RUN echo "no command set""#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "30"],
+            validate: |output| {
+                // The runner should fail (non-zero exit) since there's nothing to run.
+                // It may also produce an error message about missing cmd/entrypoint.
+                if output.exit_code != 0 {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected non-zero exit for image with no CMD/ENTRYPOINT.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+            },
+        },
+        // =======================================================================
+        // Race condition scenarios
+        // =======================================================================
+        Scenario {
+            name: "rapid_exit",
+            description: "Instantly exiting process doesn't lose results",
+            // The process exits immediately. This tests whether the vsock
+            // listener is set up before the guest finishes, and whether
+            // results are collected even for very short-lived processes.
+            dockerfile: r#"FROM busybox
+CMD ["echo", "rapid_exit_marker"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    bail!(
+                        "Expected exit code 0, got {}.\nstdout: {}\nstderr: {}",
+                        output.exit_code,
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                if output.stdout.contains("rapid_exit_marker") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Output lost for rapid exit.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+            },
+        },
+        // =======================================================================
+        // Exit code scenarios
+        // =======================================================================
+        Scenario {
+            name: "signal_exit",
+            description: "Signal exit code (137) captured correctly",
+            // Simulate a process killed by SIGKILL by exiting with 137 (128+9).
+            // The runner should capture and report this exit code.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "exit 137"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                // The runner should report exit code 137 somewhere in its output,
+                // or the runner itself may exit non-zero for non-zero guest exits.
+                let combined = format!("{}{}", output.stdout, output.stderr);
+                if combined.contains("137") || output.exit_code != 0 {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected exit code 137 in output or non-zero runner exit.\nexit_code: {}\nstdout: {}\nstderr: {}",
+                        output.exit_code,
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+            },
+        },
+        // =======================================================================
+        // Environment scenarios
+        // =======================================================================
+        Scenario {
+            name: "large_env",
+            description: "Many/large environment variables work",
+            // Set 50 environment variables and a large value to stress
+            // the init config parsing and env var passing.
+            dockerfile: r#"FROM busybox
+ENV A1=val1 A2=val2 A3=val3 A4=val4 A5=val5 A6=val6 A7=val7 A8=val8 A9=val9 A10=val10
+ENV B1=val11 B2=val12 B3=val13 B4=val14 B5=val15 B6=val16 B7=val17 B8=val18 B9=val19 B10=val20
+ENV LARGE_VALUE=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    bail!(
+                        "Expected exit code 0, got {}.\nstderr: {}",
+                        output.exit_code,
+                        output.stderr
+                    )
+                }
+                if output.stdout.contains("A1=val1") && output.stdout.contains("B10=val20") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected env vars in output.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
             },
         },
     ]
@@ -889,9 +1241,69 @@ fn build_test_image(name: &str, dockerfile: &str) -> Result<Utf8PathBuf> {
     Ok(oci_dir)
 }
 
-/// Run the runner and capture output.
-fn run_runner(image_path: &Utf8Path, args: &[&str]) -> Result<ScenarioOutput> {
-    // Find the runner binary
+/// Run the runner, send SIGTERM after `delay`, and capture output.
+fn run_runner_with_cancel(
+    image_path: &Utf8Path,
+    args: &[&str],
+    delay: Duration,
+) -> Result<ScenarioOutput> {
+    let runner_bin = find_runner_bin()?;
+
+    let mut child = Command::new(runner_bin.as_str())
+        .arg("run")
+        .arg("--image")
+        .arg(image_path.as_str())
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+
+    let pid = child.id();
+
+    // Wait for the delay, then send SIGTERM
+    std::thread::sleep(delay);
+
+    // Send SIGTERM to the runner process
+    #[cfg(unix)]
+    #[expect(unsafe_code, reason = "libc::kill requires unsafe")]
+    // SAFETY: Sending a signal to a known child process we just spawned.
+    unsafe {
+        libc::kill(pid as i32, libc::SIGTERM);
+    }
+
+    // Wait for the process to exit with a grace period.
+    // If the runner handles SIGTERM correctly, it should shut down the VM and exit.
+    let grace = Duration::from_secs(30);
+    let start = std::time::Instant::now();
+    loop {
+        match child.try_wait()? {
+            Some(_) => {
+                // Process exited — collect remaining pipe output
+                let output = child.wait_with_output()?;
+                return Ok(ScenarioOutput {
+                    stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+                    stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+                    exit_code: output.status.code().unwrap_or(-1),
+                });
+            },
+            None => {
+                if start.elapsed() > grace {
+                    child.kill()?;
+                    let output = child.wait_with_output()?;
+                    bail!(
+                        "Runner did not exit within {grace:?} after SIGTERM — cancellation is broken.\nstdout: {}\nstderr: {}",
+                        String::from_utf8_lossy(&output.stdout),
+                        String::from_utf8_lossy(&output.stderr),
+                    );
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            },
+        }
+    }
+}
+
+/// Find the runner binary.
+fn find_runner_bin() -> Result<Utf8PathBuf> {
     let workspace_root = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(|p| p.parent())
@@ -903,6 +1315,13 @@ fn run_runner(image_path: &Utf8Path, args: &[&str]) -> Result<ScenarioOutput> {
     if !runner_bin.exists() {
         bail!("Runner binary not found at {runner_bin}. Run `cargo build -p bencher_runner_bin`");
     }
+
+    Ok(runner_bin)
+}
+
+/// Run the runner and capture output.
+fn run_runner(image_path: &Utf8Path, args: &[&str]) -> Result<ScenarioOutput> {
+    let runner_bin = find_runner_bin()?;
 
     let output = Command::new(runner_bin.as_str())
         .arg("run")

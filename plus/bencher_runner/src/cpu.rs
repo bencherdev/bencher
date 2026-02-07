@@ -86,7 +86,7 @@ impl CpuLayout {
         }
 
         // Fallback to nix sysconf
-        match nix::unistd::sysconf(nix::unistd::SysconfVar::_SC_NPROCESSORS_ONLN) {
+        match nix::unistd::sysconf(nix::unistd::SysconfVar::_NPROCESSORS_ONLN) {
             Ok(Some(n)) if n > 0 => n as usize,
             _ => 1, // Ultimate fallback
         }

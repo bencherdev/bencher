@@ -34,6 +34,7 @@ const TRANSIENT_RETRY_DELAY: Duration = Duration::from_secs(5);
 /// Async-signal-safe: only uses `AtomicBool::store`.
 static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 
+#[derive(Debug)]
 pub struct DaemonConfig {
     pub host: Url,
     pub token: String,

@@ -10,6 +10,8 @@ publish = false
 default = []
 plus = [
     "dep:bencher_json",
+    "bencher_json/client",
+    "bencher_json/plus",
     "dep:bencher_oci",
     "dep:bencher_rootfs",
     "dep:camino",
@@ -43,7 +45,7 @@ uuid = { workspace = true, features = ["v4", "serde"], optional = true }
 # Linux-only dependencies
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = { workspace = true }
-nix = { workspace = true, features = ["sched", "signal"] }
+nix = { workspace = true, features = ["feature", "sched", "signal"] }
 
 [build-dependencies]
 flate2 = { workspace = true }

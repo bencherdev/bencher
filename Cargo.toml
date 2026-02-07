@@ -67,7 +67,6 @@ bencher_recaptcha = { path = "plus/bencher_recaptcha" }
 bencher_runner = { path = "plus/bencher_runner" }
 bencher_oci = { path = "plus/bencher_oci" }
 bencher_rootfs = { path = "plus/bencher_rootfs" }
-bencher_guest = { path = "plus/bencher_guest" }
 bencher_init = { path = "plus/bencher_init" }
 # crates.io
 anyhow = "1.0"
