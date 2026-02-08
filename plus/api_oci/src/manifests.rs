@@ -16,7 +16,26 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::auth::{require_pull_access, require_push_access, validate_push_access};
-use crate::response::{DOCKER_CONTENT_DIGEST, oci_cors_headers};
+use crate::response::{DOCKER_CONTENT_DIGEST, OCI_SUBJECT, oci_cors_headers};
+
+/// Parse a reference string, returning the correct OCI error code on failure.
+///
+/// Per the OCI Distribution Spec, an invalid digest should return `DIGEST_INVALID`
+/// and an invalid tag should return `TAG_INVALID` — not `MANIFEST_UNKNOWN` (which
+/// is a 404 for a well-formed reference that simply doesn't exist).
+fn parse_reference(reference: &str) -> Result<Reference, HttpError> {
+    reference.parse().map_err(|_err| {
+        if reference.contains(':') {
+            crate::error::into_http_error(OciError::DigestInvalid {
+                digest: reference.to_owned(),
+            })
+        } else {
+            crate::error::into_http_error(OciError::TagInvalid {
+                tag: reference.to_owned(),
+            })
+        }
+    })
+}
 
 /// Resolve a reference (tag or digest) to a digest
 async fn resolve_reference(
@@ -74,11 +93,7 @@ pub async fn oci_manifest_exists(
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
     // Parse reference
-    let reference: Reference = path.reference.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::ManifestUnknown {
-            reference: path.reference.clone(),
-        })
-    })?;
+    let reference = parse_reference(&path.reference)?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -131,11 +146,7 @@ pub async fn oci_manifest_get(
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
     // Parse reference
-    let reference: Reference = path.reference.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::ManifestUnknown {
-            reference: path.reference.clone(),
-        })
-    })?;
+    let reference = parse_reference(&path.reference)?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -198,11 +209,7 @@ pub async fn oci_manifest_put(
     let project_slug = &push_access.project.slug;
 
     // Parse reference
-    let reference: Reference = path.reference.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::ManifestUnknown {
-            reference: path.reference.clone(),
-        })
-    })?;
+    let reference = parse_reference(&path.reference)?;
 
     // Get storage and enforce max body size
     let storage = context.oci_storage();
@@ -271,7 +278,7 @@ pub async fn oci_manifest_put(
 
     // Add OCI-Subject header if manifest has a subject field
     if let Some(subject) = subject_digest {
-        builder = builder.header("OCI-Subject", subject);
+        builder = builder.header(OCI_SUBJECT, subject);
     }
 
     let response = builder
@@ -302,11 +309,7 @@ pub async fn oci_manifest_delete(
     let storage = context.oci_storage();
 
     // Parse reference - can be either a digest or a tag
-    let reference: Reference = path.reference.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::ManifestUnknown {
-            reference: path.reference.clone(),
-        })
-    })?;
+    let reference = parse_reference(&path.reference)?;
 
     match reference {
         Reference::Digest(digest) => {

@@ -35,7 +35,9 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::auth::{require_pull_access, require_push_access, validate_push_access};
-use crate::response::{DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers};
+use crate::response::{
+    APPLICATION_OCTET_STREAM, DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers,
+};
 
 /// Path parameters for blob/upload-start endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -128,7 +130,7 @@ pub async fn oci_blob_exists(
     let response = oci_cors_headers(
         Response::builder()
             .status(http::StatusCode::OK)
-            .header(http::header::CONTENT_TYPE, "application/octet-stream")
+            .header(http::header::CONTENT_TYPE, APPLICATION_OCTET_STREAM)
             .header(http::header::CONTENT_LENGTH, size)
             .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
         &[http::Method::HEAD, http::Method::GET],
@@ -192,7 +194,7 @@ pub async fn oci_blob_get(
     let response = oci_cors_headers(
         Response::builder()
             .status(http::StatusCode::OK)
-            .header(http::header::CONTENT_TYPE, "application/octet-stream")
+            .header(http::header::CONTENT_TYPE, APPLICATION_OCTET_STREAM)
             .header(http::header::CONTENT_LENGTH, size)
             .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
         &[http::Method::GET],
@@ -358,7 +360,7 @@ pub async fn oci_upload_start(
         Response::builder()
             .status(http::StatusCode::ACCEPTED)
             .header(http::header::LOCATION, location)
-            .header("Range", "0-0")
+            .header(http::header::RANGE, "0-0")
             .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
         &[http::Method::POST],
     )

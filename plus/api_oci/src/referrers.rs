@@ -7,6 +7,7 @@
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_json::ProjectResourceId;
+use bencher_json::oci::OCI_IMAGE_INDEX_MEDIA_TYPE;
 use bencher_oci_storage::{Digest, OciError};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, Query, RequestContext, endpoint};
@@ -15,7 +16,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::auth::require_pull_access;
-use crate::response::oci_cors_headers;
+use crate::response::{OCI_FILTERS_APPLIED, oci_cors_headers};
 
 /// Path parameters for referrers endpoint
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -90,7 +91,7 @@ pub async fn oci_referrers_list(
     // Per spec: returns application/vnd.oci.image.index.v1+json
     let index = serde_json::json!({
         "schemaVersion": 2,
-        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "mediaType": OCI_IMAGE_INDEX_MEDIA_TYPE,
         "manifests": referrers
     });
 
@@ -103,7 +104,7 @@ pub async fn oci_referrers_list(
             .status(http::StatusCode::OK)
             .header(
                 http::header::CONTENT_TYPE,
-                "application/vnd.oci.image.index.v1+json",
+                OCI_IMAGE_INDEX_MEDIA_TYPE,
             )
             .header(http::header::CONTENT_LENGTH, body.len()),
         &[http::Method::GET],
@@ -111,7 +112,7 @@ pub async fn oci_referrers_list(
 
     // Only add OCI-Filters-Applied header when a filter was actually applied
     if query.artifact_type.is_some() {
-        builder = builder.header("OCI-Filters-Applied", "artifactType");
+        builder = builder.header(OCI_FILTERS_APPLIED, "artifactType");
     }
 
     let response = builder
