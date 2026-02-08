@@ -14,6 +14,7 @@
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
+use bencher_json::oci::oci_error_body;
 use bencher_json::{Email, Jwt, ProjectResourceId};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -205,20 +206,6 @@ pub async fn auth_oci_token_get(
         .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
         .body(Body::from(body))
         .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))
-}
-
-/// Formats an OCI-compliant JSON error body
-///
-/// Per the OCI Distribution Spec, if the response body is JSON it MUST follow:
-/// `{"errors": [{"code": "<CODE>", "message": "<msg>"}]}`
-fn oci_error_body(code: &str, message: &str) -> String {
-    serde_json::json!({
-        "errors": [{
-            "code": code,
-            "message": message
-        }]
-    })
-    .to_string()
 }
 
 /// Create a 401 Unauthorized error with WWW-Authenticate header

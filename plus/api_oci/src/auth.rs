@@ -7,6 +7,7 @@
 //! - Push access validation with claimed/unclaimed project support and auto-creation
 //! - Rate limiting for OCI requests
 
+use bencher_json::oci::oci_error_body;
 use bencher_json::{Jwt, ProjectResourceId, ProjectUuid, ResourceName};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -24,20 +25,6 @@ use slog::Logger;
 
 // Re-export from api_auth
 pub use api_auth::oci::unauthorized_with_www_authenticate;
-
-/// Formats an OCI-compliant JSON error body
-///
-/// Per the OCI Distribution Spec, if the response body is JSON it MUST follow:
-/// `{"errors": [{"code": "<CODE>", "message": "<msg>"}]}`
-fn oci_error_body(code: &str, message: &str) -> String {
-    serde_json::json!({
-        "errors": [{
-            "code": code,
-            "message": message
-        }]
-    })
-    .to_string()
-}
 
 /// Extract OCI bearer token from Authorization header
 ///

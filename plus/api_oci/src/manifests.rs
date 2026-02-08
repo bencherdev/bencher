@@ -131,9 +131,6 @@ pub async fn oci_manifest_exists(
     })?;
     let content_type = parsed.media_type().to_owned();
 
-    // Check Accept header for content negotiation
-    check_accept_header(&rqctx, &content_type)?;
-
     // Build response with OCI-compliant headers (no body for HEAD)
     let response = oci_cors_headers(
         Response::builder()
@@ -193,9 +190,6 @@ pub async fn oci_manifest_get(
         HttpError::for_internal_error(format!("Failed to parse stored manifest: {e}"))
     })?;
     let content_type = parsed.media_type().to_owned();
-
-    // Check Accept header for content negotiation
-    check_accept_header(&rqctx, &content_type)?;
 
     // Build response with OCI-compliant headers
     let response = oci_cors_headers(
@@ -329,11 +323,6 @@ pub async fn oci_manifest_put(
     Ok(response)
 }
 
-/// Check the Accept header for content negotiation
-///
-/// If the client sends an Accept header, the manifest's media type must
-/// be listed (or the client must accept `*/*` / `application/*`).
-/// If no Accept header is present, serve the manifest per HTTP semantics.
 /// Verify that all blobs referenced by a manifest exist in storage
 ///
 /// Only checks OCI Image Manifests and Docker Manifest V2 (which have config/layers).
@@ -377,28 +366,6 @@ async fn verify_referenced_blobs(
         }
     }
 
-    Ok(())
-}
-
-fn check_accept_header(
-    rqctx: &RequestContext<ApiContext>,
-    content_type: &str,
-) -> Result<(), HttpError> {
-    if let Some(accept_header) = rqctx.request.headers().get(http::header::ACCEPT)
-        && let Ok(accept_str) = accept_header.to_str()
-    {
-        let accepts: Vec<&str> = accept_str.split(',').map(str::trim).collect();
-        let matched = accepts.iter().any(|a| {
-            // Strip quality parameters (e.g., ";q=0.9")
-            let media = a.split(';').next().unwrap_or(a).trim();
-            media == content_type || media == "*/*" || media == "application/*"
-        });
-        if !matched {
-            return Err(crate::error::into_http_error(OciError::ManifestUnknown {
-                reference: content_type.to_owned(),
-            }));
-        }
-    }
     Ok(())
 }
 

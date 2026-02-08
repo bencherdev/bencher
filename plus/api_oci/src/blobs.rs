@@ -240,6 +240,17 @@ pub async fn oci_blob_delete(
     // Get storage
     let storage = context.oci_storage();
 
+    // Verify blob exists before deleting (S3 silently succeeds for missing objects)
+    let exists = storage
+        .blob_exists(&project_uuid, &digest)
+        .await
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+    if !exists {
+        return Err(crate::error::into_http_error(OciError::BlobUnknown {
+            digest: digest.to_string(),
+        }));
+    }
+
     // Delete the blob
     storage
         .delete_blob(&project_uuid, &digest)

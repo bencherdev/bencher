@@ -1,21 +1,8 @@
 //! HTTP error conversion for OCI errors
 
+use bencher_json::oci::oci_error_body;
 use bencher_oci_storage::OciError;
 use dropshot::{ClientErrorStatusCode, ErrorStatusCode, HttpError};
-
-/// Formats an OCI-compliant JSON error body
-///
-/// Per the OCI Distribution Spec, if the response body is JSON it MUST follow:
-/// `{"errors": [{"code": "<CODE>", "message": "<msg>"}]}`
-fn oci_error_body(code: &str, message: &str) -> String {
-    serde_json::json!({
-        "errors": [{
-            "code": code,
-            "message": message
-        }]
-    })
-    .to_string()
-}
 
 /// Converts an `OciError` into an `HttpError` with OCI-compliant JSON error body
 #[expect(

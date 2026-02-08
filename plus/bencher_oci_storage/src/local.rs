@@ -7,6 +7,7 @@
 use std::io;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::task::{Context, Poll};
 
 use bytes::Bytes;
@@ -117,6 +118,8 @@ pub struct OciLocalStorage {
     max_body_size: u64,
     /// Logger for error reporting
     log: Logger,
+    /// Unix timestamp of the last stale upload cleanup (for debouncing)
+    last_cleanup: AtomicI64,
 }
 
 impl OciLocalStorage {
@@ -134,6 +137,7 @@ impl OciLocalStorage {
             upload_timeout,
             max_body_size,
             log,
+            last_cleanup: AtomicI64::new(0),
         }
     }
 
@@ -438,8 +442,17 @@ impl OciLocalStorage {
 
     /// Spawns a background task to clean up all stale uploads that have exceeded the timeout.
     ///
-    /// This runs asynchronously and does not block the current upload operation.
+    /// Debounced: skips if a cleanup ran within the last `upload_timeout` seconds,
+    /// since stale uploads can't appear faster than the timeout period.
     fn spawn_stale_upload_cleanup(&self) {
+        let now = Utc::now().timestamp();
+        let last = self.last_cleanup.load(Ordering::Relaxed);
+        let timeout_secs = i64::try_from(self.upload_timeout).unwrap_or(i64::MAX);
+        if now.saturating_sub(last) < timeout_secs {
+            return;
+        }
+        self.last_cleanup.store(now, Ordering::Relaxed);
+
         let uploads_dir = self.uploads_dir();
         let upload_timeout = self.upload_timeout;
         let log = self.log.clone();

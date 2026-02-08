@@ -16,6 +16,7 @@
 use std::path::Path;
 use std::pin::Pin;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::task::{Context, Poll};
 
 use aws_sdk_s3::Client;
@@ -253,6 +254,8 @@ pub struct OciS3Storage {
     log: Logger,
     /// Concurrency limit for parallel referrer fetches
     concurrency: usize,
+    /// Unix timestamp of the last stale upload cleanup (for debouncing)
+    last_cleanup: AtomicI64,
 }
 
 /// OCI Storage backend - supports S3 or local filesystem
@@ -625,6 +628,7 @@ impl OciS3Storage {
             max_body_size,
             log,
             concurrency,
+            last_cleanup: AtomicI64::new(0),
         })
     }
 
@@ -957,8 +961,17 @@ impl OciS3Storage {
 
     /// Spawns a background task to clean up all stale uploads that have exceeded the timeout.
     ///
-    /// This runs asynchronously and does not block the current upload operation.
+    /// Debounced: skips if a cleanup ran within the last `upload_timeout` seconds,
+    /// since stale uploads can't appear faster than the timeout period.
     fn spawn_stale_upload_cleanup(&self) {
+        let now = Utc::now().timestamp();
+        let last = self.last_cleanup.load(Ordering::Relaxed);
+        let timeout_secs = i64::try_from(self.upload_timeout).unwrap_or(i64::MAX);
+        if now.saturating_sub(last) < timeout_secs {
+            return;
+        }
+        self.last_cleanup.store(now, Ordering::Relaxed);
+
         let client = self.client.clone();
         let config = self.config.clone();
         let upload_timeout = self.upload_timeout;
