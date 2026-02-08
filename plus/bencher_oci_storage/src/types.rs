@@ -31,7 +31,7 @@ impl Digest {
         {
             return Err(DigestError::InvalidFormat(format!("sha256:{hex_hash}")));
         }
-        Ok(Self(format!("sha256:{hex_hash}")))
+        Ok(Self(format!("sha256:{}", hex_hash.to_ascii_lowercase())))
     }
 
     /// Returns the algorithm part of the digest (e.g., "sha256")
@@ -79,7 +79,7 @@ impl FromStr for Digest {
             return Err(DigestError::InvalidFormat(s.to_owned()));
         }
 
-        Ok(Self(s.to_owned()))
+        Ok(Self(s.to_ascii_lowercase()))
     }
 }
 
@@ -224,12 +224,11 @@ impl FromStr for UploadId {
 /// Returns `Some(subject_digest)` if the manifest has a `subject.digest` field
 /// that parses as a valid `Digest`.
 pub(crate) fn extract_subject_digest(manifest_bytes: &[u8]) -> Option<Digest> {
-    let manifest = serde_json::from_slice::<serde_json::Value>(manifest_bytes).ok()?;
-    let subject_digest_str = manifest.get("subject")?.get("digest")?.as_str()?;
-    subject_digest_str.parse::<Digest>().ok()
+    let manifest = bencher_json::oci::Manifest::from_bytes(manifest_bytes).ok()?;
+    manifest.subject()?.digest.parse::<Digest>().ok()
 }
 
-/// Builds a referrer descriptor JSON from an already-parsed manifest.
+/// Builds a referrer descriptor from an already-parsed manifest.
 ///
 /// Uses the typed `Manifest` fields (`media_type`, `artifact_type`, `annotations`,
 /// `subject`) combined with the provided `digest` and `content_size` to produce an OCI
@@ -240,34 +239,19 @@ pub(crate) fn build_referrer_descriptor(
     manifest: &bencher_json::oci::Manifest,
     digest: &Digest,
     content_size: usize,
-) -> Option<(Digest, serde_json::Value)> {
+) -> Option<(Digest, bencher_json::oci::OciDescriptor)> {
     let subject = manifest.subject()?;
     let subject_digest = subject.digest.parse::<Digest>().ok()?;
 
-    let media_type = manifest.media_type();
-    let artifact_type = manifest.artifact_type();
-
-    let mut descriptor = serde_json::json!({
-        "mediaType": media_type,
-        "digest": digest.to_string(),
-        "size": content_size
-    });
-    if let Some(at) = artifact_type
-        && let Some(obj) = descriptor.as_object_mut()
-    {
-        obj.insert(
-            "artifactType".to_owned(),
-            serde_json::Value::String(at.to_owned()),
-        );
-    }
-    if let Some(annotations) = manifest.annotations()
-        && let Some(obj) = descriptor.as_object_mut()
-    {
-        obj.insert(
-            "annotations".to_owned(),
-            serde_json::to_value(annotations).ok()?,
-        );
-    }
+    let descriptor = bencher_json::oci::OciDescriptor {
+        media_type: manifest.media_type().to_owned(),
+        digest: digest.to_string(),
+        size: i64::try_from(content_size).unwrap_or(i64::MAX),
+        urls: None,
+        annotations: manifest.annotations().cloned(),
+        data: None,
+        artifact_type: manifest.artifact_type().map(ToOwned::to_owned),
+    };
 
     Some((subject_digest, descriptor))
 }
@@ -359,6 +343,26 @@ mod tests {
     #[test]
     fn digest_from_str_rejects_short_sha256() {
         assert!("sha256:abc".parse::<Digest>().is_err());
+    }
+
+    #[test]
+    fn digest_case_normalization() {
+        let upper = "sha256:E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
+        let lower = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        let parsed_upper: Digest = upper.parse().unwrap();
+        let parsed_lower: Digest = lower.parse().unwrap();
+        assert_eq!(parsed_upper, parsed_lower);
+        assert_eq!(parsed_upper.to_string(), lower);
+    }
+
+    #[test]
+    fn digest_mixed_case_normalization() {
+        let mixed = "sha256:AbCdEf0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789";
+        let parsed: Digest = mixed.parse().unwrap();
+        assert_eq!(
+            parsed.to_string(),
+            "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+        );
     }
 
     #[test]

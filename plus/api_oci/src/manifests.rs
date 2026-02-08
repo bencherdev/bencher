@@ -8,14 +8,16 @@
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Put};
 use bencher_json::ProjectResourceId;
 use bencher_json::oci::Manifest;
-use bencher_oci_storage::{Digest, OciError, OciStorage, Reference};
+use bencher_oci_storage::{Digest, OciError, OciStorage, ProjectUuid, Reference};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, RequestContext, UntypedBody, endpoint};
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::auth::{require_pull_access, require_push_access, validate_push_access};
+use crate::auth::{
+    require_pull_access, require_push_access, resolve_project_uuid, validate_push_access,
+};
 use crate::response::{DOCKER_CONTENT_DIGEST, OCI_SUBJECT, oci_cors_headers};
 
 /// Parse a reference string, returning the correct OCI error code on failure.
@@ -37,10 +39,23 @@ fn parse_reference(reference: &str) -> Result<Reference, HttpError> {
     })
 }
 
+/// Parse a reference for pull (HEAD/GET) operations.
+///
+/// For read operations, an unparseable reference simply means the manifest doesn't
+/// exist — return 404 `MANIFEST_UNKNOWN` instead of 400 `TAG_INVALID`/`DIGEST_INVALID`.
+/// This matches OCI Distribution Spec conformance expectations.
+fn parse_reference_for_pull(reference: &str) -> Result<Reference, HttpError> {
+    reference.parse().map_err(|_err| {
+        crate::error::into_http_error(OciError::ManifestUnknown {
+            reference: reference.to_owned(),
+        })
+    })
+}
+
 /// Resolve a reference (tag or digest) to a digest
 async fn resolve_reference(
     storage: &OciStorage,
-    name: &ProjectResourceId,
+    name: &ProjectUuid,
     reference: &Reference,
 ) -> Result<Digest, HttpError> {
     match reference {
@@ -92,18 +107,21 @@ pub async fn oci_manifest_exists(
     let name_str = path.name.to_string();
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
-    // Parse reference
-    let reference = parse_reference(&path.reference)?;
+    // Resolve project UUID for stable storage paths
+    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+
+    // Parse reference (pull operation: unparseable → 404 MANIFEST_UNKNOWN)
+    let reference = parse_reference_for_pull(&path.reference)?;
 
     // Get storage
     let storage = context.oci_storage();
 
     // Resolve the reference to a digest
-    let digest = resolve_reference(storage, &path.name, &reference).await?;
+    let digest = resolve_reference(storage, &project_uuid, &reference).await?;
 
     // Get manifest to check existence and get size
     let manifest = storage
-        .get_manifest_by_digest(&path.name, &digest)
+        .get_manifest_by_digest(&project_uuid, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -112,6 +130,9 @@ pub async fn oci_manifest_exists(
         HttpError::for_internal_error(format!("Failed to parse stored manifest: {e}"))
     })?;
     let content_type = parsed.media_type().to_owned();
+
+    // Check Accept header for content negotiation
+    check_accept_header(&rqctx, &content_type)?;
 
     // Build response with OCI-compliant headers (no body for HEAD)
     let response = oci_cors_headers(
@@ -145,18 +166,21 @@ pub async fn oci_manifest_get(
     let name_str = path.name.to_string();
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
-    // Parse reference
-    let reference = parse_reference(&path.reference)?;
+    // Resolve project UUID for stable storage paths
+    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+
+    // Parse reference (pull operation: unparseable → 404 MANIFEST_UNKNOWN)
+    let reference = parse_reference_for_pull(&path.reference)?;
 
     // Get storage
     let storage = context.oci_storage();
 
     // Resolve the reference to a digest
-    let digest = resolve_reference(storage, &path.name, &reference).await?;
+    let digest = resolve_reference(storage, &project_uuid, &reference).await?;
 
     // Get manifest content
     let manifest = storage
-        .get_manifest_by_digest(&path.name, &digest)
+        .get_manifest_by_digest(&project_uuid, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -169,6 +193,9 @@ pub async fn oci_manifest_get(
         HttpError::for_internal_error(format!("Failed to parse stored manifest: {e}"))
     })?;
     let content_type = parsed.media_type().to_owned();
+
+    // Check Accept header for content negotiation
+    check_accept_header(&rqctx, &content_type)?;
 
     // Build response with OCI-compliant headers
     let response = oci_cors_headers(
@@ -207,6 +234,7 @@ pub async fn oci_manifest_put(
     // Validate push access and get or create the project
     let push_access = validate_push_access(&rqctx.log, &rqctx, &path.name).await?;
     let project_slug = &push_access.project.slug;
+    let project_uuid = push_access.project.uuid;
 
     // Parse reference
     let reference = parse_reference(&path.reference)?;
@@ -237,7 +265,8 @@ pub async fn oci_manifest_put(
         && let Ok(ct_str) = content_type.to_str()
     {
         let manifest_media_type = parsed_manifest.media_type();
-        if ct_str != manifest_media_type {
+        let ct_base = ct_str.split(';').next().unwrap_or(ct_str).trim();
+        if ct_base != manifest_media_type {
             return Err(crate::error::into_http_error(OciError::ManifestInvalid(
                 format!(
                     "Content-Type '{ct_str}' does not match manifest mediaType '{manifest_media_type}'"
@@ -246,6 +275,9 @@ pub async fn oci_manifest_put(
         }
     }
 
+    // Verify referenced blobs exist (for image manifests and Docker manifests)
+    verify_referenced_blobs(storage, &project_uuid, &parsed_manifest).await?;
+
     // Extract subject digest from manifest if present (for OCI-Subject header)
     let subject_digest = parsed_manifest.subject().map(|s| s.digest.clone());
 
@@ -253,13 +285,22 @@ pub async fn oci_manifest_put(
     // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
     let digest = storage
         .put_manifest(
-            &path.name,
+            &project_uuid,
             bytes::Bytes::copy_from_slice(body_bytes),
             tag,
             &parsed_manifest,
         )
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
+    // If the reference was a digest, verify it matches the computed digest
+    if let Reference::Digest(ref_digest) = &reference
+        && ref_digest != &digest
+    {
+        return Err(crate::error::into_http_error(OciError::DigestInvalid {
+            digest: format!("URL digest {ref_digest} does not match content digest {digest}"),
+        }));
+    }
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -288,6 +329,79 @@ pub async fn oci_manifest_put(
     Ok(response)
 }
 
+/// Check the Accept header for content negotiation
+///
+/// If the client sends an Accept header, the manifest's media type must
+/// be listed (or the client must accept `*/*` / `application/*`).
+/// If no Accept header is present, serve the manifest per HTTP semantics.
+/// Verify that all blobs referenced by a manifest exist in storage
+///
+/// Only checks OCI Image Manifests and Docker Manifest V2 (which have config/layers).
+/// Image indices and manifest lists reference other manifests, not blobs.
+async fn verify_referenced_blobs(
+    storage: &OciStorage,
+    repository: &ProjectUuid,
+    manifest: &Manifest,
+) -> Result<(), HttpError> {
+    let digests: Vec<&str> = match manifest {
+        Manifest::OciImageManifest(m) => {
+            let mut d = vec![m.config.digest.as_str()];
+            d.extend(m.layers.iter().map(|l| l.digest.as_str()));
+            d
+        },
+        Manifest::DockerManifestV2(m) => {
+            let mut d = vec![m.config.digest.as_str()];
+            d.extend(m.layers.iter().map(|l| l.digest.as_str()));
+            d
+        },
+        // Image indices/manifest lists reference manifests, not blobs
+        Manifest::OciImageIndex(_) | Manifest::DockerManifestList(_) => return Ok(()),
+    };
+
+    for digest_str in digests {
+        let digest: Digest = digest_str.parse().map_err(|_e| {
+            crate::error::into_http_error(OciError::DigestInvalid {
+                digest: digest_str.to_owned(),
+            })
+        })?;
+        let exists = storage
+            .blob_exists(repository, &digest)
+            .await
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        if !exists {
+            return Err(crate::error::into_http_error(
+                OciError::ManifestBlobUnknown {
+                    digest: digest_str.to_owned(),
+                },
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn check_accept_header(
+    rqctx: &RequestContext<ApiContext>,
+    content_type: &str,
+) -> Result<(), HttpError> {
+    if let Some(accept_header) = rqctx.request.headers().get(http::header::ACCEPT)
+        && let Ok(accept_str) = accept_header.to_str()
+    {
+        let accepts: Vec<&str> = accept_str.split(',').map(str::trim).collect();
+        let matched = accepts.iter().any(|a| {
+            // Strip quality parameters (e.g., ";q=0.9")
+            let media = a.split(';').next().unwrap_or(a).trim();
+            media == content_type || media == "*/*" || media == "application/*"
+        });
+        if !matched {
+            return Err(crate::error::into_http_error(OciError::ManifestUnknown {
+                reference: content_type.to_owned(),
+            }));
+        }
+    }
+    Ok(())
+}
+
 /// Delete a manifest
 #[endpoint {
     method = DELETE,
@@ -305,6 +419,9 @@ pub async fn oci_manifest_delete(
     let name_str = path.name.to_string();
     let _access = require_push_access(&rqctx, &name_str).await?;
 
+    // Resolve project UUID for stable storage paths
+    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+
     // Get storage
     let storage = context.oci_storage();
 
@@ -315,14 +432,14 @@ pub async fn oci_manifest_delete(
         Reference::Digest(digest) => {
             // Delete by digest - delete the manifest itself
             storage
-                .delete_manifest(&path.name, &digest)
+                .delete_manifest(&project_uuid, &digest)
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
         },
         Reference::Tag(tag) => {
             // Delete by tag - delete the tag link only (manifest may still exist)
             storage
-                .delete_tag(&path.name, &tag)
+                .delete_tag(&project_uuid, &tag)
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
         },

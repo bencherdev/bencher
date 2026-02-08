@@ -34,7 +34,9 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::auth::{require_pull_access, require_push_access, validate_push_access};
+use crate::auth::{
+    require_pull_access, require_push_access, resolve_project_uuid, validate_push_access,
+};
 use crate::response::{
     APPLICATION_OCTET_STREAM, DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers,
 };
@@ -110,19 +112,18 @@ pub async fn oci_blob_exists(
     let name_str = path.name.to_string();
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
+    // Resolve project UUID for stable storage paths
+    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+
     // Parse digest
-    let digest: Digest = path.reference.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::DigestInvalid {
-            digest: path.reference.clone(),
-        })
-    })?;
+    let digest: Digest = crate::error::parse_digest(&path.reference)?;
 
     // Get storage
     let storage = context.oci_storage();
 
     // Check if blob exists and get size
     let size = storage
-        .get_blob_size(&path.name, &digest)
+        .get_blob_size(&project_uuid, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -170,19 +171,18 @@ pub async fn oci_blob_get(
     let name_str = path.name.to_string();
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
+    // Resolve project UUID for stable storage paths
+    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+
     // Parse digest
-    let digest: Digest = path.reference.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::DigestInvalid {
-            digest: path.reference.clone(),
-        })
-    })?;
+    let digest: Digest = crate::error::parse_digest(&path.reference)?;
 
     // Get storage
     let storage = context.oci_storage();
 
     // Get blob as streaming body
     let (blob_body, size) = storage
-        .get_blob_stream(&path.name, &digest)
+        .get_blob_stream(&project_uuid, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -231,19 +231,18 @@ pub async fn oci_blob_delete(
     let name_str = path.name.to_string();
     let _access = require_push_access(&rqctx, &name_str).await?;
 
+    // Resolve project UUID for stable storage paths
+    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+
     // Parse digest
-    let digest: Digest = path.reference.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::DigestInvalid {
-            digest: path.reference.clone(),
-        })
-    })?;
+    let digest: Digest = crate::error::parse_digest(&path.reference)?;
 
     // Get storage
     let storage = context.oci_storage();
 
     // Delete the blob
     storage
-        .delete_blob(&path.name, &digest)
+        .delete_blob(&project_uuid, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -289,17 +288,14 @@ pub async fn oci_upload_start(
     // Validate push access and get or create the project
     let push_access = validate_push_access(&rqctx.log, &rqctx, &path.name).await?;
     let project_slug = &push_access.project.slug;
+    let project_uuid = push_access.project.uuid;
 
     // Get storage
     let storage = context.oci_storage();
 
     // Handle cross-repository mount if requested
     if let (Some(digest_str), Some(from_name)) = (&query.digest, &query.from) {
-        let digest: Digest = digest_str.parse().map_err(|_err| {
-            crate::error::into_http_error(OciError::DigestInvalid {
-                digest: digest_str.clone(),
-            })
-        })?;
+        let digest: Digest = crate::error::parse_digest(digest_str)?;
         let from_repo: ProjectResourceId = from_name.parse().map_err(|_err| {
             crate::error::into_http_error(OciError::NameInvalid {
                 name: from_name.clone(),
@@ -312,9 +308,11 @@ pub async fn oci_upload_start(
         let from_repo_str = from_repo.to_string();
         let pull_result = require_pull_access(&rqctx, &from_repo_str).await;
         if pull_result.is_ok() {
+            // Resolve source repository UUID
+            let from_uuid = resolve_project_uuid(context, &from_repo).await?;
             // Try to mount the blob
             let mounted = storage
-                .mount_blob(&from_repo, &path.name, &digest)
+                .mount_blob(&from_uuid, &project_uuid, &digest)
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -350,7 +348,7 @@ pub async fn oci_upload_start(
 
     // Start a new upload session
     let upload_id = storage
-        .start_upload(&path.name)
+        .start_upload(&project_uuid)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -419,6 +417,7 @@ pub async fn oci_upload_monolithic(
     // Validate push access and get or create the project
     let push_access = validate_push_access(&rqctx.log, &rqctx, &path.name).await?;
     let project_slug = &push_access.project.slug;
+    let project_uuid = push_access.project.uuid;
 
     // Get storage and enforce max body size
     let storage = context.oci_storage();
@@ -428,15 +427,11 @@ pub async fn oci_upload_monolithic(
     }
 
     // Parse digest
-    let expected_digest: Digest = query.digest.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::DigestInvalid {
-            digest: query.digest.clone(),
-        })
-    })?;
+    let expected_digest: Digest = crate::error::parse_digest(&query.digest)?;
 
     // Start upload, append data, and complete in one operation
     let upload_id = storage
-        .start_upload(&path.name)
+        .start_upload(&project_uuid)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 

@@ -7,7 +7,7 @@
 //! - Push access validation with claimed/unclaimed project support and auto-creation
 //! - Rate limiting for OCI requests
 
-use bencher_json::{Jwt, ProjectResourceId, ResourceName};
+use bencher_json::{Jwt, ProjectResourceId, ProjectUuid, ResourceName};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::{ApiContext, RateLimiting},
@@ -25,6 +25,20 @@ use slog::Logger;
 // Re-export from api_auth
 pub use api_auth::oci::unauthorized_with_www_authenticate;
 
+/// Formats an OCI-compliant JSON error body
+///
+/// Per the OCI Distribution Spec, if the response body is JSON it MUST follow:
+/// `{"errors": [{"code": "<CODE>", "message": "<msg>"}]}`
+fn oci_error_body(code: &str, message: &str) -> String {
+    serde_json::json!({
+        "errors": [{
+            "code": code,
+            "message": message
+        }]
+    })
+    .to_string()
+}
+
 /// Extract OCI bearer token from Authorization header
 ///
 /// Expects format: `Authorization: Bearer <token>`
@@ -35,7 +49,7 @@ pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jw
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::UNAUTHORIZED,
-            "Missing Authorization header".to_owned(),
+            oci_error_body("UNAUTHORIZED", "Missing Authorization header"),
         )
     })?;
 
@@ -43,7 +57,7 @@ pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jw
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid Authorization header encoding".to_owned(),
+            oci_error_body("UNSUPPORTED", "Invalid Authorization header encoding"),
         )
     })?;
 
@@ -51,7 +65,7 @@ pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jw
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid Authorization header format".to_owned(),
+            oci_error_body("UNSUPPORTED", "Invalid Authorization header format"),
         )
     })?;
 
@@ -59,7 +73,7 @@ pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jw
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::UNAUTHORIZED,
-            "Expected Bearer authentication".to_owned(),
+            oci_error_body("UNAUTHORIZED", "Expected Bearer authentication"),
         ));
     }
 
@@ -67,7 +81,7 @@ pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jw
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::BAD_REQUEST,
-            format!("Invalid token format: {e}"),
+            oci_error_body("UNSUPPORTED", &format!("Invalid token format: {e}")),
         )
     })
 }
@@ -83,7 +97,7 @@ pub fn validate_oci_access(
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::UNAUTHORIZED,
-            "Invalid or expired token".to_owned(),
+            oci_error_body("UNAUTHORIZED", "Invalid or expired token"),
         )
     })?;
 
@@ -94,7 +108,10 @@ pub fn validate_oci_access(
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::FORBIDDEN,
-            format!("Token not valid for repository: {repository}"),
+            oci_error_body(
+                "DENIED",
+                &format!("Token not valid for repository: {repository}"),
+            ),
         ));
     }
 
@@ -103,7 +120,10 @@ pub fn validate_oci_access(
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::FORBIDDEN,
-            format!("Token does not permit {required_action:?} action"),
+            oci_error_body(
+                "DENIED",
+                &format!("Token does not permit {required_action:?} action"),
+            ),
         ));
     }
 
@@ -301,7 +321,7 @@ fn handle_claimed_project(
             HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::FORBIDDEN,
-                "Insufficient permissions".to_owned(),
+                oci_error_body("DENIED", "Insufficient permissions"),
             )
         })?;
 
@@ -429,6 +449,29 @@ pub fn apply_public_rate_limit(
     Ok(())
 }
 
+/// Resolve a `ProjectResourceId` (UUID or slug) to a `ProjectUuid`
+///
+/// This performs a database lookup to find the project and return its canonical UUID.
+/// Used by pull endpoints and upload session endpoints to pass a stable identifier
+/// to the storage layer.
+pub async fn resolve_project_uuid(
+    context: &ApiContext,
+    resource_id: &ProjectResourceId,
+) -> Result<ProjectUuid, HttpError> {
+    let conn = public_conn!(context);
+    let project = QueryProject::from_resource_id(conn, resource_id).map_err(|_e| {
+        HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::NOT_FOUND,
+            oci_error_body(
+                "NAME_UNKNOWN",
+                &format!("Repository not found: {resource_id}"),
+            ),
+        )
+    })?;
+    Ok(project.uuid)
+}
+
 /// Build a `PublicUser` from OCI authentication
 ///
 /// Returns (`PublicUser`, `Option<OciClaims>`) where claims is Some if authenticated.
@@ -453,14 +496,14 @@ async fn build_public_user(
             HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::UNAUTHORIZED,
-                "Invalid token".to_owned(),
+                oci_error_body("UNAUTHORIZED", "Invalid token"),
             )
         })?;
         let auth_user = AuthUser::load(conn, query_user).map_err(|_err| {
             HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::UNAUTHORIZED,
-                "Invalid token".to_owned(),
+                oci_error_body("UNAUTHORIZED", "Invalid token"),
             )
         })?;
         slog::debug!(

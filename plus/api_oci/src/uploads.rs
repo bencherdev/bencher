@@ -30,6 +30,7 @@
 
 #[cfg(feature = "plus")]
 use crate::auth::apply_public_rate_limit;
+use crate::auth::resolve_project_uuid;
 use crate::response::{DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers};
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
 use bencher_json::ProjectResourceId;
@@ -126,19 +127,18 @@ pub async fn oci_upload_status(
 
     let repository_name = path.name.to_string();
 
+    // Resolve project UUID for stable storage paths
+    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+
     // Parse upload ID
-    let upload_id: UploadId = path.session_id.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::BlobUploadUnknown {
-            upload_id: path.session_id.clone(),
-        })
-    })?;
+    let upload_id: UploadId = crate::error::parse_upload_id(&path.session_id)?;
 
     // Get storage
     let storage = context.oci_storage();
 
     // Validate upload belongs to this repository
     storage
-        .validate_upload_repository(&upload_id, &path.name)
+        .validate_upload_repository(&upload_id, &project_uuid)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -200,19 +200,18 @@ pub async fn oci_upload_chunk(
     let repository_name = path.name.to_string();
     let data = body.as_bytes();
 
+    // Resolve project UUID for stable storage paths
+    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+
     // Parse upload ID
-    let upload_id: UploadId = path.session_id.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::BlobUploadUnknown {
-            upload_id: path.session_id.clone(),
-        })
-    })?;
+    let upload_id: UploadId = crate::error::parse_upload_id(&path.session_id)?;
 
     // Get storage
     let storage = context.oci_storage();
 
     // Validate upload belongs to this repository
     storage
-        .validate_upload_repository(&upload_id, &path.name)
+        .validate_upload_repository(&upload_id, &project_uuid)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -334,24 +333,19 @@ pub async fn oci_upload_complete(
     let repository_name = path.name.to_string();
     let data = body.as_bytes();
 
+    // Resolve project UUID for stable storage paths
+    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+
     // Parse upload ID and expected digest
-    let upload_id: UploadId = path.session_id.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::BlobUploadUnknown {
-            upload_id: path.session_id.clone(),
-        })
-    })?;
-    let expected_digest: Digest = query.digest.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::DigestInvalid {
-            digest: query.digest.clone(),
-        })
-    })?;
+    let upload_id: UploadId = crate::error::parse_upload_id(&path.session_id)?;
+    let expected_digest: Digest = crate::error::parse_digest(&query.digest)?;
 
     // Get storage
     let storage = context.oci_storage();
 
     // Validate upload belongs to this repository
     storage
-        .validate_upload_repository(&upload_id, &path.name)
+        .validate_upload_repository(&upload_id, &project_uuid)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
@@ -422,19 +416,18 @@ pub async fn oci_upload_cancel(
     #[cfg(feature = "plus")]
     apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
 
+    // Resolve project UUID for stable storage paths
+    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+
     // Parse upload ID
-    let upload_id: UploadId = path.session_id.parse().map_err(|_err| {
-        crate::error::into_http_error(OciError::BlobUploadUnknown {
-            upload_id: path.session_id.clone(),
-        })
-    })?;
+    let upload_id: UploadId = crate::error::parse_upload_id(&path.session_id)?;
 
     // Get storage
     let storage = context.oci_storage();
 
     // Validate upload belongs to this repository
     storage
-        .validate_upload_repository(&upload_id, &path.name)
+        .validate_upload_repository(&upload_id, &project_uuid)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 

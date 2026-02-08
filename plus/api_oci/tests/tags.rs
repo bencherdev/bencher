@@ -13,12 +13,20 @@ use http::StatusCode;
 
 /// Create a minimal OCI manifest JSON for testing
 fn create_test_manifest(suffix: &str) -> String {
+    // Build a valid hex digest: "aabb" prefix + hex-safe suffix + zero padding
+    let hex_suffix: String = suffix
+        .bytes()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>();
+    let prefix = "aabb";
+    let used = prefix.len() + hex_suffix.len();
+    let padding = "0".repeat(64 - used);
     serde_json::json!({
         "schemaVersion": 2,
         "mediaType": "application/vnd.oci.image.manifest.v1+json",
         "config": {
             "mediaType": "application/vnd.oci.image.config.v1+json",
-            "digest": format!("sha256:config{}{}", suffix, "0".repeat(64 - 6 - suffix.len())),
+            "digest": format!("sha256:{prefix}{hex_suffix}{padding}"),
             "size": 100
         },
         "layers": []

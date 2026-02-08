@@ -74,6 +74,24 @@ pub fn into_http_error(error: OciError) -> HttpError {
     }
 }
 
+/// Parses a digest string, returning an OCI-compliant error on failure
+pub fn parse_digest(s: &str) -> Result<bencher_oci_storage::Digest, HttpError> {
+    s.parse().map_err(|_e| {
+        into_http_error(OciError::DigestInvalid {
+            digest: s.to_owned(),
+        })
+    })
+}
+
+/// Parses an upload ID string, returning an OCI-compliant error on failure
+pub fn parse_upload_id(s: &str) -> Result<bencher_oci_storage::UploadId, HttpError> {
+    s.parse().map_err(|_e| {
+        into_http_error(OciError::BlobUploadUnknown {
+            upload_id: s.to_owned(),
+        })
+    })
+}
+
 /// Returns a 413 Payload Too Large error with OCI-compliant JSON body.
 ///
 /// Dropshot's `ClientErrorStatusCode` does not include 413,

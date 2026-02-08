@@ -697,3 +697,84 @@ async fn test_blob_upload_sha512() {
         "SHA-512 digest should be rejected since storage only supports SHA-256"
     );
 }
+
+// =============================================================================
+// Authorization Scope Enforcement Tests
+// =============================================================================
+
+// Pull-only token should NOT be able to start an upload (push operation)
+#[tokio::test]
+async fn test_blob_upload_pull_only_token_rejected() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("PullOnly User", "pullonlyblob@example.com")
+        .await;
+    let org = server.create_org(&user, "PullOnly Org").await;
+    let project = server.create_project(&user, &org, "PullOnly Project").await;
+
+    // Get a pull-only token
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Attempt to start an upload (push operation) with pull-only token
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::FORBIDDEN,
+        "Pull-only token should not be able to start an upload"
+    );
+}
+
+// Push-only token should NOT be able to read a blob (pull operation)
+#[tokio::test]
+async fn test_blob_head_push_only_token_rejected() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("PushOnly User", "pushonlyblob@example.com")
+        .await;
+    let org = server.create_org(&user, "PushOnly Org").await;
+    let project = server.create_project(&user, &org, "PushOnly Project").await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload a blob first
+    let blob_data = b"push-only token test data";
+    let digest = compute_digest(blob_data);
+
+    let upload_resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Upload failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    // Attempt HEAD (pull operation) with push-only token
+    let resp = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::FORBIDDEN,
+        "Push-only token should not be able to read a blob"
+    );
+}

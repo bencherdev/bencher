@@ -22,7 +22,7 @@ use aws_sdk_s3::Client;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::CompletedMultipartUpload;
 use bencher_json::{
-    ProjectResourceId, Secret,
+    ProjectUuid, Secret,
     system::config::{DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
 };
 use bytes::Bytes;
@@ -135,6 +135,9 @@ pub enum OciStorageError {
     #[error("Invalid content: {0}")]
     InvalidContent(String),
 
+    #[error("Blob upload invalid content: {0}")]
+    BlobUploadInvalidContent(String),
+
     #[error("Invalid S3 ARN: {0}")]
     InvalidArn(String),
 
@@ -155,7 +158,9 @@ impl OciStorageError {
             Self::UploadNotFound(_) | Self::BlobNotFound(_) | Self::ManifestNotFound(_) => {
                 http::StatusCode::NOT_FOUND
             },
-            Self::DigestMismatch { .. } | Self::InvalidContent(_) => http::StatusCode::BAD_REQUEST,
+            Self::DigestMismatch { .. }
+            | Self::InvalidContent(_)
+            | Self::BlobUploadInvalidContent(_) => http::StatusCode::BAD_REQUEST,
             Self::SizeExceeded { .. } => http::StatusCode::PAYLOAD_TOO_LARGE,
             Self::S3(_)
             | Self::LocalStorage(_)
@@ -313,7 +318,7 @@ impl OciStorage {
     /// Starts a new upload session
     pub async fn start_upload(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
     ) -> Result<UploadId, OciStorageError> {
         match self {
             Self::S3(s3) => s3.start_upload(repository).await,
@@ -357,7 +362,7 @@ impl OciStorage {
     pub async fn validate_upload_repository(
         &self,
         upload_id: &UploadId,
-        expected_repository: &ProjectResourceId,
+        expected_repository: &ProjectUuid,
     ) -> Result<(), OciStorageError> {
         match self {
             Self::S3(s3) => {
@@ -385,7 +390,7 @@ impl OciStorage {
     /// Checks if a blob exists
     pub async fn blob_exists(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         match self {
@@ -399,7 +404,7 @@ impl OciStorage {
     /// For large blobs, prefer `get_blob_stream` which streams the content.
     pub async fn get_blob(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(Bytes, u64), OciStorageError> {
         match self {
@@ -414,7 +419,7 @@ impl OciStorage {
     /// rather than loaded entirely into memory, making this suitable for large blobs.
     pub async fn get_blob_stream(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(BlobBody, u64), OciStorageError> {
         match self {
@@ -432,7 +437,7 @@ impl OciStorage {
     /// Gets blob metadata (size) without downloading content
     pub async fn get_blob_size(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<u64, OciStorageError> {
         match self {
@@ -444,7 +449,7 @@ impl OciStorage {
     /// Deletes a blob
     pub async fn delete_blob(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         match self {
@@ -456,8 +461,8 @@ impl OciStorage {
     /// Mounts a blob from another repository (cross-repo blob mount)
     pub async fn mount_blob(
         &self,
-        from_repository: &ProjectResourceId,
-        to_repository: &ProjectResourceId,
+        from_repository: &ProjectUuid,
+        to_repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         match self {
@@ -475,7 +480,7 @@ impl OciStorage {
     /// Stores a manifest
     pub async fn put_manifest(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         content: Bytes,
         tag: Option<&crate::types::Tag>,
         manifest: &bencher_json::oci::Manifest,
@@ -489,7 +494,7 @@ impl OciStorage {
     /// Gets a manifest by digest
     pub async fn get_manifest_by_digest(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<Bytes, OciStorageError> {
         match self {
@@ -501,7 +506,7 @@ impl OciStorage {
     /// Resolves a tag to a digest
     pub async fn resolve_tag(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         tag: &crate::types::Tag,
     ) -> Result<Digest, OciStorageError> {
         match self {
@@ -516,7 +521,7 @@ impl OciStorage {
     /// - `start_after`: Tag to start listing after (for cursor-based pagination)
     pub async fn list_tags(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         limit: Option<usize>,
         start_after: Option<&str>,
     ) -> Result<ListTagsResult, OciStorageError> {
@@ -529,7 +534,7 @@ impl OciStorage {
     /// Deletes a manifest by digest
     pub async fn delete_manifest(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         match self {
@@ -541,7 +546,7 @@ impl OciStorage {
     /// Deletes a tag
     pub async fn delete_tag(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         tag: &crate::types::Tag,
     ) -> Result<(), OciStorageError> {
         match self {
@@ -553,10 +558,10 @@ impl OciStorage {
     /// Lists all manifests that reference a given digest via their subject field
     pub async fn list_referrers(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         subject_digest: &Digest,
         artifact_type_filter: Option<&str>,
-    ) -> Result<Vec<serde_json::Value>, OciStorageError> {
+    ) -> Result<Vec<bencher_json::oci::OciDescriptor>, OciStorageError> {
         match self {
             Self::S3(s3) => {
                 s3.list_referrers(repository, subject_digest, artifact_type_filter)
@@ -643,7 +648,7 @@ impl OciS3Storage {
     // ==================== Key Generation ====================
 
     /// Returns the S3 key prefix for the given repository
-    fn key_prefix(&self, repository: &ProjectResourceId) -> String {
+    fn key_prefix(&self, repository: &ProjectUuid) -> String {
         match &self.config.prefix {
             Some(prefix) => format!("{prefix}/{repository}"),
             None => repository.to_string(),
@@ -692,7 +697,7 @@ impl OciS3Storage {
     }
 
     /// Returns the S3 key for a blob
-    fn blob_key(&self, repository: &ProjectResourceId, digest: &Digest) -> String {
+    fn blob_key(&self, repository: &ProjectUuid, digest: &Digest) -> String {
         format!(
             "{}/blobs/{}/{}",
             self.key_prefix(repository),
@@ -702,7 +707,7 @@ impl OciS3Storage {
     }
 
     /// Returns the S3 key for a manifest by digest
-    fn manifest_key_by_digest(&self, repository: &ProjectResourceId, digest: &Digest) -> String {
+    fn manifest_key_by_digest(&self, repository: &ProjectUuid, digest: &Digest) -> String {
         format!(
             "{}/manifests/sha256/{}",
             self.key_prefix(repository),
@@ -711,12 +716,12 @@ impl OciS3Storage {
     }
 
     /// Returns the S3 key for a manifest tag link
-    fn tag_link_key(&self, repository: &ProjectResourceId, tag: &str) -> String {
+    fn tag_link_key(&self, repository: &ProjectUuid, tag: &str) -> String {
         format!("{}/tags/{}", self.key_prefix(repository), tag)
     }
 
     /// Returns the S3 key prefix for referrers to a given digest
-    fn referrers_prefix(&self, repository: &ProjectResourceId, subject_digest: &Digest) -> String {
+    fn referrers_prefix(&self, repository: &ProjectUuid, subject_digest: &Digest) -> String {
         format!(
             "{}/referrers/{}/{}",
             self.key_prefix(repository),
@@ -728,7 +733,7 @@ impl OciS3Storage {
     /// Returns the S3 key for a referrer link
     fn referrer_key(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         subject_digest: &Digest,
         referrer_digest: &Digest,
     ) -> String {
@@ -746,7 +751,7 @@ impl OciS3Storage {
     async fn validate_upload_repository(
         &self,
         upload_id: &UploadId,
-        expected_repository: &ProjectResourceId,
+        expected_repository: &ProjectUuid,
     ) -> Result<(), OciStorageError> {
         let state = self.load_upload_state(upload_id).await?;
         if state.repository != expected_repository.to_string() {
@@ -970,7 +975,7 @@ impl OciS3Storage {
     /// Also spawns a background task to clean up any stale uploads older than `upload_timeout`.
     pub async fn start_upload(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
     ) -> Result<UploadId, OciStorageError> {
         // Spawn background cleanup task (non-blocking)
         self.spawn_stale_upload_cleanup();
@@ -1025,23 +1030,22 @@ impl OciS3Storage {
         // Verify upload exists (we don't need to modify state for appends)
         let state = self.load_upload_state(upload_id).await?;
 
-        // Store data as a new chunk with unique key (race-free)
-        self.store_buffer_chunk(upload_id, data).await?;
-
-        // Calculate total size from completed parts + all chunks
-        // This is the authoritative size, discovered by listing
+        // Calculate projected total size BEFORE storing the chunk
         let chunks = self.list_buffer_chunks(upload_id).await?;
         let buffer_total_size: u64 = chunks.iter().map(|(_key, size)| size).sum();
+        let projected_total = state.completed_parts_size() + buffer_total_size + data.len() as u64;
 
-        let total_size = state.completed_parts_size() + buffer_total_size;
-        if total_size > self.max_body_size {
+        if projected_total > self.max_body_size {
             return Err(OciStorageError::SizeExceeded {
-                size: total_size,
+                size: projected_total,
                 max: self.max_body_size,
             });
         }
 
-        Ok(total_size)
+        // Store data as a new chunk with unique key (race-free)
+        self.store_buffer_chunk(upload_id, data).await?;
+
+        Ok(projected_total)
     }
 
     /// Gets the current size of an in-progress upload
@@ -1115,7 +1119,7 @@ impl OciS3Storage {
         // Must have some data
         if chunks.is_empty() && state.parts.is_empty() {
             self.cleanup_upload(upload_id).await;
-            return Err(OciStorageError::InvalidContent(
+            return Err(OciStorageError::BlobUploadInvalidContent(
                 "Cannot complete upload with no data".to_owned(),
             ));
         }
@@ -1151,7 +1155,7 @@ impl OciS3Storage {
         // Must have at least one part for S3 multipart completion
         if state.parts.is_empty() {
             self.cleanup_upload(upload_id).await;
-            return Err(OciStorageError::InvalidContent(
+            return Err(OciStorageError::BlobUploadInvalidContent(
                 "Cannot complete upload with no data".to_owned(),
             ));
         }
@@ -1207,14 +1211,13 @@ impl OciS3Storage {
             .await
             .map_err(|e| OciStorageError::S3(e.to_string()))?;
 
-        // Parse repository name
-        let repository: ProjectResourceId =
-            state
-                .repository
-                .parse()
-                .map_err(|e: bencher_json::ValidError| {
-                    OciStorageError::InvalidContent(e.to_string())
-                })?;
+        // Parse repository UUID
+        let repository: ProjectUuid = state.repository.parse().map_err(|_e| {
+            OciStorageError::InvalidContent(format!(
+                "Invalid project UUID in upload state: {}",
+                state.repository
+            ))
+        })?;
 
         // Copy to final blob location
         // For S3 Access Points, copy source must use the format:
@@ -1301,7 +1304,7 @@ impl OciS3Storage {
     /// Checks if a blob exists
     pub async fn blob_exists(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         let key = self.blob_key(repository, digest);
@@ -1329,7 +1332,7 @@ impl OciS3Storage {
     /// For large blobs, prefer `get_blob_stream` which streams the content.
     pub async fn get_blob(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(Bytes, u64), OciStorageError> {
         let key = self.blob_key(repository, digest);
@@ -1363,7 +1366,7 @@ impl OciS3Storage {
     /// from S3 rather than loaded entirely into memory.
     pub async fn get_blob_stream(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(S3BlobBody, u64), OciStorageError> {
         let key = self.blob_key(repository, digest);
@@ -1394,7 +1397,7 @@ impl OciS3Storage {
     /// Gets blob metadata (size) without downloading content
     pub async fn get_blob_size(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<u64, OciStorageError> {
         let key = self.blob_key(repository, digest);
@@ -1417,7 +1420,7 @@ impl OciS3Storage {
     /// Deletes a blob
     pub async fn delete_blob(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         let key = self.blob_key(repository, digest);
@@ -1438,8 +1441,8 @@ impl OciS3Storage {
     /// between checking existence and copying.
     pub async fn mount_blob(
         &self,
-        from_repository: &ProjectResourceId,
-        to_repository: &ProjectResourceId,
+        from_repository: &ProjectUuid,
+        to_repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         let source_key = self.blob_key(from_repository, digest);
@@ -1470,7 +1473,7 @@ impl OciS3Storage {
     /// Stores a manifest
     pub async fn put_manifest(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         content: Bytes,
         tag: Option<&crate::types::Tag>,
         manifest: &bencher_json::oci::Manifest,
@@ -1533,7 +1536,7 @@ impl OciS3Storage {
     /// Gets a manifest by digest
     pub async fn get_manifest_by_digest(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<Bytes, OciStorageError> {
         let key = self.manifest_key_by_digest(repository, digest);
@@ -1561,7 +1564,7 @@ impl OciS3Storage {
     /// Resolves a tag to a digest
     pub async fn resolve_tag(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         tag: &crate::types::Tag,
     ) -> Result<Digest, OciStorageError> {
         let key = self.tag_link_key(repository, tag.as_str());
@@ -1600,7 +1603,7 @@ impl OciS3Storage {
     /// Returns tags sorted lexicographically by S3.
     pub async fn list_tags(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         limit: Option<usize>,
         start_after: Option<&str>,
     ) -> Result<ListTagsResult, OciStorageError> {
@@ -1691,7 +1694,7 @@ impl OciS3Storage {
     /// via the `subject` field.
     pub async fn delete_manifest(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         // Try to read the manifest first to check for subject field
@@ -1728,7 +1731,7 @@ impl OciS3Storage {
     /// Deletes a tag (removes the tag link, not the manifest itself)
     pub async fn delete_tag(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         tag: &crate::types::Tag,
     ) -> Result<(), OciStorageError> {
         let key = self.tag_link_key(repository, tag.as_str());
@@ -1748,10 +1751,10 @@ impl OciS3Storage {
     /// Uses parallel fetches (up to 10 concurrent) for improved performance.
     pub async fn list_referrers(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         subject_digest: &Digest,
         artifact_type_filter: Option<&str>,
-    ) -> Result<Vec<serde_json::Value>, OciStorageError> {
+    ) -> Result<Vec<bencher_json::oci::OciDescriptor>, OciStorageError> {
         let prefix = self.referrers_prefix(repository, subject_digest);
 
         // First, collect all keys
@@ -1792,7 +1795,7 @@ impl OciS3Storage {
         // Fetch referrer descriptors in parallel
         let filter = artifact_type_filter.map(ToOwned::to_owned);
         let log = &self.log;
-        let referrers: Vec<serde_json::Value> = stream::iter(keys)
+        let referrers: Vec<bencher_json::oci::OciDescriptor> = stream::iter(keys)
             .map(|key| {
                 let client = &self.client;
                 let bucket = &self.config.bucket_arn;
@@ -1807,21 +1810,17 @@ impl OciS3Storage {
                         slog::warn!(log, "Failed to collect referrer body from S3"; "key" => &key);
                         return None;
                     };
-                    let Ok(descriptor) =
-                        serde_json::from_slice::<serde_json::Value>(&data.into_bytes())
-                    else {
+                    let Ok(descriptor) = serde_json::from_slice::<bencher_json::oci::OciDescriptor>(
+                        &data.into_bytes(),
+                    ) else {
                         slog::warn!(log, "Failed to parse referrer JSON from S3"; "key" => &key);
                         return None;
                     };
                     // Apply artifact type filter if specified
-                    if let Some(filter) = &filter {
-                        let matches = descriptor
-                            .get("artifactType")
-                            .and_then(|a| a.as_str())
-                            .is_some_and(|at| at == filter);
-                        if !matches {
-                            return None;
-                        }
+                    if let Some(filter) = &filter
+                        && descriptor.artifact_type.as_deref() != Some(filter.as_str())
+                    {
+                        return None;
                     }
                     Some(descriptor)
                 }
@@ -2038,29 +2037,7 @@ async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, uplo
                 report_cleanup_error("stale_upload: abort multipart", &e);
             }
 
-            // Delete state file
-            if let Err(e) = client
-                .delete_object()
-                .bucket(&config.bucket_arn)
-                .key(&state_key)
-                .send()
-                .await
-            {
-                report_cleanup_error("stale_upload: state delete", &e);
-            }
-
-            // Delete data file
-            if let Err(e) = client
-                .delete_object()
-                .bucket(&config.bucket_arn)
-                .key(&data_key)
-                .send()
-                .await
-            {
-                report_cleanup_error("stale_upload: data delete", &e);
-            }
-
-            // Delete all buffer chunks by listing them
+            // Delete all buffer chunks first (while state still exists for discovery)
             let chunks_prefix = format!("{global_prefix}/{upload_id}/chunks/");
             let mut continuation_token: Option<String> = None;
             loop {
@@ -2097,6 +2074,28 @@ async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, uplo
                 } else {
                     break;
                 }
+            }
+
+            // Delete data file
+            if let Err(e) = client
+                .delete_object()
+                .bucket(&config.bucket_arn)
+                .key(&data_key)
+                .send()
+                .await
+            {
+                report_cleanup_error("stale_upload: data delete", &e);
+            }
+
+            // Delete state last (so discovery still works if crash occurs above)
+            if let Err(e) = client
+                .delete_object()
+                .bucket(&config.bucket_arn)
+                .key(&state_key)
+                .send()
+                .await
+            {
+                report_cleanup_error("stale_upload: state delete", &e);
             }
         }
     }

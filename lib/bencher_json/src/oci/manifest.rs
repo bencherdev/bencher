@@ -98,6 +98,9 @@ pub struct OciManifestDescriptor {
     /// Platform the manifest is built for
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub platform: Option<Platform>,
+    /// Artifact type of the referenced manifest
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artifact_type: Option<String>,
 }
 
 /// OCI Image Manifest
@@ -230,7 +233,7 @@ impl Manifest {
         Ok(manifest)
     }
 
-    /// Validates that all descriptor sizes are non-negative per OCI spec
+    /// Validates schemaVersion and that all descriptor sizes are non-negative per OCI spec
     fn validate(&self) -> Result<(), String> {
         fn check_descriptor(desc: &OciDescriptor, context: &str) -> Result<(), String> {
             if desc.size < 0 {
@@ -253,6 +256,16 @@ impl Manifest {
                 ));
             }
             Ok(())
+        }
+
+        let sv = match self {
+            Self::OciImageManifest(m) => m.schema_version,
+            Self::OciImageIndex(m) => m.schema_version,
+            Self::DockerManifestV2(m) => m.schema_version,
+            Self::DockerManifestList(m) => m.schema_version,
+        };
+        if sv != 2 {
+            return Err(format!("schemaVersion must be 2, got {sv}"));
         }
 
         match self {
@@ -536,6 +549,54 @@ mod tests {
         });
         let bytes = serde_json::to_vec(&json).unwrap();
         assert!(Manifest::from_bytes(&bytes).is_ok());
+    }
+
+    #[test]
+    fn parse_manifest_schema_version_0() {
+        let json = serde_json::json!({
+            "schemaVersion": 0,
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "config": {
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+                "digest": "sha256:44136fa355b311bfa0680e24bf37c9e4e6e2b637bfb8e6e1e9bfb7e7e9bfb7e7",
+                "size": 0
+            },
+            "layers": []
+        });
+        let bytes = serde_json::to_vec(&json).unwrap();
+        assert!(Manifest::from_bytes(&bytes).is_err());
+    }
+
+    #[test]
+    fn parse_manifest_schema_version_1() {
+        let json = serde_json::json!({
+            "schemaVersion": 1,
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "config": {
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+                "digest": "sha256:44136fa355b311bfa0680e24bf37c9e4e6e2b637bfb8e6e1e9bfb7e7e9bfb7e7",
+                "size": 0
+            },
+            "layers": []
+        });
+        let bytes = serde_json::to_vec(&json).unwrap();
+        assert!(Manifest::from_bytes(&bytes).is_err());
+    }
+
+    #[test]
+    fn parse_manifest_schema_version_3() {
+        let json = serde_json::json!({
+            "schemaVersion": 3,
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "config": {
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+                "digest": "sha256:44136fa355b311bfa0680e24bf37c9e4e6e2b637bfb8e6e1e9bfb7e7e9bfb7e7",
+                "size": 0
+            },
+            "layers": []
+        });
+        let bytes = serde_json::to_vec(&json).unwrap();
+        assert!(Manifest::from_bytes(&bytes).is_err());
     }
 
     #[test]

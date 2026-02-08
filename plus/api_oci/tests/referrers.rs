@@ -19,7 +19,7 @@ fn create_base_manifest() -> String {
         "mediaType": "application/vnd.oci.image.manifest.v1+json",
         "config": {
             "mediaType": "application/vnd.oci.image.config.v1+json",
-            "digest": "sha256:baseconfig000000000000000000000000000000000000000000000000000000",
+            "digest": "sha256:ba5ec00f000000000000000000000000000000000000000000000000000000ab",
             "size": 100
         },
         "layers": []

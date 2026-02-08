@@ -19,7 +19,7 @@ use tokio::fs;
 use tokio::io::AsyncWriteExt as _;
 use tokio_util::io::ReaderStream;
 
-use bencher_json::ProjectResourceId;
+use bencher_json::ProjectUuid;
 
 use crate::storage::OciStorageError;
 use crate::types::{Digest, UploadId};
@@ -165,12 +165,12 @@ impl OciLocalStorage {
     }
 
     /// Returns the directory for a repository
-    fn repository_dir(&self, repository: &ProjectResourceId) -> PathBuf {
+    fn repository_dir(&self, repository: &ProjectUuid) -> PathBuf {
         self.base_dir.join(repository.to_string())
     }
 
     /// Returns the path for a blob
-    fn blob_path(&self, repository: &ProjectResourceId, digest: &Digest) -> PathBuf {
+    fn blob_path(&self, repository: &ProjectUuid, digest: &Digest) -> PathBuf {
         self.repository_dir(repository)
             .join("blobs")
             .join(digest.algorithm())
@@ -178,7 +178,7 @@ impl OciLocalStorage {
     }
 
     /// Returns the path for a manifest by digest
-    fn manifest_path(&self, repository: &ProjectResourceId, digest: &Digest) -> PathBuf {
+    fn manifest_path(&self, repository: &ProjectUuid, digest: &Digest) -> PathBuf {
         self.repository_dir(repository)
             .join("manifests")
             .join("sha256")
@@ -186,14 +186,14 @@ impl OciLocalStorage {
     }
 
     /// Returns the path for a tag link
-    fn tag_path(&self, repository: &ProjectResourceId, tag: &crate::types::Tag) -> PathBuf {
+    fn tag_path(&self, repository: &ProjectUuid, tag: &crate::types::Tag) -> PathBuf {
         self.repository_dir(repository)
             .join("tags")
             .join(tag.as_str())
     }
 
     /// Returns the directory for referrers to a given digest
-    fn referrers_dir(&self, repository: &ProjectResourceId, subject_digest: &Digest) -> PathBuf {
+    fn referrers_dir(&self, repository: &ProjectUuid, subject_digest: &Digest) -> PathBuf {
         self.repository_dir(repository)
             .join("referrers")
             .join(subject_digest.algorithm())
@@ -203,7 +203,7 @@ impl OciLocalStorage {
     /// Returns the path for a referrer link
     fn referrer_path(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         subject_digest: &Digest,
         referrer_digest: &Digest,
     ) -> PathBuf {
@@ -220,7 +220,7 @@ impl OciLocalStorage {
     pub async fn validate_upload_repository(
         &self,
         upload_id: &UploadId,
-        expected_repository: &ProjectResourceId,
+        expected_repository: &ProjectUuid,
     ) -> Result<(), OciStorageError> {
         let state = self.load_upload_state(upload_id).await?;
         if state.repository != expected_repository.to_string() {
@@ -265,7 +265,7 @@ impl OciLocalStorage {
     /// Also spawns a background task to clean up any stale uploads older than `upload_timeout`.
     pub async fn start_upload(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
     ) -> Result<UploadId, OciStorageError> {
         // Spawn background cleanup task (non-blocking)
         self.spawn_stale_upload_cleanup();
@@ -372,7 +372,7 @@ impl OciLocalStorage {
 
         if data.is_empty() {
             self.cleanup_upload(upload_id).await;
-            return Err(OciStorageError::InvalidContent(
+            return Err(OciStorageError::BlobUploadInvalidContent(
                 "Cannot complete upload with no data".to_owned(),
             ));
         }
@@ -394,14 +394,13 @@ impl OciLocalStorage {
             });
         }
 
-        // Parse repository name
-        let repository: ProjectResourceId =
-            state
-                .repository
-                .parse()
-                .map_err(|e: bencher_json::ValidError| {
-                    OciStorageError::InvalidContent(e.to_string())
-                })?;
+        // Parse repository UUID
+        let repository: ProjectUuid = state.repository.parse().map_err(|_e| {
+            OciStorageError::InvalidContent(format!(
+                "Invalid project UUID in upload state: {}",
+                state.repository
+            ))
+        })?;
 
         // Copy to final blob location
         let blob_path = self.blob_path(&repository, &actual_digest);
@@ -455,7 +454,7 @@ impl OciLocalStorage {
     /// Checks if a blob exists
     pub async fn blob_exists(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         let path = self.blob_path(repository, digest);
@@ -467,7 +466,7 @@ impl OciLocalStorage {
     /// For large blobs, prefer `get_blob_stream` which streams the content.
     pub async fn get_blob(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(Bytes, u64), OciStorageError> {
         let path = self.blob_path(repository, digest);
@@ -487,7 +486,7 @@ impl OciLocalStorage {
     /// from disk rather than loaded entirely into memory.
     pub async fn get_blob_stream(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(LocalBlobBody, u64), OciStorageError> {
         let path = self.blob_path(repository, digest);
@@ -513,7 +512,7 @@ impl OciLocalStorage {
     /// Gets blob metadata (size) without downloading content
     pub async fn get_blob_size(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<u64, OciStorageError> {
         let path = self.blob_path(repository, digest);
@@ -529,7 +528,7 @@ impl OciLocalStorage {
     /// Deletes a blob
     pub async fn delete_blob(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         let path = self.blob_path(repository, digest);
@@ -550,8 +549,8 @@ impl OciLocalStorage {
     /// returns `Ok(false)`.
     pub async fn mount_blob(
         &self,
-        from_repository: &ProjectResourceId,
-        to_repository: &ProjectResourceId,
+        from_repository: &ProjectUuid,
+        to_repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<bool, OciStorageError> {
         let source_path = self.blob_path(from_repository, digest);
@@ -577,7 +576,7 @@ impl OciLocalStorage {
     /// Stores a manifest
     pub async fn put_manifest(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         content: Bytes,
         tag: Option<&crate::types::Tag>,
         manifest: &bencher_json::oci::Manifest,
@@ -642,7 +641,7 @@ impl OciLocalStorage {
     /// Gets a manifest by digest
     pub async fn get_manifest_by_digest(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<Bytes, OciStorageError> {
         let path = self.manifest_path(repository, digest);
@@ -658,7 +657,7 @@ impl OciLocalStorage {
     /// Resolves a tag to a digest
     pub async fn resolve_tag(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         tag: &crate::types::Tag,
     ) -> Result<Digest, OciStorageError> {
         let path = self.tag_path(repository, tag);
@@ -682,13 +681,13 @@ impl OciLocalStorage {
     /// sorting and pagination. This is less efficient than S3 for very large repositories.
     pub async fn list_tags(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         limit: Option<usize>,
         start_after: Option<&str>,
     ) -> Result<crate::storage::ListTagsResult, OciStorageError> {
         let tags_dir = self.repository_dir(repository).join("tags");
 
-        if !tags_dir.exists() {
+        if !fs::try_exists(&tags_dir).await.unwrap_or(false) {
             return Ok(crate::storage::ListTagsResult {
                 tags: Vec::new(),
                 has_more: false,
@@ -739,7 +738,7 @@ impl OciLocalStorage {
     /// via the `subject` field.
     pub async fn delete_manifest(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         digest: &Digest,
     ) -> Result<(), OciStorageError> {
         let path = self.manifest_path(repository, digest);
@@ -771,7 +770,7 @@ impl OciLocalStorage {
     /// Deletes a tag
     pub async fn delete_tag(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         tag: &crate::types::Tag,
     ) -> Result<(), OciStorageError> {
         let path = self.tag_path(repository, tag);
@@ -788,13 +787,13 @@ impl OciLocalStorage {
     /// Lists all manifests that reference a given digest via their subject field
     pub async fn list_referrers(
         &self,
-        repository: &ProjectResourceId,
+        repository: &ProjectUuid,
         subject_digest: &Digest,
         artifact_type_filter: Option<&str>,
-    ) -> Result<Vec<serde_json::Value>, OciStorageError> {
+    ) -> Result<Vec<bencher_json::oci::OciDescriptor>, OciStorageError> {
         let referrers_dir = self.referrers_dir(repository, subject_digest);
 
-        if !referrers_dir.exists() {
+        if !fs::try_exists(&referrers_dir).await.unwrap_or(false) {
             return Ok(Vec::new());
         }
 
@@ -810,20 +809,17 @@ impl OciLocalStorage {
                 warn!(self.log, "Failed to read referrer file"; "path" => %entry.path().display());
                 continue;
             };
-            let Ok(descriptor) = serde_json::from_slice::<serde_json::Value>(&data) else {
+            let Ok(descriptor) = serde_json::from_slice::<bencher_json::oci::OciDescriptor>(&data)
+            else {
                 warn!(self.log, "Failed to parse referrer JSON"; "path" => %entry.path().display());
                 continue;
             };
 
             // Apply artifact type filter if specified
-            if let Some(filter) = artifact_type_filter {
-                let matches = descriptor
-                    .get("artifactType")
-                    .and_then(|a| a.as_str())
-                    .is_some_and(|at| at == filter);
-                if !matches {
-                    continue;
-                }
+            if let Some(filter) = artifact_type_filter
+                && descriptor.artifact_type.as_deref() != Some(filter)
+            {
+                continue;
             }
 
             referrers.push(descriptor);

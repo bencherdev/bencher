@@ -69,6 +69,7 @@ impl OciError {
                 OciStorageError::DigestMismatch { .. } => "DIGEST_INVALID",
                 OciStorageError::UploadNotFound(_) => "BLOB_UPLOAD_UNKNOWN",
                 OciStorageError::InvalidContent(_) => "MANIFEST_INVALID",
+                OciStorageError::BlobUploadInvalidContent(_) => "BLOB_UPLOAD_INVALID",
                 OciStorageError::BlobNotFound(_) => "BLOB_UNKNOWN",
                 OciStorageError::SizeExceeded { .. } => "SIZE_INVALID",
                 OciStorageError::S3(_)

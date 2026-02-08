@@ -1346,9 +1346,7 @@ async fn test_manifest_put_content_type_mismatch() {
 }
 
 // PUT /v2/{name}/manifests/{reference} - Manifest referencing blobs that were never uploaded
-// The OCI Distribution Spec does NOT require registries to validate blob existence before
-// storing a manifest. This test documents that our registry accepts such manifests (consistent
-// with Docker Hub, ghcr.io, and other production registries).
+// The registry validates that referenced blobs exist before storing a manifest.
 #[tokio::test]
 async fn test_manifest_put_missing_blobs() {
     let server = TestServer::new().await;
@@ -1378,9 +1376,12 @@ async fn test_manifest_put_missing_blobs() {
         .await
         .expect("Request failed");
 
-    // Registry accepts manifests with missing blobs (spec-compliant behavior)
-    assert_eq!(resp.status(), StatusCode::CREATED);
-    assert!(resp.headers().contains_key("docker-content-digest"));
+    // Registry rejects manifests with missing blobs (MANIFEST_BLOB_UNKNOWN)
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Manifest referencing non-existent blobs should be rejected"
+    );
 }
 
 // Matching Content-Type should succeed (sanity check)
@@ -1417,5 +1418,72 @@ async fn test_manifest_put_content_type_match() {
         resp.status(),
         StatusCode::CREATED,
         "Matching Content-Type header and manifest mediaType should return 201"
+    );
+}
+
+// PUT /v2/{name}/manifests/{digest} - Digest in URL does not match manifest content
+#[tokio::test]
+async fn test_manifest_put_digest_mismatch() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("DigestMismatch User", "digestmismatch@example.com")
+        .await;
+    let org = server.create_org(&user, "DigestMismatch Org").await;
+    let project = server
+        .create_project(&user, &org, "DigestMismatch Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // First upload the blobs so blob validation passes
+    let config_data = b"config for digest mismatch test";
+    let layer_data = b"layer for digest mismatch test";
+    let config_digest = compute_digest(config_data);
+    let layer_digest = compute_digest(layer_data);
+
+    server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, config_digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .body(config_data.to_vec())
+        .send()
+        .await
+        .expect("Config upload failed");
+
+    server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, layer_digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .body(layer_data.to_vec())
+        .send()
+        .await
+        .expect("Layer upload failed");
+
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
+
+    // Use a completely wrong digest in the URL
+    let wrong_digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/{}", project_slug, wrong_digest)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Manifest PUT with mismatched digest in URL should be rejected"
     );
 }

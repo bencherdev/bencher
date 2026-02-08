@@ -85,11 +85,6 @@ impl TokenKey {
         repository: Option<String>,
         actions: Vec<OciAction>,
     ) -> Result<Jwt, TokenError> {
-        if actions.is_empty() {
-            return Err(TokenError::Oci {
-                error: JsonWebTokenErrorKind::MissingRequiredClaim("actions".into()).into(),
-            });
-        }
         let oci_claims = OciScopeClaims {
             repository,
             actions,
@@ -320,11 +315,15 @@ mod tests {
     fn jwt_oci_empty_actions() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
-        assert!(
-            secret_key
-                .new_oci(EMAIL.clone(), TTL, None, vec![])
-                .is_err()
-        );
+        let token = secret_key
+            .new_oci(EMAIL.clone(), TTL, None, vec![])
+            .unwrap();
+
+        let claims = secret_key.validate_oci(&token).unwrap();
+        assert_eq!(claims.aud, Audience::Oci.to_string());
+        assert_eq!(claims.sub, *EMAIL);
+        assert!(claims.oci.actions.is_empty());
+        assert!(claims.oci.repository.is_none());
     }
 
     #[test]

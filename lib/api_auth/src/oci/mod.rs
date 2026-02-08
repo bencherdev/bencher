@@ -126,7 +126,7 @@ pub async fn auth_oci_token_get(
             return Err(HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::FORBIDDEN,
-                "Only server admins can pull OCI images".to_owned(),
+                oci_error_body("DENIED", "Only server admins can pull OCI images"),
             ));
         }
     }
@@ -166,8 +166,11 @@ pub async fn auth_oci_token_get(
                         HttpError::for_client_error(
                             None,
                             ClientErrorStatusCode::FORBIDDEN,
-                            format!(
-                                "Access denied to repository: {repo_name}. You need Create permission to push.",
+                            oci_error_body(
+                                "DENIED",
+                                &format!(
+                                    "Access denied to repository: {repo_name}. You need Create permission to push.",
+                                ),
                             ),
                         )
                     })?;
@@ -202,6 +205,20 @@ pub async fn auth_oci_token_get(
         .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
         .body(Body::from(body))
         .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))
+}
+
+/// Formats an OCI-compliant JSON error body
+///
+/// Per the OCI Distribution Spec, if the response body is JSON it MUST follow:
+/// `{"errors": [{"code": "<CODE>", "message": "<msg>"}]}`
+fn oci_error_body(code: &str, message: &str) -> String {
+    serde_json::json!({
+        "errors": [{
+            "code": code,
+            "message": message
+        }]
+    })
+    .to_string()
 }
 
 /// Create a 401 Unauthorized error with WWW-Authenticate header
@@ -249,7 +266,7 @@ pub fn unauthorized_with_www_authenticate(
     let mut error = HttpError::for_client_error(
         None,
         ClientErrorStatusCode::UNAUTHORIZED,
-        "Authentication required".to_owned(),
+        oci_error_body("UNAUTHORIZED", "Authentication required"),
     );
 
     // Add WWW-Authenticate header - ignore error if it fails
