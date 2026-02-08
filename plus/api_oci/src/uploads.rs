@@ -155,7 +155,7 @@ pub async fn oci_upload_status(
         Response::builder()
             .status(http::StatusCode::NO_CONTENT)
             .header(http::header::LOCATION, location)
-            .header("Range", format_upload_range(size))
+            .header(http::header::RANGE, format_upload_range(size))
             .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
         &[http::Method::GET],
     )
@@ -270,7 +270,7 @@ pub async fn oci_upload_chunk(
                     Response::builder()
                         .status(http::StatusCode::RANGE_NOT_SATISFIABLE)
                         .header(http::header::LOCATION, location)
-                        .header("Range", format_upload_range(current_size))
+                        .header(http::header::RANGE, format_upload_range(current_size))
                         .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
                     &[http::Method::PATCH],
                 )
@@ -297,7 +297,7 @@ pub async fn oci_upload_chunk(
         Response::builder()
             .status(http::StatusCode::ACCEPTED)
             .header(http::header::LOCATION, location)
-            .header("Range", format_upload_range(new_size))
+            .header(http::header::RANGE, format_upload_range(new_size))
             .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
         &[http::Method::PATCH],
     )

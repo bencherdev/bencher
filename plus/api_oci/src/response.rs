@@ -4,6 +4,12 @@
 pub const DOCKER_CONTENT_DIGEST: &str = "Docker-Content-Digest";
 /// OCI-specific header for upload session identifier
 pub const DOCKER_UPLOAD_UUID: &str = "Docker-Upload-UUID";
+/// OCI-specific header for subject digest (referrers API)
+pub const OCI_SUBJECT: &str = "OCI-Subject";
+/// OCI-specific header for applied filters (referrers API)
+pub const OCI_FILTERS_APPLIED: &str = "OCI-Filters-Applied";
+/// Content type for binary blob data
+pub const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
 
 /// Adds standard OCI CORS headers to a response builder
 ///
