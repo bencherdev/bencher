@@ -1487,3 +1487,266 @@ async fn test_manifest_put_digest_mismatch() {
         "Manifest PUT with mismatched digest in URL should be rejected"
     );
 }
+
+// =============================================================================
+// Concurrent Manifest Tag Overwrite Tests
+// =============================================================================
+
+// Two concurrent PUTs to the same tag should both succeed and the tag should
+// resolve to one of the two manifests without corruption
+#[tokio::test]
+async fn test_concurrent_manifest_tag_overwrite() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("ConcurrentTag User", "concurrenttag@example.com")
+        .await;
+    let org = server.create_org(&user, "ConcurrentTag Org").await;
+    let project = server
+        .create_project(&user, &org, "ConcurrentTag Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload blobs that the manifests will reference
+    let config1_data = b"config data for manifest 1";
+    let layer1_data = b"layer data for manifest 1";
+    let config2_data = b"config data for manifest 2";
+    let layer2_data = b"layer data for manifest 2";
+
+    let config1_digest = compute_digest(config1_data);
+    let layer1_digest = compute_digest(layer1_data);
+    let config2_digest = compute_digest(config2_data);
+    let layer2_digest = compute_digest(layer2_data);
+
+    for (data, digest) in [
+        (config1_data.as_slice(), &config1_digest),
+        (layer1_data.as_slice(), &layer1_digest),
+        (config2_data.as_slice(), &config2_digest),
+        (layer2_data.as_slice(), &layer2_digest),
+    ] {
+        let resp = server
+            .client
+            .put(server.api_url(&format!(
+                "/v2/{}/blobs/uploads?digest={}",
+                project_slug, digest
+            )))
+            .header("Authorization", format!("Bearer {}", push_token))
+            .header("Content-Type", "application/octet-stream")
+            .body(data.to_vec())
+            .send()
+            .await
+            .expect("Blob upload failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    // Create two distinct manifests with different config digests
+    let manifest1 = create_test_manifest(&config1_digest, &layer1_digest);
+    let manifest2 = create_test_manifest(&config2_digest, &layer2_digest);
+    let digest1 = compute_digest(manifest1.as_bytes());
+    let digest2 = compute_digest(manifest2.as_bytes());
+
+    // Concurrently PUT both manifests to the same tag
+    let url = server.api_url(&format!("/v2/{}/manifests/race-tag", project_slug));
+    let (resp1, resp2) = tokio::join!(
+        server
+            .client
+            .put(&url)
+            .header("Authorization", format!("Bearer {}", push_token))
+            .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+            .body(manifest1.clone())
+            .send(),
+        server
+            .client
+            .put(&url)
+            .header("Authorization", format!("Bearer {}", push_token))
+            .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+            .body(manifest2.clone())
+            .send()
+    );
+
+    assert_eq!(
+        resp1.expect("PUT 1 failed").status(),
+        StatusCode::CREATED,
+        "First concurrent PUT should succeed"
+    );
+    assert_eq!(
+        resp2.expect("PUT 2 failed").status(),
+        StatusCode::CREATED,
+        "Second concurrent PUT should succeed"
+    );
+
+    // HEAD the tag to get the winning digest
+    let head_resp = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/manifests/race-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("HEAD failed");
+    assert_eq!(head_resp.status(), StatusCode::OK);
+
+    let returned_digest = head_resp
+        .headers()
+        .get("docker-content-digest")
+        .expect("Missing digest header")
+        .to_str()
+        .expect("Invalid digest header")
+        .to_owned();
+
+    // The tag should point to one of the two manifests
+    assert!(
+        returned_digest == digest1 || returned_digest == digest2,
+        "Tag should resolve to one of the two manifests, got {}",
+        returned_digest
+    );
+
+    // GET the tag and verify the body is valid JSON and matches the digest
+    let get_resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/manifests/race-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("GET failed");
+    assert_eq!(get_resp.status(), StatusCode::OK);
+
+    let body = get_resp.bytes().await.expect("Failed to read body");
+    let body_digest = compute_digest(&body);
+    assert_eq!(
+        body_digest, returned_digest,
+        "GET body digest should match HEAD digest (no corruption)"
+    );
+
+    // Verify the body is valid JSON
+    let _parsed: serde_json::Value =
+        serde_json::from_slice(&body).expect("GET body should be valid JSON");
+}
+
+// =============================================================================
+// Max Body Size Tests
+// =============================================================================
+
+// Manifest PUT exceeding max body size should be rejected
+#[tokio::test]
+async fn test_manifest_put_exceeds_max_body_size() {
+    // max_body_size = 100 bytes
+    let server = TestServer::new_with_limits(3600, 100).await;
+    let user = server
+        .signup("ManifestLimit User", "manifestlimit@example.com")
+        .await;
+    let org = server.create_org(&user, "ManifestLimit Org").await;
+    let project = server
+        .create_project(&user, &org, "ManifestLimit Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // A typical test manifest is ~300 bytes, exceeding the 100-byte limit
+    let manifest = create_test_manifest(
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    );
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/too-large", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert!(
+        resp.status().is_client_error(),
+        "Manifest PUT exceeding max body size should be rejected, got {}",
+        resp.status()
+    );
+}
+
+// =============================================================================
+// Storage Failure Injection Tests
+// =============================================================================
+
+// Manifest read after storage directory is deleted
+#[tokio::test]
+async fn test_manifest_read_after_storage_deleted() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("StorageFail User", "storagefailmanifest@example.com")
+        .await;
+    let org = server.create_org(&user, "StorageFail Org").await;
+    let project = server
+        .create_project(&user, &org, "StorageFail Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload config and layer blobs, then manifest
+    let config_data = b"config for storage fail test";
+    let layer_data = b"layer for storage fail test";
+    let config_digest = compute_digest(config_data);
+    let layer_digest = compute_digest(layer_data);
+
+    for (data, digest) in [
+        (config_data.as_slice(), &config_digest),
+        (layer_data.as_slice(), &layer_digest),
+    ] {
+        let resp = server
+            .client
+            .put(server.api_url(&format!(
+                "/v2/{}/blobs/uploads?digest={}",
+                project_slug, digest
+            )))
+            .header("Authorization", format!("Bearer {}", push_token))
+            .header("Content-Type", "application/octet-stream")
+            .body(data.to_vec())
+            .send()
+            .await
+            .expect("Blob upload failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let upload_resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/storage-fail-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Manifest upload failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    // Delete project's OCI storage directory
+    let project_oci_dir = server
+        .db_path()
+        .parent()
+        .unwrap()
+        .join("oci")
+        .join(project.uuid.to_string());
+    tokio::fs::remove_dir_all(&project_oci_dir)
+        .await
+        .expect("Failed to delete project OCI storage directory");
+
+    // Try to GET the manifest - should fail with 404
+    let pull_token = server.oci_pull_token(&user, &project);
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/manifests/storage-fail-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::NOT_FOUND,
+        "Manifest read after storage deleted should return 404"
+    );
+}

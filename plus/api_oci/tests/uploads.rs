@@ -8,6 +8,8 @@
 )]
 //! Integration tests for OCI upload session endpoints.
 
+use std::time::Duration;
+
 use bencher_api_tests::TestServer;
 use bencher_api_tests::oci::compute_digest;
 use http::StatusCode;
@@ -923,5 +925,256 @@ async fn test_concurrent_uploads_different_sessions() {
         head2.status(),
         StatusCode::OK,
         "Blob 2 should exist after concurrent upload"
+    );
+}
+
+// =============================================================================
+// Upload Session Expiration Tests
+// =============================================================================
+
+// Start a session, let it expire, start another session (triggers cleanup),
+// then verify the first session is gone
+#[tokio::test]
+async fn test_upload_session_expired() {
+    // 1-second upload timeout
+    let server = TestServer::new_with_limits(1, 1_073_741_824).await;
+    let user = server
+        .signup("Expired User", "uploadexpired@example.com")
+        .await;
+    let org = server.create_org(&user, "Expired Org").await;
+    let project = server.create_project(&user, &org, "Expired Project").await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start session A
+    let start_a = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload A failed");
+    assert_eq!(start_a.status(), StatusCode::ACCEPTED);
+    let location_a = start_a
+        .headers()
+        .get("location")
+        .expect("Missing location header A")
+        .to_str()
+        .expect("Invalid location header A")
+        .to_owned();
+    let session_id_a = extract_session_id(&location_a).expect("Invalid location format A");
+
+    // Wait for session A to become stale
+    tokio::time::sleep(Duration::from_secs(2)).await;
+
+    // Start session B (triggers spawn_stale_upload_cleanup)
+    let start_b = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload B failed");
+    assert_eq!(start_b.status(), StatusCode::ACCEPTED);
+    let location_b = start_b
+        .headers()
+        .get("location")
+        .expect("Missing location header B")
+        .to_str()
+        .expect("Invalid location header B")
+        .to_owned();
+    let session_id_b = extract_session_id(&location_b).expect("Invalid location format B");
+
+    // Wait for background cleanup task to complete
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // Session A should be cleaned up (404)
+    let check_a = server
+        .client
+        .get(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id_a
+        )))
+        .send()
+        .await
+        .expect("Check session A failed");
+    assert_eq!(
+        check_a.status(),
+        StatusCode::NOT_FOUND,
+        "Expired session A should be cleaned up"
+    );
+
+    // Session B should still be valid (204)
+    let check_b = server
+        .client
+        .get(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id_b
+        )))
+        .send()
+        .await
+        .expect("Check session B failed");
+    assert_eq!(
+        check_b.status(),
+        StatusCode::NO_CONTENT,
+        "Session B should still be valid"
+    );
+}
+
+// =============================================================================
+// Max Body Size Tests
+// =============================================================================
+
+// Chunked upload cumulative exceeds max body size
+#[tokio::test]
+async fn test_chunked_upload_exceeds_max_body_size() {
+    // max_body_size = 100 bytes
+    let server = TestServer::new_with_limits(3600, 100).await;
+    let user = server
+        .signup("ChunkLimit User", "chunklimit@example.com")
+        .await;
+    let org = server.create_org(&user, "ChunkLimit Org").await;
+    let project = server
+        .create_project(&user, &org, "ChunkLimit Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload failed");
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header")
+        .to_owned();
+    let session_id = extract_session_id(&location).expect("Invalid location format");
+
+    // First chunk: 60 bytes (within limit)
+    let chunk1 = vec![0xAA; 60];
+    let resp1 = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(chunk1)
+        .send()
+        .await
+        .expect("Chunk 1 failed");
+    assert_eq!(
+        resp1.status(),
+        StatusCode::ACCEPTED,
+        "First 60-byte chunk should be accepted"
+    );
+
+    // Second chunk: 60 bytes (cumulative 120 > 100)
+    let chunk2 = vec![0xBB; 60];
+    let resp2 = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(chunk2)
+        .send()
+        .await
+        .expect("Chunk 2 failed");
+    assert!(
+        resp2.status().is_client_error(),
+        "Second chunk exceeding max body size should be rejected, got {}",
+        resp2.status()
+    );
+}
+
+// =============================================================================
+// Storage Failure Injection Tests
+// =============================================================================
+
+// Upload complete after storage directory is deleted
+#[tokio::test]
+async fn test_upload_complete_after_storage_deleted() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("StorageFail User", "storagefailupload@example.com")
+        .await;
+    let org = server.create_org(&user, "StorageFail Org").await;
+    let project = server
+        .create_project(&user, &org, "StorageFail Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload and patch a chunk
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload failed");
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header")
+        .to_owned();
+    let session_id = extract_session_id(&location).expect("Invalid location format");
+
+    let chunk = b"data for storage failure test";
+    let patch_resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(chunk.to_vec())
+        .send()
+        .await
+        .expect("Patch failed");
+    assert_eq!(patch_resp.status(), StatusCode::ACCEPTED);
+
+    // Delete the upload session's storage directory
+    let upload_dir = server
+        .db_path()
+        .parent()
+        .unwrap()
+        .join("oci")
+        .join("_uploads")
+        .join(&session_id);
+    tokio::fs::remove_dir_all(&upload_dir)
+        .await
+        .expect("Failed to delete upload storage directory");
+
+    // Try to complete the upload - should fail
+    let digest = compute_digest(chunk);
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}?digest={}",
+            project_slug, session_id, digest
+        )))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert!(
+        resp.status().is_client_error() || resp.status().is_server_error(),
+        "Upload complete after storage deleted should fail, got {}",
+        resp.status()
     );
 }

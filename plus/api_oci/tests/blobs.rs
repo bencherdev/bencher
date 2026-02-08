@@ -362,15 +362,24 @@ async fn test_blob_upload_invalid_token_no_downgrade() {
     assert_eq!(create_resp.status(), StatusCode::ACCEPTED);
 
     // Get a valid token, then tamper with it to create a structurally valid
-    // but wrongly-signed JWT (flip a char in the signature)
+    // but wrongly-signed JWT (flip a char in the middle of the signature).
+    // We must preserve valid JWT structure (3 dot-separated base64url parts)
+    // so that Jwt::parse() succeeds; otherwise the token is silently treated
+    // as absent and the unclaimed project allows unauthenticated push.
     let user = server
         .signup("Downgrade User", "downgrade@example.com")
         .await;
     let valid_token = server.oci_token(&user, unclaimed_slug, &[OciAction::Push]);
-    // Corrupt the last character of the signature portion
-    let mut tampered = valid_token.clone();
-    let last = tampered.pop().unwrap_or('A');
-    tampered.push(if last == 'A' { 'B' } else { 'A' });
+    // Split into header.payload.signature and flip a char in the signature middle
+    let parts: Vec<&str> = valid_token.split('.').collect();
+    assert_eq!(parts.len(), 3, "JWT should have 3 parts");
+    let sig = parts[2];
+    let mid = sig.len() / 2;
+    let mut sig_bytes: Vec<u8> = sig.bytes().collect();
+    // Flip between two valid base64url characters
+    sig_bytes[mid] = if sig_bytes[mid] == b'A' { b'B' } else { b'A' };
+    let tampered_sig = String::from_utf8(sig_bytes).expect("valid UTF-8");
+    let tampered = format!("{}.{}.{}", parts[0], parts[1], tampered_sig);
 
     let resp = server
         .client
@@ -732,6 +741,115 @@ async fn test_blob_upload_pull_only_token_rejected() {
     );
 }
 
+// =============================================================================
+// Max Body Size Tests
+// =============================================================================
+
+// Monolithic blob upload exceeding max body size should be rejected
+#[tokio::test]
+async fn test_blob_monolithic_upload_exceeds_max_body_size() {
+    // max_body_size = 100 bytes
+    let server = TestServer::new_with_limits(3600, 100).await;
+    let user = server
+        .signup("MonoLimit User", "monolimit@example.com")
+        .await;
+    let org = server.create_org(&user, "MonoLimit Org").await;
+    let project = server
+        .create_project(&user, &org, "MonoLimit Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // 200-byte blob exceeds 100-byte max_body_size
+    let blob_data = vec![0xCC; 200];
+    let digest = compute_digest(&blob_data);
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert!(
+        resp.status().is_client_error(),
+        "Monolithic blob exceeding max body size should be rejected, got {}",
+        resp.status()
+    );
+}
+
+// =============================================================================
+// Storage Failure Injection Tests
+// =============================================================================
+
+// Blob read after storage directory is deleted
+#[tokio::test]
+async fn test_blob_read_after_storage_deleted() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("StorageFail User", "storagefailblob@example.com")
+        .await;
+    let org = server.create_org(&user, "StorageFail Org").await;
+    let project = server
+        .create_project(&user, &org, "StorageFail Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload a blob successfully
+    let blob_data = b"blob for storage failure test";
+    let digest = compute_digest(blob_data);
+
+    let upload_resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Upload failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    // Delete project's OCI storage directory
+    let project_oci_dir = server
+        .db_path()
+        .parent()
+        .unwrap()
+        .join("oci")
+        .join(project.uuid.to_string());
+    tokio::fs::remove_dir_all(&project_oci_dir)
+        .await
+        .expect("Failed to delete project OCI storage directory");
+
+    // Try to GET the blob - should fail with 404
+    let pull_token = server.oci_pull_token(&user, &project);
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::NOT_FOUND,
+        "Blob read after storage deleted should return 404"
+    );
+}
+
 // Push-only token should NOT be able to read a blob (pull operation)
 #[tokio::test]
 async fn test_blob_head_push_only_token_rejected() {
@@ -772,9 +890,12 @@ async fn test_blob_head_push_only_token_rejected() {
         .await
         .expect("Request failed");
 
+    // require_pull_access intentionally maps all auth errors (including wrong action)
+    // to 401 with WWW-Authenticate to avoid leaking whether the token was invalid
+    // or just lacked the correct scope
     assert_eq!(
         resp.status(),
-        StatusCode::FORBIDDEN,
+        StatusCode::UNAUTHORIZED,
         "Push-only token should not be able to read a blob"
     );
 }

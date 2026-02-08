@@ -30,13 +30,23 @@ pub struct TestServer {
     /// Token key for generating test tokens (private - use `token_key()` accessor)
     token_key: TokenKey,
     /// Keep the temp file alive for the duration of the test
-    _db_file: NamedTempFile,
+    db_file: NamedTempFile,
 }
 
 impl TestServer {
-    /// Create a new test server with an in-memory database.
-    #[expect(clippy::expect_used, clippy::unused_async)]
+    /// Create a new test server with default settings.
     pub async fn new() -> Self {
+        Self::new_inner(None, None).await
+    }
+
+    /// Create a new test server with custom upload timeout and max body size.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_limits(upload_timeout: u64, max_body_size: u64) -> Self {
+        Self::new_inner(Some(upload_timeout), Some(max_body_size)).await
+    }
+
+    #[expect(clippy::expect_used, clippy::unused_async, clippy::too_many_lines)]
+    async fn new_inner(upload_timeout: Option<u64>, max_body_size: Option<u64>) -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {
             level: ConfigLoggingLevel::Warn,
@@ -98,19 +108,22 @@ impl TestServer {
                 log.clone(),
                 None,
                 std::path::Path::new(&db_path),
-                None, // Use default upload timeout
-                None, // Use default max body size
+                upload_timeout,
+                max_body_size,
             )
             .expect("Failed to create OCI storage"),
         };
         #[cfg(not(feature = "plus"))]
-        let context = ApiContext {
-            console_url: ISSUER.parse().expect("Invalid console URL"),
-            token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
-            rbac,
-            messenger: Messenger::default(),
-            database,
-            restart_tx,
+        let context = {
+            let _ = (upload_timeout, max_body_size);
+            ApiContext {
+                console_url: ISSUER.parse().expect("Invalid console URL"),
+                token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
+                rbac,
+                messenger: Messenger::default(),
+                database,
+                restart_tx,
+            }
         };
 
         // Create API description and register endpoints
@@ -153,13 +166,18 @@ impl TestServer {
             client,
             url,
             token_key,
-            _db_file: db_file,
+            db_file,
         }
     }
 
     /// Get the token key for generating test tokens
     pub fn token_key(&self) -> &TokenKey {
         &self.token_key
+    }
+
+    /// Get the path to the temporary database file
+    pub fn db_path(&self) -> &std::path::Path {
+        self.db_file.path()
     }
 
     /// Create a bearer token header value

@@ -64,11 +64,11 @@ pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jw
         ));
     }
 
-    token.trim().parse().map_err(|e| {
+    token.trim().parse().map_err(|_err| {
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::BAD_REQUEST,
-            oci_error_body("UNSUPPORTED", &format!("Invalid token format: {e}")),
+            oci_error_body("UNSUPPORTED", "Invalid token format"),
         )
     })
 }
@@ -412,10 +412,16 @@ pub async fn apply_auth_rate_limit(
     context: &ApiContext,
     claims: &OciClaims,
 ) -> Result<(), HttpError> {
-    if let Ok(query_user) = QueryUser::get_with_email(public_conn!(context), claims.email()) {
-        slog::debug!(log, "Applying OCI request rate limit"; "user_uuid" => %query_user.uuid);
-        context.rate_limiting.user_request(query_user.uuid)?;
-    }
+    let query_user =
+        QueryUser::get_with_email(public_conn!(context), claims.email()).map_err(|_err| {
+            HttpError::for_client_error(
+                None,
+                ClientErrorStatusCode::UNAUTHORIZED,
+                oci_error_body("UNAUTHORIZED", "Invalid or expired token"),
+            )
+        })?;
+    slog::debug!(log, "Applying OCI request rate limit"; "user_uuid" => %query_user.uuid);
+    context.rate_limiting.user_request(query_user.uuid)?;
     Ok(())
 }
 
