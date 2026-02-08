@@ -1178,3 +1178,100 @@ async fn test_upload_complete_after_storage_deleted() {
         resp.status()
     );
 }
+
+// Verify that rejected data is never written to disk (size check before write)
+#[tokio::test]
+async fn test_chunked_upload_size_not_written_on_reject() {
+    // max_body_size = 100 bytes
+    let server = TestServer::new_with_limits(3600, 100).await;
+    let user = server
+        .signup("SizeReject User", "sizereject@example.com")
+        .await;
+    let org = server.create_org(&user, "SizeReject Org").await;
+    let project = server
+        .create_project(&user, &org, "SizeReject Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header("Authorization", format!("Bearer {}", oci_token))
+        .send()
+        .await
+        .expect("Start upload failed");
+    assert_eq!(start_resp.status(), StatusCode::ACCEPTED);
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header")
+        .to_owned();
+    let session_id = extract_session_id(&location).expect("Invalid location format");
+
+    // First chunk: 60 bytes (within limit)
+    let chunk1 = vec![0xAA; 60];
+    let resp1 = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(chunk1)
+        .send()
+        .await
+        .expect("Chunk 1 failed");
+    assert_eq!(
+        resp1.status(),
+        StatusCode::ACCEPTED,
+        "First 60-byte chunk should be accepted"
+    );
+
+    // Second chunk: 60 bytes (cumulative 120 > 100, should be rejected)
+    let chunk2 = vec![0xBB; 60];
+    let resp2 = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(chunk2)
+        .send()
+        .await
+        .expect("Chunk 2 failed");
+    assert!(
+        resp2.status().is_client_error(),
+        "Second chunk exceeding max body size should be rejected, got {}",
+        resp2.status()
+    );
+
+    // Verify the upload size is still 60 bytes (rejected data was NOT written)
+    let status_resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .send()
+        .await
+        .expect("Status request failed");
+    assert_eq!(status_resp.status(), StatusCode::NO_CONTENT);
+
+    // The Range header reports the byte range written so far: "0-59" for 60 bytes
+    let range = status_resp
+        .headers()
+        .get("range")
+        .expect("Missing range header")
+        .to_str()
+        .expect("Invalid range header");
+    assert_eq!(
+        range, "0-59",
+        "Upload size should still be 60 bytes (rejected data should not be written), got range: {range}"
+    );
+}

@@ -305,12 +305,25 @@ impl OciLocalStorage {
         upload_id: &UploadId,
         data: Bytes,
     ) -> Result<u64, OciStorageError> {
-        // Verify upload exists by loading state (we don't use the size from state
-        // to avoid race conditions - we get the actual file size after appending)
+        // Verify upload exists by loading state
         let _state = self.load_upload_state(upload_id).await?;
 
-        // Append data to file
+        // Check projected size BEFORE writing to avoid persisting oversized data
         let data_path = self.upload_data_path(upload_id);
+        let metadata = fs::metadata(&data_path).await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to get upload file metadata: {e}"))
+        })?;
+        let current_size = metadata.len();
+        let projected_total = current_size + data.len() as u64;
+
+        if projected_total > self.max_body_size {
+            return Err(OciStorageError::SizeExceeded {
+                size: projected_total,
+                max: self.max_body_size,
+            });
+        }
+
+        // Append data to file (size check passed)
         let mut file = fs::OpenOptions::new()
             .append(true)
             .open(&data_path)
@@ -323,26 +336,11 @@ impl OciLocalStorage {
             OciStorageError::LocalStorage(format!("Failed to write upload data: {e}"))
         })?;
 
-        // Sync to ensure data is written before we get the size
         file.sync_all().await.map_err(|e| {
             OciStorageError::LocalStorage(format!("Failed to sync upload data: {e}"))
         })?;
 
-        // Get the actual file size - this is atomic and avoids race conditions
-        // where concurrent appends could corrupt a manually-tracked size counter
-        let metadata = file.metadata().await.map_err(|e| {
-            OciStorageError::LocalStorage(format!("Failed to get upload file metadata: {e}"))
-        })?;
-
-        let total_size = metadata.len();
-        if total_size > self.max_body_size {
-            return Err(OciStorageError::SizeExceeded {
-                size: total_size,
-                max: self.max_body_size,
-            });
-        }
-
-        Ok(total_size)
+        Ok(projected_total)
     }
 
     /// Gets the current size of an in-progress upload

@@ -975,9 +975,10 @@ impl OciS3Storage {
         let client = self.client.clone();
         let config = self.config.clone();
         let upload_timeout = self.upload_timeout;
+        let log = self.log.clone();
 
         tokio::spawn(async move {
-            cleanup_stale_uploads_s3(client, config, upload_timeout).await;
+            cleanup_stale_uploads_s3(&log, client, config, upload_timeout).await;
         });
     }
 
@@ -1959,9 +1960,15 @@ impl S3Arn {
 /// This is a standalone async function that can be spawned as a background task.
 #[expect(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "Stale upload cleanup logic is self-contained and benefits from being in one place"
 )]
-async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, upload_timeout: u64) {
+async fn cleanup_stale_uploads_s3(
+    log: &Logger,
+    client: Client,
+    config: OciStorageConfig,
+    upload_timeout: u64,
+) {
     let global_prefix = match &config.prefix {
         Some(prefix) => format!("{prefix}/_uploads"),
         None => "_uploads".to_owned(),
@@ -1984,6 +1991,11 @@ async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, uplo
         }
 
         let Ok(response) = request.send().await else {
+            slog::warn!(
+                log,
+                "S3 stale upload cleanup: failed to list upload prefixes"
+            );
+            report_cleanup_error("stale_upload: list prefixes", &"S3 list request failed");
             return;
         };
 
@@ -2012,6 +2024,11 @@ async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, uplo
             .trim_end_matches('/');
 
         let Ok(upload_id) = upload_id_str.parse::<UploadId>() else {
+            slog::warn!(log, "S3 stale upload cleanup: failed to parse upload ID"; "upload_id" => upload_id_str);
+            report_cleanup_error(
+                "stale_upload: parse upload ID",
+                &format!("Invalid upload ID: {upload_id_str}"),
+            );
             continue;
         };
 
@@ -2024,14 +2041,29 @@ async fn cleanup_stale_uploads_s3(client: Client, config: OciStorageConfig, uplo
             .send()
             .await
         else {
+            slog::warn!(log, "S3 stale upload cleanup: failed to get state file"; "upload_id" => %upload_id);
+            report_cleanup_error(
+                "stale_upload: get state file",
+                &format!("Failed for upload {upload_id}"),
+            );
             continue;
         };
 
         let Ok(data) = response.body.collect().await else {
+            slog::warn!(log, "S3 stale upload cleanup: failed to collect state body"; "upload_id" => %upload_id);
+            report_cleanup_error(
+                "stale_upload: collect state body",
+                &format!("Failed for upload {upload_id}"),
+            );
             continue;
         };
 
         let Ok(state) = serde_json::from_slice::<UploadState>(&data.into_bytes()) else {
+            slog::warn!(log, "S3 stale upload cleanup: failed to parse state JSON"; "upload_id" => %upload_id);
+            report_cleanup_error(
+                "stale_upload: parse state JSON",
+                &format!("Failed for upload {upload_id}"),
+            );
             continue;
         };
 
