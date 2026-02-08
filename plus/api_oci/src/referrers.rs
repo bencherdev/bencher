@@ -102,10 +102,7 @@ pub async fn oci_referrers_list(
     let mut builder = oci_cors_headers(
         Response::builder()
             .status(http::StatusCode::OK)
-            .header(
-                http::header::CONTENT_TYPE,
-                OCI_IMAGE_INDEX_MEDIA_TYPE,
-            )
+            .header(http::header::CONTENT_TYPE, OCI_IMAGE_INDEX_MEDIA_TYPE)
             .header(http::header::CONTENT_LENGTH, body.len()),
         &[http::Method::GET],
     );
