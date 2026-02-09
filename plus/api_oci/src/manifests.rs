@@ -8,7 +8,7 @@
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Put};
 use bencher_json::ProjectResourceId;
 use bencher_json::oci::Manifest;
-use bencher_oci_storage::{Digest, OciError, OciStorage, ProjectUuid, Reference};
+use bencher_oci_storage::{Digest, MAX_CONCURRENCY, OciError, OciStorage, ProjectUuid, Reference};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, RequestContext, UntypedBody, endpoint};
 use futures::stream::{self, TryStreamExt as _};
@@ -369,7 +369,7 @@ async fn verify_referenced_blobs(
     let concurrency = std::thread::available_parallelism()
         .map(std::num::NonZeroUsize::get)
         .unwrap_or(1)
-        .clamp(1, 64);
+        .clamp(1, MAX_CONCURRENCY);
 
     stream::iter(parsed_digests.into_iter().map(Ok))
         .try_for_each_concurrent(concurrency, |(digest, digest_str)| async move {

@@ -146,11 +146,11 @@ impl TokenKey {
 
 #[cfg(test)]
 mod tests {
-    use std::{sync::LazyLock, thread, time};
+    use std::{str::FromStr as _, sync::LazyLock};
 
-    use bencher_json::{Email, OrganizationUuid, organization::member::OrganizationRole};
+    use bencher_json::{Email, Jwt, OrganizationUuid, organization::member::OrganizationRole};
 
-    use crate::{Audience, DEFAULT_SECRET_KEY, OciAction};
+    use crate::{Audience, Claims, DEFAULT_SECRET_KEY, OciAction, OciScopeClaims, OrgClaims};
 
     use super::TokenKey;
 
@@ -159,9 +159,25 @@ mod tests {
 
     static EMAIL: LazyLock<Email> = LazyLock::new(|| "info@bencher.dev".parse().unwrap());
 
-    fn sleep_for_a_second() {
-        let second = time::Duration::from_secs(1);
-        thread::sleep(second);
+    fn make_expired_token(
+        secret_key: &TokenKey,
+        audience: Audience,
+        org: Option<OrgClaims>,
+        oci: Option<OciScopeClaims>,
+    ) -> Jwt {
+        let now = chrono::Utc::now().timestamp();
+        let claims = Claims {
+            aud: audience.to_string(),
+            exp: now - 100,
+            iat: now - 200,
+            iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
+            sub: EMAIL.clone(),
+            org,
+            state: None,
+            oci,
+        };
+        Jwt::from_str(&jsonwebtoken::encode(&super::HEADER, &claims, &secret_key.encoding).unwrap())
+            .unwrap()
     }
 
     #[test]
@@ -181,11 +197,7 @@ mod tests {
     #[test]
     fn jwt_auth_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key.new_auth(EMAIL.clone(), 0).unwrap();
-
-        sleep_for_a_second();
-
+        let token = make_expired_token(&secret_key, Audience::Auth, None, None);
         assert!(secret_key.validate_auth(&token).is_err());
     }
 
@@ -206,11 +218,7 @@ mod tests {
     #[test]
     fn jwt_client_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key.new_client(EMAIL.clone(), 0).unwrap();
-
-        sleep_for_a_second();
-
+        let token = make_expired_token(&secret_key, Audience::Client, None, None);
         assert!(secret_key.validate_client(&token).is_err());
     }
 
@@ -231,11 +239,7 @@ mod tests {
     #[test]
     fn jwt_api_key_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key.new_api_key(EMAIL.clone(), 0).unwrap();
-
-        sleep_for_a_second();
-
+        let token = make_expired_token(&secret_key, Audience::ApiKey, None, None);
         assert!(secret_key.validate_api_key(&token).is_err());
     }
 
@@ -285,29 +289,22 @@ mod tests {
     #[test]
     fn jwt_oci_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key
-            .new_oci(EMAIL.clone(), 0, None, vec![OciAction::Pull])
-            .unwrap();
-
-        sleep_for_a_second();
-
+        let oci = OciScopeClaims {
+            repository: None,
+            actions: vec![OciAction::Pull],
+        };
+        let token = make_expired_token(&secret_key, Audience::Oci, None, Some(oci));
         assert!(secret_key.validate_oci(&token).is_err());
     }
 
     #[test]
     fn jwt_invite_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let org_uuid = OrganizationUuid::new();
-        let role = OrganizationRole::Leader;
-
-        let token = secret_key
-            .new_invite(EMAIL.clone(), 0, org_uuid, role)
-            .unwrap();
-
-        sleep_for_a_second();
-
+        let org = OrgClaims {
+            uuid: OrganizationUuid::new(),
+            role: OrganizationRole::Leader,
+        };
+        let token = make_expired_token(&secret_key, Audience::Invite, Some(org), None);
         assert!(secret_key.validate_invite(&token).is_err());
     }
 

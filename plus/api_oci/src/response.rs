@@ -12,6 +12,8 @@ pub const OCI_FILTERS_APPLIED: &str = "OCI-Filters-Applied";
 pub const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
 /// Content type for JSON responses
 pub const APPLICATION_JSON: &str = "application/json";
+/// Empty JSON object body for OCI endpoints that return no data
+pub const EMPTY_JSON_BODY: &str = "{}";
 
 /// Adds standard OCI CORS headers to a response builder
 ///

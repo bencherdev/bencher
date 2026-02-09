@@ -144,11 +144,18 @@ pub async fn auth_oci_token_get(
         let conn = public_conn!(context);
         if let Ok(query_project) = QueryProject::from_resource_id(conn, &project_id) {
             // Check if the organization is claimed
-            let is_claimed = if let Ok(org) = query_project.organization(conn) {
-                org.is_claimed(conn).unwrap_or(false)
-            } else {
-                false
-            };
+            // Propagate DB errors as 500 to avoid silently granting access
+            let is_claimed = query_project
+                .organization(conn)
+                .map_err(|_| {
+                    HttpError::for_internal_error("Failed to query organization".to_owned())
+                })?
+                .is_claimed(conn)
+                .map_err(|_| {
+                    HttpError::for_internal_error(
+                        "Failed to check organization claim status".to_owned(),
+                    )
+                })?;
 
             // Only require RBAC permissions if the organization is claimed
             if is_claimed {

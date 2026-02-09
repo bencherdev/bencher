@@ -374,22 +374,36 @@ impl OciLocalStorage {
         // Load state
         let state = self.load_upload_state(upload_id).await?;
 
-        // Read the uploaded data
+        // Stream the uploaded data for hashing to avoid loading entire file into memory
         let data_path = self.upload_data_path(upload_id);
-        let data = fs::read(&data_path).await.map_err(|e| {
-            OciStorageError::LocalStorage(format!("Failed to read upload data: {e}"))
+        let file = fs::File::open(&data_path).await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to open upload data: {e}"))
         })?;
-
-        if data.is_empty() {
+        let metadata = file.metadata().await.map_err(|e| {
+            OciStorageError::LocalStorage(format!("Failed to read upload metadata: {e}"))
+        })?;
+        if metadata.len() == 0 {
             self.cleanup_upload(upload_id).await;
             return Err(OciStorageError::BlobUploadInvalidContent(
                 "Cannot complete upload with no data".to_owned(),
             ));
         }
 
-        // Compute actual digest
+        // Compute actual digest by streaming through the file
+        let mut reader = tokio::io::BufReader::new(file);
         let mut hasher = Sha256::new();
-        hasher.update(&data);
+        let mut buf = [0u8; 8192];
+        loop {
+            let n = tokio::io::AsyncReadExt::read(&mut reader, &mut buf)
+                .await
+                .map_err(|e| {
+                    OciStorageError::LocalStorage(format!("Failed to read upload data: {e}"))
+                })?;
+            if n == 0 {
+                break;
+            }
+            hasher.update(buf.get(..n).unwrap_or_default());
+        }
         let hash = hasher.finalize();
         // hex::encode always produces valid hex, so this is infallible in practice
         let actual_digest = Digest::sha256(&hex::encode(hash))

@@ -130,6 +130,11 @@ impl hyper::body::Body for BlobBody {
 /// S3 requires all parts except the last to be at least 5MB
 const MIN_PART_SIZE: usize = 5 * 1024 * 1024;
 
+/// Maximum concurrency for parallel S3/IO operations.
+/// Clamped to available CPU parallelism, with this upper bound to prevent
+/// excessive resource usage.
+pub const MAX_CONCURRENCY: usize = 64;
+
 /// Storage errors
 #[derive(Debug, Error)]
 pub enum OciStorageError {
@@ -644,7 +649,7 @@ impl OciS3Storage {
         let concurrency = std::thread::available_parallelism()
             .map(std::num::NonZeroUsize::get)
             .unwrap_or(1)
-            .clamp(1, 64);
+            .clamp(1, MAX_CONCURRENCY);
 
         Ok(Self {
             client,
@@ -916,7 +921,12 @@ impl OciS3Storage {
             if let Some(contents) = response.contents {
                 for object in contents {
                     if let Some(key) = object.key {
-                        let size = u64::try_from(object.size.unwrap_or(0)).unwrap_or(0);
+                        let size = if let Some(s) = object.size {
+                            u64::try_from(s).unwrap_or(0)
+                        } else {
+                            slog::warn!(self.log, "S3 object missing size"; "key" => &key);
+                            0
+                        };
                         chunks.push((key, size));
                     }
                 }
