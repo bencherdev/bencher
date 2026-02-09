@@ -876,16 +876,19 @@ async fn cleanup_stale_uploads_local(log: &Logger, uploads_dir: &Path, upload_ti
                     continue;
                 }
 
-                // Try to load the state to check creation time
+                // Try to load the state to check creation time.
+                // If the state file is missing or unparseable, fall back to the
+                // directory's modification time to decide staleness.  This avoids
+                // a race where `start_upload` has created the directory but has
+                // not yet written state.json — deleting the directory in that
+                // window would break the in-progress upload.
                 let state_path = entry.path().join("state.json");
                 let is_stale = match fs::read(&state_path).await {
                     Ok(data) => match serde_json::from_slice::<UploadState>(&data) {
                         Ok(state) => now.saturating_sub(state.created_at) > timeout_secs,
-                        // Unparseable state — treat as stale
-                        Err(_) => true,
+                        Err(_) => dir_is_stale(&entry, now, timeout_secs).await,
                     },
-                    // Missing state file — treat as stale
-                    Err(_) => true,
+                    Err(_) => dir_is_stale(&entry, now, timeout_secs).await,
                 };
 
                 // Remove stale uploads
@@ -899,4 +902,27 @@ async fn cleanup_stale_uploads_local(log: &Logger, uploads_dir: &Path, upload_ti
             },
         }
     }
+}
+
+/// Check whether a directory entry is stale based on its filesystem metadata.
+///
+/// Used as a fallback when `state.json` is missing or corrupt — the directory
+/// modification time serves as a lower bound for its creation time.
+async fn dir_is_stale(entry: &fs::DirEntry, now: i64, timeout_secs: i64) -> bool {
+    let Ok(metadata) = entry.metadata().await else {
+        // Can't read metadata — skip rather than risk deleting an active upload
+        return false;
+    };
+    let Ok(modified) = metadata.modified() else {
+        return false;
+    };
+    let modified_secs = i64::try_from(
+        modified
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+    )
+    .unwrap_or(i64::MAX);
+    let dir_age = now.saturating_sub(modified_secs);
+    dir_age > timeout_secs
 }

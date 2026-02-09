@@ -2041,47 +2041,41 @@ async fn cleanup_stale_uploads_s3(
             continue;
         };
 
-        // Load the state to check creation time
+        // Load the state to check creation time.
+        // If the state file is missing, unreadable, or unparseable, fall back
+        // to the prefix's newest object timestamp to decide staleness.  This
+        // avoids a race where `start_upload` has created the S3 multipart
+        // upload but has not yet written state.json.
         let state_key = format!("{global_prefix}/{upload_id}/state.json");
-        let Ok(response) = client
+        let state: Option<UploadState> = match client
             .get_object()
             .bucket(&config.bucket_arn)
             .key(&state_key)
             .send()
             .await
-        else {
-            slog::warn!(log, "S3 stale upload cleanup: failed to get state file"; "upload_id" => %upload_id);
-            report_cleanup_error(
-                log,
-                "stale_upload: get state file",
-                &format!("Failed for upload {upload_id}"),
-            );
-            continue;
+        {
+            Ok(response) => match response.body.collect().await {
+                Ok(data) => serde_json::from_slice::<UploadState>(&data.into_bytes()).ok(),
+                Err(_) => None,
+            },
+            Err(_) => None,
         };
 
-        let Ok(data) = response.body.collect().await else {
-            slog::warn!(log, "S3 stale upload cleanup: failed to collect state body"; "upload_id" => %upload_id);
-            report_cleanup_error(
-                log,
-                "stale_upload: collect state body",
-                &format!("Failed for upload {upload_id}"),
-            );
-            continue;
-        };
-
-        let state = if let Ok(state) = serde_json::from_slice::<UploadState>(&data.into_bytes()) {
-            Some(state)
-        } else {
-            // Treat uploads with unparseable state as stale so they get cleaned up
-            // instead of generating warnings on every cleanup cycle.
-            slog::warn!(log, "S3 stale upload cleanup: unparseable state JSON, treating as stale"; "upload_id" => %upload_id);
-            None
-        };
-
-        // Check if the upload is stale (unparseable state is always considered stale)
         let is_stale = match &state {
             Some(s) => now.saturating_sub(s.created_at) > timeout_secs,
-            None => true,
+            None => {
+                // No valid state — check the newest object in the prefix to
+                // avoid deleting a freshly-created upload whose state.json
+                // has not been written yet.
+                prefix_is_stale(
+                    &client,
+                    &config,
+                    &format!("{global_prefix}/{upload_id}/"),
+                    now,
+                    timeout_secs,
+                )
+                .await
+            },
         };
 
         if is_stale {
@@ -2161,4 +2155,46 @@ async fn cleanup_stale_uploads_s3(
             }
         }
     }
+}
+
+/// Check whether an S3 prefix with no valid state.json is stale by inspecting
+/// the `LastModified` timestamp of its newest object.
+///
+/// Returns `false` (not stale) if we can't determine the age, to avoid
+/// accidentally deleting an in-progress upload whose state hasn't been written yet.
+async fn prefix_is_stale(
+    client: &Client,
+    config: &OciStorageConfig,
+    prefix: &str,
+    now: i64,
+    timeout_secs: i64,
+) -> bool {
+    let Ok(response) = client
+        .list_objects_v2()
+        .bucket(&config.bucket_arn)
+        .prefix(prefix)
+        .max_keys(100)
+        .send()
+        .await
+    else {
+        return false;
+    };
+
+    let Some(contents) = &response.contents else {
+        // No objects at all under this prefix — truly empty, safe to consider stale
+        return true;
+    };
+
+    if contents.is_empty() {
+        return true;
+    }
+
+    // Find the newest last-modified timestamp across all objects
+    let newest = contents
+        .iter()
+        .filter_map(|obj| obj.last_modified.map(|lm| lm.secs()))
+        .max()
+        .unwrap_or(0);
+
+    now.saturating_sub(newest) > timeout_secs
 }
