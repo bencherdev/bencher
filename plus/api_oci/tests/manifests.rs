@@ -111,9 +111,15 @@ async fn test_manifest_put_by_digest() {
     let oci_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    let config_digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111";
-    let layer_digest = "sha256:2222222222222222222222222222222222222222222222222222222222222222";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&oci_token),
+        b"config for digest put",
+        b"layer for digest put",
+    )
+    .await;
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
 
     let resp = server
@@ -147,10 +153,16 @@ async fn test_manifest_exists() {
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    // Upload a manifest
-    let config_digest = "sha256:3333333333333333333333333333333333333333333333333333333333333333";
-    let layer_digest = "sha256:4444444444444444444444444444444444444444444444444444444444444444";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    // Upload blobs and manifest
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for exists test",
+        b"layer for exists test",
+    )
+    .await;
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
 
     let upload_resp = server
         .client
@@ -219,10 +231,16 @@ async fn test_manifest_get_by_tag() {
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    // Upload a manifest
-    let config_digest = "sha256:5555555555555555555555555555555555555555555555555555555555555555";
-    let layer_digest = "sha256:6666666666666666666666666666666666666666666666666666666666666666";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    // Upload blobs and manifest
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for get by tag",
+        b"layer for get by tag",
+    )
+    .await;
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
 
     server
         .client
@@ -267,10 +285,16 @@ async fn test_manifest_get_by_digest() {
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    // Upload a manifest
-    let config_digest = "sha256:7777777777777777777777777777777777777777777777777777777777777777";
-    let layer_digest = "sha256:8888888888888888888888888888888888888888888888888888888888888888";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    // Upload blobs and manifest
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for get by digest",
+        b"layer for get by digest",
+    )
+    .await;
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
 
     server
@@ -314,12 +338,18 @@ async fn test_manifest_delete_by_tag() {
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    // Upload a manifest
-    let config_digest = "sha256:9999999999999999999999999999999999999999999999999999999999999999";
-    let layer_digest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    // Upload blobs and manifest
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for delete by tag",
+        b"layer for delete by tag",
+    )
+    .await;
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
 
-    server
+    let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/to-delete", project_slug)))
         .header("Authorization", format!("Bearer {}", push_token))
@@ -328,6 +358,7 @@ async fn test_manifest_delete_by_tag() {
         .send()
         .await
         .expect("Upload failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
 
     // Delete by tag
     let resp = server
@@ -368,13 +399,19 @@ async fn test_manifest_delete_by_digest() {
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    // Upload a manifest
-    let config_digest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-    let layer_digest = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    // Upload blobs and manifest
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for delete by digest",
+        b"layer for delete by digest",
+    )
+    .await;
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
 
-    server
+    let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/digest-delete", project_slug)))
         .header("Authorization", format!("Bearer {}", push_token))
@@ -383,6 +420,7 @@ async fn test_manifest_delete_by_digest() {
         .send()
         .await
         .expect("Upload failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
 
     // Delete by digest
     let resp = server
@@ -427,11 +465,18 @@ async fn test_manifest_options() {
 async fn test_manifest_put_unclaimed() {
     let server = TestServer::new().await;
 
-    let config_digest = "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
-    let layer_digest = "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    // Upload blobs without auth (auto-creates unclaimed project)
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        "unclaimed-manifest-project",
+        None,
+        b"config for unclaimed manifest",
+        b"layer for unclaimed manifest",
+    )
+    .await;
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
 
-    // Push manifest to a new project slug (will auto-create unclaimed project)
+    // Push manifest to the unclaimed project
     let resp = server
         .client
         .put(server.api_url("/v2/unclaimed-manifest-project/manifests/latest"))
@@ -491,9 +536,15 @@ async fn test_manifest_put_authenticated_to_unclaimed() {
     // First, create an unclaimed project by pushing without authentication
     let unclaimed_slug = "unclaimed-manifest-to-claim";
 
-    let config_digest1 = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    let layer_digest1 = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-    let manifest1 = create_test_manifest(config_digest1, layer_digest1);
+    let (config_digest1, layer_digest1) = upload_test_blobs(
+        &server,
+        unclaimed_slug,
+        None,
+        b"config for unclaimed claim v1",
+        b"layer for unclaimed claim v1",
+    )
+    .await;
+    let manifest1 = create_test_manifest(&config_digest1, &layer_digest1);
 
     let create_resp = server
         .client
@@ -513,9 +564,15 @@ async fn test_manifest_put_authenticated_to_unclaimed() {
 
     let oci_token = server.oci_token(&user, unclaimed_slug, &[OciAction::Push]);
 
-    let config_digest2 = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
-    let layer_digest2 = "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
-    let manifest2 = create_test_manifest(config_digest2, layer_digest2);
+    let (config_digest2, layer_digest2) = upload_test_blobs(
+        &server,
+        unclaimed_slug,
+        Some(&oci_token),
+        b"config for unclaimed claim v2",
+        b"layer for unclaimed claim v2",
+    )
+    .await;
+    let manifest2 = create_test_manifest(&config_digest2, &layer_digest2);
 
     let resp = server
         .client
@@ -530,9 +587,10 @@ async fn test_manifest_put_authenticated_to_unclaimed() {
     assert_eq!(resp.status(), StatusCode::CREATED);
 
     // Verify the project is now claimed by trying unauthenticated push again
-    let config_digest3 = "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
-    let layer_digest3 = "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
-    let manifest3 = create_test_manifest(config_digest3, layer_digest3);
+    let manifest3 = create_test_manifest(
+        "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    );
 
     let unauth_resp = server
         .client
@@ -589,9 +647,16 @@ async fn test_manifest_put_nonexistent_slug_authenticated() {
 
     let oci_token = server.oci_token(&user, new_slug, &[OciAction::Push]);
 
-    let config_digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111";
-    let layer_digest = "sha256:2222222222222222222222222222222222222222222222222222222222222222";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    // Upload blobs with auth (auto-creates the project)
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        new_slug,
+        Some(&oci_token),
+        b"config for auto-create slug",
+        b"layer for auto-create slug",
+    )
+    .await;
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
 
     let resp = server
         .client
@@ -607,9 +672,10 @@ async fn test_manifest_put_nonexistent_slug_authenticated() {
 
     // The project should now exist and be claimed by the user
     // Verify by trying unauthenticated push - should be rejected
-    let config_digest2 = "sha256:3333333333333333333333333333333333333333333333333333333333333333";
-    let layer_digest2 = "sha256:4444444444444444444444444444444444444444444444444444444444444444";
-    let manifest2 = create_test_manifest(config_digest2, layer_digest2);
+    let manifest2 = create_test_manifest(
+        "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    );
 
     let unauth_resp = server
         .client
@@ -684,11 +750,18 @@ async fn test_manifest_tag_overwrite() {
     let pull_token = server.oci_pull_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
+    // Upload blobs for first manifest
+    let (config1, layer1) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for tag overwrite v1",
+        b"layer for tag overwrite v1",
+    )
+    .await;
+
     // Upload first manifest as "latest"
-    let manifest1 = create_test_manifest(
-        "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-        "sha256:2222222222222222222222222222222222222222222222222222222222222222",
-    );
+    let manifest1 = create_test_manifest(&config1, &layer1);
     let digest1 = compute_digest(manifest1.as_bytes());
 
     let resp1 = server
@@ -702,11 +775,18 @@ async fn test_manifest_tag_overwrite() {
         .expect("Upload 1 failed");
     assert_eq!(resp1.status(), StatusCode::CREATED);
 
+    // Upload blobs for second manifest
+    let (config2, layer2) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for tag overwrite v2",
+        b"layer for tag overwrite v2",
+    )
+    .await;
+
     // Upload second manifest as "latest" (overwrite)
-    let manifest2 = create_test_manifest(
-        "sha256:3333333333333333333333333333333333333333333333333333333333333333",
-        "sha256:4444444444444444444444444444444444444444444444444444444444444444",
-    );
+    let manifest2 = create_test_manifest(&config2, &layer2);
     let digest2 = compute_digest(manifest2.as_bytes());
 
     let resp2 = server
@@ -761,10 +841,16 @@ async fn test_manifest_content_type_round_trip() {
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    // Upload a manifest
-    let config_digest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    let layer_digest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    // Upload blobs and manifest
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for ct round trip",
+        b"layer for ct round trip",
+    )
+    .await;
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
 
     let upload_resp = server
         .client
@@ -852,6 +938,40 @@ async fn test_manifest_get_nonexistent_digest() {
 // Docker Manifest V2 Tests
 // =============================================================================
 
+/// Upload config and layer blobs for testing, returning their digest strings.
+async fn upload_test_blobs(
+    server: &TestServer,
+    project_slug: &str,
+    auth_token: Option<&str>,
+    config_data: &[u8],
+    layer_data: &[u8],
+) -> (String, String) {
+    let config_digest = compute_digest(config_data);
+    let layer_digest = compute_digest(layer_data);
+
+    for (data, digest) in [(config_data, &config_digest), (layer_data, &layer_digest)] {
+        let mut req = server.client.put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )));
+        if let Some(token) = auth_token {
+            req = req.header("Authorization", format!("Bearer {}", token));
+        }
+        let resp = req
+            .body(data.to_vec())
+            .send()
+            .await
+            .expect("Blob upload failed");
+        assert_eq!(
+            resp.status(),
+            StatusCode::CREATED,
+            "Blob upload should succeed"
+        );
+    }
+
+    (config_digest, layer_digest)
+}
+
 /// Create a Docker V2 manifest JSON for testing
 fn create_docker_v2_manifest(config_digest: &str, layer_digest: &str) -> String {
     serde_json::json!({
@@ -889,9 +1009,15 @@ async fn test_manifest_put_docker_v2() {
     let pull_token = server.oci_pull_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    let config_digest = "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1";
-    let layer_digest = "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2";
-    let manifest = create_docker_v2_manifest(config_digest, layer_digest);
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for docker v2 put",
+        b"layer for docker v2 put",
+    )
+    .await;
+    let manifest = create_docker_v2_manifest(&config_digest, &layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
 
     // PUT with Docker V2 Content-Type
@@ -958,9 +1084,15 @@ async fn test_manifest_get_docker_v2_by_tag() {
     let pull_token = server.oci_pull_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    let config_digest = "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3";
-    let layer_digest = "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4";
-    let manifest = create_docker_v2_manifest(config_digest, layer_digest);
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for docker v2 by tag",
+        b"layer for docker v2 by tag",
+    )
+    .await;
+    let manifest = create_docker_v2_manifest(&config_digest, &layer_digest);
 
     // Upload with tag
     let put_resp = server
@@ -1395,11 +1527,18 @@ async fn test_manifest_put_content_type_match() {
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
+    // Upload blobs first
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for ct match",
+        b"layer for ct match",
+    )
+    .await;
+
     // Body and Content-Type both use Docker V2
-    let manifest = create_docker_v2_manifest(
-        "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-        "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
-    );
+    let manifest = create_docker_v2_manifest(&config_digest, &layer_digest);
 
     let resp = server
         .client

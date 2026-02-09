@@ -12,14 +12,41 @@ use bencher_api_tests::TestServer;
 use bencher_api_tests::oci::compute_digest;
 use http::StatusCode;
 
+/// Upload a single blob and return its digest.
+async fn upload_blob(
+    server: &TestServer,
+    project_slug: &str,
+    auth_token: &str,
+    data: &[u8],
+) -> String {
+    let digest = compute_digest(data);
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )))
+        .header("Authorization", format!("Bearer {}", auth_token))
+        .body(data.to_vec())
+        .send()
+        .await
+        .expect("Blob upload failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::CREATED,
+        "Blob upload should succeed"
+    );
+    digest
+}
+
 /// Create a base manifest (the subject that will be referenced)
-fn create_base_manifest() -> String {
+fn create_base_manifest(config_digest: &str) -> String {
     serde_json::json!({
         "schemaVersion": 2,
         "mediaType": "application/vnd.oci.image.manifest.v1+json",
         "config": {
             "mediaType": "application/vnd.oci.image.config.v1+json",
-            "digest": "sha256:ba5ec00f000000000000000000000000000000000000000000000000000000ab",
+            "digest": config_digest,
             "size": 100
         },
         "layers": []
@@ -28,14 +55,18 @@ fn create_base_manifest() -> String {
 }
 
 /// Create a referrer manifest that points to a subject
-fn create_referrer_manifest(subject_digest: &str, artifact_type: &str) -> String {
+fn create_referrer_manifest(
+    config_digest: &str,
+    subject_digest: &str,
+    artifact_type: &str,
+) -> String {
     serde_json::json!({
         "schemaVersion": 2,
         "mediaType": "application/vnd.oci.image.manifest.v1+json",
         "artifactType": artifact_type,
         "config": {
             "mediaType": "application/vnd.oci.empty.v1+json",
-            "digest": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+            "digest": config_digest,
             "size": 2
         },
         "layers": [],
@@ -63,11 +94,12 @@ async fn test_referrers_list_empty() {
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    // Upload a base manifest
-    let base_manifest = create_base_manifest();
+    // Upload config blob and base manifest
+    let config_digest = upload_blob(&server, project_slug, &push_token, b"base config empty").await;
+    let base_manifest = create_base_manifest(&config_digest);
     let base_digest = compute_digest(base_manifest.as_bytes());
 
-    server
+    let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/base", project_slug)))
         .header("Authorization", format!("Bearer {}", push_token))
@@ -76,6 +108,7 @@ async fn test_referrers_list_empty() {
         .send()
         .await
         .expect("Upload failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
 
     // List referrers (should be empty)
     let pull_token = server.oci_pull_token(&user, &project);
@@ -115,11 +148,13 @@ async fn test_referrers_list_with_results() {
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    // Upload a base manifest
-    let base_manifest = create_base_manifest();
+    // Upload config blob and base manifest
+    let base_config_digest =
+        upload_blob(&server, project_slug, &push_token, b"base config list").await;
+    let base_manifest = create_base_manifest(&base_config_digest);
     let base_digest = compute_digest(base_manifest.as_bytes());
 
-    server
+    let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/subject", project_slug)))
         .header("Authorization", format!("Bearer {}", push_token))
@@ -128,6 +163,10 @@ async fn test_referrers_list_with_results() {
         .send()
         .await
         .expect("Upload base failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    // Upload config blob for referrer manifests
+    let referrer_config_digest = upload_blob(&server, project_slug, &push_token, b"{}").await;
 
     // Upload referrer manifests
     let artifact_types = [
@@ -135,7 +174,8 @@ async fn test_referrers_list_with_results() {
         "application/vnd.example.sig",
     ];
     for artifact_type in &artifact_types {
-        let referrer = create_referrer_manifest(&base_digest, artifact_type);
+        let referrer =
+            create_referrer_manifest(&referrer_config_digest, &base_digest, artifact_type);
         let resp = server
             .client
             .put(server.api_url(&format!(
@@ -194,11 +234,13 @@ async fn test_referrers_filter_by_artifact_type() {
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    // Upload a base manifest
-    let base_manifest = create_base_manifest();
+    // Upload config blob and base manifest
+    let base_config_digest =
+        upload_blob(&server, project_slug, &push_token, b"base config filter").await;
+    let base_manifest = create_base_manifest(&base_config_digest);
     let base_digest = compute_digest(base_manifest.as_bytes());
 
-    server
+    let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/filter-subject", project_slug)))
         .header("Authorization", format!("Bearer {}", push_token))
@@ -207,10 +249,18 @@ async fn test_referrers_filter_by_artifact_type() {
         .send()
         .await
         .expect("Upload base failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    // Upload config blob for referrer manifests
+    let referrer_config_digest = upload_blob(&server, project_slug, &push_token, b"{}").await;
 
     // Upload referrer manifests with different artifact types
-    let sbom_referrer = create_referrer_manifest(&base_digest, "application/vnd.example.sbom");
-    server
+    let sbom_referrer = create_referrer_manifest(
+        &referrer_config_digest,
+        &base_digest,
+        "application/vnd.example.sbom",
+    );
+    let sbom_resp = server
         .client
         .put(server.api_url(&format!(
             "/v2/{}/manifests/{}",
@@ -223,9 +273,14 @@ async fn test_referrers_filter_by_artifact_type() {
         .send()
         .await
         .expect("Upload sbom referrer failed");
+    assert_eq!(sbom_resp.status(), StatusCode::CREATED);
 
-    let sig_referrer = create_referrer_manifest(&base_digest, "application/vnd.example.sig");
-    server
+    let sig_referrer = create_referrer_manifest(
+        &referrer_config_digest,
+        &base_digest,
+        "application/vnd.example.sig",
+    );
+    let sig_resp = server
         .client
         .put(server.api_url(&format!(
             "/v2/{}/manifests/{}",
@@ -238,6 +293,7 @@ async fn test_referrers_filter_by_artifact_type() {
         .send()
         .await
         .expect("Upload sig referrer failed");
+    assert_eq!(sig_resp.status(), StatusCode::CREATED);
 
     // Filter by SBOM artifact type
     let pull_token = server.oci_pull_token(&user, &project);
@@ -402,11 +458,13 @@ async fn test_referrers_cleanup_on_manifest_delete() {
     let pull_token = server.oci_pull_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    // Upload a base manifest (the subject)
-    let base_manifest = create_base_manifest();
+    // Upload config blob and base manifest (the subject)
+    let base_config_digest =
+        upload_blob(&server, project_slug, &push_token, b"base config cleanup").await;
+    let base_manifest = create_base_manifest(&base_config_digest);
     let base_digest = compute_digest(base_manifest.as_bytes());
 
-    server
+    let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/cleanup-subject", project_slug)))
         .header("Authorization", format!("Bearer {}", push_token))
@@ -415,9 +473,17 @@ async fn test_referrers_cleanup_on_manifest_delete() {
         .send()
         .await
         .expect("Upload base failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    // Upload config blob for referrer manifest
+    let referrer_config_digest = upload_blob(&server, project_slug, &push_token, b"{}").await;
 
     // Upload a referrer manifest
-    let referrer = create_referrer_manifest(&base_digest, "application/vnd.example.attestation");
+    let referrer = create_referrer_manifest(
+        &referrer_config_digest,
+        &base_digest,
+        "application/vnd.example.attestation",
+    );
     let referrer_digest = compute_digest(referrer.as_bytes());
 
     let resp = server

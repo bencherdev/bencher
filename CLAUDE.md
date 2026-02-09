@@ -144,19 +144,21 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - `plus/bencher_oci_storage` - Storage backend using S3 (via Access Points)
 - OCI auth tokens use a dedicated `Oci` audience in `bencher_token`
 - Registry is configured via `JsonRegistry` in the server config (`plus.registry`)
+- Run the OCI conformance tests with `cargo test-api oci --admin`
 
 ## Code Style Rules
 
 ### Rust
 
-- Always run `cargo fmt` and `cargo clippy` before committing
+- Always run `cargo fmt` and `cargo clippy` when testing or before committing
 - Use `#[expect(...)]` instead of `#[allow(...)]` for lint suppression
 - Do **NOT** suppress a lint outside of a test module without explicit approval
-- Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
 - All dependency versions go in the workspace `Cargo.toml`
 - When reviewing code, also check:
   - `cargo check --no-default-features`
   - `cargo gen-types` (if the API changed at all)
+- Use idiomatic, strong types instead of `String` and `serde_json::Value` where possible
+- Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
 
 ### Frontend (TypeScript)
 
