@@ -14,7 +14,7 @@ use crate::{
 };
 
 static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
-static ALGORITHM: LazyLock<Algorithm> = LazyLock::new(Algorithm::default);
+const ALGORITHM: Algorithm = Algorithm::HS256;
 
 pub struct TokenKey {
     pub issuer: String,
@@ -97,7 +97,7 @@ impl TokenKey {
         token: &Jwt,
         audience: &[Audience],
     ) -> Result<TokenData<Claims>, TokenError> {
-        let mut validation = Validation::new(*ALGORITHM);
+        let mut validation = Validation::new(ALGORITHM);
         validation.set_audience(audience);
         validation.set_issuer(&[self.issuer.as_str()]);
         validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);

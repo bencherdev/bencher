@@ -14,7 +14,7 @@
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
-use bencher_json::oci::oci_error_body;
+use bencher_json::oci::{OCI_ERROR_DENIED, OCI_ERROR_UNAUTHORIZED, oci_error_body};
 use bencher_json::{Email, Jwt, ProjectResourceId};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -127,7 +127,7 @@ pub async fn auth_oci_token_get(
             return Err(HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::FORBIDDEN,
-                oci_error_body("DENIED", "Only server admins can pull OCI images"),
+                oci_error_body(OCI_ERROR_DENIED, "Only server admins can pull OCI images"),
             ));
         }
     }
@@ -168,7 +168,7 @@ pub async fn auth_oci_token_get(
                             None,
                             ClientErrorStatusCode::FORBIDDEN,
                             oci_error_body(
-                                "DENIED",
+                                OCI_ERROR_DENIED,
                                 &format!(
                                     "Access denied to repository: {repo_name}. You need Create permission to push.",
                                 ),
@@ -253,7 +253,7 @@ pub fn unauthorized_with_www_authenticate(
     let mut error = HttpError::for_client_error(
         None,
         ClientErrorStatusCode::UNAUTHORIZED,
-        oci_error_body("UNAUTHORIZED", "Authentication required"),
+        oci_error_body(OCI_ERROR_UNAUTHORIZED, "Authentication required"),
     );
 
     // Add WWW-Authenticate header - ignore error if it fails

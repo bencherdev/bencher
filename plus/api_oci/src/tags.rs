@@ -12,7 +12,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::auth::{require_pull_access, resolve_project_uuid};
-use crate::response::oci_cors_headers;
+use crate::response::{APPLICATION_JSON, oci_cors_headers};
 
 /// Path parameters for tags list
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -142,7 +142,7 @@ pub async fn oci_tags_list(
     let mut builder = oci_cors_headers(
         Response::builder()
             .status(http::StatusCode::OK)
-            .header(http::header::CONTENT_TYPE, "application/json")
+            .header(http::header::CONTENT_TYPE, APPLICATION_JSON)
             .header(http::header::CONTENT_LENGTH, body.len()),
         &[http::Method::GET],
     );

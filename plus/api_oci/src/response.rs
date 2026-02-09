@@ -10,6 +10,8 @@ pub const OCI_SUBJECT: &str = "OCI-Subject";
 pub const OCI_FILTERS_APPLIED: &str = "OCI-Filters-Applied";
 /// Content type for binary blob data
 pub const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
+/// Content type for JSON responses
+pub const APPLICATION_JSON: &str = "application/json";
 
 /// Adds standard OCI CORS headers to a response builder
 ///

@@ -11,7 +11,7 @@ use http::Response;
 #[cfg(feature = "plus")]
 use crate::auth::apply_auth_rate_limit;
 use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate};
-use crate::response::oci_cors_headers;
+use crate::response::{APPLICATION_JSON, oci_cors_headers};
 
 /// CORS preflight for OCI base endpoint
 #[endpoint {
@@ -60,7 +60,7 @@ pub async fn oci_base(rqctx: RequestContext<ApiContext>) -> Result<Response<Body
     oci_cors_headers(
         Response::builder()
             .status(http::StatusCode::OK)
-            .header(http::header::CONTENT_TYPE, "application/json"),
+            .header(http::header::CONTENT_TYPE, APPLICATION_JSON),
         &[http::Method::GET],
     )
     .body(Body::from("{}"))

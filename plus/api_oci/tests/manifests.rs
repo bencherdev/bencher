@@ -1799,8 +1799,9 @@ async fn test_manifest_put_exceeds_max_body_size() {
         .await
         .expect("Request failed");
 
-    assert!(
-        resp.status().is_client_error(),
+    assert_eq!(
+        resp.status(),
+        StatusCode::PAYLOAD_TOO_LARGE,
         "Manifest PUT exceeding max body size should be rejected, got {}",
         resp.status()
     );

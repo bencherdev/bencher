@@ -11,6 +11,7 @@ use bencher_json::oci::Manifest;
 use bencher_oci_storage::{Digest, OciError, OciStorage, ProjectUuid, Reference};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, RequestContext, UntypedBody, endpoint};
+use futures::stream::{self, StreamExt as _};
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -352,11 +353,11 @@ async fn verify_referenced_blobs(
     };
 
     // Parse all digests first, then check existence in parallel
-    let parsed_digests: Vec<(Digest, &str)> = digests
+    let parsed_digests: Vec<(Digest, String)> = digests
         .iter()
         .map(|d| {
             d.parse::<Digest>()
-                .map(|parsed| (parsed, *d))
+                .map(|parsed| (parsed, (*d).to_owned()))
                 .map_err(|_e| {
                     crate::error::into_http_error(OciError::DigestInvalid {
                         digest: (*d).to_owned(),
@@ -365,25 +366,32 @@ async fn verify_referenced_blobs(
         })
         .collect::<Result<_, _>>()?;
 
-    futures::future::try_join_all(
-        parsed_digests
-            .iter()
-            .map(|(digest, digest_str)| async move {
-                let exists = storage
-                    .blob_exists(repository, digest)
-                    .await
-                    .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
-                if !exists {
-                    return Err(crate::error::into_http_error(
-                        OciError::ManifestBlobUnknown {
-                            digest: (*digest_str).to_owned(),
-                        },
-                    ));
-                }
-                Ok(())
-            }),
-    )
-    .await?;
+    let concurrency = std::thread::available_parallelism()
+        .map(std::num::NonZeroUsize::get)
+        .unwrap_or(1)
+        .clamp(1, 64);
+
+    let results: Vec<Result<(), HttpError>> = stream::iter(parsed_digests.into_iter().map(
+        |(digest, digest_str)| async move {
+            let exists = storage
+                .blob_exists(repository, &digest)
+                .await
+                .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+            if !exists {
+                return Err(crate::error::into_http_error(
+                    OciError::ManifestBlobUnknown { digest: digest_str },
+                ));
+            }
+            Ok(())
+        },
+    ))
+    .buffer_unordered(concurrency)
+    .collect()
+    .await;
+
+    for result in results {
+        result?;
+    }
 
     Ok(())
 }

@@ -449,7 +449,14 @@ impl OciLocalStorage {
         if now.saturating_sub(last) < timeout_secs {
             return;
         }
-        self.last_cleanup.store(now, Ordering::Relaxed);
+        // Atomically claim the cleanup slot; if another thread raced us, skip.
+        if self
+            .last_cleanup
+            .compare_exchange(last, now, Ordering::Relaxed, Ordering::Relaxed)
+            .is_err()
+        {
+            return;
+        }
 
         let uploads_dir = self.uploads_dir();
         let upload_timeout = self.upload_timeout;
@@ -871,17 +878,18 @@ async fn cleanup_stale_uploads_local(log: &Logger, uploads_dir: &Path, upload_ti
 
                 // Try to load the state to check creation time
                 let state_path = entry.path().join("state.json");
-                let Ok(data) = fs::read(&state_path).await else {
-                    continue;
-                };
-                let Ok(state) = serde_json::from_slice::<UploadState>(&data) else {
-                    continue;
+                let is_stale = match fs::read(&state_path).await {
+                    Ok(data) => match serde_json::from_slice::<UploadState>(&data) {
+                        Ok(state) => now.saturating_sub(state.created_at) > timeout_secs,
+                        // Unparseable state — treat as stale
+                        Err(_) => true,
+                    },
+                    // Missing state file — treat as stale
+                    Err(_) => true,
                 };
 
-                // Check if the upload is stale and remove it
-                if (now - state.created_at) > timeout_secs
-                    && let Err(e) = fs::remove_dir_all(entry.path()).await
-                {
+                // Remove stale uploads
+                if is_stale && let Err(e) = fs::remove_dir_all(entry.path()).await {
                     error!(log, "Failed to remove stale upload"; "upload_id" => &upload_id_str, "error" => %e);
                 }
             },

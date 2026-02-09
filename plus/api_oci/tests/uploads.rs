@@ -1091,8 +1091,9 @@ async fn test_chunked_upload_exceeds_max_body_size() {
         .send()
         .await
         .expect("Chunk 2 failed");
-    assert!(
-        resp2.status().is_client_error(),
+    assert_eq!(
+        resp2.status(),
+        StatusCode::PAYLOAD_TOO_LARGE,
         "Second chunk exceeding max body size should be rejected, got {}",
         resp2.status()
     );
@@ -1245,8 +1246,9 @@ async fn test_chunked_upload_size_not_written_on_reject() {
         .send()
         .await
         .expect("Chunk 2 failed");
-    assert!(
-        resp2.status().is_client_error(),
+    assert_eq!(
+        resp2.status(),
+        StatusCode::PAYLOAD_TOO_LARGE,
         "Second chunk exceeding max body size should be rejected, got {}",
         resp2.status()
     );

@@ -967,7 +967,14 @@ impl OciS3Storage {
         if now.saturating_sub(last) < timeout_secs {
             return;
         }
-        self.last_cleanup.store(now, Ordering::Relaxed);
+        // Atomically claim the cleanup slot; if another thread raced us, skip.
+        if self
+            .last_cleanup
+            .compare_exchange(last, now, Ordering::Relaxed, Ordering::Relaxed)
+            .is_err()
+        {
+            return;
+        }
 
         let client = self.client.clone();
         let config = self.config.clone();
@@ -2062,27 +2069,32 @@ async fn cleanup_stale_uploads_s3(
             continue;
         };
 
-        let Ok(state) = serde_json::from_slice::<UploadState>(&data.into_bytes()) else {
-            slog::warn!(log, "S3 stale upload cleanup: failed to parse state JSON"; "upload_id" => %upload_id);
-            report_cleanup_error(
-                log,
-                "stale_upload: parse state JSON",
-                &format!("Failed for upload {upload_id}"),
-            );
-            continue;
+        let state = if let Ok(state) = serde_json::from_slice::<UploadState>(&data.into_bytes()) {
+            Some(state)
+        } else {
+            // Treat uploads with unparseable state as stale so they get cleaned up
+            // instead of generating warnings on every cleanup cycle.
+            slog::warn!(log, "S3 stale upload cleanup: unparseable state JSON, treating as stale"; "upload_id" => %upload_id);
+            None
         };
 
-        // Check if the upload is stale
-        if (now - state.created_at) > timeout_secs {
-            // Abort the S3 multipart upload
+        // Check if the upload is stale (unparseable state is always considered stale)
+        let is_stale = match &state {
+            Some(s) => now.saturating_sub(s.created_at) > timeout_secs,
+            None => true,
+        };
+
+        if is_stale {
+            // Abort the S3 multipart upload if we have the upload ID
             let data_key = format!("{global_prefix}/{upload_id}/data");
-            if let Err(e) = client
-                .abort_multipart_upload()
-                .bucket(&config.bucket_arn)
-                .key(&data_key)
-                .upload_id(&state.s3_upload_id)
-                .send()
-                .await
+            if let Some(state) = &state
+                && let Err(e) = client
+                    .abort_multipart_upload()
+                    .bucket(&config.bucket_arn)
+                    .key(&data_key)
+                    .upload_id(&state.s3_upload_id)
+                    .send()
+                    .await
             {
                 report_cleanup_error(log, "stale_upload: abort multipart", &e);
             }

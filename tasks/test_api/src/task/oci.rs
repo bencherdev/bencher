@@ -162,6 +162,8 @@ impl Oci {
                 "clone",
                 "--depth",
                 "1",
+                "--branch",
+                "v1.1.1",
                 "https://github.com/opencontainers/distribution-spec.git",
             ])
             .arg(&self.spec_dir)

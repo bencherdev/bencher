@@ -6,6 +6,9 @@ on:
       mold-version:
         type: string
         required: true
+      go-version:
+        type: string
+        required: true
       netlify-cli-version:
         type: string
         required: true
@@ -70,6 +73,10 @@ jobs:
         env:
           RUST_BACKTRACE: full
         run: cargo test-api smoke dev
+      - name: Setup Go (for OCI conformance tests)
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
       - name: Scale up Dev Machines
         working-directory: ./services/api
         run: flyctl scale vm performance-8x --app bencher-api-dev

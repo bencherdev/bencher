@@ -1,6 +1,6 @@
 //! HTTP error conversion for OCI errors
 
-use bencher_json::oci::oci_error_body;
+use bencher_json::oci::{OCI_ERROR_SIZE_INVALID, OCI_ERROR_UNKNOWN, oci_error_body};
 use bencher_oci_storage::OciError;
 use dropshot::{ClientErrorStatusCode, ErrorStatusCode, HttpError};
 
@@ -54,7 +54,7 @@ pub fn into_http_error(error: OciError) -> HttpError {
         _ => HttpError {
             status_code: ErrorStatusCode::INTERNAL_SERVER_ERROR,
             error_code: None,
-            external_message: oci_error_body("UNKNOWN", "Internal server error"),
+            external_message: oci_error_body(OCI_ERROR_UNKNOWN, "Internal server error"),
             internal_message: message,
             headers: None,
         },
@@ -88,7 +88,7 @@ pub fn payload_too_large(size: u64, max: u64) -> HttpError {
     HttpError {
         status_code: ErrorStatusCode::PAYLOAD_TOO_LARGE,
         error_code: None,
-        external_message: oci_error_body("SIZE_INVALID", &message),
+        external_message: oci_error_body(OCI_ERROR_SIZE_INVALID, &message),
         internal_message: message,
         headers: None,
     }

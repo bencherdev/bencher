@@ -34,6 +34,9 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+/// Path segment distinguishing upload endpoints from blob digest endpoints.
+pub const UPLOADS_REF: &str = "uploads";
+
 use crate::auth::{
     require_pull_access, require_push_access, resolve_project_uuid, validate_push_access,
 };
@@ -100,7 +103,7 @@ pub async fn oci_blob_exists(
     let path = path.into_inner();
 
     // "uploads" is not a valid digest - return appropriate error
-    if path.reference == "uploads" {
+    if path.reference == UPLOADS_REF {
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::METHOD_NOT_ALLOWED,
@@ -160,7 +163,7 @@ pub async fn oci_blob_get(
     let path = path.into_inner();
 
     // "uploads" is not a valid digest - return appropriate error
-    if path.reference == "uploads" {
+    if path.reference == UPLOADS_REF {
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::METHOD_NOT_ALLOWED,
@@ -221,7 +224,7 @@ pub async fn oci_blob_delete(
     let path = path.into_inner();
 
     // "uploads" is not a valid digest - return appropriate error
-    if path.reference == "uploads" {
+    if path.reference == UPLOADS_REF {
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::METHOD_NOT_ALLOWED,
@@ -290,7 +293,7 @@ pub async fn oci_upload_start(
     let query = query.into_inner();
 
     // POST is only valid when ref is "uploads"
-    if path.reference != "uploads" {
+    if path.reference != UPLOADS_REF {
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::METHOD_NOT_ALLOWED,
@@ -321,29 +324,26 @@ pub async fn oci_upload_start(
         let from_repo_str = from_repo.to_string();
         let pull_result = require_pull_access(&rqctx, &from_repo_str).await;
         if pull_result.is_ok() {
-            // Resolve source repository UUID
-            let from_uuid = resolve_project_uuid(context, &from_repo).await?;
-            // Try to mount the blob
-            let mounted = storage
-                .mount_blob(&from_uuid, &project_uuid, &digest)
-                .await
-                .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
-
-            if mounted {
-                // Mount successful - return 201 Created
-                let location = format!("/v2/{project_slug}/blobs/{digest}");
-                let response = oci_cors_headers(
-                    Response::builder()
-                        .status(http::StatusCode::CREATED)
-                        .header(http::header::LOCATION, location)
-                        .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
-                    &[http::Method::POST],
-                )
-                .body(Body::empty())
-                .map_err(|e| {
-                    HttpError::for_internal_error(format!("Failed to build response: {e}"))
-                })?;
-                return Ok(response);
+            // Resolve source repository UUID — fall through on failure
+            // to avoid revealing whether the source repository exists.
+            if let Ok(from_uuid) = resolve_project_uuid(context, &from_repo).await {
+                // Try to mount the blob — fall through on failure
+                if let Ok(true) = storage.mount_blob(&from_uuid, &project_uuid, &digest).await {
+                    // Mount successful - return 201 Created
+                    let location = format!("/v2/{project_slug}/blobs/{digest}");
+                    let response = oci_cors_headers(
+                        Response::builder()
+                            .status(http::StatusCode::CREATED)
+                            .header(http::header::LOCATION, location)
+                            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
+                        &[http::Method::POST],
+                    )
+                    .body(Body::empty())
+                    .map_err(|e| {
+                        HttpError::for_internal_error(format!("Failed to build response: {e}"))
+                    })?;
+                    return Ok(response);
+                }
             }
         } else {
             slog::info!(rqctx.log, "Cross-repository mount access denied, falling through to upload";
@@ -419,7 +419,7 @@ pub async fn oci_upload_monolithic(
     let data = body.as_bytes();
 
     // PUT with digest query param is only valid when ref is "uploads"
-    if path.reference != "uploads" {
+    if path.reference != UPLOADS_REF {
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::METHOD_NOT_ALLOWED,

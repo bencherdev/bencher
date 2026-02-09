@@ -778,8 +778,9 @@ async fn test_blob_monolithic_upload_exceeds_max_body_size() {
         .await
         .expect("Request failed");
 
-    assert!(
-        resp.status().is_client_error(),
+    assert_eq!(
+        resp.status(),
+        StatusCode::PAYLOAD_TOO_LARGE,
         "Monolithic blob exceeding max body size should be rejected, got {}",
         resp.status()
     );

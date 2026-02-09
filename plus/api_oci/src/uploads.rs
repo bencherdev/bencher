@@ -31,6 +31,7 @@
 #[cfg(feature = "plus")]
 use crate::auth::apply_public_rate_limit;
 use crate::auth::resolve_project_uuid;
+use crate::blobs::UPLOADS_REF;
 use crate::response::{DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers};
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
 use bencher_json::ProjectResourceId;
@@ -64,7 +65,7 @@ pub struct UploadCompleteQuery {
 
 /// Validate that the reference is "uploads"
 fn validate_uploads_ref(reference: &str) -> Result<(), HttpError> {
-    if reference != "uploads" {
+    if reference != UPLOADS_REF {
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::NOT_FOUND,
