@@ -117,7 +117,7 @@ pub async fn oci_tags_list(
     // Check if we need to add Link header for pagination
     let link_header = if has_more {
         tags.last().map(|last_tag| {
-            let n = query.n.unwrap_or(DEFAULT_PAGE_SIZE);
+            let n = page_size;
             format!(
                 "</v2/{}/tags/list?n={}&last={}>; rel=\"next\"",
                 name_str,

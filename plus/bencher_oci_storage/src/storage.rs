@@ -38,16 +38,13 @@ use thiserror::Error;
 use crate::local::{LocalBlobBody, OciLocalStorage};
 use crate::types::{Digest, UploadId};
 
-pub(crate) fn report_cleanup_error(context: &str, error: &impl std::fmt::Display) {
+pub(crate) fn report_cleanup_error(log: &Logger, context: &str, error: &impl std::fmt::Display) {
+    slog::warn!(log, "OCI cleanup error"; "context" => context, "error" => %error);
     #[cfg(feature = "sentry")]
     sentry::capture_message(
         &format!("OCI cleanup error ({context}): {error}"),
         sentry::Level::Error,
     );
-    #[cfg(not(feature = "sentry"))]
-    {
-        let _ = (context, error);
-    }
 }
 
 /// A streaming body for blob content from S3
@@ -929,7 +926,7 @@ impl OciS3Storage {
                     .send()
                     .await
                 {
-                    report_cleanup_error("cleanup_upload: chunk delete", &e);
+                    report_cleanup_error(&self.log, "cleanup_upload: chunk delete", &e);
                 }
             }
         }
@@ -943,7 +940,7 @@ impl OciS3Storage {
             .send()
             .await
         {
-            report_cleanup_error("cleanup_upload: data delete", &e);
+            report_cleanup_error(&self.log, "cleanup_upload: data delete", &e);
         }
 
         // Delete state last (so discovery still works if crash occurs above)
@@ -955,7 +952,7 @@ impl OciS3Storage {
             .send()
             .await
         {
-            report_cleanup_error("cleanup_upload: state delete", &e);
+            report_cleanup_error(&self.log, "cleanup_upload: state delete", &e);
         }
     }
 
@@ -1304,7 +1301,7 @@ impl OciS3Storage {
             .send()
             .await
         {
-            report_cleanup_error("cancel_upload: abort multipart", &e);
+            report_cleanup_error(&self.log, "cancel_upload: abort multipart", &e);
         }
 
         // Clean up (lists and deletes all buffer chunks)
@@ -1725,7 +1722,7 @@ impl OciS3Storage {
                 .send()
                 .await
             {
-                report_cleanup_error("delete_manifest: referrer link delete", &e);
+                report_cleanup_error(&self.log, "delete_manifest: referrer link delete", &e);
             }
         }
 
@@ -1995,7 +1992,11 @@ async fn cleanup_stale_uploads_s3(
                 log,
                 "S3 stale upload cleanup: failed to list upload prefixes"
             );
-            report_cleanup_error("stale_upload: list prefixes", &"S3 list request failed");
+            report_cleanup_error(
+                log,
+                "stale_upload: list prefixes",
+                &"S3 list request failed",
+            );
             return;
         };
 
@@ -2026,6 +2027,7 @@ async fn cleanup_stale_uploads_s3(
         let Ok(upload_id) = upload_id_str.parse::<UploadId>() else {
             slog::warn!(log, "S3 stale upload cleanup: failed to parse upload ID"; "upload_id" => upload_id_str);
             report_cleanup_error(
+                log,
                 "stale_upload: parse upload ID",
                 &format!("Invalid upload ID: {upload_id_str}"),
             );
@@ -2043,6 +2045,7 @@ async fn cleanup_stale_uploads_s3(
         else {
             slog::warn!(log, "S3 stale upload cleanup: failed to get state file"; "upload_id" => %upload_id);
             report_cleanup_error(
+                log,
                 "stale_upload: get state file",
                 &format!("Failed for upload {upload_id}"),
             );
@@ -2052,6 +2055,7 @@ async fn cleanup_stale_uploads_s3(
         let Ok(data) = response.body.collect().await else {
             slog::warn!(log, "S3 stale upload cleanup: failed to collect state body"; "upload_id" => %upload_id);
             report_cleanup_error(
+                log,
                 "stale_upload: collect state body",
                 &format!("Failed for upload {upload_id}"),
             );
@@ -2061,6 +2065,7 @@ async fn cleanup_stale_uploads_s3(
         let Ok(state) = serde_json::from_slice::<UploadState>(&data.into_bytes()) else {
             slog::warn!(log, "S3 stale upload cleanup: failed to parse state JSON"; "upload_id" => %upload_id);
             report_cleanup_error(
+                log,
                 "stale_upload: parse state JSON",
                 &format!("Failed for upload {upload_id}"),
             );
@@ -2079,7 +2084,7 @@ async fn cleanup_stale_uploads_s3(
                 .send()
                 .await
             {
-                report_cleanup_error("stale_upload: abort multipart", &e);
+                report_cleanup_error(log, "stale_upload: abort multipart", &e);
             }
 
             // Delete all buffer chunks first (while state still exists for discovery)
@@ -2109,7 +2114,7 @@ async fn cleanup_stale_uploads_s3(
                                 .send()
                                 .await
                         {
-                            report_cleanup_error("stale_upload: chunk delete", &e);
+                            report_cleanup_error(log, "stale_upload: chunk delete", &e);
                         }
                     }
                 }
@@ -2129,7 +2134,7 @@ async fn cleanup_stale_uploads_s3(
                 .send()
                 .await
             {
-                report_cleanup_error("stale_upload: data delete", &e);
+                report_cleanup_error(log, "stale_upload: data delete", &e);
             }
 
             // Delete state last (so discovery still works if crash occurs above)
@@ -2140,7 +2145,7 @@ async fn cleanup_stale_uploads_s3(
                 .send()
                 .await
             {
-                report_cleanup_error("stale_upload: state delete", &e);
+                report_cleanup_error(log, "stale_upload: state delete", &e);
             }
         }
     }

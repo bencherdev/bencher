@@ -22,6 +22,7 @@ plus = [
     "dep:bencher_token",
     "dep:bytes",
     "dep:dropshot",
+    "dep:futures",
     "dep:http",
     "dep:schemars",
     "dep:serde",
@@ -46,6 +47,7 @@ sentry = { workspace = true, optional = true }
 
 bytes = { workspace = true, optional = true }
 dropshot = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }

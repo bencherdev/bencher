@@ -100,12 +100,12 @@ impl OciError {
         match self {
             Self::BlobUnknown { .. }
             | Self::BlobUploadUnknown { .. }
+            | Self::ManifestBlobUnknown { .. }
             | Self::ManifestUnknown { .. }
             | Self::NameUnknown { .. } => http::StatusCode::NOT_FOUND,
 
             Self::BlobUploadInvalid { .. }
             | Self::DigestInvalid { .. }
-            | Self::ManifestBlobUnknown { .. }
             | Self::ManifestInvalid(_)
             | Self::NameInvalid { .. }
             | Self::TagInvalid { .. }

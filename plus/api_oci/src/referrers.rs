@@ -93,15 +93,7 @@ pub async fn oci_referrers_list(
         media_type: Some(OCI_IMAGE_INDEX_MEDIA_TYPE.to_owned()),
         manifests: referrers
             .into_iter()
-            .map(|d| OciManifestDescriptor {
-                media_type: d.media_type,
-                digest: d.digest,
-                size: d.size,
-                urls: d.urls,
-                annotations: d.annotations,
-                platform: None,
-                artifact_type: d.artifact_type,
-            })
+            .map(OciManifestDescriptor::from)
             .collect(),
         subject: None,
         annotations: None,

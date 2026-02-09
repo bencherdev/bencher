@@ -197,6 +197,7 @@ dependencies = [
  "bencher_token",
  "bytes",
  "dropshot",
+ "futures",
  "http 1.4.0",
  "reqwest",
  "schemars 0.8.22",

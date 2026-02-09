@@ -275,6 +275,18 @@ pub async fn oci_manifest_put(
     // Extract subject digest from manifest if present (for OCI-Subject header)
     let subject_digest = parsed_manifest.subject().map(|s| s.digest.clone());
 
+    // Pre-compute digest from body bytes to verify against URL digest BEFORE storing
+    let content_digest = Digest::from_sha256_bytes(body_bytes);
+    if let Reference::Digest(ref_digest) = &reference
+        && ref_digest != &content_digest
+    {
+        return Err(crate::error::into_http_error(OciError::DigestInvalid {
+            digest: format!(
+                "URL digest {ref_digest} does not match content digest {content_digest}"
+            ),
+        }));
+    }
+
     // Store the manifest, passing the already-parsed manifest to avoid re-parsing
     // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
     let digest = storage
@@ -286,15 +298,6 @@ pub async fn oci_manifest_put(
         )
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
-
-    // If the reference was a digest, verify it matches the computed digest
-    if let Reference::Digest(ref_digest) = &reference
-        && ref_digest != &digest
-    {
-        return Err(crate::error::into_http_error(OciError::DigestInvalid {
-            digest: format!("URL digest {ref_digest} does not match content digest {digest}"),
-        }));
-    }
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -327,6 +330,7 @@ pub async fn oci_manifest_put(
 ///
 /// Only checks OCI Image Manifests and Docker Manifest V2 (which have config/layers).
 /// Image indices and manifest lists reference other manifests, not blobs.
+/// Checks all blobs in parallel for improved performance.
 async fn verify_referenced_blobs(
     storage: &OciStorage,
     repository: &ProjectUuid,
@@ -347,24 +351,39 @@ async fn verify_referenced_blobs(
         Manifest::OciImageIndex(_) | Manifest::DockerManifestList(_) => return Ok(()),
     };
 
-    for digest_str in digests {
-        let digest: Digest = digest_str.parse().map_err(|_e| {
-            crate::error::into_http_error(OciError::DigestInvalid {
-                digest: digest_str.to_owned(),
-            })
-        })?;
-        let exists = storage
-            .blob_exists(repository, &digest)
-            .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
-        if !exists {
-            return Err(crate::error::into_http_error(
-                OciError::ManifestBlobUnknown {
-                    digest: digest_str.to_owned(),
-                },
-            ));
-        }
-    }
+    // Parse all digests first, then check existence in parallel
+    let parsed_digests: Vec<(Digest, &str)> = digests
+        .iter()
+        .map(|d| {
+            d.parse::<Digest>()
+                .map(|parsed| (parsed, *d))
+                .map_err(|_e| {
+                    crate::error::into_http_error(OciError::DigestInvalid {
+                        digest: (*d).to_owned(),
+                    })
+                })
+        })
+        .collect::<Result<_, _>>()?;
+
+    futures::future::try_join_all(
+        parsed_digests
+            .iter()
+            .map(|(digest, digest_str)| async move {
+                let exists = storage
+                    .blob_exists(repository, digest)
+                    .await
+                    .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+                if !exists {
+                    return Err(crate::error::into_http_error(
+                        OciError::ManifestBlobUnknown {
+                            digest: (*digest_str).to_owned(),
+                        },
+                    ));
+                }
+                Ok(())
+            }),
+    )
+    .await?;
 
     Ok(())
 }
@@ -395,18 +414,27 @@ pub async fn oci_manifest_delete(
     // Parse reference - can be either a digest or a tag
     let reference = parse_reference(&path.reference)?;
 
-    match reference {
+    // Resolve the digest for the response header before deleting
+    let digest = match &reference {
+        Reference::Digest(digest) => digest.clone(),
+        Reference::Tag(tag) => storage
+            .resolve_tag(&project_uuid, tag)
+            .await
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?,
+    };
+
+    match &reference {
         Reference::Digest(digest) => {
             // Delete by digest - delete the manifest itself
             storage
-                .delete_manifest(&project_uuid, &digest)
+                .delete_manifest(&project_uuid, digest)
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
         },
         Reference::Tag(tag) => {
             // Delete by tag - delete the tag link only (manifest may still exist)
             storage
-                .delete_tag(&project_uuid, &tag)
+                .delete_tag(&project_uuid, tag)
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
         },
@@ -414,7 +442,9 @@ pub async fn oci_manifest_delete(
 
     // OCI spec requires 202 Accepted for DELETE
     let response = oci_cors_headers(
-        Response::builder().status(http::StatusCode::ACCEPTED),
+        Response::builder()
+            .status(http::StatusCode::ACCEPTED)
+            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
         &[http::Method::DELETE],
     )
     .body(Body::empty())

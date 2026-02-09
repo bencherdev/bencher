@@ -1508,10 +1508,10 @@ async fn test_manifest_put_missing_blobs() {
         .await
         .expect("Request failed");
 
-    // Registry rejects manifests with missing blobs (MANIFEST_BLOB_UNKNOWN)
+    // Registry rejects manifests with missing blobs (MANIFEST_BLOB_UNKNOWN → 404 per OCI spec)
     assert_eq!(
         resp.status(),
-        StatusCode::BAD_REQUEST,
+        StatusCode::NOT_FOUND,
         "Manifest referencing non-existent blobs should be rejected"
     );
 }

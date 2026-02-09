@@ -3,11 +3,11 @@
 use std::fmt;
 use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use thiserror::Error;
 
 /// A content-addressable digest (e.g., "sha256:abc123...")
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct Digest(String);
 
 #[derive(Debug, Error)]
@@ -50,6 +50,14 @@ impl Digest {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+
+    /// Computes a SHA-256 digest from raw bytes
+    pub fn from_sha256_bytes(data: &[u8]) -> Self {
+        use sha2::Digest as _;
+        let hash = sha2::Sha256::digest(data);
+        // hex::encode always produces valid lowercase hex, infallible
+        Self(format!("sha256:{}", hex::encode(hash)))
+    }
 }
 
 impl fmt::Display for Digest {
@@ -83,8 +91,31 @@ impl FromStr for Digest {
     }
 }
 
+impl<'de> serde::Deserialize<'de> for Digest {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(DigestVisitor)
+    }
+}
+
+struct DigestVisitor;
+
+impl serde::de::Visitor<'_> for DigestVisitor {
+    type Value = Digest;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a valid OCI digest")
+    }
+
+    fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+        v.parse().map_err(E::custom)
+    }
+}
+
 /// A tag name (e.g., "latest", "v1.0.0")
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct Tag(String);
 
 #[derive(Debug, Error)]
@@ -137,6 +168,29 @@ impl FromStr for Tag {
     }
 }
 
+impl<'de> serde::Deserialize<'de> for Tag {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(TagVisitor)
+    }
+}
+
+struct TagVisitor;
+
+impl serde::de::Visitor<'_> for TagVisitor {
+    type Value = Tag;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a valid OCI tag")
+    }
+
+    fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+        v.parse().map_err(E::custom)
+    }
+}
+
 /// A reference to a manifest (either a tag or a digest)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Reference {
@@ -182,7 +236,7 @@ impl FromStr for Reference {
 }
 
 /// A unique identifier for an in-progress upload
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct UploadId(String);
 
 impl UploadId {
@@ -216,6 +270,29 @@ impl FromStr for UploadId {
         // Validate it's a valid UUID
         let _uuid: uuid::Uuid = s.parse()?;
         Ok(Self(s.to_owned()))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for UploadId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(UploadIdVisitor)
+    }
+}
+
+struct UploadIdVisitor;
+
+impl serde::de::Visitor<'_> for UploadIdVisitor {
+    type Value = UploadId;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a valid UUID upload ID")
+    }
+
+    fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+        v.parse().map_err(E::custom)
     }
 }
 
@@ -370,5 +447,58 @@ mod tests {
         let id = UploadId::new();
         let parsed: UploadId = id.as_str().parse().unwrap();
         assert_eq!(id, parsed);
+    }
+
+    #[test]
+    fn digest_from_sha256_bytes() {
+        // SHA-256 of empty input is well-known
+        let digest = Digest::from_sha256_bytes(b"");
+        assert_eq!(
+            digest.to_string(),
+            "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+    }
+
+    #[test]
+    fn tag_deserialize_rejects_invalid() {
+        // Path traversal should be rejected
+        let result: Result<Tag, _> = serde_json::from_str(r#""../../etc/passwd""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn tag_deserialize_accepts_valid() {
+        let result: Result<Tag, _> = serde_json::from_str(r#""latest""#);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().as_str(), "latest");
+    }
+
+    #[test]
+    fn digest_deserialize_rejects_invalid() {
+        let result: Result<Digest, _> = serde_json::from_str(r#""not-a-digest""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn digest_deserialize_accepts_valid() {
+        let result: Result<Digest, _> = serde_json::from_str(
+            r#""sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855""#,
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn upload_id_deserialize_rejects_invalid() {
+        let result: Result<UploadId, _> = serde_json::from_str(r#""not-a-uuid""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn upload_id_deserialize_accepts_valid() {
+        let id = UploadId::new();
+        let json = serde_json::to_string(&id).unwrap();
+        let result: Result<UploadId, _> = serde_json::from_str(&json);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), id);
     }
 }

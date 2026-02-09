@@ -434,7 +434,7 @@ impl OciLocalStorage {
         let upload_dir = self.upload_dir(upload_id);
         if let Err(e) = fs::remove_dir_all(&upload_dir).await {
             error!(self.log, "Failed to clean up upload directory"; "upload_id" => %upload_id, "error" => %e);
-            crate::storage::report_cleanup_error("cleanup_upload: remove_dir_all", &e);
+            crate::storage::report_cleanup_error(&self.log, "cleanup_upload: remove_dir_all", &e);
         }
     }
 
@@ -763,7 +763,11 @@ impl OciLocalStorage {
             if let Err(e) = fs::remove_file(&referrer_path).await
                 && e.kind() != io::ErrorKind::NotFound
             {
-                crate::storage::report_cleanup_error("delete_manifest: referrer link delete", &e);
+                crate::storage::report_cleanup_error(
+                    &self.log,
+                    "delete_manifest: referrer link delete",
+                    &e,
+                );
             }
         }
 
@@ -853,30 +857,38 @@ async fn cleanup_stale_uploads_local(log: &Logger, uploads_dir: &Path, upload_ti
     let now = Utc::now().timestamp();
     let timeout_secs = i64::try_from(upload_timeout).unwrap_or(i64::MAX);
 
-    while let Ok(Some(entry)) = entries.next_entry().await {
-        let Some(upload_id_str) = entry.file_name().to_str().map(ToOwned::to_owned) else {
-            continue;
-        };
+    loop {
+        match entries.next_entry().await {
+            Ok(Some(entry)) => {
+                let Some(upload_id_str) = entry.file_name().to_str().map(ToOwned::to_owned) else {
+                    continue;
+                };
 
-        // Validate upload ID format (we don't use the parsed value, just validate)
-        if upload_id_str.parse::<UploadId>().is_err() {
-            continue;
-        }
+                // Validate upload ID format (we don't use the parsed value, just validate)
+                if upload_id_str.parse::<UploadId>().is_err() {
+                    continue;
+                }
 
-        // Try to load the state to check creation time
-        let state_path = entry.path().join("state.json");
-        let Ok(data) = fs::read(&state_path).await else {
-            continue;
-        };
-        let Ok(state) = serde_json::from_slice::<UploadState>(&data) else {
-            continue;
-        };
+                // Try to load the state to check creation time
+                let state_path = entry.path().join("state.json");
+                let Ok(data) = fs::read(&state_path).await else {
+                    continue;
+                };
+                let Ok(state) = serde_json::from_slice::<UploadState>(&data) else {
+                    continue;
+                };
 
-        // Check if the upload is stale and remove it
-        if (now - state.created_at) > timeout_secs
-            && let Err(e) = fs::remove_dir_all(entry.path()).await
-        {
-            error!(log, "Failed to remove stale upload"; "upload_id" => &upload_id_str, "error" => %e);
+                // Check if the upload is stale and remove it
+                if (now - state.created_at) > timeout_secs
+                    && let Err(e) = fs::remove_dir_all(entry.path()).await
+                {
+                    error!(log, "Failed to remove stale upload"; "upload_id" => &upload_id_str, "error" => %e);
+                }
+            },
+            Ok(None) => break,
+            Err(e) => {
+                warn!(log, "Error reading upload directory entry"; "error" => %e);
+            },
         }
     }
 }

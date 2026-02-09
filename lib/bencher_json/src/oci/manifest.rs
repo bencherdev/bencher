@@ -103,6 +103,20 @@ pub struct OciManifestDescriptor {
     pub artifact_type: Option<String>,
 }
 
+impl From<OciDescriptor> for OciManifestDescriptor {
+    fn from(d: OciDescriptor) -> Self {
+        Self {
+            media_type: d.media_type,
+            digest: d.digest,
+            size: d.size,
+            urls: d.urls,
+            annotations: d.annotations,
+            platform: None,
+            artifact_type: d.artifact_type,
+        }
+    }
+}
+
 /// OCI Image Manifest
 ///
 /// Describes the components of a single container image.

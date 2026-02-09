@@ -133,7 +133,8 @@ pub async fn oci_blob_exists(
             .status(http::StatusCode::OK)
             .header(http::header::CONTENT_TYPE, APPLICATION_OCTET_STREAM)
             .header(http::header::CONTENT_LENGTH, size)
-            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
+            .header(DOCKER_CONTENT_DIGEST, digest.to_string())
+            .header(http::header::ACCEPT_RANGES, "bytes"),
         &[http::Method::HEAD, http::Method::GET],
     )
     .body(Body::empty())
@@ -196,7 +197,8 @@ pub async fn oci_blob_get(
             .status(http::StatusCode::OK)
             .header(http::header::CONTENT_TYPE, APPLICATION_OCTET_STREAM)
             .header(http::header::CONTENT_LENGTH, size)
-            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
+            .header(DOCKER_CONTENT_DIGEST, digest.to_string())
+            .header(http::header::ACCEPT_RANGES, "bytes"),
         &[http::Method::GET],
     )
     .body(Body::wrap(blob_body))
@@ -447,15 +449,22 @@ pub async fn oci_upload_monolithic(
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
-    storage
-        .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
-        .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+    let result = async {
+        storage
+            .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
+            .await?;
+        storage.complete_upload(&upload_id, &expected_digest).await
+    }
+    .await;
 
-    let actual_digest = storage
-        .complete_upload(&upload_id, &expected_digest)
-        .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+    let actual_digest = match result {
+        Ok(digest) => digest,
+        Err(e) => {
+            // Best-effort cleanup of the orphaned upload session
+            let _unused = storage.cancel_upload(&upload_id).await;
+            return Err(crate::error::into_http_error(OciError::from(e)));
+        },
+    };
 
     // Record metric
     #[cfg(feature = "otel")]
