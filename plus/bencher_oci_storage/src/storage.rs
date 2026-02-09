@@ -38,6 +38,27 @@ use thiserror::Error;
 use crate::local::{LocalBlobBody, OciLocalStorage};
 use crate::types::{Digest, UploadId};
 
+/// A clock that returns the current Unix timestamp in seconds.
+#[derive(Clone)]
+pub enum Clock {
+    /// Uses `chrono::Utc::now().timestamp()` — the real system clock.
+    System,
+    /// Allows injecting a custom time source for testing.
+    #[cfg(any(test, feature = "test-clock"))]
+    Custom(std::sync::Arc<dyn Fn() -> i64 + Send + Sync>),
+}
+
+impl Clock {
+    /// Returns the current Unix timestamp in seconds.
+    pub fn now(&self) -> i64 {
+        match self {
+            Self::System => Utc::now().timestamp(),
+            #[cfg(any(test, feature = "test-clock"))]
+            Self::Custom(f) => f(),
+        }
+    }
+}
+
 pub(crate) fn report_cleanup_error(log: &Logger, context: &str, error: &impl std::fmt::Display) {
     slog::warn!(log, "OCI cleanup error"; "context" => context, "error" => %error);
     #[cfg(feature = "sentry")]
@@ -253,6 +274,8 @@ pub struct OciS3Storage {
     concurrency: usize,
     /// Unix timestamp of the last stale upload cleanup (for debouncing)
     last_cleanup: AtomicI64,
+    /// Clock for getting the current time (injectable for testing)
+    clock: Clock,
 }
 
 /// OCI Storage backend - supports S3 or local filesystem
@@ -279,9 +302,11 @@ impl OciStorage {
         database_path: &Path,
         upload_timeout: Option<u64>,
         max_body_size: Option<u64>,
+        clock: Option<Clock>,
     ) -> Result<Self, OciStorageError> {
         let timeout = upload_timeout.unwrap_or(DEFAULT_UPLOAD_TIMEOUT_SECS);
         let body_size = max_body_size.unwrap_or(DEFAULT_MAX_BODY_SIZE);
+        let clock = clock.unwrap_or(Clock::System);
         match data_store {
             Some(RegistryDataStore::AwsS3 {
                 access_key_id,
@@ -294,6 +319,7 @@ impl OciStorage {
                 &access_point,
                 timeout,
                 body_size,
+                clock,
             )
             .map(OciStorage::S3),
             None => Ok(OciStorage::Local(OciLocalStorage::new(
@@ -301,6 +327,7 @@ impl OciStorage {
                 database_path,
                 timeout,
                 body_size,
+                clock,
             ))),
         }
     }
@@ -585,6 +612,7 @@ impl OciS3Storage {
         access_point: &str,
         upload_timeout: u64,
         max_body_size: u64,
+        clock: Clock,
     ) -> Result<Self, OciStorageError> {
         // Parse the S3 ARN
         let arn = S3Arn::from_str(access_point)
@@ -626,6 +654,7 @@ impl OciS3Storage {
             log,
             concurrency,
             last_cleanup: AtomicI64::new(0),
+            clock,
         })
     }
 
@@ -962,7 +991,7 @@ impl OciS3Storage {
     /// Debounced: skips if a cleanup ran within the last `upload_timeout` seconds,
     /// since stale uploads can't appear faster than the timeout period.
     fn spawn_stale_upload_cleanup(&self) {
-        let now = Utc::now().timestamp();
+        let now = self.clock.now();
         let last = self.last_cleanup.load(Ordering::Relaxed);
         let timeout_secs = i64::try_from(self.upload_timeout).unwrap_or(i64::MAX);
         if now.saturating_sub(last) < timeout_secs {
@@ -981,9 +1010,10 @@ impl OciS3Storage {
         let config = self.config.clone();
         let upload_timeout = self.upload_timeout;
         let log = self.log.clone();
+        let clock = self.clock.clone();
 
         tokio::spawn(async move {
-            cleanup_stale_uploads_s3(&log, client, config, upload_timeout).await;
+            cleanup_stale_uploads_s3(&log, client, config, upload_timeout, clock).await;
         });
     }
 
@@ -1022,7 +1052,7 @@ impl OciS3Storage {
             s3_upload_id,
             repository: repository.to_string(),
             parts: Vec::new(),
-            created_at: Utc::now().timestamp(),
+            created_at: self.clock.now(),
         };
         self.save_upload_state(&upload_id, &state).await?;
 
@@ -1736,22 +1766,41 @@ impl OciS3Storage {
 
         // Clean up any tags that point to this digest (best-effort)
         if let Ok(result) = self.list_tags(repository, None, None).await {
-            for tag_name in result.tags {
-                if let Ok(tag) = tag_name.parse::<crate::types::Tag>()
-                    && let Ok(tag_digest) = self.resolve_tag(repository, &tag).await
-                    && tag_digest.as_str() == digest.as_str()
+            let tags_to_delete: Vec<String> = stream::iter(
+                result
+                    .tags
+                    .into_iter()
+                    .filter_map(|tag_name| {
+                        tag_name
+                            .parse::<crate::types::Tag>()
+                            .ok()
+                            .map(|tag| (tag_name, tag))
+                    })
+                    .map(|(tag_name, tag)| async move {
+                        match self.resolve_tag(repository, &tag).await {
+                            Ok(tag_digest) if tag_digest.as_str() == digest.as_str() => {
+                                Some(tag_name)
+                            },
+                            _ => None,
+                        }
+                    }),
+            )
+            .buffer_unordered(self.concurrency)
+            .filter_map(|x| async { x })
+            .collect()
+            .await;
+
+            for tag_name in tags_to_delete {
+                let tag_key = self.tag_link_key(repository, &tag_name);
+                if let Err(e) = self
+                    .client
+                    .delete_object()
+                    .bucket(&self.config.bucket_arn)
+                    .key(&tag_key)
+                    .send()
+                    .await
                 {
-                    let tag_key = self.tag_link_key(repository, &tag_name);
-                    if let Err(e) = self
-                        .client
-                        .delete_object()
-                        .bucket(&self.config.bucket_arn)
-                        .key(&tag_key)
-                        .send()
-                        .await
-                    {
-                        report_cleanup_error(&self.log, "delete_manifest: tag link delete", &e);
-                    }
+                    report_cleanup_error(&self.log, "delete_manifest: tag link delete", &e);
                 }
             }
         }
@@ -1995,6 +2044,7 @@ async fn cleanup_stale_uploads_s3(
     client: Client,
     config: OciStorageConfig,
     upload_timeout: u64,
+    clock: Clock,
 ) {
     let global_prefix = match &config.prefix {
         Some(prefix) => format!("{prefix}/_uploads"),
@@ -2041,7 +2091,7 @@ async fn cleanup_stale_uploads_s3(
         }
     }
 
-    let now = Utc::now().timestamp();
+    let now = clock.now();
     let timeout_secs = i64::try_from(upload_timeout).unwrap_or(i64::MAX);
 
     for prefix in all_prefixes {

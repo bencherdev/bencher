@@ -8,6 +8,8 @@
 )]
 //! Integration tests for OCI upload session endpoints.
 
+use std::sync::Arc;
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::time::Duration;
 
 use bencher_api_tests::TestServer;
@@ -932,12 +934,18 @@ async fn test_concurrent_uploads_different_sessions() {
 // Upload Session Expiration Tests
 // =============================================================================
 
-// Start a session, let it expire, start another session (triggers cleanup),
-// then verify the first session is gone
+// Start a session, advance mock clock past timeout, start another session
+// (triggers cleanup), then verify the first session is gone
 #[tokio::test]
 async fn test_upload_session_expired() {
+    let base_time = chrono::Utc::now().timestamp();
+    let mock_time = Arc::new(AtomicI64::new(base_time));
+    let time_ref = mock_time.clone();
+    let clock =
+        bencher_oci_storage::Clock::Custom(Arc::new(move || time_ref.load(Ordering::Relaxed)));
+
     // 1-second upload timeout
-    let server = TestServer::new_with_limits(1, 1_073_741_824).await;
+    let server = TestServer::new_with_clock(1, 1_073_741_824, clock).await;
     let user = server
         .signup("Expired User", "uploadexpired@example.com")
         .await;
@@ -947,7 +955,7 @@ async fn test_upload_session_expired() {
     let oci_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    // Start session A
+    // Start session A (created_at = base_time)
     let start_a = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
@@ -965,10 +973,10 @@ async fn test_upload_session_expired() {
         .to_owned();
     let session_id_a = extract_session_id(&location_a).expect("Invalid location format A");
 
-    // Wait for session A to become stale
-    tokio::time::sleep(Duration::from_secs(2)).await;
+    // Advance mock clock past the 1-second timeout (no real sleep!)
+    mock_time.fetch_add(2, Ordering::Relaxed);
 
-    // Start session B (triggers spawn_stale_upload_cleanup)
+    // Start session B (triggers spawn_stale_upload_cleanup which sees session A as stale)
     let start_b = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
@@ -986,10 +994,11 @@ async fn test_upload_session_expired() {
         .to_owned();
     let session_id_b = extract_session_id(&location_b).expect("Invalid location format B");
 
-    // Poll for background cleanup task to complete (retry loop instead of fixed sleep)
+    // Poll for background cleanup task to complete
+    // (short intervals — only waiting for tokio::spawn scheduling, not wall-clock staleness)
     let mut cleaned_up = false;
-    for _ in 0..10 {
-        tokio::time::sleep(Duration::from_millis(200)).await;
+    for _ in 0..50 {
+        tokio::time::sleep(Duration::from_millis(10)).await;
         let check_a = server
             .client
             .get(server.api_url(&format!(

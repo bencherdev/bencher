@@ -128,6 +128,7 @@ async fn test_blob_exists() {
     assert_eq!(resp.status(), StatusCode::OK);
     assert!(resp.headers().contains_key("docker-content-digest"));
     assert!(resp.headers().contains_key("content-length"));
+    assert!(!resp.headers().contains_key("accept-ranges"));
 }
 
 // HEAD /v2/{name}/blobs/{digest} - Blob not found
@@ -195,6 +196,7 @@ async fn test_blob_get() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::OK);
+    assert!(!resp.headers().contains_key("accept-ranges"));
     let body = resp.bytes().await.expect("Failed to read body");
     assert_eq!(body.as_ref(), blob_data);
 }

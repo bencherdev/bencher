@@ -57,7 +57,9 @@ urlencoding = { workspace = true, optional = true }
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
+bencher_oci_storage = { workspace = true, features = ["plus", "test-clock"] }
 bencher_token.workspace = true
+chrono.workspace = true
 http.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 serde_json.workspace = true

@@ -377,7 +377,10 @@ async fn handle_nonexistent_project(
             Err(HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::NOT_FOUND,
-                format!("Project not found: {uuid}"),
+                oci_error_body(
+                    OCI_ERROR_NAME_UNKNOWN,
+                    &format!("Repository not found: {uuid}"),
+                ),
             ))
         },
         ProjectResourceId::Slug(slug) => {

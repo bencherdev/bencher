@@ -11,7 +11,7 @@ use bencher_json::oci::Manifest;
 use bencher_oci_storage::{Digest, OciError, OciStorage, ProjectUuid, Reference};
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, RequestContext, UntypedBody, endpoint};
-use futures::stream::{self, StreamExt as _};
+use futures::stream::{self, TryStreamExt as _};
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -371,8 +371,8 @@ async fn verify_referenced_blobs(
         .unwrap_or(1)
         .clamp(1, 64);
 
-    let results: Vec<Result<(), HttpError>> = stream::iter(parsed_digests.into_iter().map(
-        |(digest, digest_str)| async move {
+    stream::iter(parsed_digests.into_iter().map(Ok))
+        .try_for_each_concurrent(concurrency, |(digest, digest_str)| async move {
             let exists = storage
                 .blob_exists(repository, &digest)
                 .await
@@ -383,15 +383,8 @@ async fn verify_referenced_blobs(
                 ));
             }
             Ok(())
-        },
-    ))
-    .buffer_unordered(concurrency)
-    .collect()
-    .await;
-
-    for result in results {
-        result?;
-    }
+        })
+        .await?;
 
     Ok(())
 }

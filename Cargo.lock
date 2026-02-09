@@ -196,6 +196,7 @@ dependencies = [
  "bencher_schema",
  "bencher_token",
  "bytes",
+ "chrono",
  "dropshot",
  "futures",
  "http 1.4.0",
@@ -1114,6 +1115,7 @@ dependencies = [
  "libsqlite3-sys",
  "reqwest",
  "sha2",
+ "slog",
  "tempfile",
  "tokio",
 ]

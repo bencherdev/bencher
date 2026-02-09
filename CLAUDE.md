@@ -170,6 +170,7 @@ The API server includes an OCI Distribution Spec compliant container registry, r
   - `cargo gen-types` (if the API changed at all)
 - Use idiomatic, strong types instead of `String` and `serde_json::Value` where possible
 - Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
+- All time-based tests should be deterministic and use time manipulation not real wall-clock time
 
 ### Frontend (TypeScript)
 

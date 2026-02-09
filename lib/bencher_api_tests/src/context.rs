@@ -36,17 +36,32 @@ pub struct TestServer {
 impl TestServer {
     /// Create a new test server with default settings.
     pub async fn new() -> Self {
-        Self::new_inner(None, None).await
+        Self::build(None, None, None).await
     }
 
     /// Create a new test server with custom upload timeout and max body size.
     #[cfg(feature = "plus")]
     pub async fn new_with_limits(upload_timeout: u64, max_body_size: u64) -> Self {
-        Self::new_inner(Some(upload_timeout), Some(max_body_size)).await
+        Self::build(Some(upload_timeout), Some(max_body_size), None).await
     }
 
-    #[expect(clippy::expect_used, clippy::unused_async, clippy::too_many_lines)]
-    async fn new_inner(upload_timeout: Option<u64>, max_body_size: Option<u64>) -> Self {
+    /// Create a new test server with custom upload timeout, max body size, and injectable clock.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_clock(
+        upload_timeout: u64,
+        max_body_size: u64,
+        clock: bencher_oci_storage::Clock,
+    ) -> Self {
+        Self::build(Some(upload_timeout), Some(max_body_size), Some(clock)).await
+    }
+
+    #[cfg(feature = "plus")]
+    #[expect(clippy::expect_used, clippy::unused_async)]
+    async fn build(
+        upload_timeout: Option<u64>,
+        max_body_size: Option<u64>,
+        clock: Option<bencher_oci_storage::Clock>,
+    ) -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {
             level: ConfigLoggingLevel::Warn,
@@ -87,7 +102,6 @@ impl TestServer {
             data_store: None,
         };
 
-        #[cfg(feature = "plus")]
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
@@ -110,22 +124,81 @@ impl TestServer {
                 std::path::Path::new(&db_path),
                 upload_timeout,
                 max_body_size,
+                clock,
             )
             .expect("Failed to create OCI storage"),
         };
-        #[cfg(not(feature = "plus"))]
-        let context = {
-            let _ = (upload_timeout, max_body_size);
-            ApiContext {
-                console_url: ISSUER.parse().expect("Invalid console URL"),
-                token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
-                rbac,
-                messenger: Messenger::default(),
-                database,
-                restart_tx,
-            }
+
+        Self::start_server(context, &log, token_key, db_file)
+    }
+
+    #[cfg(not(feature = "plus"))]
+    #[expect(clippy::expect_used, clippy::unused_async, clippy::too_many_lines)]
+    async fn build(
+        upload_timeout: Option<u64>,
+        max_body_size: Option<u64>,
+        _clock: Option<()>,
+    ) -> Self {
+        // Create logger early so it can be used for OCI storage
+        let log_config = ConfigLogging::StderrTerminal {
+            level: ConfigLoggingLevel::Warn,
+        };
+        let log = log_config
+            .to_logger("bencher_api_tests")
+            .expect("Failed to create logger");
+
+        // Create a temporary database file
+        let db_file = NamedTempFile::new().expect("Failed to create temp db file");
+        let db_path = db_file.path().to_str().expect("Invalid db path").to_owned();
+
+        // Establish connection and run migrations
+        let mut conn =
+            DbConnection::establish(&db_path).expect("Failed to establish database connection");
+        run_migrations(&mut conn).expect("Failed to run migrations");
+
+        // Create connection pools
+        let public_pool = Pool::builder()
+            .max_size(2)
+            .build(ConnectionManager::<DbConnection>::new(&db_path))
+            .expect("Failed to create public pool");
+        let auth_pool = Pool::builder()
+            .max_size(2)
+            .build(ConnectionManager::<DbConnection>::new(&db_path))
+            .expect("Failed to create auth pool");
+
+        // Build minimal ApiContext
+        let token_key = TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let rbac = init_rbac().expect("Failed to init RBAC").into();
+        let (restart_tx, _restart_rx) = mpsc::channel(1);
+
+        let database = Database {
+            path: PathBuf::from(&db_path),
+            public_pool,
+            auth_pool,
+            connection: Arc::new(Mutex::new(conn)),
+            data_store: None,
         };
 
+        let _ = (upload_timeout, max_body_size);
+        let context = ApiContext {
+            console_url: ISSUER.parse().expect("Invalid console URL"),
+            token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
+            rbac,
+            messenger: Messenger::default(),
+            database,
+            restart_tx,
+        };
+
+        Self::start_server(context, &log, token_key, db_file)
+    }
+
+    #[expect(clippy::expect_used)]
+    fn start_server(
+        context: ApiContext,
+        log: &slog::Logger,
+        token_key: TokenKey,
+        db_file: NamedTempFile,
+    ) -> Self {
         // Create API description and register endpoints
         let mut api_description = ApiDescription::new();
         #[cfg(feature = "plus")]
@@ -151,7 +224,7 @@ impl TestServer {
         };
 
         // Start the server
-        let server = dropshot::HttpServerStarter::new(&config, api_description, context, &log)
+        let server = dropshot::HttpServerStarter::new(&config, api_description, context, log)
             .expect("Failed to create server")
             .start();
 

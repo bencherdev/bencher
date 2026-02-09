@@ -74,6 +74,7 @@ impl Plus {
                     database_path,
                     None,
                     None,
+                    None,
                 )
                 .map_err(PlusError::OciStorage)?,
             });
@@ -102,6 +103,7 @@ impl Plus {
             database_path,
             upload_timeout,
             max_body_size,
+            None,
         )
         .map_err(PlusError::OciStorage)?;
 

@@ -136,8 +136,7 @@ pub async fn oci_blob_exists(
             .status(http::StatusCode::OK)
             .header(http::header::CONTENT_TYPE, APPLICATION_OCTET_STREAM)
             .header(http::header::CONTENT_LENGTH, size)
-            .header(DOCKER_CONTENT_DIGEST, digest.to_string())
-            .header(http::header::ACCEPT_RANGES, "bytes"),
+            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
         &[http::Method::HEAD, http::Method::GET],
     )
     .body(Body::empty())
@@ -200,8 +199,7 @@ pub async fn oci_blob_get(
             .status(http::StatusCode::OK)
             .header(http::header::CONTENT_TYPE, APPLICATION_OCTET_STREAM)
             .header(http::header::CONTENT_LENGTH, size)
-            .header(DOCKER_CONTENT_DIGEST, digest.to_string())
-            .header(http::header::ACCEPT_RANGES, "bytes"),
+            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
         &[http::Method::GET],
     )
     .body(Body::wrap(blob_body))
