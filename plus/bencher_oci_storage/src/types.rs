@@ -311,7 +311,7 @@ pub(crate) fn extract_subject_digest(manifest_bytes: &[u8]) -> Option<Digest> {
 /// `subject`) combined with the provided `digest` and `content_size` to produce an OCI
 /// descriptor suitable for the referrers API.
 ///
-/// Returns `None` if the manifest has no `subject` field.
+/// Returns `None` if the manifest has no `subject` field or if `content_size` overflows `i64`.
 pub(crate) fn build_referrer_descriptor(
     manifest: &bencher_json::oci::Manifest,
     digest: &Digest,
@@ -323,7 +323,7 @@ pub(crate) fn build_referrer_descriptor(
     let descriptor = bencher_json::oci::OciDescriptor {
         media_type: manifest.media_type().to_owned(),
         digest: digest.to_string(),
-        size: i64::try_from(content_size).unwrap_or(i64::MAX),
+        size: i64::try_from(content_size).ok()?,
         urls: None,
         annotations: manifest.annotations().cloned(),
         data: None,

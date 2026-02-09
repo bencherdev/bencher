@@ -250,6 +250,9 @@ pub async fn oci_upload_chunk(
             // If exactly one side parses, the range is malformed
             let partial_parse = start_ok.is_some() != end_ok.is_some();
 
+            // If neither side parses, the range is also malformed
+            let neither_parsed = start_ok.is_none() && end_ok.is_none();
+
             // Validate start offset matches current upload size
             let start_mismatch = start_ok.is_some_and(|start| start != current_size);
 
@@ -267,7 +270,7 @@ pub async fn oci_upload_chunk(
                 _ => false,
             };
 
-            if partial_parse || start_mismatch || end_mismatch {
+            if partial_parse || neither_parsed || start_mismatch || end_mismatch {
                 // Return 416 with Location and Range headers per OCI spec
                 let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
                 let response = oci_cors_headers(

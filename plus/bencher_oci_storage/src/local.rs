@@ -348,7 +348,12 @@ impl OciLocalStorage {
             OciStorageError::LocalStorage(format!("Failed to sync upload data: {e}"))
         })?;
 
-        Ok(projected_total)
+        let actual_metadata = fs::metadata(&data_path).await.map_err(|e| {
+            OciStorageError::LocalStorage(format!(
+                "Failed to get upload file metadata after write: {e}"
+            ))
+        })?;
+        Ok(actual_metadata.len())
     }
 
     /// Gets the current size of an in-progress upload
@@ -466,7 +471,7 @@ impl OciLocalStorage {
     /// since stale uploads can't appear faster than the timeout period.
     fn spawn_stale_upload_cleanup(&self) {
         let now = self.clock.now();
-        let last = self.last_cleanup.load(Ordering::Relaxed);
+        let last = self.last_cleanup.load(Ordering::Acquire);
         let timeout_secs = i64::try_from(self.upload_timeout).unwrap_or(i64::MAX);
         if now.saturating_sub(last) < timeout_secs {
             return;
@@ -474,7 +479,7 @@ impl OciLocalStorage {
         // Atomically claim the cleanup slot; if another thread raced us, skip.
         if self
             .last_cleanup
-            .compare_exchange(last, now, Ordering::Relaxed, Ordering::Relaxed)
+            .compare_exchange(last, now, Ordering::AcqRel, Ordering::Acquire)
             .is_err()
         {
             return;

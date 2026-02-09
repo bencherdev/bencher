@@ -598,12 +598,11 @@ async fn test_upload_malformed_content_range() {
         .await
         .expect("Request failed");
 
-    // Content-Range with completely unparseable values on both sides should be ignored
-    // (no range validation) and the upload should proceed normally
+    // Content-Range with completely unparseable values on both sides should be rejected
     assert_eq!(
         resp.status(),
-        StatusCode::ACCEPTED,
-        "Unparseable Content-Range should be ignored and upload should succeed"
+        StatusCode::RANGE_NOT_SATISFIABLE,
+        "Unparseable Content-Range should be rejected as malformed"
     );
 }
 

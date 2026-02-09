@@ -1002,7 +1002,7 @@ impl OciS3Storage {
     /// since stale uploads can't appear faster than the timeout period.
     fn spawn_stale_upload_cleanup(&self) {
         let now = self.clock.now();
-        let last = self.last_cleanup.load(Ordering::Relaxed);
+        let last = self.last_cleanup.load(Ordering::Acquire);
         let timeout_secs = i64::try_from(self.upload_timeout).unwrap_or(i64::MAX);
         if now.saturating_sub(last) < timeout_secs {
             return;
@@ -1010,7 +1010,7 @@ impl OciS3Storage {
         // Atomically claim the cleanup slot; if another thread raced us, skip.
         if self
             .last_cleanup
-            .compare_exchange(last, now, Ordering::Relaxed, Ordering::Relaxed)
+            .compare_exchange(last, now, Ordering::AcqRel, Ordering::Acquire)
             .is_err()
         {
             return;
@@ -2252,32 +2252,44 @@ async fn prefix_is_stale(
     now: i64,
     timeout_secs: i64,
 ) -> bool {
-    let Ok(response) = client
-        .list_objects_v2()
-        .bucket(&config.bucket_arn)
-        .prefix(prefix)
-        .max_keys(100)
-        .send()
-        .await
-    else {
-        return false;
-    };
+    let mut newest: i64 = 0;
+    let mut found_any = false;
+    let mut continuation_token: Option<String> = None;
 
-    let Some(contents) = &response.contents else {
-        // No objects at all under this prefix — truly empty, safe to consider stale
-        return true;
-    };
+    loop {
+        let mut request = client
+            .list_objects_v2()
+            .bucket(&config.bucket_arn)
+            .prefix(prefix);
 
-    if contents.is_empty() {
-        return true;
+        if let Some(token) = continuation_token.take() {
+            request = request.continuation_token(token);
+        }
+
+        let Ok(response) = request.send().await else {
+            return false;
+        };
+
+        if let Some(contents) = &response.contents {
+            for obj in contents {
+                found_any = true;
+                if let Some(lm) = obj.last_modified {
+                    newest = newest.max(lm.secs());
+                }
+            }
+        }
+
+        if response.is_truncated == Some(true) {
+            continuation_token = response.next_continuation_token;
+        } else {
+            break;
+        }
     }
 
-    // Find the newest last-modified timestamp across all objects
-    let newest = contents
-        .iter()
-        .filter_map(|obj| obj.last_modified.map(|lm| lm.secs()))
-        .max()
-        .unwrap_or(0);
+    if !found_any {
+        // No objects at all under this prefix — truly empty, safe to consider stale
+        return true;
+    }
 
     now.saturating_sub(newest) > timeout_secs
 }
