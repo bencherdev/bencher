@@ -986,24 +986,25 @@ async fn test_upload_session_expired() {
         .to_owned();
     let session_id_b = extract_session_id(&location_b).expect("Invalid location format B");
 
-    // Wait for background cleanup task to complete
-    tokio::time::sleep(Duration::from_millis(500)).await;
-
-    // Session A should be cleaned up (404)
-    let check_a = server
-        .client
-        .get(server.api_url(&format!(
-            "/v2/{}/blobs/uploads/{}",
-            project_slug, session_id_a
-        )))
-        .send()
-        .await
-        .expect("Check session A failed");
-    assert_eq!(
-        check_a.status(),
-        StatusCode::NOT_FOUND,
-        "Expired session A should be cleaned up"
-    );
+    // Poll for background cleanup task to complete (retry loop instead of fixed sleep)
+    let mut cleaned_up = false;
+    for _ in 0..10 {
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        let check_a = server
+            .client
+            .get(server.api_url(&format!(
+                "/v2/{}/blobs/uploads/{}",
+                project_slug, session_id_a
+            )))
+            .send()
+            .await
+            .expect("Check session A failed");
+        if check_a.status() == StatusCode::NOT_FOUND {
+            cleaned_up = true;
+            break;
+        }
+    }
+    assert!(cleaned_up, "Expired session A should be cleaned up");
 
     // Session B should still be valid (204)
     let check_b = server

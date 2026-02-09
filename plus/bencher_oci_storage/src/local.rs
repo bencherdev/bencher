@@ -185,7 +185,7 @@ impl OciLocalStorage {
     fn manifest_path(&self, repository: &ProjectUuid, digest: &Digest) -> PathBuf {
         self.repository_dir(repository)
             .join("manifests")
-            .join("sha256")
+            .join(digest.algorithm())
             .join(digest.hex_hash())
     }
 
@@ -778,6 +778,25 @@ impl OciLocalStorage {
             }
         }
 
+        // Clean up any tags that point to this digest (best-effort)
+        let tags_dir = self.repository_dir(repository).join("tags");
+        if let Ok(mut entries) = fs::read_dir(&tags_dir).await {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                if let Ok(content) = fs::read_to_string(entry.path()).await
+                    && let Ok(tag_digest) = content.trim().parse::<Digest>()
+                    && tag_digest.as_str() == digest.as_str()
+                    && let Err(e) = fs::remove_file(entry.path()).await
+                    && e.kind() != io::ErrorKind::NotFound
+                {
+                    crate::storage::report_cleanup_error(
+                        &self.log,
+                        "delete_manifest: tag link delete",
+                        &e,
+                    );
+                }
+            }
+        }
+
         // Delete the manifest itself
         match fs::remove_file(&path).await {
             Ok(()) => Ok(()),
@@ -925,4 +944,199 @@ async fn dir_is_stale(entry: &fs::DirEntry, now: i64, timeout_secs: i64) -> bool
     .unwrap_or(i64::MAX);
     let dir_age = now.saturating_sub(modified_secs);
     dir_age > timeout_secs
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bytes::Bytes;
+
+    /// Create a test `OciLocalStorage` backed by a temporary directory.
+    fn test_storage(tmp: &tempfile::TempDir) -> OciLocalStorage {
+        let db_path = tmp.path().join("bencher.db");
+        let log = Logger::root(slog::Discard, slog::o!());
+        OciLocalStorage::new(log, &db_path, 3600, 1_073_741_824)
+    }
+
+    /// Create a minimal OCI manifest JSON for testing
+    fn test_manifest_json(config_digest: &str) -> String {
+        serde_json::json!({
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "config": {
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+                "digest": config_digest,
+                "size": 100
+            },
+            "layers": []
+        })
+        .to_string()
+    }
+
+    fn test_repository() -> ProjectUuid {
+        "00000000-0000-0000-0000-000000000001".parse().unwrap()
+    }
+
+    #[tokio::test]
+    async fn put_and_get_manifest_by_digest() {
+        let tmp = tempfile::tempdir().unwrap();
+        let storage = test_storage(&tmp);
+        let repo = test_repository();
+        let content = test_manifest_json(
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        );
+        let manifest = bencher_json::oci::Manifest::from_bytes(content.as_bytes()).unwrap();
+
+        let digest = storage
+            .put_manifest(&repo, Bytes::from(content.clone()), None, &manifest)
+            .await
+            .unwrap();
+
+        let retrieved = storage
+            .get_manifest_by_digest(&repo, &digest)
+            .await
+            .unwrap();
+        assert_eq!(retrieved.as_ref(), content.as_bytes());
+    }
+
+    #[tokio::test]
+    async fn put_manifest_with_tag_and_resolve() {
+        let tmp = tempfile::tempdir().unwrap();
+        let storage = test_storage(&tmp);
+        let repo = test_repository();
+        let content = test_manifest_json(
+            "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        );
+        let manifest = bencher_json::oci::Manifest::from_bytes(content.as_bytes()).unwrap();
+        let tag: crate::types::Tag = "latest".parse().unwrap();
+
+        let digest = storage
+            .put_manifest(&repo, Bytes::from(content), Some(&tag), &manifest)
+            .await
+            .unwrap();
+
+        let resolved = storage.resolve_tag(&repo, &tag).await.unwrap();
+        assert_eq!(resolved.as_str(), digest.as_str());
+    }
+
+    #[tokio::test]
+    async fn delete_manifest_removes_tags() {
+        let tmp = tempfile::tempdir().unwrap();
+        let storage = test_storage(&tmp);
+        let repo = test_repository();
+        let content = test_manifest_json(
+            "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        );
+        let manifest = bencher_json::oci::Manifest::from_bytes(content.as_bytes()).unwrap();
+        let tag1: crate::types::Tag = "v1".parse().unwrap();
+        let tag2: crate::types::Tag = "v2".parse().unwrap();
+
+        // Push manifest with tag1, then overwrite tag2 to point to the same digest
+        let digest = storage
+            .put_manifest(&repo, Bytes::from(content.clone()), Some(&tag1), &manifest)
+            .await
+            .unwrap();
+        let _digest2 = storage
+            .put_manifest(&repo, Bytes::from(content), Some(&tag2), &manifest)
+            .await
+            .unwrap();
+
+        // Delete manifest by digest
+        storage.delete_manifest(&repo, &digest).await.unwrap();
+
+        // Both tags should be gone
+        assert!(storage.resolve_tag(&repo, &tag1).await.is_err());
+        assert!(storage.resolve_tag(&repo, &tag2).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn upload_round_trip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let storage = test_storage(&tmp);
+        let repo = test_repository();
+
+        let upload_id = storage.start_upload(&repo).await.unwrap();
+
+        let data = b"hello world blob data";
+        let total = storage
+            .append_upload(&upload_id, Bytes::from_static(data))
+            .await
+            .unwrap();
+        assert_eq!(total, data.len() as u64);
+
+        let expected_digest = Digest::from_sha256_bytes(data);
+        let actual_digest = storage
+            .complete_upload(&upload_id, &expected_digest)
+            .await
+            .unwrap();
+        assert_eq!(actual_digest.as_str(), expected_digest.as_str());
+
+        // Blob should now exist
+        assert!(storage.blob_exists(&repo, &actual_digest).await.unwrap());
+        let (blob_data, size) = storage.get_blob(&repo, &actual_digest).await.unwrap();
+        assert_eq!(blob_data.as_ref(), data);
+        assert_eq!(size, data.len() as u64);
+    }
+
+    #[tokio::test]
+    async fn cancel_upload_cleans_up() {
+        let tmp = tempfile::tempdir().unwrap();
+        let storage = test_storage(&tmp);
+        let repo = test_repository();
+
+        let upload_id = storage.start_upload(&repo).await.unwrap();
+        storage
+            .append_upload(&upload_id, Bytes::from_static(b"some data"))
+            .await
+            .unwrap();
+
+        storage.cancel_upload(&upload_id).await.unwrap();
+
+        // Upload dir should be gone
+        let upload_dir = storage.upload_dir(&upload_id);
+        assert!(!upload_dir.exists());
+    }
+
+    #[tokio::test]
+    async fn blob_exists_nonexistent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let storage = test_storage(&tmp);
+        let repo = test_repository();
+        let digest = Digest::from_sha256_bytes(b"no such blob");
+
+        assert!(!storage.blob_exists(&repo, &digest).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn stale_upload_cleanup() {
+        let tmp = tempfile::tempdir().unwrap();
+        let storage = test_storage(&tmp);
+        let repo = test_repository();
+
+        let upload_id = storage.start_upload(&repo).await.unwrap();
+        storage
+            .append_upload(&upload_id, Bytes::from_static(b"stale data"))
+            .await
+            .unwrap();
+
+        // Manually set created_at to epoch time to make it stale
+        let state_path = storage.upload_state_path(&upload_id);
+        let state_data = fs::read(&state_path).await.unwrap();
+        let mut state: UploadState = serde_json::from_slice(&state_data).unwrap();
+        state.created_at = 0;
+        fs::write(&state_path, serde_json::to_vec(&state).unwrap())
+            .await
+            .unwrap();
+
+        // Run cleanup with 1-second timeout
+        let log = Logger::root(slog::Discard, slog::o!());
+        cleanup_stale_uploads_local(&log, &storage.uploads_dir(), 1).await;
+
+        // Upload dir should be gone
+        let upload_dir = storage.upload_dir(&upload_id);
+        assert!(
+            !upload_dir.exists(),
+            "Stale upload directory should have been cleaned up"
+        );
+    }
 }

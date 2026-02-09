@@ -257,8 +257,12 @@ pub async fn oci_upload_chunk(
             // end - start + 1 should equal the body length
             let end_mismatch = match (start_ok, end_ok) {
                 (Some(start), Some(end)) => {
-                    let expected_len = end.saturating_sub(start) + 1;
-                    expected_len != data.len() as u64
+                    if end < start {
+                        true
+                    } else {
+                        let expected_len = end - start + 1;
+                        expected_len != data.len() as u64
+                    }
                 },
                 _ => false,
             };

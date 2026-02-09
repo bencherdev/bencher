@@ -30,6 +30,7 @@ bencher_token.workspace = true
 diesel = { workspace = true, features = ["sqlite"] }
 dropshot.workspace = true
 hex.workspace = true
+http.workspace = true
 libsqlite3-sys.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 sha2.workspace = true

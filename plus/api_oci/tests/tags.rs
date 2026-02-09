@@ -9,35 +9,7 @@
 //! Integration tests for OCI tags endpoint.
 
 use bencher_api_tests::TestServer;
-use bencher_api_tests::oci::compute_digest;
 use http::StatusCode;
-
-/// Upload a single blob and return its digest.
-async fn upload_blob(
-    server: &TestServer,
-    project_slug: &str,
-    auth_token: &str,
-    data: &[u8],
-) -> String {
-    let digest = compute_digest(data);
-    let resp = server
-        .client
-        .put(server.api_url(&format!(
-            "/v2/{}/blobs/uploads?digest={}",
-            project_slug, digest
-        )))
-        .header("Authorization", format!("Bearer {}", auth_token))
-        .body(data.to_vec())
-        .send()
-        .await
-        .expect("Blob upload failed");
-    assert_eq!(
-        resp.status(),
-        StatusCode::CREATED,
-        "Blob upload should succeed"
-    );
-    digest
-}
 
 /// Create a minimal OCI manifest JSON for testing
 fn create_test_manifest(config_digest: &str) -> String {
@@ -61,13 +33,13 @@ async fn upload_blob_and_create_manifest(
     push_token: &str,
     suffix: &str,
 ) -> String {
-    let config_digest = upload_blob(
-        server,
-        project_slug,
-        push_token,
-        format!("config-{suffix}").as_bytes(),
-    )
-    .await;
+    let config_digest = server
+        .upload_blob(
+            project_slug,
+            push_token,
+            format!("config-{suffix}").as_bytes(),
+        )
+        .await;
     create_test_manifest(&config_digest)
 }
 

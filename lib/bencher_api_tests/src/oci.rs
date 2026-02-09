@@ -48,4 +48,24 @@ impl TestServer {
             &[OciAction::Pull, OciAction::Push],
         )
     }
+
+    /// Upload a single blob and return its digest.
+    #[expect(clippy::expect_used)]
+    pub async fn upload_blob(&self, project_slug: &str, auth_token: &str, data: &[u8]) -> String {
+        let digest = compute_digest(data);
+        let resp = self
+            .client
+            .put(self.api_url(&format!("/v2/{project_slug}/blobs/uploads?digest={digest}")))
+            .header("Authorization", format!("Bearer {auth_token}"))
+            .body(data.to_vec())
+            .send()
+            .await
+            .expect("Blob upload failed");
+        assert_eq!(
+            resp.status(),
+            http::StatusCode::CREATED,
+            "Blob upload should succeed"
+        );
+        digest
+    }
 }

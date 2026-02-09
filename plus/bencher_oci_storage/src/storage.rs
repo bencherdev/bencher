@@ -43,7 +43,7 @@ pub(crate) fn report_cleanup_error(log: &Logger, context: &str, error: &impl std
     #[cfg(feature = "sentry")]
     sentry::capture_message(
         &format!("OCI cleanup error ({context}): {error}"),
-        sentry::Level::Error,
+        sentry::Level::Warning,
     );
 }
 
@@ -710,8 +710,9 @@ impl OciS3Storage {
     /// Returns the S3 key for a manifest by digest
     fn manifest_key_by_digest(&self, repository: &ProjectUuid, digest: &Digest) -> String {
         format!(
-            "{}/manifests/sha256/{}",
+            "{}/manifests/{}/{}",
             self.key_prefix(repository),
+            digest.algorithm(),
             digest.hex_hash()
         )
     }
@@ -1733,6 +1734,28 @@ impl OciS3Storage {
             }
         }
 
+        // Clean up any tags that point to this digest (best-effort)
+        if let Ok(result) = self.list_tags(repository, None, None).await {
+            for tag_name in result.tags {
+                if let Ok(tag) = tag_name.parse::<crate::types::Tag>()
+                    && let Ok(tag_digest) = self.resolve_tag(repository, &tag).await
+                    && tag_digest.as_str() == digest.as_str()
+                {
+                    let tag_key = self.tag_link_key(repository, &tag_name);
+                    if let Err(e) = self
+                        .client
+                        .delete_object()
+                        .bucket(&self.config.bucket_arn)
+                        .key(&tag_key)
+                        .send()
+                        .await
+                    {
+                        report_cleanup_error(&self.log, "delete_manifest: tag link delete", &e);
+                    }
+                }
+            }
+        }
+
         // Delete the manifest itself
         let key = self.manifest_key_by_digest(repository, digest);
         self.client
@@ -2197,4 +2220,95 @@ async fn prefix_is_stale(
         .unwrap_or(0);
 
     now.saturating_sub(newest) > timeout_secs
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn s3_arn_valid_without_path() {
+        let arn: S3Arn = "arn:aws:s3:us-east-1:123456789012:accesspoint/my-bucket"
+            .parse()
+            .unwrap();
+        assert_eq!(arn.partition, "aws");
+        assert_eq!(arn.region, "us-east-1");
+        assert_eq!(arn.account_id, "123456789012");
+        assert_eq!(arn.bucket_name, "my-bucket");
+        assert!(arn.bucket_path.is_none());
+    }
+
+    #[test]
+    fn s3_arn_valid_with_path() {
+        let arn: S3Arn = "arn:aws:s3:eu-west-1:987654321098:accesspoint/my-bucket/some/prefix"
+            .parse()
+            .unwrap();
+        assert_eq!(arn.partition, "aws");
+        assert_eq!(arn.region, "eu-west-1");
+        assert_eq!(arn.account_id, "987654321098");
+        assert_eq!(arn.bucket_name, "my-bucket");
+        assert_eq!(arn.bucket_path.as_deref(), Some("some/prefix"));
+    }
+
+    #[test]
+    fn s3_arn_bucket_arn_round_trip() {
+        let arn: S3Arn = "arn:aws:s3:us-west-2:111111111111:accesspoint/test-bucket"
+            .parse()
+            .unwrap();
+        assert_eq!(
+            arn.bucket_arn(),
+            "arn:aws:s3:us-west-2:111111111111:accesspoint/test-bucket"
+        );
+    }
+
+    #[test]
+    fn s3_arn_bucket_arn_strips_path() {
+        let arn: S3Arn = "arn:aws:s3:us-west-2:111111111111:accesspoint/test-bucket/path"
+            .parse()
+            .unwrap();
+        assert_eq!(
+            arn.bucket_arn(),
+            "arn:aws:s3:us-west-2:111111111111:accesspoint/test-bucket"
+        );
+    }
+
+    #[test]
+    fn s3_arn_missing_prefix() {
+        let result = "not-arn:aws:s3:us-east-1:123:accesspoint/b".parse::<S3Arn>();
+        assert!(matches!(result, Err(S3ArnError::BadPrefix(_))));
+    }
+
+    #[test]
+    fn s3_arn_bad_service() {
+        let result = "arn:aws:ec2:us-east-1:123:accesspoint/b".parse::<S3Arn>();
+        assert!(matches!(result, Err(S3ArnError::BadService(_))));
+    }
+
+    #[test]
+    fn s3_arn_missing_accesspoint() {
+        let result = "arn:aws:s3:us-east-1:123:bucket-only".parse::<S3Arn>();
+        assert!(matches!(result, Err(S3ArnError::NoAccessPoint)));
+    }
+
+    #[test]
+    fn s3_arn_empty_bucket_name() {
+        let result = "arn:aws:s3:us-east-1:123:accesspoint/".parse::<S3Arn>();
+        assert!(matches!(result, Err(S3ArnError::BadBucketName(_))));
+    }
+
+    #[test]
+    fn s3_arn_missing_resource() {
+        let result = "arn:aws:s3:us-east-1:123".parse::<S3Arn>();
+        assert!(matches!(result, Err(S3ArnError::NoResource)));
+    }
+
+    #[test]
+    fn s3_arn_gov_cloud_partition() {
+        let arn: S3Arn = "arn:aws-us-gov:s3:us-gov-west-1:123:accesspoint/gov-bucket"
+            .parse()
+            .unwrap();
+        assert_eq!(arn.partition, "aws-us-gov");
+        assert_eq!(arn.region, "us-gov-west-1");
+        assert_eq!(arn.bucket_name, "gov-bucket");
+    }
 }

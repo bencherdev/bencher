@@ -348,6 +348,7 @@ async fn test_manifest_delete_by_tag() {
     )
     .await;
     let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest_digest = compute_digest(manifest.as_bytes());
 
     let upload_resp = server
         .client
@@ -382,6 +383,24 @@ async fn test_manifest_delete_by_tag() {
         .expect("Request failed");
 
     assert_eq!(check_resp.status(), StatusCode::NOT_FOUND);
+
+    // Verify manifest is still accessible by digest (tag deletion only removes the tag link)
+    let digest_check = server
+        .client
+        .head(server.api_url(&format!(
+            "/v2/{}/manifests/{}",
+            project_slug, manifest_digest
+        )))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        digest_check.status(),
+        StatusCode::OK,
+        "Manifest should still be accessible by digest after tag-only deletion"
+    );
 }
 
 // DELETE /v2/{name}/manifests/{reference} - Delete manifest by digest
@@ -435,6 +454,115 @@ async fn test_manifest_delete_by_digest() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::ACCEPTED);
+
+    // Verify the tag was also cleaned up
+    let pull_token = server.oci_pull_token(&user, &project);
+    let check_resp = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/manifests/digest-delete", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        check_resp.status(),
+        StatusCode::NOT_FOUND,
+        "Tag 'digest-delete' should be cleaned up after manifest delete by digest"
+    );
+}
+
+// DELETE /v2/{name}/manifests/{reference} - Delete manifest by digest cleans multiple tags
+#[tokio::test]
+async fn test_manifest_delete_by_digest_cleans_multiple_tags() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("DeleteMultiTag User", "deletemultitag@example.com")
+        .await;
+    let org = server.create_org(&user, "DeleteMultiTag Org").await;
+    let project = server
+        .create_project(&user, &org, "DeleteMultiTag Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload blobs and manifest with first tag
+    let (config_digest, layer_digest) = upload_test_blobs(
+        &server,
+        project_slug,
+        Some(&push_token),
+        b"config for multi-tag delete",
+        b"layer for multi-tag delete",
+    )
+    .await;
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest_digest = compute_digest(manifest.as_bytes());
+
+    // Push with tag "alpha"
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/alpha", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest.clone())
+        .send()
+        .await
+        .expect("Upload alpha failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Push same manifest with tag "beta"
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/beta", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Upload beta failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Delete by digest
+    let resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v2/{}/manifests/{}",
+            project_slug, manifest_digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .send()
+        .await
+        .expect("Delete failed");
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+
+    // Both tags should be gone
+    let check_alpha = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/manifests/alpha", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Check alpha failed");
+    assert_eq!(
+        check_alpha.status(),
+        StatusCode::NOT_FOUND,
+        "Tag 'alpha' should be cleaned up"
+    );
+
+    let check_beta = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/manifests/beta", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Check beta failed");
+    assert_eq!(
+        check_beta.status(),
+        StatusCode::NOT_FOUND,
+        "Tag 'beta' should be cleaned up"
+    );
 }
 
 // OPTIONS /v2/{name}/manifests/{reference} - CORS preflight
@@ -1888,5 +2016,37 @@ async fn test_manifest_read_after_storage_deleted() {
         resp.status(),
         StatusCode::NOT_FOUND,
         "Manifest read after storage deleted should return 404"
+    );
+}
+
+// PUT /v2/{name}/manifests/{reference} - Invalid JSON body should be rejected
+#[tokio::test]
+async fn test_manifest_put_invalid_json_body() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("InvalidJSON User", "invalidjson@example.com")
+        .await;
+    let org = server.create_org(&user, "InvalidJSON Org").await;
+    let project = server
+        .create_project(&user, &org, "InvalidJSON Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body("this is not valid json {{{")
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Invalid JSON body should be rejected"
     );
 }
