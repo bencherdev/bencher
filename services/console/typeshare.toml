@@ -32,6 +32,7 @@
 "NameId" = "Uuid | Slug | string"
 # Other types
 "DateTime" = "string"
+"Utf8PathBuf" = "string"
 "OrderedFloat" = "number"
 "BigInt" = "number"
 "TimestampMillis" = "number"

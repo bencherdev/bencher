@@ -745,6 +745,7 @@ mod job_spec {
         assert_eq!(spec.disk, 10737418240); // 10 GB
         assert_eq!(spec.timeout, 3600);
         assert!(!spec.network);
+        assert!(spec.file_paths.is_none());
     }
 
     // Test that optional spec fields (entrypoint, cmd, env) are correctly returned
@@ -797,6 +798,15 @@ mod job_spec {
         let env = spec.env.as_ref().expect("Expected env");
         assert_eq!(env.get("RUST_LOG"), Some(&"info".to_string()));
         assert_eq!(env.get("CI"), Some(&"true".to_string()));
+
+        let file_paths: Vec<&str> = spec
+            .file_paths
+            .as_ref()
+            .expect("Expected file_paths")
+            .iter()
+            .map(|p| p.as_str())
+            .collect();
+        assert_eq!(file_paths, vec!["/output/results.json", "/tmp/bench.txt"]);
     }
 
     // Test that invalid spec JSON returns a 400 error

@@ -18,6 +18,7 @@ plus = ["bencher_valid/plus"]
 [dependencies]
 bencher_context.workspace = true
 bencher_valid = { workspace = true, features = ["schema"] }
+camino = { workspace = true, features = ["serde1"] }
 derive_more.workspace = true
 diesel = { workspace = true, optional = true }
 ordered-float = { workspace = true, features = ["serde"] }

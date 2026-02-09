@@ -219,7 +219,8 @@ pub fn insert_test_job_with_optional_fields(
         "memory": 8589934592_u64,  // 8 GB
         "disk": 21474836480_u64,   // 20 GB
         "timeout": 7200,
-        "network": true
+        "network": true,
+        "file_paths": ["/output/results.json", "/tmp/bench.txt"]
     });
 
     diesel::insert_into(schema::job::table)

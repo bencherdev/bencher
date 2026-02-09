@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_valid::{DateTime, ImageDigest, Url};
+use camino::Utf8PathBuf;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -106,6 +107,10 @@ pub struct JsonJobSpec {
     pub timeout: u32,
     /// Whether the VM has network access
     pub network: bool,
+    /// File paths to read from the VM after job completion
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<Vec<String>>"))]
+    pub file_paths: Option<Vec<Utf8PathBuf>>,
 }
 
 const PENDING_INT: i32 = 0;

@@ -1337,6 +1337,7 @@ version = "0.5.10"
 dependencies = [
  "bencher_context",
  "bencher_valid",
+ "camino",
  "derive_more 2.1.0",
  "diesel",
  "ordered-float",
