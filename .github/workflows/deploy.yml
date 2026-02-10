@@ -52,6 +52,7 @@ jobs:
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: cli
@@ -60,7 +61,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ inputs.go-version }}
-      - uses: actions/checkout@v6
       - name: Download API Docker Artifact
         uses: actions/download-artifact@v4
         with:
