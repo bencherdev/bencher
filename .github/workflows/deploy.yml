@@ -52,6 +52,14 @@ jobs:
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: cli
+          mold-version: ${{ inputs.mold-version }}
+      - name: Setup Go (for OCI conformance tests)
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
       - uses: actions/checkout@v6
       - name: Download API Docker Artifact
         uses: actions/download-artifact@v4
@@ -65,21 +73,15 @@ jobs:
       - name: Deploy Local API to Fly.io
         working-directory: ./services/api
         run: flyctl deploy --local-only --config fly/fly.dev.toml --wait-timeout 300
-      - uses: ./.github/actions/setup-rust
-        with:
-          cache-key: cli
-          mold-version: ${{ inputs.mold-version }}
-      - name: Run Smoke Test
-        env:
-          RUST_BACKTRACE: full
-        run: cargo test-api smoke dev
-      - name: Setup Go (for OCI conformance tests)
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ inputs.go-version }}
       - name: Scale up Dev Machines
         working-directory: ./services/api
         run: flyctl scale vm performance-8x --app bencher-api-dev
+      - name: Run Smoke Test
+        id: smoke-test
+        continue-on-error: true
+        env:
+          RUST_BACKTRACE: full
+        run: cargo test-api smoke dev
       - name: Run OCI Conformance Test
         continue-on-error: true
         run: |
@@ -91,6 +93,9 @@ jobs:
         if: always()
         working-directory: ./services/api
         run: flyctl scale vm shared-cpu-1x --app bencher-api-dev
+      - name: Check Smoke Test Result
+        if: steps.smoke-test.outcome == 'failure'
+        run: exit 1
 
   deploy_console_netlify_dev:
     name: Deploy Console UI to Netlify Dev
