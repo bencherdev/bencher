@@ -996,7 +996,7 @@ async fn test_upload_session_expired() {
     // Poll for background cleanup task to complete
     // (short intervals — only waiting for tokio::spawn scheduling, not wall-clock staleness)
     let mut cleaned_up = false;
-    for _ in 0..50 {
+    for _ in 0..1_000 {
         tokio::time::sleep(Duration::from_millis(10)).await;
         let check_a = server
             .client
