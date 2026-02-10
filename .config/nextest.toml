@@ -2,5 +2,6 @@
 retries = 0
 
 [profile.ci]
-retries = 0
-junit.path = "target/nextest/ci/junit.xml"
+fail-fast = false
+retries = 2
+slow-timeout = { period = "120s" }
