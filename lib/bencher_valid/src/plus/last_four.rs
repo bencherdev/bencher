@@ -94,4 +94,17 @@ mod tests {
             assert_eq!(false, is_valid_last_four(invalid_number));
         }
     }
+
+    #[test]
+    fn last_four_serde_roundtrip() {
+        use super::LastFour;
+
+        let last_four: LastFour = serde_json::from_str("\"1234\"").unwrap();
+        assert_eq!(last_four.as_ref(), "1234");
+        let json = serde_json::to_string(&last_four).unwrap();
+        assert_eq!(json, "\"1234\"");
+
+        let err = serde_json::from_str::<LastFour>("\"XXXX\"");
+        assert!(err.is_err());
+    }
 }

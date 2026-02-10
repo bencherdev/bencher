@@ -21,7 +21,7 @@ const UNKNOWN: &str = "unknown";
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Default, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(try_from = "String", rename_all = "snake_case")]
+#[serde(try_from = "String", into = "String", rename_all = "snake_case")]
 pub enum CardBrand {
     Amex,
     Diners,
@@ -111,5 +111,18 @@ mod tests {
         assert_eq!(false, is_valid_card_brand(" amex"));
         assert_eq!(false, is_valid_card_brand("amex "));
         assert_eq!(false, is_valid_card_brand(" amex "));
+    }
+
+    #[test]
+    fn card_brand_serde_roundtrip() {
+        use super::CardBrand;
+
+        let brand: CardBrand = serde_json::from_str("\"amex\"").unwrap();
+        assert_eq!(brand, CardBrand::Amex);
+        let json = serde_json::to_string(&brand).unwrap();
+        assert_eq!(json, "\"amex\"");
+
+        let err = serde_json::from_str::<CardBrand>("\"invalid\"");
+        assert!(err.is_err());
     }
 }

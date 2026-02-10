@@ -93,4 +93,17 @@ mod tests {
             assert_eq!(false, is_valid_resource_name(value), "{value}");
         }
     }
+
+    #[test]
+    fn resource_name_serde_roundtrip() {
+        use super::ResourceName;
+
+        let name: ResourceName = serde_json::from_str("\"My Resource\"").unwrap();
+        assert_eq!(name.as_ref(), "My Resource");
+        let json = serde_json::to_string(&name).unwrap();
+        assert_eq!(json, "\"My Resource\"");
+
+        let err = serde_json::from_str::<ResourceName>("\"\"");
+        assert!(err.is_err());
+    }
 }

@@ -182,4 +182,18 @@ mod tests {
     fn jwt_test_token() {
         assert_eq!(true, is_valid_jwt(Jwt::test_token().as_ref()));
     }
+
+    #[test]
+    fn jwt_serde_roundtrip() {
+        let jwt_str = format!("{HEADER}.{PAYLOAD}.{SIGNATURE}");
+        let json_str = format!("\"{jwt_str}\"");
+
+        let jwt: Jwt = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(jwt.as_ref(), jwt_str);
+        let json = serde_json::to_string(&jwt).unwrap();
+        assert_eq!(json, json_str);
+
+        let err = serde_json::from_str::<Jwt>("\"not-a-jwt\"");
+        assert!(err.is_err());
+    }
 }

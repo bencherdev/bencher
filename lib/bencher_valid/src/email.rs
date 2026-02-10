@@ -123,4 +123,15 @@ mod tests {
             Email::from_str("ABC.xYz@Example.coM").unwrap()
         );
     }
+
+    #[test]
+    fn email_serde_roundtrip() {
+        let email: Email = serde_json::from_str("\"ABC@Example.COM\"").unwrap();
+        assert_eq!(email.as_ref(), "abc@example.com");
+        let json = serde_json::to_string(&email).unwrap();
+        assert_eq!(json, "\"abc@example.com\"");
+
+        let err = serde_json::from_str::<Email>("\"not-an-email\"");
+        assert!(err.is_err());
+    }
 }

@@ -85,4 +85,17 @@ mod tests {
     fn is_valid_non_empty_false() {
         assert_eq!(false, is_valid_non_empty(LEN_0_STR));
     }
+
+    #[test]
+    fn non_empty_serde_roundtrip() {
+        use super::NonEmpty;
+
+        let non_empty: NonEmpty = serde_json::from_str("\"hello\"").unwrap();
+        assert_eq!(non_empty.as_ref(), "hello");
+        let json = serde_json::to_string(&non_empty).unwrap();
+        assert_eq!(json, "\"hello\"");
+
+        let err = serde_json::from_str::<NonEmpty>("\"\"");
+        assert!(err.is_err());
+    }
 }

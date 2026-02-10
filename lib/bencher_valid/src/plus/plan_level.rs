@@ -32,7 +32,7 @@ const BENCHER_ENTERPRISE: &str = "Bencher Enterprise";
     Deserialize,
 )]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(try_from = "String", rename_all = "snake_case")]
+#[serde(try_from = "String", into = "String", rename_all = "snake_case")]
 pub enum PlanLevel {
     #[default]
     Free,
@@ -104,5 +104,18 @@ mod tests {
         assert_eq!(false, is_valid_plan_level(" free"));
         assert_eq!(false, is_valid_plan_level("free "));
         assert_eq!(false, is_valid_plan_level(" free "));
+    }
+
+    #[test]
+    fn plan_level_serde_roundtrip() {
+        use super::PlanLevel;
+
+        let level: PlanLevel = serde_json::from_str("\"team\"").unwrap();
+        assert_eq!(level, PlanLevel::Team);
+        let json = serde_json::to_string(&level).unwrap();
+        assert_eq!(json, "\"team\"");
+
+        let err = serde_json::from_str::<PlanLevel>("\"invalid\"");
+        assert!(err.is_err());
     }
 }

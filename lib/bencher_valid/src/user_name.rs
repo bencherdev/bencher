@@ -121,4 +121,17 @@ mod tests {
             assert_eq!(false, is_valid_user_name(name), "{name}");
         }
     }
+
+    #[test]
+    fn user_name_serde_roundtrip() {
+        use super::UserName;
+
+        let name: UserName = serde_json::from_str("\"Muriel Bagge\"").unwrap();
+        assert_eq!(name.as_ref(), "Muriel Bagge");
+        let json = serde_json::to_string(&name).unwrap();
+        assert_eq!(json, "\"Muriel Bagge\"");
+
+        let err = serde_json::from_str::<UserName>("\"Muriel!\"");
+        assert!(err.is_err());
+    }
 }

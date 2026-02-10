@@ -21,7 +21,7 @@ const UNPAID: &str = "unpaid";
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(try_from = "String", rename_all = "snake_case")]
+#[serde(try_from = "String", into = "String", rename_all = "snake_case")]
 pub enum PlanStatus {
     Active,
     Canceled,
@@ -116,5 +116,18 @@ mod tests {
         assert_eq!(false, is_valid_plan_status(" active"));
         assert_eq!(false, is_valid_plan_status("active "));
         assert_eq!(false, is_valid_plan_status(" active "));
+    }
+
+    #[test]
+    fn plan_status_serde_roundtrip() {
+        use super::PlanStatus;
+
+        let status: PlanStatus = serde_json::from_str("\"incomplete_expired\"").unwrap();
+        assert_eq!(status, PlanStatus::IncompleteExpired);
+        let json = serde_json::to_string(&status).unwrap();
+        assert_eq!(json, "\"incomplete_expired\"");
+
+        let err = serde_json::from_str::<PlanStatus>("\"invalid\"");
+        assert!(err.is_err());
     }
 }

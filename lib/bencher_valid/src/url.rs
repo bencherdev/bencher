@@ -100,4 +100,17 @@ mod tests {
             assert_eq!(false, is_valid_url(url), "{url}");
         }
     }
+
+    #[test]
+    fn url_serde_roundtrip() {
+        use super::Url;
+
+        let url: Url = serde_json::from_str("\"https://example.com\"").unwrap();
+        assert_eq!(url.as_ref(), "https://example.com");
+        let json = serde_json::to_string(&url).unwrap();
+        assert_eq!(json, "\"https://example.com\"");
+
+        let err = serde_json::from_str::<Url>("\"not a url\"");
+        assert!(err.is_err());
+    }
 }

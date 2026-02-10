@@ -76,3 +76,20 @@ impl From<Secret> for String {
         secret.0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Secret;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn secret_serde_roundtrip() {
+        let secret: Secret = serde_json::from_str("\"my-secret-key\"").unwrap();
+        assert_eq!(secret.as_ref(), "my-secret-key");
+        let json = serde_json::to_string(&secret).unwrap();
+        assert_eq!(json, "\"my-secret-key\"");
+
+        let err = serde_json::from_str::<Secret>("\"\"");
+        assert!(err.is_err());
+    }
+}

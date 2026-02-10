@@ -90,4 +90,18 @@ mod tests {
             assert_eq!(false, is_valid_git_hash(hash), "{hash}");
         }
     }
+
+    #[test]
+    fn git_hash_serde_roundtrip() {
+        use super::GitHash;
+
+        let hash: GitHash =
+            serde_json::from_str("\"1234567890abcdefaaaaaaaaaaaaaaaaaaaaaaaa\"").unwrap();
+        assert_eq!(hash.as_ref(), "1234567890abcdefaaaaaaaaaaaaaaaaaaaaaaaa");
+        let json = serde_json::to_string(&hash).unwrap();
+        assert_eq!(json, "\"1234567890abcdefaaaaaaaaaaaaaaaaaaaaaaaa\"");
+
+        let err = serde_json::from_str::<GitHash>("\"abcd\"");
+        assert!(err.is_err());
+    }
 }

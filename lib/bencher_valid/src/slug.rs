@@ -204,4 +204,15 @@ mod tests {
     fn benchmark_name_issue_610() {
         assert!(Slug::new("...").is_none());
     }
+
+    #[test]
+    fn slug_serde_roundtrip() {
+        let slug: Slug = serde_json::from_str("\"a-valid-slug\"").unwrap();
+        assert_eq!(slug.as_ref(), "a-valid-slug");
+        let json = serde_json::to_string(&slug).unwrap();
+        assert_eq!(json, "\"a-valid-slug\"");
+
+        let err = serde_json::from_str::<Slug>("\"NOT A VALID SLUG\"");
+        assert!(err.is_err());
+    }
 }

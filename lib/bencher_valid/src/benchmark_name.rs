@@ -258,4 +258,15 @@ mod tests {
             (stripped_benchmark_name, true)
         );
     }
+
+    #[test]
+    fn benchmark_name_serde_roundtrip() {
+        let name: BenchmarkName = serde_json::from_str("\"my benchmark\"").unwrap();
+        assert_eq!(name.as_ref(), "my benchmark");
+        let json = serde_json::to_string(&name).unwrap();
+        assert_eq!(json, "\"my benchmark\"");
+
+        let err = serde_json::from_str::<BenchmarkName>("\"\"");
+        assert!(err.is_err());
+    }
 }

@@ -104,4 +104,17 @@ mod tests {
             assert_eq!(false, is_valid_branch_name(name), "{name}");
         }
     }
+
+    #[test]
+    fn branch_name_serde_roundtrip() {
+        use super::BranchName;
+
+        let name: BranchName = serde_json::from_str("\"main\"").unwrap();
+        assert_eq!(name.as_ref(), "main");
+        let json = serde_json::to_string(&name).unwrap();
+        assert_eq!(json, "\"main\"");
+
+        let err = serde_json::from_str::<BranchName>("\"\"");
+        assert!(err.is_err());
+    }
 }

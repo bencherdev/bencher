@@ -89,4 +89,17 @@ mod tests {
         assert_eq!(false, is_valid_card_cvc("12345"));
         assert_eq!(false, is_valid_card_cvc("bad"));
     }
+
+    #[test]
+    fn card_cvc_serde_roundtrip() {
+        use super::CardCvc;
+
+        let cvc: CardCvc = serde_json::from_str("\"123\"").unwrap();
+        assert_eq!(cvc.as_ref(), "123");
+        let json = serde_json::to_string(&cvc).unwrap();
+        assert_eq!(json, "\"123\"");
+
+        let err = serde_json::from_str::<CardCvc>("\"bad\"");
+        assert!(err.is_err());
+    }
 }

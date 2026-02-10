@@ -181,4 +181,17 @@ mod tests {
             assert_eq!(false, is_valid_card_number(invalid_number));
         }
     }
+
+    #[test]
+    fn card_number_serde_roundtrip() {
+        use super::CardNumber;
+
+        let number: CardNumber = serde_json::from_str("\"4917300800000000\"").unwrap();
+        assert_eq!(number.as_ref(), "4917300800000000");
+        let json = serde_json::to_string(&number).unwrap();
+        assert_eq!(json, "\"4917300800000000\"");
+
+        let err = serde_json::from_str::<CardNumber>("\"bad\"");
+        assert!(err.is_err());
+    }
 }
