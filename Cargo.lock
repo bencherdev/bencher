@@ -281,6 +281,7 @@ dependencies = [
  "bencher_json",
  "bencher_otel",
  "bencher_schema",
+ "camino",
  "diesel",
  "dropshot",
  "futures",

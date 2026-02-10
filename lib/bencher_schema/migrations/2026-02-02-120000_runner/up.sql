@@ -6,7 +6,7 @@ CREATE TABLE runner (
     slug TEXT NOT NULL UNIQUE,
     token_hash TEXT NOT NULL,
     state INTEGER NOT NULL DEFAULT 0,
-    locked BIGINT,
+
     archived BIGINT,
     last_heartbeat BIGINT,
     created BIGINT NOT NULL,

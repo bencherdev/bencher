@@ -201,57 +201,6 @@ async fn test_runners_update_name() {
     assert_eq!(runner.name.as_ref(), "Updated Name");
 }
 
-// PATCH /v0/runners/{runner} - lock runner
-#[tokio::test]
-async fn test_runners_lock() {
-    let server = TestServer::new().await;
-    let admin = server.signup("Admin", "runneradmin6@example.com").await;
-
-    // Create a runner
-    let body = serde_json::json!({
-        "name": "Lock Test Runner"
-    });
-    let resp = server
-        .client
-        .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    let runner_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
-
-    // Verify not locked
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/runners/{}", runner_token.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
-        .send()
-        .await
-        .expect("Request failed");
-
-    let runner: JsonRunner = resp.json().await.expect("Failed to parse response");
-    assert!(runner.locked.is_none());
-
-    // Lock the runner - use current timestamp
-    let body = serde_json::json!({
-        "locked": "2024-01-01T00:00:00Z"
-    });
-    let resp = server
-        .client
-        .patch(server.api_url(&format!("/v0/runners/{}", runner_token.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let runner: JsonRunner = resp.json().await.expect("Failed to parse response");
-    assert!(runner.locked.is_some());
-}
-
 // PATCH /v0/runners/{runner} - archive runner
 #[tokio::test]
 async fn test_runners_archive() {

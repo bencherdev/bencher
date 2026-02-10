@@ -88,7 +88,6 @@ pub struct JsonRunner {
     pub name: ResourceName,
     pub slug: Slug,
     pub state: RunnerState,
-    pub locked: Option<DateTime>,
     pub archived: Option<DateTime>,
     pub last_heartbeat: Option<DateTime>,
     pub created: DateTime,
@@ -134,8 +133,6 @@ pub struct JsonUpdateRunner {
     pub name: Option<ResourceName>,
     /// The new slug for the runner.
     pub slug: Option<Slug>,
-    /// Lock the runner (set to current time) or unlock (set to null).
-    pub locked: Option<Option<DateTime>>,
     /// Archive the runner (set to current time) or unarchive (set to null).
     pub archived: Option<Option<DateTime>>,
 }

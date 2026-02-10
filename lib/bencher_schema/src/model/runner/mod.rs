@@ -27,7 +27,6 @@ pub struct QueryRunner {
     pub slug: Slug,
     pub token_hash: String,
     pub state: RunnerState,
-    pub locked: Option<DateTime>,
     pub archived: Option<DateTime>,
     pub last_heartbeat: Option<DateTime>,
     pub created: DateTime,
@@ -66,10 +65,6 @@ impl QueryRunner {
         }
     }
 
-    pub fn is_locked(&self) -> bool {
-        self.locked.is_some()
-    }
-
     pub fn is_archived(&self) -> bool {
         self.archived.is_some()
     }
@@ -80,7 +75,6 @@ impl QueryRunner {
             name: self.name,
             slug: self.slug,
             state: self.state,
-            locked: self.locked,
             archived: self.archived,
             last_heartbeat: self.last_heartbeat,
             created: self.created,
@@ -123,7 +117,6 @@ pub struct UpdateRunner {
     pub slug: Option<Slug>,
     pub token_hash: Option<String>,
     pub state: Option<RunnerState>,
-    pub locked: Option<Option<DateTime>>,
     pub archived: Option<Option<DateTime>>,
     pub last_heartbeat: Option<Option<DateTime>>,
     pub modified: Option<DateTime>,

@@ -38,6 +38,9 @@ export type ExpirationYear = number;
 
 export type GitHash = string;
 
+/** An OCI image digest (e.g., "sha256:abc123...") */
+export type ImageDigest = string;
+
 export type Index = number;
 
 export type Iteration = number;
@@ -56,6 +59,8 @@ export enum JobStatus {
 export interface JsonJob {
 	uuid: JobUuid;
 	status: JobStatus;
+	/** Job specification (only included when claimed by a runner) */
+	spec?: JsonJobSpec;
 	runner?: RunnerUuid;
 	claimed?: string;
 	started?: string;
@@ -265,7 +270,6 @@ export interface JsonRunner {
 	name: ResourceName;
 	slug: string;
 	state: RunnerState;
-	locked?: string;
 	archived?: string;
 	last_heartbeat?: string;
 	created: string;
@@ -801,8 +805,8 @@ export interface JsonUpdateJob {
 	stdout?: string;
 	/** Standard error */
 	stderr?: string;
-	/** Combined or additional output */
-	output?: string;
+	/** File path to contents map */
+	output?: Record<string, string> | undefined;
 }
 
 /** Response to job update */
@@ -817,8 +821,6 @@ export interface JsonUpdateRunner {
 	name?: ResourceName;
 	/** The new slug for the runner. */
 	slug?: string;
-	/** Lock the runner (set to current time) or unlock (set to null). */
-	locked?: string | null;
 	/** Archive the runner (set to current time) or unarchive (set to null). */
 	archived?: string | null;
 }

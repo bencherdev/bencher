@@ -95,44 +95,6 @@ async fn test_claim_job_wrong_runner_token() {
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
 
-// POST /v0/runners/{runner}/jobs - locked runner rejected
-#[tokio::test]
-async fn test_claim_job_locked_runner() {
-    let server = TestServer::new().await;
-    let admin = server.signup("Admin", "jobsadmin4@example.com").await;
-
-    let runner = create_runner(&server, &admin.token, "Locked Runner").await;
-    let runner_token: &str = runner.token.as_ref();
-
-    // Lock the runner
-    let body = serde_json::json!({
-        "locked": "2024-01-01T00:00:00Z"
-    });
-    server
-        .client
-        .patch(server.api_url(&format!("/v0/runners/{}", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    // Try to claim job with locked runner
-    let body = serde_json::json!({
-        "poll_timeout": 1
-    });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::LOCKED);
-}
-
 // POST /v0/runners/{runner}/jobs - missing Authorization header
 #[tokio::test]
 async fn test_claim_job_missing_auth() {

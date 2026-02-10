@@ -2,6 +2,8 @@
 //!
 //! Provides a persistent connection for heartbeat and status updates during job execution.
 
+use std::collections::HashMap;
+
 use bencher_json::{DateTime, JobStatus, JobUuid, RunnerResourceId};
 use bencher_schema::{
     auth_conn,
@@ -10,6 +12,7 @@ use bencher_schema::{
     model::runner::{JobId, QueryJob, UpdateJob, job::spawn_heartbeat_timeout},
     schema, write_conn,
 };
+use camino::Utf8PathBuf;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::WebsocketConnectionRaw;
 use dropshot::{Path, RequestContext, WebsocketChannelResult, WebsocketConnection, channel};
@@ -50,13 +53,21 @@ pub enum RunnerMessage {
     Completed {
         exit_code: i32,
         #[serde(skip_serializing_if = "Option::is_none")]
-        output: Option<String>,
+        stdout: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        stderr: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        output: Option<HashMap<Utf8PathBuf, String>>,
     },
     /// Benchmark failed.
     Failed {
         #[serde(skip_serializing_if = "Option::is_none")]
         exit_code: Option<i32>,
         error: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        stdout: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        stderr: Option<String>,
     },
     /// Acknowledge cancellation from server.
     Cancelled,
@@ -262,13 +273,23 @@ async fn handle_runner_message(
                 return Ok(cancel);
             }
         },
-        RunnerMessage::Completed { exit_code, output } => {
+        RunnerMessage::Completed {
+            exit_code,
+            stdout,
+            stderr,
+            output,
+        } => {
             slog::info!(log, "Job completed"; "job_id" => ?job_id, "exit_code" => exit_code);
-            handle_completed(log, context, job_id, exit_code, output).await?;
+            handle_completed(log, context, job_id, exit_code, stdout, stderr, output).await?;
         },
-        RunnerMessage::Failed { exit_code, error } => {
+        RunnerMessage::Failed {
+            exit_code,
+            error,
+            stdout,
+            stderr,
+        } => {
             slog::warn!(log, "Job failed"; "job_id" => ?job_id, "exit_code" => ?exit_code, "error" => &error);
-            handle_failed(log, context, job_id, exit_code).await?;
+            handle_failed(log, context, job_id, exit_code, stdout, stderr).await?;
         },
         RunnerMessage::Cancelled => {
             slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job_id);
@@ -377,7 +398,9 @@ async fn handle_completed(
     context: &ApiContext,
     job_id: JobId,
     exit_code: i32,
-    output: Option<String>,
+    stdout: Option<String>,
+    stderr: Option<String>,
+    output: Option<HashMap<Utf8PathBuf, String>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let now = DateTime::now();
 
@@ -414,6 +437,8 @@ async fn handle_completed(
     ));
 
     // TODO: Store output somewhere (job table or separate results table)
+    drop(stdout);
+    drop(stderr);
     drop(output);
 
     Ok(())
@@ -425,6 +450,8 @@ async fn handle_failed(
     context: &ApiContext,
     job_id: JobId,
     exit_code: Option<i32>,
+    stdout: Option<String>,
+    stderr: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let now = DateTime::now();
 
@@ -459,6 +486,10 @@ async fn handle_failed(
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
         bencher_otel::JobStatusKind::Failed,
     ));
+
+    // TODO: Store output somewhere (job table or separate results table)
+    drop(stdout);
+    drop(stderr);
 
     Ok(())
 }

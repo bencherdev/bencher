@@ -247,7 +247,7 @@ async fn get_one_inner(
 ///
 /// Update a runner on the server.
 /// The user must be an admin to use this endpoint.
-/// Can be used to lock, unlock, archive, or unarchive a runner.
+/// Can be used to archive or unarchive a runner.
 #[endpoint {
     method = PATCH,
     path = "/v0/runners/{runner}",
@@ -274,7 +274,6 @@ async fn patch_inner(
     let update_runner = UpdateRunner {
         name: json_runner.name.clone(),
         slug: json_runner.slug.clone(),
-        locked: json_runner.locked,
         archived: json_runner.archived,
         modified: Some(DateTime::now()),
         ..Default::default()

@@ -51,8 +51,10 @@ pub struct JsonUpdateJob {
     pub stdout: Option<String>,
     /// Standard error
     pub stderr: Option<String>,
-    /// Combined or additional output
-    pub output: Option<String>,
+    /// File path to contents map
+    #[typeshare(typescript(type = "Record<string, string> | undefined"))]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<HashMap<String, String>>"))]
+    pub output: Option<HashMap<Utf8PathBuf, String>>,
 }
 
 /// Response to job update
@@ -78,7 +80,6 @@ pub struct JsonClaimJob {
 /// Contains the minimal information needed for a runner to execute a job.
 /// Designed to minimize data leakage - runners only learn what's necessary
 /// to pull and execute an OCI image.
-#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonJobSpec {

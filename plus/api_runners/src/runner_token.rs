@@ -2,7 +2,7 @@ use bencher_json::RunnerResourceId;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{forbidden_error, locked_error, resource_not_found_err},
+    error::{forbidden_error, resource_not_found_err},
     model::runner::{QueryRunner, RunnerId},
     schema,
 };
@@ -57,11 +57,6 @@ impl RunnerToken {
             .optional()
             .map_err(resource_not_found_err!(Runner))?
             .ok_or_else(|| forbidden_error("Invalid runner token"))?;
-
-        // Check if runner is locked
-        if runner.is_locked() {
-            return Err(locked_error("Runner is locked"));
-        }
 
         // Verify the runner matches the path parameter
         let expected = QueryRunner::from_resource_id(auth_conn!(context), expected_runner)?;

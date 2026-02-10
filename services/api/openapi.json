@@ -7782,7 +7782,7 @@
           "runners"
         ],
         "summary": "Update a runner",
-        "description": "Update a runner on the server. The user must be an admin to use this endpoint. Can be used to lock, unlock, archive, or unarchive a runner.",
+        "description": "Update a runner on the server. The user must be an admin to use this endpoint. Can be used to archive or unarchive a runner.",
         "operationId": "runner_patch",
         "parameters": [
           {
@@ -10485,6 +10485,10 @@
           "append"
         ]
       },
+      "ImageDigest": {
+        "description": "An OCI image digest (e.g., \"sha256:abc123...\")",
+        "type": "string"
+      },
       "Index": {
         "type": "integer",
         "format": "uint8",
@@ -11242,6 +11246,15 @@
               }
             ]
           },
+          "spec": {
+            "nullable": true,
+            "description": "Job specification (only included when claimed by a runner)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonJobSpec"
+              }
+            ]
+          },
           "started": {
             "nullable": true,
             "allOf": [
@@ -11262,6 +11275,106 @@
           "modified",
           "status",
           "uuid"
+        ]
+      },
+      "JsonJobSpec": {
+        "description": "Job specification sent to runners.\n\nContains the minimal information needed for a runner to execute a job. Designed to minimize data leakage - runners only learn what's necessary to pull and execute an OCI image.",
+        "type": "object",
+        "properties": {
+          "cmd": {
+            "nullable": true,
+            "description": "Command override (like Docker CMD)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "digest": {
+            "description": "Image digest - must be immutable (e.g., \"sha256:abc123...\")",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageDigest"
+              }
+            ]
+          },
+          "disk": {
+            "description": "Disk size in bytes",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "entrypoint": {
+            "nullable": true,
+            "description": "Entrypoint override (like Docker ENTRYPOINT)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env": {
+            "nullable": true,
+            "description": "Environment variables passed to the container",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "file_paths": {
+            "nullable": true,
+            "description": "File paths to read from the VM after job completion",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "memory": {
+            "description": "Memory size in bytes",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "network": {
+            "description": "Whether the VM has network access",
+            "type": "boolean"
+          },
+          "project": {
+            "description": "Project UUID for OCI authentication scoping",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProjectUuid"
+              }
+            ]
+          },
+          "registry": {
+            "description": "Registry URL for pulling the OCI image (e.g., `https://registry.bencher.dev`)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
+          },
+          "timeout": {
+            "description": "Maximum execution time in seconds",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "vcpu": {
+            "description": "Number of virtual CPUs for the VM",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "digest",
+          "disk",
+          "memory",
+          "network",
+          "project",
+          "registry",
+          "timeout",
+          "vcpu"
         ]
       },
       "JsonJobs": {
@@ -13273,6 +13386,14 @@
               }
             ]
           },
+          "runner": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRunnerRateLimiter"
+              }
+            ]
+          },
           "unclaimed_limit": {
             "nullable": true,
             "type": "integer",
@@ -13852,14 +13973,6 @@
               }
             ]
           },
-          "locked": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DateTime"
-              }
-            ]
-          },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -13884,6 +13997,19 @@
           "state",
           "uuid"
         ]
+      },
+      "JsonRunnerRateLimiter": {
+        "type": "object",
+        "properties": {
+          "requests": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          }
+        }
       },
       "JsonRunnerToken": {
         "description": "Runner token response (returned on create or rotate)",
@@ -14763,8 +14889,11 @@
           },
           "output": {
             "nullable": true,
-            "description": "Combined or additional output",
-            "type": "string"
+            "description": "File path to contents map",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           },
           "status": {
             "description": "New job status (running, completed, failed)",
@@ -14951,15 +15080,6 @@
           "archived": {
             "nullable": true,
             "description": "Archive the runner (set to current time) or unarchive (set to null).",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DateTime"
-              }
-            ]
-          },
-          "locked": {
-            "nullable": true,
-            "description": "Lock the runner (set to current time) or unlock (set to null).",
             "allOf": [
               {
                 "$ref": "#/components/schemas/DateTime"
