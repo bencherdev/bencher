@@ -134,7 +134,7 @@ impl TestServer {
             heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
         };
 
-        Self::start_server(context, &log, token_key, db_file)
+        Self::start_server(context, &log, token_key, db_path, db_file)
     }
 
     #[cfg(not(feature = "plus"))]
@@ -195,7 +195,7 @@ impl TestServer {
             restart_tx,
         };
 
-        Self::start_server(context, &log, token_key, db_file)
+        Self::start_server(context, &log, token_key, db_path, db_file)
     }
 
     #[expect(clippy::expect_used)]
@@ -203,6 +203,7 @@ impl TestServer {
         context: ApiContext,
         log: &slog::Logger,
         token_key: TokenKey,
+        db_path: String,
         db_file: NamedTempFile,
     ) -> Self {
         // Create API description and register endpoints

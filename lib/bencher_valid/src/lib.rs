@@ -1,6 +1,6 @@
 #[cfg(feature = "server")]
 use regex as _;
-#[cfg(all(test, not(feature = "wasm")))]
+#[cfg(test)]
 use wasm_bindgen_test as _;
 
 mod benchmark_name;
