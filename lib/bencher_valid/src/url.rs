@@ -1,20 +1,18 @@
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::ValidError;
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct Url(String);
@@ -22,15 +20,23 @@ pub struct Url(String);
 #[cfg(feature = "db")]
 crate::typed_string!(Url);
 
+impl TryFrom<String> for Url {
+    type Error = ValidError;
+
+    fn try_from(url: String) -> Result<Self, Self::Error> {
+        if is_valid_url(&url) {
+            Ok(Self(url))
+        } else {
+            Err(ValidError::Url(url))
+        }
+    }
+}
+
 impl FromStr for Url {
     type Err = ValidError;
 
     fn from_str(url: &str) -> Result<Self, Self::Err> {
-        if is_valid_url(url) {
-            Ok(Self(url.into()))
-        } else {
-            Err(ValidError::Url(url.into()))
-        }
+        Self::try_from(url.to_owned())
     }
 }
 
@@ -57,32 +63,6 @@ impl TryFrom<Url> for url::Url {
 
     fn try_from(url: Url) -> Result<Self, Self::Error> {
         url::Url::from_str(url.as_ref()).map_err(|e| ValidError::UrlToUrl(url, e))
-    }
-}
-
-impl<'de> Deserialize<'de> for Url {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(UrlVisitor)
-    }
-}
-
-struct UrlVisitor;
-
-impl Visitor<'_> for UrlVisitor {
-    type Value = Url;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid URL")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 

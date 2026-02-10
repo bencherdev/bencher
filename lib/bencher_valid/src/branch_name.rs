@@ -2,14 +2,11 @@ use derive_more::Display;
 use git_validate::reference::name_partial;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{Slug, ValidError};
 
@@ -17,8 +14,9 @@ use crate::{Slug, ValidError};
 const MAX_BRANCH_LEN: usize = 256;
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct BranchName(String);
@@ -26,15 +24,23 @@ pub struct BranchName(String);
 #[cfg(feature = "db")]
 crate::typed_string!(BranchName);
 
+impl TryFrom<String> for BranchName {
+    type Error = ValidError;
+
+    fn try_from(branch_name: String) -> Result<Self, Self::Error> {
+        if is_valid_branch_name(&branch_name) {
+            Ok(Self(branch_name))
+        } else {
+            Err(ValidError::BranchName(branch_name))
+        }
+    }
+}
+
 impl FromStr for BranchName {
     type Err = ValidError;
 
     fn from_str(branch_name: &str) -> Result<Self, Self::Err> {
-        if is_valid_branch_name(branch_name) {
-            Ok(Self(branch_name.into()))
-        } else {
-            Err(ValidError::BranchName(branch_name.into()))
-        }
+        Self::try_from(branch_name.to_owned())
     }
 }
 
@@ -53,32 +59,6 @@ impl From<BranchName> for String {
 impl From<Slug> for BranchName {
     fn from(slug: Slug) -> Self {
         Self(slug.into())
-    }
-}
-
-impl<'de> Deserialize<'de> for BranchName {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(BranchNameVisitor)
-    }
-}
-
-struct BranchNameVisitor;
-
-impl Visitor<'_> for BranchNameVisitor {
-    type Value = BranchName;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid branch name")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 

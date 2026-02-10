@@ -1,14 +1,11 @@
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::ValidError;
 
@@ -22,9 +19,9 @@ const VISA: &str = "visa";
 const UNKNOWN: &str = "unknown";
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Copy, Default, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Copy, Default, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "snake_case")]
+#[serde(try_from = "String", rename_all = "snake_case")]
 pub enum CardBrand {
     Amex,
     Diners,
@@ -37,25 +34,29 @@ pub enum CardBrand {
     Unknown,
 }
 
+impl TryFrom<String> for CardBrand {
+    type Error = ValidError;
+
+    fn try_from(card_brand: String) -> Result<Self, Self::Error> {
+        match card_brand.as_str() {
+            AMEX => Ok(Self::Amex),
+            DINERS => Ok(Self::Diners),
+            DISCOVER => Ok(Self::Discover),
+            JCB => Ok(Self::Jcb),
+            MASTERCARD => Ok(Self::Mastercard),
+            UNIONPAY => Ok(Self::Unionpay),
+            VISA => Ok(Self::Visa),
+            UNKNOWN => Ok(Self::Unknown),
+            _ => Err(ValidError::CardBrand(card_brand)),
+        }
+    }
+}
+
 impl FromStr for CardBrand {
     type Err = ValidError;
 
     fn from_str(card_brand: &str) -> Result<Self, Self::Err> {
-        if is_valid_card_brand(card_brand) {
-            return Ok(match card_brand {
-                AMEX => Self::Amex,
-                DINERS => Self::Diners,
-                DISCOVER => Self::Discover,
-                JCB => Self::Jcb,
-                MASTERCARD => Self::Mastercard,
-                UNIONPAY => Self::Unionpay,
-                VISA => Self::Visa,
-                UNKNOWN => Self::Unknown,
-                _ => return Err(ValidError::CardBrand(card_brand.into())),
-            });
-        }
-
-        Err(ValidError::CardBrand(card_brand.into()))
+        Self::try_from(card_brand.to_owned())
     }
 }
 
@@ -77,32 +78,6 @@ impl AsRef<str> for CardBrand {
 impl From<CardBrand> for String {
     fn from(card_brand: CardBrand) -> Self {
         card_brand.as_ref().to_owned()
-    }
-}
-
-impl<'de> Deserialize<'de> for CardBrand {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(CardBrandVisitor)
-    }
-}
-
-struct CardBrandVisitor;
-
-impl Visitor<'_> for CardBrandVisitor {
-    type Value = CardBrand;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid payment card brand")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 

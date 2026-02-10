@@ -1,14 +1,11 @@
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{Slug, ValidError};
 
@@ -20,8 +17,9 @@ const BENCHER_IGNORE_PASCAL_CASE: &str = "BencherIgnore";
 const BENCHER_IGNORE_KEBAB_CASE: &str = "-bencher-ignore";
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct BenchmarkName(String);
@@ -63,15 +61,23 @@ impl BenchmarkName {
     }
 }
 
+impl TryFrom<String> for BenchmarkName {
+    type Error = ValidError;
+
+    fn try_from(benchmark_name: String) -> Result<Self, Self::Error> {
+        if is_valid_benchmark_name(&benchmark_name) {
+            Ok(Self(benchmark_name))
+        } else {
+            Err(ValidError::BenchmarkName(benchmark_name))
+        }
+    }
+}
+
 impl FromStr for BenchmarkName {
     type Err = ValidError;
 
     fn from_str(benchmark_name: &str) -> Result<Self, Self::Err> {
-        if is_valid_benchmark_name(benchmark_name) {
-            Ok(Self(benchmark_name.into()))
-        } else {
-            Err(ValidError::BenchmarkName(benchmark_name.into()))
-        }
+        Self::try_from(benchmark_name.to_owned())
     }
 }
 
@@ -90,32 +96,6 @@ impl From<Slug> for BenchmarkName {
 impl From<BenchmarkName> for String {
     fn from(benchmark_name: BenchmarkName) -> Self {
         benchmark_name.0
-    }
-}
-
-impl<'de> Deserialize<'de> for BenchmarkName {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(BenchmarkNameVisitor)
-    }
-}
-
-struct BenchmarkNameVisitor;
-
-impl Visitor<'_> for BenchmarkNameVisitor {
-    type Value = BenchmarkName;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid benchmark name")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 

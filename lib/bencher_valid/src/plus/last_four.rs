@@ -7,14 +7,11 @@ use regex::Regex;
 use regex_lite::Regex;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{ValidError, error::REGEX_ERROR};
 
@@ -23,19 +20,28 @@ static LAST_FOUR_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new("^[[:digit:]]{4}$").expect(REGEX_ERROR));
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 pub struct LastFour(String);
+
+impl TryFrom<String> for LastFour {
+    type Error = ValidError;
+
+    fn try_from(last_four: String) -> Result<Self, Self::Error> {
+        if is_valid_last_four(&last_four) {
+            Ok(Self(last_four))
+        } else {
+            Err(ValidError::LastFour(last_four))
+        }
+    }
+}
 
 impl FromStr for LastFour {
     type Err = ValidError;
 
     fn from_str(last_four: &str) -> Result<Self, Self::Err> {
-        if is_valid_last_four(last_four) {
-            Ok(Self(last_four.into()))
-        } else {
-            Err(ValidError::LastFour(last_four.into()))
-        }
+        Self::try_from(last_four.to_owned())
     }
 }
 
@@ -48,32 +54,6 @@ impl AsRef<str> for LastFour {
 impl From<LastFour> for String {
     fn from(last_four: LastFour) -> Self {
         last_four.0
-    }
-}
-
-impl<'de> Deserialize<'de> for LastFour {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(LastFourVisitor)
-    }
-}
-
-struct LastFourVisitor;
-
-impl Visitor<'_> for LastFourVisitor {
-    type Value = LastFour;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid payment card last four numbers")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 

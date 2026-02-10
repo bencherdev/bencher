@@ -1,14 +1,11 @@
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::ValidError;
 
@@ -22,9 +19,9 @@ const TRIALING: &str = "trialing";
 const UNPAID: &str = "unpaid";
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "snake_case")]
+#[serde(try_from = "String", rename_all = "snake_case")]
 pub enum PlanStatus {
     Active,
     Canceled,
@@ -36,25 +33,29 @@ pub enum PlanStatus {
     Unpaid,
 }
 
+impl TryFrom<String> for PlanStatus {
+    type Error = ValidError;
+
+    fn try_from(plan_status: String) -> Result<Self, Self::Error> {
+        match plan_status.as_str() {
+            ACTIVE => Ok(Self::Active),
+            CANCELED => Ok(Self::Canceled),
+            INCOMPLETE => Ok(Self::Incomplete),
+            INCOMPLETE_EXPIRED => Ok(Self::IncompleteExpired),
+            PAST_DUE => Ok(Self::PastDue),
+            PAUSED => Ok(Self::Paused),
+            TRIALING => Ok(Self::Trialing),
+            UNPAID => Ok(Self::Unpaid),
+            _ => Err(ValidError::PlanStatus(plan_status)),
+        }
+    }
+}
+
 impl FromStr for PlanStatus {
     type Err = ValidError;
 
     fn from_str(plan_status: &str) -> Result<Self, Self::Err> {
-        if is_valid_plan_status(plan_status) {
-            return Ok(match plan_status {
-                ACTIVE => Self::Active,
-                CANCELED => Self::Canceled,
-                INCOMPLETE => Self::Incomplete,
-                INCOMPLETE_EXPIRED => Self::IncompleteExpired,
-                PAST_DUE => Self::PastDue,
-                PAUSED => Self::Paused,
-                TRIALING => Self::Trialing,
-                UNPAID => Self::Unpaid,
-                _ => return Err(ValidError::PlanStatus(plan_status.into())),
-            });
-        }
-
-        Err(ValidError::PlanStatus(plan_status.into()))
+        Self::try_from(plan_status.to_owned())
     }
 }
 
@@ -82,32 +83,6 @@ impl From<PlanStatus> for String {
 impl PlanStatus {
     pub fn is_active(&self) -> bool {
         matches!(self, Self::Active | Self::Trialing)
-    }
-}
-
-impl<'de> Deserialize<'de> for PlanStatus {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(PlanStatusVisitor)
-    }
-}
-
-struct PlanStatusVisitor;
-
-impl Visitor<'_> for PlanStatusVisitor {
-    type Value = PlanStatus;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid plan status")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 
