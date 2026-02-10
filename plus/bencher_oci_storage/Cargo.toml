@@ -8,6 +8,7 @@ publish = false
 
 [features]
 default = []
+test-clock = []
 # Required due to feature unification
 # https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
 plus = [
@@ -30,7 +31,7 @@ plus = [
     "dep:tokio-util",
     "dep:uuid",
 ]
-sentry = []
+sentry = ["dep:sentry"]
 otel = []
 
 [dependencies]
@@ -40,6 +41,8 @@ bencher_json = { workspace = true, optional = true, features = ["server", "plus"
 # AWS S3 (same as database backup)
 aws-credential-types = { workspace = true, optional = true }
 aws-sdk-s3 = { workspace = true, optional = true }
+
+sentry = { workspace = true, optional = true }
 
 # External dependencies
 bytes = { workspace = true, optional = true }
@@ -60,6 +63,8 @@ uuid = { workspace = true, optional = true, features = ["v4"] }
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
 
 [lints]
 workspace = true

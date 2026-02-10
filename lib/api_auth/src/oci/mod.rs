@@ -14,6 +14,7 @@
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
+use bencher_json::oci::{OCI_ERROR_DENIED, OCI_ERROR_UNAUTHORIZED, oci_error_body};
 use bencher_json::{Email, Jwt, ProjectResourceId};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -24,6 +25,7 @@ use bencher_schema::{
     },
     public_conn,
 };
+use bencher_token::OciAction;
 use chrono::Utc;
 use dropshot::{Body, ClientErrorStatusCode, HttpError, Query, RequestContext, endpoint};
 use http::Response;
@@ -114,7 +116,7 @@ pub async fn auth_oci_token_get(
 
     // 4. Check admin status for pull requests
     // Only server admins can pull OCI images (to prevent abuse of the registry)
-    if actions.contains(&"pull".to_owned()) {
+    if actions.contains(&OciAction::Pull) {
         let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, &email)
             .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
@@ -125,7 +127,7 @@ pub async fn auth_oci_token_get(
             return Err(HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::FORBIDDEN,
-                "Only server admins can pull OCI images".to_owned(),
+                oci_error_body(OCI_ERROR_DENIED, "Only server admins can pull OCI images"),
             ));
         }
     }
@@ -133,7 +135,7 @@ pub async fn auth_oci_token_get(
     // 5. Validate RBAC permissions for push if a repository is requested AND the organization is claimed
     // The repository name maps to a project slug
     // For unclaimed organizations, we allow push without RBAC
-    if actions.contains(&"push".to_owned())
+    if actions.contains(&OciAction::Push)
         && let Some(repo_name) = &repository
         // The repository name is a project UUID or slug
         && let Ok(project_id) = repo_name.parse::<ProjectResourceId>()
@@ -142,11 +144,18 @@ pub async fn auth_oci_token_get(
         let conn = public_conn!(context);
         if let Ok(query_project) = QueryProject::from_resource_id(conn, &project_id) {
             // Check if the organization is claimed
-            let is_claimed = if let Ok(org) = query_project.organization(conn) {
-                org.is_claimed(conn).unwrap_or(false)
-            } else {
-                false
-            };
+            // Propagate DB errors as 500 to avoid silently granting access
+            let is_claimed = query_project
+                .organization(conn)
+                .map_err(|_| {
+                    HttpError::for_internal_error("Failed to query organization".to_owned())
+                })?
+                .is_claimed(conn)
+                .map_err(|_| {
+                    HttpError::for_internal_error(
+                        "Failed to check organization claim status".to_owned(),
+                    )
+                })?;
 
             // Only require RBAC permissions if the organization is claimed
             if is_claimed {
@@ -165,8 +174,11 @@ pub async fn auth_oci_token_get(
                         HttpError::for_client_error(
                             None,
                             ClientErrorStatusCode::FORBIDDEN,
-                            format!(
-                                "Access denied to repository: {repo_name}. You need Create permission to push.",
+                            oci_error_body(
+                                OCI_ERROR_DENIED,
+                                &format!(
+                                    "Access denied to repository: {repo_name}. You need Create permission to push.",
+                                ),
                             ),
                         )
                     })?;
@@ -228,6 +240,7 @@ pub fn unauthorized_with_www_authenticate(
         .headers()
         .get(http::header::HOST)
         .and_then(|h| h.to_str().ok())
+        .filter(|h| is_valid_host(h))
         .unwrap_or("localhost");
     let realm = format!("{scheme}://{host}/v0/auth/oci/token");
 
@@ -238,20 +251,30 @@ pub fn unauthorized_with_www_authenticate(
 
     let mut www_auth = format!("Bearer realm=\"{realm}\",service=\"{service}\"");
     if let Some(scope) = scope {
+        // Sanitize scope to prevent header injection via embedded quotes
+        let sanitized_scope = scope.replace('"', "");
         // Using write! to avoid extra allocation per clippy::format_push_string
-        let _ = write!(www_auth, ",scope=\"{scope}\"");
+        let _ = write!(www_auth, ",scope=\"{sanitized_scope}\"");
     }
 
     let mut error = HttpError::for_client_error(
         None,
         ClientErrorStatusCode::UNAUTHORIZED,
-        "Authentication required".to_owned(),
+        oci_error_body(OCI_ERROR_UNAUTHORIZED, "Authentication required"),
     );
 
     // Add WWW-Authenticate header - ignore error if it fails
     let _ = error.add_header(http::header::WWW_AUTHENTICATE, &www_auth);
 
     error
+}
+
+/// Validates that a host header value contains only safe characters
+fn is_valid_host(host: &str) -> bool {
+    !host.is_empty()
+        && host.chars().all(|c| {
+            c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == ':' || c == '[' || c == ']'
+        })
 }
 
 /// Extract email and API token from Basic auth header
@@ -278,7 +301,7 @@ fn extract_basic_auth(rqctx: &RequestContext<ApiContext>) -> Result<(Email, Jwt)
         .split_once(' ')
         .ok_or_else(|| unauthorized_with_www_authenticate(rqctx, None))?;
 
-    if scheme != "Basic" {
+    if !scheme.eq_ignore_ascii_case("Basic") {
         return Err(unauthorized_with_www_authenticate(rqctx, None));
     }
 
@@ -330,7 +353,7 @@ fn extract_basic_auth(rqctx: &RequestContext<ApiContext>) -> Result<(Email, Jwt)
 ///
 /// Format: "repository:name:actions" where actions is comma-separated
 /// Example: "repository:org/project:pull,push"
-fn parse_scope(scope: &str) -> Result<(Option<String>, Vec<String>), HttpError> {
+fn parse_scope(scope: &str) -> Result<(Option<String>, Vec<OciAction>), HttpError> {
     let parts: Vec<&str> = scope.split(':').collect();
 
     let [resource_type, repository_name, actions_str] = parts.as_slice() else {
@@ -349,22 +372,20 @@ fn parse_scope(scope: &str) -> Result<(Option<String>, Vec<String>), HttpError> 
         ));
     }
 
-    let actions: Vec<String> = actions_str
+    let actions: Vec<OciAction> = actions_str
         .split(',')
-        .map(|a| a.trim().to_owned())
+        .map(str::trim)
         .filter(|a| !a.is_empty())
-        .collect();
-
-    // Validate actions
-    for action in &actions {
-        if action != "pull" && action != "push" {
-            return Err(HttpError::for_client_error(
+        .map(|a| match a {
+            "pull" => Ok(OciAction::Pull),
+            "push" => Ok(OciAction::Push),
+            _ => Err(HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::BAD_REQUEST,
-                format!("Unknown action: {action}. Supported: pull, push"),
-            ));
-        }
-    }
+                format!("Unknown action: {a}. Supported: pull, push"),
+            )),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok((Some((*repository_name).to_owned()), actions))
 }
@@ -377,14 +398,14 @@ mod tests {
     fn test_parse_scope_valid() {
         let (repo, actions) = parse_scope("repository:org/project:pull,push").unwrap();
         assert_eq!(repo, Some("org/project".to_owned()));
-        assert_eq!(actions, vec!["pull", "push"]);
+        assert_eq!(actions, vec![OciAction::Pull, OciAction::Push]);
     }
 
     #[test]
     fn test_parse_scope_single_action() {
         let (repo, actions) = parse_scope("repository:myrepo:pull").unwrap();
         assert_eq!(repo, Some("myrepo".to_owned()));
-        assert_eq!(actions, vec!["pull"]);
+        assert_eq!(actions, vec![OciAction::Pull]);
     }
 
     #[test]
@@ -403,5 +424,36 @@ mod tests {
     fn test_parse_scope_invalid_action() {
         let result = parse_scope("repository:myrepo:delete");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_is_valid_host_valid() {
+        assert!(is_valid_host("localhost"));
+        assert!(is_valid_host("example.com"));
+        assert!(is_valid_host("sub.example.com"));
+        assert!(is_valid_host("localhost:8080"));
+        assert!(is_valid_host("[::1]:8080"));
+        assert!(is_valid_host("my-host.example.com"));
+    }
+
+    #[test]
+    fn test_is_valid_host_invalid() {
+        assert!(!is_valid_host(""));
+        // Header injection attempts
+        assert!(!is_valid_host("evil.com\r\nX-Injected: true"));
+        assert!(!is_valid_host("host\nheader"));
+        assert!(!is_valid_host("host header"));
+        assert!(!is_valid_host("host\"inject"));
+        assert!(!is_valid_host("host'inject"));
+    }
+
+    #[test]
+    fn test_parse_scope_sanitizes_quotes() {
+        // Quotes in repository name are stripped by scope sanitization
+        // before reaching parse_scope, but parse_scope itself should
+        // handle the already-sanitized input correctly
+        let (repo, actions) = parse_scope("repository:org/project:pull").unwrap();
+        assert_eq!(repo, Some("org/project".to_owned()));
+        assert_eq!(actions, vec![OciAction::Pull]);
     }
 }

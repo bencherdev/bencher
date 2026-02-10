@@ -1,4 +1,5 @@
 //! Integration tests for run endpoint.
+#![expect(unused_crate_dependencies)]
 
 use bencher_api_tests::TestServer;
 use bencher_json::JsonReport;

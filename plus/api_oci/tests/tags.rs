@@ -12,18 +12,35 @@ use bencher_api_tests::TestServer;
 use http::StatusCode;
 
 /// Create a minimal OCI manifest JSON for testing
-fn create_test_manifest(suffix: &str) -> String {
+fn create_test_manifest(config_digest: &str) -> String {
     serde_json::json!({
         "schemaVersion": 2,
         "mediaType": "application/vnd.oci.image.manifest.v1+json",
         "config": {
             "mediaType": "application/vnd.oci.image.config.v1+json",
-            "digest": format!("sha256:config{}{}", suffix, "0".repeat(56)),
+            "digest": config_digest,
             "size": 100
         },
         "layers": []
     })
     .to_string()
+}
+
+/// Upload a config blob and create a manifest referencing it. Returns the manifest JSON string.
+async fn upload_blob_and_create_manifest(
+    server: &TestServer,
+    project_slug: &str,
+    push_token: &str,
+    suffix: &str,
+) -> String {
+    let config_digest = server
+        .upload_blob(
+            project_slug,
+            push_token,
+            format!("config-{suffix}").as_bytes(),
+        )
+        .await;
+    create_test_manifest(&config_digest)
 }
 
 // GET /v2/{name}/tags/list - List tags (empty)
@@ -71,8 +88,14 @@ async fn test_tags_list_with_manifests() {
     // Upload manifests with different tags
     let tags = ["v1.0.0", "v1.1.0", "latest"];
     for (i, tag) in tags.iter().enumerate() {
-        let manifest = create_test_manifest(&i.to_string());
-        server
+        let manifest = upload_blob_and_create_manifest(
+            &server,
+            project_slug,
+            &push_token,
+            &format!("list{i}"),
+        )
+        .await;
+        let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/{}", project_slug, tag)))
             .header("Authorization", format!("Bearer {}", push_token))
@@ -81,6 +104,7 @@ async fn test_tags_list_with_manifests() {
             .send()
             .await
             .expect("Upload failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
     }
 
     // List tags
@@ -122,8 +146,14 @@ async fn test_tags_list_pagination_n() {
 
     // Upload 5 manifests
     for i in 0..5 {
-        let manifest = create_test_manifest(&format!("page{}", i));
-        server
+        let manifest = upload_blob_and_create_manifest(
+            &server,
+            project_slug,
+            &push_token,
+            &format!("page{i}"),
+        )
+        .await;
+        let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
             .header("Authorization", format!("Bearer {}", push_token))
@@ -132,6 +162,7 @@ async fn test_tags_list_pagination_n() {
             .send()
             .await
             .expect("Upload failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
     }
 
     // List with n=2
@@ -165,8 +196,14 @@ async fn test_tags_list_pagination_last() {
     // Upload manifests with alphabetically ordered tags
     let tags = ["aaa", "bbb", "ccc", "ddd"];
     for (i, tag) in tags.iter().enumerate() {
-        let manifest = create_test_manifest(&format!("last{}", i));
-        server
+        let manifest = upload_blob_and_create_manifest(
+            &server,
+            project_slug,
+            &push_token,
+            &format!("last{i}"),
+        )
+        .await;
+        let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/{}", project_slug, tag)))
             .header("Authorization", format!("Bearer {}", push_token))
@@ -175,6 +212,7 @@ async fn test_tags_list_pagination_last() {
             .send()
             .await
             .expect("Upload failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
     }
 
     // List with last=bbb (should return tags after "bbb")
@@ -258,8 +296,14 @@ async fn test_tags_list_pagination_link_header() {
 
     // Upload 5 manifests with different tags
     for i in 0..5 {
-        let manifest = create_test_manifest(&format!("link{}", i));
-        server
+        let manifest = upload_blob_and_create_manifest(
+            &server,
+            project_slug,
+            &push_token,
+            &format!("link{i}"),
+        )
+        .await;
+        let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
             .header("Authorization", format!("Bearer {}", push_token))
@@ -268,6 +312,7 @@ async fn test_tags_list_pagination_link_header() {
             .send()
             .await
             .expect("Upload failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
     }
 
     // List with n=2 (should have Link header since there are 5 tags)
@@ -345,8 +390,14 @@ async fn test_tags_list_no_link_header_when_complete() {
 
     // Upload only 2 manifests
     for i in 0..2 {
-        let manifest = create_test_manifest(&format!("nolink{}", i));
-        server
+        let manifest = upload_blob_and_create_manifest(
+            &server,
+            project_slug,
+            &push_token,
+            &format!("nolink{i}"),
+        )
+        .await;
+        let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
             .header("Authorization", format!("Bearer {}", push_token))
@@ -355,6 +406,7 @@ async fn test_tags_list_no_link_header_when_complete() {
             .send()
             .await
             .expect("Upload failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
     }
 
     // List with n=5 (larger than number of tags, so no Link header expected)
@@ -399,8 +451,14 @@ async fn test_tags_list_follow_pagination() {
     // Upload 5 manifests with alphabetically ordered tags
     let tags = ["aaa", "bbb", "ccc", "ddd", "eee"];
     for (i, tag) in tags.iter().enumerate() {
-        let manifest = create_test_manifest(&format!("follow{}", i));
-        server
+        let manifest = upload_blob_and_create_manifest(
+            &server,
+            project_slug,
+            &push_token,
+            &format!("follow{i}"),
+        )
+        .await;
+        let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/{}", project_slug, tag)))
             .header("Authorization", format!("Bearer {}", push_token))
@@ -409,6 +467,7 @@ async fn test_tags_list_follow_pagination() {
             .send()
             .await
             .expect("Upload failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
     }
 
     let pull_token = server.oci_pull_token(&user, &project);
@@ -507,4 +566,200 @@ async fn test_tags_list_follow_pagination() {
         .map(|v| v.as_str().expect("tag should be string"))
         .collect();
     assert_eq!(page3_tags, vec!["eee"]);
+}
+
+// GET /v2/{name}/tags/list?n=0 - n=0 should be clamped to 1
+#[tokio::test]
+async fn test_tags_list_pagination_n_zero_clamped() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("TagsNZero User", "tagsnzero@example.com")
+        .await;
+    let org = server.create_org(&user, "TagsNZero Org").await;
+    let project = server
+        .create_project(&user, &org, "TagsNZero Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload 3 manifests
+    for i in 0..3 {
+        let manifest = upload_blob_and_create_manifest(
+            &server,
+            project_slug,
+            &push_token,
+            &format!("nzero{i}"),
+        )
+        .await;
+        let resp = server
+            .client
+            .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
+            .header("Authorization", format!("Bearer {}", push_token))
+            .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+            .body(manifest)
+            .send()
+            .await
+            .expect("Upload failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    // Request with n=0 — should clamp to 1, returning exactly 1 tag
+    let pull_token = server.oci_pull_token(&user, &project);
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/tags/list?n=0", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse response");
+    let tags_array = body["tags"].as_array().expect("tags should be array");
+    assert_eq!(
+        tags_array.len(),
+        1,
+        "n=0 should be clamped to 1, returning exactly 1 tag"
+    );
+}
+
+// GET /v2/{name}/tags/list?n=999999 - large n should be clamped to MAX_PAGE_SIZE
+#[tokio::test]
+async fn test_tags_list_pagination_n_large_clamped() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("TagsNLarge User", "tagsnlarge@example.com")
+        .await;
+    let org = server.create_org(&user, "TagsNLarge Org").await;
+    let project = server
+        .create_project(&user, &org, "TagsNLarge Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload 3 manifests
+    for i in 0..3 {
+        let manifest = upload_blob_and_create_manifest(
+            &server,
+            project_slug,
+            &push_token,
+            &format!("nlarge{i}"),
+        )
+        .await;
+        let resp = server
+            .client
+            .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
+            .header("Authorization", format!("Bearer {}", push_token))
+            .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+            .body(manifest)
+            .send()
+            .await
+            .expect("Upload failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    // Request with n=999999 — should succeed (clamped internally) and return all 3
+    let pull_token = server.oci_pull_token(&user, &project);
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/tags/list?n=999999", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Check no Link header before consuming resp with json()
+    let has_link = resp.headers().get("link").is_some();
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse response");
+    let tags_array = body["tags"].as_array().expect("tags should be array");
+    assert_eq!(tags_array.len(), 3);
+    assert!(!has_link, "No Link header since all tags fit");
+}
+
+// GET /v2/{name}/tags/list?last=<invalid> - invalid cursor should be rejected
+#[tokio::test]
+async fn test_tags_list_invalid_last_cursor() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("TagsBadCursor User", "tagsbadcursor@example.com")
+        .await;
+    let org = server.create_org(&user, "TagsBadCursor Org").await;
+    let project = server
+        .create_project(&user, &org, "TagsBadCursor Project")
+        .await;
+
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // A tag starting with '-' is invalid per OCI spec
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/tags/list?last=-invalid-tag", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Invalid last cursor should be rejected"
+    );
+}
+
+// GET /v2/{name}/tags/list?n=-1 - Negative n should be rejected (u32 can't be negative)
+#[tokio::test]
+async fn test_tags_list_pagination_n_negative() {
+    let server = TestServer::new().await;
+    let user = server.signup("TagsNNeg User", "tagsnneg@example.com").await;
+    let org = server.create_org(&user, "TagsNNeg Org").await;
+    let project = server.create_project(&user, &org, "TagsNNeg Project").await;
+
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/tags/list?n=-1", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Negative n should be rejected"
+    );
+}
+
+// GET /v2/{name}/tags/list?n=abc - Non-integer n should be rejected
+#[tokio::test]
+async fn test_tags_list_pagination_n_non_integer() {
+    let server = TestServer::new().await;
+    let user = server.signup("TagsNStr User", "tagsnstr@example.com").await;
+    let org = server.create_org(&user, "TagsNStr Org").await;
+    let project = server.create_project(&user, &org, "TagsNStr Project").await;
+
+    let pull_token = server.oci_pull_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/tags/list?n=abc", project_slug)))
+        .header("Authorization", format!("Bearer {}", pull_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Non-integer n should be rejected"
+    );
 }

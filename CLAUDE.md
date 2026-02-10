@@ -12,6 +12,8 @@ Bencher is a continuous benchmarking platform that detects and prevents performa
 
 **Tech stack:** Rust (edition 2024, toolchain 1.91.1), TypeScript, SQLite (Diesel ORM), WASM for sharing Rust types with frontend. Version control uses Jujutsu (`jj`) with Git.
 
+**Development Methodology:** Practice test-driven development (TDD) with a strong emphasis on code quality, maintainability, and clear documentation. Follow the established code style rules and project architecture to ensure consistency across the codebase.
+
 ## Common Commands
 
 ### Building & Running
@@ -33,11 +35,22 @@ cargo test-api seed            # Seed the database with sample data
 cd services/console && npm test # Run frontend tests (vitest)
 ```
 
+Crates that depend on `bencher_valid` will need to specify either:
+
+1. `server` feature for server-side usage
+2. `client` feature for client-side usage
+
+Otherwise, you will see:
+
+```
+use of undeclared type `Regex`
+```
+
 Running the seed tests:
 
 1. Stop the API server if it's running.
 2. Delete the existing database at `services/api/data/bencher.db` if it exists.
-3. Run the API server.
+3. Run the API server from `services/api` in one terminal.
 4. In another terminal:
   - Bencher Cloud: `cargo test-api seed --is-bencher-cloud`
   - Bencher Self-Hosted: `cargo test-api seed`
@@ -142,19 +155,22 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - `plus/bencher_oci_storage` - Storage backend using S3 (via Access Points)
 - OCI auth tokens use a dedicated `Oci` audience in `bencher_token`
 - Registry is configured via `JsonRegistry` in the server config (`plus.registry`)
+- Run the OCI conformance tests with `cargo test-api oci --admin`
 
 ## Code Style Rules
 
 ### Rust
 
-- Always run `cargo fmt` and `cargo clippy` before committing
+- Always run `cargo fmt` and `cargo clippy` when testing or before committing
 - Use `#[expect(...)]` instead of `#[allow(...)]` for lint suppression
 - Do **NOT** suppress a lint outside of a test module without explicit approval
-- Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
 - All dependency versions go in the workspace `Cargo.toml`
 - When reviewing code, also check:
   - `cargo check --no-default-features`
   - `cargo gen-types` (if the API changed at all)
+- Use idiomatic, strong types instead of `String` and `serde_json::Value` where possible
+- Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
+- All time-based tests should be deterministic and use time manipulation not real wall-clock time
 
 ### Frontend (TypeScript)
 

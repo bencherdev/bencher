@@ -9,12 +9,12 @@ use jsonwebtoken::{
 };
 
 use crate::{
-    Audience, Claims, InviteClaims, OAuthClaims, OciClaims, OciScopeClaims, OrgClaims, StateClaims,
-    TokenError,
+    Audience, Claims, InviteClaims, OAuthClaims, OciAction, OciClaims, OciScopeClaims, OrgClaims,
+    StateClaims, TokenError,
 };
 
 static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
-static ALGORITHM: LazyLock<Algorithm> = LazyLock::new(Algorithm::default);
+const ALGORITHM: Algorithm = Algorithm::HS256;
 
 pub struct TokenKey {
     pub issuer: String,
@@ -41,12 +41,10 @@ impl TokenKey {
         oci: Option<OciScopeClaims>,
     ) -> Result<Jwt, TokenError> {
         let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org, state, oci);
-        Jwt::from_str(&encode(&HEADER, &claims, &self.encoding).map_err(|e| {
-            TokenError::Encode {
-                claims: Box::new(claims),
-                error: e,
-            }
-        })?)
+        Jwt::from_str(
+            &encode(&HEADER, &claims, &self.encoding)
+                .map_err(|e| TokenError::Encode { error: e })?,
+        )
         .map_err(TokenError::Parse)
     }
 
@@ -85,7 +83,7 @@ impl TokenKey {
         email: Email,
         ttl: u32,
         repository: Option<String>,
-        actions: Vec<String>,
+        actions: Vec<OciAction>,
     ) -> Result<Jwt, TokenError> {
         let oci_claims = OciScopeClaims {
             repository,
@@ -99,16 +97,13 @@ impl TokenKey {
         token: &Jwt,
         audience: &[Audience],
     ) -> Result<TokenData<Claims>, TokenError> {
-        let mut validation = Validation::new(*ALGORITHM);
+        let mut validation = Validation::new(ALGORITHM);
         validation.set_audience(audience);
         validation.set_issuer(&[self.issuer.as_str()]);
         validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
 
         let token_data: TokenData<Claims> = decode(token.as_ref(), &self.decoding, &validation)
-            .map_err(|error| TokenError::Decode {
-                token: token.clone(),
-                error,
-            })?;
+            .map_err(|error| TokenError::Decode { error })?;
         let exp = token_data.claims.exp;
         let now = Utc::now().timestamp();
         if exp < now {
@@ -151,11 +146,11 @@ impl TokenKey {
 
 #[cfg(test)]
 mod tests {
-    use std::{sync::LazyLock, thread, time};
+    use std::{str::FromStr as _, sync::LazyLock};
 
-    use bencher_json::{Email, OrganizationUuid, organization::member::OrganizationRole};
+    use bencher_json::{Email, Jwt, OrganizationUuid, organization::member::OrganizationRole};
 
-    use crate::{Audience, DEFAULT_SECRET_KEY};
+    use crate::{Audience, Claims, DEFAULT_SECRET_KEY, OciAction, OciScopeClaims, OrgClaims};
 
     use super::TokenKey;
 
@@ -164,9 +159,25 @@ mod tests {
 
     static EMAIL: LazyLock<Email> = LazyLock::new(|| "info@bencher.dev".parse().unwrap());
 
-    fn sleep_for_a_second() {
-        let second = time::Duration::from_secs(1);
-        thread::sleep(second);
+    fn make_expired_token(
+        secret_key: &TokenKey,
+        audience: Audience,
+        org: Option<OrgClaims>,
+        oci: Option<OciScopeClaims>,
+    ) -> Jwt {
+        let now = chrono::Utc::now().timestamp();
+        let claims = Claims {
+            aud: audience.to_string(),
+            exp: now - 100,
+            iat: now - 200,
+            iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
+            sub: EMAIL.clone(),
+            org,
+            state: None,
+            oci,
+        };
+        Jwt::from_str(&jsonwebtoken::encode(&super::HEADER, &claims, &secret_key.encoding).unwrap())
+            .unwrap()
     }
 
     #[test]
@@ -186,11 +197,7 @@ mod tests {
     #[test]
     fn jwt_auth_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key.new_auth(EMAIL.clone(), 0).unwrap();
-
-        sleep_for_a_second();
-
+        let token = make_expired_token(&secret_key, Audience::Auth, None, None);
         assert!(secret_key.validate_auth(&token).is_err());
     }
 
@@ -211,11 +218,7 @@ mod tests {
     #[test]
     fn jwt_client_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key.new_client(EMAIL.clone(), 0).unwrap();
-
-        sleep_for_a_second();
-
+        let token = make_expired_token(&secret_key, Audience::Client, None, None);
         assert!(secret_key.validate_client(&token).is_err());
     }
 
@@ -236,11 +239,7 @@ mod tests {
     #[test]
     fn jwt_api_key_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key.new_api_key(EMAIL.clone(), 0).unwrap();
-
-        sleep_for_a_second();
-
+        let token = make_expired_token(&secret_key, Audience::ApiKey, None, None);
         assert!(secret_key.validate_api_key(&token).is_err());
     }
 
@@ -267,18 +266,89 @@ mod tests {
     }
 
     #[test]
-    fn jwt_invite_expired() {
+    fn jwt_oci() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
-        let org_uuid = OrganizationUuid::new();
-        let role = OrganizationRole::Leader;
+        let repository = Some("test-org/test-project".to_owned());
+        let actions = vec![OciAction::Pull, OciAction::Push];
 
         let token = secret_key
-            .new_invite(EMAIL.clone(), 0, org_uuid, role)
+            .new_oci(EMAIL.clone(), TTL, repository.clone(), actions.clone())
             .unwrap();
 
-        sleep_for_a_second();
+        let claims = secret_key.validate_oci(&token).unwrap();
 
+        assert_eq!(claims.aud, Audience::Oci.to_string());
+        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
+        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
+        assert_eq!(claims.sub, *EMAIL);
+        assert_eq!(claims.oci.repository, repository);
+        assert_eq!(claims.oci.actions, actions);
+    }
+
+    #[test]
+    fn jwt_oci_expired() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let oci = OciScopeClaims {
+            repository: None,
+            actions: vec![OciAction::Pull],
+        };
+        let token = make_expired_token(&secret_key, Audience::Oci, None, Some(oci));
+        assert!(secret_key.validate_oci(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_invite_expired() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let org = OrgClaims {
+            uuid: OrganizationUuid::new(),
+            role: OrganizationRole::Leader,
+        };
+        let token = make_expired_token(&secret_key, Audience::Invite, Some(org), None);
         assert!(secret_key.validate_invite(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_oci_empty_actions() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key
+            .new_oci(EMAIL.clone(), TTL, None, vec![])
+            .unwrap();
+
+        let claims = secret_key.validate_oci(&token).unwrap();
+        assert_eq!(claims.aud, Audience::Oci.to_string());
+        assert_eq!(claims.sub, *EMAIL);
+        assert!(claims.oci.actions.is_empty());
+        assert!(claims.oci.repository.is_none());
+    }
+
+    #[test]
+    fn jwt_auth_token_rejected_as_oci() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
+
+        assert!(secret_key.validate_oci(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_api_key_rejected_as_oci() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
+
+        assert!(secret_key.validate_oci(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_oci_token_rejected_as_auth() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let token = secret_key
+            .new_oci(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
+            .unwrap();
+
+        assert!(secret_key.validate_auth(&token).is_err());
     }
 }

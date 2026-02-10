@@ -23,14 +23,18 @@ bencher_config.workspace = true
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_license = { workspace = true, optional = true }
-bencher_oci_storage = { workspace = true, optional = true }
+bencher_oci_storage = { workspace = true, optional = true, features = ["test-clock"] }
 bencher_rbac.workspace = true
 bencher_schema.workspace = true
 bencher_token.workspace = true
 diesel = { workspace = true, features = ["sqlite"] }
 dropshot.workspace = true
+hex.workspace = true
+http.workspace = true
 libsqlite3-sys.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+sha2.workspace = true
+slog.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 

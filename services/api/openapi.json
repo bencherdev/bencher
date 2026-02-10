@@ -9409,39 +9409,13 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "access-control-allow-origin": {
-                "description": "CORS: Allow all origins",
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "description": "CORS: Expose headers to client (includes Link when pagination is present)",
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
+          "default": {
+            "description": "",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TagsListResponse"
-                }
+              "*/*": {
+                "schema": {}
               }
             }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -12389,6 +12363,13 @@
               }
             ]
           },
+          "max_body_size": {
+            "description": "Maximum body size in bytes for blob and manifest uploads. Requests exceeding this limit are rejected with 413 Payload Too Large. Defaults to 1 GiB (1,073,741,824 bytes).",
+            "default": 1073741824,
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
           "upload_timeout": {
             "description": "Upload session timeout in seconds. Uploads older than this are cleaned up when new uploads start. Defaults to 3600 (1 hour).",
             "default": 3600,
@@ -14467,27 +14448,6 @@
       "SsoUuid": {
         "type": "string",
         "format": "uuid"
-      },
-      "TagsListResponse": {
-        "description": "Response for tags list",
-        "type": "object",
-        "properties": {
-          "name": {
-            "description": "Repository name",
-            "type": "string"
-          },
-          "tags": {
-            "description": "List of tags",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "name",
-          "tags"
-        ]
       },
       "TestbedSlug": {
         "$ref": "#/components/schemas/Slug"

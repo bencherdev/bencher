@@ -3,11 +3,11 @@
 use std::fmt;
 use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use thiserror::Error;
 
 /// A content-addressable digest (e.g., "sha256:abc123...")
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct Digest(String);
 
 #[derive(Debug, Error)]
@@ -19,26 +19,44 @@ pub enum DigestError {
 }
 
 impl Digest {
+    /// Expected hex hash length for SHA-256 (64 hex characters = 32 bytes)
+    const SHA256_HEX_LEN: usize = 64;
+    /// Expected hex hash length for SHA-512 (128 hex characters = 64 bytes)
+    const SHA512_HEX_LEN: usize = 128;
+
     /// Creates a new SHA-256 digest from the given hex-encoded hash
-    pub fn sha256(hex_hash: &str) -> Self {
-        Self(format!("sha256:{hex_hash}"))
+    pub fn sha256(hex_hash: &str) -> Result<Self, DigestError> {
+        if hex_hash.len() != Self::SHA256_HEX_LEN
+            || !hex_hash.chars().all(|c| c.is_ascii_hexdigit())
+        {
+            return Err(DigestError::InvalidFormat(format!("sha256:{hex_hash}")));
+        }
+        Ok(Self(format!("sha256:{}", hex_hash.to_ascii_lowercase())))
     }
 
     /// Returns the algorithm part of the digest (e.g., "sha256")
     pub fn algorithm(&self) -> &str {
-        // Safe: Digest is only constructed via FromStr which validates format
+        // Safe: Digest is only constructed via FromStr or sha256(), both of which validate format
         self.0.split(':').next().unwrap_or("sha256")
     }
 
     /// Returns the hex-encoded hash part of the digest
     pub fn hex_hash(&self) -> &str {
-        // Safe: Digest is only constructed via FromStr which validates format
+        // Safe: Digest is only constructed via FromStr or sha256(), both of which validate format
         self.0.split(':').nth(1).unwrap_or("")
     }
 
     /// Returns the full digest string (e.g., "sha256:abc123...")
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+
+    /// Computes a SHA-256 digest from raw bytes
+    pub fn from_sha256_bytes(data: &[u8]) -> Self {
+        use sha2::Digest as _;
+        let hash = sha2::Sha256::digest(data);
+        // hex::encode always produces valid lowercase hex, infallible
+        Self(format!("sha256:{}", hex::encode(hash)))
     }
 }
 
@@ -59,22 +77,45 @@ impl FromStr for Digest {
             .split_once(':')
             .ok_or_else(|| DigestError::InvalidFormat(s.to_owned()))?;
 
-        // Validate algorithm - only sha256 and sha512 are commonly used
-        if algorithm != "sha256" && algorithm != "sha512" {
-            return Err(DigestError::UnsupportedAlgorithm(algorithm.to_owned()));
-        }
-
-        // Validate encoded hash is hex
-        if encoded.is_empty() || !encoded.chars().all(|c| c.is_ascii_hexdigit()) {
+        // Validate algorithm and get expected hash length
+        let expected_len = match algorithm {
+            "sha256" => Self::SHA256_HEX_LEN,
+            "sha512" => Self::SHA512_HEX_LEN,
+            _ => return Err(DigestError::UnsupportedAlgorithm(algorithm.to_owned())),
+        };
+        if encoded.len() != expected_len || !encoded.chars().all(|c| c.is_ascii_hexdigit()) {
             return Err(DigestError::InvalidFormat(s.to_owned()));
         }
 
-        Ok(Self(s.to_owned()))
+        Ok(Self(s.to_ascii_lowercase()))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Digest {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(DigestVisitor)
+    }
+}
+
+struct DigestVisitor;
+
+impl serde::de::Visitor<'_> for DigestVisitor {
+    type Value = Digest;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a valid OCI digest")
+    }
+
+    fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+        v.parse().map_err(E::custom)
     }
 }
 
 /// A tag name (e.g., "latest", "v1.0.0")
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct Tag(String);
 
 #[derive(Debug, Error)]
@@ -127,6 +168,29 @@ impl FromStr for Tag {
     }
 }
 
+impl<'de> serde::Deserialize<'de> for Tag {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(TagVisitor)
+    }
+}
+
+struct TagVisitor;
+
+impl serde::de::Visitor<'_> for TagVisitor {
+    type Value = Tag;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a valid OCI tag")
+    }
+
+    fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+        v.parse().map_err(E::custom)
+    }
+}
+
 /// A reference to a manifest (either a tag or a digest)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Reference {
@@ -172,7 +236,7 @@ impl FromStr for Reference {
 }
 
 /// A unique identifier for an in-progress upload
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct UploadId(String);
 
 impl UploadId {
@@ -207,6 +271,66 @@ impl FromStr for UploadId {
         let _uuid: uuid::Uuid = s.parse()?;
         Ok(Self(s.to_owned()))
     }
+}
+
+impl<'de> serde::Deserialize<'de> for UploadId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(UploadIdVisitor)
+    }
+}
+
+struct UploadIdVisitor;
+
+impl serde::de::Visitor<'_> for UploadIdVisitor {
+    type Value = UploadId;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a valid UUID upload ID")
+    }
+
+    fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+        v.parse().map_err(E::custom)
+    }
+}
+
+/// Extracts the subject digest from manifest JSON bytes.
+///
+/// Returns `Some(subject_digest)` if the manifest has a `subject.digest` field
+/// that parses as a valid `Digest`.
+pub(crate) fn extract_subject_digest(manifest_bytes: &[u8]) -> Option<Digest> {
+    let manifest = bencher_json::oci::Manifest::from_bytes(manifest_bytes).ok()?;
+    manifest.subject()?.digest.parse::<Digest>().ok()
+}
+
+/// Builds a referrer descriptor from an already-parsed manifest.
+///
+/// Uses the typed `Manifest` fields (`media_type`, `artifact_type`, `annotations`,
+/// `subject`) combined with the provided `digest` and `content_size` to produce an OCI
+/// descriptor suitable for the referrers API.
+///
+/// Returns `None` if the manifest has no `subject` field or if `content_size` overflows `i64`.
+pub(crate) fn build_referrer_descriptor(
+    manifest: &bencher_json::oci::Manifest,
+    digest: &Digest,
+    content_size: usize,
+) -> Option<(Digest, bencher_json::oci::OciDescriptor)> {
+    let subject = manifest.subject()?;
+    let subject_digest = subject.digest.parse::<Digest>().ok()?;
+
+    let descriptor = bencher_json::oci::OciDescriptor {
+        media_type: manifest.media_type().to_owned(),
+        digest: digest.to_string(),
+        size: i64::try_from(content_size).ok()?,
+        urls: None,
+        annotations: manifest.annotations().cloned(),
+        data: None,
+        artifact_type: manifest.artifact_type().map(ToOwned::to_owned),
+    };
+
+    Some((subject_digest, descriptor))
 }
 
 #[cfg(test)]
@@ -248,9 +372,133 @@ mod tests {
     }
 
     #[test]
+    fn digest_sha256_valid() {
+        let digest =
+            Digest::sha256("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+                .unwrap();
+        assert_eq!(digest.algorithm(), "sha256");
+        assert_eq!(
+            digest.hex_hash(),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+    }
+
+    #[test]
+    fn digest_sha256_invalid() {
+        assert!(Digest::sha256("").is_err());
+        assert!(Digest::sha256("not-hex!").is_err());
+        assert!(Digest::sha256("ZZZZ").is_err());
+        // Too short
+        assert!(Digest::sha256("abc123").is_err());
+        // Too long (65 chars)
+        assert!(
+            Digest::sha256("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8550")
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn digest_sha512_valid() {
+        let hash = "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e";
+        let digest: Digest = format!("sha512:{hash}").parse().unwrap();
+        assert_eq!(digest.algorithm(), "sha512");
+        assert_eq!(digest.hex_hash(), hash);
+    }
+
+    #[test]
+    fn digest_sha512_invalid_length() {
+        // Too short
+        assert!("sha512:abc123".parse::<Digest>().is_err());
+        // sha256-length hash with sha512 algorithm
+        assert!(
+            "sha512:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                .parse::<Digest>()
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn digest_from_str_rejects_short_sha256() {
+        assert!("sha256:abc".parse::<Digest>().is_err());
+    }
+
+    #[test]
+    fn digest_case_normalization() {
+        let upper = "sha256:E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
+        let lower = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        let parsed_upper: Digest = upper.parse().unwrap();
+        let parsed_lower: Digest = lower.parse().unwrap();
+        assert_eq!(parsed_upper, parsed_lower);
+        assert_eq!(parsed_upper.to_string(), lower);
+    }
+
+    #[test]
+    fn digest_mixed_case_normalization() {
+        let mixed = "sha256:AbCdEf0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789";
+        let parsed: Digest = mixed.parse().unwrap();
+        assert_eq!(
+            parsed.to_string(),
+            "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+        );
+    }
+
+    #[test]
     fn upload_id() {
         let id = UploadId::new();
         let parsed: UploadId = id.as_str().parse().unwrap();
         assert_eq!(id, parsed);
+    }
+
+    #[test]
+    fn digest_from_sha256_bytes() {
+        // SHA-256 of empty input is well-known
+        let digest = Digest::from_sha256_bytes(b"");
+        assert_eq!(
+            digest.to_string(),
+            "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+    }
+
+    #[test]
+    fn tag_deserialize_rejects_invalid() {
+        // Path traversal should be rejected
+        let result: Result<Tag, _> = serde_json::from_str(r#""../../etc/passwd""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn tag_deserialize_accepts_valid() {
+        let result: Result<Tag, _> = serde_json::from_str(r#""latest""#);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().as_str(), "latest");
+    }
+
+    #[test]
+    fn digest_deserialize_rejects_invalid() {
+        let result: Result<Digest, _> = serde_json::from_str(r#""not-a-digest""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn digest_deserialize_accepts_valid() {
+        let result: Result<Digest, _> = serde_json::from_str(
+            r#""sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855""#,
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn upload_id_deserialize_rejects_invalid() {
+        let result: Result<UploadId, _> = serde_json::from_str(r#""not-a-uuid""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn upload_id_deserialize_accepts_valid() {
+        let id = UploadId::new();
+        let json = serde_json::to_string(&id).unwrap();
+        let result: Result<UploadId, _> = serde_json::from_str(&json);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), id);
     }
 }

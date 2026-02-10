@@ -47,6 +47,10 @@ pub enum PlusError {
 }
 
 impl Plus {
+    #[expect(
+        clippy::too_many_lines,
+        reason = "registry config adds necessary lines"
+    )]
     pub fn new(
         log: &Logger,
         console_url: &Url,
@@ -64,15 +68,26 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
-                oci_storage: OciStorage::try_from_config(log.clone(), None, database_path, None)
-                    .map_err(PlusError::OciStorage)?,
+                oci_storage: OciStorage::try_from_config(
+                    log.clone(),
+                    None,
+                    database_path,
+                    None,
+                    None,
+                    None,
+                )
+                .map_err(PlusError::OciStorage)?,
             });
         };
 
         // Initialize registry storage - uses S3 if configured, otherwise local filesystem
-        let (registry_data_store, upload_timeout) =
-            plus.registry.map_or((None, None), |registry| {
-                (Some(registry.data_store), Some(registry.upload_timeout))
+        let (registry_data_store, upload_timeout, max_body_size) =
+            plus.registry.map_or((None, None, None), |registry| {
+                (
+                    Some(registry.data_store),
+                    Some(registry.upload_timeout),
+                    Some(registry.max_body_size),
+                )
             });
         if registry_data_store.is_none() {
             info!(
@@ -87,6 +102,8 @@ impl Plus {
             registry_data_store,
             database_path,
             upload_timeout,
+            max_body_size,
+            None,
         )
         .map_err(PlusError::OciStorage)?;
 

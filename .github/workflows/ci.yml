@@ -94,7 +94,7 @@ jobs:
     uses: ./.github/workflows/test.yml
     with:
       mold-version: "2.34.1"
-      go-version: "1.21"
+      go-version: "1.25"
       is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
     secrets:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
@@ -120,11 +120,13 @@ jobs:
     uses: ./.github/workflows/deploy.yml
     with:
       mold-version: "2.34.1"
+      go-version: "1.25"
       netlify-cli-version: "18.0.4"
       deploy-dev: ${{ github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))  }}
       deploy-test: ${{ github.ref == 'refs/heads/devel'  ||  github.ref == 'refs/heads/cloud' }}
       deploy-prod: ${{ github.ref == 'refs/heads/cloud' }}
     secrets:
+      TEST_BENCHER_API_TOKEN_ADMIN: ${{ secrets.TEST_BENCHER_API_TOKEN_ADMIN }}
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
@@ -138,6 +140,7 @@ jobs:
     uses: ./.github/workflows/release.yml
     with:
       mold-version: "2.34.1"
+      go-version: "1.25"
 
   ci-success:
     name: CI Success
@@ -151,7 +154,7 @@ jobs:
             echo "Lint failed"
             exit 1
           fi
-          if [[ "${{ needs.cli.result }}" != "success" && "${{ needs.test.result }}" != "skipped" ]]; then
+          if [[ "${{ needs.cli.result }}" != "success" && "${{ needs.cli.result }}" != "skipped" ]]; then
             echo "CLI failed"
             exit 1
           fi

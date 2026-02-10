@@ -6,6 +6,9 @@ on:
       mold-version:
         type: string
         required: true
+      go-version:
+        type: string
+        required: true
       netlify-cli-version:
         type: string
         required: true
@@ -19,6 +22,8 @@ on:
         type: boolean
         required: true
     secrets:
+      TEST_BENCHER_API_TOKEN_ADMIN:
+        required: true
       FLY_API_TOKEN:
         required: true
       SENTRY_AUTH_TOKEN:
@@ -68,9 +73,24 @@ jobs:
         env:
           RUST_BACKTRACE: full
         run: cargo test-api smoke dev
+      - name: Setup Go (for OCI conformance tests)
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
+      - name: Scale up Dev Machines
+        working-directory: ./services/api
+        run: flyctl scale vm performance-8x --app bencher-api-dev
       - name: Run OCI Conformance Test
         continue-on-error: true
-        run: cargo test-api oci --admin
+        run: |
+          cargo test-api oci \
+          --api-url https://bencher-api-dev.fly.dev \
+          --username eustace.bagge@nowhere.com \
+          --password "${{ secrets.TEST_BENCHER_API_TOKEN_ADMIN }}"
+      - name: Scale down Dev Machines
+        if: always()
+        working-directory: ./services/api
+        run: flyctl scale vm shared-cpu-1x --app bencher-api-dev
 
   deploy_console_netlify_dev:
     name: Deploy Console UI to Netlify Dev

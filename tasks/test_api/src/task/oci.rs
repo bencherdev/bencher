@@ -162,6 +162,8 @@ impl Oci {
                 "clone",
                 "--depth",
                 "1",
+                "--branch",
+                "v1.1.1",
                 "https://github.com/opencontainers/distribution-spec.git",
             ])
             .arg(&self.spec_dir)
@@ -262,7 +264,8 @@ impl Oci {
             .env("OCI_DEBUG", if self.debug { "1" } else { "0" })
             .env("OCI_REPORT_DIR", &self.output_dir)
             .env("OCI_USERNAME", &self.username)
-            .env("OCI_PASSWORD", &self.password);
+            .env("OCI_PASSWORD", &self.password)
+            .env("OCI_AUTOMATIC_CROSSMOUNT", "0");
 
         if self.pull_only {
             cmd.env("OCI_TEST_PULL", "1")

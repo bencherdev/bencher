@@ -21,13 +21,22 @@ pub struct Claims {
     pub oci: Option<OciScopeClaims>, // OCI scope (for registry access)
 }
 
+/// OCI registry action
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum OciAction {
+    #[serde(rename = "pull")]
+    Pull,
+    #[serde(rename = "push")]
+    Push,
+}
+
 /// OCI-specific scope claims for registry access tokens
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OciScopeClaims {
     /// Repository name (e.g., `org-slug/project-slug`)
     pub repository: Option<String>,
-    /// Allowed actions (e.g., `pull` or `push`)
-    pub actions: Vec<String>,
+    /// Allowed actions
+    pub actions: Vec<OciAction>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

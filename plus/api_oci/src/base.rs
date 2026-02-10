@@ -11,6 +11,7 @@ use http::Response;
 #[cfg(feature = "plus")]
 use crate::auth::apply_auth_rate_limit;
 use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate};
+use crate::response::{APPLICATION_JSON, EMPTY_JSON_BODY, oci_cors_headers};
 
 /// CORS preflight for OCI base endpoint
 #[endpoint {
@@ -56,10 +57,12 @@ pub async fn oci_base(rqctx: RequestContext<ApiContext>) -> Result<Response<Body
     apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
 
     // Return 200 OK with empty JSON body
-    Response::builder()
-        .status(http::StatusCode::OK)
-        .header(http::header::CONTENT_TYPE, "application/json")
-        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .body(Body::from("{}"))
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))
+    oci_cors_headers(
+        Response::builder()
+            .status(http::StatusCode::OK)
+            .header(http::header::CONTENT_TYPE, APPLICATION_JSON),
+        &[http::Method::GET],
+    )
+    .body(Body::from(EMPTY_JSON_BODY))
+    .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))
 }
