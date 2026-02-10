@@ -36,12 +36,12 @@ CREATE TABLE job (
     started BIGINT,
     completed BIGINT,
     last_heartbeat BIGINT,
-    last_billed_minute INTEGER DEFAULT 0,
+    last_billed_minute INTEGER,
     exit_code INTEGER,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
     FOREIGN KEY (report_id) REFERENCES report (id) ON DELETE CASCADE,
-    FOREIGN KEY (organization_id) REFERENCES organization (id),
+    FOREIGN KEY (organization_id) REFERENCES organization (id) ON DELETE CASCADE,
     FOREIGN KEY (runner_id) REFERENCES runner (id) ON DELETE RESTRICT
 );
 -- Index for job claiming (ordered by priority, then FIFO)
@@ -58,5 +58,5 @@ CREATE INDEX index_job_in_flight ON job(status)
 WHERE status = 1 OR status = 2;
 CREATE INDEX index_job_runner_id ON job(runner_id)
 WHERE runner_id IS NOT NULL;
-CREATE INDEX index_runner_token_hash ON runner(token_hash);
+CREATE UNIQUE INDEX index_runner_token_hash ON runner(token_hash);
 CREATE INDEX index_job_report_id ON job(report_id);

@@ -13,7 +13,7 @@ use bencher_schema::{
     schema, write_conn,
 };
 use camino::Utf8PathBuf;
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::WebsocketConnectionRaw;
 use dropshot::{Path, RequestContext, WebsocketChannelResult, WebsocketConnection, channel};
 use futures::{SinkExt as _, StreamExt as _};
@@ -155,8 +155,8 @@ pub async fn runner_job_channel(
             heartbeat_timeout,
             context.database.connection.clone(),
             job_id,
-            #[cfg(feature = "plus")]
             &context.heartbeat_tasks,
+            context.job_timeout_grace_period,
         );
     }
 
@@ -302,6 +302,8 @@ async fn handle_runner_message(
 
 /// Handle a Running message: transition job from Claimed to Running,
 /// or update heartbeat if already Running (reconnection case).
+///
+/// Uses conditional UPDATEs with status filters to avoid TOCTOU races.
 async fn handle_running(
     log: &slog::Logger,
     context: &ApiContext,
@@ -309,53 +311,55 @@ async fn handle_running(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let now = DateTime::now();
 
-    let job: QueryJob = schema::job::table
-        .filter(schema::job::id.eq(job_id))
-        .first(auth_conn!(context))
-        .map_err(resource_not_found_err!(Job, job_id))?;
+    // Try reconnection case first: already Running, just update heartbeat
+    let reconnect_update = UpdateJob {
+        last_heartbeat: Some(Some(now)),
+        modified: Some(now),
+        ..Default::default()
+    };
+    let updated = diesel::update(
+        schema::job::table
+            .filter(schema::job::id.eq(job_id))
+            .filter(schema::job::status.eq(JobStatus::Running)),
+    )
+    .set(&reconnect_update)
+    .execute(write_conn!(context))?;
 
-    match job.status {
-        JobStatus::Running => {
-            // Reconnection case: just update heartbeat
-            slog::info!(log, "Runner reconnected to running job"; "job_id" => ?job_id);
-            let update = UpdateJob {
-                last_heartbeat: Some(Some(now)),
-                modified: Some(now),
-                ..Default::default()
-            };
-            diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-                .set(&update)
-                .execute(write_conn!(context))?;
-        },
-        JobStatus::Claimed => {
-            // Normal transition: Claimed -> Running
-            let update = UpdateJob {
-                status: Some(JobStatus::Running),
-                started: Some(Some(now)),
-                last_heartbeat: Some(Some(now)),
-                modified: Some(now),
-                ..Default::default()
-            };
-            diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-                .set(&update)
-                .execute(write_conn!(context))?;
-
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-                bencher_otel::JobStatusKind::Running,
-            ));
-        },
-        JobStatus::Pending | JobStatus::Completed | JobStatus::Failed | JobStatus::Canceled => {
-            slog::warn!(log, "Invalid state transition"; "job_id" => ?job_id, "from" => ?job.status, "to" => "running");
-            return Err(format!(
-                "Invalid state transition from {:?} to Running, expected Claimed or Running",
-                job.status
-            )
-            .into());
-        },
+    if updated > 0 {
+        slog::info!(log, "Runner reconnected to running job"; "job_id" => ?job_id);
+        return Ok(());
     }
 
-    Ok(())
+    // Try normal transition: Claimed -> Running
+    let transition_update = UpdateJob {
+        status: Some(JobStatus::Running),
+        started: Some(Some(now)),
+        last_heartbeat: Some(Some(now)),
+        modified: Some(now),
+        ..Default::default()
+    };
+    let updated = diesel::update(
+        schema::job::table
+            .filter(schema::job::id.eq(job_id))
+            .filter(schema::job::status.eq(JobStatus::Claimed)),
+    )
+    .set(&transition_update)
+    .execute(write_conn!(context))?;
+
+    if updated > 0 {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+            bencher_otel::JobStatusKind::Running,
+        ));
+        return Ok(());
+    }
+
+    // Neither matched — concurrent state change
+    slog::warn!(log, "Invalid state transition to Running (concurrent state change)"; "job_id" => ?job_id);
+    Err(format!(
+        "Invalid state transition to Running for job {job_id:?}, expected Claimed or Running"
+    )
+    .into())
 }
 
 /// Handle a Heartbeat message: update `last_heartbeat` and check for cancellation.
@@ -393,6 +397,8 @@ async fn handle_heartbeat(
 }
 
 /// Handle a Completed message: transition job from Running to Completed.
+///
+/// Uses a status filter on the UPDATE to avoid TOCTOU races.
 async fn handle_completed(
     log: &slog::Logger,
     context: &ApiContext,
@@ -404,21 +410,6 @@ async fn handle_completed(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let now = DateTime::now();
 
-    // Validate state transition: only Running -> Completed is valid
-    let job: QueryJob = schema::job::table
-        .filter(schema::job::id.eq(job_id))
-        .first(auth_conn!(context))
-        .map_err(resource_not_found_err!(Job, job_id))?;
-
-    if job.status != JobStatus::Running {
-        slog::warn!(log, "Invalid state transition"; "job_id" => ?job_id, "from" => ?job.status, "to" => "completed");
-        return Err(format!(
-            "Invalid state transition from {:?} to Completed, expected Running",
-            job.status
-        )
-        .into());
-    }
-
     let update = UpdateJob {
         status: Some(JobStatus::Completed),
         completed: Some(Some(now)),
@@ -427,9 +418,21 @@ async fn handle_completed(
         ..Default::default()
     };
 
-    diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-        .set(&update)
-        .execute(write_conn!(context))?;
+    let updated = diesel::update(
+        schema::job::table
+            .filter(schema::job::id.eq(job_id))
+            .filter(schema::job::status.eq(JobStatus::Running)),
+    )
+    .set(&update)
+    .execute(write_conn!(context))?;
+
+    if updated == 0 {
+        slog::warn!(log, "Invalid state transition to Completed (concurrent state change)"; "job_id" => ?job_id);
+        return Err(format!(
+            "Invalid state transition to Completed for job {job_id:?}, expected Running"
+        )
+        .into());
+    }
 
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
@@ -445,6 +448,8 @@ async fn handle_completed(
 }
 
 /// Handle a Failed message: transition job from Claimed or Running to Failed.
+///
+/// Uses a status filter on the UPDATE to avoid TOCTOU races.
 async fn handle_failed(
     log: &slog::Logger,
     context: &ApiContext,
@@ -455,21 +460,6 @@ async fn handle_failed(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let now = DateTime::now();
 
-    // Validate state transition: Claimed -> Failed or Running -> Failed
-    let job: QueryJob = schema::job::table
-        .filter(schema::job::id.eq(job_id))
-        .first(auth_conn!(context))
-        .map_err(resource_not_found_err!(Job, job_id))?;
-
-    if !matches!(job.status, JobStatus::Claimed | JobStatus::Running) {
-        slog::warn!(log, "Invalid state transition"; "job_id" => ?job_id, "from" => ?job.status, "to" => "failed");
-        return Err(format!(
-            "Invalid state transition from {:?} to Failed, expected Claimed or Running",
-            job.status
-        )
-        .into());
-    }
-
     let update = UpdateJob {
         status: Some(JobStatus::Failed),
         completed: Some(Some(now)),
@@ -478,9 +468,25 @@ async fn handle_failed(
         ..Default::default()
     };
 
-    diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-        .set(&update)
-        .execute(write_conn!(context))?;
+    let updated = diesel::update(
+        schema::job::table
+            .filter(schema::job::id.eq(job_id))
+            .filter(
+                schema::job::status
+                    .eq(JobStatus::Claimed)
+                    .or(schema::job::status.eq(JobStatus::Running)),
+            ),
+    )
+    .set(&update)
+    .execute(write_conn!(context))?;
+
+    if updated == 0 {
+        slog::warn!(log, "Invalid state transition to Failed (concurrent state change)"; "job_id" => ?job_id);
+        return Err(format!(
+            "Invalid state transition to Failed for job {job_id:?}, expected Claimed or Running"
+        )
+        .into());
+    }
 
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
@@ -495,6 +501,9 @@ async fn handle_failed(
 }
 
 /// Handle a Cancelled message: runner acknowledges cancellation, ensure job is in Canceled state.
+///
+/// Uses a status filter on the UPDATE to avoid TOCTOU races. If zero rows updated,
+/// re-reads to check whether the job is already Canceled (idempotent success).
 async fn handle_cancelled(
     log: &slog::Logger,
     context: &ApiContext,
@@ -502,27 +511,7 @@ async fn handle_cancelled(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let now = DateTime::now();
 
-    let job: QueryJob = schema::job::table
-        .filter(schema::job::id.eq(job_id))
-        .first(auth_conn!(context))
-        .map_err(resource_not_found_err!(Job, job_id))?;
-
-    // If already canceled, just acknowledge
-    if job.status == JobStatus::Canceled {
-        slog::debug!(log, "Job already canceled"; "job_id" => ?job_id);
-        return Ok(());
-    }
-
-    // Transition to Canceled from Claimed or Running
-    if !matches!(job.status, JobStatus::Claimed | JobStatus::Running) {
-        slog::warn!(log, "Invalid state transition"; "job_id" => ?job_id, "from" => ?job.status, "to" => "canceled");
-        return Err(format!(
-            "Invalid state transition from {:?} to Canceled, expected Claimed or Running",
-            job.status
-        )
-        .into());
-    }
-
+    // Try to transition from Claimed or Running to Canceled
     let update = UpdateJob {
         status: Some(JobStatus::Canceled),
         completed: Some(Some(now)),
@@ -530,14 +519,41 @@ async fn handle_cancelled(
         ..Default::default()
     };
 
-    diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-        .set(&update)
-        .execute(write_conn!(context))?;
+    let updated = diesel::update(
+        schema::job::table
+            .filter(schema::job::id.eq(job_id))
+            .filter(
+                schema::job::status
+                    .eq(JobStatus::Claimed)
+                    .or(schema::job::status.eq(JobStatus::Running)),
+            ),
+    )
+    .set(&update)
+    .execute(write_conn!(context))?;
 
-    #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-        bencher_otel::JobStatusKind::Canceled,
-    ));
+    if updated > 0 {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+            bencher_otel::JobStatusKind::Canceled,
+        ));
+        return Ok(());
+    }
 
-    Ok(())
+    // Zero rows updated — check if already Canceled (idempotent) or invalid state
+    let job: QueryJob = schema::job::table
+        .filter(schema::job::id.eq(job_id))
+        .first(write_conn!(context))
+        .map_err(resource_not_found_err!(Job, job_id))?;
+
+    if job.status == JobStatus::Canceled {
+        slog::debug!(log, "Job already canceled"; "job_id" => ?job_id);
+        return Ok(());
+    }
+
+    slog::warn!(log, "Invalid state transition to Canceled (concurrent state change)"; "job_id" => ?job_id, "current_status" => ?job.status);
+    Err(format!(
+        "Invalid state transition from {:?} to Canceled for job {job_id:?}, expected Claimed or Running",
+        job.status
+    )
+    .into())
 }

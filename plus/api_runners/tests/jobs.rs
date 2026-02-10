@@ -790,7 +790,7 @@ mod job_spec {
         // Insert job with invalid spec (missing required fields)
         let _job_uuid = insert_test_job_with_invalid_spec(&server, report_id);
 
-        // Try to claim the job - should fail with 400
+        // Try to claim the job - should fail with 500 (corrupt spec is a server error)
         let body = serde_json::json!({ "poll_timeout": 5 });
         let resp = server
             .client
@@ -801,7 +801,7 @@ mod job_spec {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
     // Test that the spec is NOT included in public job listing
@@ -2288,7 +2288,7 @@ mod invalid_transitions {
         assert_eq!(resp.status(), StatusCode::FORBIDDEN);
     }
 
-    // Canceled -> Running (invalid: terminal state)
+    // Canceled -> Running: returns 200 with canceled: true (tells runner to stop)
     #[tokio::test]
     async fn test_job_invalid_transition_canceled_to_running() {
         let server = TestServer::new().await;
@@ -2305,7 +2305,9 @@ mod invalid_transitions {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        assert_eq!(resp.status(), StatusCode::OK);
+        let json: JsonUpdateJobResponse = resp.json().await.expect("Failed to parse response");
+        assert!(json.canceled);
     }
 }
 

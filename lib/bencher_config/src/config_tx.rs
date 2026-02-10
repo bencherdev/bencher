@@ -7,7 +7,9 @@ use std::{
 
 use bencher_endpoint::Registrar;
 #[cfg(feature = "plus")]
-use bencher_json::system::config::JsonPlus;
+use bencher_json::system::config::{
+    DEFAULT_HEARTBEAT_TIMEOUT_SECS, DEFAULT_JOB_TIMEOUT_GRACE_PERIOD_SECS, JsonPlus,
+};
 use bencher_json::{
     JsonConfig,
     system::config::{
@@ -256,6 +258,21 @@ async fn into_context(
     #[cfg(feature = "plus")]
     let rate_limiting = plus.as_ref().and_then(|plus| plus.rate_limiting);
 
+    #[cfg(feature = "plus")]
+    let heartbeat_timeout = std::time::Duration::from_secs(
+        plus.as_ref()
+            .and_then(|p| p.runners.as_ref())
+            .map_or(DEFAULT_HEARTBEAT_TIMEOUT_SECS, |r| r.heartbeat_timeout),
+    );
+    #[cfg(feature = "plus")]
+    let job_timeout_grace_period = std::time::Duration::from_secs(
+        plus.as_ref()
+            .and_then(|p| p.runners.as_ref())
+            .map_or(DEFAULT_JOB_TIMEOUT_GRACE_PERIOD_SECS, |r| {
+                r.job_timeout_grace_period
+            }),
+    );
+
     info!(log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
     let Plus {
@@ -311,7 +328,9 @@ async fn into_context(
         #[cfg(feature = "plus")]
         oci_storage,
         #[cfg(feature = "plus")]
-        heartbeat_timeout: std::time::Duration::from_secs(90),
+        heartbeat_timeout,
+        #[cfg(feature = "plus")]
+        job_timeout_grace_period,
         #[cfg(feature = "plus")]
         heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
     })
@@ -528,6 +547,7 @@ async fn spawn_job_recovery(log: Logger, context: &ApiContext) {
             context.database.connection.clone(),
             job.id,
             &context.heartbeat_tasks,
+            context.job_timeout_grace_period,
         );
     }
 }

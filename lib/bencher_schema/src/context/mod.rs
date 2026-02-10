@@ -75,6 +75,8 @@ pub struct ApiContext {
     #[cfg(feature = "plus")]
     pub heartbeat_timeout: std::time::Duration,
     #[cfg(feature = "plus")]
+    pub job_timeout_grace_period: std::time::Duration,
+    #[cfg(feature = "plus")]
     pub heartbeat_tasks: HeartbeatTasks,
 }
 

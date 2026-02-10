@@ -310,6 +310,11 @@ async fn update_job_inner(
         return Err(forbidden_error("Job is not assigned to this runner"));
     }
 
+    // Early canceled check: if job was already canceled, tell the runner immediately
+    if job.status == JobStatus::Canceled {
+        return Ok(JsonUpdateJobResponse { canceled: true });
+    }
+
     // Verify valid state transition
     let valid_transition = matches!(
         (job.status, update_request.status),
@@ -337,10 +342,27 @@ async fn update_job_inner(
         ..Default::default()
     };
 
-    diesel::update(schema::job::table.filter(schema::job::id.eq(job.id)))
-        .set(&job_update)
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Job, job))?;
+    // Use status filter on UPDATE to prevent TOCTOU races
+    let updated = diesel::update(
+        schema::job::table
+            .filter(schema::job::id.eq(job.id))
+            .filter(schema::job::status.eq(job.status)),
+    )
+    .set(&job_update)
+    .execute(write_conn!(context))
+    .map_err(resource_conflict_err!(Job, job))?;
+
+    if updated == 0 {
+        // Re-read to check if job was canceled between our read and write
+        let current_job = QueryJob::from_uuid(write_conn!(context), job_uuid)?;
+        if current_job.status == JobStatus::Canceled {
+            return Ok(JsonUpdateJobResponse { canceled: true });
+        }
+        return Err(forbidden_error(format!(
+            "Concurrent status change: job is now {:?}, expected {:?}",
+            current_job.status, job.status
+        )));
+    }
 
     // Cancel any pending heartbeat timeout for this job
     if update_request.status.is_terminal() {

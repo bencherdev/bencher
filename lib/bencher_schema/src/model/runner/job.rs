@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use bencher_json::{DateTime, JobStatus, JobUuid, JsonJob, JsonJobSpec, RunnerUuid};
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use bencher_json::{DateTime, JobStatus, JobUuid, JsonJob, JsonJobSpec};
+use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
 
 use crate::{
     context::DbConnection,
-    error::bad_request_error,
+    error::issue_error,
     model::{
         organization::OrganizationId,
         project::report::ReportId,
@@ -62,8 +62,13 @@ impl QueryJob {
 
     /// Parse the job spec from JSON string.
     pub fn parse_spec(&self) -> Result<JsonJobSpec, HttpError> {
-        serde_json::from_str(&self.spec)
-            .map_err(|e| bad_request_error(format!("Failed to parse job spec: {e}")))
+        serde_json::from_str(&self.spec).map_err(|e| {
+            issue_error(
+                "Invalid job spec",
+                "Job spec stored in database could not be parsed",
+                e,
+            )
+        })
     }
 
     /// Convert to JSON for public API (spec is not included).
@@ -86,39 +91,6 @@ impl QueryJob {
             created: self.created,
             modified: self.modified,
         })
-    }
-
-    /// Convert to JSON for runner claim response (includes spec).
-    pub fn into_json_for_runner(self, runner_uuid: RunnerUuid) -> Result<JsonJob, HttpError> {
-        let spec = self.parse_spec()?;
-        Ok(JsonJob {
-            uuid: self.uuid,
-            status: self.status,
-            spec: Some(spec),
-            runner: Some(runner_uuid),
-            claimed: self.claimed,
-            started: self.started,
-            completed: self.completed,
-            exit_code: self.exit_code,
-            created: self.created,
-            modified: self.modified,
-        })
-    }
-
-    /// Convert to JSON using a known runner UUID (avoids database lookup, no spec).
-    pub fn into_json_with_known_runner(self, runner_uuid: RunnerUuid) -> JsonJob {
-        JsonJob {
-            uuid: self.uuid,
-            status: self.status,
-            spec: None,
-            runner: Some(runner_uuid),
-            claimed: self.claimed,
-            started: self.started,
-            completed: self.completed,
-            exit_code: self.exit_code,
-            created: self.created,
-            modified: self.modified,
-        }
     }
 }
 
@@ -179,15 +151,19 @@ pub struct UpdateJob {
 /// Spawn a background task that marks a job as failed if no heartbeat is received
 /// within the timeout period. This handles both "disconnected runner" recovery
 /// and startup recovery for in-flight jobs.
+///
+/// Also enforces job timeout: if the job has been running longer than its configured
+/// `timeout` plus `job_timeout_grace_period`, it is marked as Canceled so the runner
+/// receives a Cancel event on its next heartbeat.
 pub fn spawn_heartbeat_timeout(
     log: slog::Logger,
     timeout: std::time::Duration,
     connection: Arc<Mutex<DbConnection>>,
     job_id: JobId,
-    #[cfg(feature = "plus")] heartbeat_tasks: &crate::context::HeartbeatTasks,
+    heartbeat_tasks: &crate::context::HeartbeatTasks,
+    job_timeout_grace_period: std::time::Duration,
 ) {
     let join_handle = tokio::spawn({
-        #[cfg(feature = "plus")]
         let heartbeat_tasks = heartbeat_tasks.clone();
         async move {
             tokio::time::sleep(timeout).await;
@@ -211,6 +187,42 @@ pub fn spawn_heartbeat_timeout(
                 return;
             }
 
+            // Check job timeout: if running longer than timeout + grace period, cancel it
+            if let Some(started) = job.started {
+                let now = DateTime::now();
+                let elapsed = (now.timestamp() - started.timestamp()).max(0);
+                #[expect(
+                    clippy::cast_possible_wrap,
+                    reason = "job timeout and grace period fit in i64"
+                )]
+                let limit = i64::from(job.timeout) + job_timeout_grace_period.as_secs() as i64;
+                if elapsed > limit {
+                    slog::warn!(log, "Job timeout exceeded, marking as canceled"; "job_id" => ?job_id, "elapsed" => elapsed, "limit" => limit);
+                    let cancel_update = UpdateJob {
+                        status: Some(JobStatus::Canceled),
+                        completed: Some(Some(now)),
+                        modified: Some(now),
+                        ..Default::default()
+                    };
+                    // Use status filter to avoid TOCTOU race
+                    if let Err(e) = diesel::update(
+                        schema::job::table
+                            .filter(schema::job::id.eq(job_id))
+                            .filter(
+                                schema::job::status
+                                    .eq(JobStatus::Claimed)
+                                    .or(schema::job::status.eq(JobStatus::Running)),
+                            ),
+                    )
+                    .set(&cancel_update)
+                    .execute(&mut *conn)
+                    {
+                        slog::error!(log, "Failed to cancel timed-out job"; "job_id" => ?job_id, "error" => %e);
+                    }
+                    return;
+                }
+            }
+
             // If the runner reconnected and sent a recent heartbeat, don't fail the job
             if let Some(last_heartbeat) = job.last_heartbeat {
                 let now = DateTime::now();
@@ -230,8 +242,8 @@ pub fn spawn_heartbeat_timeout(
                         remaining,
                         connection_clone,
                         job_id,
-                        #[cfg(feature = "plus")]
                         &heartbeat_tasks,
+                        job_timeout_grace_period,
                     );
                     return;
                 }
@@ -256,8 +268,5 @@ pub fn spawn_heartbeat_timeout(
         }
     });
 
-    #[cfg(feature = "plus")]
     heartbeat_tasks.insert(job_id, join_handle.abort_handle());
-    #[cfg(not(feature = "plus"))]
-    drop(join_handle);
 }
