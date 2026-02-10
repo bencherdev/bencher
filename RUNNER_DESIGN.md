@@ -51,133 +51,62 @@ Runners are **server-scoped** - they can execute jobs from ANY project on the se
 
 This is the shared infrastructure model (similar to GitHub-hosted runners). A pool of bare metal machines serves the entire platform.
 
-## Database Schema
+## Data Model
 
-```sql
--- Runner registration and state (server-scoped, serves all projects)
-CREATE TABLE runner (
-    id UUID PRIMARY KEY,
-    uuid UUID NOT NULL UNIQUE,        -- Runner's self-generated ID
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL UNIQUE,        -- URL-friendly name
-    token_hash TEXT NOT NULL,         -- SHA-256 hash of token (token itself never stored)
-    labels JSONB NOT NULL DEFAULT '[]', -- ["arch:arm64", "os:linux"]
-    state TEXT NOT NULL DEFAULT 'offline', -- offline, idle, running
-    locked TIMESTAMP,              -- If set, runner is locked (token compromised)
-    archived TIMESTAMP,               -- Soft delete
-    last_heartbeat TIMESTAMP,
-    created TIMESTAMP NOT NULL,
-    modified TIMESTAMP NOT NULL
-);
+### Runner
 
--- Job status enum (stored as integer)
--- 0 = pending
--- 1 = claimed
--- 2 = running
--- 3 = completed
--- 4 = failed
--- 5 = canceled
+Represents a registered bare metal machine capable of executing benchmark jobs.
 
--- Job queue
-CREATE TABLE job (
-    id UUID PRIMARY KEY,
-    report_id UUID NOT NULL REFERENCES report(id) ON DELETE CASCADE,
+| Field            | Description                                          |
+| ---------------- | ---------------------------------------------------- |
+| uuid             | Runner's self-generated ID                           |
+| name / slug      | Human-readable name and URL-friendly slug            |
+| token_hash       | SHA-256 hash of runner token (token itself never stored) |
+| labels           | Metadata tags (e.g., `arch:arm64`, `os:linux`)       |
+| state            | `offline`, `idle`, or `running`                      |
+| archived         | Soft delete timestamp                                |
+| last_heartbeat   | Last heartbeat received from this runner             |
 
-    -- Scheduling (set at creation, used by claim algorithm)
-    organization_id INTEGER NOT NULL REFERENCES organization(id),
-    source_ip TEXT NOT NULL,          -- For unclaimed project rate limiting
-    priority INTEGER NOT NULL DEFAULT 0,  -- 0=unclaimed, 100=free, 200=team, 300=enterprise
+### Job
 
-    -- Job specification (JsonJobSpec serialized as JSON)
-    status INTEGER NOT NULL DEFAULT 0,  -- JobStatus enum
-    spec JSONB NOT NULL,                -- JsonJobSpec
+Represents a benchmark execution request linked to a report.
 
-    -- Execution tracking
-    runner_id UUID REFERENCES runner(id) ON DELETE RESTRICT,
-    claimed TIMESTAMP,
-    started TIMESTAMP,                -- When benchmark actually began (after setup)
-    completed TIMESTAMP,
-    last_heartbeat TIMESTAMP,
-    last_billed_minute INTEGER DEFAULT 0,  -- Minutes billed so far
+| Field              | Description                                          |
+| ------------------ | ---------------------------------------------------- |
+| report_id          | Reference to the parent report                       |
+| organization_id    | Owning organization (for concurrency limits)         |
+| source_ip          | Submitter IP (for unclaimed project rate limiting)   |
+| priority           | Scheduling priority (0=unclaimed, 100=free, 200=team, 300=enterprise) |
+| status             | Job lifecycle state (see Job State Machine)          |
+| spec               | `JsonJobSpec` — everything the runner needs to execute |
+| runner_id          | Runner that claimed this job                         |
+| claimed / started / completed | Lifecycle timestamps                      |
+| last_heartbeat     | Last heartbeat for this specific job                 |
+| last_billed_minute | Minutes billed so far (prevents double-counting)     |
+| exit_code          | Process exit code from the benchmark                 |
 
-    -- Results
-    exit_code INTEGER,
+### Job Status
 
-    created TIMESTAMP NOT NULL,
-    modified TIMESTAMP NOT NULL
-);
-
--- Note: The `spec` column contains JsonJobSpec:
--- {
---   "registry": "https://registry.bencher.dev",
---   "project": "<project-uuid>",
---   "digest": "sha256:...",
---   "entrypoint": ["./run.sh"],      // optional
---   "cmd": ["--iterations", "100"],  // optional
---   "env": {"KEY": "value"},         // optional
---   "vcpu": 4,
---   "memory": 8589934592,            // 8 GB in bytes
---   "disk": 21474836480,             // 20 GB in bytes
---   "timeout": 3600,
---   "network": false
--- }
-
--- Index for job claiming (ordered by priority, then FIFO)
-CREATE INDEX idx_job_pending
-    ON job(status, priority DESC, created ASC)
-    WHERE status = 0;  -- pending
-
--- Indexes for concurrency limit checks (used in claim subqueries)
-CREATE INDEX index_job_org_running
-    ON job(organization_id) WHERE status = 2;  -- running
-CREATE INDEX index_job_source_ip_running
-    ON job(source_ip) WHERE status = 2;  -- running
-```
-
-```rust
-#[repr(u8)]
-pub enum JobStatus {
-    Pending = 0,
-    Claimed = 1,
-    Running = 2,
-    Completed = 3,
-    Failed = 4,
-    Canceled = 5,
-}
-```
+`Pending` (0), `Claimed` (1), `Running` (2), `Completed` (3), `Failed` (4), `Canceled` (5)
 
 ## Job Spec Structure
 
 The job spec is designed to minimize data sent to runners, reducing leakage risk. Runners only receive what's necessary to pull and execute an OCI image.
 
-```rust
-/// Job specification sent to runners when claiming a job.
-/// Defined in `bencher_json`, with `ImageDigest` validated in `bencher_valid`.
-pub struct JsonJobSpec {
-    /// Registry URL for pulling the OCI image (e.g., "https://registry.bencher.dev")
-    pub registry: Url,
-    /// Project UUID for OCI authentication scoping
-    pub project: ProjectUuid,
-    /// Image digest - must be immutable (e.g., "sha256:abc123...")
-    pub digest: ImageDigest,
-    /// Entrypoint override (like Docker ENTRYPOINT)
-    pub entrypoint: Option<Vec<String>>,
-    /// Command override (like Docker CMD)
-    pub cmd: Option<Vec<String>>,
-    /// Environment variables passed to the container
-    pub env: Option<HashMap<String, String>>,
-    /// Number of virtual CPUs for the VM
-    pub vcpu: u32,
-    /// Memory size in bytes
-    pub memory: u64,
-    /// Disk size in bytes
-    pub disk: u64,
-    /// Maximum execution time in seconds
-    pub timeout: u32,
-    /// Whether the VM has network access
-    pub network: bool,
-}
-```
+| Field      | Description                                                |
+| ---------- | ---------------------------------------------------------- |
+| registry   | Registry URL (e.g., `https://registry.bencher.dev`)        |
+| project    | Project UUID for OCI authentication scoping                |
+| digest     | Immutable image digest (e.g., `sha256:abc123...`)          |
+| entrypoint | Optional entrypoint override (like Docker ENTRYPOINT)      |
+| cmd        | Optional command override (like Docker CMD)                |
+| env        | Optional environment variables                             |
+| vcpu       | Number of virtual CPUs for the VM                          |
+| memory     | Memory size in bytes                                       |
+| disk       | Disk size in bytes                                         |
+| timeout    | Maximum execution time in seconds                          |
+| network    | Whether the VM has network access                          |
+| output     | List of file paths to read results from after execution    |
 
 **Design principles:**
 - **Minimal information**: Runner doesn't know repo URL, branch, commit, or benchmark commands directly
@@ -196,7 +125,7 @@ Requires server admin permissions.
 | POST   | `/v0/runners`                | Create runner, returns token                   |
 | GET    | `/v0/runners`                | List runners                                   |
 | GET    | `/v0/runners/{runner}`       | Get runner details                             |
-| PATCH  | `/v0/runners/{runner}`       | Update runner (name, labels, locked, archived) |
+| PATCH  | `/v0/runners/{runner}`       | Update runner (name, labels, archived)         |
 | POST   | `/v0/runners/{runner}/token` | Generate new token (invalidates old)           |
 
 ### Job Management (Project Scoped)
@@ -217,96 +146,39 @@ Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
 | POST      | `/v0/runners/{runner}/jobs`               | Long-poll to claim a job (from any accessible project) |
 | WebSocket | `/v0/runners/{runner}/jobs/{job}/channel` | Heartbeat and status updates during job execution      |
 
-## Endpoint Details
+## Claim Endpoint Behavior
 
-### POST /v0/runners - Register Runner
-
-```rust
-// Request (by project admin)
-pub struct CreateRunner {
-    pub name: String,
-    pub labels: Vec<String>,
-}
-
-// Response (token shown once, then hashed)
-pub struct RunnerCreated {
-    pub uuid: Uuid,
-    pub token: String,  // "bencher_runner_xxxx" - only shown once
-}
-```
-
-### POST /v0/runners/{runner}/jobs - Claim Job (Long-Poll)
-
-```rust
-// Request
-pub struct JsonClaimJob {
-    pub poll_timeout: Option<u32>,  // 1-60 seconds, default 30
-}
-
-// Response (after job available or timeout)
-// Returns Option<JsonJob> - None if timeout with no jobs
-
-/// Job returned to runner on claim (includes spec for execution)
-pub struct JsonJob {
-    pub uuid: JobUuid,
-    pub status: JobStatus,
-    pub spec: JsonJobSpec,          // What to execute (see Job Spec Structure)
-    pub runner: Option<RunnerUuid>,
-    pub claimed: Option<DateTime>,
-    pub started: Option<DateTime>,
-    pub completed: Option<DateTime>,
-    pub exit_code: Option<i32>,
-    pub created: DateTime,
-    pub modified: DateTime,
-}
-```
-
-The claim endpoint:
 1. Applies per-runner rate limiting to prevent abuse of long-polling
 2. Finds pending jobs ordered by `(priority DESC, created ASC)`
-3. Atomically updates job status to `claimed`, sets `runner_id` and `claimed`
+3. Atomically updates job status to `claimed`, sets `runner_id` and `claimed` timestamp
 4. If no matching jobs, holds connection open until timeout or job arrives
 5. Returns job with spec or `None` on timeout
 
-### WebSocket /v0/runners/{runner}/jobs/{job}/channel - Job Execution Channel
+## WebSocket Job Execution Channel
 
 WebSocket connection for heartbeat and job status updates. Established after claiming a job, before benchmark execution begins.
 
 **Authentication:** Runner token passed via `Sec-WebSocket-Protocol: bearer.<token>` header.
 
-```rust
-// Runner → Server messages (JSON)
-#[serde(tag = "event", rename_all = "snake_case")]
-enum RunnerMessage {
-    /// Job setup complete, benchmark execution starting
-    Running,
-    /// Periodic heartbeat (~1/sec), keeps job alive and triggers billing
-    Heartbeat,
-    /// Benchmark completed successfully
-    Completed {
-        exit_code: i32,
-        output: Option<String>,
-    },
-    /// Benchmark failed
-    Failed {
-        exit_code: Option<i32>,
-        error: String,
-    },
-    /// Acknowledge cancellation from server
-    Cancelled,
-}
+### Runner to Server Messages
 
-// Server → Runner messages (JSON)
-#[serde(tag = "event", rename_all = "snake_case")]
-enum ServerMessage {
-    /// Acknowledge received message
-    Ack,
-    /// Job was canceled, stop execution immediately
-    Cancel,
-}
-```
+| Event       | Description                                 | Payload                            |
+| ----------- | ------------------------------------------- | ---------------------------------- |
+| `running`   | Job setup complete, benchmark starting      | —                                  |
+| `heartbeat` | Periodic liveness signal (~1/sec)           | —                                  |
+| `completed` | Benchmark completed successfully            | `exit_code`, `stdout`, `stderr`, optional `output` (file path → contents map) |
+| `failed`    | Benchmark failed                            | optional `exit_code`, `error`      |
+| `cancelled` | Acknowledge cancellation from server        | —                                  |
 
-**Connection flow:**
+### Server to Runner Messages
+
+| Event    | Description                              |
+| -------- | ---------------------------------------- |
+| `ack`    | Acknowledge received message             |
+| `cancel` | Job was canceled, stop execution         |
+
+### Connection Flow
+
 ```
 Runner                              Server
   │                                    │
@@ -327,7 +199,8 @@ Runner                              Server
   ├──[WS Close] ──────────────────────►│
 ```
 
-**Cancellation flow:**
+### Cancellation Flow
+
 ```
 Runner                              Server
   │                                    │
@@ -355,20 +228,20 @@ Instead of a periodic reaper, stale jobs are recovered via per-job timeout tasks
 
 **Two complementary mechanisms:**
 
-1. **Inline WS timeout** — While the WebSocket connection is open, `tokio::time::timeout(heartbeat_timeout, rx.next())` detects a "connected but silent" runner. On timeout, the job is marked `Failed` immediately within the WS loop.
+1. **Inline WS timeout** — While the WebSocket connection is open, a read timeout detects a "connected but silent" runner. On timeout, the job is marked `Failed` immediately within the WS loop.
 
-2. **Spawned disconnect timeout** — When a WebSocket disconnects and the job is still in-flight (non-terminal), a background `tokio::spawn` task sleeps for `heartbeat_timeout`. After waking, it checks:
+2. **Spawned disconnect timeout** — When a WebSocket disconnects and the job is still in-flight (non-terminal), a background task sleeps for the heartbeat timeout. After waking, it checks:
    - If the job reached a terminal state: do nothing (finished normally).
    - If `last_heartbeat` is recent (within the timeout window): the runner reconnected — schedule another timeout for the remaining duration.
    - Otherwise: mark the job as `Failed`.
 
 **Startup recovery:** On server startup, all `Claimed` or `Running` jobs are queried and a timeout task is spawned for each, recovering jobs that were in-flight when the server previously shut down.
 
-**Heartbeat timeout is configurable** via `ApiContext.heartbeat_timeout` (default: 90 seconds in production, 5 seconds in tests).
+**Heartbeat timeout is configurable** (default: 90 seconds in production, 5 seconds in tests).
 
 ### WebSocket Reconnection
 
-If a runner disconnects and reconnects to a `Running` job, the WebSocket channel accepts the connection (status check allows `Claimed | Running`). Sending a `Running` message on a job that is already `Running` is idempotent — it updates `last_heartbeat` without changing the status or `started` timestamp. This cancels any pending disconnect-timeout task (via the `last_heartbeat` freshness check).
+If a runner disconnects and reconnects to a `Running` job, the WebSocket channel accepts the connection. Sending a `Running` message on a job that is already `Running` is idempotent — it updates `last_heartbeat` without changing the status or `started` timestamp. This cancels any pending disconnect-timeout task via the `last_heartbeat` freshness check.
 
 ## Job State Machine
 
@@ -385,11 +258,11 @@ pending ───▶ claimed ───▶ running ───▶ completed
 | ------- | --------- | --------------------------------- |
 | pending | claimed   | Runner claims job                 |
 | pending | canceled  | User cancels                      |
-| claimed | running   | Runner calls `/started`           |
+| claimed | running   | Runner sends `running` event      |
 | claimed | failed    | Runner fails during setup         |
 | claimed | canceled  | User cancels                      |
-| running | completed | Runner calls `/completed`         |
-| running | failed    | Runner calls `/failed` or timeout |
+| running | completed | Runner sends `completed` event    |
+| running | failed    | Runner sends `failed` event or timeout |
 | running | canceled  | User cancels                      |
 
 **Terminal states:** completed, failed, canceled (no transitions out)
@@ -467,215 +340,26 @@ Jobs are queued with priority based on the submitting organization's plan. Prior
 
 ### Claim Algorithm
 
-The claim endpoint must atomically find the highest-priority eligible job while respecting concurrency limits. This is implemented in pure Diesel using table aliases for correlated subqueries:
+The claim endpoint atomically finds the highest-priority eligible job while respecting concurrency limits:
 
-```rust
-use diesel::dsl::{exists, not};
-use diesel::alias;
-use crate::schema::job;
+1. **Enterprise/Team** (priority >= 200): No concurrency limit — always eligible.
+2. **Free** (priority 100-199): Eligible only if no other `Running` job exists for the same organization.
+3. **Unclaimed** (priority < 100): Eligible only if no other `Running` job exists for the same source IP.
 
-// Create aliases for correlated subqueries
-alias!(job as job_org: JobOrg);
-alias!(job as job_ip: JobIp);
-
-fn claim_next_job(conn: &mut DbConnection, runner_id: RunnerId) -> Result<Option<QueryJob>, HttpError> {
-    use job::dsl::*;
-
-    // Tier 1: Enterprise/Team (priority >= 200) - no concurrency limit
-    let tier_unlimited = priority.ge(200);
-
-    // Tier 2: Free (priority 100-199) - one concurrent job per organization
-    let tier_free_eligible = priority.ge(100)
-        .and(priority.lt(200))
-        .and(not(exists(
-            job_org
-                .filter(job_org.field(status).eq(JobStatus::Running))
-                .filter(job_org.field(organization_id).eq(organization_id))
-        )));
-
-    // Tier 3: Unclaimed (priority < 100) - one concurrent job per source IP
-    let tier_unclaimed_eligible = priority.lt(100)
-        .and(not(exists(
-            job_ip
-                .filter(job_ip.field(status).eq(JobStatus::Running))
-                .filter(job_ip.field(source_ip).eq(source_ip))
-        )));
-
-    // Combined eligibility: any tier condition passes
-    let eligible = tier_unlimited
-        .or(tier_free_eligible)
-        .or(tier_unclaimed_eligible);
-
-    // Atomic claim: find and update in transaction
-    let job = job::table
-        .filter(status.eq(JobStatus::Pending))
-        .filter(eligible)
-        .order((priority.desc(), created.asc()))
-        .first::<QueryJob>(conn)
-        .optional()?;
-
-    if let Some(ref j) = job {
-        diesel::update(job::table.filter(id.eq(j.id)))
-            .set((
-                status.eq(JobStatus::Claimed),
-                runner_id.eq(Some(runner_id)),
-                claimed.eq(Some(DateTime::now())),
-                modified.eq(DateTime::now()),
-            ))
-            .execute(conn)?;
-    }
-
-    Ok(job)
-}
-```
-
-**Generated SQL:**
-```sql
-SELECT * FROM job
-WHERE status = 0  -- Pending
-AND (
-    priority >= 200
-    OR (priority >= 100 AND priority < 200
-        AND NOT EXISTS (
-            SELECT 1 FROM job AS job_org
-            WHERE job_org.status = 2 AND job_org.organization_id = job.organization_id
-        ))
-    OR (priority < 100
-        AND NOT EXISTS (
-            SELECT 1 FROM job AS job_ip
-            WHERE job_ip.status = 2 AND job_ip.source_ip = job.source_ip
-        ))
-)
-ORDER BY priority DESC, created ASC
-LIMIT 1
-```
-
-SQLite's serialized write transactions ensure atomicity without explicit row locking.
-
-### Required Schema Additions
-
-```sql
--- Add to job table
-organization_id INTEGER NOT NULL REFERENCES organization(id),
-source_ip TEXT NOT NULL,
-
--- Partial indexes for efficient concurrency checks
-CREATE INDEX index_job_org_running
-    ON job(organization_id) WHERE status = 2;
-CREATE INDEX index_job_source_ip_running
-    ON job(source_ip) WHERE status = 2;
-```
+Jobs are ordered by `(priority DESC, created ASC)` — highest priority first, FIFO within the same tier. SQLite's serialized write transactions ensure atomicity without explicit row locking.
 
 ### OTEL Metrics
 
-Track queue time to monitor starvation across priority tiers. Uses strongly-typed enums following the `bencher_otel` patterns:
-
-```rust
-// In bencher_otel/src/api_meter.rs
-
-/// Priority tier for job scheduling metrics
-#[derive(Debug, Clone, Copy)]
-pub enum PriorityTier {
-    Enterprise,
-    Team,
-    Free,
-    Unclaimed,
-}
-
-impl PriorityTier {
-    const KEY: &str = "priority.tier";
-
-    /// Convert from priority integer value
-    pub fn from_priority(priority: i32) -> Self {
-        match priority {
-            p if p >= 300 => Self::Enterprise,
-            p if p >= 200 => Self::Team,
-            p if p >= 100 => Self::Free,
-            _ => Self::Unclaimed,
-        }
-    }
-}
-
-impl fmt::Display for PriorityTier {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Enterprise => write!(f, "enterprise"),
-            Self::Team => write!(f, "team"),
-            Self::Free => write!(f, "free"),
-            Self::Unclaimed => write!(f, "unclaimed"),
-        }
-    }
-}
-
-impl From<PriorityTier> for opentelemetry::KeyValue {
-    fn from(tier: PriorityTier) -> Self {
-        opentelemetry::KeyValue::new(PriorityTier::KEY, tier.to_string())
-    }
-}
-
-/// Histogram metrics for the API
-#[derive(Debug, Clone, Copy)]
-pub enum ApiHistogram {
-    /// Time a job spent in pending state before being claimed and started
-    JobQueueDuration(PriorityTier),
-}
-
-impl ApiHistogram {
-    fn name(&self) -> &str {
-        match self {
-            Self::JobQueueDuration(_) => "job.queue.duration",
-        }
-    }
-
-    fn description(&self) -> &str {
-        match self {
-            Self::JobQueueDuration(_) => "Time job spent queued before starting (seconds)",
-        }
-    }
-
-    fn unit(&self) -> &str {
-        match self {
-            Self::JobQueueDuration(_) => "s",
-        }
-    }
-
-    fn attributes(self) -> Vec<opentelemetry::KeyValue> {
-        match self {
-            Self::JobQueueDuration(tier) => vec![tier.into()],
-        }
-    }
-}
-
-impl ApiMeter {
-    pub fn record(histogram: ApiHistogram, value: f64) {
-        let meter = Self::new();
-        let h = meter.meter
-            .f64_histogram(histogram.name().to_owned())
-            .with_description(histogram.description().to_owned())
-            .with_unit(histogram.unit().to_owned())
-            .build();
-        h.record(value, &histogram.attributes());
-    }
-}
-```
-
-Usage when job transitions to Running:
-
-```rust
-// In channel.rs or jobs.rs when job starts running
-let queue_duration = (started - created).as_secs_f64();
-let tier = PriorityTier::from_priority(job.priority);
-ApiMeter::record(ApiHistogram::JobQueueDuration(tier), queue_duration);
-```
+Queue time is tracked per priority tier to monitor starvation. A `job.queue.duration` histogram (in seconds) is recorded when a job transitions to `Running`, with a `priority.tier` attribute indicating the tier (enterprise, team, free, unclaimed).
 
 ### Usage-Based Billing
 
-Usage is tracked per-minute via Stripe's usage-based pricing. Heartbeats (received out-of-band) serve double duty:
+Usage is tracked per-minute via Stripe's usage-based pricing. Heartbeats serve double duty:
 
-1. **Liveness check** - Confirms runner is still executing the job
-2. **Billing increment** - Reports usage to Stripe
+1. **Liveness check** — Confirms runner is still executing the job
+2. **Billing increment** — Reports usage to Stripe
 
-The API tracks which minutes have been billed via `last_billed_minute` on the job (to avoid double-counting if heartbeats arrive early).
+The API tracks which minutes have been billed via `last_billed_minute` on the job to avoid double-counting if heartbeats arrive early.
 
 On each heartbeat:
 1. Update `last_heartbeat` on job and runner
@@ -687,57 +371,19 @@ On each heartbeat:
 
 ### Token Format
 
-Runner tokens use random bytes with a prefix (not JWTs):
-
-```rust
-// Generation (only done once, at runner creation)
-let random_bytes: [u8; 32] = rand::random();
-let token = format!("bencher_runner_{}", hex::encode(&random_bytes));
-// Example: bencher_runner_a1b2c3d4e5f6...
-
-// Storage (only the hash is stored, never the token itself)
-let token_hash = sha256(token.as_bytes());
-```
-
-**Key properties:**
-- Token shown exactly once at creation (cannot be retrieved later)
-- Only SHA-256 hash stored in database
-- DB breach doesn't expose usable tokens
-- Prefix `bencher_runner_` makes token type obvious
+Runner tokens use random bytes with a `bencher_runner_` prefix (not JWTs). The token is shown exactly once at creation and cannot be retrieved later. Only the SHA-256 hash is stored in the database, so a database breach does not expose usable tokens.
 
 ### Token Validation
 
-```rust
-fn validate_runner_token(token: &str) -> Result<Runner, AuthError> {
-    // 1. Check prefix
-    let token = token.strip_prefix("bencher_runner_")
-        .ok_or(AuthError::InvalidToken)?;
-
-    // 2. Hash the provided token
-    let token_hash = sha256(format!("bencher_runner_{}", token).as_bytes());
-
-    // 3. Look up runner by hash (excluding archived)
-    let runner = db.query(
-        "SELECT * FROM runner WHERE token_hash = ? AND archived IS NULL",
-        token_hash
-    )?;
-
-    // 4. Check if locked
-    if runner.locked.is_some() {
-        return Err(AuthError::RunnerLocked);
-    }
-
-    Ok(runner)
-}
-```
+1. Verify the `bencher_runner_` prefix
+2. Hash the provided token with SHA-256
+3. Look up the runner by hash (excluding archived runners)
 
 ### Token Rotation
 
 If a token is compromised:
-1. Lock the runner: `PATCH /v0/runners/{runner}` with `locked: true`
-2. Generate new token: `POST /v0/runners/{runner}/token`
-3. Update runner agent with new token
-4. Unlock the runner: `PATCH /v0/runners/{runner}` with `locked: false`
+1. Rotate token (`POST /v0/runners/{runner}/token`) — old token is invalidated immediately
+2. Update runner agent with new token
 
 ### Request Header
 
@@ -752,70 +398,15 @@ This token is scoped to:
 
 ## Open Questions
 
-- [x] **Runner scope**: ~~Project-scoped or organization-scoped?~~ **Decided: Server-scoped** - Runners can execute jobs from any project on the server (both self-hosted and cloud)
-- [x] **Job priority**: ~~FIFO or priority field?~~ **Decided: Priority + FIFO** - Bencher Plus customers get priority, FIFO within tiers
-- [x] **Usage billing**: ~~How to track?~~ **Decided: Stripe usage-based pricing** - Heartbeats trigger per-minute billing to Stripe
-- [x] **Heartbeat protocol**: ~~UDP? WebSocket? gRPC stream?~~ **Decided: WebSocket** - Low overhead, immediate cancellation, connection-based liveness detection
-- [x] **Stale job recovery**: ~~Periodic reaper or per-job timeout?~~ **Decided: Per-job timeout** - Spawned on WS disconnect and at startup; no periodic polling
-- [x] **Job spec design**: ~~What info does runner need?~~ **Decided: Minimal OCI-based spec** - Registry URL, project UUID, image digest, entrypoint/cmd/env overrides, VM resources (vcpu/memory/disk), timeout, network access
-- [x] **Job spec persistence**: ~~JSON string or typed?~~ **Decided: JsonJobSpec in bencher_json** - Implemented with `ImageDigest` validation in `bencher_valid`. Stored as JSONB in job table.
-- [x] **Concurrency limits**: ~~How to limit abuse?~~ **Decided: Tier-based limits** - Free: 1/org, Unclaimed: 1/source_ip, Team/Enterprise: unlimited
-- [ ] **Result storage**: Store in job table or separate results table linked to existing perf tables?
-- [ ] **Output storage**: Store benchmark output from WebSocket `completed` messages (currently dropped). Needed before the runner feature is usable end-to-end.
-- [ ] **Retry policy**: Auto-retry failed jobs? How many times?
-- [ ] **OCI auth for runners**: How does runner authenticate to registry? Options: (a) runner token directly, (b) exchange runner token for short-lived OCI token via API, (c) job claim response includes OCI token.
+- **Result storage**: Store in job table or separate results table linked to existing perf tables?
+- **Output storage**: How to persist the file path → contents map from `completed` messages? Options: inline in job table, separate table, or external blob storage.
+- **Retry policy**: Auto-retry failed jobs? How many times?
+- **OCI auth for runners**: How does runner authenticate to registry? Options: (a) runner token directly, (b) exchange runner token for short-lived OCI token via API, (c) job claim response includes OCI token.
 
 ## Implementation Phases
 
-1. **Phase 1**: Runner registration & heartbeat - Runners can connect and stay alive
-2. **Phase 2**: Job queue & claiming - Basic job distribution
-3. **Phase 3**: Execution & result reporting - Actually run benchmarks
-4. **Phase 4**: Labels & affinity - Match jobs to appropriate hardware
-5. **Phase 5**: Console UI - Manage runners, view job history
-
-## TODO: Job Scheduling Implementation
-
-The following changes are needed to implement the tier-based scheduling with concurrency limits:
-
-### 1. Migration Changes (`2026-02-02-120000_runner/up.sql`)
-
-- [ ] Add `organization_id INTEGER NOT NULL REFERENCES organization(id)` to job table
-- [ ] Add `source_ip TEXT NOT NULL` to job table
-- [ ] Add partial index `index_job_org_running ON job(organization_id) WHERE status = 2`
-- [ ] Add partial index `index_job_source_ip_running ON job(source_ip) WHERE status = 2`
-
-### 2. Model Changes (`bencher_schema/src/model/runner/job.rs`)
-
-- [ ] Add `organization_id: OrganizationId` to `QueryJob`
-- [ ] Add `source_ip: String` to `QueryJob`
-- [ ] Add `organization_id: OrganizationId` to `InsertJob`
-- [ ] Add `source_ip: String` to `InsertJob`
-- [ ] Update `InsertJob::new()` to accept these parameters
-
-### 3. Claim Endpoint (`api_runners/src/jobs.rs`)
-
-- [ ] Define table aliases: `alias!(job as job_org: JobOrg)` and `alias!(job as job_ip: JobIp)`
-- [ ] Implement tier-based eligibility filter using `not(exists())` with correlated subqueries
-- [ ] Replace simple priority ordering with eligibility-filtered query
-
-### 4. Job Creation (wherever jobs are created)
-
-- [ ] Pass `organization_id` from project context
-- [ ] Capture `source_ip` from HTTP request (`X-Forwarded-For` or socket addr)
-- [ ] Set priority based on organization's plan tier (0/100/200/300)
-
-### 5. OTEL Metrics (`bencher_otel/src/api_meter.rs`)
-
-- [ ] Add `PriorityTier` enum with `Enterprise`, `Team`, `Free`, `Unclaimed` variants
-- [ ] Implement `Display`, `From<PriorityTier> for KeyValue`, and `from_priority(i32)` for `PriorityTier`
-- [ ] Add `ApiHistogram` enum with `JobQueueDuration(PriorityTier)` variant
-- [ ] Add `ApiMeter::record(histogram, value)` method for histogram recording
-- [ ] Emit `JobQueueDuration` when job transitions to Running (in channel.rs `handle_running`)
-
-### 6. Tests (`api_runners/tests/`)
-
-- [ ] Test: Free tier jobs respect 1-per-org concurrency limit
-- [ ] Test: Unclaimed jobs respect 1-per-source-ip concurrency limit
-- [ ] Test: Enterprise/Team jobs have no concurrency limit
-- [ ] Test: Higher priority jobs are claimed before lower priority
-- [ ] Test: Blocked jobs stay pending, unblocked jobs of same tier are claimed
+1. **Phase 1**: Runner registration & heartbeat — Runners can connect and stay alive
+2. **Phase 2**: Job queue & claiming — Basic job distribution
+3. **Phase 3**: Execution & result reporting — Actually run benchmarks
+4. **Phase 4**: Labels & affinity — Match jobs to appropriate hardware
+5. **Phase 5**: Console UI — Manage runners, view job history
