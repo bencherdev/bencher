@@ -1,0 +1,6 @@
+[profile.default]
+retries = 0
+
+[profile.ci]
+retries = 0
+junit.path = "target/nextest/ci/junit.xml"
