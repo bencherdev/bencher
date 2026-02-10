@@ -34,8 +34,10 @@ jobs:
         with:
           cache-key: all-features
           mold-version: ${{ inputs.mold-version }}
-      - name: cargo test
-        run: RUST_BACKTRACE=1 cargo test --all-features -- --nocapture
+      - name: cargo nextest run
+        run: RUST_BACKTRACE=1 cargo nextest run --all-features --no-capture --profile ci
+      - name: cargo test --doc
+        run: RUST_BACKTRACE=1 cargo test --doc --all-features
       - name: Upload Perf JPEG
         uses: actions/upload-artifact@v4
         with:
@@ -52,8 +54,14 @@ jobs:
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ inputs.mold-version }}
-      - name: cargo test
-        run: RUST_BACKTRACE=1 cargo test --all-features -- --nocapture
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+      - name: cargo nextest run
+        run: RUST_BACKTRACE=1 cargo nextest run --all-features --no-capture --profile ci
+      - name: cargo test --doc
+        run: RUST_BACKTRACE=1 cargo test --doc --all-features
       - name: Upload Perf JPEG
         uses: actions/upload-artifact@v4
         with:

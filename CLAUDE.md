@@ -29,8 +29,9 @@ cd services/console && npm run dev  # Runs on http://localhost:3000
 ### Testing
 
 ```bash
-cargo test                     # Run all Rust tests
-cargo test -p <crate_name>    # Run tests for a specific crate
+cargo nextest run              # Run all Rust tests
+cargo nextest run -p <crate_name>  # Run tests for a specific crate
+cargo test --doc               # Run doctests (nextest doesn't support doctests)
 cargo test-api seed            # Seed the database with sample data
 cd services/console && npm test # Run frontend tests (vitest)
 ```

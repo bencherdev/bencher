@@ -34,3 +34,8 @@ runs:
       uses: rui314/setup-mold@v1
       with:
         mold-version: ${{ inputs.mold-version }}
+
+    - name: Install cargo-nextest
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-nextest
