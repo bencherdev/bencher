@@ -1,22 +1,20 @@
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{MAX_LEN, ValidError, is_valid_len};
 
 pub const BASE_36: &str = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct Slug(String);
@@ -30,15 +28,23 @@ impl From<uuid::Uuid> for Slug {
     }
 }
 
+impl TryFrom<String> for Slug {
+    type Error = ValidError;
+
+    fn try_from(slug: String) -> Result<Self, Self::Error> {
+        if is_valid_slug(&slug) {
+            Ok(Self(slug))
+        } else {
+            Err(ValidError::Slug(slug))
+        }
+    }
+}
+
 impl FromStr for Slug {
     type Err = ValidError;
 
     fn from_str(slug: &str) -> Result<Self, Self::Err> {
-        if is_valid_slug(slug) {
-            Ok(Self(slug.into()))
-        } else {
-            Err(ValidError::Slug(slug.into()))
-        }
+        Self::try_from(slug.to_owned())
     }
 }
 
@@ -51,32 +57,6 @@ impl AsRef<str> for Slug {
 impl From<Slug> for String {
     fn from(slug: Slug) -> Self {
         slug.0
-    }
-}
-
-impl<'de> Deserialize<'de> for Slug {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(SlugVisitor)
-    }
-}
-
-struct SlugVisitor;
-
-impl Visitor<'_> for SlugVisitor {
-    type Value = Slug;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid slug")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 
@@ -223,5 +203,16 @@ mod tests {
     #[test]
     fn benchmark_name_issue_610() {
         assert!(Slug::new("...").is_none());
+    }
+
+    #[test]
+    fn slug_serde_roundtrip() {
+        let slug: Slug = serde_json::from_str("\"a-valid-slug\"").unwrap();
+        assert_eq!(slug.as_ref(), "a-valid-slug");
+        let json = serde_json::to_string(&slug).unwrap();
+        assert_eq!(json, "\"a-valid-slug\"");
+
+        let err = serde_json::from_str::<Slug>("\"NOT A VALID SLUG\"");
+        assert!(err.is_err());
     }
 }

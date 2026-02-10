@@ -10,10 +10,7 @@ use std::{fmt, str::FromStr};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{ValidError, error::REGEX_ERROR, secret::SANITIZED_SECRET};
 
@@ -22,19 +19,28 @@ static NUMBER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new("^[[:digit:]]{12,19}$").expect(REGEX_ERROR));
 
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 pub struct CardNumber(String);
+
+impl TryFrom<String> for CardNumber {
+    type Error = ValidError;
+
+    fn try_from(card_number: String) -> Result<Self, Self::Error> {
+        if is_valid_card_number(&card_number) {
+            Ok(Self(card_number))
+        } else {
+            Err(ValidError::CardNumber(card_number))
+        }
+    }
+}
 
 impl FromStr for CardNumber {
     type Err = ValidError;
 
     fn from_str(card_number: &str) -> Result<Self, Self::Err> {
-        if is_valid_card_number(card_number) {
-            Ok(Self(card_number.into()))
-        } else {
-            Err(ValidError::CardNumber(card_number.into()))
-        }
+        Self::try_from(card_number.to_owned())
     }
 }
 
@@ -61,32 +67,6 @@ impl fmt::Display for CardNumber {
                 &self.0.get((self.0.len() - 4)..).unwrap_or_default()
             )
         }
-    }
-}
-
-impl<'de> Deserialize<'de> for CardNumber {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(CardNumberVisitor)
-    }
-}
-
-struct CardNumberVisitor;
-
-impl Visitor<'_> for CardNumberVisitor {
-    type Value = CardNumber;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid payment card number")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 
@@ -200,5 +180,18 @@ mod tests {
         for invalid_number in invalid_numbers {
             assert_eq!(false, is_valid_card_number(invalid_number));
         }
+    }
+
+    #[test]
+    fn card_number_serde_roundtrip() {
+        use super::CardNumber;
+
+        let number: CardNumber = serde_json::from_str("\"4917300800000000\"").unwrap();
+        assert_eq!(number.as_ref(), "4917300800000000");
+        let json = serde_json::to_string(&number).unwrap();
+        assert_eq!(json, "\"4917300800000000\"");
+
+        let err = serde_json::from_str::<CardNumber>("\"bad\"");
+        assert!(err.is_err());
     }
 }

@@ -2,20 +2,18 @@ use derive_more::Display;
 use gix_hash::ObjectId;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::ValidError;
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct GitHash(String);
@@ -23,15 +21,23 @@ pub struct GitHash(String);
 #[cfg(feature = "db")]
 crate::typed_string!(GitHash);
 
+impl TryFrom<String> for GitHash {
+    type Error = ValidError;
+
+    fn try_from(git_hash: String) -> Result<Self, Self::Error> {
+        if is_valid_git_hash(&git_hash) {
+            Ok(Self(git_hash))
+        } else {
+            Err(ValidError::GitHash(git_hash))
+        }
+    }
+}
+
 impl FromStr for GitHash {
     type Err = ValidError;
 
     fn from_str(git_hash: &str) -> Result<Self, Self::Err> {
-        if is_valid_git_hash(git_hash) {
-            Ok(Self(git_hash.into()))
-        } else {
-            Err(ValidError::GitHash(git_hash.into()))
-        }
+        Self::try_from(git_hash.to_owned())
     }
 }
 
@@ -50,32 +56,6 @@ impl From<GitHash> for String {
 impl From<ObjectId> for GitHash {
     fn from(object_id: ObjectId) -> Self {
         Self(object_id.to_string())
-    }
-}
-
-impl<'de> Deserialize<'de> for GitHash {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(GitHashVisitor)
-    }
-}
-
-struct GitHashVisitor;
-
-impl Visitor<'_> for GitHashVisitor {
-    type Value = GitHash;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid git_hash")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 
@@ -109,5 +89,19 @@ mod tests {
         ] {
             assert_eq!(false, is_valid_git_hash(hash), "{hash}");
         }
+    }
+
+    #[test]
+    fn git_hash_serde_roundtrip() {
+        use super::GitHash;
+
+        let hash: GitHash =
+            serde_json::from_str("\"1234567890abcdefaaaaaaaaaaaaaaaaaaaaaaaa\"").unwrap();
+        assert_eq!(hash.as_ref(), "1234567890abcdefaaaaaaaaaaaaaaaaaaaaaaaa");
+        let json = serde_json::to_string(&hash).unwrap();
+        assert_eq!(json, "\"1234567890abcdefaaaaaaaaaaaaaaaaaaaaaaaa\"");
+
+        let err = serde_json::from_str::<GitHash>("\"abcd\"");
+        assert!(err.is_err());
     }
 }

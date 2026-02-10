@@ -10,10 +10,7 @@ use std::{fmt, str::FromStr};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{ValidError, error::REGEX_ERROR, secret::SANITIZED_SECRET};
 
@@ -22,19 +19,28 @@ static CVC_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new("^[[:digit:]]{3,4}$").expect(REGEX_ERROR));
 
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 pub struct CardCvc(String);
+
+impl TryFrom<String> for CardCvc {
+    type Error = ValidError;
+
+    fn try_from(card_cvc: String) -> Result<Self, Self::Error> {
+        if is_valid_card_cvc(&card_cvc) {
+            Ok(Self(card_cvc))
+        } else {
+            Err(ValidError::CardCvc(card_cvc))
+        }
+    }
+}
 
 impl FromStr for CardCvc {
     type Err = ValidError;
 
     fn from_str(card_cvc: &str) -> Result<Self, Self::Err> {
-        if is_valid_card_cvc(card_cvc) {
-            Ok(Self(card_cvc.into()))
-        } else {
-            Err(ValidError::CardCvc(card_cvc.into()))
-        }
+        Self::try_from(card_cvc.to_owned())
     }
 }
 
@@ -50,15 +56,6 @@ impl From<CardCvc> for String {
     }
 }
 
-impl<'de> Deserialize<'de> for CardCvc {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(CardCvcVisitor)
-    }
-}
-
 impl fmt::Display for CardCvc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if cfg!(debug_assertions) {
@@ -66,23 +63,6 @@ impl fmt::Display for CardCvc {
         } else {
             write!(f, "{SANITIZED_SECRET}",)
         }
-    }
-}
-
-struct CardCvcVisitor;
-
-impl Visitor<'_> for CardCvcVisitor {
-    type Value = CardCvc;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid payment card CVC")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 
@@ -108,5 +88,18 @@ mod tests {
         assert_eq!(false, is_valid_card_cvc("01234"));
         assert_eq!(false, is_valid_card_cvc("12345"));
         assert_eq!(false, is_valid_card_cvc("bad"));
+    }
+
+    #[test]
+    fn card_cvc_serde_roundtrip() {
+        use super::CardCvc;
+
+        let cvc: CardCvc = serde_json::from_str("\"123\"").unwrap();
+        assert_eq!(cvc.as_ref(), "123");
+        let json = serde_json::to_string(&cvc).unwrap();
+        assert_eq!(json, "\"123\"");
+
+        let err = serde_json::from_str::<CardCvc>("\"bad\"");
+        assert!(err.is_err());
     }
 }

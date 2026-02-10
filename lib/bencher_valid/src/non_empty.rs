@@ -1,20 +1,18 @@
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{UserName, ValidError};
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct NonEmpty(String);
@@ -22,15 +20,23 @@ pub struct NonEmpty(String);
 #[cfg(feature = "db")]
 crate::typed_string!(NonEmpty);
 
+impl TryFrom<String> for NonEmpty {
+    type Error = ValidError;
+
+    fn try_from(non_empty: String) -> Result<Self, Self::Error> {
+        if is_valid_non_empty(&non_empty) {
+            Ok(Self(non_empty))
+        } else {
+            Err(ValidError::NonEmpty(non_empty))
+        }
+    }
+}
+
 impl FromStr for NonEmpty {
     type Err = ValidError;
 
     fn from_str(non_empty: &str) -> Result<Self, Self::Err> {
-        if is_valid_non_empty(non_empty) {
-            Ok(Self(non_empty.into()))
-        } else {
-            Err(ValidError::NonEmpty(non_empty.into()))
-        }
+        Self::try_from(non_empty.to_owned())
     }
 }
 
@@ -49,32 +55,6 @@ impl From<NonEmpty> for String {
 impl From<UserName> for NonEmpty {
     fn from(user_name: UserName) -> Self {
         Self(user_name.into())
-    }
-}
-
-impl<'de> Deserialize<'de> for NonEmpty {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(NonEmptyVisitor)
-    }
-}
-
-struct NonEmptyVisitor;
-
-impl Visitor<'_> for NonEmptyVisitor {
-    type Value = NonEmpty;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a non-empty string")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 
@@ -104,5 +84,18 @@ mod tests {
     #[test]
     fn is_valid_non_empty_false() {
         assert_eq!(false, is_valid_non_empty(LEN_0_STR));
+    }
+
+    #[test]
+    fn non_empty_serde_roundtrip() {
+        use super::NonEmpty;
+
+        let non_empty: NonEmpty = serde_json::from_str("\"hello\"").unwrap();
+        assert_eq!(non_empty.as_ref(), "hello");
+        let json = serde_json::to_string(&non_empty).unwrap();
+        assert_eq!(json, "\"hello\"");
+
+        let err = serde_json::from_str::<NonEmpty>("\"\"");
+        assert!(err.is_err());
     }
 }

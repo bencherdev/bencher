@@ -1,20 +1,18 @@
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{Slug, UserName, ValidError, is_valid_len};
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct ResourceName(String);
@@ -22,15 +20,23 @@ pub struct ResourceName(String);
 #[cfg(feature = "db")]
 crate::typed_string!(ResourceName);
 
+impl TryFrom<String> for ResourceName {
+    type Error = ValidError;
+
+    fn try_from(resource_name: String) -> Result<Self, Self::Error> {
+        if is_valid_resource_name(&resource_name) {
+            Ok(Self(resource_name))
+        } else {
+            Err(ValidError::ResourceName(resource_name))
+        }
+    }
+}
+
 impl FromStr for ResourceName {
     type Err = ValidError;
 
     fn from_str(resource_name: &str) -> Result<Self, Self::Err> {
-        if is_valid_resource_name(resource_name) {
-            Ok(Self(resource_name.into()))
-        } else {
-            Err(ValidError::ResourceName(resource_name.into()))
-        }
+        Self::try_from(resource_name.to_owned())
     }
 }
 
@@ -55,32 +61,6 @@ impl From<UserName> for ResourceName {
 impl From<Slug> for ResourceName {
     fn from(slug: Slug) -> Self {
         Self(slug.into())
-    }
-}
-
-impl<'de> Deserialize<'de> for ResourceName {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(ResourceNameVisitor)
-    }
-}
-
-struct ResourceNameVisitor;
-
-impl Visitor<'_> for ResourceNameVisitor {
-    type Value = ResourceName;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a resource name string")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 
@@ -112,5 +92,18 @@ mod tests {
         for value in [LEN_0_STR, LEN_65_STR] {
             assert_eq!(false, is_valid_resource_name(value), "{value}");
         }
+    }
+
+    #[test]
+    fn resource_name_serde_roundtrip() {
+        use super::ResourceName;
+
+        let name: ResourceName = serde_json::from_str("\"My Resource\"").unwrap();
+        assert_eq!(name.as_ref(), "My Resource");
+        let json = serde_json::to_string(&name).unwrap();
+        assert_eq!(json, "\"My Resource\"");
+
+        let err = serde_json::from_str::<ResourceName>("\"\"");
+        assert!(err.is_err());
     }
 }

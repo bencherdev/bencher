@@ -8,14 +8,11 @@ use base64::{
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::ValidError;
 
@@ -44,8 +41,9 @@ static TEST_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
 });
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct Jwt(String);
@@ -53,15 +51,23 @@ pub struct Jwt(String);
 #[cfg(feature = "db")]
 crate::typed_string!(Jwt);
 
+impl TryFrom<String> for Jwt {
+    type Error = ValidError;
+
+    fn try_from(jwt: String) -> Result<Self, Self::Error> {
+        if is_valid_jwt(&jwt) {
+            Ok(Self(jwt))
+        } else {
+            Err(ValidError::Jwt(jwt))
+        }
+    }
+}
+
 impl FromStr for Jwt {
     type Err = ValidError;
 
     fn from_str(jwt: &str) -> Result<Self, Self::Err> {
-        if is_valid_jwt(jwt) {
-            Ok(Self(jwt.into()))
-        } else {
-            Err(ValidError::Jwt(jwt.into()))
-        }
+        Self::try_from(jwt.to_owned())
     }
 }
 
@@ -87,32 +93,6 @@ impl Jwt {
     /// Create a valid test token
     pub fn test_token() -> Self {
         TEST_BENCHER_API_TOKEN.clone()
-    }
-}
-
-impl<'de> Deserialize<'de> for Jwt {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(JwtVisitor)
-    }
-}
-
-struct JwtVisitor;
-
-impl Visitor<'_> for JwtVisitor {
-    type Value = Jwt;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid jwt")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 
@@ -201,5 +181,19 @@ mod tests {
     #[test]
     fn jwt_test_token() {
         assert_eq!(true, is_valid_jwt(Jwt::test_token().as_ref()));
+    }
+
+    #[test]
+    fn jwt_serde_roundtrip() {
+        let jwt_str = format!("{HEADER}.{PAYLOAD}.{SIGNATURE}");
+        let json_str = format!("\"{jwt_str}\"");
+
+        let jwt: Jwt = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(jwt.as_ref(), jwt_str);
+        let json = serde_json::to_string(&jwt).unwrap();
+        assert_eq!(json, json_str);
+
+        let err = serde_json::from_str::<Jwt>("\"not-a-jwt\"");
+        assert!(err.is_err());
     }
 }

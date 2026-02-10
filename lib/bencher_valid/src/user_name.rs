@@ -7,14 +7,11 @@ use regex::Regex;
 use regex_lite::Regex;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{REGEX_ERROR, Slug, ValidError, is_valid_len};
 
@@ -23,8 +20,9 @@ static NAME_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9A-Za-z ,\.\-']{1,64}$").expect(REGEX_ERROR));
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct UserName(String);
@@ -32,15 +30,23 @@ pub struct UserName(String);
 #[cfg(feature = "db")]
 crate::typed_string!(UserName);
 
+impl TryFrom<String> for UserName {
+    type Error = ValidError;
+
+    fn try_from(user_name: String) -> Result<Self, Self::Error> {
+        if is_valid_user_name(&user_name) {
+            Ok(Self(user_name))
+        } else {
+            Err(ValidError::UserName(user_name))
+        }
+    }
+}
+
 impl FromStr for UserName {
     type Err = ValidError;
 
     fn from_str(user_name: &str) -> Result<Self, Self::Err> {
-        if is_valid_user_name(user_name) {
-            Ok(Self(user_name.into()))
-        } else {
-            Err(ValidError::UserName(user_name.into()))
-        }
+        Self::try_from(user_name.to_owned())
     }
 }
 
@@ -59,32 +65,6 @@ impl From<Slug> for UserName {
 impl From<UserName> for String {
     fn from(user_name: UserName) -> Self {
         user_name.0
-    }
-}
-
-impl<'de> Deserialize<'de> for UserName {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(UserNameVisitor)
-    }
-}
-
-struct UserNameVisitor;
-
-impl Visitor<'_> for UserNameVisitor {
-    type Value = UserName;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid user name")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 
@@ -140,5 +120,18 @@ mod tests {
         ] {
             assert_eq!(false, is_valid_user_name(name), "{name}");
         }
+    }
+
+    #[test]
+    fn user_name_serde_roundtrip() {
+        use super::UserName;
+
+        let name: UserName = serde_json::from_str("\"Muriel Bagge\"").unwrap();
+        assert_eq!(name.as_ref(), "Muriel Bagge");
+        let json = serde_json::to_string(&name).unwrap();
+        assert_eq!(json, "\"Muriel Bagge\"");
+
+        let err = serde_json::from_str::<UserName>("\"Muriel!\"");
+        assert!(err.is_err());
     }
 }

@@ -3,18 +3,16 @@ use schemars::JsonSchema;
 use std::{fmt, str::FromStr};
 use uuid::Uuid;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{Sanitize, ValidError};
 
 pub const SANITIZED_SECRET: &str = "************";
 
 #[typeshare::typeshare]
-#[derive(Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 pub struct Secret(String);
 
 impl fmt::Debug for Secret {
@@ -39,17 +37,25 @@ impl Sanitize for Secret {
     }
 }
 
+impl TryFrom<String> for Secret {
+    type Error = ValidError;
+
+    fn try_from(secret: String) -> Result<Self, Self::Error> {
+        // Unlike `NonEmpty`, `Secret` is allowed to have surrounding whitespace.
+        // This is to accommodate keys with newlines at the end.
+        if secret.is_empty() {
+            Err(ValidError::Secret(secret))
+        } else {
+            Ok(Self(secret))
+        }
+    }
+}
+
 impl FromStr for Secret {
     type Err = ValidError;
 
     fn from_str(secret: &str) -> Result<Self, Self::Err> {
-        // Unlike `NonEmpty`, `Secret` is allowed to have surrounding whitespace.
-        // This is to accommodate keys with newlines at the end.
-        if secret.is_empty() {
-            Err(ValidError::Secret(secret.into()))
-        } else {
-            Ok(Self(secret.into()))
-        }
+        Self::try_from(secret.to_owned())
     }
 }
 
@@ -71,28 +77,19 @@ impl From<Secret> for String {
     }
 }
 
-impl<'de> Deserialize<'de> for Secret {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(SecretVisitor)
-    }
-}
+#[cfg(test)]
+mod tests {
+    use super::Secret;
+    use pretty_assertions::assert_eq;
 
-struct SecretVisitor;
+    #[test]
+    fn secret_serde_roundtrip() {
+        let secret: Secret = serde_json::from_str("\"my-secret-key\"").unwrap();
+        assert_eq!(secret.as_ref(), "my-secret-key");
+        let json = serde_json::to_string(&secret).unwrap();
+        assert_eq!(json, "\"my-secret-key\"");
 
-impl Visitor<'_> for SecretVisitor {
-    type Value = Secret;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a non-empty secret string")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
+        let err = serde_json::from_str::<Secret>("\"\"");
+        assert!(err.is_err());
     }
 }

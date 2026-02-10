@@ -2,20 +2,18 @@ use derive_more::Display;
 use email_address::EmailAddress;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{self, Visitor},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{Sanitize, ValidError, secret::SANITIZED_SECRET};
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct Email(String);
@@ -23,15 +21,23 @@ pub struct Email(String);
 #[cfg(feature = "db")]
 crate::typed_string!(Email);
 
+impl TryFrom<String> for Email {
+    type Error = ValidError;
+
+    fn try_from(email: String) -> Result<Self, Self::Error> {
+        if is_valid_email(&email) {
+            Ok(Self(email.to_lowercase()))
+        } else {
+            Err(ValidError::Email(email))
+        }
+    }
+}
+
 impl FromStr for Email {
     type Err = ValidError;
 
     fn from_str(email: &str) -> Result<Self, Self::Err> {
-        if is_valid_email(email) {
-            Ok(Self(email.to_lowercase()))
-        } else {
-            Err(ValidError::Email(email.into()))
-        }
+        Self::try_from(email.to_owned())
     }
 }
 
@@ -50,32 +56,6 @@ impl From<Email> for String {
 impl Sanitize for Email {
     fn sanitize(&mut self) {
         self.0 = SANITIZED_SECRET.into();
-    }
-}
-
-impl<'de> Deserialize<'de> for Email {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(EmailVisitor)
-    }
-}
-
-struct EmailVisitor;
-
-impl Visitor<'_> for EmailVisitor {
-    type Value = Email;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a valid email")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse().map_err(E::custom)
     }
 }
 
@@ -142,5 +122,16 @@ mod tests {
             Email::from_str("abc.xyz@example.com").unwrap(),
             Email::from_str("ABC.xYz@Example.coM").unwrap()
         );
+    }
+
+    #[test]
+    fn email_serde_roundtrip() {
+        let email: Email = serde_json::from_str("\"ABC@Example.COM\"").unwrap();
+        assert_eq!(email.as_ref(), "abc@example.com");
+        let json = serde_json::to_string(&email).unwrap();
+        assert_eq!(json, "\"abc@example.com\"");
+
+        let err = serde_json::from_str::<Email>("\"not-an-email\"");
+        assert!(err.is_err());
     }
 }
