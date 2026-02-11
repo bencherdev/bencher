@@ -1,4 +1,12 @@
+// Each test file (`jobs.rs`, `channel.rs`, etc.) includes this module separately,
+// so not all helpers are used by every test binary.
+#![allow(dead_code)]
 //! Shared test helpers for `api_runners` integration tests.
+//!
+//! Note: Similar helpers exist in `lib/api_projects/tests/jobs.rs`.
+//! They are kept separate because the two test suites live in different
+//! crates and have slightly different signatures. Both copies use UUID-based
+//! slugs to avoid UNIQUE constraint collisions across tests.
 
 use bencher_api_tests::TestServer;
 use bencher_json::{
@@ -174,7 +182,7 @@ pub fn create_test_report(server: &TestServer, project_id: i32) -> i32 {
             schema::testbed::uuid.eq(&testbed_uuid),
             schema::testbed::project_id.eq(project_id),
             schema::testbed::name.eq("test-testbed"),
-            schema::testbed::slug.eq("test-testbed"),
+            schema::testbed::slug.eq(&format!("test-testbed-{testbed_uuid}")),
             schema::testbed::created.eq(&now),
             schema::testbed::modified.eq(&now),
         ))
@@ -207,7 +215,7 @@ pub fn create_test_report(server: &TestServer, project_id: i32) -> i32 {
             schema::branch::uuid.eq(&branch_uuid),
             schema::branch::project_id.eq(project_id),
             schema::branch::name.eq("main"),
-            schema::branch::slug.eq("main"),
+            schema::branch::slug.eq(&format!("main-{branch_uuid}")),
             schema::branch::created.eq(&now),
             schema::branch::modified.eq(&now),
         ))

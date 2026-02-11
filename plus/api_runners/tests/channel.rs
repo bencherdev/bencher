@@ -697,3 +697,100 @@ async fn test_channel_cancelled_acknowledgment() {
     // Let's verify the job is indeed in Canceled state.
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
 }
+
+// =============================================================================
+// Binary Message Test
+// =============================================================================
+
+/// Binary WebSocket messages should be ignored; the connection stays open.
+#[tokio::test]
+async fn test_channel_binary_message() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "binary").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send a binary message — server should ignore it
+    ws.send(Message::Binary(b"\x00\x01\x02\x03".to_vec().into()))
+        .await
+        .expect("Failed to send binary message");
+
+    // Connection should still be open; send a valid Running message
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Send another binary message to be sure
+    ws.send(Message::Binary(vec![0xff; 100].into()))
+        .await
+        .expect("Failed to send second binary message");
+
+    // Send a Heartbeat to verify connection is still functional
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+// =============================================================================
+// Status Transition Edge Cases
+// =============================================================================
+
+/// Completed sent before Running (job is still Claimed) should be rejected.
+/// The server requires Running status for a Completed transition.
+#[tokio::test]
+async fn test_channel_completed_before_running() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "complete-early").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Completed without first sending Running (job is still Claimed)
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            exit_code: 0,
+            stdout: None,
+            stderr: None,
+            output: None,
+        },
+    )
+    .await;
+
+    // The server should reject this (invalid state transition) and close
+    assert_ws_closed(&mut ws).await;
+
+    // Job should still be Claimed (not Completed) since the transition was invalid
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Claimed);
+}
+
+/// Failed sent from Claimed state (before Running) should succeed.
+/// The server allows Failed from both Claimed and Running states.
+#[tokio::test]
+async fn test_channel_failed_from_claimed() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "fail-early").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Failed without first sending Running (job is still Claimed)
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Failed {
+            exit_code: Some(127),
+            error: "command not found".to_owned(),
+            stdout: None,
+            stderr: None,
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Job should be Failed — transition from Claimed is allowed
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}

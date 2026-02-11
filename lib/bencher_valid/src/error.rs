@@ -70,6 +70,12 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Invalid timeout: {0}")]
     Timeout(u32),
+    #[cfg(feature = "plus")]
+    #[error("Invalid heartbeat timeout: {0}")]
+    HeartbeatTimeout(u64),
+    #[cfg(feature = "plus")]
+    #[error("Invalid grace period: {0}")]
+    GracePeriod(u64),
 
     #[cfg(feature = "plus")]
     #[error("Failed to validate plan level: {0}")]

@@ -205,6 +205,69 @@ async fn test_concurrent_token_rotation() {
     // We just verify both have the correct prefix and length.
     assert!(t1.starts_with("bencher_runner_"));
     assert!(t2.starts_with("bencher_runner_"));
-    assert_eq!(t1.len(), 79);
-    assert_eq!(t2.len(), 79);
+    assert_eq!(t1.len(), api_runners::RUNNER_TOKEN_LENGTH);
+    assert_eq!(t2.len(), api_runners::RUNNER_TOKEN_LENGTH);
+}
+
+// After token rotation, the old token should be rejected.
+#[tokio::test]
+async fn test_old_token_rejected_after_rotation() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "tokenold@example.com").await;
+
+    // Create a runner and save the original token
+    let body = serde_json::json!({ "name": "Old Token Runner" });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/runners"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let original: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let original_token: String = original.token.as_ref().to_owned();
+
+    // Rotate the token
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/token", original.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let new: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let new_token: String = new.token.as_ref().to_owned();
+
+    // Old token should be rejected on the claim endpoint
+    let claim_body = serde_json::json!({ "poll_timeout": 1 });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", original.uuid)))
+        .header("Authorization", format!("Bearer {original_token}"))
+        .json(&claim_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::FORBIDDEN,
+        "Old token should be rejected after rotation"
+    );
+
+    // New token should work
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", original.uuid)))
+        .header("Authorization", format!("Bearer {new_token}"))
+        .json(&claim_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "New token should authenticate successfully"
+    );
 }

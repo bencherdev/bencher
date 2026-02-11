@@ -355,7 +355,8 @@ async fn test_runners_total_count_header() {
 async fn test_runner_delete_restricted_by_fk() {
     use bencher_schema::schema;
     use common::{
-        create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job,
+        associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
+        insert_test_job, insert_test_spec,
     };
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
@@ -366,12 +367,15 @@ async fn test_runner_delete_restricted_by_fk() {
         .create_project(&admin, &org, "FK Constraint Project")
         .await;
 
+    let (_, spec_id) = insert_test_spec(&server);
     let runner = create_runner(&server, &admin.token, "FK Constraint Runner").await;
     let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
-    let _job_uuid = insert_test_job(&server, report_id);
+    let _job_uuid = insert_test_job(&server, report_id, spec_id);
 
     // Claim the job so runner_id is set
     let body = serde_json::json!({ "poll_timeout": 5 });
@@ -396,6 +400,40 @@ async fn test_runner_delete_restricted_by_fk() {
     assert!(
         result.is_err(),
         "Expected FK constraint to prevent runner deletion while jobs reference it"
+    );
+}
+
+// Creating two runners with the same name should produce a slug collision
+#[tokio::test]
+async fn test_duplicate_runner_name() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "duprunner@example.com").await;
+
+    // Create first runner
+    let body = serde_json::json!({ "name": "Duplicate Runner" });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/runners"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Create second runner with the same name — should fail due to slug UNIQUE constraint
+    let resp = server
+        .client
+        .post(server.api_url("/v0/runners"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::CONFLICT,
+        "Duplicate runner name should produce a slug collision"
     );
 }
 

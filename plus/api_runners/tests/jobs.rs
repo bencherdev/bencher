@@ -11,7 +11,7 @@ use bencher_api_tests::TestServer;
 use bencher_json::{JsonJob, JsonUpdateJobResponse};
 use common::{
     associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
-    insert_test_job, insert_test_spec, set_job_runner_id, set_job_status,
+    insert_test_job, insert_test_spec, insert_test_spec_full, set_job_runner_id, set_job_status,
 };
 use futures_concurrency::future::Join as _;
 use http::StatusCode;
@@ -1813,7 +1813,7 @@ mod priority_scheduling {
             project1.uuid,
             org1_id,
             "10.0.0.1",
-            150,
+            JobPriority::Free,
             spec_id,
         );
         let job2 = insert_test_job_full(
@@ -1822,7 +1822,7 @@ mod priority_scheduling {
             project2.uuid,
             org2_id,
             "10.0.0.2",
-            150,
+            JobPriority::Free,
             spec_id,
         );
 
@@ -1901,7 +1901,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            150,
+            JobPriority::Free,
             spec_id,
         );
         let job2 = insert_test_job_full(
@@ -1910,7 +1910,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.2",
-            150,
+            JobPriority::Free,
             spec_id,
         );
 
@@ -2716,6 +2716,7 @@ mod poll_timeout_boundaries {
 
 mod concurrency_safety {
     use super::*;
+    use bencher_json::JobPriority;
     use common::{get_organization_id, insert_test_job_full};
 
     // Two runners race to claim Free-tier jobs for the same org.
@@ -2751,7 +2752,7 @@ mod concurrency_safety {
             project.uuid,
             org_id,
             "10.0.0.1",
-            150,
+            JobPriority::Free,
             spec_id,
         );
         let _job2 = insert_test_job_full(
@@ -2760,7 +2761,7 @@ mod concurrency_safety {
             project.uuid,
             org_id,
             "10.0.0.2",
-            150,
+            JobPriority::Free,
             spec_id,
         );
 
@@ -2844,7 +2845,7 @@ mod concurrency_safety {
             project.uuid,
             org_id,
             same_ip,
-            50,
+            JobPriority::Unclaimed,
             spec_id,
         );
         let _job2 = insert_test_job_full(
@@ -2853,7 +2854,7 @@ mod concurrency_safety {
             project.uuid,
             org_id,
             same_ip,
-            50,
+            JobPriority::Unclaimed,
             spec_id,
         );
 
@@ -2932,4 +2933,96 @@ async fn test_user_jwt_rejected_on_runner_endpoint() {
         StatusCode::FORBIDDEN,
         "User JWT should be rejected on runner endpoints"
     );
+}
+
+// =============================================================================
+// Multi-Spec Claiming Tests
+// =============================================================================
+
+/// A runner associated with multiple specs can claim jobs requiring any of them.
+/// Uses Team priority to avoid per-IP concurrency limits on the unclaimed tier.
+#[tokio::test]
+async fn test_runner_multiple_specs_claims_matching_jobs() {
+    use bencher_json::JobPriority;
+    use common::insert_test_job_full;
+
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "multispec@example.com").await;
+    let org = server.create_org(&admin, "Multi Spec Org").await;
+    let project = server
+        .create_project(&admin, &org, "Multi Spec Project")
+        .await;
+
+    // Create two different specs
+    let (_, spec_a_id) = insert_test_spec_full(&server, 2, 4_294_967_296, 10_737_418_240, false);
+    let (_, spec_b_id) = insert_test_spec_full(&server, 4, 8_589_934_592, 21_474_836_480, true);
+
+    // Create a runner and associate it with both specs
+    let runner = create_runner(&server, &admin.token, "Multi Spec Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_a_id);
+    associate_runner_spec(&server, runner_id, spec_b_id);
+
+    // Insert jobs with Team priority (unlimited concurrency) to avoid IP limits
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let org_id = common::get_organization_id(&server, project_id);
+    let job_a = insert_test_job_full(
+        &server,
+        report_id,
+        project.uuid,
+        org_id,
+        common::TEST_SOURCE_IP,
+        JobPriority::Team,
+        spec_a_id,
+    );
+    let job_b = insert_test_job_full(
+        &server,
+        report_id,
+        project.uuid,
+        org_id,
+        common::TEST_SOURCE_IP,
+        JobPriority::Team,
+        spec_b_id,
+    );
+
+    // First claim should get one job
+    let claim_body = serde_json::json!({ "poll_timeout": 1 });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {runner_token}"))
+        .json(&claim_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let first: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let first = first.expect("Expected to claim first job");
+
+    // Second claim should get the other job
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {runner_token}"))
+        .json(&claim_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let second: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let second = second.expect("Expected to claim second job");
+
+    // Both jobs should have been claimed (order depends on priority/FIFO)
+    let claimed_uuids = [first.uuid, second.uuid];
+    assert!(
+        claimed_uuids.contains(&job_a),
+        "Job A should have been claimed"
+    );
+    assert!(
+        claimed_uuids.contains(&job_b),
+        "Job B should have been claimed"
+    );
+    assert_ne!(first.uuid, second.uuid, "Should claim two different jobs");
 }

@@ -11134,9 +11134,19 @@
       "GitHash": {
         "type": "string"
       },
+      "GracePeriod": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0
+      },
       "HeadUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "HeartbeatTimeout": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0
       },
       "IfExists": {
         "type": "string",
@@ -14764,16 +14774,20 @@
           "heartbeat_timeout": {
             "description": "Time in seconds without a heartbeat before marking a job as failed. Defaults to 90 seconds.",
             "default": 90,
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HeartbeatTimeout"
+              }
+            ]
           },
           "job_timeout_grace_period": {
             "description": "Extra time in seconds beyond a job's configured timeout before the server cancels it. Defaults to 60 seconds.",
             "default": 60,
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GracePeriod"
+              }
+            ]
           }
         }
       },

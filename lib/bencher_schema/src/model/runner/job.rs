@@ -75,7 +75,7 @@ impl QueryJob {
     /// Convert to JSON for public API (config is not included).
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
         let runner_uuid = if let Some(runner_id) = self.runner_id {
-            QueryRunner::get(conn, runner_id).ok().map(|r| r.uuid)
+            Some(QueryRunner::get(conn, runner_id)?.uuid)
         } else {
             None
         };
@@ -120,12 +120,14 @@ impl InsertJob {
         organization_id: OrganizationId,
         source_ip: SourceIp,
         spec_id: SpecId,
-        config: String,
+        config: &JsonJobConfig,
         timeout: i32,
         priority: JobPriority,
-    ) -> Self {
+    ) -> Result<Self, HttpError> {
+        let config = serde_json::to_string(config)
+            .map_err(|e| issue_error("Invalid job config", "Failed to serialize job config", e))?;
         let now = DateTime::now();
-        Self {
+        Ok(Self {
             uuid: JobUuid::new(),
             report_id,
             organization_id,
@@ -137,7 +139,7 @@ impl InsertJob {
             status: JobStatus::default(),
             created: now,
             modified: now,
-        }
+        })
     }
 }
 

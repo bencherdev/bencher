@@ -23,7 +23,7 @@ use std::time::Duration;
 
 use tokio_tungstenite::tungstenite::{
     Message,
-    protocol::{Role, WebSocketConfig},
+    protocol::{CloseFrame, Role, WebSocketConfig, frame::coding::CloseCode},
 };
 
 use crate::runner_token::RunnerToken;
@@ -212,6 +212,13 @@ async fn handle_websocket(
                 if updated == 0 {
                     slog::info!(log, "Heartbeat timeout: job already in terminal state"; "job_id" => ?job_id);
                 }
+                drop(
+                    tx.send(Message::Close(Some(CloseFrame {
+                        code: CloseCode::Policy,
+                        reason: "heartbeat timeout".into(),
+                    })))
+                    .await,
+                );
                 break;
             },
         };
@@ -245,6 +252,13 @@ async fn handle_websocket(
 
                 // If we sent a cancel or the job is terminal, close the connection
                 if matches!(response, ServerMessage::Cancel) {
+                    drop(
+                        tx.send(Message::Close(Some(CloseFrame {
+                            code: CloseCode::Normal,
+                            reason: "job canceled".into(),
+                        })))
+                        .await,
+                    );
                     break;
                 }
             },
@@ -398,9 +412,18 @@ async fn handle_heartbeat(
 
     // It is okay to wait until here to get the write lock
     // Worst case, we add an extra write if the job was canceled between reads
-    diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-        .set(&update)
-        .execute(write_conn!(context))?;
+    // Use status filter to avoid overwriting a concurrent cancellation
+    diesel::update(
+        schema::job::table
+            .filter(schema::job::id.eq(job_id))
+            .filter(
+                schema::job::status
+                    .eq(JobStatus::Claimed)
+                    .or(schema::job::status.eq(JobStatus::Running)),
+            ),
+    )
+    .set(&update)
+    .execute(write_conn!(context))?;
 
     // TODO: Billing logic - check elapsed minutes and bill to Stripe
 

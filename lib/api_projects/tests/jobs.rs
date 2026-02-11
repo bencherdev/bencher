@@ -249,12 +249,13 @@ async fn test_private_project_jobs_denied_unauthenticated() {
 
     // Make the project private by updating visibility directly in the database
     {
+        use bencher_json::project::Visibility;
         use bencher_schema::schema;
         use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
         let mut conn = server.db_conn();
         diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
-            .set(schema::project::visibility.eq(1_i32))
+            .set(schema::project::visibility.eq(Visibility::Private))
             .execute(&mut conn)
             .expect("Failed to update project visibility");
     }
@@ -296,6 +297,9 @@ fn get_project_id(server: &TestServer, project_slug: &str) -> i32 {
 
 /// Helper: create minimal test infrastructure (testbed, version, branch, head, report).
 /// Returns the report ID.
+///
+/// Note: A similar helper exists in `plus/api_runners/tests/common/mod.rs`.
+/// They are kept separate due to crate boundaries and slightly different signatures.
 #[expect(clippy::expect_used)]
 fn create_test_report(server: &TestServer, project_id: i32) -> i32 {
     use bencher_json::{BranchUuid, DateTime, HeadUuid, ReportUuid, TestbedUuid, VersionUuid};
@@ -707,4 +711,55 @@ async fn test_jobs_total_count_with_data() {
 
     let jobs: JsonJobs = resp.json().await.expect("Failed to parse response");
     assert_eq!(jobs.0.len(), 2);
+}
+
+// GET /v0/projects/{project}/jobs - non-member cannot access private project's jobs
+#[tokio::test]
+async fn test_non_member_private_project_jobs() {
+    let server = TestServer::new().await;
+    let owner = server.signup("Owner", "jobprivowner@example.com").await;
+    let non_member = server
+        .signup("NonMember", "jobprivnonmem@example.com")
+        .await;
+
+    let org = server.create_org(&owner, "Job Priv Owner Org").await;
+    let project = server
+        .create_project(&owner, &org, "Job Priv Owner Project")
+        .await;
+
+    // Make the project private
+    {
+        use bencher_json::project::Visibility;
+        use bencher_schema::schema;
+        use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+        let mut conn = server.db_conn();
+        diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+            .set(schema::project::visibility.eq(Visibility::Private))
+            .execute(&mut conn)
+            .expect("Failed to update project visibility");
+    }
+
+    // Insert some jobs so there's data to potentially leak
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let now = bencher_json::DateTime::now();
+    let _job = insert_test_job(&server, report_id, project.uuid, now);
+
+    // Non-member tries to access the private project's jobs
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs")))
+        .header("Authorization", server.bearer(&non_member.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    // Non-member should be denied access to a private project
+    assert!(
+        resp.status() == StatusCode::NOT_FOUND || resp.status() == StatusCode::FORBIDDEN,
+        "Expected NOT_FOUND or FORBIDDEN for non-member, got {}",
+        resp.status()
+    );
 }

@@ -4,6 +4,8 @@
 #[cfg(test)]
 use bencher_api_tests as _;
 #[cfg(test)]
+use futures_concurrency as _;
+#[cfg(test)]
 use http as _;
 #[cfg(test)]
 use serde_json as _;
@@ -18,6 +20,7 @@ mod specs;
 mod token;
 
 pub use channel::{RunnerMessage, ServerMessage};
+pub use runners::RUNNER_TOKEN_LENGTH;
 
 pub struct Api;
 

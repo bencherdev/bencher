@@ -262,14 +262,16 @@ async fn into_context(
     let heartbeat_timeout = std::time::Duration::from_secs(
         plus.as_ref()
             .and_then(|p| p.runners.as_ref())
-            .map_or(DEFAULT_HEARTBEAT_TIMEOUT_SECS, |r| r.heartbeat_timeout),
+            .map_or(DEFAULT_HEARTBEAT_TIMEOUT_SECS, |r| {
+                u64::from(r.heartbeat_timeout)
+            }),
     );
     #[cfg(feature = "plus")]
     let job_timeout_grace_period = std::time::Duration::from_secs(
         plus.as_ref()
             .and_then(|p| p.runners.as_ref())
             .map_or(DEFAULT_JOB_TIMEOUT_GRACE_PERIOD_SECS, |r| {
-                r.job_timeout_grace_period
+                u64::from(r.job_timeout_grace_period)
             }),
     );
 

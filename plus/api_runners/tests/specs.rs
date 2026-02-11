@@ -164,6 +164,114 @@ async fn test_runner_specs_add_forbidden_for_non_admin() {
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
 
+// POST /v0/runners/{runner}/specs - duplicate association returns conflict
+#[tokio::test]
+async fn test_runner_specs_add_duplicate() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "rspecdup@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Spec Dup Runner").await;
+    let (spec_uuid, _spec_id) = insert_test_spec(&server);
+
+    // First association should succeed
+    let body = serde_json::json!({"spec": spec_uuid.to_string()});
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Second association of the same spec should fail (UNIQUE constraint)
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::CONFLICT,
+        "Duplicate spec association should be rejected"
+    );
+}
+
+// GET /v0/runners/{runner}/specs - returns all associated specs
+#[tokio::test]
+async fn test_runner_specs_list_multiple() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "rspecmulti@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Spec Multi Runner").await;
+
+    // Create 3 different specs
+    let (spec1_uuid, _) = insert_test_spec_full(&server, 1, 2_147_483_648, 5_368_709_120, false);
+    let (spec2_uuid, _) = insert_test_spec_full(&server, 2, 4_294_967_296, 10_737_418_240, false);
+    let (spec3_uuid, _) = insert_test_spec_full(&server, 4, 8_589_934_592, 21_474_836_480, true);
+
+    // Associate all 3 specs with the runner
+    for spec_uuid in [spec1_uuid, spec2_uuid, spec3_uuid] {
+        let body = serde_json::json!({"spec": spec_uuid.to_string()});
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+            .header("Authorization", server.bearer(&admin.token))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    // List specs
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let specs: JsonSpecs = resp.json().await.expect("Failed to parse response");
+    assert_eq!(specs.0.len(), 3, "All 3 specs should be returned");
+
+    // Verify all spec UUIDs are present
+    let uuids: Vec<_> = specs.0.iter().map(|s| s.uuid).collect();
+    assert!(uuids.contains(&spec1_uuid));
+    assert!(uuids.contains(&spec2_uuid));
+    assert!(uuids.contains(&spec3_uuid));
+}
+
+// GET /v0/runners/{runner}/specs - empty when no specs associated
+#[tokio::test]
+async fn test_runner_specs_list_empty() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "rspecempty@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Spec Empty Runner").await;
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let specs: JsonSpecs = resp.json().await.expect("Failed to parse response");
+    assert!(
+        specs.0.is_empty(),
+        "Runner with no specs should return empty list"
+    );
+}
+
 // Claim job - runner without matching spec cannot claim a pending job
 #[tokio::test]
 async fn test_claim_job_spec_mismatch() {
