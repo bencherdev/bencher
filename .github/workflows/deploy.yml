@@ -73,9 +73,6 @@ jobs:
       - name: Deploy Local API to Fly.io
         working-directory: ./services/api
         run: flyctl deploy --local-only --config fly/fly.dev.toml --wait-timeout 300
-      - name: Scale up Dev Machines
-        working-directory: ./services/api
-        run: flyctl scale vm performance-8x --app bencher-api-dev
       - name: Run Smoke Test
         id: smoke-test
         continue-on-error: true
@@ -89,10 +86,6 @@ jobs:
           --api-url https://bencher-api-dev.fly.dev \
           --username eustace.bagge@nowhere.com \
           --password "${{ secrets.TEST_BENCHER_API_TOKEN_ADMIN }}"
-      - name: Scale down Dev Machines
-        if: always()
-        working-directory: ./services/api
-        run: flyctl scale vm shared-cpu-1x --app bencher-api-dev
       - name: Check Smoke Test Result
         if: steps.smoke-test.outcome == 'failure'
         run: exit 1
