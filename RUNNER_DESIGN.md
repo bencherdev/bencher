@@ -31,7 +31,7 @@ A pull-based runner agent architecture where runners claim jobs from the API, ex
 **Flow:**
 1. CLI pushes benchmark OCI image to `registry.bencher.dev/{project}/...`
 2. CLI submits job to API with image digest
-3. Runner claims job from API, receives `JsonJobSpec`
+3. Runner claims job from API, receives `JsonJobConfig` and spec details
 4. Runner pulls image from registry using project-scoped OCI auth
 5. Runner executes image in isolated VM, reports results via WebSocket
 
@@ -62,10 +62,33 @@ Represents a registered bare metal machine capable of executing benchmark jobs.
 | uuid             | Runner's self-generated ID                           |
 | name / slug      | Human-readable name and URL-friendly slug            |
 | token_hash       | SHA-256 hash of runner token (token itself never stored) |
-| labels           | Metadata tags (e.g., `arch:arm64`, `os:linux`)       |
 | state            | `offline`, `idle`, or `running`                      |
 | archived         | Soft delete timestamp                                |
 | last_heartbeat   | Last heartbeat received from this runner             |
+
+### Spec
+
+Represents a hardware specification that runners can be associated with and jobs can target.
+
+| Field            | Description                                          |
+| ---------------- | ---------------------------------------------------- |
+| uuid             | Unique identifier                                    |
+| cpu              | Number of CPUs                                       |
+| memory           | Memory size in bytes                                 |
+| disk             | Disk size in bytes                                   |
+| network          | Whether network access is available                  |
+| archived         | Soft delete timestamp                                |
+| created          | Creation timestamp                                   |
+| modified         | Last modification timestamp                          |
+
+### Runner-Spec
+
+Many-to-many association between runners and specs. A runner can support multiple specs, and a spec can be supported by multiple runners. When a job targets a spec, only runners associated with that spec are eligible to claim it.
+
+| Field            | Description                                          |
+| ---------------- | ---------------------------------------------------- |
+| runner_id        | FK to runner                                         |
+| spec_id          | FK to spec                                           |
 
 ### Job
 
@@ -78,7 +101,8 @@ Represents a benchmark execution request linked to a report.
 | source_ip          | Submitter IP (for unclaimed project rate limiting)   |
 | priority           | Scheduling priority (0=unclaimed, 100=free, 200=team, 300=enterprise) |
 | status             | Job lifecycle state (see Job State Machine)          |
-| spec               | `JsonJobSpec` — everything the runner needs to execute |
+| spec_id            | FK to spec (hardware requirements for this job)      |
+| config             | `JsonJobConfig` — execution details the runner needs |
 | runner_id          | Runner that claimed this job                         |
 | claimed / started / completed | Lifecycle timestamps                      |
 | last_heartbeat     | Last heartbeat for this specific job                 |
@@ -89,9 +113,9 @@ Represents a benchmark execution request linked to a report.
 
 `Pending` (0), `Claimed` (1), `Running` (2), `Completed` (3), `Failed` (4), `Canceled` (5)
 
-## Job Spec Structure
+## Job Config Structure
 
-The job spec is designed to minimize data sent to runners, reducing leakage risk. Runners only receive what's necessary to pull and execute an OCI image.
+The job config is designed to minimize data sent to runners, reducing leakage risk. Runners only receive what's necessary to pull and execute an OCI image. Hardware resource constraints (cpu, memory, disk, network) are defined in the associated spec, not in the config.
 
 | Field      | Description                                                |
 | ---------- | ---------------------------------------------------------- |
@@ -101,17 +125,13 @@ The job spec is designed to minimize data sent to runners, reducing leakage risk
 | entrypoint | Optional entrypoint override (like Docker ENTRYPOINT)      |
 | cmd        | Optional command override (like Docker CMD)                |
 | env        | Optional environment variables                             |
-| cpu        | Number of CPUs for the VM                                  |
-| memory     | Memory size in bytes                                       |
-| disk       | Disk size in bytes                                         |
 | timeout    | Maximum execution time in seconds                          |
-| network    | Whether the VM has network access                          |
 | output     | List of file paths to read results from after execution    |
 
 **Design principles:**
 - **Minimal information**: Runner doesn't know repo URL, branch, commit, or benchmark commands directly
 - **Immutable reference**: Digest (not tag) ensures the image can't change between job creation and execution
-- **Isolated execution**: VM resources (cpu, memory, disk) and network access are explicit
+- **Isolated execution**: VM resources (cpu, memory, disk) and network access are defined in the spec table
 - **OCI-based**: All benchmark code is packaged in an OCI image, pulled from the Bencher registry
 
 ## API Endpoints
@@ -125,8 +145,30 @@ Requires server admin permissions.
 | POST   | `/v0/runners`                | Create runner, returns token                   |
 | GET    | `/v0/runners`                | List runners                                   |
 | GET    | `/v0/runners/{runner}`       | Get runner details                             |
-| PATCH  | `/v0/runners/{runner}`       | Update runner (name, labels, archived)         |
+| PATCH  | `/v0/runners/{runner}`       | Update runner (name, archived)                 |
 | POST   | `/v0/runners/{runner}/token` | Generate new token (invalidates old)           |
+
+### Spec Management (Server Scoped)
+
+Requires server admin permissions.
+
+| Method | Endpoint                     | Description                                    |
+| ------ | ---------------------------- | ---------------------------------------------- |
+| GET    | `/v0/specs`                  | List specs                                     |
+| POST   | `/v0/specs`                  | Create spec                                    |
+| GET    | `/v0/specs/{spec}`           | Get spec details                               |
+| PATCH  | `/v0/specs/{spec}`           | Update spec (archive)                          |
+| DELETE | `/v0/specs/{spec}`           | Delete spec                                    |
+
+### Runner-Spec Association (Server Scoped)
+
+Requires server admin permissions.
+
+| Method | Endpoint                              | Description                            |
+| ------ | ------------------------------------- | -------------------------------------- |
+| GET    | `/v0/runners/{runner}/specs`          | List specs for a runner                |
+| POST   | `/v0/runners/{runner}/specs`          | Add spec to a runner                   |
+| DELETE | `/v0/runners/{runner}/specs/{spec}`   | Remove spec from a runner              |
 
 ### Job Management (Project Scoped)
 
@@ -149,10 +191,11 @@ Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
 ## Claim Endpoint Behavior
 
 1. Applies per-runner rate limiting to prevent abuse of long-polling
-2. Finds pending jobs ordered by `(priority DESC, created ASC)`
-3. Atomically updates job status to `claimed`, sets `runner_id` and `claimed` timestamp
-4. If no matching jobs, holds connection open until timeout or job arrives
-5. Returns job with spec or `None` on timeout
+2. Filters pending jobs to only those whose `spec_id` matches one of the runner's associated specs
+3. Finds matching pending jobs ordered by `(priority DESC, created ASC)`
+4. Atomically updates job status to `claimed`, sets `runner_id` and `claimed` timestamp
+5. If no matching jobs, holds connection open until timeout or job arrives
+6. Returns job with config or `None` on timeout
 
 ## WebSocket Job Execution Channel
 
@@ -289,7 +332,7 @@ User submits job via CLI or API
 ```
 1. Idle: Long-poll POST /v0/runners/{runner}/jobs
                 │
-                ▼ (job received with JsonJobSpec)
+                ▼ (job received with JsonJobConfig)
 2. Job "claimed" implicitly via claim response
                 │
                 ▼
@@ -300,7 +343,7 @@ User submits job via CLI or API
    Pull image from registry.bencher.dev/{project}/images@{digest}
                 │
                 ▼
-5. Create VM with spec constraints (cpu, memory, disk, network)
+5. Create VM with spec constraints (cpu, memory, disk, network from spec)
    Load OCI image into VM
                 │
                 ▼
@@ -313,7 +356,7 @@ User submits job via CLI or API
    - Heartbeat messages sent ~1/sec over WebSocket
    - Server may send { "event": "cancel" } at any time
    - On cancel: stop execution, send { "event": "cancelled" }, close
-   - Timeout enforced per job spec
+   - Timeout enforced per job config
                 │
                 ▼
 8. Send { "event": "completed", ... } or { "event": "failed", ... }
@@ -408,5 +451,4 @@ This token is scoped to:
 1. **Phase 1**: Runner registration & heartbeat — Runners can connect and stay alive
 2. **Phase 2**: Job queue & claiming — Basic job distribution
 3. **Phase 3**: Execution & result reporting — Actually run benchmarks
-4. **Phase 4**: Labels & affinity — Match jobs to appropriate hardware
-5. **Phase 5**: Console UI — Manage runners, view job history
+4. **Phase 4**: Console UI — Manage runners, view job history

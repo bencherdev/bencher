@@ -1,4 +1,6 @@
-use bencher_json::{DateTime, JsonRunner, JsonUpdateRunner, ResourceName, RunnerResourceId, Slug};
+use bencher_json::{
+    DateTime, JsonRunner, JsonUpdateRunner, ResourceName, RunnerResourceId, Slug, SpecUuid,
+};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
@@ -11,10 +13,14 @@ use crate::{
 };
 
 pub mod job;
+pub mod runner_spec;
 mod source_ip;
+pub mod spec;
 
 pub use job::{InsertJob, JobId, QueryJob, UpdateJob, spawn_heartbeat_timeout};
+pub use runner_spec::{InsertRunnerSpec, QueryRunnerSpec, RunnerSpecId};
 pub use source_ip::SourceIp;
+pub use spec::{InsertSpec, QuerySpec, SpecId, UpdateSpec};
 
 crate::macros::typed_id::typed_id!(RunnerId);
 
@@ -69,17 +75,23 @@ impl QueryRunner {
         self.archived.is_some()
     }
 
-    pub fn into_json(self) -> JsonRunner {
-        JsonRunner {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonRunner, HttpError> {
+        let spec_ids = QueryRunnerSpec::spec_ids_for_runner(conn, self.id)?;
+        let specs: Vec<SpecUuid> = spec_ids
+            .into_iter()
+            .map(|spec_id| QuerySpec::get(conn, spec_id).map(|s| s.uuid))
+            .collect::<Result<_, _>>()?;
+        Ok(JsonRunner {
             uuid: self.uuid,
             name: self.name,
             slug: self.slug,
             state: self.state,
+            specs,
             archived: self.archived,
             last_heartbeat: self.last_heartbeat,
             created: self.created,
             modified: self.modified,
-        }
+        })
     }
 }
 

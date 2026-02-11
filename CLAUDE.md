@@ -174,9 +174,8 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - Use idiomatic, strong types instead of `String` and `serde_json::Value` where possible
 - Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
 - All time-based tests should be deterministic and use time manipulation not real wall-clock time
-- Maximum cognitive complexity: 25
-- Use absolute paths sparingly (max 3 segments, diesel crate exempt)
 - Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
+- Always pass strong types (`MyTypeId`, `MyTypeUuid`, etc) into a function instead of its stringly typed equivalent, even in tests
 
 ### Frontend (TypeScript)
 

@@ -12,6 +12,29 @@ CREATE TABLE runner (
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL
 );
+-- Spec: server-scoped resource requirements for jobs
+CREATE TABLE spec (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    cpu INTEGER NOT NULL,
+    memory BIGINT NOT NULL,
+    disk BIGINT NOT NULL,
+    network BOOLEAN NOT NULL DEFAULT 0,
+    archived BIGINT,
+    created BIGINT NOT NULL,
+    modified BIGINT NOT NULL
+);
+-- Runner-Spec: many-to-many association
+CREATE TABLE runner_spec (
+    id INTEGER PRIMARY KEY NOT NULL,
+    runner_id INTEGER NOT NULL,
+    spec_id INTEGER NOT NULL,
+    FOREIGN KEY (runner_id) REFERENCES runner (id) ON DELETE CASCADE,
+    FOREIGN KEY (spec_id) REFERENCES spec (id) ON DELETE RESTRICT,
+    UNIQUE (runner_id, spec_id)
+);
+CREATE INDEX index_runner_spec_runner_id ON runner_spec(runner_id);
+CREATE INDEX index_runner_spec_spec_id ON runner_spec(spec_id);
 -- Job status enum (stored as integer)
 -- 0 = pending
 -- 1 = claimed
@@ -27,10 +50,11 @@ CREATE TABLE job (
     report_id INTEGER NOT NULL,
     organization_id INTEGER NOT NULL,
     source_ip TEXT NOT NULL,
-    status INTEGER NOT NULL DEFAULT 0,
-    spec TEXT NOT NULL,
+    spec_id INTEGER NOT NULL,
+    config TEXT NOT NULL,
     timeout INTEGER NOT NULL DEFAULT 3600,
     priority INTEGER NOT NULL DEFAULT 0,
+    status INTEGER NOT NULL DEFAULT 0,
     runner_id INTEGER,
     claimed BIGINT,
     started BIGINT,
@@ -42,6 +66,7 @@ CREATE TABLE job (
     modified BIGINT NOT NULL,
     FOREIGN KEY (report_id) REFERENCES report (id) ON DELETE CASCADE,
     FOREIGN KEY (organization_id) REFERENCES organization (id) ON DELETE CASCADE,
+    FOREIGN KEY (spec_id) REFERENCES spec (id) ON DELETE RESTRICT,
     FOREIGN KEY (runner_id) REFERENCES runner (id) ON DELETE RESTRICT
 );
 -- Index for job claiming (ordered by priority, then FIFO)
@@ -58,5 +83,6 @@ CREATE INDEX index_job_in_flight ON job(status)
 WHERE status = 1 OR status = 2;
 CREATE INDEX index_job_runner_id ON job(runner_id)
 WHERE runner_id IS NOT NULL;
+CREATE INDEX index_job_spec_id ON job(spec_id);
 CREATE UNIQUE INDEX index_runner_token_hash ON runner(token_hash);
 CREATE INDEX index_job_report_id ON job(report_id);

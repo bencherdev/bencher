@@ -2,14 +2,14 @@ use std::time::Duration;
 
 use bencher_endpoint::{CorsResponse, Endpoint, Patch, Post, ResponseOk};
 use bencher_json::{
-    DateTime, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonUpdateJob, JsonUpdateJobResponse,
-    RunnerResourceId,
+    DateTime, JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonUpdateJob,
+    JsonUpdateJobResponse, RunnerResourceId,
 };
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
-    model::runner::{QueryJob, UpdateJob},
+    model::runner::{QueryJob, QuerySpec, UpdateJob},
     schema, write_conn,
 };
 use diesel::{
@@ -29,9 +29,9 @@ diesel::alias!(schema::job as job_org: JobOrg);
 diesel::alias!(schema::job as job_ip: JobIp);
 
 /// Priority threshold for Enterprise/Team tiers (unlimited concurrency)
-const PRIORITY_UNLIMITED: i32 = 200;
+const PRIORITY_UNLIMITED: JobPriority = JobPriority::Team;
 /// Priority threshold for Free tier (1 per org concurrency)
-const PRIORITY_FREE: i32 = 100;
+const PRIORITY_FREE: JobPriority = JobPriority::Free;
 
 /// Poll interval for long-polling (1 second)
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
@@ -120,11 +120,15 @@ async fn claim_job_inner(
 /// Attempt to claim a pending job with tier-based concurrency limits.
 ///
 /// Priority tiers:
-/// - Enterprise (>= 300) / Team (>= 200): Unlimited concurrent jobs
-/// - Free (>= 100): 1 concurrent job per organization
-/// - Unclaimed (< 100): 1 concurrent job per source IP
+/// - Enterprise / Team: Unlimited concurrent jobs
+/// - Free: 1 concurrent job per organization
+/// - Unclaimed: 1 concurrent job per source IP
 ///
 /// Returns `Ok(Some(job))` if a job was claimed, `Ok(None)` if no eligible jobs available.
+#[expect(
+    clippy::too_many_lines,
+    reason = "claim logic is inherently complex with tier-based concurrency checks"
+)]
 async fn try_claim_job(
     context: &ApiContext,
     runner_token: &RunnerToken,
@@ -168,14 +172,22 @@ async fn try_claim_job(
         .or(tier_free_eligible)
         .or(tier_unclaimed_eligible);
 
+    // Spec filter: only claim jobs whose spec_id matches one of the runner's specs
+    let spec_filter = schema::job::spec_id.eq_any(
+        schema::runner_spec::table
+            .filter(schema::runner_spec::runner_id.eq(runner_token.runner_id))
+            .select(schema::runner_spec::spec_id),
+    );
+
     // Acquire write lock for the entire read-check-update to prevent TOCTOU races
     // where concurrent runners could bypass concurrency limits.
     let mut conn = context.database.connection.lock().await;
 
-    // Find the highest-priority eligible pending job
+    // Find the highest-priority eligible pending job matching this runner's specs
     let pending_job: Option<QueryJob> = schema::job::table
         .filter(status.eq(JobStatus::Pending))
         .filter(eligible)
+        .filter(spec_filter)
         .order((priority.desc(), created.asc(), id.asc()))
         .first(&mut *conn)
         .optional()
@@ -205,10 +217,15 @@ async fn try_claim_job(
     .execute(&mut *conn)
     .map_err(resource_conflict_err!(Job, query_job))?;
 
+    // Look up the spec before releasing the lock
+    let json_spec = (updated > 0)
+        .then(|| QuerySpec::get(&mut conn, query_job.spec_id)?.into_json())
+        .transpose()?;
+
     // Release the lock before doing non-DB work
     drop(conn);
 
-    if updated > 0 {
+    if let Some(json_spec) = json_spec {
         #[cfg(feature = "otel")]
         {
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
@@ -220,19 +237,20 @@ async fn try_claim_job(
             )]
             let queue_duration_secs =
                 ((now.timestamp() - query_job.created.timestamp()) as f64).max(0.0);
-            let tier = bencher_otel::PriorityTier::from_priority(query_job.priority);
+            let tier = bencher_otel::PriorityTier::from_priority(query_job.priority.into());
             bencher_otel::ApiMeter::record(
                 bencher_otel::ApiHistogram::JobQueueDuration(tier),
                 queue_duration_secs,
             );
         }
 
-        // Parse and return job with spec for runner
-        let job_spec = query_job.parse_spec()?;
+        // Parse and return job with config for runner
+        let job_config = query_job.parse_config()?;
         Ok(Some(JsonJob {
             uuid: query_job.uuid,
             status: JobStatus::Claimed,
-            spec: Some(job_spec),
+            spec: json_spec,
+            config: Some(job_config),
             runner: Some(runner_token.runner_uuid),
             claimed: Some(now),
             started: None,

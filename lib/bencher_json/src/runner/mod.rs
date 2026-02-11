@@ -4,11 +4,13 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub mod job;
+pub mod spec;
 
 pub use job::{
-    JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonJobSpec, JsonJobs, JsonUpdateJob,
+    JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonJobConfig, JsonJobs, JsonUpdateJob,
     JsonUpdateJobResponse,
 };
+pub use spec::{JsonNewRunnerSpec, JsonNewSpec, JsonSpec, JsonSpecs, JsonUpdateSpec, SpecUuid};
 
 crate::typed_uuid::typed_uuid!(RunnerUuid);
 crate::typed_slug::typed_slug!(RunnerSlug, ResourceName);
@@ -88,6 +90,7 @@ pub struct JsonRunner {
     pub name: ResourceName,
     pub slug: Slug,
     pub state: RunnerState,
+    pub specs: Vec<SpecUuid>,
     pub archived: Option<DateTime>,
     pub last_heartbeat: Option<DateTime>,
     pub created: DateTime,

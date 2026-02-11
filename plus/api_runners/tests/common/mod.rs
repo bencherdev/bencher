@@ -1,7 +1,9 @@
 //! Shared test helpers for `api_runners` integration tests.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{BranchUuid, DateTime, JobStatus, JobUuid, JsonRunnerToken};
+use bencher_json::{
+    BranchUuid, DateTime, JobPriority, JobStatus, JobUuid, JsonRunnerToken, SpecUuid,
+};
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
@@ -28,17 +30,72 @@ pub async fn create_runner(server: &TestServer, admin_token: &str, name: &str) -
 /// Default test source IP for job insertion.
 pub const TEST_SOURCE_IP: &str = "127.0.0.1";
 
+/// Insert a test spec directly into the database. Returns the spec UUID and spec_id.
+#[expect(clippy::expect_used)]
+pub fn insert_test_spec(server: &TestServer) -> (SpecUuid, i32) {
+    insert_test_spec_full(server, 2, 4_294_967_296, 10_737_418_240, false)
+}
+
+/// Insert a test spec with specific values. Returns (SpecUuid, spec_id).
+#[expect(clippy::expect_used)]
+pub fn insert_test_spec_full(
+    server: &TestServer,
+    cpu: i32,
+    memory: i64,
+    disk: i64,
+    network: bool,
+) -> (SpecUuid, i32) {
+    let mut conn = server.db_conn();
+    let now = DateTime::now();
+    let spec_uuid = SpecUuid::new();
+
+    diesel::insert_into(schema::spec::table)
+        .values((
+            schema::spec::uuid.eq(&spec_uuid),
+            schema::spec::cpu.eq(cpu),
+            schema::spec::memory.eq(memory),
+            schema::spec::disk.eq(disk),
+            schema::spec::network.eq(network),
+            schema::spec::created.eq(&now),
+            schema::spec::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert test spec");
+
+    let spec_id: i32 = schema::spec::table
+        .filter(schema::spec::uuid.eq(&spec_uuid))
+        .select(schema::spec::id)
+        .first(&mut conn)
+        .expect("Failed to get spec ID");
+
+    (spec_uuid, spec_id)
+}
+
+/// Associate a spec with a runner.
+#[expect(clippy::expect_used)]
+pub fn associate_runner_spec(server: &TestServer, runner_id: i32, spec_id: i32) {
+    let mut conn = server.db_conn();
+    diesel::insert_into(schema::runner_spec::table)
+        .values((
+            schema::runner_spec::runner_id.eq(runner_id),
+            schema::runner_spec::spec_id.eq(spec_id),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to associate runner with spec");
+}
+
 /// Insert a test job directly into the database. Returns the job UUID.
 /// Uses a default organization_id of 1 and source_ip of "127.0.0.1".
 #[expect(clippy::expect_used)]
-pub fn insert_test_job(server: &TestServer, report_id: i32) -> JobUuid {
+pub fn insert_test_job(server: &TestServer, report_id: i32, spec_id: i32) -> JobUuid {
     insert_test_job_full(
         server,
         report_id,
         bencher_json::ProjectUuid::new(),
         1,
         TEST_SOURCE_IP,
-        0,
+        JobPriority::default(),
+        spec_id,
     )
 }
 
@@ -48,8 +105,17 @@ pub fn insert_test_job_with_project(
     server: &TestServer,
     report_id: i32,
     project_uuid: bencher_json::ProjectUuid,
+    spec_id: i32,
 ) -> JobUuid {
-    insert_test_job_full(server, report_id, project_uuid, 1, TEST_SOURCE_IP, 0)
+    insert_test_job_full(
+        server,
+        report_id,
+        project_uuid,
+        1,
+        TEST_SOURCE_IP,
+        JobPriority::default(),
+        spec_id,
+    )
 }
 
 /// Insert a test job with full control over scheduling parameters.
@@ -60,22 +126,19 @@ pub fn insert_test_job_full(
     project_uuid: bencher_json::ProjectUuid,
     organization_id: i32,
     source_ip: &str,
-    priority: i32,
+    priority: JobPriority,
+    spec_id: i32,
 ) -> JobUuid {
     let mut conn = server.db_conn();
     let now = DateTime::now();
     let job_uuid = JobUuid::new();
 
-    // Create a valid JsonJobSpec as JSON
-    let spec = serde_json::json!({
+    // Create a valid JsonJobConfig as JSON
+    let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
         "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-        "cpu": 2,
-        "memory": 4294967296_u64,  // 4 GB
-        "disk": 10737418240_u64,   // 10 GB
-        "timeout": 3600,
-        "network": false
+        "timeout": 3600
     });
 
     diesel::insert_into(schema::job::table)
@@ -85,7 +148,8 @@ pub fn insert_test_job_full(
             schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq(source_ip),
             schema::job::status.eq(JobStatus::Pending),
-            schema::job::spec.eq(spec.to_string()),
+            schema::job::spec_id.eq(spec_id),
+            schema::job::config.eq(config.to_string()),
             schema::job::timeout.eq(3600),
             schema::job::priority.eq(priority),
             schema::job::created.eq(&now),
@@ -199,13 +263,14 @@ pub fn insert_test_job_with_optional_fields(
     server: &TestServer,
     report_id: i32,
     project_uuid: bencher_json::ProjectUuid,
+    spec_id: i32,
 ) -> JobUuid {
     let mut conn = server.db_conn();
     let now = DateTime::now();
     let job_uuid = JobUuid::new();
 
-    // Create a JsonJobSpec with optional fields populated
-    let spec = serde_json::json!({
+    // Create a JsonJobConfig with optional fields populated
+    let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
         "digest": "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
@@ -215,11 +280,7 @@ pub fn insert_test_job_with_optional_fields(
             "RUST_LOG": "info",
             "CI": "true"
         },
-        "cpu": 4,
-        "memory": 8589934592_u64,  // 8 GB
-        "disk": 21474836480_u64,   // 20 GB
         "timeout": 7200,
-        "network": true,
         "file_paths": ["/output/results.json", "/tmp/bench.txt"]
     });
 
@@ -230,9 +291,10 @@ pub fn insert_test_job_with_optional_fields(
             schema::job::organization_id.eq(1),
             schema::job::source_ip.eq(TEST_SOURCE_IP),
             schema::job::status.eq(JobStatus::Pending),
-            schema::job::spec.eq(spec.to_string()),
+            schema::job::spec_id.eq(spec_id),
+            schema::job::config.eq(config.to_string()),
             schema::job::timeout.eq(7200),
-            schema::job::priority.eq(0),
+            schema::job::priority.eq(JobPriority::default()),
             schema::job::created.eq(&now),
             schema::job::modified.eq(&now),
         ))
@@ -242,15 +304,19 @@ pub fn insert_test_job_with_optional_fields(
     job_uuid
 }
 
-/// Insert a test job with invalid spec JSON (missing required fields). Returns the job UUID.
+/// Insert a test job with invalid config JSON (missing required fields). Returns the job UUID.
 #[expect(clippy::expect_used)]
-pub fn insert_test_job_with_invalid_spec(server: &TestServer, report_id: i32) -> JobUuid {
+pub fn insert_test_job_with_invalid_config(
+    server: &TestServer,
+    report_id: i32,
+    spec_id: i32,
+) -> JobUuid {
     let mut conn = server.db_conn();
     let now = DateTime::now();
     let job_uuid = JobUuid::new();
 
-    // Invalid spec - missing required fields like digest, cpu, memory, etc.
-    let spec = serde_json::json!({
+    // Invalid config - missing required fields like digest, timeout, etc.
+    let config = serde_json::json!({
         "registry": "https://registry.bencher.dev"
     });
 
@@ -261,9 +327,10 @@ pub fn insert_test_job_with_invalid_spec(server: &TestServer, report_id: i32) ->
             schema::job::organization_id.eq(1),
             schema::job::source_ip.eq(TEST_SOURCE_IP),
             schema::job::status.eq(JobStatus::Pending),
-            schema::job::spec.eq(spec.to_string()),
+            schema::job::spec_id.eq(spec_id),
+            schema::job::config.eq(config.to_string()),
             schema::job::timeout.eq(3600),
-            schema::job::priority.eq(0),
+            schema::job::priority.eq(JobPriority::default()),
             schema::job::created.eq(&now),
             schema::job::modified.eq(&now),
         ))
@@ -323,21 +390,18 @@ pub fn insert_test_job_with_timestamp(
     project_uuid: bencher_json::ProjectUuid,
     organization_id: i32,
     source_ip: &str,
-    priority: i32,
+    priority: JobPriority,
     created: DateTime,
+    spec_id: i32,
 ) -> JobUuid {
     let mut conn = server.db_conn();
     let job_uuid = JobUuid::new();
 
-    let spec = serde_json::json!({
+    let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
         "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-        "cpu": 2,
-        "memory": 4294967296_u64,
-        "disk": 10737418240_u64,
-        "timeout": 3600,
-        "network": false
+        "timeout": 3600
     });
 
     diesel::insert_into(schema::job::table)
@@ -347,7 +411,8 @@ pub fn insert_test_job_with_timestamp(
             schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq(source_ip),
             schema::job::status.eq(JobStatus::Pending),
-            schema::job::spec.eq(spec.to_string()),
+            schema::job::spec_id.eq(spec_id),
+            schema::job::config.eq(config.to_string()),
             schema::job::timeout.eq(3600),
             schema::job::priority.eq(priority),
             schema::job::created.eq(&created),

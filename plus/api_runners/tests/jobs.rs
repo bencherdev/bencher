@@ -10,8 +10,8 @@ mod common;
 use bencher_api_tests::TestServer;
 use bencher_json::{JsonJob, JsonUpdateJobResponse};
 use common::{
-    create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job,
-    set_job_runner_id, set_job_status,
+    associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
+    insert_test_job, insert_test_spec, set_job_runner_id, set_job_status,
 };
 use futures_concurrency::future::Join as _;
 use http::StatusCode;
@@ -22,8 +22,11 @@ async fn test_claim_job_no_jobs() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "jobsadmin@example.com").await;
 
+    let (_, spec_id) = insert_test_spec(&server);
     let runner = create_runner(&server, &admin.token, "Claim Test Runner").await;
     let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
 
     let body = serde_json::json!({
         "poll_timeout": 1
@@ -247,8 +250,11 @@ async fn test_claim_job_archived_runner() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "jobsadmin9@example.com").await;
 
+    let (_, spec_id) = insert_test_spec(&server);
     let runner = create_runner(&server, &admin.token, "Archived Runner").await;
     let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
 
     // Archive the runner
     let body = serde_json::json!({
@@ -300,13 +306,16 @@ mod job_lifecycle {
             .await;
 
         // Create a runner
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Lifecycle Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         // Create test infrastructure and a pending job
         let project_id = get_project_id(&server, project.slug.as_ref());
         let report_id = create_test_report(&server, project_id);
-        let job_uuid = insert_test_job(&server, report_id);
+        let job_uuid = insert_test_job(&server, report_id, spec_id);
 
         // Step 1: Claim the job
         let body = serde_json::json!({
@@ -396,13 +405,16 @@ mod job_lifecycle {
             .await;
 
         // Create a runner
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Lifecycle Fail Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         // Create test infrastructure and a pending job
         let project_id = get_project_id(&server, project.slug.as_ref());
         let report_id = create_test_report(&server, project_id);
-        let job_uuid = insert_test_job(&server, report_id);
+        let job_uuid = insert_test_job(&server, report_id, spec_id);
 
         // Step 1: Claim the job
         let body = serde_json::json!({
@@ -483,13 +495,16 @@ mod job_lifecycle {
             .await;
 
         // Create a runner
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Invalid Trans Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         // Create test infrastructure and a pending job
         let project_id = get_project_id(&server, project.slug.as_ref());
         let report_id = create_test_report(&server, project_id);
-        let job_uuid = insert_test_job(&server, report_id);
+        let job_uuid = insert_test_job(&server, report_id, spec_id);
 
         // Claim the job
         let body = serde_json::json!({
@@ -534,15 +549,20 @@ mod job_lifecycle {
             .await;
 
         // Create two runners
+        let (_, spec_id) = insert_test_spec(&server);
         let runner1 = create_runner(&server, &admin.token, "Concurrent Runner 1").await;
         let runner1_token: String = runner1.token.as_ref().to_owned();
+        let runner1_id = get_runner_id(&server, runner1.uuid);
+        associate_runner_spec(&server, runner1_id, spec_id);
         let runner2 = create_runner(&server, &admin.token, "Concurrent Runner 2").await;
         let runner2_token: String = runner2.token.as_ref().to_owned();
+        let runner2_id = get_runner_id(&server, runner2.uuid);
+        associate_runner_spec(&server, runner2_id, spec_id);
 
         // Create a single pending job
         let project_id = get_project_id(&server, project.slug.as_ref());
         let report_id = create_test_report(&server, project_id);
-        let job_uuid = insert_test_job(&server, report_id);
+        let job_uuid = insert_test_job(&server, report_id, spec_id);
 
         // Both runners try to claim concurrently
         let claim_body = serde_json::json!({ "poll_timeout": 1 });
@@ -606,15 +626,20 @@ mod job_lifecycle {
             .await;
 
         // Create two runners
+        let (_, spec_id) = insert_test_spec(&server);
         let runner1 = create_runner(&server, &admin.token, "Runner One Lifecycle").await;
         let runner1_token: &str = runner1.token.as_ref();
+        let runner1_id = get_runner_id(&server, runner1.uuid);
+        associate_runner_spec(&server, runner1_id, spec_id);
         let runner2 = create_runner(&server, &admin.token, "Runner Two Lifecycle").await;
         let runner2_token: &str = runner2.token.as_ref();
+        let runner2_id = get_runner_id(&server, runner2.uuid);
+        associate_runner_spec(&server, runner2_id, spec_id);
 
         // Create test infrastructure and a pending job
         let project_id = get_project_id(&server, project.slug.as_ref());
         let report_id = create_test_report(&server, project_id);
-        let job_uuid = insert_test_job(&server, report_id);
+        let job_uuid = insert_test_job(&server, report_id, spec_id);
 
         // Runner 1 claims the job
         let body = serde_json::json!({
@@ -656,9 +681,9 @@ mod job_lifecycle {
 
 mod job_spec {
     use super::*;
-    use bencher_json::{JobStatus, JsonJobSpec};
+    use bencher_json::{JobStatus, JsonJobConfig};
     use common::{
-        insert_test_job_with_invalid_spec, insert_test_job_with_optional_fields,
+        insert_test_job_with_invalid_config, insert_test_job_with_optional_fields,
         insert_test_job_with_project,
     };
 
@@ -670,12 +695,15 @@ mod job_spec {
         let org = server.create_org(&admin, "Spec Org").await;
         let project = server.create_project(&admin, &org, "Spec Project").await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Spec Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let report_id = create_test_report(&server, project_id);
-        let _job_uuid = insert_test_job_with_project(&server, report_id, project.uuid);
+        let _job_uuid = insert_test_job_with_project(&server, report_id, project.uuid, spec_id);
 
         // Claim the job
         let body = serde_json::json!({ "poll_timeout": 5 });
@@ -693,21 +721,23 @@ mod job_spec {
         let claimed_job = claimed_job.expect("Expected to claim a job");
 
         // Verify spec is present and has correct values
-        let spec: &JsonJobSpec = claimed_job
-            .spec
+        assert_eq!(u32::from(claimed_job.spec.cpu), 2);
+        assert_eq!(u64::from(claimed_job.spec.memory), 4294967296); // 4 GB
+        assert_eq!(u64::from(claimed_job.spec.disk), 10737418240); // 10 GB
+        assert!(!claimed_job.spec.network);
+
+        // Verify config is present and has correct values
+        let config: &JsonJobConfig = claimed_job
+            .config
             .as_ref()
-            .expect("Expected spec to be present");
-        assert_eq!(spec.project, project.uuid);
+            .expect("Expected config to be present");
+        assert_eq!(config.project, project.uuid);
         assert_eq!(
-            spec.digest.as_ref(),
+            config.digest.as_ref(),
             "sha256:0000000000000000000000000000000000000000000000000000000000000000"
         );
-        assert_eq!(u32::from(spec.cpu), 2);
-        assert_eq!(u64::from(spec.memory), 4294967296); // 4 GB
-        assert_eq!(u64::from(spec.disk), 10737418240); // 10 GB
-        assert_eq!(u32::from(spec.timeout), 3600);
-        assert!(!spec.network);
-        assert!(spec.file_paths.is_none());
+        assert_eq!(u32::from(config.timeout), 3600);
+        assert!(config.file_paths.is_none());
     }
 
     // Test that optional spec fields (entrypoint, cmd, env) are correctly returned
@@ -720,14 +750,18 @@ mod job_spec {
             .create_project(&admin, &org, "Spec Optional Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Spec Optional Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let report_id = create_test_report(&server, project_id);
 
         // Insert job with optional fields populated
-        let job_uuid = insert_test_job_with_optional_fields(&server, report_id, project.uuid);
+        let job_uuid =
+            insert_test_job_with_optional_fields(&server, report_id, project.uuid, spec_id);
 
         // Claim the job
         let body = serde_json::json!({ "poll_timeout": 5 });
@@ -745,23 +779,23 @@ mod job_spec {
         let claimed_job = claimed_job.expect("Expected to claim a job");
         assert_eq!(claimed_job.uuid, job_uuid);
 
-        let spec = claimed_job
-            .spec
+        let config = claimed_job
+            .config
             .as_ref()
-            .expect("Expected spec to be present");
+            .expect("Expected config to be present");
 
         // Verify optional fields
-        let entrypoint = spec.entrypoint.as_ref().expect("Expected entrypoint");
+        let entrypoint = config.entrypoint.as_ref().expect("Expected entrypoint");
         assert_eq!(entrypoint, &vec!["/bin/sh".to_string(), "-c".to_string()]);
 
-        let cmd = spec.cmd.as_ref().expect("Expected cmd");
+        let cmd = config.cmd.as_ref().expect("Expected cmd");
         assert_eq!(cmd, &vec!["cargo".to_string(), "bench".to_string()]);
 
-        let env = spec.env.as_ref().expect("Expected env");
+        let env = config.env.as_ref().expect("Expected env");
         assert_eq!(env.get("RUST_LOG"), Some(&"info".to_string()));
         assert_eq!(env.get("CI"), Some(&"true".to_string()));
 
-        let file_paths: Vec<&str> = spec
+        let file_paths: Vec<&str> = config
             .file_paths
             .as_ref()
             .expect("Expected file_paths")
@@ -781,14 +815,17 @@ mod job_spec {
             .create_project(&admin, &org, "Spec Invalid Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Spec Invalid Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let report_id = create_test_report(&server, project_id);
 
-        // Insert job with invalid spec (missing required fields)
-        let _job_uuid = insert_test_job_with_invalid_spec(&server, report_id);
+        // Insert job with invalid config (missing required fields)
+        let _job_uuid = insert_test_job_with_invalid_config(&server, report_id, spec_id);
 
         // Try to claim the job - should fail with 500 (corrupt spec is a server error)
         let body = serde_json::json!({ "poll_timeout": 5 });
@@ -804,7 +841,7 @@ mod job_spec {
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    // Test that the spec is NOT included in public job listing
+    // Test that the config is NOT included in public job listing
     #[tokio::test]
     async fn test_public_job_list_excludes_spec() {
         let server = TestServer::new().await;
@@ -814,12 +851,15 @@ mod job_spec {
             .create_project(&admin, &org, "Spec Public Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Spec Public Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let report_id = create_test_report(&server, project_id);
-        let job_uuid = insert_test_job(&server, report_id);
+        let job_uuid = insert_test_job(&server, report_id, spec_id);
 
         // Claim the job (so it has a runner assigned)
         let body = serde_json::json!({ "poll_timeout": 5 });
@@ -845,10 +885,10 @@ mod job_spec {
         assert_eq!(resp.status(), StatusCode::OK);
         let job: JsonJob = resp.json().await.expect("Failed to parse response");
 
-        // Spec should NOT be included in public API response
+        // Config should NOT be included in public API response
         assert!(
-            job.spec.is_none(),
-            "Expected spec to be None in public API response"
+            job.config.is_none(),
+            "Expected config to be None in public API response"
         );
         assert_eq!(job.status, JobStatus::Claimed);
     }
@@ -864,8 +904,11 @@ async fn test_claim_job_poll_timeout_timing() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "polltiming@example.com").await;
 
+    let (_, spec_id) = insert_test_spec(&server);
     let runner = create_runner(&server, &admin.token, "Poll Timing Runner").await;
     let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
 
     tokio::time::pause();
     let handle = tokio::spawn({
@@ -897,13 +940,13 @@ async fn test_claim_job_poll_timeout_timing() {
 // =============================================================================
 //
 // These tests verify the tier-based priority scheduling system:
-// - Enterprise (>= 300) / Team (>= 200): Unlimited concurrent jobs
-// - Free (>= 100): 1 concurrent job per organization
-// - Unclaimed (< 100): 1 concurrent job per source IP
+// - Enterprise / Team: Unlimited concurrent jobs
+// - Free: 1 concurrent job per organization
+// - Unclaimed: 1 concurrent job per source IP
 
 mod priority_scheduling {
     use super::*;
-    use bencher_json::{DateTime, JobStatus};
+    use bencher_json::{DateTime, JobPriority, JobStatus};
     use common::{get_organization_id, insert_test_job_full, insert_test_job_with_timestamp};
 
     // Test that higher priority jobs are claimed before lower priority ones
@@ -916,20 +959,44 @@ mod priority_scheduling {
             .create_project(&admin, &org, "Priority Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Priority Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
         let report_id = create_test_report(&server, project_id);
 
         // Insert jobs with different priorities (lower priority first to test ordering)
-        let low_job =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 50);
-        let high_job =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 300);
-        let medium_job =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.3", 150);
+        let low_job = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            JobPriority::Unclaimed,
+            spec_id,
+        );
+        let high_job = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.2",
+            JobPriority::Enterprise,
+            spec_id,
+        );
+        let medium_job = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.3",
+            JobPriority::Free,
+            spec_id,
+        );
 
         // Claim first job - should be the high priority one
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1037,16 +1104,35 @@ mod priority_scheduling {
             .create_project(&admin, &org, "Free Tier Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Free Tier Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
         let report_id = create_test_report(&server, project_id);
 
-        // Insert two Free tier jobs (priority 100-199) for the same org
-        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 150);
-        let _job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 150);
+        // Insert two Free tier jobs for the same org
+        let job1 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            JobPriority::Free,
+            spec_id,
+        );
+        let _job2 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.2",
+            JobPriority::Free,
+            spec_id,
+        );
 
         // Claim first job
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1101,17 +1187,36 @@ mod priority_scheduling {
             .create_project(&admin, &org, "Unclaimed Tier Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Unclaimed Tier Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
         let report_id = create_test_report(&server, project_id);
 
-        // Insert two Unclaimed tier jobs (priority < 100) with same source IP
+        // Insert two Unclaimed tier jobs with same source IP
         let same_ip = "192.168.1.100";
-        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 50);
-        let _job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 50);
+        let job1 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            same_ip,
+            JobPriority::Unclaimed,
+            spec_id,
+        );
+        let _job2 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            same_ip,
+            JobPriority::Unclaimed,
+            spec_id,
+        );
 
         // Claim first job
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1166,16 +1271,35 @@ mod priority_scheduling {
             .create_project(&admin, &org, "Unclaimed IPs Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Unclaimed IPs Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
         let report_id = create_test_report(&server, project_id);
 
         // Insert two Unclaimed tier jobs with DIFFERENT source IPs
-        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 50);
-        let job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 50);
+        let job1 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            JobPriority::Unclaimed,
+            spec_id,
+        );
+        let job2 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.2",
+            JobPriority::Unclaimed,
+            spec_id,
+        );
 
         // Claim first job
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1237,16 +1361,35 @@ mod priority_scheduling {
             .create_project(&admin, &org, "Enterprise Tier Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Enterprise Tier Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
         let report_id = create_test_report(&server, project_id);
 
-        // Insert multiple Enterprise tier jobs (priority >= 200) for the same org
-        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 300);
-        let job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 300);
+        // Insert multiple Enterprise tier jobs for the same org
+        let job1 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            JobPriority::Enterprise,
+            spec_id,
+        );
+        let job2 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            JobPriority::Enterprise,
+            spec_id,
+        );
 
         // Claim first job
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1308,16 +1451,26 @@ mod priority_scheduling {
             .create_project(&admin, &org, "Skip Blocked Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Skip Blocked Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
         let report_id = create_test_report(&server, project_id);
 
         // Insert a Free tier job and mark it as running to block the org
-        let blocking_job =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 150);
+        let blocking_job = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            JobPriority::Free,
+            spec_id,
+        );
 
         // Claim and start the blocking job
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1344,10 +1497,24 @@ mod priority_scheduling {
             .expect("Request failed");
 
         // Insert a blocked Free tier job and an unblocked Enterprise tier job
-        let _blocked_job =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 150);
-        let enterprise_job =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.3", 300);
+        let _blocked_job = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.2",
+            JobPriority::Free,
+            spec_id,
+        );
+        let enterprise_job = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.3",
+            JobPriority::Enterprise,
+            spec_id,
+        );
 
         // Try to claim - should get the Enterprise job (skipping the blocked Free tier job)
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1379,16 +1546,35 @@ mod priority_scheduling {
             .create_project(&admin, &org, "Team Tier Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Team Tier Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
         let report_id = create_test_report(&server, project_id);
 
-        // Insert multiple Team tier jobs (priority 200-299) for the same org and IP
-        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 250);
-        let job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 250);
+        // Insert multiple Team tier jobs for the same org and IP
+        let job1 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            JobPriority::Team,
+            spec_id,
+        );
+        let job2 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            JobPriority::Team,
+            spec_id,
+        );
 
         // Claim first job
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1447,8 +1633,11 @@ mod priority_scheduling {
         let org = server.create_org(&admin, "FIFO Org").await;
         let project = server.create_project(&admin, &org, "FIFO Project").await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "FIFO Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
@@ -1467,8 +1656,9 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            300,
+            JobPriority::Enterprise,
             ts1,
+            spec_id,
         );
         let second_job = insert_test_job_with_timestamp(
             &server,
@@ -1476,8 +1666,9 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.2",
-            300,
+            JobPriority::Enterprise,
             ts2,
+            spec_id,
         );
         let third_job = insert_test_job_with_timestamp(
             &server,
@@ -1485,8 +1676,9 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.3",
-            300,
+            JobPriority::Enterprise,
             ts3,
+            spec_id,
         );
 
         // Claim first - should be first_job (created first)
@@ -1600,8 +1792,11 @@ mod priority_scheduling {
             .create_project(&admin, &org2, "Free Tier Project 2")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Free Diff Org Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project1_id = get_project_id(&server, project1.slug.as_ref());
         let org1_id = get_organization_id(&server, project1_id);
@@ -1612,10 +1807,24 @@ mod priority_scheduling {
         let report2_id = create_test_report(&server, project2_id);
 
         // Insert Free tier jobs for different orgs
-        let job1 =
-            insert_test_job_full(&server, report1_id, project1.uuid, org1_id, "10.0.0.1", 150);
-        let job2 =
-            insert_test_job_full(&server, report2_id, project2.uuid, org2_id, "10.0.0.2", 150);
+        let job1 = insert_test_job_full(
+            &server,
+            report1_id,
+            project1.uuid,
+            org1_id,
+            "10.0.0.1",
+            150,
+            spec_id,
+        );
+        let job2 = insert_test_job_full(
+            &server,
+            report2_id,
+            project2.uuid,
+            org2_id,
+            "10.0.0.2",
+            150,
+            spec_id,
+        );
 
         // Claim first job
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1675,16 +1884,35 @@ mod priority_scheduling {
         let org = server.create_org(&admin, "Unblock Org").await;
         let project = server.create_project(&admin, &org, "Unblock Project").await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Unblock Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
         let report_id = create_test_report(&server, project_id);
 
         // Insert two Free tier jobs for the same org
-        let job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 150);
-        let job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 150);
+        let job1 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            150,
+            spec_id,
+        );
+        let job2 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.2",
+            150,
+            spec_id,
+        );
 
         // Claim and start first job
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1770,9 +1998,9 @@ mod priority_scheduling {
         );
     }
 
-    // Test boundary values for priority tiers
+    // Test that Free tier is blocked while Team tier is not for the same org
     #[tokio::test]
-    async fn test_priority_boundary_values() {
+    async fn test_free_blocked_team_unblocked() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "boundary1@example.com").await;
         let org = server.create_org(&admin, "Boundary Org").await;
@@ -1780,17 +2008,26 @@ mod priority_scheduling {
             .create_project(&admin, &org, "Boundary Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Boundary Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
         let report_id = create_test_report(&server, project_id);
 
-        // Test boundary: priority 199 (Free tier, should be blocked by running Free job)
-        // vs priority 200 (Team tier, should NOT be blocked)
-        let blocking_job =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 150);
+        // Insert a Free tier job and mark it as running to block the org for Free tier
+        let blocking_job = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            JobPriority::Free,
+            spec_id,
+        );
 
         // Claim and start the blocking job
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1816,15 +2053,29 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        // Insert job at priority 199 (Free tier boundary - should be blocked)
-        let _free_boundary =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 199);
+        // Insert another Free tier job (should be blocked by org concurrency)
+        let _free_blocked = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.2",
+            JobPriority::Free,
+            spec_id,
+        );
 
-        // Insert job at priority 200 (Team tier boundary - should NOT be blocked)
-        let team_boundary =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.3", 200);
+        // Insert a Team tier job (should NOT be blocked)
+        let team_job = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.3",
+            JobPriority::Team,
+            spec_id,
+        );
 
-        // Try to claim - should get the Team tier job (priority 200), not the blocked Free tier job
+        // Try to claim - should get the Team tier job, not the blocked Free tier job
         let body = serde_json::json!({ "poll_timeout": 1 });
         let resp = server
             .client
@@ -1836,16 +2087,16 @@ mod priority_scheduling {
             .expect("Request failed");
 
         let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
-        let claimed = claimed.expect("Expected to claim Team tier job at boundary");
+        let claimed = claimed.expect("Expected to claim Team tier job");
         assert_eq!(
-            claimed.uuid, team_boundary,
-            "Priority 200 should be Team tier (unlimited), not Free tier (blocked)"
+            claimed.uuid, team_job,
+            "Team tier should be unlimited, not blocked like Free tier"
         );
     }
 
-    // Test boundary: priority 99 vs 100 (Unclaimed vs Free tier)
+    // Test Unclaimed tier blocked by IP while Free tier from different org succeeds
     #[tokio::test]
-    async fn test_priority_boundary_unclaimed_free() {
+    async fn test_unclaimed_blocked_free_different_org_unblocked() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "boundary2@example.com").await;
         let org = server.create_org(&admin, "Boundary UF Org").await;
@@ -1853,17 +2104,27 @@ mod priority_scheduling {
             .create_project(&admin, &org, "Boundary UF Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Boundary UF Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
         let report_id = create_test_report(&server, project_id);
 
-        // Start a job with same source IP to block Unclaimed tier
+        // Start an Unclaimed job with same source IP to block that IP
         let same_ip = "192.168.1.50";
-        let blocking_job =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 50);
+        let blocking_job = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            same_ip,
+            JobPriority::Unclaimed,
+            spec_id,
+        );
 
         // Claim and start the blocking job
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1889,14 +2150,28 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        // Insert job at priority 99 with same IP (Unclaimed tier - should be blocked by IP)
-        let _unclaimed_boundary =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 99);
+        // Insert Unclaimed job with same IP (should be blocked by IP)
+        let _unclaimed_blocked = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            same_ip,
+            JobPriority::Unclaimed,
+            spec_id,
+        );
 
-        // Insert job at priority 100 (Free tier - blocked by org, not IP)
-        // But since org already has a running job, this should also be blocked
-        let _free_boundary =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 100);
+        // Insert Free tier job with same IP and same org
+        // Blocked by org concurrency (running Unclaimed job counts against org)
+        let _free_same_org = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            same_ip,
+            JobPriority::Free,
+            spec_id,
+        );
 
         // Insert a Free tier job with DIFFERENT IP and DIFFERENT org to prove Free tier works
         let org2 = server.create_org(&admin, "Boundary UF Org 2").await;
@@ -1913,7 +2188,8 @@ mod priority_scheduling {
             project2.uuid,
             org2_id,
             "10.0.0.99",
-            100,
+            JobPriority::Free,
+            spec_id,
         );
 
         // Try to claim - should get the Free tier job from different org
@@ -1931,7 +2207,7 @@ mod priority_scheduling {
         let claimed = claimed.expect("Expected to claim unblocked Free tier job");
         assert_eq!(
             claimed.uuid, free_unblocked,
-            "Priority 100 from different org should be claimable"
+            "Free tier from different org should be claimable"
         );
     }
 
@@ -1947,8 +2223,11 @@ mod priority_scheduling {
             .create_project(&admin, &org, "FIFO Tie Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "FIFO Tie Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
@@ -1965,8 +2244,9 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            300,
+            JobPriority::Enterprise,
             fixed_ts,
+            spec_id,
         );
         let second_job = insert_test_job_with_timestamp(
             &server,
@@ -1974,8 +2254,9 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.2",
-            300,
+            JobPriority::Enterprise,
             fixed_ts,
+            spec_id,
         );
         let third_job = insert_test_job_with_timestamp(
             &server,
@@ -1983,8 +2264,9 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.3",
-            300,
+            JobPriority::Enterprise,
             fixed_ts,
+            spec_id,
         );
 
         // Claim first - should be first_job (lowest id)
@@ -2110,12 +2392,15 @@ mod invalid_transitions {
             .create_project(&admin, &org, &format!("Inv {suffix} Proj"))
             .await;
 
+        let (_, spec_id) = insert_test_spec(server);
         let runner = create_runner(server, &admin.token, &format!("Inv {suffix} Runner")).await;
         let runner_token: String = runner.token.as_ref().to_owned();
+        let runner_id = get_runner_id(server, runner.uuid);
+        associate_runner_spec(server, runner_id, spec_id);
 
         let project_id = get_project_id(server, project.slug.as_ref());
         let report_id = create_test_report(server, project_id);
-        let job_uuid = insert_test_job(server, report_id);
+        let job_uuid = insert_test_job(server, report_id, spec_id);
 
         // Claim the job
         let body = serde_json::json!({ "poll_timeout": 5 });
@@ -2347,8 +2632,11 @@ mod poll_timeout_boundaries {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "poll-zero@example.com").await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Poll Zero Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         tokio::time::pause();
         let handle = tokio::spawn({
@@ -2385,12 +2673,15 @@ mod poll_timeout_boundaries {
             .create_project(&admin, &org, "Poll Max Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Poll Max Runner").await;
         let runner_token: &str = runner.token.as_ref();
+        let runner_id = get_runner_id(&server, runner.uuid);
+        associate_runner_spec(&server, runner_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let report_id = create_test_report(&server, project_id);
-        let _job_uuid = insert_test_job(&server, report_id);
+        let _job_uuid = insert_test_job(&server, report_id, spec_id);
 
         let body = serde_json::json!({ "poll_timeout": 61 });
         let start = std::time::Instant::now();
@@ -2439,18 +2730,39 @@ mod concurrency_safety {
             .create_project(&admin, &org, "Concurrent Free Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner1 = create_runner(&server, &admin.token, "Conc Free Runner 1").await;
         let runner1_token: String = runner1.token.as_ref().to_owned();
+        let runner1_id = get_runner_id(&server, runner1.uuid);
+        associate_runner_spec(&server, runner1_id, spec_id);
         let runner2 = create_runner(&server, &admin.token, "Conc Free Runner 2").await;
         let runner2_token: String = runner2.token.as_ref().to_owned();
+        let runner2_id = get_runner_id(&server, runner2.uuid);
+        associate_runner_spec(&server, runner2_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
         let report_id = create_test_report(&server, project_id);
 
         // Insert two Free tier jobs for the same org
-        let _job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 150);
-        let _job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 150);
+        let _job1 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            150,
+            spec_id,
+        );
+        let _job2 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.2",
+            150,
+            spec_id,
+        );
 
         let claim_body = serde_json::json!({ "poll_timeout": 1 });
         let url1 = server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid));
@@ -2510,10 +2822,15 @@ mod concurrency_safety {
             .create_project(&admin, &org, "Concurrent Unclaimed Project")
             .await;
 
+        let (_, spec_id) = insert_test_spec(&server);
         let runner1 = create_runner(&server, &admin.token, "Conc Uncl Runner 1").await;
         let runner1_token: String = runner1.token.as_ref().to_owned();
+        let runner1_id = get_runner_id(&server, runner1.uuid);
+        associate_runner_spec(&server, runner1_id, spec_id);
         let runner2 = create_runner(&server, &admin.token, "Conc Uncl Runner 2").await;
         let runner2_token: String = runner2.token.as_ref().to_owned();
+        let runner2_id = get_runner_id(&server, runner2.uuid);
+        associate_runner_spec(&server, runner2_id, spec_id);
 
         let project_id = get_project_id(&server, project.slug.as_ref());
         let org_id = get_organization_id(&server, project_id);
@@ -2521,8 +2838,24 @@ mod concurrency_safety {
 
         // Insert two Unclaimed tier jobs with the same source IP
         let same_ip = "192.168.1.200";
-        let _job1 = insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 50);
-        let _job2 = insert_test_job_full(&server, report_id, project.uuid, org_id, same_ip, 50);
+        let _job1 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            same_ip,
+            50,
+            spec_id,
+        );
+        let _job2 = insert_test_job_full(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            same_ip,
+            50,
+            spec_id,
+        );
 
         let claim_body = serde_json::json!({ "poll_timeout": 1 });
         let url1 = server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid));

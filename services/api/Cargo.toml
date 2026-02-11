@@ -11,6 +11,7 @@ default = ["plus", "sentry", "otel"]
 plus = [
     "dep:api_oci",
     "dep:api_runners",
+    "dep:api_specs",
     "api_auth/plus",
     "api_checkout/plus",
     "api_oci/plus",
@@ -19,6 +20,7 @@ plus = [
     "api_run/plus",
     "api_runners/plus",
     "api_server/plus",
+    "api_specs/plus",
     "api_users/plus",
     "bencher_endpoint/plus",
     "bencher_config/plus",
@@ -36,6 +38,7 @@ sentry = [
     "api_run/sentry",
     "api_runners/sentry",
     "api_server/sentry",
+    "api_specs?/sentry",
     "api_users/sentry",
     "bencher_config/sentry",
     "bencher_schema/sentry",
@@ -51,6 +54,7 @@ otel = [
     "api_run/otel",
     "api_runners/otel",
     "api_server/otel",
+    "api_specs?/otel",
     "api_users/otel",
     "bencher_config/otel",
     "bencher_endpoint/otel",
@@ -65,6 +69,7 @@ api_organizations.workspace = true
 api_projects.workspace = true
 api_run.workspace = true
 api_runners = { workspace = true, optional = true }
+api_specs = { workspace = true, optional = true }
 api_server.workspace = true
 api_users.workspace = true
 bencher_config.workspace = true

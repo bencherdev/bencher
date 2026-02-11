@@ -8,8 +8,8 @@ use bencher_api_tests::TestServer;
 use bencher_json::{JobStatus, JobUuid, JsonJob, RunnerUuid};
 use bencher_schema::schema;
 use common::{
-    create_runner, create_test_report, get_project_id, insert_test_job,
-    insert_test_job_with_optional_fields, set_job_status,
+    associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
+    insert_test_job, insert_test_job_with_optional_fields, insert_test_spec, set_job_status,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
@@ -62,8 +62,11 @@ async fn setup_claimed_job(server: &TestServer, suffix: &str) -> (RunnerUuid, St
 
     let project_id = get_project_id(server, project.slug.as_ref());
     let report_id = create_test_report(server, project_id);
-    let job_uuid = insert_test_job(server, report_id);
+    let (_, spec_id) = insert_test_spec(server);
+    let job_uuid = insert_test_job(server, report_id, spec_id);
 
+    let runner_id = get_runner_id(server, runner.uuid);
+    associate_runner_spec(server, runner_id, spec_id);
     let claimed = claim_job(server, runner.uuid, &runner_token).await;
     assert_eq!(claimed.uuid, job_uuid);
     assert_eq!(claimed.status, JobStatus::Claimed);
@@ -208,7 +211,10 @@ async fn test_channel_wrong_runner() {
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
-    let job_uuid = insert_test_job(&server, report_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+    let runner1_id = get_runner_id(&server, runner1.uuid);
+    associate_runner_spec(&server, runner1_id, spec_id);
     let _claimed = claim_job(&server, runner1.uuid, &runner1_token).await;
 
     // Try to open channel with runner2 (doesn't own the job)
@@ -237,7 +243,8 @@ async fn test_channel_job_not_claimed() {
     // Create a job but do NOT claim it (stays Pending)
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
-    let job_uuid = insert_test_job(&server, report_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
 
     let request = ws_request(&server, runner.uuid, &runner_token, job_uuid);
     match tokio_tungstenite::connect_async(request).await {
@@ -504,19 +511,22 @@ async fn test_channel_lifecycle_with_full_spec() {
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
     // Use the helper that creates a job with optional fields populated
-    let job_uuid = insert_test_job_with_optional_fields(&server, report_id, project.uuid);
+    let job_uuid = insert_test_job_with_optional_fields(&server, report_id, project.uuid, spec_id);
 
     // Claim the job
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
     let claimed = claim_job(&server, runner.uuid, &runner_token).await;
     assert_eq!(claimed.uuid, job_uuid);
     assert_eq!(claimed.status, JobStatus::Claimed);
 
-    // Verify the spec has optional fields
-    let spec = claimed.spec.as_ref().expect("Expected spec");
-    assert!(spec.entrypoint.is_some());
-    assert!(spec.cmd.is_some());
-    assert!(spec.env.is_some());
+    // Verify the config has optional fields
+    let config = claimed.config.as_ref().expect("Expected config");
+    assert!(config.entrypoint.is_some());
+    assert!(config.cmd.is_some());
+    assert!(config.env.is_some());
 
     // Connect to WebSocket channel
     let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;

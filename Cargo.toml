@@ -51,6 +51,7 @@ api_users = { path = "lib/api_users" }
 api_oci = { path = "plus/api_oci" }
 # plus
 api_runners = { path = "plus/api_runners" }
+api_specs = { path = "plus/api_specs" }
 bencher_billing = { path = "plus/bencher_billing" }
 bencher_bing_index = { path = "plus/bencher_bing_index" }
 bencher_github_client = { path = "plus/bencher_github_client" }

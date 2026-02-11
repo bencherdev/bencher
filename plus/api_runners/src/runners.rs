@@ -99,7 +99,15 @@ async fn get_ls_inner(
         .load::<QueryRunner>(auth_conn!(context))
         .map_err(resource_not_found_err!(Runner))?;
 
-    let json_runners = runners.into_iter().map(QueryRunner::into_json).collect();
+    let json_runners: JsonRunners = {
+        let json: Vec<_> = auth_conn!(context, |conn| {
+            runners
+                .into_iter()
+                .map(|r| r.into_json(conn))
+                .collect::<Result<Vec<_>, _>>()?
+        });
+        json.into()
+    };
 
     let total_count = get_ls_query(&pagination_params, &query_params)
         .count()
@@ -239,8 +247,10 @@ async fn get_one_inner(
     context: &ApiContext,
     path_params: RunnerParams,
 ) -> Result<JsonRunner, HttpError> {
-    let query_runner = QueryRunner::from_resource_id(auth_conn!(context), &path_params.runner)?;
-    Ok(query_runner.into_json())
+    auth_conn!(context, |conn| {
+        let query_runner = QueryRunner::from_resource_id(conn, &path_params.runner)?;
+        query_runner.into_json(conn)
+    })
 }
 
 /// Update a runner
@@ -284,8 +294,10 @@ async fn patch_inner(
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerUpdate);
 
-    let runner = QueryRunner::get(auth_conn!(context), query_runner.id)?;
-    Ok(runner.into_json())
+    auth_conn!(context, |conn| {
+        let runner = QueryRunner::get(conn, query_runner.id)?;
+        runner.into_json(conn)
+    })
 }
 
 /// Generate a random runner token with prefix

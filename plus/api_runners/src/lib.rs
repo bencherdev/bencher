@@ -14,6 +14,7 @@ mod channel;
 mod jobs;
 mod runner_token;
 mod runners;
+mod specs;
 mod token;
 
 pub use channel::{RunnerMessage, ServerMessage};
@@ -35,6 +36,15 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(runners::runners_post)?;
         api_description.register(runners::runner_get)?;
         api_description.register(runners::runner_patch)?;
+
+        // Runner-Spec Associations (admin only)
+        if http_options {
+            api_description.register(specs::runner_specs_options)?;
+            api_description.register(specs::runner_spec_options)?;
+        }
+        api_description.register(specs::runner_specs_get)?;
+        api_description.register(specs::runner_specs_post)?;
+        api_description.register(specs::runner_spec_delete)?;
 
         // Token Rotation (admin only)
         if http_options {

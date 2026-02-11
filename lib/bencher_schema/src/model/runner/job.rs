@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bencher_json::{DateTime, JobStatus, JobUuid, JsonJob, JsonJobSpec};
+use bencher_json::{DateTime, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig};
 use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
@@ -11,7 +11,7 @@ use crate::{
     model::{
         organization::OrganizationId,
         project::report::ReportId,
-        runner::{QueryRunner, RunnerId, SourceIp},
+        runner::{QueryRunner, QuerySpec, RunnerId, SourceIp, spec::SpecId},
     },
     resource_not_found_err,
     schema::{self, job as job_table},
@@ -30,10 +30,11 @@ pub struct QueryJob {
     pub report_id: ReportId,
     pub organization_id: OrganizationId,
     pub source_ip: SourceIp,
-    pub status: JobStatus,
-    pub spec: String,
+    pub spec_id: SpecId,
+    pub config: String,
     pub timeout: i32,
-    pub priority: i32,
+    pub priority: JobPriority,
+    pub status: JobStatus,
     pub runner_id: Option<RunnerId>,
     pub claimed: Option<DateTime>,
     pub started: Option<DateTime>,
@@ -60,18 +61,18 @@ impl QueryJob {
             .map_err(resource_not_found_err!(Job, uuid))
     }
 
-    /// Parse the job spec from JSON string.
-    pub fn parse_spec(&self) -> Result<JsonJobSpec, HttpError> {
-        serde_json::from_str(&self.spec).map_err(|e| {
+    /// Parse the job config from JSON string.
+    pub fn parse_config(&self) -> Result<JsonJobConfig, HttpError> {
+        serde_json::from_str(&self.config).map_err(|e| {
             issue_error(
-                "Invalid job spec",
-                "Job spec stored in database could not be parsed",
+                "Invalid job config",
+                "Job config stored in database could not be parsed",
                 e,
             )
         })
     }
 
-    /// Convert to JSON for public API (spec is not included).
+    /// Convert to JSON for public API (config is not included).
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
         let runner_uuid = if let Some(runner_id) = self.runner_id {
             QueryRunner::get(conn, runner_id).ok().map(|r| r.uuid)
@@ -79,10 +80,13 @@ impl QueryJob {
             None
         };
 
+        let json_spec = QuerySpec::get(conn, self.spec_id)?.into_json()?;
+
         Ok(JsonJob {
             uuid: self.uuid,
             status: self.status,
-            spec: None,
+            spec: json_spec,
+            config: None,
             runner: runner_uuid,
             claimed: self.claimed,
             started: self.started,
@@ -101,10 +105,11 @@ pub struct InsertJob {
     pub report_id: ReportId,
     pub organization_id: OrganizationId,
     pub source_ip: SourceIp,
-    pub status: JobStatus,
-    pub spec: String,
+    pub spec_id: SpecId,
+    pub config: String,
     pub timeout: i32,
-    pub priority: i32,
+    pub priority: JobPriority,
+    pub status: JobStatus,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -114,9 +119,10 @@ impl InsertJob {
         report_id: ReportId,
         organization_id: OrganizationId,
         source_ip: SourceIp,
-        spec: String,
+        spec_id: SpecId,
+        config: String,
         timeout: i32,
-        priority: i32,
+        priority: JobPriority,
     ) -> Self {
         let now = DateTime::now();
         Self {
@@ -124,10 +130,11 @@ impl InsertJob {
             report_id,
             organization_id,
             source_ip,
-            status: JobStatus::default(),
-            spec,
+            spec_id,
+            config,
             timeout,
             priority,
+            status: JobStatus::default(),
             created: now,
             modified: now,
         }

@@ -320,6 +320,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "api_specs"
+version = "0.5.10"
+dependencies = [
+ "bencher_api_tests",
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_schema",
+ "diesel",
+ "dropshot",
+ "http 1.4.0",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "api_users"
 version = "0.5.10"
 dependencies = [
@@ -1105,6 +1122,7 @@ dependencies = [
  "api_run",
  "api_runners",
  "api_server",
+ "api_specs",
  "api_users",
  "bencher_config",
  "bencher_endpoint",

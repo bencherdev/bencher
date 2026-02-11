@@ -403,22 +403,38 @@ fn insert_test_job(
     project_uuid: bencher_json::ProjectUuid,
     created: bencher_json::DateTime,
 ) -> bencher_json::JobUuid {
-    use bencher_json::{JobStatus, JobUuid};
+    use bencher_json::{JobPriority, JobStatus, JobUuid, SpecUuid};
     use bencher_schema::schema;
-    use diesel::{ExpressionMethods as _, RunQueryDsl as _};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     let mut conn = server.db_conn();
     let job_uuid = JobUuid::new();
 
-    let spec = serde_json::json!({
+    // Create a spec row for hardware requirements
+    let spec_uuid = SpecUuid::new();
+    diesel::insert_into(schema::spec::table)
+        .values((
+            schema::spec::uuid.eq(&spec_uuid),
+            schema::spec::cpu.eq(2),
+            schema::spec::memory.eq(4_294_967_296_i64),
+            schema::spec::disk.eq(10_737_418_240_i64),
+            schema::spec::network.eq(false),
+            schema::spec::created.eq(&created),
+            schema::spec::modified.eq(&created),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert spec");
+    let spec_id: i32 = schema::spec::table
+        .filter(schema::spec::uuid.eq(&spec_uuid))
+        .select(schema::spec::id)
+        .first(&mut conn)
+        .expect("Failed to get spec ID");
+
+    let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
         "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-        "cpu": 2,
-        "memory": 4294967296_u64,
-        "disk": 10737418240_u64,
-        "timeout": 3600,
-        "network": false
+        "timeout": 3600
     });
 
     diesel::insert_into(schema::job::table)
@@ -428,9 +444,10 @@ fn insert_test_job(
             schema::job::organization_id.eq(1),
             schema::job::source_ip.eq("127.0.0.1"),
             schema::job::status.eq(JobStatus::Pending),
-            schema::job::spec.eq(spec.to_string()),
+            schema::job::spec_id.eq(spec_id),
+            schema::job::config.eq(config.to_string()),
             schema::job::timeout.eq(3600),
-            schema::job::priority.eq(0),
+            schema::job::priority.eq(JobPriority::default()),
             schema::job::created.eq(&created),
             schema::job::modified.eq(&created),
         ))
