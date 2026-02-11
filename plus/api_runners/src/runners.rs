@@ -2,8 +2,8 @@ use bencher_endpoint::{
     CorsResponse, Endpoint, Get, Patch, Post, ResponseCreated, ResponseOk, TotalCount,
 };
 use bencher_json::{
-    DateTime, JsonDirection, JsonNewRunner, JsonPagination, JsonRunner, JsonRunnerToken,
-    JsonUpdateRunner, ResourceName, RunnerResourceId, Search, Slug, runner::JsonRunners,
+    JsonDirection, JsonNewRunner, JsonPagination, JsonRunner, JsonRunnerToken, JsonUpdateRunner,
+    ResourceName, RunnerResourceId, Search, Slug, runner::JsonRunners,
 };
 use bencher_schema::{
     auth_conn,
@@ -271,13 +271,7 @@ async fn patch_inner(
 ) -> Result<JsonRunner, HttpError> {
     let query_runner = QueryRunner::from_resource_id(auth_conn!(context), &path_params.runner)?;
 
-    let update_runner = UpdateRunner {
-        name: json_runner.name.clone(),
-        slug: json_runner.slug.clone(),
-        archived: json_runner.archived,
-        modified: Some(DateTime::now()),
-        ..Default::default()
-    };
+    let update_runner = UpdateRunner::from(json_runner.clone());
 
     diesel::update(schema::runner::table.filter(schema::runner::id.eq(query_runner.id)))
         .set(&update_runner)

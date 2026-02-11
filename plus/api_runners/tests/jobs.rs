@@ -252,7 +252,7 @@ async fn test_claim_job_archived_runner() {
 
     // Archive the runner
     let body = serde_json::json!({
-        "archived": "2024-01-01T00:00:00Z"
+        "archived": true
     });
     server
         .client
@@ -702,10 +702,10 @@ mod job_spec {
             spec.digest.as_ref(),
             "sha256:0000000000000000000000000000000000000000000000000000000000000000"
         );
-        assert_eq!(spec.vcpu, 2);
-        assert_eq!(spec.memory, 4294967296); // 4 GB
-        assert_eq!(spec.disk, 10737418240); // 10 GB
-        assert_eq!(spec.timeout, 3600);
+        assert_eq!(u32::from(spec.cpu), 2);
+        assert_eq!(u64::from(spec.memory), 4294967296); // 4 GB
+        assert_eq!(u64::from(spec.disk), 10737418240); // 10 GB
+        assert_eq!(u32::from(spec.timeout), 3600);
         assert!(!spec.network);
         assert!(spec.file_paths.is_none());
     }
@@ -903,8 +903,8 @@ async fn test_claim_job_poll_timeout_timing() {
 
 mod priority_scheduling {
     use super::*;
-    use bencher_json::JobStatus;
-    use common::{get_organization_id, insert_test_job_full};
+    use bencher_json::{DateTime, JobStatus};
+    use common::{get_organization_id, insert_test_job_full, insert_test_job_with_timestamp};
 
     // Test that higher priority jobs are claimed before lower priority ones
     #[tokio::test]
@@ -1456,15 +1456,38 @@ mod priority_scheduling {
 
         // Insert jobs with same priority - should be claimed in creation order (FIFO)
         // Use Enterprise tier so there's no concurrency blocking
-        let first_job =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.1", 300);
-        // Small delay to ensure different creation timestamps
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        let second_job =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.2", 300);
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        let third_job =
-            insert_test_job_full(&server, report_id, project.uuid, org_id, "10.0.0.3", 300);
+        // Use explicit timestamps to guarantee deterministic ordering
+        let base_ts = DateTime::now();
+        let ts1 = base_ts;
+        let ts2 = DateTime::try_from(base_ts.timestamp() + 1).unwrap();
+        let ts3 = DateTime::try_from(base_ts.timestamp() + 2).unwrap();
+        let first_job = insert_test_job_with_timestamp(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.1",
+            300,
+            ts1,
+        );
+        let second_job = insert_test_job_with_timestamp(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.2",
+            300,
+            ts2,
+        );
+        let third_job = insert_test_job_with_timestamp(
+            &server,
+            report_id,
+            project.uuid,
+            org_id,
+            "10.0.0.3",
+            300,
+            ts3,
+        );
 
         // Claim first - should be first_job (created first)
         let body = serde_json::json!({ "poll_timeout": 1 });
@@ -1932,7 +1955,7 @@ mod priority_scheduling {
         let report_id = create_test_report(&server, project_id);
 
         // Use a single fixed timestamp for all jobs so the `created` column is identical.
-        let fixed_ts = bencher_json::DateTime::now();
+        let fixed_ts = DateTime::now();
 
         // Insert 3 Enterprise-tier jobs with the exact same timestamp.
         // They will get sequential database IDs.
@@ -2402,7 +2425,6 @@ mod poll_timeout_boundaries {
 
 mod concurrency_safety {
     use super::*;
-    use bencher_json::JobStatus;
     use common::{get_organization_id, insert_test_job_full};
 
     // Two runners race to claim Free-tier jobs for the same org.
@@ -2468,20 +2490,11 @@ mod concurrency_safety {
         let claimed_count = [&job1, &job2].iter().filter(|j| j.is_some()).count();
 
         // Free tier: at most 1 concurrent job per org.
-        // Both runners should get a job (different jobs), but each job blocks the org.
         // After the first claim, the second runner should see the org as blocked.
-        assert!(
-            claimed_count <= 2,
-            "Both runners claimed jobs (expected, they got different jobs)"
+        assert_eq!(
+            claimed_count, 1,
+            "Free tier allows at most 1 concurrent job per org"
         );
-
-        // If both claimed, verify they got different jobs (not the same one)
-        if let (Some(j1), Some(j2)) = (&job1, &job2) {
-            assert_ne!(
-                j1.uuid, j2.uuid,
-                "Two runners should not claim the same job"
-            );
-        }
     }
 
     // Two runners race to claim Unclaimed-tier jobs for the same source IP.
@@ -2546,13 +2559,14 @@ mod concurrency_safety {
         let job1: Option<JsonJob> = resp1.json().await.expect("Failed to parse response 1");
         let job2: Option<JsonJob> = resp2.json().await.expect("Failed to parse response 2");
 
-        // If both claimed, verify they got different jobs (not the same one)
-        if let (Some(j1), Some(j2)) = (&job1, &job2) {
-            assert_ne!(
-                j1.uuid, j2.uuid,
-                "Two runners should not claim the same job"
-            );
-        }
+        let claimed_count = [&job1, &job2].iter().filter(|j| j.is_some()).count();
+
+        // Unclaimed tier: at most 1 concurrent job per source IP.
+        // After the first claim, the second runner should see the IP as blocked.
+        assert_eq!(
+            claimed_count, 1,
+            "Unclaimed tier allows at most 1 concurrent job per source IP"
+        );
     }
 }
 

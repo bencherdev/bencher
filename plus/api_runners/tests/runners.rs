@@ -224,7 +224,7 @@ async fn test_runners_archive() {
 
     // Archive the runner
     let body = serde_json::json!({
-        "archived": "2024-01-01T00:00:00Z"
+        "archived": true
     });
     let resp = server
         .client
@@ -275,7 +275,7 @@ async fn test_runners_list_with_archived() {
     let runner_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
 
     let body = serde_json::json!({
-        "archived": "2024-01-01T00:00:00Z"
+        "archived": true
     });
     server
         .client

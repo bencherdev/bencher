@@ -10401,6 +10401,11 @@
           "unknown"
         ]
       },
+      "Cpu": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0
+      },
       "DataStore": {
         "oneOf": [
           {
@@ -10434,6 +10439,11 @@
       "DateTime": {
         "type": "string",
         "format": "date-time"
+      },
+      "Disk": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0
       },
       "Email": {
         "type": "string"
@@ -11289,6 +11299,14 @@
               "type": "string"
             }
           },
+          "cpu": {
+            "description": "Number of CPUs for the VM",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Cpu"
+              }
+            ]
+          },
           "digest": {
             "description": "Image digest - must be immutable (e.g., \"sha256:abc123...\")",
             "allOf": [
@@ -11299,9 +11317,11 @@
           },
           "disk": {
             "description": "Disk size in bytes",
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Disk"
+              }
+            ]
           },
           "entrypoint": {
             "nullable": true,
@@ -11329,9 +11349,11 @@
           },
           "memory": {
             "description": "Memory size in bytes",
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Memory"
+              }
+            ]
           },
           "network": {
             "description": "Whether the VM has network access",
@@ -11355,26 +11377,22 @@
           },
           "timeout": {
             "description": "Maximum execution time in seconds",
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
-          },
-          "vcpu": {
-            "description": "Number of virtual CPUs for the VM",
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Timeout"
+              }
+            ]
           }
         },
         "required": [
+          "cpu",
           "digest",
           "disk",
           "memory",
           "network",
           "project",
           "registry",
-          "timeout",
-          "vcpu"
+          "timeout"
         ]
       },
       "JsonJobs": {
@@ -13135,6 +13153,14 @@
               }
             ]
           },
+          "runners": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRunners2"
+              }
+            ]
+          },
           "stats": {
             "nullable": true,
             "allOf": [
@@ -14037,6 +14063,26 @@
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/JsonRunner"
+        }
+      },
+      "JsonRunners2": {
+        "description": "Runner system configuration",
+        "type": "object",
+        "properties": {
+          "heartbeat_timeout": {
+            "description": "Time in seconds without a heartbeat before marking a job as failed. Defaults to 90 seconds.",
+            "default": 90,
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "job_timeout_grace_period": {
+            "description": "Extra time in seconds beyond a job's configured timeout before the server cancels it. Defaults to 60 seconds.",
+            "default": 60,
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          }
         }
       },
       "JsonSecurity": {
@@ -15079,12 +15125,8 @@
         "properties": {
           "archived": {
             "nullable": true,
-            "description": "Archive the runner (set to current time) or unarchive (set to null).",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DateTime"
-              }
-            ]
+            "description": "Set whether the runner is archived.",
+            "type": "boolean"
           },
           "name": {
             "nullable": true,
@@ -15453,6 +15495,11 @@
         "type": "string",
         "format": "uuid"
       },
+      "Memory": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0
+      },
       "MetricUuid": {
         "type": "string",
         "format": "uuid"
@@ -15761,6 +15808,11 @@
       "ThresholdUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "Timeout": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0
       },
       "TokenUuid": {
         "type": "string",

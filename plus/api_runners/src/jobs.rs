@@ -354,7 +354,7 @@ async fn update_job_inner(
 
     if updated == 0 {
         // Re-read to check if job was canceled between our read and write
-        let current_job = QueryJob::from_uuid(write_conn!(context), job_uuid)?;
+        let current_job = QueryJob::from_uuid(auth_conn!(context), job_uuid)?;
         if current_job.status == JobStatus::Canceled {
             return Ok(JsonUpdateJobResponse { canceled: true });
         }

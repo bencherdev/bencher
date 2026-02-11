@@ -24,6 +24,8 @@ export type CardCvc = string;
 
 export type CardNumber = string;
 
+export type Cpu = number;
+
 export type DateTime = string;
 
 export type DateTimeMillis = number;
@@ -53,6 +55,44 @@ export enum JobStatus {
 	Completed = "completed",
 	Failed = "failed",
 	Canceled = "canceled",
+}
+
+export type Url = string;
+
+export type Timeout = number;
+
+/**
+ * Job specification sent to runners.
+ * 
+ * Contains the minimal information needed for a runner to execute a job.
+ * Designed to minimize data leakage - runners only learn what's necessary
+ * to pull and execute an OCI image.
+ */
+export interface JsonJobSpec {
+	/** Registry URL for pulling the OCI image (e.g., `https://registry.bencher.dev`) */
+	registry: Url;
+	/** Project UUID for OCI authentication scoping */
+	project: Uuid;
+	/** Image digest - must be immutable (e.g., "sha256:abc123...") */
+	digest: ImageDigest;
+	/** Entrypoint override (like Docker ENTRYPOINT) */
+	entrypoint?: string[];
+	/** Command override (like Docker CMD) */
+	cmd?: string[];
+	/** Environment variables passed to the container */
+	env?: Record<string, string>;
+	/** Number of CPUs for the VM */
+	cpu: Cpu;
+	/** Memory size in bytes */
+	memory: Memory;
+	/** Disk size in bytes */
+	disk: Disk;
+	/** Maximum execution time in seconds */
+	timeout: Timeout;
+	/** Whether the VM has network access */
+	network: boolean;
+	/** File paths to read from the VM after job completion */
+	file_paths?: string[];
 }
 
 /** A benchmark job */
@@ -310,8 +350,6 @@ export type TestbedNameId = Uuid | Slug | string;
 
 /** An testbed UUID or slug. */
 export type TestbedResourceId = Uuid | Slug;
-
-export type Url = string;
 
 export type UserName = string;
 
@@ -821,8 +859,8 @@ export interface JsonUpdateRunner {
 	name?: ResourceName;
 	/** The new slug for the runner. */
 	slug?: string;
-	/** Archive the runner (set to current time) or unarchive (set to null). */
-	archived?: string | null;
+	/** Set whether the runner is archived. */
+	archived?: boolean;
 }
 
 export interface JsonUpdateUser {

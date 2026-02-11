@@ -10,9 +10,7 @@ use bencher_schema::{
     model::{project::QueryProject, runner::QueryJob, user::public::PublicUser},
     public_conn, schema,
 };
-use diesel::{
-    ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
-};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -101,29 +99,14 @@ async fn get_ls_inner(
         public_user,
     )?;
 
-    let mut query = schema::job::table
-        .inner_join(schema::report::table.on(schema::job::report_id.eq(schema::report::id)))
-        .filter(schema::report::project_id.eq(query_project.id))
-        .into_boxed();
-
-    if let Some(status) = query_params.status {
-        query = query.filter(schema::job::status.eq(status));
-    }
-
-    let jobs: Vec<QueryJob> = match pagination_params.order() {
-        ProjJobsSort::Created => match pagination_params.direction {
-            Some(JsonDirection::Asc) => query.order(schema::job::created.asc()),
-            Some(JsonDirection::Desc) | None => query.order(schema::job::created.desc()),
-        },
-    }
-    .select(QueryJob::as_select())
-    .offset(pagination_params.offset())
-    .limit(pagination_params.limit())
-    .load(public_conn!(context, public_user))
-    .map_err(resource_not_found_err!(
-        Job,
-        (&query_project, &pagination_params, &query_params)
-    ))?;
+    let jobs = get_ls_query(&query_project, &pagination_params, &query_params)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryJob>(public_conn!(context, public_user))
+        .map_err(resource_not_found_err!(
+            Job,
+            (&query_project, &pagination_params, &query_params)
+        ))?;
 
     let json_jobs = public_conn!(context, public_user, |conn| {
         jobs.into_iter()
@@ -131,17 +114,7 @@ async fn get_ls_inner(
             .collect::<Result<Vec<_>, _>>()?
     });
 
-    // Build query again for count
-    let mut count_query = schema::job::table
-        .inner_join(schema::report::table.on(schema::job::report_id.eq(schema::report::id)))
-        .filter(schema::report::project_id.eq(query_project.id))
-        .into_boxed();
-
-    if let Some(status) = query_params.status {
-        count_query = count_query.filter(schema::job::status.eq(status));
-    }
-
-    let total_count = count_query
+    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
         .get_result::<i64>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
@@ -152,6 +125,39 @@ async fn get_ls_inner(
 
     Ok((json_jobs.into(), total_count))
 }
+
+fn get_ls_query<'q>(
+    query_project: &'q QueryProject,
+    pagination_params: &ProjJobsPagination,
+    query_params: &'q ProjJobsQuery,
+) -> BoxedQuery<'q> {
+    let mut query = schema::job::table
+        .inner_join(schema::report::table)
+        .filter(schema::report::project_id.eq(query_project.id))
+        .select(QueryJob::as_select())
+        .into_boxed();
+
+    if let Some(status) = query_params.status {
+        query = query.filter(schema::job::status.eq(status));
+    }
+
+    match pagination_params.order() {
+        ProjJobsSort::Created => match pagination_params.direction {
+            Some(JsonDirection::Asc) => query.order(schema::job::created.asc()),
+            Some(JsonDirection::Desc) | None => query.order(schema::job::created.desc()),
+        },
+    }
+}
+
+// TODO refactor out internal types
+type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
+    'q,
+    diesel::helper_types::AsSelect<QueryJob, diesel::sqlite::Sqlite>,
+    diesel::internal::table_macro::FromClause<
+        diesel::helper_types::InnerJoinQuerySource<schema::job::table, schema::report::table>,
+    >,
+    diesel::sqlite::Sqlite,
+>;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjJobParams {
@@ -205,7 +211,7 @@ async fn get_one_inner(
     )?;
 
     let job: QueryJob = schema::job::table
-        .inner_join(schema::report::table.on(schema::job::report_id.eq(schema::report::id)))
+        .inner_join(schema::report::table)
         .filter(schema::report::project_id.eq(query_project.id))
         .filter(schema::job::uuid.eq(path_params.job))
         .select(QueryJob::as_select())

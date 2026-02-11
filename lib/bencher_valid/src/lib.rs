@@ -51,8 +51,9 @@ pub use name_id::NameId;
 pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
 pub use plus::{
-    CardBrand, CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, LastFour,
-    LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus, RecaptchaAction, RecaptchaScore,
+    CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
+    LastFour, LicensedPlanId, Memory, MeteredPlanId, PlanLevel, PlanStatus, RecaptchaAction,
+    RecaptchaScore, Timeout,
 };
 pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;

@@ -198,9 +198,20 @@ async fn handle_websocket(
                     modified: Some(now),
                     ..Default::default()
                 };
-                diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-                    .set(&update)
-                    .execute(write_conn!(context))?;
+                let updated = diesel::update(
+                    schema::job::table
+                        .filter(schema::job::id.eq(job_id))
+                        .filter(
+                            schema::job::status
+                                .eq(JobStatus::Claimed)
+                                .or(schema::job::status.eq(JobStatus::Running)),
+                        ),
+                )
+                .set(&update)
+                .execute(write_conn!(context))?;
+                if updated == 0 {
+                    slog::info!(log, "Heartbeat timeout: job already in terminal state"; "job_id" => ?job_id);
+                }
                 break;
             },
         };
@@ -542,7 +553,7 @@ async fn handle_cancelled(
     // Zero rows updated — check if already Canceled (idempotent) or invalid state
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
-        .first(write_conn!(context))
+        .first(auth_conn!(context))
         .map_err(resource_not_found_err!(Job, job_id))?;
 
     if job.status == JobStatus::Canceled {

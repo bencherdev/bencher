@@ -1,4 +1,4 @@
-use bencher_json::{DateTime, JsonRunner, ResourceName, RunnerResourceId, Slug};
+use bencher_json::{DateTime, JsonRunner, JsonUpdateRunner, ResourceName, RunnerResourceId, Slug};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
@@ -120,4 +120,23 @@ pub struct UpdateRunner {
     pub archived: Option<Option<DateTime>>,
     pub last_heartbeat: Option<Option<DateTime>>,
     pub modified: Option<DateTime>,
+}
+
+impl From<JsonUpdateRunner> for UpdateRunner {
+    fn from(update: JsonUpdateRunner) -> Self {
+        let JsonUpdateRunner {
+            name,
+            slug,
+            archived,
+        } = update;
+        let modified = DateTime::now();
+        let archived = archived.map(|archived| archived.then_some(modified));
+        Self {
+            name,
+            slug,
+            archived,
+            modified: Some(modified),
+            ..Default::default()
+        }
+    }
 }

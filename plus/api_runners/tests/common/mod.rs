@@ -71,7 +71,7 @@ pub fn insert_test_job_full(
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
         "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-        "vcpu": 2,
+        "cpu": 2,
         "memory": 4294967296_u64,  // 4 GB
         "disk": 10737418240_u64,   // 10 GB
         "timeout": 3600,
@@ -215,7 +215,7 @@ pub fn insert_test_job_with_optional_fields(
             "RUST_LOG": "info",
             "CI": "true"
         },
-        "vcpu": 4,
+        "cpu": 4,
         "memory": 8589934592_u64,  // 8 GB
         "disk": 21474836480_u64,   // 20 GB
         "timeout": 7200,
@@ -249,7 +249,7 @@ pub fn insert_test_job_with_invalid_spec(server: &TestServer, report_id: i32) ->
     let now = DateTime::now();
     let job_uuid = JobUuid::new();
 
-    // Invalid spec - missing required fields like digest, vcpu, memory, etc.
+    // Invalid spec - missing required fields like digest, cpu, memory, etc.
     let spec = serde_json::json!({
         "registry": "https://registry.bencher.dev"
     });
@@ -333,7 +333,7 @@ pub fn insert_test_job_with_timestamp(
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
         "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-        "vcpu": 2,
+        "cpu": 2,
         "memory": 4294967296_u64,
         "disk": 10737418240_u64,
         "timeout": 3600,

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_valid::{DateTime, ImageDigest, Url};
+use bencher_valid::{Cpu, DateTime, Disk, ImageDigest, Memory, Timeout, Url};
 use camino::Utf8PathBuf;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -80,6 +80,7 @@ pub struct JsonClaimJob {
 /// Contains the minimal information needed for a runner to execute a job.
 /// Designed to minimize data leakage - runners only learn what's necessary
 /// to pull and execute an OCI image.
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonJobSpec {
@@ -98,14 +99,14 @@ pub struct JsonJobSpec {
     /// Environment variables passed to the container
     #[serde(skip_serializing_if = "Option::is_none")]
     pub env: Option<HashMap<String, String>>,
-    /// Number of virtual CPUs for the VM
-    pub vcpu: u32,
+    /// Number of CPUs for the VM
+    pub cpu: Cpu,
     /// Memory size in bytes
-    pub memory: u64,
+    pub memory: Memory,
     /// Disk size in bytes
-    pub disk: u64,
+    pub disk: Disk,
     /// Maximum execution time in seconds
-    pub timeout: u32,
+    pub timeout: Timeout,
     /// Whether the VM has network access
     pub network: bool,
     /// File paths to read from the VM after job completion

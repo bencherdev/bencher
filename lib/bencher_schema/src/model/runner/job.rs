@@ -188,39 +188,8 @@ pub fn spawn_heartbeat_timeout(
             }
 
             // Check job timeout: if running longer than timeout + grace period, cancel it
-            if let Some(started) = job.started {
-                let now = DateTime::now();
-                let elapsed = (now.timestamp() - started.timestamp()).max(0);
-                #[expect(
-                    clippy::cast_possible_wrap,
-                    reason = "job timeout and grace period fit in i64"
-                )]
-                let limit = i64::from(job.timeout) + job_timeout_grace_period.as_secs() as i64;
-                if elapsed > limit {
-                    slog::warn!(log, "Job timeout exceeded, marking as canceled"; "job_id" => ?job_id, "elapsed" => elapsed, "limit" => limit);
-                    let cancel_update = UpdateJob {
-                        status: Some(JobStatus::Canceled),
-                        completed: Some(Some(now)),
-                        modified: Some(now),
-                        ..Default::default()
-                    };
-                    // Use status filter to avoid TOCTOU race
-                    if let Err(e) = diesel::update(
-                        schema::job::table
-                            .filter(schema::job::id.eq(job_id))
-                            .filter(
-                                schema::job::status
-                                    .eq(JobStatus::Claimed)
-                                    .or(schema::job::status.eq(JobStatus::Running)),
-                            ),
-                    )
-                    .set(&cancel_update)
-                    .execute(&mut *conn)
-                    {
-                        slog::error!(log, "Failed to cancel timed-out job"; "job_id" => ?job_id, "error" => %e);
-                    }
-                    return;
-                }
+            if check_job_timeout(&log, &job, job_timeout_grace_period, &mut conn) {
+                return;
             }
 
             // If the runner reconnected and sent a recent heartbeat, don't fail the job
@@ -259,14 +228,74 @@ pub fn spawn_heartbeat_timeout(
                 ..Default::default()
             };
 
-            if let Err(e) = diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-                .set(&update)
-                .execute(&mut *conn)
+            match diesel::update(
+                schema::job::table
+                    .filter(schema::job::id.eq(job_id))
+                    .filter(
+                        schema::job::status
+                            .eq(JobStatus::Claimed)
+                            .or(schema::job::status.eq(JobStatus::Running)),
+                    ),
+            )
+            .set(&update)
+            .execute(&mut *conn)
             {
-                slog::error!(log, "Failed to mark job as failed"; "job_id" => ?job_id, "error" => %e);
+                Ok(0) => {
+                    slog::info!(log, "Heartbeat timeout: job already in terminal state"; "job_id" => ?job_id);
+                },
+                Ok(_) => {},
+                Err(e) => {
+                    slog::error!(log, "Failed to mark job as failed"; "job_id" => ?job_id, "error" => %e);
+                },
             }
         }
     });
 
     heartbeat_tasks.insert(job_id, join_handle.abort_handle());
+}
+
+/// Check if a job has exceeded its timeout + grace period.
+/// If so, mark it as canceled and return `true` to indicate the caller should stop.
+fn check_job_timeout(
+    log: &slog::Logger,
+    job: &QueryJob,
+    job_timeout_grace_period: std::time::Duration,
+    conn: &mut DbConnection,
+) -> bool {
+    let Some(started) = job.started else {
+        return false;
+    };
+    let now = DateTime::now();
+    let elapsed = (now.timestamp() - started.timestamp()).max(0);
+    #[expect(
+        clippy::cast_possible_wrap,
+        reason = "job timeout and grace period fit in i64"
+    )]
+    let limit = i64::from(job.timeout) + job_timeout_grace_period.as_secs() as i64;
+    if elapsed <= limit {
+        return false;
+    }
+    slog::warn!(log, "Job timeout exceeded, marking as canceled"; "job_id" => ?job.id, "elapsed" => elapsed, "limit" => limit);
+    let cancel_update = UpdateJob {
+        status: Some(JobStatus::Canceled),
+        completed: Some(Some(now)),
+        modified: Some(now),
+        ..Default::default()
+    };
+    // Use status filter to avoid TOCTOU race
+    if let Err(e) = diesel::update(
+        schema::job::table
+            .filter(schema::job::id.eq(job.id))
+            .filter(
+                schema::job::status
+                    .eq(JobStatus::Claimed)
+                    .or(schema::job::status.eq(JobStatus::Running)),
+            ),
+    )
+    .set(&cancel_update)
+    .execute(conn)
+    {
+        slog::error!(log, "Failed to cancel timed-out job"; "job_id" => ?job.id, "error" => %e);
+    }
+    true
 }

@@ -101,7 +101,7 @@ The job spec is designed to minimize data sent to runners, reducing leakage risk
 | entrypoint | Optional entrypoint override (like Docker ENTRYPOINT)      |
 | cmd        | Optional command override (like Docker CMD)                |
 | env        | Optional environment variables                             |
-| vcpu       | Number of virtual CPUs for the VM                          |
+| cpu        | Number of CPUs for the VM                                  |
 | memory     | Memory size in bytes                                       |
 | disk       | Disk size in bytes                                         |
 | timeout    | Maximum execution time in seconds                          |
@@ -111,7 +111,7 @@ The job spec is designed to minimize data sent to runners, reducing leakage risk
 **Design principles:**
 - **Minimal information**: Runner doesn't know repo URL, branch, commit, or benchmark commands directly
 - **Immutable reference**: Digest (not tag) ensures the image can't change between job creation and execution
-- **Isolated execution**: VM resources (vcpu, memory, disk) and network access are explicit
+- **Isolated execution**: VM resources (cpu, memory, disk) and network access are explicit
 - **OCI-based**: All benchmark code is packaged in an OCI image, pulled from the Bencher registry
 
 ## API Endpoints
@@ -300,7 +300,7 @@ User submits job via CLI or API
    Pull image from registry.bencher.dev/{project}/images@{digest}
                 │
                 ▼
-5. Create VM with spec constraints (vcpu, memory, disk, network)
+5. Create VM with spec constraints (cpu, memory, disk, network)
    Load OCI image into VM
                 │
                 ▼

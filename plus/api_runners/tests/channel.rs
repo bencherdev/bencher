@@ -3,6 +3,7 @@
 
 mod common;
 
+use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
 use bencher_json::{JobStatus, JobUuid, JsonJob, RunnerUuid};
 use bencher_schema::schema;
@@ -13,36 +14,9 @@ use common::{
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
 use http::StatusCode;
-use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::{
     Message, client::IntoClientRequest as _, protocol::WebSocketConfig,
 };
-
-// ---- Message types matching the server definitions ----
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "event", rename_all = "snake_case")]
-enum RunnerMessage {
-    Running,
-    Heartbeat,
-    Completed {
-        exit_code: i32,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        output: Option<String>,
-    },
-    Failed {
-        #[serde(skip_serializing_if = "Option::is_none")]
-        exit_code: Option<i32>,
-        error: String,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "event", rename_all = "snake_case")]
-enum ServerMessage {
-    Ack,
-    Cancel,
-}
 
 type WsStream =
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
@@ -330,7 +304,9 @@ async fn test_channel_lifecycle_completed() {
         &mut ws,
         &RunnerMessage::Completed {
             exit_code: 0,
-            output: Some("benchmark results".to_owned()),
+            stdout: None,
+            stderr: None,
+            output: None,
         },
     )
     .await;
@@ -370,6 +346,8 @@ async fn test_channel_lifecycle_failed() {
         &RunnerMessage::Failed {
             exit_code: Some(1),
             error: "segfault".to_owned(),
+            stdout: None,
+            stderr: None,
         },
     )
     .await;
@@ -559,7 +537,9 @@ async fn test_channel_lifecycle_with_full_spec() {
         &mut ws,
         &RunnerMessage::Completed {
             exit_code: 0,
-            output: Some("benchmark results with full spec".to_owned()),
+            stdout: None,
+            stderr: None,
+            output: None,
         },
     )
     .await;

@@ -59,6 +59,19 @@ pub enum ValidError {
     IndexStr(std::num::ParseIntError),
 
     #[cfg(feature = "plus")]
+    #[error("Invalid CPU count: {0}")]
+    Cpu(u32),
+    #[cfg(feature = "plus")]
+    #[error("Invalid memory size: {0}")]
+    Memory(u64),
+    #[cfg(feature = "plus")]
+    #[error("Invalid disk size: {0}")]
+    Disk(u64),
+    #[cfg(feature = "plus")]
+    #[error("Invalid timeout: {0}")]
+    Timeout(u32),
+
+    #[cfg(feature = "plus")]
     #[error("Failed to validate plan level: {0}")]
     PlanLevel(String),
     #[cfg(feature = "plus")]

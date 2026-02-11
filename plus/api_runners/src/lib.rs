@@ -16,6 +16,8 @@ mod runner_token;
 mod runners;
 mod token;
 
+pub use channel::{RunnerMessage, ServerMessage};
+
 pub struct Api;
 
 impl bencher_endpoint::Registrar for Api {

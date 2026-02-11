@@ -49,22 +49,26 @@ impl RunnerToken {
         // Hash the token
         let token_hash = hash_token(token);
 
-        // Look up runner by token hash
-        let runner: QueryRunner = schema::runner::table
+        // Look up runner by token hash AND path parameter in a single query
+        let mut query = schema::runner::table
             .filter(schema::runner::token_hash.eq(&token_hash))
             .filter(schema::runner::archived.is_null())
+            .into_boxed();
+
+        match expected_runner {
+            RunnerResourceId::Uuid(uuid) => {
+                query = query.filter(schema::runner::uuid.eq(*uuid));
+            },
+            RunnerResourceId::Slug(slug) => {
+                query = query.filter(schema::runner::slug.eq(AsRef::<str>::as_ref(slug)));
+            },
+        }
+
+        let runner: QueryRunner = query
             .first(auth_conn!(context))
             .optional()
             .map_err(resource_not_found_err!(Runner))?
             .ok_or_else(|| forbidden_error("Invalid runner token"))?;
-
-        // Verify the runner matches the path parameter
-        let expected = QueryRunner::from_resource_id(auth_conn!(context), expected_runner)?;
-        if runner.id != expected.id {
-            return Err(forbidden_error(
-                "Runner token does not match the runner in the path",
-            ));
-        }
 
         Ok(Self {
             runner_id: runner.id,

@@ -17,6 +17,10 @@ crate::typed_slug::typed_slug!(RunnerSlug, ResourceName);
 #[typeshare::typeshare]
 pub type RunnerResourceId = ResourceId<RunnerUuid, RunnerSlug>;
 
+const OFFLINE_INT: i32 = 0;
+const IDLE_INT: i32 = 1;
+const RUNNING_INT: i32 = 2;
+
 /// Runner state
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -27,18 +31,14 @@ pub type RunnerResourceId = ResourceId<RunnerUuid, RunnerSlug>;
 #[repr(i32)]
 pub enum RunnerState {
     #[default]
-    Offline = 0,
-    Idle = 1,
-    Running = 2,
+    Offline = OFFLINE_INT,
+    Idle = IDLE_INT,
+    Running = RUNNING_INT,
 }
 
 #[cfg(feature = "db")]
 mod runner_state_db {
-    use super::RunnerState;
-
-    const OFFLINE_INT: i32 = 0;
-    const IDLE_INT: i32 = 1;
-    const RUNNING_INT: i32 = 2;
+    use super::{IDLE_INT, OFFLINE_INT, RUNNING_INT, RunnerState};
 
     #[derive(Debug, thiserror::Error)]
     pub enum RunnerStateError {
@@ -133,6 +133,6 @@ pub struct JsonUpdateRunner {
     pub name: Option<ResourceName>,
     /// The new slug for the runner.
     pub slug: Option<Slug>,
-    /// Archive the runner (set to current time) or unarchive (set to null).
-    pub archived: Option<Option<DateTime>>,
+    /// Set whether the runner is archived.
+    pub archived: Option<bool>,
 }
