@@ -57,18 +57,31 @@ export enum JobStatus {
 	Canceled = "canceled",
 }
 
+/** A hardware spec */
+export interface JsonSpec {
+	uuid: SpecUuid;
+	cpu: Cpu;
+	memory: Memory;
+	disk: Disk;
+	network: boolean;
+	archived?: string;
+	created: string;
+	modified: string;
+}
+
 export type Url = string;
 
 export type Timeout = number;
 
 /**
- * Job specification sent to runners.
+ * Job configuration sent to runners.
  * 
- * Contains the minimal information needed for a runner to execute a job.
+ * Contains the execution details needed for a runner to execute a job.
  * Designed to minimize data leakage - runners only learn what's necessary
- * to pull and execute an OCI image.
+ * to pull and execute an OCI image. Resource requirements (cpu, memory,
+ * disk, network) are in the associated spec.
  */
-export interface JsonJobSpec {
+export interface JsonJobConfig {
 	/** Registry URL for pulling the OCI image (e.g., `https://registry.bencher.dev`) */
 	registry: Url;
 	/** Project UUID for OCI authentication scoping */
@@ -81,16 +94,8 @@ export interface JsonJobSpec {
 	cmd?: string[];
 	/** Environment variables passed to the container */
 	env?: Record<string, string>;
-	/** Number of CPUs for the VM */
-	cpu: Cpu;
-	/** Memory size in bytes */
-	memory: Memory;
-	/** Disk size in bytes */
-	disk: Disk;
 	/** Maximum execution time in seconds */
 	timeout: Timeout;
-	/** Whether the VM has network access */
-	network: boolean;
 	/** File paths to read from the VM after job completion */
 	file_paths?: string[];
 }
@@ -99,8 +104,10 @@ export interface JsonJobSpec {
 export interface JsonJob {
 	uuid: JobUuid;
 	status: JobStatus;
-	/** Job specification (only included when claimed by a runner) */
-	spec?: JsonJobSpec;
+	/** Resource spec for this job */
+	spec: JsonSpec;
+	/** Job configuration (only included when claimed by a runner) */
+	config?: JsonJobConfig;
 	runner?: RunnerUuid;
 	claimed?: string;
 	started?: string;
@@ -310,6 +317,7 @@ export interface JsonRunner {
 	name: ResourceName;
 	slug: string;
 	state: RunnerState;
+	specs: SpecUuid[];
 	archived?: string;
 	last_heartbeat?: string;
 	created: string;
@@ -318,6 +326,9 @@ export interface JsonRunner {
 
 /** List of runners */
 export type JsonRunners = JsonRunner[];
+
+/** List of specs */
+export type JsonSpecs = JsonSpec[];
 
 export type Jwt = string;
 
@@ -573,6 +584,24 @@ export interface JsonNewRunner {
 	 * If not provided, the slug will be generated from the name.
 	 */
 	slug?: string;
+}
+
+/** Add a spec to a runner */
+export interface JsonNewRunnerSpec {
+	/** The UUID of the spec to associate with the runner. */
+	spec: SpecUuid;
+}
+
+/** Create a new spec */
+export interface JsonNewSpec {
+	/** Number of CPUs */
+	cpu: Cpu;
+	/** Memory size in bytes */
+	memory: Memory;
+	/** Disk size in bytes */
+	disk: Disk;
+	/** Whether the VM has network access */
+	network?: boolean;
 }
 
 export interface JsonNewSso {
@@ -863,6 +892,12 @@ export interface JsonUpdateRunner {
 	archived?: boolean;
 }
 
+/** Update a spec (archive/unarchive only) */
+export interface JsonUpdateSpec {
+	/** Set whether the spec is archived. */
+	archived?: boolean;
+}
+
 export interface JsonUpdateUser {
 	/**
 	 * The new name of the user.
@@ -919,6 +954,22 @@ export interface JsonUsage {
 	end_time: string;
 	/** The metrics usage amount. */
 	usage?: number;
+}
+
+/**
+ * Job priority — determines scheduling order and concurrency limits.
+ * 
+ * Priority tiers:
+ * - Enterprise (300): Unlimited concurrent jobs
+ * - Team (200): Unlimited concurrent jobs
+ * - Free (100): 1 concurrent job per organization
+ * - Unclaimed (0): 1 concurrent job per source IP
+ */
+export enum JobPriority {
+	Unclaimed = "unclaimed",
+	Free = "free",
+	Team = "team",
+	Enterprise = "enterprise",
 }
 
 export enum OrganizationPermission {

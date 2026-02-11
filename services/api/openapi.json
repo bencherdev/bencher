@@ -8084,6 +8084,244 @@
         "x-dropshot-websocket": {}
       }
     },
+    "/v0/runners/{runner}/specs": {
+      "get": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "List specs for a runner",
+        "description": "List all hardware specs associated with a runner. The user must be an admin to use this endpoint.",
+        "operationId": "runner_specs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runner",
+            "description": "The slug or UUID for a runner.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonSpecs"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "Add a spec to a runner",
+        "description": "Associate a hardware spec with a runner. The user must be an admin to use this endpoint.",
+        "operationId": "runner_specs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runner",
+            "description": "The slug or UUID for a runner.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewRunnerSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "successful creation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonSpec"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/runners/{runner}/specs/{spec}": {
+      "delete": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "Remove a spec from a runner",
+        "description": "Remove the association between a hardware spec and a runner. The user must be an admin to use this endpoint.",
+        "operationId": "runner_spec_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runner",
+            "description": "The slug or UUID for a runner.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spec",
+            "description": "The UUID for a spec.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SpecUuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/runners/{runner}/token": {
       "post": {
         "tags": [
@@ -8568,7 +8806,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonSpec"
+                  "$ref": "#/components/schemas/JsonSpec2"
                 }
               }
             }
@@ -8869,6 +9107,419 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonApiVersion"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/specs": {
+      "get": {
+        "tags": [
+          "specs"
+        ],
+        "summary": "List specs",
+        "description": "List all hardware specs on the server. The user must be an admin to use this endpoint.",
+        "operationId": "specs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
+            "schema": {
+              "$ref": "#/components/schemas/SpecsSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "description": "Include archived specs.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonSpecs"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "specs"
+        ],
+        "summary": "Create a spec",
+        "description": "Create a new hardware spec on the server. The user must be an admin to use this endpoint.",
+        "operationId": "specs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "successful creation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonSpec"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/specs/{spec}": {
+      "get": {
+        "tags": [
+          "specs"
+        ],
+        "summary": "View a spec",
+        "description": "View a hardware spec on the server. The user must be an admin to use this endpoint.",
+        "operationId": "spec_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spec",
+            "description": "The UUID for a spec.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SpecUuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonSpec"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "specs"
+        ],
+        "summary": "Delete a spec",
+        "description": "Delete a hardware spec from the server. The user must be an admin to use this endpoint. Returns 409 Conflict if the spec is referenced by runners or jobs.",
+        "operationId": "spec_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spec",
+            "description": "The UUID for a spec.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SpecUuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "specs"
+        ],
+        "summary": "Update a spec",
+        "description": "Update a hardware spec on the server. The user must be an admin to use this endpoint. Can only be used to archive or unarchive a spec.",
+        "operationId": "spec_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spec",
+            "description": "The UUID for a spec.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SpecUuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonSpec"
                 }
               }
             }
@@ -11237,6 +11888,15 @@
               }
             ]
           },
+          "config": {
+            "nullable": true,
+            "description": "Job configuration (only included when claimed by a runner)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonJobConfig"
+              }
+            ]
+          },
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -11257,11 +11917,10 @@
             ]
           },
           "spec": {
-            "nullable": true,
-            "description": "Job specification (only included when claimed by a runner)",
+            "description": "Resource spec for this job",
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonJobSpec"
+                "$ref": "#/components/schemas/JsonSpec"
               }
             ]
           },
@@ -11283,12 +11942,13 @@
         "required": [
           "created",
           "modified",
+          "spec",
           "status",
           "uuid"
         ]
       },
-      "JsonJobSpec": {
-        "description": "Job specification sent to runners.\n\nContains the minimal information needed for a runner to execute a job. Designed to minimize data leakage - runners only learn what's necessary to pull and execute an OCI image.",
+      "JsonJobConfig": {
+        "description": "Job configuration sent to runners.\n\nContains the execution details needed for a runner to execute a job. Designed to minimize data leakage - runners only learn what's necessary to pull and execute an OCI image. Resource requirements (cpu, memory, disk, network) are in the associated spec.",
         "type": "object",
         "properties": {
           "cmd": {
@@ -11299,27 +11959,11 @@
               "type": "string"
             }
           },
-          "cpu": {
-            "description": "Number of CPUs for the VM",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Cpu"
-              }
-            ]
-          },
           "digest": {
             "description": "Image digest - must be immutable (e.g., \"sha256:abc123...\")",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ImageDigest"
-              }
-            ]
-          },
-          "disk": {
-            "description": "Disk size in bytes",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Disk"
               }
             ]
           },
@@ -11347,18 +11991,6 @@
               "type": "string"
             }
           },
-          "memory": {
-            "description": "Memory size in bytes",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Memory"
-              }
-            ]
-          },
-          "network": {
-            "description": "Whether the VM has network access",
-            "type": "boolean"
-          },
           "project": {
             "description": "Project UUID for OCI authentication scoping",
             "allOf": [
@@ -11385,11 +12017,7 @@
           }
         },
         "required": [
-          "cpu",
           "digest",
-          "disk",
-          "memory",
-          "network",
           "project",
           "registry",
           "timeout"
@@ -12304,6 +12932,63 @@
         },
         "required": [
           "name"
+        ]
+      },
+      "JsonNewRunnerSpec": {
+        "description": "Add a spec to a runner",
+        "type": "object",
+        "properties": {
+          "spec": {
+            "description": "The UUID of the spec to associate with the runner.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SpecUuid"
+              }
+            ]
+          }
+        },
+        "required": [
+          "spec"
+        ]
+      },
+      "JsonNewSpec": {
+        "description": "Create a new spec",
+        "type": "object",
+        "properties": {
+          "cpu": {
+            "description": "Number of CPUs",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Cpu"
+              }
+            ]
+          },
+          "disk": {
+            "description": "Disk size in bytes",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Disk"
+              }
+            ]
+          },
+          "memory": {
+            "description": "Memory size in bytes",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Memory"
+              }
+            ]
+          },
+          "network": {
+            "description": "Whether the VM has network access",
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cpu",
+          "disk",
+          "memory"
         ]
       },
       "JsonNewSso": {
@@ -14008,6 +14693,12 @@
           "slug": {
             "$ref": "#/components/schemas/Slug"
           },
+          "specs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpecUuid"
+            }
+          },
           "state": {
             "$ref": "#/components/schemas/RunnerState"
           },
@@ -14020,6 +14711,7 @@
           "modified",
           "name",
           "slug",
+          "specs",
           "state",
           "uuid"
         ]
@@ -14499,7 +15191,58 @@
           "username"
         ]
       },
-      "JsonSpec": {},
+      "JsonSpec": {
+        "description": "A hardware spec",
+        "type": "object",
+        "properties": {
+          "archived": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "cpu": {
+            "$ref": "#/components/schemas/Cpu"
+          },
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "disk": {
+            "$ref": "#/components/schemas/Disk"
+          },
+          "memory": {
+            "$ref": "#/components/schemas/Memory"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "network": {
+            "type": "boolean"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/SpecUuid"
+          }
+        },
+        "required": [
+          "cpu",
+          "created",
+          "disk",
+          "memory",
+          "modified",
+          "network",
+          "uuid"
+        ]
+      },
+      "JsonSpec2": {},
+      "JsonSpecs": {
+        "description": "List of specs",
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonSpec"
+        }
+      },
       "JsonSso": {
         "type": "object",
         "properties": {
@@ -15145,6 +15888,17 @@
                 "$ref": "#/components/schemas/Slug"
               }
             ]
+          }
+        }
+      },
+      "JsonUpdateSpec": {
+        "description": "Update a spec (archive/unarchive only)",
+        "type": "object",
+        "properties": {
+          "archived": {
+            "nullable": true,
+            "description": "Set whether the spec is archived.",
+            "type": "boolean"
           }
         }
       },
@@ -15794,6 +16548,10 @@
       "Slug": {
         "type": "string"
       },
+      "SpecUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "SsoUuid": {
         "type": "string",
         "format": "uuid"
@@ -16154,6 +16912,17 @@
         "description": "Optional boolean parameter",
         "type": "boolean"
       },
+      "SpecsSort": {
+        "oneOf": [
+          {
+            "description": "Sort by creation date.",
+            "type": "string",
+            "enum": [
+              "created"
+            ]
+          }
+        ]
+      },
       "UsersSort": {
         "oneOf": [
           {
@@ -16267,6 +17036,9 @@
     {
       "name": "server",
       "description": "Server"
+    },
+    {
+      "name": "specs"
     },
     {
       "name": "sso",
