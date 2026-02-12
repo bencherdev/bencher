@@ -145,10 +145,10 @@ impl ConfigTx {
         let config_dropshot = into_config_dropshot(server);
 
         #[cfg(feature = "plus")]
-        spawn_stats(log.clone(), &context).await?;
+        spawn_job_recovery(log, &context).await;
 
         #[cfg(feature = "plus")]
-        spawn_job_recovery(log.clone(), &context).await;
+        spawn_stats(log, &context).await?;
 
         let mut api_description = ApiDescription::new();
         debug!(log, "Registering server APIs");
@@ -513,7 +513,7 @@ fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
 }
 
 #[cfg(feature = "plus")]
-async fn spawn_job_recovery(log: Logger, context: &ApiContext) {
+async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
     use bencher_json::JobStatus;
     use bencher_schema::{model::runner::QueryJob, schema};
     use diesel::BoolExpressionMethods as _;
@@ -555,7 +555,7 @@ async fn spawn_job_recovery(log: Logger, context: &ApiContext) {
 }
 
 #[cfg(feature = "plus")]
-async fn spawn_stats(log: Logger, context: &ApiContext) -> Result<(), ConfigTxError> {
+async fn spawn_stats(log: &Logger, context: &ApiContext) -> Result<(), ConfigTxError> {
     let query_server =
         QueryServer::get_or_create(write_conn!(context)).map_err(ConfigTxError::ServerId)?;
     info!(log, "Bencher API Server ID: {}", query_server.uuid);
