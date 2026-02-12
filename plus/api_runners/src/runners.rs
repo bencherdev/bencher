@@ -22,7 +22,6 @@ use diesel::{
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use sha2::{Digest as _, Sha256};
 
 /// Runner token prefix
 pub const RUNNER_TOKEN_PREFIX: &str = "bencher_runner_";
@@ -309,12 +308,5 @@ pub fn generate_runner_token() -> String {
 
 /// Hash a runner token using SHA-256
 pub fn hash_token(token: &str) -> TokenHash {
-    let mut hasher = Sha256::new();
-    hasher.update(token.as_bytes());
-    let result = hasher.finalize();
-    #[expect(
-        clippy::expect_used,
-        reason = "SHA-256 hex::encode always produces 64 hex chars"
-    )]
-    TokenHash::new(&hex::encode(result)).expect("SHA-256 hex is always 64 characters")
+    TokenHash::encode(token)
 }

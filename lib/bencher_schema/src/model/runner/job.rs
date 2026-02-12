@@ -80,7 +80,7 @@ impl QueryJob {
             None
         };
 
-        let json_spec = QuerySpec::get(conn, self.spec_id)?.into_json()?;
+        let json_spec = QuerySpec::get(conn, self.spec_id)?.into_json();
 
         Ok(JsonJob {
             uuid: self.uuid,

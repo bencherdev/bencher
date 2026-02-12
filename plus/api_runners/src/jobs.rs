@@ -213,7 +213,7 @@ async fn try_claim_job(
 
     // Look up the spec before releasing the lock
     let json_spec = (updated > 0)
-        .then(|| QuerySpec::get(&mut conn, query_job.spec_id)?.into_json())
+        .then(|| QuerySpec::get(&mut conn, query_job.spec_id).map(QuerySpec::into_json))
         .transpose()?;
 
     // Release the lock before doing non-DB work

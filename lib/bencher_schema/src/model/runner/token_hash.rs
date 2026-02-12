@@ -38,6 +38,16 @@ impl TokenHash {
     pub fn new(hash: &str) -> Result<Self, TokenHashError> {
         hash.parse()
     }
+
+    /// Hash a token string with SHA-256 and encode the digest as hex.
+    ///
+    /// Internally uses `sha2::Sha256` and `hex::encode`, producing a
+    /// guaranteed-valid 64-character hex string.
+    pub fn encode(token: &str) -> Self {
+        use sha2::{Digest as _, Sha256};
+        let digest = Sha256::digest(token.as_bytes());
+        Self(hex::encode(digest))
+    }
 }
 
 impl fmt::Display for TokenHash {
@@ -140,5 +150,16 @@ mod tests {
         let hash = TokenHash::new(hex).unwrap();
         assert_eq!(hash.to_string(), hex);
         assert_eq!(hex.parse::<TokenHash>().unwrap(), hash);
+    }
+
+    #[test]
+    fn encode_token() {
+        let hash = TokenHash::encode("test_token");
+        // SHA-256 hex is always 64 chars
+        assert_eq!(hash.to_string().len(), SHA256_HEX_LEN);
+        // Deterministic
+        assert_eq!(hash, TokenHash::encode("test_token"));
+        // Different input → different hash
+        assert_ne!(hash, TokenHash::encode("other_token"));
     }
 }

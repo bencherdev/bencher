@@ -1,4 +1,4 @@
-use bencher_valid::{Cpu, DateTime, Disk, Memory};
+use bencher_valid::{Architecture, Cpu, DateTime, Disk, Memory};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -10,6 +10,8 @@ crate::typed_uuid::typed_uuid!(SpecUuid);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewSpec {
+    /// CPU architecture
+    pub architecture: Architecture,
     /// Number of CPUs
     pub cpu: Cpu,
     /// Memory size in bytes
@@ -35,6 +37,8 @@ crate::from_vec!(JsonSpecs[JsonSpec]);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSpec {
     pub uuid: SpecUuid,
+    /// CPU architecture
+    pub architecture: Architecture,
     pub cpu: Cpu,
     pub memory: Memory,
     pub disk: Disk,

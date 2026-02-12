@@ -9,8 +9,9 @@ pub use bencher_valid::{
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
-    CardBrand, CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, LastFour,
-    LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus, RecaptchaAction, RecaptchaScore,
+    CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
+    LastFour, LicensedPlanId, Memory, MeteredPlanId, PlanLevel, PlanStatus, RecaptchaAction,
+    RecaptchaScore,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -36,6 +37,8 @@ pub(crate) mod typed_uuid;
 pub mod urlencoded;
 pub mod user;
 
+#[cfg(feature = "plus")]
+pub use bencher_valid::Architecture;
 pub use big_int::BigInt;
 pub use organization::{
     JsonNewOrganization, JsonOrganization, JsonOrganizations, OrganizationResourceId,

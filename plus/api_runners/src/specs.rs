@@ -63,10 +63,7 @@ async fn get_ls_inner(
         let spec_ids = QueryRunnerSpec::spec_ids_for_runner(conn, query_runner.id)?;
         let json_specs: Vec<JsonSpec> = spec_ids
             .into_iter()
-            .map(|spec_id| {
-                let spec = QuerySpec::get(conn, spec_id)?;
-                spec.into_json()
-            })
+            .map(|spec_id| QuerySpec::get(conn, spec_id).map(QuerySpec::into_json))
             .collect::<Result<_, _>>()?;
         Ok(json_specs.into())
     })
@@ -110,7 +107,7 @@ async fn post_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(RunnerSpec, insert))?;
 
-    query_spec.into_json()
+    Ok(query_spec.into_json())
 }
 
 #[derive(Deserialize, JsonSchema)]

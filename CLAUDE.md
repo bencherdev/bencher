@@ -172,6 +172,7 @@ The API server includes an OCI Distribution Spec compliant container registry, r
   - `cargo check --no-default-features`
   - `cargo gen-types` (if the API changed at all)
 - Use idiomatic, strong types instead of `String` and `serde_json::Value` where possible
+- Database model fields should use strong validated types (e.g., `ProjectId`, `ProjectUuid`, `ProjectName`, `DateTime`, `VersionNumber`) with Diesel `ToSql`/`FromSql` impls rather than raw primitives (`i32`, `i64`, `String`). All conversion happens inside the Diesel impls, not in the model layer.
 - Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
 - All time-based tests should be deterministic and use time manipulation not real wall-clock time
 - Most wire type definitions are in the `bencher_valid` or `bencher_json` crate

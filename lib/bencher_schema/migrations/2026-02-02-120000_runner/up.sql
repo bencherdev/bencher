@@ -15,6 +15,7 @@ CREATE TABLE runner (
 CREATE TABLE spec (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
+    architecture TEXT NOT NULL,
     cpu INTEGER NOT NULL CHECK (cpu > 0),
     memory BIGINT NOT NULL CHECK (memory > 0),
     disk BIGINT NOT NULL CHECK (disk > 0),

@@ -61,9 +61,16 @@ export enum JobStatus {
 	Canceled = "canceled",
 }
 
+export enum Architecture {
+	X86_64 = "X86_64",
+	Aarch64 = "Aarch64",
+}
+
 /** A hardware spec */
 export interface JsonSpec {
 	uuid: Uuid;
+	/** CPU architecture */
+	architecture: Architecture;
 	cpu: number;
 	memory: number;
 	disk: number;
@@ -592,6 +599,8 @@ export interface JsonNewRunnerSpec {
 
 /** Create a new spec */
 export interface JsonNewSpec {
+	/** CPU architecture */
+	architecture: Architecture;
 	/** Number of CPUs */
 	cpu: number;
 	/** Memory size in bytes */

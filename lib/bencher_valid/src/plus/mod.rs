@@ -1,5 +1,6 @@
 #![cfg(feature = "plus")]
 
+mod architecture;
 mod brand;
 mod cpu;
 mod cvc;
@@ -20,6 +21,7 @@ mod recaptcha_score;
 mod timeout;
 mod year;
 
+pub use architecture::Architecture;
 pub use brand::CardBrand;
 pub use cpu::Cpu;
 pub use cvc::CardCvc;

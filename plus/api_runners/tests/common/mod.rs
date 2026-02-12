@@ -41,13 +41,14 @@ pub const TEST_SOURCE_IP: &str = "127.0.0.1";
 /// Insert a test spec directly into the database. Returns the spec UUID and spec_id.
 #[expect(clippy::expect_used)]
 pub fn insert_test_spec(server: &TestServer) -> (SpecUuid, i32) {
-    insert_test_spec_full(server, 2, 4_294_967_296, 10_737_418_240, false)
+    insert_test_spec_full(server, "x86_64", 2, 4_294_967_296, 10_737_418_240, false)
 }
 
 /// Insert a test spec with specific values. Returns (SpecUuid, spec_id).
 #[expect(clippy::expect_used)]
 pub fn insert_test_spec_full(
     server: &TestServer,
+    architecture: &str,
     cpu: i32,
     memory: i64,
     disk: i64,
@@ -60,6 +61,7 @@ pub fn insert_test_spec_full(
     diesel::insert_into(schema::spec::table)
         .values((
             schema::spec::uuid.eq(&spec_uuid),
+            schema::spec::architecture.eq(architecture),
             schema::spec::cpu.eq(cpu),
             schema::spec::memory.eq(memory),
             schema::spec::disk.eq(disk),

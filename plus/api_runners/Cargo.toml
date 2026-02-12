@@ -21,7 +21,6 @@ plus = [
     "dep:schemars",
     "dep:serde",
     "dep:serde_json",
-    "dep:sha2",
     "dep:slog",
     "dep:tokio",
     "dep:tokio-tungstenite",
@@ -44,7 +43,6 @@ rand = { workspace = true, optional = true }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
-sha2 = { workspace = true, optional = true }
 slog = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["time"], optional = true }
 tokio-tungstenite = { workspace = true, optional = true }

@@ -207,9 +207,12 @@ async fn test_runner_specs_list_multiple() {
     let runner = create_runner(&server, &admin.token, "Spec Multi Runner").await;
 
     // Create 3 different specs
-    let (spec1_uuid, _) = insert_test_spec_full(&server, 1, 2_147_483_648, 5_368_709_120, false);
-    let (spec2_uuid, _) = insert_test_spec_full(&server, 2, 4_294_967_296, 10_737_418_240, false);
-    let (spec3_uuid, _) = insert_test_spec_full(&server, 4, 8_589_934_592, 21_474_836_480, true);
+    let (spec1_uuid, _) =
+        insert_test_spec_full(&server, "x86_64", 1, 2_147_483_648, 5_368_709_120, false);
+    let (spec2_uuid, _) =
+        insert_test_spec_full(&server, "aarch64", 2, 4_294_967_296, 10_737_418_240, false);
+    let (spec3_uuid, _) =
+        insert_test_spec_full(&server, "x86_64", 4, 8_589_934_592, 21_474_836_480, true);
 
     // Associate all 3 specs with the runner
     for spec_uuid in [spec1_uuid, spec2_uuid, spec3_uuid] {
@@ -286,9 +289,9 @@ async fn test_claim_job_spec_mismatch() {
 
     // Create two specs with different configurations
     let (_spec_a_uuid, spec_a_id) =
-        insert_test_spec_full(&server, 2, 4_294_967_296, 10_737_418_240, false);
+        insert_test_spec_full(&server, "x86_64", 2, 4_294_967_296, 10_737_418_240, false);
     let (_spec_b_uuid, spec_b_id) =
-        insert_test_spec_full(&server, 4, 8_589_934_592, 21_474_836_480, true);
+        insert_test_spec_full(&server, "aarch64", 4, 8_589_934_592, 21_474_836_480, true);
 
     // Associate runner with spec A only
     associate_runner_spec(&server, runner_id, spec_a_id);

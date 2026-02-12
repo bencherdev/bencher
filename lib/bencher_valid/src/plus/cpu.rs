@@ -16,6 +16,8 @@ const MAX_CPU: u32 = 256;
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
 pub struct Cpu(u32);
 
 impl TryFrom<u32> for Cpu {
@@ -69,6 +71,46 @@ impl Visitor<'_> for CpuVisitor {
         E: de::Error,
     {
         v.try_into().map_err(E::custom)
+    }
+}
+
+#[cfg(feature = "db")]
+mod db {
+    use super::Cpu;
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for Cpu
+    where
+        DB: diesel::backend::Backend,
+        for<'a> i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>
+            + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            #[expect(
+                clippy::cast_possible_wrap,
+                reason = "CPU count max 256, always fits in i32"
+            )]
+            let val = self.0 as i32;
+            out.set_value(val);
+            Ok(diesel::serialize::IsNull::No)
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for Cpu
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            #[expect(
+                clippy::cast_sign_loss,
+                reason = "CPU stored as i32 but CHECK constraint ensures > 0"
+            )]
+            let cpu = i32::from_sql(bytes)? as u32;
+            cpu.try_into().map_err(Into::into)
+        }
     }
 }
 

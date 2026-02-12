@@ -11003,6 +11003,13 @@
         "type": "string",
         "format": "uuid"
       },
+      "Architecture": {
+        "type": "string",
+        "enum": [
+          "X86_64",
+          "Aarch64"
+        ]
+      },
       "BenchmarkName": {
         "type": "string"
       },
@@ -12976,6 +12983,14 @@
         "description": "Create a new spec",
         "type": "object",
         "properties": {
+          "architecture": {
+            "description": "CPU architecture",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Architecture"
+              }
+            ]
+          },
           "cpu": {
             "description": "Number of CPUs",
             "allOf": [
@@ -13007,6 +13022,7 @@
           }
         },
         "required": [
+          "architecture",
           "cpu",
           "disk",
           "memory"
@@ -15217,6 +15233,14 @@
         "description": "A hardware spec",
         "type": "object",
         "properties": {
+          "architecture": {
+            "description": "CPU architecture",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Architecture"
+              }
+            ]
+          },
           "archived": {
             "nullable": true,
             "allOf": [
@@ -15248,6 +15272,7 @@
           }
         },
         "required": [
+          "architecture",
           "cpu",
           "created",
           "disk",

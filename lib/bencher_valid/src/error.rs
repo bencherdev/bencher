@@ -81,6 +81,9 @@ pub enum ValidError {
     GracePeriod(u32),
 
     #[cfg(feature = "plus")]
+    #[error("Failed to validate architecture: {0}")]
+    Architecture(String),
+    #[cfg(feature = "plus")]
     #[error("Failed to validate plan level: {0}")]
     PlanLevel(String),
     #[cfg(feature = "plus")]

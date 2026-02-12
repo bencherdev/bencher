@@ -2944,8 +2944,10 @@ async fn test_runner_multiple_specs_claims_matching_jobs() {
         .await;
 
     // Create two different specs
-    let (_, spec_a_id) = insert_test_spec_full(&server, 2, 4_294_967_296, 10_737_418_240, false);
-    let (_, spec_b_id) = insert_test_spec_full(&server, 4, 8_589_934_592, 21_474_836_480, true);
+    let (_, spec_a_id) =
+        insert_test_spec_full(&server, "x86_64", 2, 4_294_967_296, 10_737_418_240, false);
+    let (_, spec_b_id) =
+        insert_test_spec_full(&server, "aarch64", 4, 8_589_934_592, 21_474_836_480, true);
 
     // Create a runner and associate it with both specs
     let runner = create_runner(&server, &admin.token, "Multi Spec Runner").await;

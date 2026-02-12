@@ -1,4 +1,6 @@
-use bencher_json::{DateTime, JsonNewSpec, JsonSpec, JsonUpdateSpec, SpecUuid};
+use bencher_json::{
+    Architecture, Cpu, DateTime, Disk, JsonNewSpec, JsonSpec, JsonUpdateSpec, Memory, SpecUuid,
+};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
@@ -15,9 +17,10 @@ crate::macros::typed_id::typed_id!(SpecId);
 pub struct QuerySpec {
     pub id: SpecId,
     pub uuid: SpecUuid,
-    pub cpu: i32,
-    pub memory: i64,
-    pub disk: i64,
+    pub architecture: Architecture,
+    pub cpu: Cpu,
+    pub memory: Memory,
+    pub disk: Disk,
     pub network: bool,
     pub archived: Option<DateTime>,
     pub created: DateTime,
@@ -39,42 +42,18 @@ impl QuerySpec {
             .map_err(resource_not_found_err!(Spec, uuid))
     }
 
-    pub fn into_json(self) -> Result<JsonSpec, HttpError> {
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "CPU stored as i32 but is always non-negative"
-        )]
-        let cpu = (self.cpu as u32).try_into().map_err(|e| {
-            crate::error::issue_error("Invalid CPU value", "CPU value in database is invalid", e)
-        })?;
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "memory stored as i64 but is always non-negative"
-        )]
-        let memory = (self.memory as u64).try_into().map_err(|e| {
-            crate::error::issue_error(
-                "Invalid memory value",
-                "Memory value in database is invalid",
-                e,
-            )
-        })?;
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "disk stored as i64 but is always non-negative"
-        )]
-        let disk = (self.disk as u64).try_into().map_err(|e| {
-            crate::error::issue_error("Invalid disk value", "Disk value in database is invalid", e)
-        })?;
-        Ok(JsonSpec {
+    pub fn into_json(self) -> JsonSpec {
+        JsonSpec {
             uuid: self.uuid,
-            cpu,
-            memory,
-            disk,
+            architecture: self.architecture,
+            cpu: self.cpu,
+            memory: self.memory,
+            disk: self.disk,
             network: self.network,
             archived: self.archived,
             created: self.created,
             modified: self.modified,
-        })
+        }
     }
 }
 
@@ -82,9 +61,10 @@ impl QuerySpec {
 #[diesel(table_name = spec_table)]
 pub struct InsertSpec {
     pub uuid: SpecUuid,
-    pub cpu: i32,
-    pub memory: i64,
-    pub disk: i64,
+    pub architecture: Architecture,
+    pub cpu: Cpu,
+    pub memory: Memory,
+    pub disk: Disk,
     pub network: bool,
     pub created: DateTime,
     pub modified: DateTime,
@@ -93,23 +73,12 @@ pub struct InsertSpec {
 impl InsertSpec {
     pub fn new(json: &JsonNewSpec) -> Self {
         let now = DateTime::now();
-        #[expect(clippy::cast_possible_wrap, reason = "CPU count fits in i32 (max 256)")]
-        let cpu = u32::from(json.cpu) as i32;
-        #[expect(
-            clippy::cast_possible_wrap,
-            reason = "memory in bytes fits in i64 (max ~9.2 EB)"
-        )]
-        let memory = u64::from(json.memory) as i64;
-        #[expect(
-            clippy::cast_possible_wrap,
-            reason = "disk in bytes fits in i64 (max ~9.2 EB)"
-        )]
-        let disk = u64::from(json.disk) as i64;
         Self {
             uuid: SpecUuid::new(),
-            cpu,
-            memory,
-            disk,
+            architecture: json.architecture,
+            cpu: json.cpu,
+            memory: json.memory,
+            disk: json.disk,
             network: json.network,
             created: now,
             modified: now,

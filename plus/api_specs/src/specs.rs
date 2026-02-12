@@ -86,10 +86,7 @@ async fn get_ls_inner(
         .load::<QuerySpec>(auth_conn!(context))
         .map_err(resource_not_found_err!(Spec))?;
 
-    let json_specs: Vec<JsonSpec> = specs
-        .into_iter()
-        .map(QuerySpec::into_json)
-        .collect::<Result<_, _>>()?;
+    let json_specs: Vec<JsonSpec> = specs.into_iter().map(QuerySpec::into_json).collect();
 
     let total_count = get_ls_query(&pagination_params, &query_params)
         .count()
@@ -147,7 +144,7 @@ async fn post_inner(context: &ApiContext, json_spec: JsonNewSpec) -> Result<Json
         .map_err(resource_conflict_err!(Spec, insert_spec))?;
 
     let query_spec = QuerySpec::from_uuid(auth_conn!(context), uuid)?;
-    query_spec.into_json()
+    Ok(query_spec.into_json())
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -192,7 +189,7 @@ async fn get_one_inner(
     path_params: SpecParams,
 ) -> Result<JsonSpec, HttpError> {
     let query_spec = QuerySpec::from_uuid(auth_conn!(context), path_params.spec)?;
-    query_spec.into_json()
+    Ok(query_spec.into_json())
 }
 
 /// Update a spec
@@ -230,7 +227,7 @@ async fn patch_inner(
         .map_err(resource_conflict_err!(Spec, (&query_spec, &json_spec)))?;
 
     let spec = QuerySpec::get(auth_conn!(context), query_spec.id)?;
-    spec.into_json()
+    Ok(spec.into_json())
 }
 
 /// Delete a spec
