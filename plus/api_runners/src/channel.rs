@@ -66,7 +66,7 @@ pub enum RunnerMessage {
         stderr: Option<String>,
     },
     /// Acknowledge cancellation from server.
-    Cancelled,
+    Canceled,
 }
 
 /// Messages sent from the server to the runner.
@@ -159,7 +159,7 @@ pub async fn runner_job_channel(
 /// Handle WebSocket messages for a job.
 ///
 /// The heartbeat timeout only resets on valid protocol messages from the runner
-/// (Running, Heartbeat, Completed, Failed, Cancelled). Ping/Pong frames, invalid
+/// (Running, Heartbeat, Completed, Failed, Canceled). Ping/Pong frames, invalid
 /// JSON, and other non-protocol messages do NOT reset the timeout.
 async fn handle_websocket(
     log: &slog::Logger,
@@ -288,8 +288,8 @@ fn terminal_close_reason(
     if matches!(runner_msg, RunnerMessage::Failed { .. }) {
         return Some("job failed");
     }
-    if matches!(runner_msg, RunnerMessage::Cancelled) {
-        return Some("job cancelled by runner");
+    if matches!(runner_msg, RunnerMessage::Canceled) {
+        return Some("job canceled by runner");
     }
     None
 }
@@ -347,9 +347,9 @@ async fn handle_runner_message(
             )
             .await?;
         },
-        RunnerMessage::Cancelled => {
+        RunnerMessage::Canceled => {
             slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job_id);
-            handle_cancelled(log, context, job_id).await?;
+            handle_canceled(log, context, job_id).await?;
         },
     }
 
@@ -569,11 +569,11 @@ async fn handle_failed(
     Ok(())
 }
 
-/// Handle a Cancelled message: runner acknowledges cancellation, ensure job is in Canceled state.
+/// Handle a Canceled message: runner acknowledges cancellation, ensure job is in Canceled state.
 ///
 /// Uses a status filter on the UPDATE to avoid TOCTOU races. If zero rows updated,
 /// re-reads to check whether the job is already Canceled (idempotent success).
-async fn handle_cancelled(
+async fn handle_canceled(
     log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,

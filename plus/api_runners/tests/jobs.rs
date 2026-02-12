@@ -8,7 +8,7 @@
 mod common;
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JobPriority, JsonJob, JsonUpdateJobResponse};
+use bencher_json::{JobPriority, JobStatus, JsonJob, JsonUpdateJobResponse};
 use common::{
     associate_runner_spec, create_runner, create_test_report, get_job_priority, get_project_id,
     get_runner_id, insert_test_job, insert_test_job_full, insert_test_spec, insert_test_spec_full,
@@ -284,6 +284,51 @@ async fn claim_job_archived_runner() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+// POST /v0/runners/{runner}/jobs - canceled pending job is not claimable
+#[tokio::test]
+async fn claim_job_canceled_pending() {
+    let server = TestServer::new().await;
+    let admin = server
+        .signup("Admin", "jobsadmin-canceled@example.com")
+        .await;
+    let org = server.create_org(&admin, "Canceled Pending Org").await;
+    let project = server
+        .create_project(&admin, &org, "Canceled Pending Project")
+        .await;
+
+    let (_, spec_id) = insert_test_spec(&server);
+    let runner = create_runner(&server, &admin.token, "Canceled Pending Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    // Create test infrastructure and a pending job
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let _job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    // Cancel the pending job before claiming
+    set_job_status(&server, _job_uuid, JobStatus::Canceled);
+
+    // Try to claim - should get None since only Pending jobs are claimable
+    let body = serde_json::json!({ "poll_timeout": 1 });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {runner_token}"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    assert!(
+        claimed.is_none(),
+        "Canceled pending job should not be claimable"
+    );
 }
 
 // =============================================================================

@@ -84,7 +84,7 @@ where
 {
     fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
         let s = <String as FromSql<Text, DB>>::from_sql(bytes)?;
-        Ok(Self(s))
+        s.parse().map_err(|e: TokenHashError| e.into())
     }
 }
 

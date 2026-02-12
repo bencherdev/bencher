@@ -129,6 +129,45 @@ pub fn insert_test_job_with_project(
     )
 }
 
+/// Insert a test job with a custom timeout (in seconds). Returns the job UUID.
+pub fn insert_test_job_with_timeout(
+    server: &TestServer,
+    report_id: i32,
+    spec_id: i32,
+    timeout_secs: i32,
+) -> JobUuid {
+    let mut conn = server.db_conn();
+    let now = DateTime::now();
+    let job_uuid = JobUuid::new();
+    let project_uuid = bencher_json::ProjectUuid::new();
+
+    let config = serde_json::json!({
+        "registry": "https://registry.bencher.dev",
+        "project": project_uuid,
+        "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "timeout": timeout_secs
+    });
+
+    diesel::insert_into(schema::job::table)
+        .values((
+            schema::job::uuid.eq(&job_uuid),
+            schema::job::report_id.eq(report_id),
+            schema::job::organization_id.eq(1),
+            schema::job::source_ip.eq(TEST_SOURCE_IP),
+            schema::job::status.eq(JobStatus::Pending),
+            schema::job::spec_id.eq(spec_id),
+            schema::job::config.eq(config.to_string()),
+            schema::job::timeout.eq(timeout_secs),
+            schema::job::priority.eq(JobPriority::default()),
+            schema::job::created.eq(&now),
+            schema::job::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert test job");
+
+    job_uuid
+}
+
 /// Insert a test job with full control over scheduling parameters.
 #[expect(clippy::expect_used)]
 pub fn insert_test_job_full(

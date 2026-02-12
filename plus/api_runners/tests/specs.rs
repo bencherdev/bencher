@@ -278,6 +278,43 @@ async fn runner_specs_list_empty() {
     );
 }
 
+// Claim job - runner with no specs at all cannot claim a pending job
+#[tokio::test]
+async fn claim_job_no_specs() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "nospec@example.com").await;
+    let org = server.create_org(&admin, "No Spec Org").await;
+    let project = server.create_project(&admin, &org, "No Spec Project").await;
+
+    // Create runner but do NOT associate any specs
+    let runner = create_runner(&server, &admin.token, "No Spec Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+
+    // Create a pending job
+    let (_, spec_id) = insert_test_spec(&server);
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let _job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    // Runner tries to claim - should get None (no specs associated)
+    let claim_body = serde_json::json!({"poll_timeout": 1});
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {runner_token}"))
+        .json(&claim_body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    assert!(
+        claimed.is_none(),
+        "Runner with no specs should not claim any job"
+    );
+}
+
 // Claim job - runner without matching spec cannot claim a pending job
 #[tokio::test]
 async fn claim_job_spec_mismatch() {

@@ -106,6 +106,22 @@ impl DateTime {
     }
 }
 
+impl std::ops::Add<chrono::Duration> for DateTime {
+    type Output = Self;
+
+    fn add(self, rhs: chrono::Duration) -> Self {
+        Self(self.0 + rhs)
+    }
+}
+
+impl std::ops::Sub<chrono::Duration> for DateTime {
+    type Output = Self;
+
+    fn sub(self, rhs: chrono::Duration) -> Self {
+        Self(self.0 - rhs)
+    }
+}
+
 impl FromStr for DateTime {
     type Err = ValidError;
 

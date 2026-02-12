@@ -273,13 +273,18 @@ pub fn recover_orphaned_claimed_jobs(
     conn: &mut DbConnection,
     heartbeat_timeout: std::time::Duration,
 ) -> usize {
-    let now = DateTime::now();
-    #[expect(clippy::cast_possible_wrap, reason = "heartbeat timeout fits in i64")]
-    let cutoff_timestamp = now.timestamp() - heartbeat_timeout.as_secs() as i64;
+    let heartbeat_timeout =
+        chrono::Duration::from_std(heartbeat_timeout).unwrap_or(chrono::Duration::MAX);
+    let cutoff = DateTime::now() - heartbeat_timeout;
 
-    // Find claimed jobs where claimed_at is older than the heartbeat timeout
+    // Find claimed jobs where claimed (or created, if claimed is NULL) is older than the cutoff
     let orphaned_jobs: Vec<QueryJob> = match schema::job::table
         .filter(schema::job::status.eq(JobStatus::Claimed))
+        .filter(
+            schema::job::claimed.le(cutoff).or(schema::job::claimed
+                .is_null()
+                .and(schema::job::created.le(cutoff))),
+        )
         .load(conn)
     {
         Ok(jobs) => jobs,
@@ -290,21 +295,14 @@ pub fn recover_orphaned_claimed_jobs(
     };
 
     let mut recovered = 0;
-    for job in orphaned_jobs {
-        let claimed_at = if let Some(claimed) = job.claimed {
-            claimed
-        } else {
+    for job in &orphaned_jobs {
+        if job.claimed.is_none() {
             // Claimed but no timestamp — should not happen, fail it anyway
             slog::warn!(log, "Claimed job has no claimed timestamp"; "job_id" => ?job.id);
-            job.created
-        };
-
-        if claimed_at.timestamp() > cutoff_timestamp {
-            // Not yet orphaned
-            continue;
         }
 
         slog::warn!(log, "Recovering orphaned claimed job"; "job_id" => ?job.id);
+        let now = DateTime::now();
         let update = UpdateJob {
             status: Some(JobStatus::Failed),
             completed: Some(Some(now)),

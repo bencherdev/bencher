@@ -9,7 +9,8 @@ use bencher_json::{JobStatus, JobUuid, JsonJob, RunnerUuid};
 use bencher_schema::schema;
 use common::{
     associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
-    insert_test_job, insert_test_job_with_optional_fields, insert_test_spec, set_job_status,
+    insert_test_job, insert_test_job_with_optional_fields, insert_test_job_with_timeout,
+    insert_test_spec, set_job_status,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
@@ -674,9 +675,9 @@ async fn channel_ping_does_not_reset_heartbeat_timeout() {
 /// Verify that a runner can acknowledge cancellation on a new WS connection.
 /// 1. Set up a running job, cancel it in DB
 /// 2. Send Heartbeat on the WS → get Cancel, connection closes
-/// 3. Open a *new* WS connection, send Cancelled → get Ack
+/// 3. Open a *new* WS connection, send Canceled → get Ack
 #[tokio::test]
-async fn channel_cancelled_acknowledgment() {
+async fn channel_canceled_acknowledgment() {
     let server = TestServer::new().await;
     let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "cancel-ack").await;
 
@@ -703,7 +704,7 @@ async fn channel_cancelled_acknowledgment() {
     // The job is in Canceled state, so channel should still accept it
     // (the channel allows Claimed or Running, but we need to check if Canceled is allowed)
     // Actually, the server only allows Claimed|Running for channel opening.
-    // So the Cancelled acknowledgment via REST PATCH endpoint is the correct path.
+    // So the Canceled acknowledgment via REST PATCH endpoint is the correct path.
     // Let's verify the job is indeed in Canceled state.
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
 }
@@ -973,4 +974,71 @@ async fn channel_completed_with_stderr_only() {
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
 
     assert_ws_closed(&mut ws).await;
+}
+
+// =============================================================================
+// Job Timeout Test
+// =============================================================================
+
+/// Verify that a job exceeding its configured timeout + grace period is marked Canceled.
+/// This is distinct from heartbeat timeout (which marks jobs as Failed).
+/// Uses tokio time manipulation to avoid waiting real wall-clock time.
+#[tokio::test]
+#[expect(clippy::panic)]
+async fn channel_job_timeout() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-jobtimeout@example.com").await;
+    let org = server.create_org(&admin, "Ws jobtimeout").await;
+    let project = server
+        .create_project(&admin, &org, "Ws jobtimeout proj")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner jobtimeout").await;
+    let runner_token = runner.token.to_string();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+
+    // Insert a job with a short timeout (10 seconds)
+    let job_uuid = insert_test_job_with_timeout(&server, report_id, spec_id, 10);
+
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+    let claimed = claim_job(&server, runner.uuid, &runner_token).await;
+    assert_eq!(claimed.uuid, job_uuid);
+    assert_eq!(claimed.status, JobStatus::Claimed);
+
+    let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
+
+    // Send Running to start the job (sets the `started` timestamp)
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Send Heartbeat to confirm job is active
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Pause tokio time and advance past job timeout (10s) + grace period (60s) = 70s.
+    // The heartbeat timeout handler fires at 5s, sees the job has exceeded its
+    // timeout + grace period, and marks it as Canceled (not Failed).
+    tokio::time::pause();
+    tokio::time::advance(std::time::Duration::from_secs(75)).await;
+    tokio::time::resume();
+
+    // The server's timeout handler should have fired and closed the connection.
+    match ws.next().await {
+        None | Some(Ok(Message::Close(_)) | Err(_)) => {
+            // Connection closed as expected
+        },
+        Some(Ok(other)) => {
+            panic!("Expected connection to close from job timeout, got: {other:?}");
+        },
+    }
+
+    // Verify job is marked as Canceled (not Failed — distinguishes from heartbeat timeout)
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
 }
