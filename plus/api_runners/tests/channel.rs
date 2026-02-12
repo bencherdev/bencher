@@ -794,3 +794,173 @@ async fn test_channel_failed_from_claimed() {
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }
+
+// =============================================================================
+// WebSocket Close on Terminal Messages (Fix 1)
+// =============================================================================
+
+/// Server closes the WebSocket after Completed message.
+#[tokio::test]
+async fn test_channel_close_on_completed() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "close-done").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Send Completed
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            exit_code: 0,
+            stdout: None,
+            stderr: None,
+            output: None,
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Server should close the connection after Completed
+    assert_ws_closed(&mut ws).await;
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+}
+
+/// Server closes the WebSocket after Failed message.
+#[tokio::test]
+async fn test_channel_close_on_failed() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "close-fail").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Send Failed
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Failed {
+            exit_code: Some(1),
+            error: "test failure".to_owned(),
+            stdout: None,
+            stderr: None,
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Server should close the connection after Failed
+    assert_ws_closed(&mut ws).await;
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+}
+
+// =============================================================================
+// WebSocket Output Tests (Fix 17)
+// =============================================================================
+
+/// Completed with stdout/stderr/output fields.
+#[tokio::test]
+async fn test_channel_completed_with_output() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "output-done").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Send Completed with stdout and output
+    let mut output = std::collections::HashMap::new();
+    output.insert(
+        camino::Utf8PathBuf::from("/output/results.json"),
+        "final results".to_owned(),
+    );
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            exit_code: 0,
+            stdout: Some("line of output\n".into()),
+            stderr: None,
+            output: Some(output),
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+
+    assert_ws_closed(&mut ws).await;
+}
+
+/// Failed with stderr and output fields.
+#[tokio::test]
+async fn test_channel_failed_with_output() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "output-fail").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Send Failed with stderr
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Failed {
+            exit_code: Some(1),
+            error: "benchmark crashed".to_owned(),
+            stdout: Some("partial output\n".into()),
+            stderr: Some("error output\n".into()),
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+
+    assert_ws_closed(&mut ws).await;
+}
+
+/// Output message with stdout only.
+#[tokio::test]
+async fn test_channel_completed_with_stderr_only() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "stderr-only").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Send Completed with only stderr (e.g., benchmark wrote to stderr)
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            exit_code: 0,
+            stdout: None,
+            stderr: Some("warning: benchmark variance high\n".into()),
+            output: None,
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+
+    assert_ws_closed(&mut ws).await;
+}

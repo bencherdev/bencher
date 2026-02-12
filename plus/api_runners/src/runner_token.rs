@@ -2,7 +2,7 @@ use bencher_json::RunnerResourceId;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{forbidden_error, resource_not_found_err},
+    error::{resource_not_found_err, unauthorized_error},
     model::runner::{QueryRunner, RunnerId},
     schema,
 };
@@ -39,11 +39,11 @@ impl RunnerToken {
     ) -> Result<Self, HttpError> {
         let token = auth_header
             .and_then(|h| h.strip_prefix("Bearer "))
-            .ok_or_else(|| forbidden_error("Missing or invalid Authorization header"))?;
+            .ok_or_else(|| unauthorized_error("Missing or invalid Authorization header"))?;
 
         // Validate token format (prefix + length)
         if !token.starts_with(RUNNER_TOKEN_PREFIX) || token.len() != RUNNER_TOKEN_LENGTH {
-            return Err(forbidden_error("Invalid runner token format"));
+            return Err(unauthorized_error("Invalid runner token format"));
         }
 
         // Hash the token
@@ -68,7 +68,7 @@ impl RunnerToken {
             .first(auth_conn!(context))
             .optional()
             .map_err(resource_not_found_err!(Runner))?
-            .ok_or_else(|| forbidden_error("Invalid runner token"))?;
+            .ok_or_else(|| unauthorized_error("Invalid runner token"))?;
 
         Ok(Self {
             runner_id: runner.id,

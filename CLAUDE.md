@@ -227,7 +227,7 @@ Bare metal benchmark runners that claim and execute jobs from the API. Server-sc
 
 **Key files:**
 - `plus/api_runners/` - Runner CRUD, token rotation, job claiming, job updates, WebSocket channel
-- `lib/bencher_json/src/runner/` - Shared JSON types (`JsonRunner`, `JsonJob`, `JobStatus`, `RunnerState`)
+- `lib/bencher_json/src/runner/` - Shared JSON types (`JsonRunner`, `JsonJob`, `JobStatus`)
 - `lib/bencher_schema/src/model/runner/` - Database models and queries
 - `lib/api_projects/src/jobs.rs` - Project-scoped job listing (public API)
 - `lib/bencher_schema/migrations/2026-02-02-120000_runner/` - Migration for `runner` and `job` tables

@@ -8,7 +8,7 @@ use bencher_json::{DateTime, JobStatus, JobUuid, RunnerResourceId};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{forbidden_error, resource_not_found_err},
+    error::{conflict_error, forbidden_error, resource_not_found_err},
     model::runner::{JobId, QueryJob, UpdateJob, job::spawn_heartbeat_timeout},
     schema, write_conn,
 };
@@ -119,7 +119,7 @@ pub async fn runner_job_channel(
 
     // Only allow channel for claimed or running jobs (running allows reconnection)
     if !matches!(job.status, JobStatus::Claimed | JobStatus::Running) {
-        return Err(forbidden_error(format!(
+        return Err(conflict_error(format!(
             "Cannot open channel for job in {:?} status, expected Claimed or Running",
             job.status
         ))
@@ -242,7 +242,7 @@ async fn handle_websocket(
                     },
                 };
 
-                let response = handle_runner_message(log, context, job_id, runner_msg).await?;
+                let response = handle_runner_message(log, context, job_id, &runner_msg).await?;
 
                 // Reset heartbeat only on valid protocol messages
                 last_heartbeat = tokio::time::Instant::now();
@@ -250,12 +250,13 @@ async fn handle_websocket(
                 let response_text = serde_json::to_string(&response)?;
                 tx.send(Message::Text(response_text.into())).await?;
 
-                // If we sent a cancel or the job is terminal, close the connection
-                if matches!(response, ServerMessage::Cancel) {
+                // Close the connection on terminal messages
+                let close_reason = terminal_close_reason(&response, &runner_msg);
+                if let Some(reason) = close_reason {
                     drop(
                         tx.send(Message::Close(Some(CloseFrame {
                             code: CloseCode::Normal,
-                            reason: "job canceled".into(),
+                            reason: reason.into(),
                         })))
                         .await,
                     );
@@ -280,12 +281,29 @@ async fn handle_websocket(
     Ok(())
 }
 
+/// Check if a response/message pair represents a terminal state that should close the connection.
+fn terminal_close_reason(
+    response: &ServerMessage,
+    runner_msg: &RunnerMessage,
+) -> Option<&'static str> {
+    if matches!(response, ServerMessage::Cancel) {
+        return Some("job canceled");
+    }
+    if matches!(runner_msg, RunnerMessage::Completed { .. }) {
+        return Some("job completed");
+    }
+    if matches!(runner_msg, RunnerMessage::Failed { .. }) {
+        return Some("job failed");
+    }
+    None
+}
+
 /// Handle a message from the runner and return the appropriate response.
 async fn handle_runner_message(
     log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,
-    msg: RunnerMessage,
+    msg: &RunnerMessage,
 ) -> Result<ServerMessage, Box<dyn std::error::Error + Send + Sync>> {
     match msg {
         RunnerMessage::Running => {
@@ -305,7 +323,16 @@ async fn handle_runner_message(
             output,
         } => {
             slog::info!(log, "Job completed"; "job_id" => ?job_id, "exit_code" => exit_code);
-            handle_completed(log, context, job_id, exit_code, stdout, stderr, output).await?;
+            handle_completed(
+                log,
+                context,
+                job_id,
+                *exit_code,
+                stdout.clone(),
+                stderr.clone(),
+                output.clone(),
+            )
+            .await?;
         },
         RunnerMessage::Failed {
             exit_code,
@@ -314,7 +341,15 @@ async fn handle_runner_message(
             stderr,
         } => {
             slog::warn!(log, "Job failed"; "job_id" => ?job_id, "exit_code" => ?exit_code, "error" => &error);
-            handle_failed(log, context, job_id, exit_code, stdout, stderr).await?;
+            handle_failed(
+                log,
+                context,
+                job_id,
+                *exit_code,
+                stdout.clone(),
+                stderr.clone(),
+            )
+            .await?;
         },
         RunnerMessage::Cancelled => {
             slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job_id);
@@ -379,12 +414,16 @@ async fn handle_running(
         return Ok(());
     }
 
-    // Neither matched — concurrent state change
-    slog::warn!(log, "Invalid state transition to Running (concurrent state change)"; "job_id" => ?job_id);
-    Err(format!(
-        "Invalid state transition to Running for job {job_id:?}, expected Claimed or Running"
-    )
-    .into())
+    // Neither matched — check if job was canceled
+    let current_job: QueryJob = schema::job::table
+        .filter(schema::job::id.eq(job_id))
+        .first(auth_conn!(context))?;
+    if current_job.status == JobStatus::Canceled {
+        slog::info!(log, "Job was canceled before Running transition"; "job_id" => ?job_id);
+        return Ok(());
+    }
+    slog::warn!(log, "Unexpected job state during Running transition"; "job_id" => ?job_id, "status" => ?current_job.status);
+    Ok(())
 }
 
 /// Handle a Heartbeat message: update `last_heartbeat` and check for cancellation.

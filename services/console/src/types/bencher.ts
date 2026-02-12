@@ -40,6 +40,10 @@ export type ExpirationYear = number;
 
 export type GitHash = string;
 
+export type GracePeriod = number;
+
+export type HeartbeatTimeout = number;
+
 /** An OCI image digest (e.g., "sha256:abc123...") */
 export type ImageDigest = string;
 
@@ -59,10 +63,10 @@ export enum JobStatus {
 
 /** A hardware spec */
 export interface JsonSpec {
-	uuid: SpecUuid;
-	cpu: Cpu;
-	memory: Memory;
-	disk: Disk;
+	uuid: Uuid;
+	cpu: number;
+	memory: number;
+	disk: number;
 	network: boolean;
 	archived?: string;
 	created: string;
@@ -102,13 +106,13 @@ export interface JsonJobConfig {
 
 /** A benchmark job */
 export interface JsonJob {
-	uuid: JobUuid;
+	uuid: Uuid;
 	status: JobStatus;
 	/** Resource spec for this job */
 	spec: JsonSpec;
 	/** Job configuration (only included when claimed by a runner) */
 	config?: JsonJobConfig;
-	runner?: RunnerUuid;
+	runner?: Uuid;
 	claimed?: string;
 	started?: string;
 	completed?: string;
@@ -304,20 +308,12 @@ export type JsonResultsMap = Record<BenchmarkName, JsonMetricsMap>;
 
 export type Slug = string;
 
-/** Runner state */
-export enum RunnerState {
-	Offline = "offline",
-	Idle = "idle",
-	Running = "running",
-}
-
 /** A benchmark runner */
 export interface JsonRunner {
-	uuid: RunnerUuid;
+	uuid: Uuid;
 	name: ResourceName;
 	slug: string;
-	state: RunnerState;
-	specs: SpecUuid[];
+	specs: Uuid[];
 	archived?: string;
 	last_heartbeat?: string;
 	created: string;
@@ -589,17 +585,17 @@ export interface JsonNewRunner {
 /** Add a spec to a runner */
 export interface JsonNewRunnerSpec {
 	/** The UUID of the spec to associate with the runner. */
-	spec: SpecUuid;
+	spec: Uuid;
 }
 
 /** Create a new spec */
 export interface JsonNewSpec {
 	/** Number of CPUs */
-	cpu: Cpu;
+	cpu: number;
 	/** Memory size in bytes */
-	memory: Memory;
+	memory: number;
 	/** Disk size in bytes */
-	disk: Disk;
+	disk: number;
 	/** Whether the VM has network access */
 	network?: boolean;
 }
@@ -824,7 +820,7 @@ export interface JsonReport {
 
 /** Runner token response (returned on create or rotate) */
 export interface JsonRunnerToken {
-	uuid: RunnerUuid;
+	uuid: Uuid;
 	/** The runner token. Only shown once - store it securely! */
 	token: Secret;
 }

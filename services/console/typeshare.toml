@@ -17,6 +17,9 @@
 "AlertUuid" = "Uuid"
 "UserUuid" = "Uuid"
 "TokenUuid" = "Uuid"
+"SpecUuid" = "Uuid"
+"RunnerUuid" = "Uuid"
+"JobUuid" = "Uuid"
 # Typed Slugs
 "Slug" = "string"
 "OrganizationSlug" = "Slug"
@@ -26,6 +29,7 @@
 "BenchmarkSlug" = "Slug"
 "MeasureSlug" = "Slug"
 "UserSlug" = "Slug"
+"RunnerSlug" = "Slug"
 # Resource ID
 "ResourceId" = "Uuid | Slug"
 # Name ID
@@ -36,3 +40,8 @@
 "OrderedFloat" = "number"
 "BigInt" = "number"
 "TimestampMillis" = "number"
+"Cpu" = "number"
+"Disk" = "number"
+"Memory" = "number"
+"GracePeriod" = "number"
+"HeartbeatTimeout" = "number"

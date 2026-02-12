@@ -4,7 +4,7 @@ use bencher_json::{
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
-pub use bencher_json::{JobStatus, JobUuid, RunnerState, RunnerUuid};
+pub use bencher_json::{JobStatus, JobUuid, RunnerUuid};
 
 use crate::{
     context::DbConnection,
@@ -16,11 +16,13 @@ pub mod job;
 pub mod runner_spec;
 mod source_ip;
 pub mod spec;
+mod token_hash;
 
 pub use job::{InsertJob, JobId, QueryJob, UpdateJob, spawn_heartbeat_timeout};
 pub use runner_spec::{InsertRunnerSpec, QueryRunnerSpec, RunnerSpecId};
 pub use source_ip::SourceIp;
 pub use spec::{InsertSpec, QuerySpec, SpecId, UpdateSpec};
+pub use token_hash::TokenHash;
 
 crate::macros::typed_id::typed_id!(RunnerId);
 
@@ -31,8 +33,7 @@ pub struct QueryRunner {
     pub uuid: RunnerUuid,
     pub name: ResourceName,
     pub slug: Slug,
-    pub token_hash: String,
-    pub state: RunnerState,
+    pub token_hash: TokenHash,
     pub archived: Option<DateTime>,
     pub last_heartbeat: Option<DateTime>,
     pub created: DateTime,
@@ -85,7 +86,6 @@ impl QueryRunner {
             uuid: self.uuid,
             name: self.name,
             slug: self.slug,
-            state: self.state,
             specs,
             archived: self.archived,
             last_heartbeat: self.last_heartbeat,
@@ -101,21 +101,19 @@ pub struct InsertRunner {
     pub uuid: RunnerUuid,
     pub name: ResourceName,
     pub slug: Slug,
-    pub token_hash: String,
-    pub state: RunnerState,
+    pub token_hash: TokenHash,
     pub created: DateTime,
     pub modified: DateTime,
 }
 
 impl InsertRunner {
-    pub fn new(name: ResourceName, slug: Slug, token_hash: String) -> Self {
+    pub fn new(name: ResourceName, slug: Slug, token_hash: TokenHash) -> Self {
         let now = DateTime::now();
         Self {
             uuid: RunnerUuid::new(),
             name,
             slug,
             token_hash,
-            state: RunnerState::default(),
             created: now,
             modified: now,
         }
@@ -127,8 +125,7 @@ impl InsertRunner {
 pub struct UpdateRunner {
     pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
-    pub token_hash: Option<String>,
-    pub state: Option<RunnerState>,
+    pub token_hash: Option<TokenHash>,
     pub archived: Option<Option<DateTime>>,
     pub last_heartbeat: Option<Option<DateTime>>,
     pub modified: Option<DateTime>,

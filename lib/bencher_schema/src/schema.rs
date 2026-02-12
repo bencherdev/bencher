@@ -279,7 +279,6 @@ diesel::table! {
         name -> Text,
         slug -> Text,
         token_hash -> Text,
-        state -> Integer,
         archived -> Nullable<BigInt>,
         last_heartbeat -> Nullable<BigInt>,
         created -> BigInt,

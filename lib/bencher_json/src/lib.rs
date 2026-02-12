@@ -84,7 +84,7 @@ pub use runner::{
     JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonJobConfig, JsonNewRunner,
     JsonNewRunnerSpec, JsonNewSpec, JsonRunner, JsonRunnerToken, JsonRunners, JsonSpec, JsonSpecs,
     JsonUpdateJob, JsonUpdateJobResponse, JsonUpdateRunner, JsonUpdateSpec, RunnerResourceId,
-    RunnerSlug, RunnerState, RunnerUuid, SpecUuid,
+    RunnerSlug, RunnerUuid, SpecUuid,
 };
 pub use system::{
     auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonSignup},

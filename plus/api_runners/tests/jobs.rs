@@ -8,10 +8,11 @@
 mod common;
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonJob, JsonUpdateJobResponse};
+use bencher_json::{JobPriority, JsonJob, JsonUpdateJobResponse};
 use common::{
     associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
-    insert_test_job, insert_test_spec, insert_test_spec_full, set_job_runner_id, set_job_status,
+    insert_test_job, insert_test_job_full, insert_test_spec, insert_test_spec_full,
+    set_job_runner_id, set_job_status,
 };
 use futures_concurrency::future::Join as _;
 use http::StatusCode;
@@ -68,7 +69,7 @@ async fn test_claim_job_invalid_token() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // POST /v0/runners/{runner}/jobs - token for wrong runner rejected
@@ -95,7 +96,7 @@ async fn test_claim_job_wrong_runner_token() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // POST /v0/runners/{runner}/jobs - missing Authorization header
@@ -118,7 +119,7 @@ async fn test_claim_job_missing_auth() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // PATCH /v0/runners/{runner}/jobs/{job} - invalid token rejected
@@ -145,7 +146,7 @@ async fn test_update_job_invalid_token() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // PATCH /v0/runners/{runner}/jobs/{job} - job not found
@@ -198,7 +199,7 @@ async fn test_claim_job_no_prefix_token() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // POST /v0/runners/{runner}/jobs - correct prefix but wrong length rejected
@@ -226,7 +227,7 @@ async fn test_claim_job_wrong_length_token() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
     // Token has the correct prefix but is too long (15 + 66 hex = 81 chars, not 79)
     let resp = server
@@ -241,7 +242,7 @@ async fn test_claim_job_wrong_length_token() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // POST /v0/runners/{runner}/jobs - archived runner rejected
@@ -282,7 +283,7 @@ async fn test_claim_job_archived_runner() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // =============================================================================
@@ -535,7 +536,7 @@ mod job_lifecycle {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
     }
 
     // Test concurrent job claiming: two runners race for the same job, exactly one wins
@@ -2513,7 +2514,7 @@ mod invalid_transitions {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
     }
 
     // Completed -> Running (invalid: terminal state)
@@ -2533,7 +2534,7 @@ mod invalid_transitions {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
     }
 
     // Completed -> Failed (invalid: terminal to terminal)
@@ -2553,7 +2554,7 @@ mod invalid_transitions {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
     }
 
     // Failed -> Running (invalid: terminal state)
@@ -2573,7 +2574,7 @@ mod invalid_transitions {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
     }
 
     // Failed -> Completed (invalid: terminal to terminal)
@@ -2593,7 +2594,7 @@ mod invalid_transitions {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
     }
 
     // Canceled -> Running: returns 200 with canceled: true (tells runner to stop)
@@ -2930,7 +2931,7 @@ async fn test_user_jwt_rejected_on_runner_endpoint() {
 
     assert_eq!(
         resp.status(),
-        StatusCode::FORBIDDEN,
+        StatusCode::UNAUTHORIZED,
         "User JWT should be rejected on runner endpoints"
     );
 }
@@ -3025,4 +3026,250 @@ async fn test_runner_multiple_specs_claims_matching_jobs() {
         "Job B should have been claimed"
     );
     assert_ne!(first.uuid, second.uuid, "Should claim two different jobs");
+}
+
+// =============================================================================
+// Auth-Boundary Tests (Fix 16)
+// =============================================================================
+
+/// Non-admin user cannot PATCH a runner.
+#[tokio::test]
+async fn test_non_admin_cannot_patch_runner() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "auth-patch-admin@example.com").await;
+    let user = server.signup("User", "auth-patch-user@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Patch Auth Runner").await;
+
+    let body = serde_json::json!({ "name": "Renamed Runner" });
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/runners/{}", runner.uuid)))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::FORBIDDEN,
+        "Non-admin should not be able to PATCH a runner"
+    );
+}
+
+/// Wrong runner's token cannot claim a job assigned to a different runner.
+#[tokio::test]
+async fn test_wrong_runner_token_claim() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "auth-wrong-claim@example.com").await;
+
+    let runner1 = create_runner(&server, &admin.token, "Auth Runner One").await;
+    let runner2 = create_runner(&server, &admin.token, "Auth Runner Two").await;
+    let runner2_token: &str = runner2.token.as_ref();
+
+    // Use runner2's token to claim on runner1's endpoint
+    let body = serde_json::json!({ "poll_timeout": 1 });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid)))
+        .header("Authorization", format!("Bearer {runner2_token}"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    // Token hash won't match runner1 — should fail auth
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+/// Archived runner's token cannot claim jobs.
+#[tokio::test]
+async fn test_archived_runner_token_rejected() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "auth-archived@example.com").await;
+
+    let (_, spec_id) = insert_test_spec(&server);
+    let runner = create_runner(&server, &admin.token, "Archived Auth Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    // Archive the runner
+    let body = serde_json::json!({ "archived": true });
+    server
+        .client
+        .patch(server.api_url(&format!("/v0/runners/{}", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    // Try to claim with the archived runner's token
+    let body = serde_json::json!({ "poll_timeout": 1 });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {runner_token}"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::UNAUTHORIZED,
+        "Archived runner's token should be rejected"
+    );
+}
+
+// =============================================================================
+// Additional Concurrency Tier Tests (Fix 2)
+// =============================================================================
+
+/// Free tier: blocked when same org has in-flight, even from a different runner.
+#[tokio::test]
+async fn test_free_tier_blocked_same_org_different_runner() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "free-diff-runner@example.com").await;
+    let org = server.create_org(&admin, "Free DiffRunner Org").await;
+    let project = server
+        .create_project(&admin, &org, "Free DiffRunner Proj")
+        .await;
+
+    let (_, spec_id) = insert_test_spec(&server);
+    let runner1 = create_runner(&server, &admin.token, "FreeOrgRunner1").await;
+    let runner1_token: &str = runner1.token.as_ref();
+    let runner1_id = get_runner_id(&server, runner1.uuid);
+    associate_runner_spec(&server, runner1_id, spec_id);
+    let runner2 = create_runner(&server, &admin.token, "FreeOrgRunner2").await;
+    let runner2_token: &str = runner2.token.as_ref();
+    let runner2_id = get_runner_id(&server, runner2.uuid);
+    associate_runner_spec(&server, runner2_id, spec_id);
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let org_id = common::get_organization_id(&server, project_id);
+    let report_id = create_test_report(&server, project_id);
+
+    // Two Free tier jobs for the same org
+    let job1 = insert_test_job_full(
+        &server,
+        report_id,
+        project.uuid,
+        org_id,
+        "10.0.0.1",
+        JobPriority::Free,
+        spec_id,
+    );
+    let _job2 = insert_test_job_full(
+        &server,
+        report_id,
+        project.uuid,
+        org_id,
+        "10.0.0.2",
+        JobPriority::Free,
+        spec_id,
+    );
+
+    // Runner1 claims first job
+    let body = serde_json::json!({ "poll_timeout": 1 });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid)))
+        .header("Authorization", format!("Bearer {runner1_token}"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+    assert_eq!(claimed.as_ref().map(|j| j.uuid), Some(job1));
+
+    // Set to running
+    set_job_status(&server, job1, bencher_json::JobStatus::Running);
+    set_job_runner_id(&server, job1, runner1_id);
+
+    // Runner2 tries to claim second job — same org, should be blocked
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid)))
+        .header("Authorization", format!("Bearer {runner2_token}"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+    assert!(
+        claimed.is_none(),
+        "Free tier: second job should be blocked for same org"
+    );
+}
+
+/// Enterprise/Team tier: mixed scenario where free is blocked but enterprise is claimable.
+#[tokio::test]
+async fn test_mixed_tier_free_blocked_enterprise_claimable() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "mix-tier@example.com").await;
+    let org = server.create_org(&admin, "MixTier Org").await;
+    let project = server.create_project(&admin, &org, "MixTier Project").await;
+
+    let (_, spec_id) = insert_test_spec(&server);
+    let runner = create_runner(&server, &admin.token, "MixTier Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let org_id = common::get_organization_id(&server, project_id);
+    let report_id = create_test_report(&server, project_id);
+
+    // Insert a Free tier job and mark it as running to block the org
+    let blocking_job = insert_test_job_full(
+        &server,
+        report_id,
+        project.uuid,
+        org_id,
+        "10.0.0.1",
+        JobPriority::Free,
+        spec_id,
+    );
+    set_job_status(&server, blocking_job, bencher_json::JobStatus::Running);
+    set_job_runner_id(&server, blocking_job, runner_id);
+
+    // Insert a Free tier job (should be blocked) and an Enterprise tier job (should be claimable)
+    let _free_job = insert_test_job_full(
+        &server,
+        report_id,
+        project.uuid,
+        org_id,
+        "10.0.0.2",
+        JobPriority::Free,
+        spec_id,
+    );
+    let enterprise_job = insert_test_job_full(
+        &server,
+        report_id,
+        project.uuid,
+        org_id,
+        "10.0.0.3",
+        JobPriority::Enterprise,
+        spec_id,
+    );
+
+    // Claim should skip the blocked Free job and grab the Enterprise job
+    let body = serde_json::json!({ "poll_timeout": 1 });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {runner_token}"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+    assert_eq!(
+        claimed.as_ref().map(|j| j.uuid),
+        Some(enterprise_job),
+        "Enterprise job should be claimable even when Free tier is blocked"
+    );
 }

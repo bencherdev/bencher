@@ -8,7 +8,7 @@ use bencher_json::{
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
+    error::{conflict_error, forbidden_error, resource_conflict_err, resource_not_found_err},
     model::runner::{QueryJob, QuerySpec, UpdateJob},
     schema, write_conn,
 };
@@ -341,7 +341,7 @@ async fn update_job_inner(
     );
 
     if !valid_transition {
-        return Err(forbidden_error(format!(
+        return Err(conflict_error(format!(
             "Invalid status transition from {:?} to {:?}",
             job.status, update_request.status
         )));
@@ -376,7 +376,7 @@ async fn update_job_inner(
         if current_job.status == JobStatus::Canceled {
             return Ok(JsonUpdateJobResponse { canceled: true });
         }
-        return Err(forbidden_error(format!(
+        return Err(conflict_error(format!(
             "Concurrent status change: job is now {:?}, expected {:?}",
             current_job.status, job.status
         )));

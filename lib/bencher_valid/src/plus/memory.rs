@@ -48,6 +48,13 @@ impl Visitor<'_> for MemoryVisitor {
         formatter.write_str("a nonzero memory size in bytes")
     }
 
+    fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        self.visit_u64(u64::from(v))
+    }
+
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
     where
         E: de::Error,

@@ -10,24 +10,25 @@ use serde::{
 
 use crate::ValidError;
 
-const MIN_GRACE_PERIOD: u64 = 10;
-const MAX_GRACE_PERIOD: u64 = 600;
+const MIN_GRACE_PERIOD: u32 = 10;
+const MAX_GRACE_PERIOD: u32 = 600;
 
+#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct GracePeriod(u64);
+pub struct GracePeriod(u32);
 
-impl TryFrom<u64> for GracePeriod {
+impl TryFrom<u32> for GracePeriod {
     type Error = ValidError;
 
-    fn try_from(period: u64) -> Result<Self, Self::Error> {
+    fn try_from(period: u32) -> Result<Self, Self::Error> {
         is_valid_grace_period(period)
             .then_some(Self(period))
             .ok_or(ValidError::GracePeriod(period))
     }
 }
 
-impl From<GracePeriod> for u64 {
+impl From<GracePeriod> for u32 {
     fn from(period: GracePeriod) -> Self {
         period.0
     }
@@ -43,7 +44,7 @@ impl<'de> Deserialize<'de> for GracePeriod {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_u64(GracePeriodVisitor)
+        deserializer.deserialize_u32(GracePeriodVisitor)
     }
 }
 
@@ -60,11 +61,18 @@ impl Visitor<'_> for GracePeriodVisitor {
     where
         E: de::Error,
     {
+        self.visit_u32(u32::try_from(v).map_err(E::custom)?)
+    }
+
+    fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
         v.try_into().map_err(E::custom)
     }
 }
 
-pub fn is_valid_grace_period(period: u64) -> bool {
+pub fn is_valid_grace_period(period: u32) -> bool {
     (MIN_GRACE_PERIOD..=MAX_GRACE_PERIOD).contains(&period)
 }
 

@@ -11136,7 +11136,7 @@
       },
       "GracePeriod": {
         "type": "integer",
-        "format": "uint64",
+        "format": "uint32",
         "minimum": 0
       },
       "HeadUuid": {
@@ -11145,7 +11145,7 @@
       },
       "HeartbeatTimeout": {
         "type": "integer",
-        "format": "uint64",
+        "format": "uint32",
         "minimum": 0
       },
       "IfExists": {
@@ -14710,9 +14710,6 @@
               "$ref": "#/components/schemas/SpecUuid"
             }
           },
-          "state": {
-            "$ref": "#/components/schemas/RunnerState"
-          },
           "uuid": {
             "$ref": "#/components/schemas/RunnerUuid"
           }
@@ -14723,7 +14720,6 @@
           "name",
           "slug",
           "specs",
-          "state",
           "uuid"
         ]
       },
@@ -16481,15 +16477,6 @@
         "additionalProperties": {
           "type": "string"
         }
-      },
-      "RunnerState": {
-        "description": "Runner state",
-        "type": "string",
-        "enum": [
-          "offline",
-          "idle",
-          "running"
-        ]
       },
       "RunnerUuid": {
         "type": "string",

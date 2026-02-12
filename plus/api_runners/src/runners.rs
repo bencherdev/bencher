@@ -10,7 +10,7 @@ use bencher_schema::{
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
-        runner::{InsertRunner, QueryRunner, UpdateRunner},
+        runner::{InsertRunner, QueryRunner, TokenHash, UpdateRunner},
         user::{admin::AdminUser, auth::BearerToken},
     },
     schema, write_conn,
@@ -308,9 +308,9 @@ pub fn generate_runner_token() -> String {
 }
 
 /// Hash a runner token using SHA-256
-pub fn hash_token(token: &str) -> String {
+pub fn hash_token(token: &str) -> TokenHash {
     let mut hasher = Sha256::new();
     hasher.update(token.as_bytes());
     let result = hasher.finalize();
-    hex::encode(result)
+    TokenHash::new(hex::encode(result))
 }

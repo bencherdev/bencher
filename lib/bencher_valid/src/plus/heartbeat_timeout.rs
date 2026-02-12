@@ -10,24 +10,25 @@ use serde::{
 
 use crate::ValidError;
 
-const MIN_HEARTBEAT_TIMEOUT: u64 = 10;
-const MAX_HEARTBEAT_TIMEOUT: u64 = 300;
+const MIN_HEARTBEAT_TIMEOUT: u32 = 10;
+const MAX_HEARTBEAT_TIMEOUT: u32 = 300;
 
+#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct HeartbeatTimeout(u64);
+pub struct HeartbeatTimeout(u32);
 
-impl TryFrom<u64> for HeartbeatTimeout {
+impl TryFrom<u32> for HeartbeatTimeout {
     type Error = ValidError;
 
-    fn try_from(timeout: u64) -> Result<Self, Self::Error> {
+    fn try_from(timeout: u32) -> Result<Self, Self::Error> {
         is_valid_heartbeat_timeout(timeout)
             .then_some(Self(timeout))
             .ok_or(ValidError::HeartbeatTimeout(timeout))
     }
 }
 
-impl From<HeartbeatTimeout> for u64 {
+impl From<HeartbeatTimeout> for u32 {
     fn from(timeout: HeartbeatTimeout) -> Self {
         timeout.0
     }
@@ -43,7 +44,7 @@ impl<'de> Deserialize<'de> for HeartbeatTimeout {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_u64(HeartbeatTimeoutVisitor)
+        deserializer.deserialize_u32(HeartbeatTimeoutVisitor)
     }
 }
 
@@ -60,11 +61,18 @@ impl Visitor<'_> for HeartbeatTimeoutVisitor {
     where
         E: de::Error,
     {
+        self.visit_u32(u32::try_from(v).map_err(E::custom)?)
+    }
+
+    fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
         v.try_into().map_err(E::custom)
     }
 }
 
-pub fn is_valid_heartbeat_timeout(timeout: u64) -> bool {
+pub fn is_valid_heartbeat_timeout(timeout: u32) -> bool {
     (MIN_HEARTBEAT_TIMEOUT..=MAX_HEARTBEAT_TIMEOUT).contains(&timeout)
 }
 

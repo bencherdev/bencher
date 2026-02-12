@@ -5,7 +5,6 @@ CREATE TABLE runner (
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     token_hash TEXT NOT NULL,
-    state INTEGER NOT NULL DEFAULT 0,
 
     archived BIGINT,
     last_heartbeat BIGINT,
@@ -54,7 +53,7 @@ CREATE TABLE job (
     config TEXT NOT NULL,
     timeout INTEGER NOT NULL DEFAULT 3600 CHECK (timeout > 0),
     priority INTEGER NOT NULL DEFAULT 0 CHECK (priority >= 0),
-    status INTEGER NOT NULL DEFAULT 0,
+    status INTEGER NOT NULL DEFAULT 0 CHECK (status >= 0 AND status <= 5),
     runner_id INTEGER,
     claimed BIGINT,
     started BIGINT,

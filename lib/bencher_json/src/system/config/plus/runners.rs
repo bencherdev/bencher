@@ -6,10 +6,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Default heartbeat timeout: 90 seconds
-pub const DEFAULT_HEARTBEAT_TIMEOUT_SECS: u64 = 90;
+pub const DEFAULT_HEARTBEAT_TIMEOUT_SECS: u32 = 90;
 
 /// Default job timeout grace period: 60 seconds
-pub const DEFAULT_JOB_TIMEOUT_GRACE_PERIOD_SECS: u64 = 60;
+pub const DEFAULT_JOB_TIMEOUT_GRACE_PERIOD_SECS: u32 = 60;
 
 #[expect(clippy::expect_used)]
 static DEFAULT_HEARTBEAT_TIMEOUT: LazyLock<HeartbeatTimeout> = LazyLock::new(|| {

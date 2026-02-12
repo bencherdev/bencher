@@ -252,7 +252,7 @@ async fn test_old_token_rejected_after_rotation() {
         .expect("Request failed");
     assert_eq!(
         resp.status(),
-        StatusCode::FORBIDDEN,
+        StatusCode::UNAUTHORIZED,
         "Old token should be rejected after rotation"
     );
 
