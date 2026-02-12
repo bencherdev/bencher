@@ -6,7 +6,7 @@
 //! Integration tests for server `OpenAPI` spec endpoint.
 
 use bencher_api_tests::TestServer;
-use bencher_json::JsonSpec;
+use bencher_json::JsonOpenApiSpec;
 use http::StatusCode;
 
 // GET /v0/server/spec - public, no auth required
@@ -22,7 +22,7 @@ async fn test_spec_get() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let body: JsonSpec = resp.json().await.expect("Failed to parse response");
+    let body: JsonOpenApiSpec = resp.json().await.expect("Failed to parse response");
     assert!(body.version().is_some());
 }
 

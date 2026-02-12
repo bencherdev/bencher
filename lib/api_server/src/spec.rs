@@ -1,14 +1,14 @@
 use std::sync::LazyLock;
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
-use bencher_json::JsonSpec;
+use bencher_json::JsonOpenApiSpec;
 use bencher_schema::context::ApiContext;
 use dropshot::{HttpError, RequestContext, endpoint};
 
 pub const SPEC_STR: &str = include_str!("../../../services/api/openapi.json");
 #[expect(clippy::expect_used)]
-pub static SPEC: LazyLock<JsonSpec> =
-    LazyLock::new(|| JsonSpec(SPEC_STR.parse().expect("Failed to parse OpenAPI spec")));
+pub static SPEC: LazyLock<JsonOpenApiSpec> =
+    LazyLock::new(|| JsonOpenApiSpec(SPEC_STR.parse().expect("Failed to parse OpenAPI spec")));
 
 #[endpoint {
     method = OPTIONS,
@@ -33,6 +33,6 @@ pub async fn server_spec_options(
 }]
 pub async fn server_spec_get(
     _rqctx: RequestContext<ApiContext>,
-) -> Result<ResponseOk<JsonSpec>, HttpError> {
+) -> Result<ResponseOk<JsonOpenApiSpec>, HttpError> {
     Ok(Get::pub_response_ok(SPEC.clone()))
 }

@@ -8806,7 +8806,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonSpec2"
+                  "$ref": "#/components/schemas/JsonOpenApiSpec"
                 }
               }
             }
@@ -13307,6 +13307,7 @@
           "uuid"
         ]
       },
+      "JsonOpenApiSpec": {},
       "JsonOrganization": {
         "type": "object",
         "properties": {
@@ -15249,7 +15250,6 @@
           "uuid"
         ]
       },
-      "JsonSpec2": {},
       "JsonSpecs": {
         "description": "List of specs",
         "type": "array",

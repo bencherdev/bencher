@@ -79,7 +79,7 @@ impl Spec {
 
 pub fn test_spec() -> anyhow::Result<()> {
     let spec_str = fs::read_to_string(SPEC_PATH)?;
-    let spec: bencher_json::JsonSpec = serde_json::from_str(&spec_str)?;
+    let spec: bencher_json::JsonOpenApiSpec = serde_json::from_str(&spec_str)?;
     let version = spec
         .version()
         .ok_or_else(|| anyhow::anyhow!("No version found in openapi.json"))?;

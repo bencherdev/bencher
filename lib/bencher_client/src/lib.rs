@@ -149,7 +149,7 @@ try_from_client!(
     JsonConfig,
     JsonConsole,
     JsonApiVersion,
-    JsonSpec
+    JsonOpenApiSpec
 );
 
 #[cfg(feature = "plus")]
