@@ -29,6 +29,9 @@ jobs:
     env:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
+      - uses: jlumbroso/free-disk-space@main
+        with:
+          large-packages: false
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-rust
         with:
@@ -50,6 +53,9 @@ jobs:
     if: ${{ inputs.is-fork }}
     runs-on: ubuntu-22.04
     steps:
+      - uses: jlumbroso/free-disk-space@main
+        with:
+          large-packages: false
       - uses: actions/checkout@v6
       - uses: rui314/setup-mold@v1
         with:

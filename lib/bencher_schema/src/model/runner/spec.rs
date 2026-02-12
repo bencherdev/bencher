@@ -1,4 +1,4 @@
-use bencher_json::{DateTime, JsonNewSpec, JsonUpdateSpec, SpecUuid, runner::JsonSpec};
+use bencher_json::{DateTime, JsonNewSpec, JsonSpec, JsonUpdateSpec, SpecUuid};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 

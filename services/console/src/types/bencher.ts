@@ -874,8 +874,8 @@ export interface JsonUpdateJob {
 
 /** Response to job update */
 export interface JsonUpdateJobResponse {
-	/** If true, job was canceled - runner should stop execution */
-	canceled: boolean;
+	/** The current status of the job after the update */
+	status: JobStatus;
 }
 
 /** Update a runner */

@@ -330,7 +330,9 @@ async fn update_job_inner(
 
     // Early canceled check: if job was already canceled, tell the runner immediately
     if job.status == JobStatus::Canceled {
-        return Ok(JsonUpdateJobResponse { canceled: true });
+        return Ok(JsonUpdateJobResponse {
+            status: JobStatus::Canceled,
+        });
     }
 
     // Verify valid state transition
@@ -374,7 +376,9 @@ async fn update_job_inner(
         // Re-read to check if job was canceled between our read and write
         let current_job = QueryJob::from_uuid(auth_conn!(context), job_uuid)?;
         if current_job.status == JobStatus::Canceled {
-            return Ok(JsonUpdateJobResponse { canceled: true });
+            return Ok(JsonUpdateJobResponse {
+                status: JobStatus::Canceled,
+            });
         }
         return Err(conflict_error(format!(
             "Concurrent status change: job is now {:?}, expected {:?}",
@@ -402,5 +406,7 @@ async fn update_job_inner(
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(status_kind));
     }
 
-    Ok(JsonUpdateJobResponse { canceled: false })
+    Ok(JsonUpdateJobResponse {
+        status: update_request.status,
+    })
 }

@@ -21,9 +21,7 @@ impl HeartbeatTasks {
     /// and insert the new abort handle.
     pub fn insert(&self, job_id: JobId, handle: AbortHandle) {
         // Cancel the previous timeout for this job, if any.
-        if let Some((_, old)) = self.inner.remove(&job_id) {
-            old.abort();
-        }
+        self.cancel(&job_id);
 
         // Opportunistically clean up finished tasks to prevent unbounded growth.
         self.inner.retain(|_, h| !h.is_finished());

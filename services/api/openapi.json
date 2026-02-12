@@ -15721,13 +15721,17 @@
         "description": "Response to job update",
         "type": "object",
         "properties": {
-          "canceled": {
-            "description": "If true, job was canceled - runner should stop execution",
-            "type": "boolean"
+          "status": {
+            "description": "The current status of the job after the update",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JobStatus"
+              }
+            ]
           }
         },
         "required": [
-          "canceled"
+          "status"
         ]
       },
       "JsonUpdateMeasure": {

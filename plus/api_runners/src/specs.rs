@@ -1,10 +1,7 @@
 use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
-use bencher_json::{
-    JsonNewRunnerSpec, RunnerResourceId, SpecUuid,
-    runner::{JsonSpec, JsonSpecs},
-};
+use bencher_json::{JsonNewRunnerSpec, JsonSpec, JsonSpecs, RunnerResourceId, SpecUuid};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,

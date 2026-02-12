@@ -4,10 +4,7 @@
 mod common;
 
 use bencher_api_tests::TestServer;
-use bencher_json::{
-    JsonJob,
-    runner::{JsonSpec, JsonSpecs},
-};
+use bencher_json::{JsonJob, JsonSpec, JsonSpecs};
 use common::{
     associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
     insert_test_job, insert_test_spec, insert_test_spec_full,

@@ -3,8 +3,7 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonNewSpec, JsonPagination, JsonUpdateSpec, SpecUuid,
-    runner::{JsonSpec, JsonSpecs},
+    JsonDirection, JsonNewSpec, JsonPagination, JsonSpec, JsonSpecs, JsonUpdateSpec, SpecUuid,
 };
 use bencher_schema::{
     auth_conn,

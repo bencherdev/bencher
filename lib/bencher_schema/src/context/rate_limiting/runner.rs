@@ -5,9 +5,9 @@ use crate::context::{
     rate_limiting::{RateLimiter, RateLimits, extract_rate_limits},
 };
 
-const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 8;
-const DEFAULT_REQUESTS_PER_HOUR_LIMIT: usize = 1 << 12;
-const DEFAULT_REQUESTS_PER_DAY_LIMIT: usize = 1 << 14;
+const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 4;
+const DEFAULT_REQUESTS_PER_HOUR_LIMIT: usize = 1 << 8;
+const DEFAULT_REQUESTS_PER_DAY_LIMIT: usize = 1 << 12;
 
 pub(super) struct RunnerRateLimiter {
     requests: RateLimiter<RunnerUuid>,

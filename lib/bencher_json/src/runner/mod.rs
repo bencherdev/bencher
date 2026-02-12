@@ -3,14 +3,17 @@ use bencher_valid::{DateTime, ResourceId, ResourceName, Secret, Slug};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::spec::SpecUuid;
+
 pub mod job;
-pub mod spec;
+pub mod job_priority;
+pub mod job_status;
 
 pub use job::{
-    JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonJobConfig, JsonJobs, JsonUpdateJob,
-    JsonUpdateJobResponse,
+    JobUuid, JsonClaimJob, JsonJob, JsonJobConfig, JsonJobs, JsonUpdateJob, JsonUpdateJobResponse,
 };
-pub use spec::{JsonNewRunnerSpec, JsonNewSpec, JsonSpec, JsonSpecs, JsonUpdateSpec, SpecUuid};
+pub use job_priority::JobPriority;
+pub use job_status::JobStatus;
 
 crate::typed_uuid::typed_uuid!(RunnerUuid);
 crate::typed_slug::typed_slug!(RunnerSlug, ResourceName);

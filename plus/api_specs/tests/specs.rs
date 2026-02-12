@@ -2,10 +2,7 @@
 //! Integration tests for spec CRUD endpoints.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{
-    JsonRunnerToken,
-    runner::{JsonSpec, JsonSpecs},
-};
+use bencher_json::{JsonRunnerToken, JsonSpec, JsonSpecs};
 use http::StatusCode;
 
 // POST /v0/specs - admin can create spec

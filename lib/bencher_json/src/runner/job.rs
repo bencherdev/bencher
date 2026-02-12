@@ -7,8 +7,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::RunnerUuid;
-use super::spec::JsonSpec;
+use super::job_status::JobStatus;
 use crate::ProjectUuid;
+use crate::spec::JsonSpec;
 
 crate::typed_uuid::typed_uuid!(JobUuid);
 
@@ -65,8 +66,8 @@ pub struct JsonUpdateJob {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateJobResponse {
-    /// If true, job was canceled - runner should stop execution
-    pub canceled: bool,
+    /// The current status of the job after the update
+    pub status: JobStatus,
 }
 
 /// Request to claim a job (runner agent endpoint)
@@ -109,181 +110,4 @@ pub struct JsonJobConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "schema", schemars(with = "Option<Vec<String>>"))]
     pub file_paths: Option<Vec<Utf8PathBuf>>,
-}
-
-const UNCLAIMED_PRIORITY_INT: i32 = 0;
-const FREE_PRIORITY_INT: i32 = 100;
-const TEAM_PRIORITY_INT: i32 = 200;
-const ENTERPRISE_PRIORITY_INT: i32 = 300;
-
-/// Job priority — determines scheduling order and concurrency limits.
-///
-/// Priority tiers:
-/// - Enterprise (300): Unlimited concurrent jobs
-/// - Team (200): Unlimited concurrent jobs
-/// - Free (100): 1 concurrent job per organization
-/// - Unclaimed (0): 1 concurrent job per source IP
-#[typeshare::typeshare]
-#[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
-#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
-#[serde(rename_all = "snake_case")]
-#[repr(i32)]
-pub enum JobPriority {
-    #[default]
-    Unclaimed = UNCLAIMED_PRIORITY_INT,
-    Free = FREE_PRIORITY_INT,
-    Team = TEAM_PRIORITY_INT,
-    Enterprise = ENTERPRISE_PRIORITY_INT,
-}
-
-impl JobPriority {
-    /// Returns true if this priority tier has unlimited concurrency.
-    pub fn is_unlimited(&self) -> bool {
-        matches!(self, Self::Team | Self::Enterprise)
-    }
-
-    /// Returns true if this priority is in the Free tier.
-    pub fn is_free(&self) -> bool {
-        matches!(self, Self::Free)
-    }
-}
-
-impl From<JobPriority> for i32 {
-    fn from(priority: JobPriority) -> Self {
-        priority as Self
-    }
-}
-
-#[cfg(feature = "db")]
-mod job_priority_db {
-    use super::{
-        ENTERPRISE_PRIORITY_INT, FREE_PRIORITY_INT, JobPriority, TEAM_PRIORITY_INT,
-        UNCLAIMED_PRIORITY_INT,
-    };
-
-    #[derive(Debug, thiserror::Error)]
-    pub enum JobPriorityError {
-        #[error("Invalid job priority value: {0}")]
-        Invalid(i32),
-    }
-
-    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for JobPriority
-    where
-        DB: diesel::backend::Backend,
-        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
-    {
-        fn to_sql<'b>(
-            &'b self,
-            out: &mut diesel::serialize::Output<'b, '_, DB>,
-        ) -> diesel::serialize::Result {
-            match self {
-                Self::Unclaimed => UNCLAIMED_PRIORITY_INT.to_sql(out),
-                Self::Free => FREE_PRIORITY_INT.to_sql(out),
-                Self::Team => TEAM_PRIORITY_INT.to_sql(out),
-                Self::Enterprise => ENTERPRISE_PRIORITY_INT.to_sql(out),
-            }
-        }
-    }
-
-    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for JobPriority
-    where
-        DB: diesel::backend::Backend,
-        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
-    {
-        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-            match i32::from_sql(bytes)? {
-                UNCLAIMED_PRIORITY_INT => Ok(Self::Unclaimed),
-                FREE_PRIORITY_INT => Ok(Self::Free),
-                TEAM_PRIORITY_INT => Ok(Self::Team),
-                ENTERPRISE_PRIORITY_INT => Ok(Self::Enterprise),
-                value => Err(Box::new(JobPriorityError::Invalid(value))),
-            }
-        }
-    }
-}
-
-const PENDING_INT: i32 = 0;
-const CLAIMED_INT: i32 = 1;
-const RUNNING_INT: i32 = 2;
-const COMPLETED_INT: i32 = 3;
-const FAILED_INT: i32 = 4;
-const CANCELED_INT: i32 = 5;
-
-/// Job status
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
-#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
-#[serde(rename_all = "snake_case")]
-#[repr(i32)]
-pub enum JobStatus {
-    #[default]
-    Pending = PENDING_INT,
-    Claimed = CLAIMED_INT,
-    Running = RUNNING_INT,
-    Completed = COMPLETED_INT,
-    Failed = FAILED_INT,
-    Canceled = CANCELED_INT,
-}
-
-impl JobStatus {
-    pub fn is_terminal(&self) -> bool {
-        matches!(self, Self::Completed | Self::Failed | Self::Canceled)
-    }
-}
-
-#[cfg(feature = "db")]
-mod job_status_db {
-    use super::{
-        CANCELED_INT, CLAIMED_INT, COMPLETED_INT, FAILED_INT, JobStatus, PENDING_INT, RUNNING_INT,
-    };
-
-    #[derive(Debug, thiserror::Error)]
-    pub enum JobStatusError {
-        #[error("Invalid job status value: {0}")]
-        Invalid(i32),
-    }
-
-    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for JobStatus
-    where
-        DB: diesel::backend::Backend,
-        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
-    {
-        fn to_sql<'b>(
-            &'b self,
-            out: &mut diesel::serialize::Output<'b, '_, DB>,
-        ) -> diesel::serialize::Result {
-            match self {
-                Self::Pending => PENDING_INT.to_sql(out),
-                Self::Claimed => CLAIMED_INT.to_sql(out),
-                Self::Running => RUNNING_INT.to_sql(out),
-                Self::Completed => COMPLETED_INT.to_sql(out),
-                Self::Failed => FAILED_INT.to_sql(out),
-                Self::Canceled => CANCELED_INT.to_sql(out),
-            }
-        }
-    }
-
-    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for JobStatus
-    where
-        DB: diesel::backend::Backend,
-        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
-    {
-        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-            match i32::from_sql(bytes)? {
-                PENDING_INT => Ok(Self::Pending),
-                CLAIMED_INT => Ok(Self::Claimed),
-                RUNNING_INT => Ok(Self::Running),
-                COMPLETED_INT => Ok(Self::Completed),
-                FAILED_INT => Ok(Self::Failed),
-                CANCELED_INT => Ok(Self::Canceled),
-                value => Err(Box::new(JobStatusError::Invalid(value))),
-            }
-        }
-    }
 }

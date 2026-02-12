@@ -27,6 +27,8 @@ pub mod project;
 pub mod run;
 #[cfg(feature = "plus")]
 pub mod runner;
+#[cfg(feature = "plus")]
+pub mod spec;
 pub mod system;
 pub(crate) mod typed_db;
 pub(crate) mod typed_slug;
@@ -82,10 +84,11 @@ pub use run::JsonNewRun;
 #[cfg(feature = "plus")]
 pub use runner::{
     JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonJobConfig, JsonNewRunner,
-    JsonNewRunnerSpec, JsonNewSpec, JsonRunner, JsonRunnerToken, JsonRunners, JsonSpec, JsonSpecs,
-    JsonUpdateJob, JsonUpdateJobResponse, JsonUpdateRunner, JsonUpdateSpec, RunnerResourceId,
-    RunnerSlug, RunnerUuid, SpecUuid,
+    JsonRunner, JsonRunnerToken, JsonRunners, JsonUpdateJob, JsonUpdateJobResponse,
+    JsonUpdateRunner, RunnerResourceId, RunnerSlug, RunnerUuid,
 };
+#[cfg(feature = "plus")]
+pub use spec::{JsonNewRunnerSpec, JsonNewSpec, JsonSpec, JsonSpecs, JsonUpdateSpec, SpecUuid};
 pub use system::{
     auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonSignup},
     backup::{JsonBackup, JsonBackupCreated},
