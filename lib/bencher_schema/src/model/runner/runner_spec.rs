@@ -1,7 +1,8 @@
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
-use super::{RunnerId, spec::SpecId};
+use super::RunnerId;
+use crate::model::spec::SpecId;
 use crate::{
     context::DbConnection,
     resource_not_found_err,

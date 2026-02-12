@@ -1,13 +1,14 @@
 use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
-use bencher_json::{JsonNewRunnerSpec, JsonSpec, JsonSpecs, RunnerResourceId, SpecUuid};
+use bencher_json::{JsonNewRunnerSpec, JsonSpec, JsonSpecs, RunnerResourceId, SpecResourceId};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
-        runner::{InsertRunnerSpec, QueryRunner, QueryRunnerSpec, QuerySpec},
+        runner::{InsertRunnerSpec, QueryRunner, QueryRunnerSpec},
+        spec::QuerySpec,
         user::{admin::AdminUser, auth::BearerToken},
     },
     schema, write_conn,
@@ -95,7 +96,7 @@ async fn post_inner(
     json_runner_spec: JsonNewRunnerSpec,
 ) -> Result<JsonSpec, HttpError> {
     let query_runner = QueryRunner::from_resource_id(auth_conn!(context), &path_params.runner)?;
-    let query_spec = QuerySpec::from_uuid(auth_conn!(context), json_runner_spec.spec)?;
+    let query_spec = QuerySpec::from_resource_id(auth_conn!(context), &json_runner_spec.spec)?;
 
     let insert = InsertRunnerSpec {
         runner_id: query_runner.id,
@@ -114,8 +115,8 @@ async fn post_inner(
 pub struct RunnerSpecParams {
     /// The slug or UUID for a runner.
     pub runner: RunnerResourceId,
-    /// The UUID for a spec.
-    pub spec: SpecUuid,
+    /// The UUID or slug for a spec.
+    pub spec: SpecResourceId,
 }
 
 #[endpoint {
@@ -154,7 +155,7 @@ async fn delete_inner(
     path_params: RunnerSpecParams,
 ) -> Result<(), HttpError> {
     let query_runner = QueryRunner::from_resource_id(auth_conn!(context), &path_params.runner)?;
-    let query_spec = QuerySpec::from_uuid(auth_conn!(context), path_params.spec)?;
+    let query_spec = QuerySpec::from_resource_id(auth_conn!(context), &path_params.spec)?;
 
     let deleted = diesel::delete(
         schema::runner_spec::table

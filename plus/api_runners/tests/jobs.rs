@@ -3381,9 +3381,7 @@ async fn test_claim_upgrades_pending_job_priority() {
     // --- Claim the unclaimed organization ---
     let resp = server
         .client
-        .post(server.api_url(&format!(
-            "/v0/organizations/{unclaimed_org_slug}/claim"
-        )))
+        .post(server.api_url(&format!("/v0/organizations/{unclaimed_org_slug}/claim")))
         .header("Authorization", format!("Bearer {}", admin.token))
         .json(&serde_json::json!({}))
         .send()
@@ -3456,9 +3454,7 @@ async fn test_claim_no_pending_jobs_succeeds() {
     // Claim should succeed even with no pending jobs
     let resp = server
         .client
-        .post(server.api_url(&format!(
-            "/v0/organizations/{unclaimed_org_slug}/claim"
-        )))
+        .post(server.api_url(&format!("/v0/organizations/{unclaimed_org_slug}/claim")))
         .header("Authorization", format!("Bearer {}", admin.token))
         .json(&serde_json::json!({}))
         .send()

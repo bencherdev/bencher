@@ -3,7 +3,7 @@ use bencher_endpoint::{
 };
 use bencher_json::{
     JsonDirection, JsonNewRunner, JsonPagination, JsonRunner, JsonRunnerToken, JsonUpdateRunner,
-    ResourceName, RunnerResourceId, Search, Slug, runner::JsonRunners,
+    ResourceName, RunnerResourceId, RunnerSlug, Search, Slug, runner::JsonRunners,
 };
 use bencher_schema::{
     auth_conn,
@@ -176,7 +176,9 @@ async fn post_inner(
 ) -> Result<JsonRunnerToken, HttpError> {
     // Generate slug from name if not provided
     let slug = json_runner.slug.unwrap_or_else(|| {
-        Slug::new(&json_runner.name).unwrap_or_else(|| Slug::from(uuid::Uuid::new_v4()))
+        RunnerSlug::from(
+            Slug::new(&json_runner.name).unwrap_or_else(|| Slug::from(uuid::Uuid::new_v4())),
+        )
     });
 
     // Generate random token

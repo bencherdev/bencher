@@ -416,9 +416,13 @@ fn insert_test_job(
 
     // Create a spec row for hardware requirements
     let spec_uuid = SpecUuid::new();
+    let spec_name = format!("test-spec-{spec_uuid}");
+    let spec_slug = format!("test-spec-{spec_uuid}");
     diesel::insert_into(schema::spec::table)
         .values((
             schema::spec::uuid.eq(&spec_uuid),
+            schema::spec::name.eq(&spec_name),
+            schema::spec::slug.eq(&spec_slug),
             schema::spec::cpu.eq(2),
             schema::spec::memory.eq(4_294_967_296_i64),
             schema::spec::disk.eq(10_737_418_240_i64),

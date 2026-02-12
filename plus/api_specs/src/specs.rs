@@ -3,19 +3,23 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonNewSpec, JsonPagination, JsonSpec, JsonSpecs, JsonUpdateSpec, SpecUuid,
+    JsonDirection, JsonNewSpec, JsonPagination, JsonSpec, JsonSpecs, JsonUpdateSpec, ResourceName,
+    Search, SpecResourceId,
 };
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
-        runner::{InsertSpec, QuerySpec, UpdateSpec},
+        spec::{InsertSpec, QuerySpec, UpdateSpec},
         user::{admin::AdminUser, auth::BearerToken},
     },
     schema, write_conn,
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    TextExpressionMethods as _,
+};
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -25,13 +29,19 @@ pub type SpecsPagination = JsonPagination<SpecsSort>;
 #[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SpecsSort {
-    /// Sort by creation date.
+    /// Sort by spec name.
     #[default]
+    Name,
+    /// Sort by creation date.
     Created,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct SpecsQuery {
+    /// Filter by spec name, exact match.
+    pub name: Option<ResourceName>,
+    /// Search by spec name, slug, or UUID.
+    pub search: Option<Search>,
     /// Include archived specs.
     #[serde(default)]
     pub archived: bool,
@@ -103,11 +113,30 @@ fn get_ls_query<'q>(
 ) -> schema::spec::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = schema::spec::table.into_boxed();
 
+    if let Some(name) = query_params.name.as_ref() {
+        query = query.filter(schema::spec::name.eq(name));
+    }
+    if let Some(search) = query_params.search.as_ref() {
+        query = query.filter(
+            schema::spec::name
+                .like(search)
+                .or(schema::spec::slug.like(search))
+                .or(schema::spec::uuid.like(search)),
+        );
+    }
     if !query_params.archived {
         query = query.filter(schema::spec::archived.is_null());
     }
 
     match pagination_params.order() {
+        SpecsSort::Name => match pagination_params.direction {
+            Some(JsonDirection::Asc) | None => {
+                query.order((schema::spec::name.asc(), schema::spec::slug.asc()))
+            },
+            Some(JsonDirection::Desc) => {
+                query.order((schema::spec::name.desc(), schema::spec::slug.desc()))
+            },
+        },
         SpecsSort::Created => match pagination_params.direction {
             Some(JsonDirection::Asc) => query.order(schema::spec::created.asc()),
             Some(JsonDirection::Desc) | None => query.order(schema::spec::created.desc()),
@@ -135,7 +164,7 @@ pub async fn specs_post(
 }
 
 async fn post_inner(context: &ApiContext, json_spec: JsonNewSpec) -> Result<JsonSpec, HttpError> {
-    let insert_spec = InsertSpec::new(&json_spec);
+    let insert_spec = InsertSpec::new(write_conn!(context), &json_spec);
     let uuid = insert_spec.uuid;
 
     diesel::insert_into(schema::spec::table)
@@ -149,8 +178,8 @@ async fn post_inner(context: &ApiContext, json_spec: JsonNewSpec) -> Result<Json
 
 #[derive(Deserialize, JsonSchema)]
 pub struct SpecParams {
-    /// The UUID for a spec.
-    pub spec: SpecUuid,
+    /// The UUID or slug for a spec.
+    pub spec: SpecResourceId,
 }
 
 #[endpoint {
@@ -188,7 +217,7 @@ async fn get_one_inner(
     context: &ApiContext,
     path_params: SpecParams,
 ) -> Result<JsonSpec, HttpError> {
-    let query_spec = QuerySpec::from_uuid(auth_conn!(context), path_params.spec)?;
+    let query_spec = QuerySpec::from_resource_id(auth_conn!(context), &path_params.spec)?;
     Ok(query_spec.into_json())
 }
 
@@ -196,7 +225,6 @@ async fn get_one_inner(
 ///
 /// Update a hardware spec on the server.
 /// The user must be an admin to use this endpoint.
-/// Can only be used to archive or unarchive a spec.
 #[endpoint {
     method = PATCH,
     path = "/v0/specs/{spec}",
@@ -218,7 +246,7 @@ async fn patch_inner(
     path_params: SpecParams,
     json_spec: JsonUpdateSpec,
 ) -> Result<JsonSpec, HttpError> {
-    let query_spec = QuerySpec::from_uuid(auth_conn!(context), path_params.spec)?;
+    let query_spec = QuerySpec::from_resource_id(auth_conn!(context), &path_params.spec)?;
     let update_spec = UpdateSpec::from(json_spec.clone());
 
     diesel::update(schema::spec::table.filter(schema::spec::id.eq(query_spec.id)))
@@ -251,7 +279,7 @@ pub async fn spec_delete(
 }
 
 async fn delete_inner(context: &ApiContext, path_params: SpecParams) -> Result<(), HttpError> {
-    let query_spec = QuerySpec::from_uuid(auth_conn!(context), path_params.spec)?;
+    let query_spec = QuerySpec::from_resource_id(auth_conn!(context), &path_params.spec)?;
 
     diesel::delete(schema::spec::table.filter(schema::spec::id.eq(query_spec.id)))
         .execute(write_conn!(context))

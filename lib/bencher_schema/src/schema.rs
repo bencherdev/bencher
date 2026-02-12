@@ -306,6 +306,8 @@ diesel::table! {
     spec (id) {
         id -> Integer,
         uuid -> Text,
+        name -> Text,
+        slug -> Text,
         architecture -> Text,
         cpu -> Integer,
         memory -> BigInt,

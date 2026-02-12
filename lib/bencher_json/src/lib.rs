@@ -91,7 +91,10 @@ pub use runner::{
     JsonUpdateRunner, RunnerResourceId, RunnerSlug, RunnerUuid,
 };
 #[cfg(feature = "plus")]
-pub use spec::{JsonNewRunnerSpec, JsonNewSpec, JsonSpec, JsonSpecs, JsonUpdateSpec, SpecUuid};
+pub use spec::{
+    JsonNewRunnerSpec, JsonNewSpec, JsonSpec, JsonSpecs, JsonUpdateSpec, SpecResourceId, SpecSlug,
+    SpecUuid,
+};
 pub use system::{
     auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonSignup},
     backup::{JsonBackup, JsonBackupCreated},

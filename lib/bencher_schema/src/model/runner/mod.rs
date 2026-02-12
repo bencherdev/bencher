@@ -1,5 +1,7 @@
+use std::string::ToString as _;
+
 use bencher_json::{
-    DateTime, JsonRunner, JsonUpdateRunner, ResourceName, RunnerResourceId, Slug, SpecUuid,
+    DateTime, JsonRunner, JsonUpdateRunner, ResourceName, RunnerSlug, SpecUuid,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -8,6 +10,11 @@ pub use bencher_json::{JobStatus, JobUuid, RunnerUuid};
 
 use crate::{
     context::DbConnection,
+    macros::{
+        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        resource_id::{fn_eq_resource_id, fn_from_resource_id},
+    },
+    model::spec::QuerySpec,
     resource_not_found_err,
     schema::{self, runner as runner_table},
 };
@@ -15,7 +22,6 @@ use crate::{
 pub mod job;
 pub mod runner_spec;
 mod source_ip;
-pub mod spec;
 mod token_hash;
 
 pub use job::{
@@ -23,7 +29,6 @@ pub use job::{
 };
 pub use runner_spec::{InsertRunnerSpec, QueryRunnerSpec, RunnerSpecId};
 pub use source_ip::SourceIp;
-pub use spec::{InsertSpec, QuerySpec, SpecId, UpdateSpec};
 pub use token_hash::TokenHash;
 
 crate::macros::typed_id::typed_id!(RunnerId);
@@ -34,7 +39,7 @@ pub struct QueryRunner {
     pub id: RunnerId,
     pub uuid: RunnerUuid,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: RunnerSlug,
     pub token_hash: TokenHash,
     pub archived: Option<DateTime>,
     pub last_heartbeat: Option<DateTime>,
@@ -43,35 +48,17 @@ pub struct QueryRunner {
 }
 
 impl QueryRunner {
-    pub fn get(conn: &mut DbConnection, id: RunnerId) -> Result<Self, HttpError> {
-        schema::runner::table
-            .filter(schema::runner::id.eq(id))
-            .first(conn)
-            .map_err(resource_not_found_err!(Runner, id))
-    }
+    fn_get!(runner, RunnerId);
+    fn_get_id!(runner, RunnerId, RunnerUuid);
+    fn_get_uuid!(runner, RunnerId, RunnerUuid);
+    fn_eq_resource_id!(runner, RunnerResourceId);
+    fn_from_resource_id!(runner, Runner, RunnerResourceId);
 
     pub fn from_uuid(conn: &mut DbConnection, uuid: RunnerUuid) -> Result<Self, HttpError> {
         schema::runner::table
             .filter(schema::runner::uuid.eq(uuid))
             .first(conn)
             .map_err(resource_not_found_err!(Runner, uuid))
-    }
-
-    pub fn from_slug(conn: &mut DbConnection, slug: &Slug) -> Result<Self, HttpError> {
-        schema::runner::table
-            .filter(schema::runner::slug.eq(slug))
-            .first(conn)
-            .map_err(resource_not_found_err!(Runner, slug))
-    }
-
-    pub fn from_resource_id(
-        conn: &mut DbConnection,
-        resource_id: &RunnerResourceId,
-    ) -> Result<Self, HttpError> {
-        match resource_id {
-            RunnerResourceId::Uuid(uuid) => Self::from_uuid(conn, *uuid),
-            RunnerResourceId::Slug(slug) => Self::from_slug(conn, slug.as_ref()),
-        }
     }
 
     pub fn is_archived(&self) -> bool {
@@ -102,14 +89,14 @@ impl QueryRunner {
 pub struct InsertRunner {
     pub uuid: RunnerUuid,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: RunnerSlug,
     pub token_hash: TokenHash,
     pub created: DateTime,
     pub modified: DateTime,
 }
 
 impl InsertRunner {
-    pub fn new(name: ResourceName, slug: Slug, token_hash: TokenHash) -> Self {
+    pub fn new(name: ResourceName, slug: RunnerSlug, token_hash: TokenHash) -> Self {
         let now = DateTime::now();
         Self {
             uuid: RunnerUuid::new(),
@@ -126,7 +113,7 @@ impl InsertRunner {
 #[diesel(table_name = runner_table)]
 pub struct UpdateRunner {
     pub name: Option<ResourceName>,
-    pub slug: Option<Slug>,
+    pub slug: Option<RunnerSlug>,
     pub token_hash: Option<TokenHash>,
     pub archived: Option<Option<DateTime>>,
     pub last_heartbeat: Option<Option<DateTime>>,

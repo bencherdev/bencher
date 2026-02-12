@@ -57,10 +57,14 @@ pub fn insert_test_spec_full(
     let mut conn = server.db_conn();
     let now = DateTime::now();
     let spec_uuid = SpecUuid::new();
+    let name = format!("test-spec-{spec_uuid}");
+    let slug = format!("test-spec-{spec_uuid}");
 
     diesel::insert_into(schema::spec::table)
         .values((
             schema::spec::uuid.eq(&spec_uuid),
+            schema::spec::name.eq(&name),
+            schema::spec::slug.eq(&slug),
             schema::spec::architecture.eq(architecture),
             schema::spec::cpu.eq(cpu),
             schema::spec::memory.eq(memory),

@@ -8,10 +8,12 @@ use tokio::sync::Mutex;
 use crate::{
     context::DbConnection,
     error::issue_error,
+    macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     model::{
         organization::OrganizationId,
         project::report::ReportId,
-        runner::{QueryRunner, QuerySpec, RunnerId, SourceIp, spec::SpecId},
+        runner::{QueryRunner, RunnerId, SourceIp},
+        spec::{QuerySpec, SpecId},
     },
     resource_not_found_err,
     schema::{self, job as job_table},
@@ -47,12 +49,9 @@ pub struct QueryJob {
 }
 
 impl QueryJob {
-    pub fn get(conn: &mut DbConnection, id: JobId) -> Result<Self, HttpError> {
-        schema::job::table
-            .filter(schema::job::id.eq(id))
-            .first(conn)
-            .map_err(resource_not_found_err!(Job, id))
-    }
+    fn_get!(job, JobId);
+    fn_get_id!(job, JobId, JobUuid);
+    fn_get_uuid!(job, JobId, JobUuid);
 
     pub fn from_uuid(conn: &mut DbConnection, uuid: JobUuid) -> Result<Self, HttpError> {
         schema::job::table

@@ -3,6 +3,8 @@ pub mod project;
 #[cfg(feature = "plus")]
 pub mod runner;
 pub mod server;
+#[cfg(feature = "plus")]
+pub mod spec;
 pub mod user;
 
 // https://docs.rs/chrono/latest/chrono/naive/struct.NaiveDateTime.html#impl-Display-for-NaiveDateTime

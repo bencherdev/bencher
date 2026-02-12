@@ -1,4 +1,4 @@
-use bencher_valid::{DateTime, ResourceId, ResourceName, Secret, Slug};
+use bencher_valid::{DateTime, ResourceId, ResourceName, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -29,7 +29,7 @@ pub type RunnerResourceId = ResourceId<RunnerUuid, RunnerSlug>;
 pub struct JsonRunner {
     pub uuid: RunnerUuid,
     pub name: ResourceName,
-    pub slug: Slug,
+    pub slug: RunnerSlug,
     pub specs: Vec<SpecUuid>,
     pub archived: Option<DateTime>,
     pub last_heartbeat: Option<DateTime>,
@@ -54,7 +54,7 @@ pub struct JsonNewRunner {
     pub name: ResourceName,
     /// The preferred slug for the runner.
     /// If not provided, the slug will be generated from the name.
-    pub slug: Option<Slug>,
+    pub slug: Option<RunnerSlug>,
 }
 
 /// Runner token response (returned on create or rotate)
@@ -75,7 +75,7 @@ pub struct JsonUpdateRunner {
     /// The new name for the runner.
     pub name: Option<ResourceName>,
     /// The new slug for the runner.
-    pub slug: Option<Slug>,
+    pub slug: Option<RunnerSlug>,
     /// Set whether the runner is archived.
     pub archived: Option<bool>,
 }

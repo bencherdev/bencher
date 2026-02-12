@@ -9,7 +9,10 @@ use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{conflict_error, forbidden_error, resource_conflict_err, resource_not_found_err},
-    model::runner::{QueryJob, QuerySpec, UpdateJob},
+    model::{
+        runner::{QueryJob, UpdateJob},
+        spec::QuerySpec,
+    },
     schema, write_conn,
 };
 use diesel::{

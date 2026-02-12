@@ -12,6 +12,7 @@ async fn test_specs_create() {
     let admin = server.signup("Admin", "specadmin@example.com").await;
 
     let body = serde_json::json!({
+        "name": "Small x86",
         "cpu": 2,
         "memory": 4_294_967_296_i64,
         "disk": 10_737_418_240_i64,
@@ -31,11 +32,42 @@ async fn test_specs_create() {
     let spec: JsonSpec = resp.json().await.expect("Failed to parse response");
     // Verify fields round-trip correctly
     let value = serde_json::to_value(&spec).expect("Failed to serialize");
+    assert_eq!(value["name"], "Small x86");
+    assert_eq!(value["slug"], "small-x86");
     assert_eq!(value["cpu"], 2);
     assert_eq!(value["memory"], 4_294_967_296_i64);
     assert_eq!(value["disk"], 10_737_418_240_i64);
     assert_eq!(value["network"], false);
     assert!(value["archived"].is_null());
+}
+
+// POST /v0/specs - custom slug on create
+#[tokio::test]
+async fn test_specs_create_custom_slug() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specslug@example.com").await;
+
+    let body = serde_json::json!({
+        "name": "My Custom Spec",
+        "slug": "my-custom-slug",
+        "cpu": 2,
+        "memory": 4_294_967_296_i64,
+        "disk": 10_737_418_240_i64,
+        "network": false
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let spec: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert_eq!(spec.slug.as_ref(), "my-custom-slug");
 }
 
 // POST /v0/specs - non-admin cannot create spec
@@ -46,6 +78,7 @@ async fn test_specs_create_forbidden_for_non_admin() {
     let user = server.signup("User", "specuser2@example.com").await;
 
     let body = serde_json::json!({
+        "name": "Forbidden Spec",
         "cpu": 2,
         "memory": 4_294_967_296_i64,
         "disk": 10_737_418_240_i64,
@@ -72,6 +105,7 @@ async fn test_specs_list() {
 
     // Create a spec first
     let body = serde_json::json!({
+        "name": "List Spec",
         "cpu": 4,
         "memory": 8_589_934_592_i64,
         "disk": 21_474_836_480_i64,
@@ -109,6 +143,7 @@ async fn test_specs_get_by_uuid() {
 
     // Create a spec
     let body = serde_json::json!({
+        "name": "Get By UUID Spec",
         "cpu": 2,
         "memory": 4_294_967_296_i64,
         "disk": 10_737_418_240_i64,
@@ -138,6 +173,45 @@ async fn test_specs_get_by_uuid() {
     assert_eq!(spec.uuid, created.uuid);
 }
 
+// GET /v0/specs/{slug} - get by slug
+#[tokio::test]
+async fn test_specs_get_by_slug() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specslugget@example.com").await;
+
+    // Create a spec
+    let body = serde_json::json!({
+        "name": "Slug Lookup Spec",
+        "cpu": 2,
+        "memory": 4_294_967_296_i64,
+        "disk": 10_737_418_240_i64,
+        "network": false
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let created: JsonSpec = resp.json().await.expect("Failed to parse response");
+
+    // Get by slug
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/specs/{}", created.slug)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let spec: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert_eq!(spec.uuid, created.uuid);
+    assert_eq!(spec.slug, created.slug);
+}
+
 // PATCH /v0/specs/{uuid} - archive spec
 #[tokio::test]
 async fn test_specs_archive() {
@@ -146,6 +220,7 @@ async fn test_specs_archive() {
 
     // Create a spec
     let body = serde_json::json!({
+        "name": "Archive Spec",
         "cpu": 2,
         "memory": 4_294_967_296_i64,
         "disk": 10_737_418_240_i64,
@@ -198,6 +273,7 @@ async fn test_specs_list_with_archived() {
 
     // Create and archive a spec
     let body = serde_json::json!({
+        "name": "Archived List Spec",
         "cpu": 2,
         "memory": 4_294_967_296_i64,
         "disk": 10_737_418_240_i64,
@@ -245,6 +321,7 @@ async fn test_specs_unarchive() {
 
     // Create and archive a spec
     let body = serde_json::json!({
+        "name": "Unarchive Spec",
         "cpu": 2,
         "memory": 4_294_967_296_i64,
         "disk": 10_737_418_240_i64,
@@ -294,6 +371,7 @@ async fn test_specs_delete() {
 
     // Create a spec
     let body = serde_json::json!({
+        "name": "Delete Spec",
         "cpu": 2,
         "memory": 4_294_967_296_i64,
         "disk": 10_737_418_240_i64,
@@ -340,6 +418,7 @@ async fn test_specs_delete_fails_when_in_use() {
 
     // Create a spec
     let body = serde_json::json!({
+        "name": "FK Test Spec",
         "cpu": 2,
         "memory": 4_294_967_296_i64,
         "disk": 10_737_418_240_i64,
