@@ -19,7 +19,7 @@ use http::StatusCode;
 
 // POST /v0/runners/{runner}/jobs - claim job with valid token (no jobs available)
 #[tokio::test]
-async fn test_claim_job_no_jobs() {
+async fn claim_job_no_jobs() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "jobsadmin@example.com").await;
 
@@ -50,7 +50,7 @@ async fn test_claim_job_no_jobs() {
 
 // POST /v0/runners/{runner}/jobs - invalid token rejected
 #[tokio::test]
-async fn test_claim_job_invalid_token() {
+async fn claim_job_invalid_token() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "jobsadmin2@example.com").await;
 
@@ -74,7 +74,7 @@ async fn test_claim_job_invalid_token() {
 
 // POST /v0/runners/{runner}/jobs - token for wrong runner rejected
 #[tokio::test]
-async fn test_claim_job_wrong_runner_token() {
+async fn claim_job_wrong_runner_token() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "jobsadmin3@example.com").await;
 
@@ -101,7 +101,7 @@ async fn test_claim_job_wrong_runner_token() {
 
 // POST /v0/runners/{runner}/jobs - missing Authorization header
 #[tokio::test]
-async fn test_claim_job_missing_auth() {
+async fn claim_job_missing_auth() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "jobsadmin5@example.com").await;
 
@@ -124,7 +124,7 @@ async fn test_claim_job_missing_auth() {
 
 // PATCH /v0/runners/{runner}/jobs/{job} - invalid token rejected
 #[tokio::test]
-async fn test_update_job_invalid_token() {
+async fn update_job_invalid_token() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "jobsadmin6@example.com").await;
 
@@ -151,7 +151,7 @@ async fn test_update_job_invalid_token() {
 
 // PATCH /v0/runners/{runner}/jobs/{job} - job not found
 #[tokio::test]
-async fn test_update_job_not_found() {
+async fn update_job_not_found() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "jobsadmin7@example.com").await;
 
@@ -179,7 +179,7 @@ async fn test_update_job_not_found() {
 
 // POST /v0/runners/{runner}/jobs - token without prefix rejected
 #[tokio::test]
-async fn test_claim_job_no_prefix_token() {
+async fn claim_job_no_prefix_token() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "jobsadmin8@example.com").await;
 
@@ -204,7 +204,7 @@ async fn test_claim_job_no_prefix_token() {
 
 // POST /v0/runners/{runner}/jobs - correct prefix but wrong length rejected
 #[tokio::test]
-async fn test_claim_job_wrong_length_token() {
+async fn claim_job_wrong_length_token() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "jobsadmin-wl@example.com").await;
 
@@ -247,7 +247,7 @@ async fn test_claim_job_wrong_length_token() {
 
 // POST /v0/runners/{runner}/jobs - archived runner rejected
 #[tokio::test]
-async fn test_claim_job_archived_runner() {
+async fn claim_job_archived_runner() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "jobsadmin9@example.com").await;
 
@@ -298,7 +298,7 @@ mod job_lifecycle {
 
     // Test the full job lifecycle: claim → running → completed
     #[tokio::test]
-    async fn test_job_lifecycle_completed() {
+    async fn job_lifecycle_completed() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "lifecycle1@example.com").await;
         let org = server.create_org(&admin, "Lifecycle Org").await;
@@ -397,7 +397,7 @@ mod job_lifecycle {
 
     // Test the job lifecycle with failure: claim → running → failed
     #[tokio::test]
-    async fn test_job_lifecycle_failed() {
+    async fn job_lifecycle_failed() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "lifecycle2@example.com").await;
         let org = server.create_org(&admin, "Lifecycle Fail Org").await;
@@ -487,7 +487,7 @@ mod job_lifecycle {
 
     // Test invalid state transition: claimed → completed (skipping running)
     #[tokio::test]
-    async fn test_job_invalid_transition_claimed_to_completed() {
+    async fn job_invalid_transition_claimed_to_completed() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "lifecycle3@example.com").await;
         let org = server.create_org(&admin, "Invalid Trans Org").await;
@@ -541,7 +541,7 @@ mod job_lifecycle {
 
     // Test concurrent job claiming: two runners race for the same job, exactly one wins
     #[tokio::test]
-    async fn test_concurrent_job_claim() {
+    async fn concurrent_job_claim() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "concurrent1@example.com").await;
         let org = server.create_org(&admin, "Concurrent Org").await;
@@ -618,7 +618,7 @@ mod job_lifecycle {
 
     // Test that a different runner cannot update another runner's job
     #[tokio::test]
-    async fn test_job_wrong_runner_update() {
+    async fn job_wrong_runner_update() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "lifecycle4@example.com").await;
         let org = server.create_org(&admin, "Wrong Runner Org").await;
@@ -690,7 +690,7 @@ mod job_spec {
 
     // Test that the spec is included when claiming a job
     #[tokio::test]
-    async fn test_claim_job_includes_spec() {
+    async fn claim_job_includes_spec() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "spec1@example.com").await;
         let org = server.create_org(&admin, "Spec Org").await;
@@ -723,8 +723,8 @@ mod job_spec {
 
         // Verify spec is present and has correct values
         assert_eq!(u32::from(claimed_job.spec.cpu), 2);
-        assert_eq!(u64::from(claimed_job.spec.memory), 4294967296); // 4 GB
-        assert_eq!(u64::from(claimed_job.spec.disk), 10737418240); // 10 GB
+        assert_eq!(u64::from(claimed_job.spec.memory), 0x0001_0000_0000); // 4 GB
+        assert_eq!(u64::from(claimed_job.spec.disk), 10_737_418_240); // 10 GB
         assert!(!claimed_job.spec.network);
 
         // Verify config is present and has correct values
@@ -743,7 +743,7 @@ mod job_spec {
 
     // Test that optional spec fields (entrypoint, cmd, env) are correctly returned
     #[tokio::test]
-    async fn test_claim_job_includes_optional_spec_fields() {
+    async fn claim_job_includes_optional_spec_fields() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "spec3@example.com").await;
         let org = server.create_org(&admin, "Spec Optional Org").await;
@@ -787,14 +787,14 @@ mod job_spec {
 
         // Verify optional fields
         let entrypoint = config.entrypoint.as_ref().expect("Expected entrypoint");
-        assert_eq!(entrypoint, &vec!["/bin/sh".to_string(), "-c".to_string()]);
+        assert_eq!(entrypoint, &vec!["/bin/sh".to_owned(), "-c".to_owned()]);
 
         let cmd = config.cmd.as_ref().expect("Expected cmd");
-        assert_eq!(cmd, &vec!["cargo".to_string(), "bench".to_string()]);
+        assert_eq!(cmd, &vec!["cargo".to_owned(), "bench".to_owned()]);
 
         let env = config.env.as_ref().expect("Expected env");
-        assert_eq!(env.get("RUST_LOG"), Some(&"info".to_string()));
-        assert_eq!(env.get("CI"), Some(&"true".to_string()));
+        assert_eq!(env.get("RUST_LOG"), Some(&"info".to_owned()));
+        assert_eq!(env.get("CI"), Some(&"true".to_owned()));
 
         let file_paths: Vec<&str> = config
             .file_paths
@@ -808,7 +808,7 @@ mod job_spec {
 
     // Test that invalid spec JSON returns a 400 error
     #[tokio::test]
-    async fn test_claim_job_invalid_spec_returns_error() {
+    async fn claim_job_invalid_spec_returns_error() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "spec4@example.com").await;
         let org = server.create_org(&admin, "Spec Invalid Org").await;
@@ -844,7 +844,7 @@ mod job_spec {
 
     // Test that the config is NOT included in public job listing
     #[tokio::test]
-    async fn test_public_job_list_excludes_spec() {
+    async fn public_job_list_excludes_spec() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "spec2@example.com").await;
         let org = server.create_org(&admin, "Spec Public Org").await;
@@ -901,7 +901,7 @@ mod job_spec {
 
 // POST /v0/runners/{runner}/jobs - poll timeout respects the requested duration
 #[tokio::test]
-async fn test_claim_job_poll_timeout_timing() {
+async fn claim_job_poll_timeout_timing() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "polltiming@example.com").await;
 
@@ -952,7 +952,8 @@ mod priority_scheduling {
 
     // Test that higher priority jobs are claimed before lower priority ones
     #[tokio::test]
-    async fn test_priority_ordering() {
+    #[expect(clippy::too_many_lines)]
+    async fn priority_ordering() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "priority1@example.com").await;
         let org = server.create_org(&admin, "Priority Org").await;
@@ -1097,7 +1098,7 @@ mod priority_scheduling {
 
     // Test Free tier concurrency limit (1 per organization)
     #[tokio::test]
-    async fn test_free_tier_org_limit() {
+    async fn free_tier_org_limit() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "freetier1@example.com").await;
         let org = server.create_org(&admin, "Free Tier Org").await;
@@ -1180,7 +1181,7 @@ mod priority_scheduling {
 
     // Test Unclaimed tier concurrency limit (1 per source IP)
     #[tokio::test]
-    async fn test_unclaimed_tier_ip_limit() {
+    async fn unclaimed_tier_ip_limit() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "unclaimed1@example.com").await;
         let org = server.create_org(&admin, "Unclaimed Tier Org").await;
@@ -1264,7 +1265,7 @@ mod priority_scheduling {
 
     // Test that different source IPs can run Unclaimed jobs concurrently
     #[tokio::test]
-    async fn test_unclaimed_tier_different_ips() {
+    async fn unclaimed_tier_different_ips() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "unclaimed2@example.com").await;
         let org = server.create_org(&admin, "Unclaimed IPs Org").await;
@@ -1354,7 +1355,7 @@ mod priority_scheduling {
 
     // Test Enterprise/Team tier unlimited concurrency
     #[tokio::test]
-    async fn test_enterprise_tier_unlimited() {
+    async fn enterprise_tier_unlimited() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "enterprise1@example.com").await;
         let org = server.create_org(&admin, "Enterprise Tier Org").await;
@@ -1444,7 +1445,7 @@ mod priority_scheduling {
 
     // Test that high priority job skips blocked lower priority jobs
     #[tokio::test]
-    async fn test_high_priority_skips_blocked() {
+    async fn high_priority_skips_blocked() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "skipblocked@example.com").await;
         let org = server.create_org(&admin, "Skip Blocked Org").await;
@@ -1539,7 +1540,7 @@ mod priority_scheduling {
 
     // Test Team tier (200-299) unlimited concurrency
     #[tokio::test]
-    async fn test_team_tier_unlimited() {
+    async fn team_tier_unlimited() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "teamtier1@example.com").await;
         let org = server.create_org(&admin, "Team Tier Org").await;
@@ -1628,7 +1629,8 @@ mod priority_scheduling {
 
     // Test FIFO ordering within same priority level
     #[tokio::test]
-    async fn test_fifo_within_same_priority() {
+    #[expect(clippy::too_many_lines)]
+    async fn fifo_within_same_priority() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "fifo1@example.com").await;
         let org = server.create_org(&admin, "FIFO Org").await;
@@ -1779,7 +1781,7 @@ mod priority_scheduling {
 
     // Test Free tier with different organizations can run concurrently
     #[tokio::test]
-    async fn test_free_tier_different_orgs() {
+    async fn free_tier_different_orgs() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "freedifforg@example.com").await;
 
@@ -1879,7 +1881,7 @@ mod priority_scheduling {
 
     // Test that completing a job unblocks the next job
     #[tokio::test]
-    async fn test_job_completion_unblocks() {
+    async fn job_completion_unblocks() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "unblock1@example.com").await;
         let org = server.create_org(&admin, "Unblock Org").await;
@@ -2001,7 +2003,7 @@ mod priority_scheduling {
 
     // Test that Free tier is blocked while Team tier is not for the same org
     #[tokio::test]
-    async fn test_free_blocked_team_unblocked() {
+    async fn free_blocked_team_unblocked() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "boundary1@example.com").await;
         let org = server.create_org(&admin, "Boundary Org").await;
@@ -2097,7 +2099,7 @@ mod priority_scheduling {
 
     // Test Unclaimed tier blocked by IP while Free tier from different org succeeds
     #[tokio::test]
-    async fn test_unclaimed_blocked_free_different_org_unblocked() {
+    async fn unclaimed_blocked_free_different_org_unblocked() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "boundary2@example.com").await;
         let org = server.create_org(&admin, "Boundary UF Org").await;
@@ -2179,15 +2181,15 @@ mod priority_scheduling {
         let project2 = server
             .create_project(&admin, &org2, "Boundary UF Project 2")
             .await;
-        let project2_id = get_project_id(&server, project2.slug.as_ref());
-        let org2_id = get_organization_id(&server, project2_id);
-        let report2_id = create_test_report(&server, project2_id);
+        let second_project_id = get_project_id(&server, project2.slug.as_ref());
+        let second_org_id = get_organization_id(&server, second_project_id);
+        let second_report_id = create_test_report(&server, second_project_id);
 
         let free_unblocked = insert_test_job_full(
             &server,
-            report2_id,
+            second_report_id,
             project2.uuid,
-            org2_id,
+            second_org_id,
             "10.0.0.99",
             JobPriority::Free,
             spec_id,
@@ -2214,7 +2216,8 @@ mod priority_scheduling {
 
     // Test that jobs with identical timestamps are ordered deterministically by id
     #[tokio::test]
-    async fn test_fifo_same_timestamp_tiebreaker() {
+    #[expect(clippy::too_many_lines)]
+    async fn fifo_same_timestamp_tiebreaker() {
         use common::insert_test_job_with_timestamp;
 
         let server = TestServer::new().await;
@@ -2378,6 +2381,12 @@ mod invalid_transitions {
 
     /// Helper: claim a job, transition to Running, then to a target terminal state.
     /// Returns the job UUID after reaching `target_status`.
+    #[expect(
+        clippy::too_many_lines,
+        clippy::expect_used,
+        clippy::missing_assert_message,
+        clippy::unreachable
+    )]
     async fn setup_job_in_state(
         server: &TestServer,
         suffix: &str,
@@ -2500,7 +2509,7 @@ mod invalid_transitions {
     // Running -> Claimed (invalid: "claimed" is not a valid JobUpdateStatus variant,
     // so the server rejects it at deserialization time with 400 Bad Request)
     #[tokio::test]
-    async fn test_job_invalid_transition_running_to_claimed() {
+    async fn job_invalid_transition_running_to_claimed() {
         let server = TestServer::new().await;
         let (runner_uuid, runner_token, job_uuid) =
             setup_job_in_state(&server, "run2claim", JobStatus::Running).await;
@@ -2520,7 +2529,7 @@ mod invalid_transitions {
 
     // Completed -> Running (invalid: terminal state)
     #[tokio::test]
-    async fn test_job_invalid_transition_completed_to_running() {
+    async fn job_invalid_transition_completed_to_running() {
         let server = TestServer::new().await;
         let (runner_uuid, runner_token, job_uuid) =
             setup_job_in_state(&server, "comp2run", JobStatus::Completed).await;
@@ -2540,7 +2549,7 @@ mod invalid_transitions {
 
     // Completed -> Failed (invalid: terminal to terminal)
     #[tokio::test]
-    async fn test_job_invalid_transition_completed_to_failed() {
+    async fn job_invalid_transition_completed_to_failed() {
         let server = TestServer::new().await;
         let (runner_uuid, runner_token, job_uuid) =
             setup_job_in_state(&server, "comp2fail", JobStatus::Completed).await;
@@ -2560,7 +2569,7 @@ mod invalid_transitions {
 
     // Failed -> Running (invalid: terminal state)
     #[tokio::test]
-    async fn test_job_invalid_transition_failed_to_running() {
+    async fn job_invalid_transition_failed_to_running() {
         let server = TestServer::new().await;
         let (runner_uuid, runner_token, job_uuid) =
             setup_job_in_state(&server, "fail2run", JobStatus::Failed).await;
@@ -2580,7 +2589,7 @@ mod invalid_transitions {
 
     // Failed -> Completed (invalid: terminal to terminal)
     #[tokio::test]
-    async fn test_job_invalid_transition_failed_to_completed() {
+    async fn job_invalid_transition_failed_to_completed() {
         let server = TestServer::new().await;
         let (runner_uuid, runner_token, job_uuid) =
             setup_job_in_state(&server, "fail2comp", JobStatus::Failed).await;
@@ -2600,7 +2609,7 @@ mod invalid_transitions {
 
     // Canceled -> Running: returns 200 with canceled: true (tells runner to stop)
     #[tokio::test]
-    async fn test_job_invalid_transition_canceled_to_running() {
+    async fn job_invalid_transition_canceled_to_running() {
         let server = TestServer::new().await;
         let (runner_uuid, runner_token, job_uuid) =
             setup_job_in_state(&server, "cancel2run", JobStatus::Canceled).await;
@@ -2631,7 +2640,7 @@ mod poll_timeout_boundaries {
     // poll_timeout: 0 is below PollTimeout::MIN (1), so the server rejects it
     // at deserialization time with 400 Bad Request.
     #[tokio::test]
-    async fn test_poll_timeout_zero_clamps_to_min() {
+    async fn poll_timeout_zero_clamps_to_min() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "poll-zero@example.com").await;
 
@@ -2655,7 +2664,7 @@ mod poll_timeout_boundaries {
 
     // poll_timeout: 61 with a job available should return immediately (clamped to 60)
     #[tokio::test]
-    async fn test_poll_timeout_exceeds_max() {
+    async fn poll_timeout_exceeds_max() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "poll-max@example.com").await;
         let org = server.create_org(&admin, "Poll Max Org").await;
@@ -2713,7 +2722,7 @@ mod concurrency_safety {
     // Only one should claim because of the 1-per-org concurrency limit.
     // This validates the TOCTOU fix: read+check+update under a single write lock.
     #[tokio::test]
-    async fn test_concurrent_free_tier_claim_respects_org_limit() {
+    async fn concurrent_free_tier_claim_respects_org_limit() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "concurrent-free@example.com").await;
         let org = server.create_org(&admin, "Concurrent Free Org").await;
@@ -2803,7 +2812,7 @@ mod concurrency_safety {
     // Two runners race to claim Unclaimed-tier jobs for the same source IP.
     // The concurrency limit should prevent both from claiming simultaneously.
     #[tokio::test]
-    async fn test_concurrent_unclaimed_tier_claim_respects_ip_limit() {
+    async fn concurrent_unclaimed_tier_claim_respects_ip_limit() {
         let server = TestServer::new().await;
         let admin = server
             .signup("Admin", "concurrent-unclaimed@example.com")
@@ -2900,7 +2909,7 @@ mod concurrency_safety {
 
 // A valid user JWT token should be rejected on runner endpoints
 #[tokio::test]
-async fn test_user_jwt_rejected_on_runner_endpoint() {
+async fn user_jwt_rejected_on_runner_endpoint() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "userjwt@example.com").await;
 
@@ -2932,7 +2941,7 @@ async fn test_user_jwt_rejected_on_runner_endpoint() {
 /// A runner associated with multiple specs can claim jobs requiring any of them.
 /// Uses Team priority to avoid per-IP concurrency limits on the unclaimed tier.
 #[tokio::test]
-async fn test_runner_multiple_specs_claims_matching_jobs() {
+async fn runner_multiple_specs_claims_matching_jobs() {
     use bencher_json::JobPriority;
     use common::insert_test_job_full;
 
@@ -2944,17 +2953,29 @@ async fn test_runner_multiple_specs_claims_matching_jobs() {
         .await;
 
     // Create two different specs
-    let (_, spec_a_id) =
-        insert_test_spec_full(&server, "x86_64", 2, 4_294_967_296, 10_737_418_240, false);
-    let (_, spec_b_id) =
-        insert_test_spec_full(&server, "aarch64", 4, 8_589_934_592, 21_474_836_480, true);
+    let (_, spec_x86_id) = insert_test_spec_full(
+        &server,
+        "x86_64",
+        2,
+        0x0001_0000_0000,
+        10_737_418_240,
+        false,
+    );
+    let (_, spec_arm_id) = insert_test_spec_full(
+        &server,
+        "aarch64",
+        4,
+        0x0002_0000_0000,
+        21_474_836_480,
+        true,
+    );
 
     // Create a runner and associate it with both specs
     let runner = create_runner(&server, &admin.token, "Multi Spec Runner").await;
     let runner_token: &str = runner.token.as_ref();
     let runner_id = get_runner_id(&server, runner.uuid);
-    associate_runner_spec(&server, runner_id, spec_a_id);
-    associate_runner_spec(&server, runner_id, spec_b_id);
+    associate_runner_spec(&server, runner_id, spec_x86_id);
+    associate_runner_spec(&server, runner_id, spec_arm_id);
 
     // Insert jobs with Team priority (unlimited concurrency) to avoid IP limits
     let project_id = get_project_id(&server, project.slug.as_ref());
@@ -2967,7 +2988,7 @@ async fn test_runner_multiple_specs_claims_matching_jobs() {
         org_id,
         common::TEST_SOURCE_IP,
         JobPriority::Team,
-        spec_a_id,
+        spec_x86_id,
     );
     let job_b = insert_test_job_full(
         &server,
@@ -2976,7 +2997,7 @@ async fn test_runner_multiple_specs_claims_matching_jobs() {
         org_id,
         common::TEST_SOURCE_IP,
         JobPriority::Team,
-        spec_b_id,
+        spec_arm_id,
     );
 
     // First claim should get one job
@@ -3025,7 +3046,7 @@ async fn test_runner_multiple_specs_claims_matching_jobs() {
 
 /// Non-admin user cannot PATCH a runner.
 #[tokio::test]
-async fn test_non_admin_cannot_patch_runner() {
+async fn non_admin_cannot_patch_runner() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "auth-patch-admin@example.com").await;
     let user = server.signup("User", "auth-patch-user@example.com").await;
@@ -3051,7 +3072,7 @@ async fn test_non_admin_cannot_patch_runner() {
 
 /// Wrong runner's token cannot claim a job assigned to a different runner.
 #[tokio::test]
-async fn test_wrong_runner_token_claim() {
+async fn wrong_runner_token_claim() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "auth-wrong-claim@example.com").await;
 
@@ -3076,7 +3097,7 @@ async fn test_wrong_runner_token_claim() {
 
 /// Archived runner's token cannot claim jobs.
 #[tokio::test]
-async fn test_archived_runner_token_rejected() {
+async fn archived_runner_token_rejected() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "auth-archived@example.com").await;
 
@@ -3121,7 +3142,7 @@ async fn test_archived_runner_token_rejected() {
 
 /// Free tier: blocked when same org has in-flight, even from a different runner.
 #[tokio::test]
-async fn test_free_tier_blocked_same_org_different_runner() {
+async fn free_tier_blocked_same_org_different_runner() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "free-diff-runner@example.com").await;
     let org = server.create_org(&admin, "Free DiffRunner Org").await;
@@ -3198,7 +3219,7 @@ async fn test_free_tier_blocked_same_org_different_runner() {
 
 /// Enterprise/Team tier: mixed scenario where free is blocked but enterprise is claimable.
 #[tokio::test]
-async fn test_mixed_tier_free_blocked_enterprise_claimable() {
+async fn mixed_tier_free_blocked_enterprise_claimable() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "mix-tier@example.com").await;
     let org = server.create_org(&admin, "MixTier Org").await;
@@ -3267,7 +3288,8 @@ async fn test_mixed_tier_free_blocked_enterprise_claimable() {
 
 // Claiming an organization upgrades pending Unclaimed jobs to Free priority.
 #[tokio::test]
-async fn test_claim_upgrades_pending_job_priority() {
+#[expect(clippy::too_many_lines)]
+async fn claim_upgrades_pending_job_priority() {
     use bencher_json::{DateTime, JobStatus, OrganizationSlug, OrganizationUuid, ProjectUuid};
     use bencher_schema::schema;
     use common::{get_organization_id, insert_test_job_full};
@@ -3423,7 +3445,7 @@ async fn test_claim_upgrades_pending_job_priority() {
 
 // Claiming an organization with no pending jobs succeeds without error.
 #[tokio::test]
-async fn test_claim_no_pending_jobs_succeeds() {
+async fn claim_no_pending_jobs_succeeds() {
     use bencher_json::{DateTime, OrganizationSlug, OrganizationUuid};
     use bencher_schema::schema;
     use diesel::{ExpressionMethods as _, RunQueryDsl as _};

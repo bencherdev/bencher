@@ -67,7 +67,7 @@ impl From<Architecture> for String {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(feature = "wasm"), expect(dead_code))]
+#[cfg_attr(not(any(feature = "wasm", test)), expect(dead_code))]
 pub fn is_valid_architecture(architecture: &str) -> bool {
     matches!(architecture, X86_64 | AARCH64)
 }

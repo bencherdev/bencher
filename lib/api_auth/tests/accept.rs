@@ -1,8 +1,4 @@
-#![expect(
-    unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
-)]
+#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for auth accept (invite) endpoint.
 
 use bencher_api_tests::TestServer;
@@ -10,7 +6,7 @@ use http::StatusCode;
 
 // POST /v0/auth/accept - invalid invite token
 #[tokio::test]
-async fn test_accept_invalid_token() {
+async fn accept_invalid_token() {
     let server = TestServer::new().await;
 
     let body = serde_json::json!({
@@ -31,7 +27,7 @@ async fn test_accept_invalid_token() {
 
 // POST /v0/auth/accept - empty invite token
 #[tokio::test]
-async fn test_accept_empty_token() {
+async fn accept_empty_token() {
     let server = TestServer::new().await;
 
     let body = serde_json::json!({
@@ -51,7 +47,7 @@ async fn test_accept_empty_token() {
 
 // POST /v0/auth/accept - missing invite field
 #[tokio::test]
-async fn test_accept_missing_invite() {
+async fn accept_missing_invite() {
     let server = TestServer::new().await;
 
     let body = serde_json::json!({});

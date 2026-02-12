@@ -8,7 +8,7 @@ use http::StatusCode;
 
 // POST /v0/runners/{runner}/token - admin can rotate token
 #[tokio::test]
-async fn test_token_rotate_as_admin() {
+async fn token_rotate_as_admin() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "tokenadmin@example.com").await;
 
@@ -51,7 +51,7 @@ async fn test_token_rotate_as_admin() {
 
 // POST /v0/runners/{runner}/token - non-admin cannot rotate token
 #[tokio::test]
-async fn test_token_rotate_forbidden_for_non_admin() {
+async fn token_rotate_forbidden_for_non_admin() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "tokenadmin2@example.com").await;
     let user = server.signup("User", "tokenuser@example.com").await;
@@ -85,7 +85,7 @@ async fn test_token_rotate_forbidden_for_non_admin() {
 
 // POST /v0/runners/{runner}/token - rotate by slug
 #[tokio::test]
-async fn test_token_rotate_by_slug() {
+async fn token_rotate_by_slug() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "tokenadmin3@example.com").await;
 
@@ -121,7 +121,7 @@ async fn test_token_rotate_by_slug() {
 
 // POST /v0/runners/{runner}/token - not found for invalid runner
 #[tokio::test]
-async fn test_token_rotate_not_found() {
+async fn token_rotate_not_found() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "tokenadmin4@example.com").await;
 
@@ -138,7 +138,7 @@ async fn test_token_rotate_not_found() {
 
 // POST /v0/runners/{runner}/token - concurrent rotation yields two different tokens
 #[tokio::test]
-async fn test_concurrent_token_rotation() {
+async fn concurrent_token_rotation() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "tokenadmin5@example.com").await;
 
@@ -211,7 +211,7 @@ async fn test_concurrent_token_rotation() {
 
 // After token rotation, the old token should be rejected.
 #[tokio::test]
-async fn test_old_token_rejected_after_rotation() {
+async fn old_token_rejected_after_rotation() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "tokenold@example.com").await;
 

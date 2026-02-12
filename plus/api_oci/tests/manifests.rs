@@ -3,8 +3,9 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
-    clippy::redundant_test_prefix,
-    clippy::indexing_slicing
+    clippy::indexing_slicing,
+    clippy::expect_used,
+    clippy::too_many_lines
 )]
 //! Integration tests for OCI manifest endpoints.
 
@@ -36,7 +37,7 @@ fn create_test_manifest(config_digest: &str, layer_digest: &str) -> String {
 
 // PUT /v2/{name}/manifests/{reference} - Upload manifest with tag
 #[tokio::test]
-async fn test_manifest_put_with_tag() {
+async fn manifest_put_with_tag() {
     let server = TestServer::new().await;
     let user = server
         .signup("Manifest User", "manifestput@example.com")
@@ -98,7 +99,7 @@ async fn test_manifest_put_with_tag() {
 
 // PUT /v2/{name}/manifests/{reference} - Upload manifest with digest reference
 #[tokio::test]
-async fn test_manifest_put_by_digest() {
+async fn manifest_put_by_digest() {
     let server = TestServer::new().await;
     let user = server
         .signup("DigestManifest User", "manifestdigest@example.com")
@@ -140,7 +141,7 @@ async fn test_manifest_put_by_digest() {
 
 // HEAD /v2/{name}/manifests/{reference} - Check manifest exists
 #[tokio::test]
-async fn test_manifest_exists() {
+async fn manifest_exists() {
     let server = TestServer::new().await;
     let user = server
         .signup("ExistsManifest User", "manifestexists@example.com")
@@ -192,7 +193,7 @@ async fn test_manifest_exists() {
 
 // HEAD /v2/{name}/manifests/{reference} - Manifest not found
 #[tokio::test]
-async fn test_manifest_not_found() {
+async fn manifest_not_found() {
     let server = TestServer::new().await;
     let user = server
         .signup("NotFoundManifest User", "manifestnotfound@example.com")
@@ -218,7 +219,7 @@ async fn test_manifest_not_found() {
 
 // GET /v2/{name}/manifests/{reference} - Download manifest by tag
 #[tokio::test]
-async fn test_manifest_get_by_tag() {
+async fn manifest_get_by_tag() {
     let server = TestServer::new().await;
     let user = server
         .signup("GetManifest User", "manifestget@example.com")
@@ -272,7 +273,7 @@ async fn test_manifest_get_by_tag() {
 
 // GET /v2/{name}/manifests/{reference} - Download manifest by digest
 #[tokio::test]
-async fn test_manifest_get_by_digest() {
+async fn manifest_get_by_digest() {
     let server = TestServer::new().await;
     let user = server
         .signup("DigestGet User", "manifestdigestget@example.com")
@@ -325,7 +326,7 @@ async fn test_manifest_get_by_digest() {
 
 // DELETE /v2/{name}/manifests/{reference} - Delete manifest by tag
 #[tokio::test]
-async fn test_manifest_delete_by_tag() {
+async fn manifest_delete_by_tag() {
     let server = TestServer::new().await;
     let user = server
         .signup("DeleteTag User", "manifestdeletetag@example.com")
@@ -405,7 +406,7 @@ async fn test_manifest_delete_by_tag() {
 
 // DELETE /v2/{name}/manifests/{reference} - Delete manifest by digest
 #[tokio::test]
-async fn test_manifest_delete_by_digest() {
+async fn manifest_delete_by_digest() {
     let server = TestServer::new().await;
     let user = server
         .signup("DeleteDigest User", "manifestdeletedigest@example.com")
@@ -474,7 +475,7 @@ async fn test_manifest_delete_by_digest() {
 
 // DELETE /v2/{name}/manifests/{reference} - Delete manifest by digest cleans multiple tags
 #[tokio::test]
-async fn test_manifest_delete_by_digest_cleans_multiple_tags() {
+async fn manifest_delete_by_digest_cleans_multiple_tags() {
     let server = TestServer::new().await;
     let user = server
         .signup("DeleteMultiTag User", "deletemultitag@example.com")
@@ -567,7 +568,7 @@ async fn test_manifest_delete_by_digest_cleans_multiple_tags() {
 
 // OPTIONS /v2/{name}/manifests/{reference} - CORS preflight
 #[tokio::test]
-async fn test_manifest_options() {
+async fn manifest_options() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -590,7 +591,7 @@ async fn test_manifest_options() {
 
 // Manifest upload to UNCLAIMED project (unauthenticated) should succeed
 #[tokio::test]
-async fn test_manifest_put_unclaimed() {
+async fn manifest_put_unclaimed() {
     let server = TestServer::new().await;
 
     // Upload blobs without auth (auto-creates unclaimed project)
@@ -621,7 +622,7 @@ async fn test_manifest_put_unclaimed() {
 
 // Manifest upload to CLAIMED project without auth should fail with 401
 #[tokio::test]
-async fn test_manifest_put_unauthenticated_to_claimed() {
+async fn manifest_put_unauthenticated_to_claimed() {
     let server = TestServer::new().await;
 
     // Create a claimed project
@@ -658,7 +659,7 @@ async fn test_manifest_put_unauthenticated_to_claimed() {
 
 // Authenticated manifest upload to UNCLAIMED project should auto-claim
 #[tokio::test]
-async fn test_manifest_put_authenticated_to_unclaimed() {
+async fn manifest_put_authenticated_to_unclaimed() {
     let server = TestServer::new().await;
 
     // First, create an unclaimed project by pushing without authentication
@@ -734,7 +735,7 @@ async fn test_manifest_put_authenticated_to_unclaimed() {
 
 // Manifest upload to non-existent project by UUID should return 404
 #[tokio::test]
-async fn test_manifest_put_nonexistent_uuid() {
+async fn manifest_put_nonexistent_uuid() {
     let server = TestServer::new().await;
     let user = server
         .signup("Manifest UUID User", "manifestuuidpush@example.com")
@@ -764,7 +765,7 @@ async fn test_manifest_put_nonexistent_uuid() {
 
 // Authenticated manifest upload to non-existent slug should auto-create
 #[tokio::test]
-async fn test_manifest_put_nonexistent_slug_authenticated() {
+async fn manifest_put_nonexistent_slug_authenticated() {
     let server = TestServer::new().await;
     let user = server
         .signup("Manifest Slug User", "manifestslugpush@example.com")
@@ -819,7 +820,7 @@ async fn test_manifest_put_nonexistent_slug_authenticated() {
 
 // Manifest with an unsupported media type should be rejected
 #[tokio::test]
-async fn test_manifest_put_invalid_media_type() {
+async fn manifest_put_invalid_media_type() {
     let server = TestServer::new().await;
     let user = server
         .signup("MediaType User", "mediatype@example.com")
@@ -864,7 +865,7 @@ async fn test_manifest_put_invalid_media_type() {
 
 // PUT /v2/{name}/manifests/{tag} - Tag overwrite should succeed and update the tag
 #[tokio::test]
-async fn test_manifest_tag_overwrite() {
+async fn manifest_tag_overwrite() {
     let server = TestServer::new().await;
     let user = server
         .signup("TagOverwrite User", "manifesttagoverwrite@example.com")
@@ -956,7 +957,7 @@ async fn test_manifest_tag_overwrite() {
 
 // HEAD and GET should return the correct content-type header matching the manifest media type
 #[tokio::test]
-async fn test_manifest_content_type_round_trip() {
+async fn manifest_content_type_round_trip() {
     let server = TestServer::new().await;
     let user = server
         .signup("ContentType User", "manifestcontenttype@example.com")
@@ -1036,7 +1037,7 @@ async fn test_manifest_content_type_round_trip() {
 
 // GET /v2/{name}/manifests/{digest} - Non-existent digest should return 404
 #[tokio::test]
-async fn test_manifest_get_nonexistent_digest() {
+async fn manifest_get_nonexistent_digest() {
     let server = TestServer::new().await;
     let user = server
         .signup("ManifestNotFound User", "manifestnotfound@example.com")
@@ -1123,7 +1124,7 @@ fn create_docker_v2_manifest(config_digest: &str, layer_digest: &str) -> String 
 
 // PUT Docker V2 manifest with correct Content-Type, verify 201, GET back and verify content-type round-trip
 #[tokio::test]
-async fn test_manifest_put_docker_v2() {
+async fn manifest_put_docker_v2() {
     let server = TestServer::new().await;
     let user = server
         .signup("DockerV2Put User", "dockerv2put@example.com")
@@ -1198,7 +1199,7 @@ async fn test_manifest_put_docker_v2() {
 
 // Tag-based retrieval of a Docker V2 manifest
 #[tokio::test]
-async fn test_manifest_get_docker_v2_by_tag() {
+async fn manifest_get_docker_v2_by_tag() {
     let server = TestServer::new().await;
     let user = server
         .signup("DockerV2Tag User", "dockerv2tag@example.com")
@@ -1299,7 +1300,7 @@ fn create_docker_manifest_list() -> String {
 
 // PUT Docker manifest list with platform entries, verify round-trip
 #[tokio::test]
-async fn test_manifest_put_docker_manifest_list() {
+async fn manifest_put_docker_manifest_list() {
     let server = TestServer::new().await;
     let user = server
         .signup("DockerList User", "dockerlist@example.com")
@@ -1350,7 +1351,7 @@ async fn test_manifest_put_docker_manifest_list() {
 
 // Verify platform entries are preserved in Docker manifest list
 #[tokio::test]
-async fn test_manifest_get_docker_manifest_list() {
+async fn manifest_get_docker_manifest_list() {
     let server = TestServer::new().await;
     let user = server
         .signup("DockerListGet User", "dockerlistget@example.com")
@@ -1459,7 +1460,7 @@ fn create_oci_image_index() -> String {
 
 // PUT multi-platform OCI image index, verify 201
 #[tokio::test]
-async fn test_manifest_put_oci_image_index() {
+async fn manifest_put_oci_image_index() {
     let server = TestServer::new().await;
     let user = server
         .signup("OciIndex User", "ociindexput@example.com")
@@ -1489,7 +1490,7 @@ async fn test_manifest_put_oci_image_index() {
 
 // Verify manifests array and platform entries round-trip for OCI image index
 #[tokio::test]
-async fn test_manifest_get_oci_image_index() {
+async fn manifest_get_oci_image_index() {
     let server = TestServer::new().await;
     let user = server
         .signup("OciIndexGet User", "ociindexget@example.com")
@@ -1565,7 +1566,7 @@ async fn test_manifest_get_oci_image_index() {
 
 // OCI body with Docker Content-Type header should return 400
 #[tokio::test]
-async fn test_manifest_put_content_type_mismatch() {
+async fn manifest_put_content_type_mismatch() {
     let server = TestServer::new().await;
     let user = server
         .signup("CTMismatch User", "ctmismatch@example.com")
@@ -1608,7 +1609,7 @@ async fn test_manifest_put_content_type_mismatch() {
 // PUT /v2/{name}/manifests/{reference} - Manifest referencing blobs that were never uploaded
 // The registry validates that referenced blobs exist before storing a manifest.
 #[tokio::test]
-async fn test_manifest_put_missing_blobs() {
+async fn manifest_put_missing_blobs() {
     let server = TestServer::new().await;
     let user = server
         .signup("MissingBlobs User", "missingblobs@example.com")
@@ -1646,7 +1647,7 @@ async fn test_manifest_put_missing_blobs() {
 
 // Matching Content-Type should succeed (sanity check)
 #[tokio::test]
-async fn test_manifest_put_content_type_match() {
+async fn manifest_put_content_type_match() {
     let server = TestServer::new().await;
     let user = server.signup("CTMatch User", "ctmatch@example.com").await;
     let org = server.create_org(&user, "CTMatch Org").await;
@@ -1690,7 +1691,7 @@ async fn test_manifest_put_content_type_match() {
 
 // PUT /v2/{name}/manifests/{digest} - Digest in URL does not match manifest content
 #[tokio::test]
-async fn test_manifest_put_digest_mismatch() {
+async fn manifest_put_digest_mismatch() {
     let server = TestServer::new().await;
     let user = server
         .signup("DigestMismatch User", "digestmismatch@example.com")
@@ -1762,7 +1763,7 @@ async fn test_manifest_put_digest_mismatch() {
 // Two concurrent PUTs to the same tag should both succeed and the tag should
 // resolve to one of the two manifests without corruption
 #[tokio::test]
-async fn test_concurrent_manifest_tag_overwrite() {
+async fn concurrent_manifest_tag_overwrite() {
     let server = TestServer::new().await;
     let user = server
         .signup("ConcurrentTag User", "concurrenttag@example.com")
@@ -1897,7 +1898,7 @@ async fn test_concurrent_manifest_tag_overwrite() {
 
 // Manifest PUT exceeding max body size should be rejected
 #[tokio::test]
-async fn test_manifest_put_exceeds_max_body_size() {
+async fn manifest_put_exceeds_max_body_size() {
     // max_body_size = 100 bytes
     let server = TestServer::new_with_limits(3600, 100).await;
     let user = server
@@ -1941,7 +1942,7 @@ async fn test_manifest_put_exceeds_max_body_size() {
 
 // Manifest read after storage directory is deleted
 #[tokio::test]
-async fn test_manifest_read_after_storage_deleted() {
+async fn manifest_read_after_storage_deleted() {
     let server = TestServer::new().await;
     let user = server
         .signup("StorageFail User", "storagefailmanifest@example.com")
@@ -2021,7 +2022,7 @@ async fn test_manifest_read_after_storage_deleted() {
 
 // PUT /v2/{name}/manifests/{reference} - Invalid JSON body should be rejected
 #[tokio::test]
-async fn test_manifest_put_invalid_json_body() {
+async fn manifest_put_invalid_json_body() {
     let server = TestServer::new().await;
     let user = server
         .signup("InvalidJSON User", "invalidjson@example.com")

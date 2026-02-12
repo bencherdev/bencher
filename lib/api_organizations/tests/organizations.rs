@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/organizations - requires auth
 #[tokio::test]
-async fn test_organizations_list_requires_auth() {
+async fn organizations_list_requires_auth() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -26,7 +26,7 @@ async fn test_organizations_list_requires_auth() {
 
 // GET /v0/organizations - authenticated user sees their orgs
 #[tokio::test]
-async fn test_organizations_list() {
+async fn organizations_list() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "orglist@example.com").await;
 
@@ -46,7 +46,7 @@ async fn test_organizations_list() {
 
 // POST /v0/organizations - create new org
 #[tokio::test]
-async fn test_organizations_create() {
+async fn organizations_create() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "orgcreate@example.com").await;
 
@@ -71,7 +71,7 @@ async fn test_organizations_create() {
 
 // POST /v0/organizations - create with auto-generated slug
 #[tokio::test]
-async fn test_organizations_create_auto_slug() {
+async fn organizations_create_auto_slug() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "orgautoslug@example.com").await;
 
@@ -98,7 +98,7 @@ async fn test_organizations_create_auto_slug() {
 
 // GET /v0/organizations/{organization} - view org
 #[tokio::test]
-async fn test_organizations_get() {
+async fn organizations_get() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "orgget@example.com").await;
     let org = server.create_org(&user, "View Org").await;
@@ -119,7 +119,7 @@ async fn test_organizations_get() {
 
 // GET /v0/organizations/{organization} - not found
 #[tokio::test]
-async fn test_organizations_get_not_found() {
+async fn organizations_get_not_found() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "orgnotfound@example.com").await;
 
@@ -136,7 +136,7 @@ async fn test_organizations_get_not_found() {
 
 // PATCH /v0/organizations/{organization} - update org
 #[tokio::test]
-async fn test_organizations_update() {
+async fn organizations_update() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "orgupdate@example.com").await;
     let org = server.create_org(&user, "Update Org").await;
@@ -162,7 +162,7 @@ async fn test_organizations_update() {
 
 // DELETE /v0/organizations/{organization} - delete org
 #[tokio::test]
-async fn test_organizations_delete() {
+async fn organizations_delete() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "orgdelete@example.com").await;
     let org = server.create_org(&user, "Delete Org").await;

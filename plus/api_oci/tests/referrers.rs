@@ -3,7 +3,6 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
-    clippy::redundant_test_prefix,
     clippy::indexing_slicing
 )]
 //! Integration tests for OCI referrers endpoint.
@@ -54,7 +53,7 @@ fn create_referrer_manifest(
 
 // GET /v2/{name}/referrers/{digest} - List referrers (empty)
 #[tokio::test]
-async fn test_referrers_list_empty() {
+async fn referrers_list_empty() {
     let server = TestServer::new().await;
     let user = server
         .signup("Referrers User", "referrersempty@example.com")
@@ -110,7 +109,7 @@ async fn test_referrers_list_empty() {
 
 // GET /v2/{name}/referrers/{digest} - List referrers with results
 #[tokio::test]
-async fn test_referrers_list_with_results() {
+async fn referrers_list_with_results() {
     let server = TestServer::new().await;
     let user = server
         .signup("ReferrersList User", "referrerslist@example.com")
@@ -197,7 +196,7 @@ async fn test_referrers_list_with_results() {
 
 // GET /v2/{name}/referrers/{digest}?artifactType= - Filter by artifact type
 #[tokio::test]
-async fn test_referrers_filter_by_artifact_type() {
+async fn referrers_filter_by_artifact_type() {
     let server = TestServer::new().await;
     let user = server
         .signup("ReferrersFilter User", "referrersfilter@example.com")
@@ -306,7 +305,7 @@ async fn test_referrers_filter_by_artifact_type() {
 
 // GET /v2/{name}/referrers/{digest} - Unauthenticated (should fail)
 #[tokio::test]
-async fn test_referrers_unauthenticated() {
+async fn referrers_unauthenticated() {
     let server = TestServer::new().await;
     let user = server
         .signup("ReferrersUnauth User", "referrersunauth@example.com")
@@ -332,7 +331,7 @@ async fn test_referrers_unauthenticated() {
 
 // GET /v2/{name}/referrers/{digest} - Invalid digest format
 #[tokio::test]
-async fn test_referrers_invalid_digest() {
+async fn referrers_invalid_digest() {
     let server = TestServer::new().await;
     let user = server
         .signup("ReferrersInvalid User", "referrersinvalid@example.com")
@@ -358,7 +357,7 @@ async fn test_referrers_invalid_digest() {
 
 // OPTIONS /v2/{name}/referrers/{digest} - CORS preflight
 #[tokio::test]
-async fn test_referrers_options() {
+async fn referrers_options() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -377,7 +376,7 @@ async fn test_referrers_options() {
 
 // GET /v2/{name}/referrers/{digest} - Referrers for a non-existent subject should return empty list
 #[tokio::test]
-async fn test_referrers_nonexistent_subject() {
+async fn referrers_nonexistent_subject() {
     let server = TestServer::new().await;
     let user = server
         .signup("ReferrersNoSubject User", "referrersnosubject@example.com")
@@ -421,7 +420,7 @@ async fn test_referrers_nonexistent_subject() {
 
 // DELETE /v2/{name}/manifests/{digest} - Verify referrer link cleanup
 #[tokio::test]
-async fn test_referrers_cleanup_on_manifest_delete() {
+async fn referrers_cleanup_on_manifest_delete() {
     let server = TestServer::new().await;
     let user = server
         .signup("ReferrersCleanup User", "referrerscleanup@example.com")

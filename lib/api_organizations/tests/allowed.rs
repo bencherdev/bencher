@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/organizations/{organization}/allowed/{permission} - view permission
 #[tokio::test]
-async fn test_allowed_view() {
+async fn allowed_view() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "allowedview@example.com").await;
     let org = server.create_org(&user, "Allowed Org").await;
@@ -32,7 +32,7 @@ async fn test_allowed_view() {
 
 // GET /v0/organizations/{organization}/allowed/{permission} - edit permission
 #[tokio::test]
-async fn test_allowed_edit() {
+async fn allowed_edit() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "allowededit@example.com").await;
     let org = server.create_org(&user, "Edit Allowed Org").await;
@@ -54,7 +54,7 @@ async fn test_allowed_edit() {
 
 // GET /v0/organizations/{organization}/allowed/{permission} - delete permission
 #[tokio::test]
-async fn test_allowed_delete() {
+async fn allowed_delete() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "alloweddelete@example.com")
@@ -78,7 +78,7 @@ async fn test_allowed_delete() {
 
 // GET /v0/organizations/{organization}/allowed/{permission} - invalid permission
 #[tokio::test]
-async fn test_allowed_invalid_permission() {
+async fn allowed_invalid_permission() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "allowedinvalid@example.com")

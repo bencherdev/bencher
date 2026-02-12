@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/projects/{project}/testbeds - list testbeds
 #[tokio::test]
-async fn test_testbeds_list() {
+async fn testbeds_list() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "testbedlist@example.com").await;
     let org = server.create_org(&user, "Testbed Org").await;
@@ -32,7 +32,7 @@ async fn test_testbeds_list() {
 
 // POST /v0/projects/{project}/testbeds - create testbed
 #[tokio::test]
-async fn test_testbeds_create() {
+async fn testbeds_create() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "testbedcreate@example.com")
@@ -64,7 +64,7 @@ async fn test_testbeds_create() {
 
 // POST /v0/projects/{project}/testbeds - duplicate slug fails
 #[tokio::test]
-async fn test_testbeds_create_duplicate() {
+async fn testbeds_create_duplicate() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "testbeddup@example.com").await;
     let org = server.create_org(&user, "Testbed Dup Org").await;
@@ -104,7 +104,7 @@ async fn test_testbeds_create_duplicate() {
 
 // DELETE /v0/projects/{project}/testbeds/{testbed} - delete testbed
 #[tokio::test]
-async fn test_testbeds_delete() {
+async fn testbeds_delete() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "testbeddelete@example.com")

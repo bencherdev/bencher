@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cargo clippy --no-deps --all-features -- -Dwarnings
+cargo clippy --no-deps --all-targets --all-features -- -Dwarnings

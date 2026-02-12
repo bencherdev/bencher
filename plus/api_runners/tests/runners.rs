@@ -9,7 +9,7 @@ use http::StatusCode;
 
 // POST /v0/runners - admin can create runner
 #[tokio::test]
-async fn test_runners_create_as_admin() {
+async fn runners_create_as_admin() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "runneradmin@example.com").await;
 
@@ -36,7 +36,7 @@ async fn test_runners_create_as_admin() {
 
 // POST /v0/runners - non-admin cannot create runner
 #[tokio::test]
-async fn test_runners_create_forbidden_for_non_admin() {
+async fn runners_create_forbidden_for_non_admin() {
     let server = TestServer::new().await;
     let _admin = server.signup("Admin", "adminrun1@example.com").await;
     let user = server.signup("User", "userrun1@example.com").await;
@@ -59,7 +59,7 @@ async fn test_runners_create_forbidden_for_non_admin() {
 
 // POST /v0/runners - create with custom slug
 #[tokio::test]
-async fn test_runners_create_with_slug() {
+async fn runners_create_with_slug() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "runneradmin2@example.com").await;
 
@@ -95,7 +95,7 @@ async fn test_runners_create_with_slug() {
 
 // GET /v0/runners - admin can list runners
 #[tokio::test]
-async fn test_runners_list_as_admin() {
+async fn runners_list_as_admin() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "runneradmin3@example.com").await;
 
@@ -128,7 +128,7 @@ async fn test_runners_list_as_admin() {
 
 // GET /v0/runners/{runner} - get by UUID
 #[tokio::test]
-async fn test_runners_get_by_uuid() {
+async fn runners_get_by_uuid() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "runneradmin4@example.com").await;
 
@@ -164,7 +164,7 @@ async fn test_runners_get_by_uuid() {
 
 // PATCH /v0/runners/{runner} - update runner name
 #[tokio::test]
-async fn test_runners_update_name() {
+async fn runners_update_name() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "runneradmin5@example.com").await;
 
@@ -203,7 +203,7 @@ async fn test_runners_update_name() {
 
 // PATCH /v0/runners/{runner} - archive runner
 #[tokio::test]
-async fn test_runners_archive() {
+async fn runners_archive() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "runneradmin7@example.com").await;
 
@@ -255,7 +255,7 @@ async fn test_runners_archive() {
 
 // GET /v0/runners?archived=true - list includes archived
 #[tokio::test]
-async fn test_runners_list_with_archived() {
+async fn runners_list_with_archived() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "runneradmin8@example.com").await;
 
@@ -302,7 +302,7 @@ async fn test_runners_list_with_archived() {
 
 // GET /v0/runners - X-Total-Count header reflects the number of runners
 #[tokio::test]
-async fn test_runners_total_count_header() {
+async fn runners_total_count_header() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "runnertotalcount@example.com").await;
 
@@ -352,7 +352,7 @@ async fn test_runners_total_count_header() {
 
 // DELETE runner with active jobs should fail due to FK constraint (ON DELETE RESTRICT)
 #[tokio::test]
-async fn test_runner_delete_restricted_by_fk() {
+async fn runner_delete_restricted_by_fk() {
     use bencher_schema::schema;
     use common::{
         associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
@@ -405,7 +405,7 @@ async fn test_runner_delete_restricted_by_fk() {
 
 // Creating two runners with the same name should produce a slug collision
 #[tokio::test]
-async fn test_duplicate_runner_name() {
+async fn duplicate_runner_name() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "duprunner@example.com").await;
 
@@ -439,7 +439,7 @@ async fn test_duplicate_runner_name() {
 
 // A runner token should be rejected on user endpoints (e.g., project listing)
 #[tokio::test]
-async fn test_runner_token_rejected_on_user_endpoint() {
+async fn runner_token_rejected_on_user_endpoint() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "runnertokusr@example.com").await;
 

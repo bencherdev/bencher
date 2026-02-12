@@ -1,8 +1,4 @@
-#![expect(
-    unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
-)]
+#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for server config endpoints.
 
 use bencher_api_tests::TestServer;
@@ -11,7 +7,7 @@ use http::StatusCode;
 
 // GET /v0/server/config/console - public endpoint
 #[tokio::test]
-async fn test_config_console_get() {
+async fn config_console_get() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -29,7 +25,7 @@ async fn test_config_console_get() {
 
 // GET /v0/server/config - requires admin auth
 #[tokio::test]
-async fn test_config_get_requires_auth() {
+async fn config_get_requires_auth() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -45,7 +41,7 @@ async fn test_config_get_requires_auth() {
 
 // GET /v0/server/config - admin can view config
 #[tokio::test]
-async fn test_config_get_as_admin() {
+async fn config_get_as_admin() {
     let server = TestServer::new().await;
     // First user is admin
     let admin = server.signup("Admin User", "configadmin@example.com").await;
@@ -64,7 +60,7 @@ async fn test_config_get_as_admin() {
 
 // GET /v0/server/config - non-admin cannot view config
 #[tokio::test]
-async fn test_config_get_forbidden_for_non_admin() {
+async fn config_get_forbidden_for_non_admin() {
     let server = TestServer::new().await;
     // First user is admin
     let _admin = server.signup("Admin User", "admin@example.com").await;

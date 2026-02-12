@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn boundary() {
         assert_eq!(true, is_valid_memory(1));
-        assert_eq!(true, is_valid_memory(4_294_967_296)); // 4 GB
+        assert_eq!(true, is_valid_memory(0x0001_0000_0000)); // 4 GB
         assert_eq!(true, is_valid_memory(u64::MAX));
 
         assert_eq!(false, is_valid_memory(0));

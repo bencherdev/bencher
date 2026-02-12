@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/projects/{project}/benchmarks - list benchmarks (empty)
 #[tokio::test]
-async fn test_benchmarks_list_empty() {
+async fn benchmarks_list_empty() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "benchmarklist@example.com")
@@ -38,7 +38,7 @@ async fn test_benchmarks_list_empty() {
 
 // GET /v0/projects/{project}/benchmarks - with search
 #[tokio::test]
-async fn test_benchmarks_list_with_search() {
+async fn benchmarks_list_with_search() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "benchmarksearch@example.com")
@@ -65,7 +65,7 @@ async fn test_benchmarks_list_with_search() {
 
 // GET /v0/projects/{project}/benchmarks/{benchmark} - not found
 #[tokio::test]
-async fn test_benchmarks_get_not_found() {
+async fn benchmarks_get_not_found() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "benchmarknotfound@example.com")
@@ -92,7 +92,7 @@ async fn test_benchmarks_get_not_found() {
 
 // DELETE /v0/projects/{project}/benchmarks/{benchmark} - not found
 #[tokio::test]
-async fn test_benchmarks_delete_not_found() {
+async fn benchmarks_delete_not_found() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "benchmarkdelnotfound@example.com")

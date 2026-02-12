@@ -2,7 +2,8 @@
 #![expect(
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
-    clippy::redundant_test_prefix
+    clippy::similar_names,
+    clippy::indexing_slicing
 )]
 //! Integration tests for project job endpoints.
 //!
@@ -15,7 +16,7 @@ use http::StatusCode;
 
 // GET /v0/projects/{project}/jobs - list jobs (empty)
 #[tokio::test]
-async fn test_jobs_list_empty() {
+async fn jobs_list_empty() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "joblist@example.com").await;
     let org = server.create_org(&user, "Job Org").await;
@@ -38,7 +39,7 @@ async fn test_jobs_list_empty() {
 
 // GET /v0/projects/{project}/jobs - with pagination
 #[tokio::test]
-async fn test_jobs_list_with_pagination() {
+async fn jobs_list_with_pagination() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobpage@example.com").await;
     let org = server.create_org(&user, "Job Page Org").await;
@@ -62,7 +63,7 @@ async fn test_jobs_list_with_pagination() {
 
 // GET /v0/projects/{project}/jobs - with status filter
 #[tokio::test]
-async fn test_jobs_list_with_status_filter() {
+async fn jobs_list_with_status_filter() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobstatus@example.com").await;
     let org = server.create_org(&user, "Job Status Org").await;
@@ -86,7 +87,7 @@ async fn test_jobs_list_with_status_filter() {
 
 // GET /v0/projects/{project}/jobs - with ascending order
 #[tokio::test]
-async fn test_jobs_list_ascending_order() {
+async fn jobs_list_ascending_order() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobasc@example.com").await;
     let org = server.create_org(&user, "Job Asc Org").await;
@@ -106,7 +107,7 @@ async fn test_jobs_list_ascending_order() {
 
 // GET /v0/projects/{project}/jobs/{job} - not found
 #[tokio::test]
-async fn test_jobs_get_not_found() {
+async fn jobs_get_not_found() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobnotfound@example.com").await;
     let org = server.create_org(&user, "Job NotFound Org").await;
@@ -130,7 +131,7 @@ async fn test_jobs_get_not_found() {
 
 // GET /v0/projects/{project}/jobs - public project, no auth
 #[tokio::test]
-async fn test_jobs_list_public_no_auth() {
+async fn jobs_list_public_no_auth() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobpublic@example.com").await;
     let org = server.create_org(&user, "Job Public Org").await;
@@ -154,7 +155,7 @@ async fn test_jobs_list_public_no_auth() {
 
 // GET /v0/projects/{project}/jobs/{job} - public project, no auth, not found
 #[tokio::test]
-async fn test_jobs_get_public_no_auth_not_found() {
+async fn jobs_get_public_no_auth_not_found() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobpub2@example.com").await;
     let org = server.create_org(&user, "Job Public2 Org").await;
@@ -177,7 +178,7 @@ async fn test_jobs_get_public_no_auth_not_found() {
 
 // GET /v0/projects/{project}/jobs - nonexistent project
 #[tokio::test]
-async fn test_jobs_list_project_not_found() {
+async fn jobs_list_project_not_found() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobnoproj@example.com").await;
 
@@ -194,7 +195,7 @@ async fn test_jobs_list_project_not_found() {
 
 // GET /v0/projects/{project}/jobs - X-Total-Count header present
 #[tokio::test]
-async fn test_jobs_list_total_count_header() {
+async fn jobs_list_total_count_header() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobtotal@example.com").await;
     let org = server.create_org(&user, "Job Total Org").await;
@@ -220,7 +221,7 @@ async fn test_jobs_list_total_count_header() {
 
 // GET /v0/projects/{project}/jobs - using project UUID instead of slug
 #[tokio::test]
-async fn test_jobs_list_by_uuid() {
+async fn jobs_list_by_uuid() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobuuid@example.com").await;
     let org = server.create_org(&user, "Job UUID Org").await;
@@ -239,7 +240,7 @@ async fn test_jobs_list_by_uuid() {
 
 // GET /v0/projects/{project}/jobs - private project, no auth, should be denied
 #[tokio::test]
-async fn test_private_project_jobs_denied_unauthenticated() {
+async fn private_project_jobs_denied_unauthenticated() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobprivate@example.com").await;
     let org = server.create_org(&user, "Job Private Org").await;
@@ -281,7 +282,7 @@ async fn test_private_project_jobs_denied_unauthenticated() {
 // Tests with actual data
 // =============================================================================
 
-/// Helper: get project_id from project slug.
+/// Helper: get `project_id` from project slug.
 #[expect(clippy::expect_used)]
 fn get_project_id(server: &TestServer, project_slug: &str) -> i32 {
     use bencher_schema::schema;
@@ -423,9 +424,10 @@ fn insert_test_job(
             schema::spec::uuid.eq(&spec_uuid),
             schema::spec::name.eq(&spec_name),
             schema::spec::slug.eq(&spec_slug),
+            schema::spec::architecture.eq("x86_64"),
             schema::spec::cpu.eq(2),
-            schema::spec::memory.eq(4_294_967_296_i64),
-            schema::spec::disk.eq(10_737_418_240_i64),
+            schema::spec::memory.eq(0x0001_0000_0000i64),
+            schema::spec::disk.eq(0x0002_8000_0000i64),
             schema::spec::network.eq(false),
             schema::spec::created.eq(&created),
             schema::spec::modified.eq(&created),
@@ -484,7 +486,7 @@ fn set_job_status(
 
 // GET /v0/projects/{project}/jobs - list returns inserted jobs
 #[tokio::test]
-async fn test_jobs_list_with_data() {
+async fn jobs_list_with_data() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobdata@example.com").await;
     let org = server.create_org(&user, "Job Data Org").await;
@@ -514,7 +516,7 @@ async fn test_jobs_list_with_data() {
 
 // GET /v0/projects/{project}/jobs - pagination with data
 #[tokio::test]
-async fn test_jobs_list_pagination_with_data() {
+async fn jobs_list_pagination_with_data() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobpagedata@example.com").await;
     let org = server.create_org(&user, "Job PageData Org").await;
@@ -565,7 +567,7 @@ async fn test_jobs_list_pagination_with_data() {
 
 // GET /v0/projects/{project}/jobs - status filter with data
 #[tokio::test]
-async fn test_jobs_list_status_filter_with_data() {
+async fn jobs_list_status_filter_with_data() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "jobfilterdata@example.com")
@@ -620,7 +622,7 @@ async fn test_jobs_list_status_filter_with_data() {
 
 // GET /v0/projects/{project}/jobs - ordering with data
 #[tokio::test]
-async fn test_jobs_list_ordering_with_data() {
+async fn jobs_list_ordering_with_data() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "joborderdata@example.com").await;
     let org = server.create_org(&user, "Job OrderData Org").await;
@@ -677,7 +679,7 @@ async fn test_jobs_list_ordering_with_data() {
 
 // GET /v0/projects/{project}/jobs - X-Total-Count with data
 #[tokio::test]
-async fn test_jobs_total_count_with_data() {
+async fn jobs_total_count_with_data() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "jobtotaldata@example.com").await;
     let org = server.create_org(&user, "Job TotalData Org").await;
@@ -719,7 +721,7 @@ async fn test_jobs_total_count_with_data() {
 
 // GET /v0/projects/{project}/jobs - non-member cannot access private project's jobs
 #[tokio::test]
-async fn test_non_member_private_project_jobs() {
+async fn non_member_private_project_jobs() {
     let server = TestServer::new().await;
     let owner = server.signup("Owner", "jobprivowner@example.com").await;
     let non_member = server

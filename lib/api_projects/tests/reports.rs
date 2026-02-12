@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/projects/{project}/reports - list reports (empty)
 #[tokio::test]
-async fn test_reports_list_empty() {
+async fn reports_list_empty() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "reportlist@example.com").await;
     let org = server.create_org(&user, "Report Org").await;
@@ -34,7 +34,7 @@ async fn test_reports_list_empty() {
 
 // GET /v0/projects/{project}/reports - with pagination
 #[tokio::test]
-async fn test_reports_list_with_pagination() {
+async fn reports_list_with_pagination() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "reportpage@example.com").await;
     let org = server.create_org(&user, "Report Page Org").await;
@@ -59,7 +59,7 @@ async fn test_reports_list_with_pagination() {
 
 // GET /v0/projects/{project}/reports/{report} - not found
 #[tokio::test]
-async fn test_reports_get_not_found() {
+async fn reports_get_not_found() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "reportnotfound@example.com")
@@ -86,7 +86,7 @@ async fn test_reports_get_not_found() {
 
 // DELETE /v0/projects/{project}/reports/{report} - not found
 #[tokio::test]
-async fn test_reports_delete_not_found() {
+async fn reports_delete_not_found() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "reportdelnotfound@example.com")

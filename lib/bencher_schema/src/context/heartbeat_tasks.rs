@@ -56,7 +56,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_insert_cancels_previous_task_for_same_job() {
+    async fn insert_cancels_previous_task_for_same_job() {
         let tasks = HeartbeatTasks::new();
         let id = job_id(1);
 
@@ -73,7 +73,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_cancel_aborts_task() {
+    async fn cancel_aborts_task() {
         let tasks = HeartbeatTasks::new();
         let id = job_id(2);
 
@@ -90,7 +90,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_insert_cleans_up_finished_entries() {
+    async fn insert_cleans_up_finished_entries() {
         let tasks = HeartbeatTasks::new();
 
         // Insert a task that finishes immediately, then manually put its handle in the map.

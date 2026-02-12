@@ -2,8 +2,7 @@
 #![expect(
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
-    clippy::uninlined_format_args,
-    clippy::redundant_test_prefix
+    clippy::uninlined_format_args
 )]
 //! Integration tests for OCI base endpoint (/v2/).
 
@@ -12,7 +11,7 @@ use http::StatusCode;
 
 // GET /v2/ - OCI base endpoint (unauthenticated)
 #[tokio::test]
-async fn test_oci_base_unauthenticated() {
+async fn oci_base_unauthenticated() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -29,7 +28,7 @@ async fn test_oci_base_unauthenticated() {
 
 // GET /v2/ - OCI base endpoint (authenticated)
 #[tokio::test]
-async fn test_oci_base_authenticated() {
+async fn oci_base_authenticated() {
     let server = TestServer::new().await;
     let user = server.signup("OCI User", "ocibase@example.com").await;
     let org = server.create_org(&user, "OCI Org").await;
@@ -51,7 +50,7 @@ async fn test_oci_base_authenticated() {
 
 // OPTIONS /v2/ - CORS preflight
 #[tokio::test]
-async fn test_oci_base_options() {
+async fn oci_base_options() {
     let server = TestServer::new().await;
 
     let resp = server

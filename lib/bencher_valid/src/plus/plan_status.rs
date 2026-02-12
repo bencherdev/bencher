@@ -87,7 +87,7 @@ impl PlanStatus {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(feature = "wasm"), expect(dead_code))]
+#[cfg_attr(not(any(feature = "wasm", test)), expect(dead_code))]
 pub fn is_valid_plan_status(plan_status: &str) -> bool {
     matches!(
         plan_status,

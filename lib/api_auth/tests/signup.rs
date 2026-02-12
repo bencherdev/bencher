@@ -1,8 +1,4 @@
-#![expect(
-    unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
-)]
+#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for auth signup endpoint.
 
 use bencher_api_tests::TestServer;
@@ -11,7 +7,7 @@ use http::StatusCode;
 
 // POST /v0/auth/signup - successful signup
 #[tokio::test]
-async fn test_signup_success() {
+async fn signup_success() {
     let server = TestServer::new().await;
 
     let body = JsonSignup {
@@ -42,7 +38,7 @@ async fn test_signup_success() {
 
 // POST /v0/auth/signup - custom slug
 #[tokio::test]
-async fn test_signup_with_custom_slug() {
+async fn signup_with_custom_slug() {
     let server = TestServer::new().await;
 
     let body = JsonSignup {
@@ -71,7 +67,7 @@ async fn test_signup_with_custom_slug() {
 
 // POST /v0/auth/signup - duplicate email returns conflict
 #[tokio::test]
-async fn test_signup_duplicate_email() {
+async fn signup_duplicate_email() {
     let server = TestServer::new().await;
 
     let body = JsonSignup {
@@ -110,7 +106,7 @@ async fn test_signup_duplicate_email() {
 
 // POST /v0/auth/signup - must agree to terms
 #[tokio::test]
-async fn test_signup_must_agree_to_terms() {
+async fn signup_must_agree_to_terms() {
     let server = TestServer::new().await;
 
     let body = JsonSignup {
@@ -139,7 +135,7 @@ async fn test_signup_must_agree_to_terms() {
 
 // POST /v0/auth/signup - invalid email format
 #[tokio::test]
-async fn test_signup_invalid_email() {
+async fn signup_invalid_email() {
     let server = TestServer::new().await;
 
     let body = serde_json::json!({

@@ -1,7 +1,6 @@
 #![expect(
     unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
+    clippy::tests_outside_test_module
 )]
 //! Integration tests for server `OpenAPI` spec endpoint.
 
@@ -11,7 +10,7 @@ use http::StatusCode;
 
 // GET /v0/server/spec - public, no auth required
 #[tokio::test]
-async fn test_spec_get() {
+async fn spec_get() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -28,7 +27,7 @@ async fn test_spec_get() {
 
 // Verify spec contains expected paths
 #[tokio::test]
-async fn test_spec_contains_paths() {
+async fn spec_contains_paths() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -48,7 +47,7 @@ async fn test_spec_contains_paths() {
 
 // Verify spec has correct OpenAPI version
 #[tokio::test]
-async fn test_spec_openapi_version() {
+async fn spec_openapi_version() {
     let server = TestServer::new().await;
 
     let resp = server

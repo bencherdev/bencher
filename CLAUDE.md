@@ -60,7 +60,7 @@ Running the seed tests:
 
 ```bash
 cargo fmt                      # Format Rust code
-cargo clippy --no-deps --all-features -- -Dwarnings  # Lint Rust code
+cargo clippy --no-deps --all-targets --all-features -- -Dwarnings  # Lint Rust code
 cargo check --no-default-features  # Verify build without Plus features
 
 cd services/console

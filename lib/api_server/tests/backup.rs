@@ -1,8 +1,4 @@
-#![expect(
-    unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
-)]
+#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for server backup endpoint.
 
 use bencher_api_tests::TestServer;
@@ -10,7 +6,7 @@ use http::StatusCode;
 
 // POST /v0/server/backup - requires admin auth
 #[tokio::test]
-async fn test_backup_requires_auth() {
+async fn backup_requires_auth() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -26,7 +22,7 @@ async fn test_backup_requires_auth() {
 
 // POST /v0/server/backup - non-admin cannot backup
 #[tokio::test]
-async fn test_backup_forbidden_for_non_admin() {
+async fn backup_forbidden_for_non_admin() {
     let server = TestServer::new().await;
     // First user is admin
     let _admin = server.signup("Admin User", "backupadmin@example.com").await;
@@ -52,7 +48,7 @@ async fn test_backup_forbidden_for_non_admin() {
 
 // POST /v0/server/backup - admin can trigger backup
 #[tokio::test]
-async fn test_backup_as_admin() {
+async fn backup_as_admin() {
     let server = TestServer::new().await;
     // First user is admin
     let admin = server.signup("Admin User", "adminbackup@example.com").await;

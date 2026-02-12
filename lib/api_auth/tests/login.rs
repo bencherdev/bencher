@@ -1,7 +1,6 @@
 #![expect(
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
-    clippy::uninlined_format_args,
     clippy::unwrap_used,
     clippy::expect_used
 )]
@@ -37,7 +36,7 @@ async fn create_user(server: &TestServer, email: &str) {
 
 // POST /v0/auth/login - successful login
 #[tokio::test]
-async fn test_login_success() {
+async fn login_success() {
     let server = TestServer::new().await;
     create_user(&server, "login@example.com").await;
 
@@ -66,7 +65,7 @@ async fn test_login_success() {
 
 // POST /v0/auth/login - unknown user returns not found
 #[tokio::test]
-async fn test_login_unknown_user() {
+async fn login_unknown_user() {
     let server = TestServer::new().await;
 
     let body = JsonLogin {
@@ -91,7 +90,7 @@ async fn test_login_unknown_user() {
 
 // POST /v0/auth/login - invalid email format
 #[tokio::test]
-async fn test_login_invalid_email() {
+async fn login_invalid_email() {
     let server = TestServer::new().await;
 
     let body = serde_json::json!({
@@ -111,7 +110,7 @@ async fn test_login_invalid_email() {
 
 // POST /v0/auth/login - empty body
 #[tokio::test]
-async fn test_login_empty_body() {
+async fn login_empty_body() {
     let server = TestServer::new().await;
 
     let resp = server

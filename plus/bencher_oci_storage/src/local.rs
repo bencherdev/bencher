@@ -992,7 +992,7 @@ mod tests {
             log,
             &db_path,
             3600,
-            1_073_741_824,
+            0x4000_0000,
             crate::storage::Clock::System,
         )
     }

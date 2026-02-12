@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/users - admin can list all users
 #[tokio::test]
-async fn test_users_list_as_admin() {
+async fn users_list_as_admin() {
     let server = TestServer::new().await;
     // First user is admin
     let admin = server.signup("Admin User", "usersadmin@example.com").await;
@@ -30,7 +30,7 @@ async fn test_users_list_as_admin() {
 
 // GET /v0/users - non-admin cannot list users
 #[tokio::test]
-async fn test_users_list_forbidden_for_non_admin() {
+async fn users_list_forbidden_for_non_admin() {
     let server = TestServer::new().await;
     // First user is admin
     let _admin = server.signup("Admin User", "adminlist@example.com").await;
@@ -52,7 +52,7 @@ async fn test_users_list_forbidden_for_non_admin() {
 
 // GET /v0/users/{user} - view own profile
 #[tokio::test]
-async fn test_users_get_self() {
+async fn users_get_self() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "usersget@example.com").await;
 
@@ -72,7 +72,7 @@ async fn test_users_get_self() {
 
 // GET /v0/users/{user} - view by UUID
 #[tokio::test]
-async fn test_users_get_by_uuid() {
+async fn users_get_by_uuid() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "usersbyuuid@example.com").await;
 
@@ -91,7 +91,7 @@ async fn test_users_get_by_uuid() {
 
 // GET /v0/users/{user} - cannot view other user (unless admin)
 #[tokio::test]
-async fn test_users_get_other_forbidden() {
+async fn users_get_other_forbidden() {
     let server = TestServer::new().await;
     let user1 = server.signup("User One", "user1@example.com").await;
     let user2 = server.signup("User Two", "user2@example.com").await;
@@ -117,7 +117,7 @@ async fn test_users_get_other_forbidden() {
 
 // PATCH /v0/users/{user} - update own profile
 #[tokio::test]
-async fn test_users_update_self() {
+async fn users_update_self() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "usersupdate@example.com").await;
 
@@ -142,7 +142,7 @@ async fn test_users_update_self() {
 
 // PATCH /v0/users/{user} - update slug
 #[tokio::test]
-async fn test_users_update_slug() {
+async fn users_update_slug() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "usersslug@example.com").await;
 
@@ -168,7 +168,7 @@ async fn test_users_update_slug() {
 
 // PATCH /v0/users/{user} - non-admin cannot set admin flag
 #[tokio::test]
-async fn test_users_update_admin_forbidden() {
+async fn users_update_admin_forbidden() {
     let server = TestServer::new().await;
     let _admin = server.signup("Admin", "adminupd@example.com").await;
     let user = server.signup("Test User", "useradmin@example.com").await;

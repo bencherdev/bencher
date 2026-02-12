@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/projects/{project}/branches - list branches
 #[tokio::test]
-async fn test_branches_list() {
+async fn branches_list() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "branchlist@example.com").await;
     let org = server.create_org(&user, "Branch Org").await;
@@ -32,7 +32,7 @@ async fn test_branches_list() {
 
 // POST /v0/projects/{project}/branches - create branch
 #[tokio::test]
-async fn test_branches_create() {
+async fn branches_create() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "branchcreate@example.com").await;
     let org = server.create_org(&user, "Branch Create Org").await;
@@ -62,7 +62,7 @@ async fn test_branches_create() {
 
 // POST /v0/projects/{project}/branches - auto-generate slug
 #[tokio::test]
-async fn test_branches_create_auto_slug() {
+async fn branches_create_auto_slug() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "branchautoslug@example.com")
@@ -92,7 +92,7 @@ async fn test_branches_create_auto_slug() {
 
 // GET /v0/projects/{project}/branches/{branch} - get branch
 #[tokio::test]
-async fn test_branches_get() {
+async fn branches_get() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "branchget@example.com").await;
     let org = server.create_org(&user, "Branch Get Org").await;
@@ -136,7 +136,7 @@ async fn test_branches_get() {
 
 // DELETE /v0/projects/{project}/branches/{branch} - delete branch
 #[tokio::test]
-async fn test_branches_delete() {
+async fn branches_delete() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "branchdelete@example.com").await;
     let org = server.create_org(&user, "Branch Delete Org").await;

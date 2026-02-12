@@ -13,7 +13,7 @@ use http::StatusCode;
 
 // POST /v0/runners/{runner}/specs - add spec to runner
 #[tokio::test]
-async fn test_runner_specs_add() {
+async fn runner_specs_add() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "rspecadd@example.com").await;
 
@@ -37,7 +37,7 @@ async fn test_runner_specs_add() {
 
 // GET /v0/runners/{runner}/specs - list runner specs
 #[tokio::test]
-async fn test_runner_specs_list() {
+async fn runner_specs_list() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "rspeclist@example.com").await;
 
@@ -73,7 +73,7 @@ async fn test_runner_specs_list() {
 
 // DELETE /v0/runners/{runner}/specs/{spec} - remove spec from runner
 #[tokio::test]
-async fn test_runner_specs_remove() {
+async fn runner_specs_remove() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "rspecremove@example.com").await;
 
@@ -119,7 +119,7 @@ async fn test_runner_specs_remove() {
 
 // DELETE /v0/runners/{runner}/specs/{spec} - nonexistent association returns 404
 #[tokio::test]
-async fn test_runner_specs_remove_nonexistent() {
+async fn runner_specs_remove_nonexistent() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "rspecrmne@example.com").await;
 
@@ -140,7 +140,7 @@ async fn test_runner_specs_remove_nonexistent() {
 
 // POST /v0/runners/{runner}/specs - non-admin gets 403
 #[tokio::test]
-async fn test_runner_specs_add_forbidden_for_non_admin() {
+async fn runner_specs_add_forbidden_for_non_admin() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "rspecforbid@example.com").await;
     let user = server.signup("User", "rspecuser@example.com").await;
@@ -163,7 +163,7 @@ async fn test_runner_specs_add_forbidden_for_non_admin() {
 
 // POST /v0/runners/{runner}/specs - duplicate association returns conflict
 #[tokio::test]
-async fn test_runner_specs_add_duplicate() {
+async fn runner_specs_add_duplicate() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "rspecdup@example.com").await;
 
@@ -200,7 +200,7 @@ async fn test_runner_specs_add_duplicate() {
 
 // GET /v0/runners/{runner}/specs - returns all associated specs
 #[tokio::test]
-async fn test_runner_specs_list_multiple() {
+async fn runner_specs_list_multiple() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "rspecmulti@example.com").await;
 
@@ -208,11 +208,17 @@ async fn test_runner_specs_list_multiple() {
 
     // Create 3 different specs
     let (spec1_uuid, _) =
-        insert_test_spec_full(&server, "x86_64", 1, 2_147_483_648, 5_368_709_120, false);
-    let (spec2_uuid, _) =
-        insert_test_spec_full(&server, "aarch64", 2, 4_294_967_296, 10_737_418_240, false);
+        insert_test_spec_full(&server, "x86_64", 1, 0x8000_0000, 5_368_709_120, false);
+    let (spec2_uuid, _) = insert_test_spec_full(
+        &server,
+        "aarch64",
+        2,
+        0x0001_0000_0000,
+        10_737_418_240,
+        false,
+    );
     let (spec3_uuid, _) =
-        insert_test_spec_full(&server, "x86_64", 4, 8_589_934_592, 21_474_836_480, true);
+        insert_test_spec_full(&server, "x86_64", 4, 0x0002_0000_0000, 21_474_836_480, true);
 
     // Associate all 3 specs with the runner
     for spec_uuid in [spec1_uuid, spec2_uuid, spec3_uuid] {
@@ -250,7 +256,7 @@ async fn test_runner_specs_list_multiple() {
 
 // GET /v0/runners/{runner}/specs - empty when no specs associated
 #[tokio::test]
-async fn test_runner_specs_list_empty() {
+async fn runner_specs_list_empty() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "rspecempty@example.com").await;
 
@@ -274,7 +280,7 @@ async fn test_runner_specs_list_empty() {
 
 // Claim job - runner without matching spec cannot claim a pending job
 #[tokio::test]
-async fn test_claim_job_spec_mismatch() {
+async fn claim_job_spec_mismatch() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "specmismatch@example.com").await;
     let org = server.create_org(&admin, "Spec Mismatch Org").await;
@@ -288,18 +294,30 @@ async fn test_claim_job_spec_mismatch() {
     let runner_id = get_runner_id(&server, runner.uuid);
 
     // Create two specs with different configurations
-    let (_spec_a_uuid, spec_a_id) =
-        insert_test_spec_full(&server, "x86_64", 2, 4_294_967_296, 10_737_418_240, false);
-    let (_spec_b_uuid, spec_b_id) =
-        insert_test_spec_full(&server, "aarch64", 4, 8_589_934_592, 21_474_836_480, true);
+    let (_spec_x86_uuid, spec_x86_id) = insert_test_spec_full(
+        &server,
+        "x86_64",
+        2,
+        0x0001_0000_0000,
+        10_737_418_240,
+        false,
+    );
+    let (_spec_arm_uuid, spec_arm_id) = insert_test_spec_full(
+        &server,
+        "aarch64",
+        4,
+        0x0002_0000_0000,
+        21_474_836_480,
+        true,
+    );
 
-    // Associate runner with spec A only
-    associate_runner_spec(&server, runner_id, spec_a_id);
+    // Associate runner with spec x86 only
+    associate_runner_spec(&server, runner_id, spec_x86_id);
 
-    // Create a job referencing spec B
+    // Create a job referencing spec arm
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
-    let _job_uuid = insert_test_job(&server, report_id, spec_b_id);
+    let _job_uuid = insert_test_job(&server, report_id, spec_arm_id);
 
     // Runner tries to claim - should get None (no matching job for its specs)
     let claim_body = serde_json::json!({"poll_timeout": 1});
@@ -319,8 +337,8 @@ async fn test_claim_job_spec_mismatch() {
         "Runner should not claim job with mismatched spec"
     );
 
-    // Now associate runner with spec B
-    associate_runner_spec(&server, runner_id, spec_b_id);
+    // Now associate runner with spec arm
+    associate_runner_spec(&server, runner_id, spec_arm_id);
 
     // Runner tries to claim again - should get the job
     let resp = server

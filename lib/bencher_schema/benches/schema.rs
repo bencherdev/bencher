@@ -1,6 +1,5 @@
 #![expect(unused_crate_dependencies)]
 #![expect(clippy::expect_used)]
-#![expect(clippy::cast_possible_truncation)]
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use diesel::{
@@ -80,11 +79,11 @@ fn setup_head_version_data(conn: &mut SqliteConnection, num_versions: usize) -> 
             .values((
                 version::uuid.eq(format!("00000000-0000-0000-0000-{i:012}")),
                 version::project_id.eq(1),
-                version::number.eq(i as i32),
+                version::number.eq(i32::try_from(i).expect("version number fits in i32")),
             ))
             .execute(conn)
             .expect("Failed to insert version");
-        version_ids.push((i + 1) as i32);
+        version_ids.push(i32::try_from(i + 1).expect("version id fits in i32"));
     }
 
     (1, version_ids) // head_id, version_ids
@@ -170,8 +169,8 @@ fn setup_threshold_data(conn: &mut SqliteConnection, num_thresholds: usize) -> i
                 threshold::uuid.eq(format!("30000000-0000-0000-0000-{i:012}")),
                 threshold::project_id.eq(1),
                 threshold::branch_id.eq(1),
-                threshold::testbed_id.eq((i + 1) as i32),
-                threshold::measure_id.eq((i + 1) as i32),
+                threshold::testbed_id.eq(i32::try_from(i + 1).expect("testbed id fits in i32")),
+                threshold::measure_id.eq(i32::try_from(i + 1).expect("measure id fits in i32")),
                 threshold::created.eq(0i64),
                 threshold::modified.eq(0i64),
             ))
@@ -181,17 +180,20 @@ fn setup_threshold_data(conn: &mut SqliteConnection, num_thresholds: usize) -> i
         diesel::insert_into(model::table)
             .values((
                 model::uuid.eq(format!("40000000-0000-0000-0000-{i:012}")),
-                model::threshold_id.eq((i + 1) as i32),
+                model::threshold_id.eq(i32::try_from(i + 1).expect("threshold id fits in i32")),
                 model::test.eq(0),
                 model::created.eq(0i64),
             ))
             .execute(conn)
             .expect("Failed to insert model");
 
-        diesel::update(threshold::table.filter(threshold::id.eq((i + 1) as i32)))
-            .set(threshold::model_id.eq((i + 1) as i32))
-            .execute(conn)
-            .expect("Failed to update threshold with model_id");
+        diesel::update(
+            threshold::table
+                .filter(threshold::id.eq(i32::try_from(i + 1).expect("threshold id fits in i32"))),
+        )
+        .set(threshold::model_id.eq(i32::try_from(i + 1).expect("model id fits in i32")))
+        .execute(conn)
+        .expect("Failed to update threshold with model_id");
     }
 
     1 // branch_id
@@ -215,8 +217,8 @@ fn bench_threshold_join_query(c: &mut Criterion) {
                         (conn, branch_id)
                     },
                     |(mut conn, branch_id)| {
-                        use diesel::JoinOnDsl;
-                        use diesel::NullableExpressionMethods;
+                        use diesel::JoinOnDsl as _;
+                        use diesel::NullableExpressionMethods as _;
 
                         let _results: Vec<(QueryThreshold, Option<QueryModel>)> =
                             schema::threshold::table

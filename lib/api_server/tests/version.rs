@@ -1,7 +1,6 @@
 #![expect(
     unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
+    clippy::tests_outside_test_module
 )]
 //! Integration tests for server version endpoint.
 
@@ -11,7 +10,7 @@ use http::StatusCode;
 
 // GET /v0/server/version - public, no auth required
 #[tokio::test]
-async fn test_version_get() {
+async fn version_get() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -28,7 +27,7 @@ async fn test_version_get() {
 
 // Verify version format is semver-like
 #[tokio::test]
-async fn test_version_format() {
+async fn version_format() {
     let server = TestServer::new().await;
 
     let resp = server

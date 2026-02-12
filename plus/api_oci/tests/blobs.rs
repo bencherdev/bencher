@@ -3,8 +3,9 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
-    clippy::redundant_test_prefix,
-    clippy::similar_names
+    clippy::similar_names,
+    clippy::indexing_slicing,
+    clippy::integer_division
 )]
 //! Integration tests for OCI blob endpoints.
 
@@ -15,7 +16,7 @@ use http::StatusCode;
 
 // POST /v2/{name}/blobs/uploads - Start upload (authenticated)
 #[tokio::test]
-async fn test_blob_upload_start() {
+async fn blob_upload_start() {
     let server = TestServer::new().await;
     let user = server.signup("Blob User", "blobstart@example.com").await;
     let org = server.create_org(&user, "Blob Org").await;
@@ -39,7 +40,7 @@ async fn test_blob_upload_start() {
 
 // POST /v2/{name}/blobs/uploads - Start upload (unauthenticated, unclaimed project)
 #[tokio::test]
-async fn test_blob_upload_start_unclaimed() {
+async fn blob_upload_start_unclaimed() {
     let server = TestServer::new().await;
 
     // Push to a new project slug (will auto-create unclaimed project)
@@ -56,7 +57,7 @@ async fn test_blob_upload_start_unclaimed() {
 
 // PUT /v2/{name}/blobs/uploads - Monolithic upload
 #[tokio::test]
-async fn test_blob_monolithic_upload() {
+async fn blob_monolithic_upload() {
     let server = TestServer::new().await;
     let user = server.signup("Mono User", "blobmono@example.com").await;
     let org = server.create_org(&user, "Mono Org").await;
@@ -88,7 +89,7 @@ async fn test_blob_monolithic_upload() {
 
 // HEAD /v2/{name}/blobs/{digest} - Check blob exists
 #[tokio::test]
-async fn test_blob_exists() {
+async fn blob_exists() {
     let server = TestServer::new().await;
     let user = server.signup("Exists User", "blobexists@example.com").await;
     let org = server.create_org(&user, "Exists Org").await;
@@ -133,7 +134,7 @@ async fn test_blob_exists() {
 
 // HEAD /v2/{name}/blobs/{digest} - Blob not found
 #[tokio::test]
-async fn test_blob_not_found() {
+async fn blob_not_found() {
     let server = TestServer::new().await;
     let user = server
         .signup("NotFound User", "blobnotfound@example.com")
@@ -158,7 +159,7 @@ async fn test_blob_not_found() {
 
 // GET /v2/{name}/blobs/{digest} - Download blob
 #[tokio::test]
-async fn test_blob_get() {
+async fn blob_get() {
     let server = TestServer::new().await;
     let user = server.signup("Get User", "blobget@example.com").await;
     let org = server.create_org(&user, "Get Org").await;
@@ -203,7 +204,7 @@ async fn test_blob_get() {
 
 // DELETE /v2/{name}/blobs/{digest} - Delete blob
 #[tokio::test]
-async fn test_blob_delete() {
+async fn blob_delete() {
     let server = TestServer::new().await;
     let user = server.signup("Delete User", "blobdelete@example.com").await;
     let org = server.create_org(&user, "Delete Org").await;
@@ -256,7 +257,7 @@ async fn test_blob_delete() {
 
 // OPTIONS /v2/{name}/blobs/{ref} - CORS preflight
 #[tokio::test]
-async fn test_blob_options() {
+async fn blob_options() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -279,7 +280,7 @@ async fn test_blob_options() {
 
 // Unauthenticated push to a CLAIMED project should be rejected with 401
 #[tokio::test]
-async fn test_blob_upload_unauthenticated_to_claimed_project() {
+async fn blob_upload_unauthenticated_to_claimed_project() {
     let server = TestServer::new().await;
 
     // Create a user, org, and project (this makes it "claimed" since user is a member)
@@ -305,7 +306,7 @@ async fn test_blob_upload_unauthenticated_to_claimed_project() {
 
 // Authenticated push to an UNCLAIMED project should auto-claim the org
 #[tokio::test]
-async fn test_blob_upload_authenticated_to_unclaimed_project() {
+async fn blob_upload_authenticated_to_unclaimed_project() {
     let server = TestServer::new().await;
 
     // First, create an unclaimed project by pushing without authentication
@@ -350,7 +351,7 @@ async fn test_blob_upload_authenticated_to_unclaimed_project() {
 // A structurally valid but wrongly-signed JWT should NOT silently downgrade
 // to public access. Even on an unclaimed project, a bad signature must be rejected.
 #[tokio::test]
-async fn test_blob_upload_invalid_token_no_downgrade() {
+async fn blob_upload_invalid_token_no_downgrade() {
     let server = TestServer::new().await;
 
     // First, create an unclaimed project (unauthenticated push succeeds)
@@ -400,7 +401,7 @@ async fn test_blob_upload_invalid_token_no_downgrade() {
 
 // Push to a non-existent project by UUID should return 404
 #[tokio::test]
-async fn test_blob_upload_nonexistent_uuid() {
+async fn blob_upload_nonexistent_uuid() {
     let server = TestServer::new().await;
     let user = server.signup("UUID User", "uuidpush@example.com").await;
 
@@ -422,7 +423,7 @@ async fn test_blob_upload_nonexistent_uuid() {
 
 // Push to a non-existent project by slug should auto-create the project
 #[tokio::test]
-async fn test_blob_upload_nonexistent_slug_authenticated() {
+async fn blob_upload_nonexistent_slug_authenticated() {
     let server = TestServer::new().await;
     let user = server.signup("Slug User", "slugpush@example.com").await;
 
@@ -456,7 +457,7 @@ async fn test_blob_upload_nonexistent_slug_authenticated() {
 
 // Monolithic upload (PUT /blobs/uploads?digest=) to unclaimed project
 #[tokio::test]
-async fn test_blob_monolithic_upload_unclaimed() {
+async fn blob_monolithic_upload_unclaimed() {
     let server = TestServer::new().await;
 
     let blob_data = b"unclaimed monolithic blob content";
@@ -482,7 +483,7 @@ async fn test_blob_monolithic_upload_unclaimed() {
 
 // Monolithic upload to a CLAIMED project without auth should fail
 #[tokio::test]
-async fn test_blob_monolithic_upload_unauthenticated_to_claimed() {
+async fn blob_monolithic_upload_unauthenticated_to_claimed() {
     let server = TestServer::new().await;
 
     // Create a claimed project
@@ -517,7 +518,7 @@ async fn test_blob_monolithic_upload_unauthenticated_to_claimed() {
 
 // PUT /v2/{name}/blobs/uploads?digest= - Monolithic upload with wrong digest
 #[tokio::test]
-async fn test_blob_monolithic_upload_digest_mismatch() {
+async fn blob_monolithic_upload_digest_mismatch() {
     let server = TestServer::new().await;
     let user = server
         .signup("DigestMismatch User", "blobdigestmismatch@example.com")
@@ -555,7 +556,7 @@ async fn test_blob_monolithic_upload_digest_mismatch() {
 
 // PUT /v2/{name}/blobs/uploads?digest= - Monolithic upload with zero-length body
 #[tokio::test]
-async fn test_blob_monolithic_upload_zero_length() {
+async fn blob_monolithic_upload_zero_length() {
     let server = TestServer::new().await;
     let user = server
         .signup("ZeroLen User", "blobzerolen@example.com")
@@ -598,7 +599,7 @@ async fn test_blob_monolithic_upload_zero_length() {
 // Since user B doesn't have pull access to project A, the mount should fail silently
 // and fall through to a regular upload (returning 202 Accepted, not 201 Created)
 #[tokio::test]
-async fn test_cross_repo_mount_access_denied_fallback() {
+async fn cross_repo_mount_access_denied_fallback() {
     let server = TestServer::new().await;
 
     // Create user A with project A and push a blob
@@ -675,7 +676,7 @@ async fn test_cross_repo_mount_access_denied_fallback() {
 
 // Upload blob with sha512 digest should fail because storage only computes sha256
 #[tokio::test]
-async fn test_blob_upload_sha512() {
+async fn blob_upload_sha512() {
     let server = TestServer::new().await;
     let user = server.signup("Sha512 User", "sha512blob@example.com").await;
     let org = server.create_org(&user, "Sha512 Org").await;
@@ -715,7 +716,7 @@ async fn test_blob_upload_sha512() {
 
 // Pull-only token should NOT be able to start an upload (push operation)
 #[tokio::test]
-async fn test_blob_upload_pull_only_token_rejected() {
+async fn blob_upload_pull_only_token_rejected() {
     let server = TestServer::new().await;
     let user = server
         .signup("PullOnly User", "pullonlyblob@example.com")
@@ -749,7 +750,7 @@ async fn test_blob_upload_pull_only_token_rejected() {
 
 // Monolithic blob upload exceeding max body size should be rejected
 #[tokio::test]
-async fn test_blob_monolithic_upload_exceeds_max_body_size() {
+async fn blob_monolithic_upload_exceeds_max_body_size() {
     // max_body_size = 100 bytes
     let server = TestServer::new_with_limits(3600, 100).await;
     let user = server
@@ -794,7 +795,7 @@ async fn test_blob_monolithic_upload_exceeds_max_body_size() {
 
 // Blob read after storage directory is deleted
 #[tokio::test]
-async fn test_blob_read_after_storage_deleted() {
+async fn blob_read_after_storage_deleted() {
     let server = TestServer::new().await;
     let user = server
         .signup("StorageFail User", "storagefailblob@example.com")
@@ -855,7 +856,7 @@ async fn test_blob_read_after_storage_deleted() {
 
 // Push-only token should NOT be able to read a blob (pull operation)
 #[tokio::test]
-async fn test_blob_head_push_only_token_rejected() {
+async fn blob_head_push_only_token_rejected() {
     let server = TestServer::new().await;
     let user = server
         .signup("PushOnly User", "pushonlyblob@example.com")

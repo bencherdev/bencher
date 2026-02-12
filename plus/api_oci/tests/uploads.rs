@@ -3,8 +3,8 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
-    clippy::redundant_test_prefix,
-    clippy::too_many_lines
+    clippy::too_many_lines,
+    clippy::decimal_literal_representation
 )]
 //! Integration tests for OCI upload session endpoints.
 
@@ -24,7 +24,7 @@ fn extract_session_id(location: &str) -> Option<String> {
 
 // GET /v2/{name}/blobs/uploads/{session_id} - Get upload status
 #[tokio::test]
-async fn test_upload_status() {
+async fn upload_status() {
     let server = TestServer::new().await;
     let user = server
         .signup("Status User", "uploadstatus@example.com")
@@ -71,7 +71,7 @@ async fn test_upload_status() {
 
 // PATCH /v2/{name}/blobs/uploads/{session_id} - Upload chunk
 #[tokio::test]
-async fn test_upload_chunk() {
+async fn upload_chunk() {
     let server = TestServer::new().await;
     let user = server.signup("Chunk User", "uploadchunk@example.com").await;
     let org = server.create_org(&user, "Chunk Org").await;
@@ -126,7 +126,7 @@ async fn test_upload_chunk() {
 
 // PATCH with Content-Range header
 #[tokio::test]
-async fn test_upload_chunk_with_content_range() {
+async fn upload_chunk_with_content_range() {
     let server = TestServer::new().await;
     let user = server.signup("Range User", "uploadrange@example.com").await;
     let org = server.create_org(&user, "Range Org").await;
@@ -191,7 +191,7 @@ async fn test_upload_chunk_with_content_range() {
 
 // PATCH with wrong Content-Range (should return 416)
 #[tokio::test]
-async fn test_upload_chunk_wrong_range() {
+async fn upload_chunk_wrong_range() {
     let server = TestServer::new().await;
     let user = server
         .signup("WrongRange User", "uploadwrongrange@example.com")
@@ -241,7 +241,7 @@ async fn test_upload_chunk_wrong_range() {
 
 // PUT /v2/{name}/blobs/uploads/{session_id}?digest= - Complete upload
 #[tokio::test]
-async fn test_upload_complete() {
+async fn upload_complete() {
     let server = TestServer::new().await;
     let user = server
         .signup("Complete User", "uploadcomplete@example.com")
@@ -302,7 +302,7 @@ async fn test_upload_complete() {
 
 // PUT with additional data in body
 #[tokio::test]
-async fn test_upload_complete_with_final_chunk() {
+async fn upload_complete_with_final_chunk() {
     let server = TestServer::new().await;
     let user = server
         .signup("FinalChunk User", "uploadfinal@example.com")
@@ -370,7 +370,7 @@ async fn test_upload_complete_with_final_chunk() {
 
 // PUT with wrong digest (should fail)
 #[tokio::test]
-async fn test_upload_complete_wrong_digest() {
+async fn upload_complete_wrong_digest() {
     let server = TestServer::new().await;
     let user = server
         .signup("WrongDigest User", "uploadwrongdigest@example.com")
@@ -431,7 +431,7 @@ async fn test_upload_complete_wrong_digest() {
 
 // DELETE /v2/{name}/blobs/uploads/{session_id} - Cancel upload
 #[tokio::test]
-async fn test_upload_cancel() {
+async fn upload_cancel() {
     let server = TestServer::new().await;
     let user = server
         .signup("Cancel User", "uploadcancel@example.com")
@@ -488,7 +488,7 @@ async fn test_upload_cancel() {
 
 // Upload to a cancelled session should return 404
 #[tokio::test]
-async fn test_upload_to_cancelled_session() {
+async fn upload_to_cancelled_session() {
     let server = TestServer::new().await;
     let user = server
         .signup("Cancelled User", "uploadcancelled@example.com")
@@ -553,7 +553,7 @@ async fn test_upload_to_cancelled_session() {
 
 // PATCH with malformed Content-Range (not parseable)
 #[tokio::test]
-async fn test_upload_malformed_content_range() {
+async fn upload_malformed_content_range() {
     let server = TestServer::new().await;
     let user = server
         .signup("MalformedRange User", "uploadmalformedrange@example.com")
@@ -608,7 +608,7 @@ async fn test_upload_malformed_content_range() {
 
 // PATCH with Content-Range including "bytes " prefix (standard HTTP format)
 #[tokio::test]
-async fn test_upload_content_range_bytes_prefix() {
+async fn upload_content_range_bytes_prefix() {
     let server = TestServer::new().await;
     let user = server
         .signup("BytesPrefix User", "uploadbytesprefix@example.com")
@@ -662,7 +662,7 @@ async fn test_upload_content_range_bytes_prefix() {
 
 // OPTIONS /v2/{name}/blobs/uploads/{session_id} - CORS preflight
 #[tokio::test]
-async fn test_upload_session_options() {
+async fn upload_session_options() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -681,7 +681,7 @@ async fn test_upload_session_options() {
 
 // PATCH with Content-Range where only end is unparseable (e.g., "0-abc") should return 416
 #[tokio::test]
-async fn test_upload_partial_content_range_bad_end() {
+async fn upload_partial_content_range_bad_end() {
     let server = TestServer::new().await;
     let user = server
         .signup("BadEnd User", "uploadbadend@example.com")
@@ -733,7 +733,7 @@ async fn test_upload_partial_content_range_bad_end() {
 
 // PATCH with Content-Range where only start is unparseable (e.g., "abc-10") should return 416
 #[tokio::test]
-async fn test_upload_partial_content_range_bad_start() {
+async fn upload_partial_content_range_bad_start() {
     let server = TestServer::new().await;
     let user = server
         .signup("BadStart User", "uploadbadstart@example.com")
@@ -789,7 +789,7 @@ async fn test_upload_partial_content_range_bad_start() {
 
 // Start 2 upload sessions to same repo, upload chunks via tokio::join!, complete both, verify both blobs exist
 #[tokio::test]
-async fn test_concurrent_uploads_different_sessions() {
+async fn concurrent_uploads_different_sessions() {
     let server = TestServer::new().await;
     let user = server
         .signup("Concurrent User", "concurrentupload@example.com")
@@ -936,7 +936,7 @@ async fn test_concurrent_uploads_different_sessions() {
 // Start a session, advance mock clock past timeout, start another session
 // (triggers cleanup), then verify the first session is gone
 #[tokio::test]
-async fn test_upload_session_expired() {
+async fn upload_session_expired() {
     let base_time = chrono::Utc::now().timestamp();
     let mock_time = Arc::new(AtomicI64::new(base_time));
     let time_ref = mock_time.clone();
@@ -1037,7 +1037,7 @@ async fn test_upload_session_expired() {
 
 // Chunked upload cumulative exceeds max body size
 #[tokio::test]
-async fn test_chunked_upload_exceeds_max_body_size() {
+async fn chunked_upload_exceeds_max_body_size() {
     // max_body_size = 100 bytes
     let server = TestServer::new_with_limits(3600, 100).await;
     let user = server
@@ -1114,7 +1114,7 @@ async fn test_chunked_upload_exceeds_max_body_size() {
 
 // Upload complete after storage directory is deleted
 #[tokio::test]
-async fn test_upload_complete_after_storage_deleted() {
+async fn upload_complete_after_storage_deleted() {
     let server = TestServer::new().await;
     let user = server
         .signup("StorageFail User", "storagefailupload@example.com")
@@ -1191,7 +1191,7 @@ async fn test_upload_complete_after_storage_deleted() {
 
 // Verify that rejected data is never written to disk (size check before write)
 #[tokio::test]
-async fn test_chunked_upload_size_not_written_on_reject() {
+async fn chunked_upload_size_not_written_on_reject() {
     // max_body_size = 100 bytes
     let server = TestServer::new_with_limits(3600, 100).await;
     let user = server

@@ -38,13 +38,12 @@ pub async fn create_runner(server: &TestServer, admin_token: &str, name: &str) -
 /// Default test source IP for job insertion.
 pub const TEST_SOURCE_IP: &str = "127.0.0.1";
 
-/// Insert a test spec directly into the database. Returns the spec UUID and spec_id.
-#[expect(clippy::expect_used)]
+/// Insert a test spec directly into the database. Returns the spec UUID and `spec_id`.
 pub fn insert_test_spec(server: &TestServer) -> (SpecUuid, i32) {
-    insert_test_spec_full(server, "x86_64", 2, 4_294_967_296, 10_737_418_240, false)
+    insert_test_spec_full(server, "x86_64", 2, 0x0001_0000_0000, 10_737_418_240, false)
 }
 
-/// Insert a test spec with specific values. Returns (SpecUuid, spec_id).
+/// Insert a test spec with specific values. Returns (`SpecUuid`, `spec_id`).
 #[expect(clippy::expect_used)]
 pub fn insert_test_spec_full(
     server: &TestServer,
@@ -99,8 +98,7 @@ pub fn associate_runner_spec(server: &TestServer, runner_id: i32, spec_id: i32) 
 }
 
 /// Insert a test job directly into the database. Returns the job UUID.
-/// Uses a default organization_id of 1 and source_ip of "127.0.0.1".
-#[expect(clippy::expect_used)]
+/// Uses a default `organization_id` of 1 and `source_ip` of "127.0.0.1".
 pub fn insert_test_job(server: &TestServer, report_id: i32, spec_id: i32) -> JobUuid {
     insert_test_job_full(
         server,
@@ -114,7 +112,6 @@ pub fn insert_test_job(server: &TestServer, report_id: i32, spec_id: i32) -> Job
 }
 
 /// Insert a test job with a specific project UUID. Returns the job UUID.
-#[expect(clippy::expect_used)]
 pub fn insert_test_job_with_project(
     server: &TestServer,
     report_id: i32,
@@ -386,7 +383,7 @@ pub fn set_job_status(server: &TestServer, job_uuid: JobUuid, status: JobStatus)
         .expect("Failed to set job status");
 }
 
-/// Set the runner_id directly in the database (for testing preconditions).
+/// Set the `runner_id` directly in the database (for testing preconditions).
 #[expect(clippy::expect_used)]
 pub fn set_job_runner_id(server: &TestServer, job_uuid: JobUuid, runner_id: i32) {
     let mut conn = server.db_conn();
@@ -397,7 +394,7 @@ pub fn set_job_runner_id(server: &TestServer, job_uuid: JobUuid, runner_id: i32)
 }
 
 /// Insert a test job with a specific created timestamp (for FIFO tiebreaker tests).
-#[expect(clippy::expect_used)]
+#[expect(clippy::too_many_arguments, clippy::expect_used)]
 pub fn insert_test_job_with_timestamp(
     server: &TestServer,
     report_id: i32,
@@ -449,7 +446,7 @@ pub fn get_job_priority(server: &TestServer, job_uuid: JobUuid) -> JobPriority {
         .expect("Failed to get job priority")
 }
 
-/// Get runner_id (as i32) from runner UUID.
+/// Get `runner_id` (as i32) from runner UUID.
 #[expect(clippy::expect_used)]
 pub fn get_runner_id(server: &TestServer, runner_uuid: bencher_json::RunnerUuid) -> i32 {
     let mut conn = server.db_conn();

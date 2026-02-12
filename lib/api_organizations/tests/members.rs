@@ -14,7 +14,7 @@ use http::StatusCode;
 
 // GET /v0/organizations/{organization}/members - list members
 #[tokio::test]
-async fn test_members_list() {
+async fn members_list() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "memberlist@example.com").await;
     let org = server.create_org(&user, "Members Org").await;
@@ -36,7 +36,7 @@ async fn test_members_list() {
 
 // GET /v0/organizations/{organization}/members - verify creator is member
 #[tokio::test]
-async fn test_members_creator_is_member() {
+async fn members_creator_is_member() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "creatormember@example.com")
@@ -62,7 +62,7 @@ async fn test_members_creator_is_member() {
 
 // POST /v0/organizations/{organization}/members - invite member
 #[tokio::test]
-async fn test_members_invite() {
+async fn members_invite() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "inviter@example.com").await;
     let org = server.create_org(&user, "Invite Org").await;
@@ -89,7 +89,7 @@ async fn test_members_invite() {
 
 // POST /v0/organizations/{organization}/members - invite without name
 #[tokio::test]
-async fn test_members_invite_no_name() {
+async fn members_invite_no_name() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "invitername@example.com").await;
     let org = server.create_org(&user, "No Name Invite Org").await;
@@ -116,7 +116,7 @@ async fn test_members_invite_no_name() {
 
 // POST /v0/organizations/{organization}/members - invalid email
 #[tokio::test]
-async fn test_members_invite_invalid_email() {
+async fn members_invite_invalid_email() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "inviterbad@example.com").await;
     let org = server.create_org(&user, "Bad Email Invite Org").await;
