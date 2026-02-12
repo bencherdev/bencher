@@ -8,14 +8,13 @@ use tokio::sync::Mutex;
 use crate::{
     context::DbConnection,
     error::issue_error,
-    macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
+    macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
     model::{
         organization::OrganizationId,
         project::report::ReportId,
         runner::{QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
     },
-    resource_not_found_err,
     schema::{self, job as job_table},
 };
 
@@ -52,13 +51,7 @@ impl QueryJob {
     fn_get!(job, JobId);
     fn_get_id!(job, JobId, JobUuid);
     fn_get_uuid!(job, JobId, JobUuid);
-
-    pub fn from_uuid(conn: &mut DbConnection, uuid: JobUuid) -> Result<Self, HttpError> {
-        schema::job::table
-            .filter(schema::job::uuid.eq(uuid))
-            .first(conn)
-            .map_err(resource_not_found_err!(Job, uuid))
-    }
+    fn_from_uuid!(job, JobUuid, Job);
 
     /// Parse the job config from JSON string.
     pub fn parse_config(&self) -> Result<JsonJobConfig, HttpError> {

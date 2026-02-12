@@ -28,7 +28,7 @@ use crate::{
         BencherResource, forbidden_error, issue_error, resource_not_found_error, unauthorized_error,
     },
     macros::{
-        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
@@ -63,16 +63,10 @@ impl QueryOrganization {
     fn_eq_resource_id!(organization, OrganizationResourceId);
     fn_from_resource_id!(organization, Organization, OrganizationResourceId);
 
-    pub fn from_uuid(conn: &mut DbConnection, uuid: OrganizationUuid) -> Result<Self, HttpError> {
-        schema::organization::table
-            .filter(schema::organization::uuid.eq(uuid))
-            .first(conn)
-            .map_err(resource_not_found_err!(Organization, uuid))
-    }
-
     fn_get!(organization, OrganizationId);
     fn_get_id!(organization, OrganizationId, OrganizationUuid);
     fn_get_uuid!(organization, OrganizationId, OrganizationUuid);
+    fn_from_uuid!(organization, OrganizationUuid, Organization);
 
     pub async fn get_or_create_from_user(
         context: &ApiContext,

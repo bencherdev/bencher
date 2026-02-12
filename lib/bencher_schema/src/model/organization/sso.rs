@@ -11,6 +11,7 @@ use crate::{
     ApiContext, auth_conn,
     context::DbConnection,
     error::issue_error,
+    macros::fn_get::fn_from_uuid,
     model::{
         organization::{OrganizationId, QueryOrganization},
         user::QueryUser,
@@ -35,12 +36,7 @@ pub struct QuerySso {
 }
 
 impl QuerySso {
-    pub fn from_uuid(conn: &mut DbConnection, uuid: SsoUuid) -> Result<Self, HttpError> {
-        schema::sso::table
-            .filter(schema::sso::uuid.eq(uuid))
-            .first(conn)
-            .map_err(resource_not_found_err!(Sso, uuid))
-    }
+    fn_from_uuid!(sso, SsoUuid, Sso);
 
     pub async fn join_all(
         context: &ApiContext,

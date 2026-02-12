@@ -88,7 +88,13 @@ macro_rules! fn_from_uuid {
         }
     };
     ($table:ident, $uuid:ident, $resource:ident) => {
-        fn_from_uuid!(project_id, ProjectId, $table, $uuid, $resource);
+        pub fn from_uuid(conn: &mut DbConnection, uuid: $uuid) -> Result<Self, HttpError> {
+            use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+            $crate::schema::$table::table
+                .filter($crate::schema::$table::uuid.eq(uuid))
+                .first::<Self>(conn)
+                .map_err($crate::error::resource_not_found_err!($resource, uuid))
+        }
     };
 }
 

@@ -1,8 +1,6 @@
 use std::string::ToString as _;
 
-use bencher_json::{
-    DateTime, JsonRunner, JsonUpdateRunner, ResourceName, RunnerSlug, SpecUuid,
-};
+use bencher_json::{DateTime, JsonRunner, JsonUpdateRunner, ResourceName, RunnerSlug, SpecUuid};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
@@ -11,11 +9,10 @@ pub use bencher_json::{JobStatus, JobUuid, RunnerUuid};
 use crate::{
     context::DbConnection,
     macros::{
-        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
     },
     model::spec::QuerySpec,
-    resource_not_found_err,
     schema::{self, runner as runner_table},
 };
 
@@ -51,15 +48,9 @@ impl QueryRunner {
     fn_get!(runner, RunnerId);
     fn_get_id!(runner, RunnerId, RunnerUuid);
     fn_get_uuid!(runner, RunnerId, RunnerUuid);
+    fn_from_uuid!(runner, RunnerUuid, Runner);
     fn_eq_resource_id!(runner, RunnerResourceId);
     fn_from_resource_id!(runner, Runner, RunnerResourceId);
-
-    pub fn from_uuid(conn: &mut DbConnection, uuid: RunnerUuid) -> Result<Self, HttpError> {
-        schema::runner::table
-            .filter(schema::runner::uuid.eq(uuid))
-            .first(conn)
-            .map_err(resource_not_found_err!(Runner, uuid))
-    }
 
     pub fn is_archived(&self) -> bool {
         self.archived.is_some()

@@ -65,7 +65,7 @@ impl QueryBranch {
     fn_get!(branch, BranchId);
     fn_get_id!(branch, BranchId, BranchUuid);
     fn_get_uuid!(branch, BranchId, BranchUuid);
-    fn_from_uuid!(branch, BranchUuid, Branch);
+    fn_from_uuid!(project_id, ProjectId, branch, BranchUuid, Branch);
 
     pub fn head_id(&self) -> Result<HeadId, HttpError> {
         self.head_id.ok_or_else(|| {

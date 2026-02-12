@@ -10,11 +10,10 @@ use dropshot::HttpError;
 use crate::{
     context::DbConnection,
     macros::{
-        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
-    resource_not_found_err,
     schema::{self, spec as spec_table},
 };
 
@@ -41,15 +40,9 @@ impl QuerySpec {
     fn_get!(spec, SpecId);
     fn_get_id!(spec, SpecId, SpecUuid);
     fn_get_uuid!(spec, SpecId, SpecUuid);
+    fn_from_uuid!(spec, SpecUuid, Spec);
     fn_eq_resource_id!(spec, SpecResourceId);
     fn_from_resource_id!(spec, Spec, SpecResourceId);
-
-    pub fn from_uuid(conn: &mut DbConnection, uuid: SpecUuid) -> Result<Self, HttpError> {
-        schema::spec::table
-            .filter(schema::spec::uuid.eq(uuid))
-            .first(conn)
-            .map_err(resource_not_found_err!(Spec, uuid))
-    }
 
     pub fn into_json(self) -> JsonSpec {
         JsonSpec {
