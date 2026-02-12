@@ -92,6 +92,8 @@ pub enum ApiCounter {
     RunnerTokenRotate,
     RunnerJobClaim,
     RunnerJobUpdate(JobStatusKind),
+    RunnerHeartbeatTimeout,
+    RunnerJobTimeout,
 
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
@@ -160,6 +162,8 @@ impl ApiCounter {
             Self::RunnerTokenRotate => "runner.token.rotate",
             Self::RunnerJobClaim => "runner.job.claim",
             Self::RunnerJobUpdate(_) => "runner.job.update",
+            Self::RunnerHeartbeatTimeout => "runner.heartbeat.timeout",
+            Self::RunnerJobTimeout => "runner.job.timeout",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
@@ -232,6 +236,12 @@ impl ApiCounter {
             Self::RunnerTokenRotate => "Counts the number of runner token rotations",
             Self::RunnerJobClaim => "Counts the number of runner job claims",
             Self::RunnerJobUpdate(_) => "Counts the number of runner job status updates",
+            Self::RunnerHeartbeatTimeout => {
+                "Counts the number of jobs failed due to heartbeat timeout"
+            },
+            Self::RunnerJobTimeout => {
+                "Counts the number of jobs canceled due to exceeding job timeout"
+            },
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
@@ -266,7 +276,9 @@ impl ApiCounter {
             | Self::RunnerCreate
             | Self::RunnerUpdate
             | Self::RunnerTokenRotate
-            | Self::RunnerJobClaim => Vec::new(),
+            | Self::RunnerJobClaim
+            | Self::RunnerHeartbeatTimeout
+            | Self::RunnerJobTimeout => Vec::new(),
             Self::UserSignup(auth_method)
             | Self::UserLogin(auth_method)
             | Self::UserSsoJoin(auth_method) => auth_method.attributes(),

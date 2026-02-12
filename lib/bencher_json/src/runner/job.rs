@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use bencher_valid::{DateTime, ImageDigest, Timeout, Url};
+use bencher_valid::{DateTime, ImageDigest, PollTimeout, Timeout, Url};
 use camino::Utf8PathBuf;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::RunnerUuid;
-use super::job_status::JobStatus;
+use super::job_status::{JobStatus, JobUpdateStatus};
 use crate::ProjectUuid;
 use crate::spec::JsonSpec;
 
@@ -48,7 +48,7 @@ pub struct JsonJob {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateJob {
     /// New job status (running, completed, failed)
-    pub status: JobStatus,
+    pub status: JobUpdateStatus,
     /// Exit code (required for completed/failed)
     pub exit_code: Option<i32>,
     /// Standard output
@@ -75,8 +75,8 @@ pub struct JsonUpdateJobResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonClaimJob {
-    /// Maximum time to wait for a job (long-poll), in seconds. Max 60 (default 30)
-    pub poll_timeout: Option<u32>,
+    /// Maximum time to wait for a job (long-poll), in seconds (1-600)
+    pub poll_timeout: Option<PollTimeout>,
 }
 
 /// Job configuration sent to runners.

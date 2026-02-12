@@ -28,10 +28,6 @@ use tokio_tungstenite::tungstenite::{
 
 use crate::runner_token::RunnerToken;
 
-/// Default heartbeat timeout when the `plus` feature is not enabled.
-#[cfg(not(feature = "plus"))]
-const DEFAULT_HEARTBEAT_TIMEOUT: Duration = Duration::from_secs(90);
-
 /// Path parameters for the job channel endpoint.
 #[derive(Deserialize, JsonSchema)]
 pub struct RunnerJobChannelParams {
@@ -139,10 +135,7 @@ pub async fn runner_job_channel(
     )
     .await;
 
-    #[cfg(feature = "plus")]
     let heartbeat_timeout = context.heartbeat_timeout;
-    #[cfg(not(feature = "plus"))]
-    let heartbeat_timeout = DEFAULT_HEARTBEAT_TIMEOUT;
 
     handle_websocket(&log, context, job_id, ws_stream, heartbeat_timeout).await?;
 
@@ -294,6 +287,9 @@ fn terminal_close_reason(
     }
     if matches!(runner_msg, RunnerMessage::Failed { .. }) {
         return Some("job failed");
+    }
+    if matches!(runner_msg, RunnerMessage::Cancelled) {
+        return Some("job cancelled by runner");
     }
     None
 }

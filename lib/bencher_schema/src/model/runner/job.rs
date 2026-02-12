@@ -207,11 +207,14 @@ pub fn spawn_heartbeat_timeout(
                 let elapsed = (now.timestamp() - last_heartbeat.timestamp()).max(0);
                 if elapsed < i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) {
                     // Heartbeat is recent, runner reconnected — schedule another timeout
-                    let remaining = std::time::Duration::from_secs(
-                        u64::try_from(
-                            i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) - elapsed,
-                        )
-                        .unwrap_or(0),
+                    let remaining = std::cmp::max(
+                        std::time::Duration::from_secs(
+                            u64::try_from(
+                                i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) - elapsed,
+                            )
+                            .unwrap_or(0),
+                        ),
+                        std::time::Duration::from_secs(1),
                     );
                     drop(conn);
                     let connection_clone = connection.clone();
@@ -252,7 +255,12 @@ pub fn spawn_heartbeat_timeout(
                 Ok(0) => {
                     slog::info!(log, "Heartbeat timeout: job already in terminal state"; "job_id" => ?job_id);
                 },
-                Ok(_) => {},
+                Ok(_) => {
+                    #[cfg(feature = "otel")]
+                    bencher_otel::ApiMeter::increment(
+                        bencher_otel::ApiCounter::RunnerHeartbeatTimeout,
+                    );
+                },
                 Err(e) => {
                     slog::error!(log, "Failed to mark job as failed"; "job_id" => ?job_id, "error" => %e);
                 },
@@ -261,6 +269,82 @@ pub fn spawn_heartbeat_timeout(
     });
 
     heartbeat_tasks.insert(job_id, join_handle.abort_handle());
+}
+
+/// Recover jobs stuck in `Claimed` status that were claimed longer ago than the
+/// heartbeat timeout. These are orphaned: the runner claimed them but never
+/// transitioned them to `Running` (e.g., the runner crashed after claiming).
+///
+/// Returns the number of jobs recovered (transitioned to `Failed`).
+pub fn recover_orphaned_claimed_jobs(
+    log: &slog::Logger,
+    conn: &mut DbConnection,
+    heartbeat_timeout: std::time::Duration,
+) -> usize {
+    let now = DateTime::now();
+    #[expect(clippy::cast_possible_wrap, reason = "heartbeat timeout fits in i64")]
+    let cutoff_timestamp = now.timestamp() - heartbeat_timeout.as_secs() as i64;
+
+    // Find claimed jobs where claimed_at is older than the heartbeat timeout
+    let orphaned_jobs: Vec<QueryJob> = match schema::job::table
+        .filter(schema::job::status.eq(JobStatus::Claimed))
+        .load(conn)
+    {
+        Ok(jobs) => jobs,
+        Err(e) => {
+            slog::error!(log, "Failed to query orphaned claimed jobs: {e}");
+            return 0;
+        },
+    };
+
+    let mut recovered = 0;
+    for job in orphaned_jobs {
+        let claimed_at = if let Some(claimed) = job.claimed {
+            claimed
+        } else {
+            // Claimed but no timestamp — should not happen, fail it anyway
+            slog::warn!(log, "Claimed job has no claimed timestamp"; "job_id" => ?job.id);
+            job.created
+        };
+
+        if claimed_at.timestamp() > cutoff_timestamp {
+            // Not yet orphaned
+            continue;
+        }
+
+        slog::warn!(log, "Recovering orphaned claimed job"; "job_id" => ?job.id);
+        let update = UpdateJob {
+            status: Some(JobStatus::Failed),
+            completed: Some(Some(now)),
+            modified: Some(now),
+            ..Default::default()
+        };
+
+        match diesel::update(
+            schema::job::table
+                .filter(schema::job::id.eq(job.id))
+                .filter(schema::job::status.eq(JobStatus::Claimed)),
+        )
+        .set(&update)
+        .execute(conn)
+        {
+            Ok(0) => {
+                slog::info!(log, "Orphaned job already changed state"; "job_id" => ?job.id);
+            },
+            Ok(_) => {
+                recovered += 1;
+            },
+            Err(e) => {
+                slog::error!(log, "Failed to recover orphaned job"; "job_id" => ?job.id, "error" => %e);
+            },
+        }
+    }
+
+    if recovered > 0 {
+        slog::info!(log, "Recovered {recovered} orphaned claimed job(s)");
+    }
+
+    recovered
 }
 
 /// Check if a job has exceeded its timeout + grace period.
@@ -292,7 +376,7 @@ fn check_job_timeout(
         ..Default::default()
     };
     // Use status filter to avoid TOCTOU race
-    if let Err(e) = diesel::update(
+    match diesel::update(
         schema::job::table
             .filter(schema::job::id.eq(job.id))
             .filter(
@@ -304,7 +388,14 @@ fn check_job_timeout(
     .set(&cancel_update)
     .execute(conn)
     {
-        slog::error!(log, "Failed to cancel timed-out job"; "job_id" => ?job.id, "error" => %e);
+        Ok(updated) if updated > 0 => {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobTimeout);
+        },
+        Ok(_) => {},
+        Err(e) => {
+            slog::error!(log, "Failed to cancel timed-out job"; "job_id" => ?job.id, "error" => %e);
+        },
     }
     true
 }

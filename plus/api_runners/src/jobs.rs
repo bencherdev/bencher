@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use bencher_endpoint::{CorsResponse, Endpoint, Patch, Post, ResponseOk};
 use bencher_json::{
-    DateTime, JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonUpdateJob,
-    JsonUpdateJobResponse, RunnerResourceId,
+    DateTime, JobPriority, JobStatus, JobUpdateStatus, JobUuid, JsonClaimJob, JsonJob,
+    JsonUpdateJob, JsonUpdateJobResponse, RunnerResourceId,
 };
 use bencher_schema::{
     auth_conn,
@@ -37,10 +37,6 @@ const PRIORITY_FREE: JobPriority = JobPriority::Free;
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
 /// Default poll timeout (30 seconds)
 const DEFAULT_POLL_TIMEOUT: u32 = 30;
-/// Minimum poll timeout (1 second)
-const MIN_POLL_TIMEOUT: u32 = 1;
-/// Maximum poll timeout (60 seconds)
-const MAX_POLL_TIMEOUT: u32 = 60;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct RunnerJobsParams {
@@ -94,11 +90,9 @@ async fn claim_job_inner(
     runner_token: RunnerToken,
     claim_request: JsonClaimJob,
 ) -> Result<Option<JsonJob>, HttpError> {
-    // Cap poll timeout at 60 seconds
     let poll_timeout = claim_request
         .poll_timeout
-        .unwrap_or(DEFAULT_POLL_TIMEOUT)
-        .clamp(MIN_POLL_TIMEOUT, MAX_POLL_TIMEOUT);
+        .map_or(DEFAULT_POLL_TIMEOUT, u32::from);
     let deadline = tokio::time::Instant::now() + Duration::from_secs(u64::from(poll_timeout));
 
     loop {
@@ -338,8 +332,13 @@ async fn update_job_inner(
     // Verify valid state transition
     let valid_transition = matches!(
         (job.status, update_request.status),
-        (JobStatus::Claimed, JobStatus::Running | JobStatus::Failed)
-            | (JobStatus::Running, JobStatus::Completed | JobStatus::Failed)
+        (
+            JobStatus::Claimed,
+            JobUpdateStatus::Running | JobUpdateStatus::Failed
+        ) | (
+            JobStatus::Running,
+            JobUpdateStatus::Completed | JobUpdateStatus::Failed
+        )
     );
 
     if !valid_transition {
@@ -349,10 +348,11 @@ async fn update_job_inner(
         )));
     }
 
+    let new_status: JobStatus = update_request.status.into();
     let now = DateTime::now();
     let job_update = UpdateJob {
-        status: Some(update_request.status),
-        started: (update_request.status == JobStatus::Running).then_some(Some(now)),
+        status: Some(new_status),
+        started: (update_request.status == JobUpdateStatus::Running).then_some(Some(now)),
         completed: update_request.status.is_terminal().then_some(Some(now)),
         exit_code: update_request
             .status
@@ -395,18 +395,12 @@ async fn update_job_inner(
     #[cfg(feature = "otel")]
     {
         let status_kind = match update_request.status {
-            JobStatus::Running => bencher_otel::JobStatusKind::Running,
-            JobStatus::Completed => bencher_otel::JobStatusKind::Completed,
-            JobStatus::Failed => bencher_otel::JobStatusKind::Failed,
-            // These statuses shouldn't reach here due to validation, but handle them
-            JobStatus::Pending | JobStatus::Claimed | JobStatus::Canceled => {
-                bencher_otel::JobStatusKind::Failed
-            },
+            JobUpdateStatus::Running => bencher_otel::JobStatusKind::Running,
+            JobUpdateStatus::Completed => bencher_otel::JobStatusKind::Completed,
+            JobUpdateStatus::Failed => bencher_otel::JobStatusKind::Failed,
         };
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(status_kind));
     }
 
-    Ok(JsonUpdateJobResponse {
-        status: update_request.status,
-    })
+    Ok(JsonUpdateJobResponse { status: new_status })
 }

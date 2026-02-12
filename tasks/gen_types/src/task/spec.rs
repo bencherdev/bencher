@@ -62,6 +62,9 @@ impl Spec {
                 "users" => TagDetails { description: Some("Users".into()), external_docs: None},
                 "tokens" => TagDetails { description: Some("API Tokens".into()), external_docs: None},
                 "server" => TagDetails { description: Some("Server".into()), external_docs: None},
+                "runners" => TagDetails { description: Some("Runners".into()), external_docs: None},
+                "specs" => TagDetails { description: Some("Specs".into()), external_docs: None},
+                "jobs" => TagDetails { description: Some("Jobs".into()), external_docs: None},
         }})
             .openapi(bencher_config::API_NAME, api_version)
             .write(&mut spec_file)

@@ -342,6 +342,8 @@ export type NonEmpty = string;
 /** An organization UUID or slug. */
 export type OrganizationResourceId = Uuid | Slug;
 
+export type PollTimeout = number;
+
 /** An project UUID or slug. */
 export type ProjectResourceId = Uuid | Slug;
 
@@ -414,8 +416,8 @@ export interface JsonCheckout {
 
 /** Request to claim a job (runner agent endpoint) */
 export interface JsonClaimJob {
-	/** Maximum time to wait for a job (long-poll), in seconds. Max 60 (default 30) */
-	poll_timeout?: number;
+	/** Maximum time to wait for a job (long-poll), in seconds (1-600) */
+	poll_timeout?: PollTimeout;
 }
 
 export interface JsonConfirm {
@@ -858,10 +860,23 @@ export interface JsonUpdateAlert {
 	status?: UpdateAlertStatus;
 }
 
+/**
+ * Restricted job status for runner update requests.
+ * 
+ * Only allows the statuses that a runner can set when updating a job:
+ * Running, Completed, or Failed. Pending, Claimed, and Canceled are
+ * server-managed statuses that runners cannot set.
+ */
+export enum JobUpdateStatus {
+	Running = "running",
+	Completed = "completed",
+	Failed = "failed",
+}
+
 /** Update job status (runner agent endpoint) */
 export interface JsonUpdateJob {
 	/** New job status (running, completed, failed) */
-	status: JobStatus;
+	status: JobUpdateStatus;
 	/** Exit code (required for completed/failed) */
 	exit_code?: number;
 	/** Standard output */

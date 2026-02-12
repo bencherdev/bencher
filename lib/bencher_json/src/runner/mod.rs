@@ -13,7 +13,7 @@ pub use job::{
     JobUuid, JsonClaimJob, JsonJob, JsonJobConfig, JsonJobs, JsonUpdateJob, JsonUpdateJobResponse,
 };
 pub use job_priority::JobPriority;
-pub use job_status::JobStatus;
+pub use job_status::{JobStatus, JobUpdateStatus};
 
 crate::typed_uuid::typed_uuid!(RunnerUuid);
 crate::typed_slug::typed_slug!(RunnerSlug, ResourceName);

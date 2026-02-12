@@ -8,7 +8,7 @@
 mod common;
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JobPriority, JobStatus, JsonJob, JsonUpdateJobResponse};
+use bencher_json::{JobPriority, JsonJob, JsonUpdateJobResponse};
 use common::{
     associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
     insert_test_job, insert_test_job_full, insert_test_spec, insert_test_spec_full,
@@ -2497,7 +2497,8 @@ mod invalid_transitions {
         (runner.uuid, runner_token, job_uuid)
     }
 
-    // Running -> Claimed (invalid: cannot go backwards)
+    // Running -> Claimed (invalid: "claimed" is not a valid JobUpdateStatus variant,
+    // so the server rejects it at deserialization time with 400 Bad Request)
     #[tokio::test]
     async fn test_job_invalid_transition_running_to_claimed() {
         let server = TestServer::new().await;
@@ -2514,7 +2515,7 @@ mod invalid_transitions {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::CONFLICT);
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }
 
     // Completed -> Running (invalid: terminal state)
@@ -2627,7 +2628,8 @@ mod invalid_transitions {
 mod poll_timeout_boundaries {
     use super::*;
 
-    // poll_timeout: 0 should be clamped to MIN_POLL_TIMEOUT (1 second)
+    // poll_timeout: 0 is below PollTimeout::MIN (1), so the server rejects it
+    // at deserialization time with 400 Bad Request.
     #[tokio::test]
     async fn test_poll_timeout_zero_clamps_to_min() {
         let server = TestServer::new().await;
@@ -2639,29 +2641,16 @@ mod poll_timeout_boundaries {
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
-        tokio::time::pause();
-        let handle = tokio::spawn({
-            let client = server.client.clone();
-            let url = server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid));
-            let token = runner_token.to_owned();
-            async move {
-                client
-                    .post(url)
-                    .header("Authorization", format!("Bearer {token}"))
-                    .json(&serde_json::json!({ "poll_timeout": 0 }))
-                    .send()
-                    .await
-                    .expect("Request failed")
-            }
-        });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+            .header("Authorization", format!("Bearer {runner_token}"))
+            .json(&serde_json::json!({ "poll_timeout": 0 }))
+            .send()
+            .await
+            .expect("Request failed");
 
-        // Advance time past the clamped 1-second poll timeout
-        tokio::time::advance(std::time::Duration::from_secs(2)).await;
-
-        let resp = handle.await.expect("Task panicked");
-        assert_eq!(resp.status(), StatusCode::OK);
-        let body: Option<serde_json::Value> = resp.json().await.expect("Failed to parse");
-        assert!(body.is_none());
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }
 
     // poll_timeout: 61 with a job available should return immediately (clamped to 60)

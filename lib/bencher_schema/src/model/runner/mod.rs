@@ -18,7 +18,9 @@ mod source_ip;
 pub mod spec;
 mod token_hash;
 
-pub use job::{InsertJob, JobId, QueryJob, UpdateJob, spawn_heartbeat_timeout};
+pub use job::{
+    InsertJob, JobId, QueryJob, UpdateJob, recover_orphaned_claimed_jobs, spawn_heartbeat_timeout,
+};
 pub use runner_spec::{InsertRunnerSpec, QueryRunnerSpec, RunnerSpecId};
 pub use source_ip::SourceIp;
 pub use spec::{InsertSpec, QuerySpec, SpecId, UpdateSpec};

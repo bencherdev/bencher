@@ -10,17 +10,33 @@ use diesel::{
     sqlite::Sqlite,
 };
 
+/// Expected length of a SHA-256 hex-encoded hash string.
+const SHA256_HEX_LEN: usize = 64;
+
 /// A SHA-256 hashed runner token stored as TEXT in `SQLite`.
 ///
 /// Provides type safety for token hashes while storing them as hex strings in the database.
+/// Validates that the hash is exactly 64 hex characters (SHA-256 output).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, diesel::AsExpression, diesel::FromSqlRow)]
 #[diesel(sql_type = Text)]
 pub struct TokenHash(String);
 
+#[derive(Debug, thiserror::Error)]
+pub enum TokenHashError {
+    #[error("Invalid token hash length: expected {SHA256_HEX_LEN}, got {0}")]
+    Length(usize),
+    #[error("Invalid token hash: contains non-hex character")]
+    NotHex,
+}
+
 impl TokenHash {
     /// Create a new `TokenHash` from a hex-encoded hash string.
-    pub fn new(hash: String) -> Self {
-        Self(hash)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the string is not exactly 64 hex characters.
+    pub fn new(hash: &str) -> Result<Self, TokenHashError> {
+        hash.parse()
     }
 }
 
@@ -30,16 +46,16 @@ impl fmt::Display for TokenHash {
     }
 }
 
-impl From<String> for TokenHash {
-    fn from(s: String) -> Self {
-        Self(s)
-    }
-}
-
 impl FromStr for TokenHash {
-    type Err = std::convert::Infallible;
+    type Err = TokenHashError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != SHA256_HEX_LEN {
+            return Err(TokenHashError::Length(s.len()));
+        }
+        if !s.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err(TokenHashError::NotHex);
+        }
         Ok(Self(s.to_owned()))
     }
 }
@@ -67,15 +83,62 @@ mod tests {
     use super::*;
 
     #[test]
-    fn roundtrip() {
-        let hash = TokenHash::new("abc123def456".to_owned());
-        assert_eq!(hash.to_string(), "abc123def456");
-        assert_eq!("abc123def456".parse::<TokenHash>().unwrap(), hash);
+    fn valid_sha256_hex() {
+        let hex = "a".repeat(SHA256_HEX_LEN);
+        let hash = hex.parse::<TokenHash>().unwrap();
+        assert_eq!(hash.to_string(), hex);
     }
 
     #[test]
-    fn from_string() {
-        let hash = TokenHash::from("test_hash".to_owned());
-        assert_eq!(hash.to_string(), "test_hash");
+    fn valid_mixed_hex() {
+        let hex = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let hash = hex.parse::<TokenHash>().unwrap();
+        assert_eq!(hash.to_string(), hex);
+    }
+
+    #[test]
+    fn new_valid() {
+        let hex = "f".repeat(SHA256_HEX_LEN);
+        let hash = TokenHash::new(&hex).unwrap();
+        assert_eq!(hash.to_string(), hex);
+    }
+
+    #[test]
+    fn wrong_length_short() {
+        let result = "abc123".parse::<TokenHash>();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), TokenHashError::Length(6)));
+    }
+
+    #[test]
+    fn wrong_length_long() {
+        let hex = "a".repeat(65);
+        let result = hex.parse::<TokenHash>();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), TokenHashError::Length(65)));
+    }
+
+    #[test]
+    fn non_hex_characters() {
+        let mut hex = "g".repeat(SHA256_HEX_LEN);
+        hex.replace_range(0..1, "g");
+        let result = hex.parse::<TokenHash>();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), TokenHashError::NotHex));
+    }
+
+    #[test]
+    fn empty_string() {
+        let result = "".parse::<TokenHash>();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), TokenHashError::Length(0)));
+    }
+
+    #[test]
+    fn roundtrip() {
+        let hex = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let hash = TokenHash::new(hex).unwrap();
+        assert_eq!(hash.to_string(), hex);
+        assert_eq!(hex.parse::<TokenHash>().unwrap(), hash);
     }
 }

@@ -33,6 +33,38 @@ impl JobStatus {
     }
 }
 
+/// Restricted job status for runner update requests.
+///
+/// Only allows the statuses that a runner can set when updating a job:
+/// Running, Completed, or Failed. Pending, Claimed, and Canceled are
+/// server-managed statuses that runners cannot set.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+#[repr(i32)]
+pub enum JobUpdateStatus {
+    Running = RUNNING_INT,
+    Completed = COMPLETED_INT,
+    Failed = FAILED_INT,
+}
+
+impl From<JobUpdateStatus> for JobStatus {
+    fn from(update_status: JobUpdateStatus) -> Self {
+        match update_status {
+            JobUpdateStatus::Running => Self::Running,
+            JobUpdateStatus::Completed => Self::Completed,
+            JobUpdateStatus::Failed => Self::Failed,
+        }
+    }
+}
+
+impl JobUpdateStatus {
+    pub fn is_terminal(&self) -> bool {
+        matches!(self, Self::Completed | Self::Failed)
+    }
+}
+
 #[cfg(feature = "db")]
 mod job_status_db {
     use super::{

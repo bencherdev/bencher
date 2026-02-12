@@ -74,6 +74,9 @@ pub enum ValidError {
     #[error("Invalid heartbeat timeout: {0}")]
     HeartbeatTimeout(u32),
     #[cfg(feature = "plus")]
+    #[error("Invalid poll timeout: {0}")]
+    PollTimeout(u32),
+    #[cfg(feature = "plus")]
     #[error("Invalid grace period: {0}")]
     GracePeriod(u32),
 

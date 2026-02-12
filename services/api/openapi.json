@@ -11182,6 +11182,15 @@
           "canceled"
         ]
       },
+      "JobUpdateStatus": {
+        "description": "Restricted job status for runner update requests.\n\nOnly allows the statuses that a runner can set when updating a job: Running, Completed, or Failed. Pending, Claimed, and Canceled are server-managed statuses that runners cannot set.",
+        "type": "string",
+        "enum": [
+          "running",
+          "completed",
+          "failed"
+        ]
+      },
       "JobUuid": {
         "type": "string",
         "format": "uuid"
@@ -11544,10 +11553,12 @@
         "properties": {
           "poll_timeout": {
             "nullable": true,
-            "description": "Maximum time to wait for a job (long-poll), in seconds. Max 60 (default 30)",
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "description": "Maximum time to wait for a job (long-poll), in seconds (1-600)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PollTimeout"
+              }
+            ]
           }
         }
       },
@@ -15698,7 +15709,7 @@
             "description": "New job status (running, completed, failed)",
             "allOf": [
               {
-                "$ref": "#/components/schemas/JobStatus"
+                "$ref": "#/components/schemas/JobUpdateStatus"
               }
             ]
           },
@@ -16423,6 +16434,11 @@
         "type": "string",
         "format": "uuid"
       },
+      "PollTimeout": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0
+      },
       "ProjectSlug": {
         "$ref": "#/components/schemas/Slug"
       },
@@ -16988,7 +17004,8 @@
       "name": "checkout"
     },
     {
-      "name": "jobs"
+      "name": "jobs",
+      "description": "Jobs"
     },
     {
       "name": "measures",
@@ -17036,14 +17053,16 @@
       "description": "Run"
     },
     {
-      "name": "runners"
+      "name": "runners",
+      "description": "Runners"
     },
     {
       "name": "server",
       "description": "Server"
     },
     {
-      "name": "specs"
+      "name": "specs",
+      "description": "Specs"
     },
     {
       "name": "sso",

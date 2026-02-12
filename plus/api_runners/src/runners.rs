@@ -312,5 +312,9 @@ pub fn hash_token(token: &str) -> TokenHash {
     let mut hasher = Sha256::new();
     hasher.update(token.as_bytes());
     let result = hasher.finalize();
-    TokenHash::new(hex::encode(result))
+    #[expect(
+        clippy::expect_used,
+        reason = "SHA-256 hex::encode always produces 64 hex chars"
+    )]
+    TokenHash::new(&hex::encode(result)).expect("SHA-256 hex is always 64 characters")
 }

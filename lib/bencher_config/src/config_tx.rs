@@ -515,10 +515,19 @@ fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
 #[cfg(feature = "plus")]
 async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
     use bencher_json::JobStatus;
-    use bencher_schema::{model::runner::QueryJob, schema};
+    use bencher_schema::{
+        model::runner::{QueryJob, recover_orphaned_claimed_jobs},
+        schema,
+    };
     use diesel::BoolExpressionMethods as _;
 
     let conn = &mut *context.database.connection.lock().await;
+
+    // First, fail any claimed jobs that have been orphaned (claimed longer ago
+    // than the heartbeat timeout without transitioning to Running).
+    recover_orphaned_claimed_jobs(log, conn, context.heartbeat_timeout);
+
+    // Then schedule heartbeat timeouts for remaining in-flight jobs.
     let in_flight_jobs: Vec<QueryJob> = match schema::job::table
         .filter(
             schema::job::status

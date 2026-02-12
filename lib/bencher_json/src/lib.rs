@@ -83,8 +83,8 @@ pub use project::{
 pub use run::JsonNewRun;
 #[cfg(feature = "plus")]
 pub use runner::{
-    JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonJob, JsonJobConfig, JsonNewRunner,
-    JsonRunner, JsonRunnerToken, JsonRunners, JsonUpdateJob, JsonUpdateJobResponse,
+    JobPriority, JobStatus, JobUpdateStatus, JobUuid, JsonClaimJob, JsonJob, JsonJobConfig,
+    JsonNewRunner, JsonRunner, JsonRunnerToken, JsonRunners, JsonUpdateJob, JsonUpdateJobResponse,
     JsonUpdateRunner, RunnerResourceId, RunnerSlug, RunnerUuid,
 };
 #[cfg(feature = "plus")]
