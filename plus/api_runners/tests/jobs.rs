@@ -10,8 +10,8 @@ mod common;
 use bencher_api_tests::TestServer;
 use bencher_json::{JobPriority, JsonJob, JsonUpdateJobResponse};
 use common::{
-    associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
-    insert_test_job, insert_test_job_full, insert_test_spec, insert_test_spec_full,
+    associate_runner_spec, create_runner, create_test_report, get_job_priority, get_project_id,
+    get_runner_id, insert_test_job, insert_test_job_full, insert_test_spec, insert_test_spec_full,
     set_job_runner_id, set_job_status,
 };
 use futures_concurrency::future::Join as _;
@@ -3262,5 +3262,212 @@ async fn test_mixed_tier_free_blocked_enterprise_claimable() {
         claimed.as_ref().map(|j| j.uuid),
         Some(enterprise_job),
         "Enterprise job should be claimable even when Free tier is blocked"
+    );
+}
+
+// Claiming an organization upgrades pending Unclaimed jobs to Free priority.
+#[tokio::test]
+async fn test_claim_upgrades_pending_job_priority() {
+    use bencher_json::{DateTime, JobStatus, OrganizationSlug, OrganizationUuid, ProjectUuid};
+    use bencher_schema::schema;
+    use common::{get_organization_id, insert_test_job_full};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "claim-upgrade@example.com").await;
+
+    // --- Insert an unclaimed organization directly (no members) ---
+    let unclaimed_org_uuid = OrganizationUuid::new();
+    let unclaimed_org_slug: OrganizationSlug = format!("unclaimed-{unclaimed_org_uuid}")
+        .parse()
+        .expect("Invalid slug");
+    let now = DateTime::now();
+    {
+        let mut conn = server.db_conn();
+        diesel::insert_into(schema::organization::table)
+            .values((
+                schema::organization::uuid.eq(&unclaimed_org_uuid),
+                schema::organization::name.eq("Unclaimed Upgrade Org"),
+                schema::organization::slug.eq(&unclaimed_org_slug),
+                schema::organization::created.eq(&now),
+                schema::organization::modified.eq(&now),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert unclaimed org");
+    }
+
+    // Get the org's internal id
+    let unclaimed_org_id: i32 = {
+        let mut conn = server.db_conn();
+        schema::organization::table
+            .filter(schema::organization::uuid.eq(&unclaimed_org_uuid))
+            .select(schema::organization::id)
+            .first(&mut conn)
+            .expect("Failed to get unclaimed org ID")
+    };
+
+    // --- Insert a project for the unclaimed org ---
+    let project_uuid = ProjectUuid::new();
+    let project_slug = format!("proj-{project_uuid}");
+    {
+        let mut conn = server.db_conn();
+        diesel::insert_into(schema::project::table)
+            .values((
+                schema::project::uuid.eq(&project_uuid),
+                schema::project::organization_id.eq(unclaimed_org_id),
+                schema::project::name.eq("Upgrade Test Project"),
+                schema::project::slug.eq(&project_slug),
+                schema::project::visibility.eq(0),
+                schema::project::created.eq(&now),
+                schema::project::modified.eq(&now),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert project");
+    }
+    let project_id = get_project_id(&server, &project_slug);
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+
+    // --- Insert pending Unclaimed jobs for the unclaimed org ---
+    let pending_job_1 = insert_test_job_full(
+        &server,
+        report_id,
+        project_uuid,
+        unclaimed_org_id,
+        "10.0.0.1",
+        JobPriority::Unclaimed,
+        spec_id,
+    );
+    let pending_job_2 = insert_test_job_full(
+        &server,
+        report_id,
+        project_uuid,
+        unclaimed_org_id,
+        "10.0.0.2",
+        JobPriority::Unclaimed,
+        spec_id,
+    );
+
+    // --- Insert a Running Unclaimed job (should NOT be upgraded) ---
+    let running_job = insert_test_job_full(
+        &server,
+        report_id,
+        project_uuid,
+        unclaimed_org_id,
+        "10.0.0.3",
+        JobPriority::Unclaimed,
+        spec_id,
+    );
+    set_job_status(&server, running_job, JobStatus::Running);
+
+    // --- Insert a pending job for a DIFFERENT org (should NOT be upgraded) ---
+    let other_org = server.create_org(&admin, "Other Org Upgrade").await;
+    let other_project = server
+        .create_project(&admin, &other_org, "Other Upgrade Proj")
+        .await;
+    let other_project_id = get_project_id(&server, other_project.slug.as_ref());
+    let other_org_id = get_organization_id(&server, other_project_id);
+    let other_report_id = create_test_report(&server, other_project_id);
+    let other_job = insert_test_job_full(
+        &server,
+        other_report_id,
+        other_project.uuid,
+        other_org_id,
+        "10.0.0.4",
+        JobPriority::Unclaimed,
+        spec_id,
+    );
+
+    // --- Claim the unclaimed organization ---
+    let resp = server
+        .client
+        .post(server.api_url(&format!(
+            "/v0/organizations/{unclaimed_org_slug}/claim"
+        )))
+        .header("Authorization", format!("Bearer {}", admin.token))
+        .json(&serde_json::json!({}))
+        .send()
+        .await
+        .expect("Claim request failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::CREATED,
+        "Claim should succeed: {}",
+        resp.text().await.unwrap_or_default()
+    );
+
+    // --- Assert: pending jobs for the claimed org now have Free priority ---
+    assert_eq!(
+        get_job_priority(&server, pending_job_1),
+        JobPriority::Free,
+        "Pending job 1 should be upgraded to Free"
+    );
+    assert_eq!(
+        get_job_priority(&server, pending_job_2),
+        JobPriority::Free,
+        "Pending job 2 should be upgraded to Free"
+    );
+
+    // --- Assert: Running job still has Unclaimed priority ---
+    assert_eq!(
+        get_job_priority(&server, running_job),
+        JobPriority::Unclaimed,
+        "Running job should NOT be upgraded"
+    );
+
+    // --- Assert: other org's job still has Unclaimed priority ---
+    assert_eq!(
+        get_job_priority(&server, other_job),
+        JobPriority::Unclaimed,
+        "Other org's job should NOT be upgraded"
+    );
+}
+
+// Claiming an organization with no pending jobs succeeds without error.
+#[tokio::test]
+async fn test_claim_no_pending_jobs_succeeds() {
+    use bencher_json::{DateTime, OrganizationSlug, OrganizationUuid};
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "claim-nojobs@example.com").await;
+
+    // Insert an unclaimed organization directly (no members, no jobs)
+    let unclaimed_org_uuid = OrganizationUuid::new();
+    let unclaimed_org_slug: OrganizationSlug = format!("unclaimed-nj-{unclaimed_org_uuid}")
+        .parse()
+        .expect("Invalid slug");
+    let now = DateTime::now();
+    {
+        let mut conn = server.db_conn();
+        diesel::insert_into(schema::organization::table)
+            .values((
+                schema::organization::uuid.eq(&unclaimed_org_uuid),
+                schema::organization::name.eq("Unclaimed No Jobs Org"),
+                schema::organization::slug.eq(&unclaimed_org_slug),
+                schema::organization::created.eq(&now),
+                schema::organization::modified.eq(&now),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert unclaimed org");
+    }
+
+    // Claim should succeed even with no pending jobs
+    let resp = server
+        .client
+        .post(server.api_url(&format!(
+            "/v0/organizations/{unclaimed_org_slug}/claim"
+        )))
+        .header("Authorization", format!("Bearer {}", admin.token))
+        .json(&serde_json::json!({}))
+        .send()
+        .await
+        .expect("Claim request failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::CREATED,
+        "Claim with no pending jobs should succeed: {}",
+        resp.text().await.unwrap_or_default()
     );
 }

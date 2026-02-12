@@ -116,7 +116,9 @@ async fn post_inner(
         }
     // If the organization is not claimed and the user is authenticated, claim it
     } else if let PublicUser::Auth(auth_user) = public_user {
-        query_organization.claim(context, &auth_user.user).await?;
+        query_organization
+            .claim(log, context, &auth_user.user)
+            .await?;
     }
 
     slog::info!(log, "New run requested"; "project" => ?query_project, "run" => ?json_run);

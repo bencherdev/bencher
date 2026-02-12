@@ -90,7 +90,9 @@ async fn handle_oauth_user(
         } else if let Some(organization_uuid) = oauth_state.claim() {
             let query_organization =
                 QueryOrganization::from_uuid(auth_conn!(context), organization_uuid)?;
-            query_organization.claim(context, &query_user).await?;
+            query_organization
+                .claim(log, context, &query_user)
+                .await?;
         }
         (query_user, AuthAction::Login)
     } else {

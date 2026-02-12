@@ -434,6 +434,17 @@ pub fn insert_test_job_with_timestamp(
     job_uuid
 }
 
+/// Get the priority of a job directly from the database.
+#[expect(clippy::expect_used)]
+pub fn get_job_priority(server: &TestServer, job_uuid: JobUuid) -> JobPriority {
+    let mut conn = server.db_conn();
+    schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::priority)
+        .first(&mut conn)
+        .expect("Failed to get job priority")
+}
+
 /// Get runner_id (as i32) from runner UUID.
 #[expect(clippy::expect_used)]
 pub fn get_runner_id(server: &TestServer, runner_uuid: bencher_json::RunnerUuid) -> i32 {
