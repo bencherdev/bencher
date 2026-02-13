@@ -10,11 +10,19 @@ use serde::{
 
 use crate::ValidError;
 
+const MIN_MEMORY: u64 = 1;
+const MAX_MEMORY: u64 = i64::MAX as u64;
+
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::BigInt))]
 pub struct Memory(u64);
+
+impl Memory {
+    pub const MIN: Self = Self(MIN_MEMORY);
+    pub const MAX: Self = Self(MAX_MEMORY);
+}
 
 impl TryFrom<u64> for Memory {
     type Error = ValidError;
@@ -81,7 +89,7 @@ mod db {
         ) -> diesel::serialize::Result {
             #[expect(
                 clippy::cast_possible_wrap,
-                reason = "memory in bytes fits in i64 (max ~9.2 EB)"
+                reason = "validated max is i64::MAX, cast is safe"
             )]
             let val = self.0 as i64;
             out.set_value(val);
@@ -106,21 +114,23 @@ mod db {
 }
 
 pub fn is_valid_memory(memory: u64) -> bool {
-    memory > 0
+    (MIN_MEMORY..=MAX_MEMORY).contains(&memory)
 }
 
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use super::is_valid_memory;
+    use super::{Memory, is_valid_memory};
 
     #[test]
     fn boundary() {
+        assert_eq!(true, is_valid_memory(Memory::MIN.into()));
         assert_eq!(true, is_valid_memory(1));
         assert_eq!(true, is_valid_memory(0x0001_0000_0000)); // 4 GB
-        assert_eq!(true, is_valid_memory(u64::MAX));
+        assert_eq!(true, is_valid_memory(Memory::MAX.into()));
 
         assert_eq!(false, is_valid_memory(0));
+        assert_eq!(false, is_valid_memory(u64::MAX));
     }
 }

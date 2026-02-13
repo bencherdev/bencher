@@ -140,7 +140,7 @@ pub async fn runner_job_channel(
     handle_websocket(&log, context, job_id, ws_stream, heartbeat_timeout).await?;
 
     // After WS disconnect, check if job is still in-flight and spawn a timeout task
-    let job = QueryJob::get(write_conn!(context), job_id)?;
+    let job = QueryJob::get(auth_conn!(context), job_id)?;
     if !job.status.is_terminal() {
         slog::info!(log, "WS disconnected for in-flight job, spawning heartbeat timeout"; "job_id" => ?job_id);
         spawn_heartbeat_timeout(

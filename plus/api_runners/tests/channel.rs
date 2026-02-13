@@ -646,10 +646,17 @@ async fn channel_ping_does_not_reset_heartbeat_timeout() {
     assert!(matches!(resp, ServerMessage::Ack));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
+    // Send a Ping frame — should NOT reset heartbeat timeout
+    ws.send(Message::Ping(b"keep-alive".to_vec().into()))
+        .await
+        .expect("Failed to send ping");
+    // Consume the Pong response
+    let pong = ws.next().await.expect("Stream ended").expect("WS error");
+    assert!(matches!(pong, Message::Pong(_)));
+
     // Pause tokio time and advance past the heartbeat timeout (5s in tests).
-    // If Ping were resetting the heartbeat, we'd need to send one first.
-    // But since the only valid message was Running at time=0, advancing 6s
-    // should trigger the timeout.
+    // The Ping above should NOT have reset the heartbeat clock, so advancing 6s
+    // past the last valid message (Running) should trigger the timeout.
     tokio::time::pause();
     tokio::time::advance(std::time::Duration::from_secs(6)).await;
     tokio::time::resume();

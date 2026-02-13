@@ -10,11 +10,19 @@ use serde::{
 
 use crate::ValidError;
 
+const MIN_DISK: u64 = 1;
+const MAX_DISK: u64 = i64::MAX as u64;
+
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::BigInt))]
 pub struct Disk(u64);
+
+impl Disk {
+    pub const MIN: Self = Self(MIN_DISK);
+    pub const MAX: Self = Self(MAX_DISK);
+}
 
 impl TryFrom<u64> for Disk {
     type Error = ValidError;
@@ -81,7 +89,7 @@ mod db {
         ) -> diesel::serialize::Result {
             #[expect(
                 clippy::cast_possible_wrap,
-                reason = "disk in bytes fits in i64 (max ~9.2 EB)"
+                reason = "validated max is i64::MAX, cast is safe"
             )]
             let val = self.0 as i64;
             out.set_value(val);
@@ -106,21 +114,23 @@ mod db {
 }
 
 pub fn is_valid_disk(disk: u64) -> bool {
-    disk > 0
+    (MIN_DISK..=MAX_DISK).contains(&disk)
 }
 
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use super::is_valid_disk;
+    use super::{Disk, is_valid_disk};
 
     #[test]
     fn boundary() {
+        assert_eq!(true, is_valid_disk(Disk::MIN.into()));
         assert_eq!(true, is_valid_disk(1));
         assert_eq!(true, is_valid_disk(10_737_418_240)); // 10 GB
-        assert_eq!(true, is_valid_disk(u64::MAX));
+        assert_eq!(true, is_valid_disk(Disk::MAX.into()));
 
         assert_eq!(false, is_valid_disk(0));
+        assert_eq!(false, is_valid_disk(u64::MAX));
     }
 }
