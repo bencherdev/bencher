@@ -1,4 +1,8 @@
-#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::indexing_slicing
+)]
 //! Integration tests for runner CRUD endpoints.
 
 mod common;
@@ -435,6 +439,191 @@ async fn duplicate_runner_name() {
         StatusCode::CONFLICT,
         "Duplicate runner name should produce a slug collision"
     );
+}
+
+// GET /v0/runners - sorting by name ascending
+#[tokio::test]
+async fn runners_list_sort_name_asc() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "rsortasc@example.com").await;
+
+    // Create runners with names that sort in a known order
+    for name in ["Alpha Runner", "Beta Runner", "Gamma Runner"] {
+        let body = serde_json::json!({ "name": name });
+        let resp = server
+            .client
+            .post(server.api_url("/v0/runners"))
+            .header("Authorization", server.bearer(&admin.token))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    // List with sort=name and direction=asc
+    let resp = server
+        .client
+        .get(server.api_url("/v0/runners?sort=name&direction=asc"))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let runners: JsonRunners = resp.json().await.expect("Failed to parse response");
+    assert!(runners.0.len() >= 3);
+
+    // Verify ascending name order
+    let names: Vec<&str> = runners.0.iter().map(|r| r.name.as_ref()).collect();
+    for i in 1..names.len() {
+        assert!(
+            names[i - 1] <= names[i],
+            "Expected ascending order, but {:?} > {:?}",
+            names[i - 1],
+            names[i]
+        );
+    }
+}
+
+// GET /v0/runners - sorting by name descending
+#[tokio::test]
+async fn runners_list_sort_name_desc() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "rsortdesc@example.com").await;
+
+    for name in ["Alpha Runner", "Beta Runner", "Gamma Runner"] {
+        let body = serde_json::json!({ "name": name });
+        let resp = server
+            .client
+            .post(server.api_url("/v0/runners"))
+            .header("Authorization", server.bearer(&admin.token))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    let resp = server
+        .client
+        .get(server.api_url("/v0/runners?sort=name&direction=desc"))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let runners: JsonRunners = resp.json().await.expect("Failed to parse response");
+    assert!(runners.0.len() >= 3);
+
+    let names: Vec<&str> = runners.0.iter().map(|r| r.name.as_ref()).collect();
+    for i in 1..names.len() {
+        assert!(
+            names[i - 1] >= names[i],
+            "Expected descending order, but {:?} < {:?}",
+            names[i - 1],
+            names[i]
+        );
+    }
+}
+
+// GET /v0/runners - pagination with per_page and page
+#[tokio::test]
+async fn runners_list_pagination() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "rpaginate@example.com").await;
+
+    // Create 3 runners
+    for i in 1..=3 {
+        let body = serde_json::json!({ "name": format!("Page Runner {i}") });
+        let resp = server
+            .client
+            .post(server.api_url("/v0/runners"))
+            .header("Authorization", server.bearer(&admin.token))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    // Request first page with per_page=2
+    let resp = server
+        .client
+        .get(server.api_url("/v0/runners?per_page=2&page=1"))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let runners: JsonRunners = resp.json().await.expect("Failed to parse response");
+    assert_eq!(runners.0.len(), 2, "First page should have 2 runners");
+
+    // Request second page
+    let resp = server
+        .client
+        .get(server.api_url("/v0/runners?per_page=2&page=2"))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let runners_page2: JsonRunners = resp.json().await.expect("Failed to parse response");
+    assert_eq!(runners_page2.0.len(), 1, "Second page should have 1 runner");
+
+    // Pages should contain different runners
+    let page1_uuids: Vec<_> = runners.0.iter().map(|r| r.uuid).collect();
+    let page2_uuids: Vec<_> = runners_page2.0.iter().map(|r| r.uuid).collect();
+    for uuid in &page2_uuids {
+        assert!(
+            !page1_uuids.contains(uuid),
+            "Page 2 runner should not appear on page 1"
+        );
+    }
+}
+
+// GET /v0/runners - search filtering
+#[tokio::test]
+async fn runners_list_search() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "rsearch@example.com").await;
+
+    // Create runners with distinct names
+    for name in ["Search Alpha", "Search Beta", "Other Runner"] {
+        let body = serde_json::json!({ "name": name });
+        let resp = server
+            .client
+            .post(server.api_url("/v0/runners"))
+            .header("Authorization", server.bearer(&admin.token))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    // Search for "Search"
+    let resp = server
+        .client
+        .get(server.api_url("/v0/runners?search=Search"))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let runners: JsonRunners = resp.json().await.expect("Failed to parse response");
+    assert_eq!(runners.0.len(), 2, "Search should match 2 runners");
+    for runner in &runners.0 {
+        assert!(
+            runner.name.as_ref().contains("Search"),
+            "All results should contain 'Search', got: {:?}",
+            runner.name
+        );
+    }
 }
 
 // A runner token should be rejected on user endpoints (e.g., project listing)

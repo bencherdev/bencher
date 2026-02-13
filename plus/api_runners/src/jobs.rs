@@ -122,10 +122,6 @@ async fn claim_job_inner(
 /// - Unclaimed: 1 concurrent job per source IP
 ///
 /// Returns `Ok(Some(job))` if a job was claimed, `Ok(None)` if no eligible jobs available.
-#[expect(
-    clippy::too_many_lines,
-    reason = "claim logic is inherently complex with tier-based concurrency checks"
-)]
 async fn try_claim_job(
     context: &ApiContext,
     runner_token: &RunnerToken,
@@ -241,13 +237,12 @@ async fn try_claim_job(
             );
         }
 
-        // Parse and return job with config for runner
-        let job_config = query_job.parse_config()?;
+        // Return job with config for runner
         Ok(Some(JsonJob {
             uuid: query_job.uuid,
             status: JobStatus::Claimed,
             spec: json_spec,
-            config: Some(job_config),
+            config: Some(query_job.config.into()),
             runner: Some(runner_token.runner_uuid),
             claimed: Some(now),
             started: None,

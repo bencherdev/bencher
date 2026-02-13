@@ -3602,9 +3602,10 @@ async fn recover_orphaned_claimed_jobs_marks_as_failed() {
 /// Test that `spawn_heartbeat_timeout` marks a Running job as Failed after timeout.
 /// Simulates what `spawn_job_recovery` does for in-flight jobs on server restart.
 ///
-/// Uses a short real timeout because `spawn_heartbeat_timeout` compares
-/// `DateTime::now()` (system clock) against `last_heartbeat`, so virtual-time
-/// manipulation alone cannot trigger the failure path.
+/// Uses `tokio::time::pause()` / `advance()` to make the test deterministic
+/// without wall-clock waits. The `last_heartbeat` is cleared to `None` so
+/// the freshness check inside `spawn_heartbeat_timeout` is skipped, and the
+/// main `tokio::time::sleep(timeout)` respects virtual time.
 #[tokio::test]
 async fn spawn_heartbeat_timeout_fails_running_job() {
     let server = TestServer::new().await;
@@ -3634,8 +3635,7 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
     let connection = Arc::new(Mutex::new(server.db_conn()));
     let heartbeat_tasks = HeartbeatTasks::new();
     let log = slog::Logger::root(slog::Discard, slog::o!());
-    // Use a short real timeout so the test completes quickly
-    let timeout = std::time::Duration::from_millis(100);
+    let timeout = std::time::Duration::from_secs(5);
     let grace_period = std::time::Duration::from_secs(60);
 
     spawn_heartbeat_timeout(
@@ -3647,8 +3647,10 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
         grace_period,
     );
 
-    // Wait for the spawned task to fire and complete
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    // Use virtual time to advance past the timeout without wall-clock wait
+    tokio::time::pause();
+    tokio::time::advance(std::time::Duration::from_secs(6)).await;
+    tokio::time::resume();
 
     // Verify the job is now Failed
     let mut conn = server.db_conn();
@@ -3711,9 +3713,9 @@ async fn claim_job_invalid_config() {
 /// Simulates what `spawn_job_recovery` does on server restart: spawns heartbeat
 /// timeouts for in-flight jobs that were claimed but never opened a WS connection.
 ///
-/// Uses a short real timeout because `spawn_heartbeat_timeout` compares
-/// `DateTime::now()` (system clock) against `last_heartbeat`, so virtual-time
-/// manipulation alone cannot trigger the failure path.
+/// Uses `tokio::time::pause()` / `advance()` to make the test deterministic.
+/// `last_heartbeat` is cleared to `None` so the freshness check is skipped,
+/// and the main `tokio::time::sleep(timeout)` respects virtual time.
 #[tokio::test]
 async fn heartbeat_timeout_claimed_job_without_ws() {
     let server = TestServer::new().await;
@@ -3771,8 +3773,7 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     let connection = Arc::new(Mutex::new(server.db_conn()));
     let heartbeat_tasks = HeartbeatTasks::new();
     let log = slog::Logger::root(slog::Discard, slog::o!());
-    // Use a short real timeout so the test completes quickly
-    let timeout = std::time::Duration::from_millis(100);
+    let timeout = std::time::Duration::from_secs(5);
     let grace_period = std::time::Duration::from_secs(60);
 
     spawn_heartbeat_timeout(
@@ -3784,8 +3785,10 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
         grace_period,
     );
 
-    // Wait for the spawned task to fire and complete
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    // Use virtual time to advance past the timeout without wall-clock wait
+    tokio::time::pause();
+    tokio::time::advance(std::time::Duration::from_secs(6)).await;
+    tokio::time::resume();
 
     // Verify the job is now Failed (heartbeat timeout, no WS interaction)
     let mut conn = server.db_conn();

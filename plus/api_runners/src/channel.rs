@@ -184,13 +184,15 @@ async fn handle_websocket(
             },
             Err(_elapsed) => {
                 let reason = handle_timeout(log, context, job_id).await?;
-                drop(
-                    tx.send(Message::Close(Some(CloseFrame {
+                if let Err(e) = tx
+                    .send(Message::Close(Some(CloseFrame {
                         code: CloseCode::Policy,
                         reason: reason.into(),
                     })))
-                    .await,
-                );
+                    .await
+                {
+                    slog::debug!(log, "Failed to send close frame"; "error" => %e);
+                }
                 break;
             },
         };
@@ -225,13 +227,15 @@ async fn handle_websocket(
                 // Close the connection on terminal messages
                 let close_reason = terminal_close_reason(&response, &runner_msg);
                 if let Some(reason) = close_reason {
-                    drop(
-                        tx.send(Message::Close(Some(CloseFrame {
+                    if let Err(e) = tx
+                        .send(Message::Close(Some(CloseFrame {
                             code: CloseCode::Normal,
                             reason: reason.into(),
                         })))
-                        .await,
-                    );
+                        .await
+                    {
+                        slog::debug!(log, "Failed to send close frame"; "error" => %e);
+                    }
                     break;
                 }
             },
@@ -272,14 +276,16 @@ async fn handle_timeout(
         return Ok("heartbeat timeout");
     }
 
+    let now = DateTime::now();
+
     let (status, reason) = if let Some(started) = job.started {
-        let now = DateTime::now();
         let elapsed = (now.timestamp() - started.timestamp()).max(0);
         #[expect(
             clippy::cast_possible_wrap,
-            reason = "job timeout and grace period fit in i64"
+            reason = "timeout max 86400 + grace period fits in i64"
         )]
-        let limit = i64::from(job.timeout) + context.job_timeout_grace_period.as_secs() as i64;
+        let limit = u64::from(u32::from(job.timeout)) as i64
+            + context.job_timeout_grace_period.as_secs() as i64;
         if elapsed > limit {
             (JobStatus::Canceled, "job timeout exceeded")
         } else {
@@ -290,7 +296,6 @@ async fn handle_timeout(
     };
 
     slog::warn!(log, "Marking job"; "job_id" => ?job_id, "status" => ?status, "reason" => reason);
-    let now = DateTime::now();
     let update = UpdateJob {
         status: Some(status),
         completed: Some(Some(now)),

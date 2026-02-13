@@ -440,6 +440,17 @@ fn insert_test_job(
         .first(&mut conn)
         .expect("Failed to get spec ID");
 
+    let project_id: i32 = schema::report::table
+        .filter(schema::report::id.eq(report_id))
+        .select(schema::report::project_id)
+        .first(&mut conn)
+        .expect("Failed to get project ID from report");
+    let organization_id: i32 = schema::project::table
+        .filter(schema::project::id.eq(project_id))
+        .select(schema::project::organization_id)
+        .first(&mut conn)
+        .expect("Failed to get organization ID");
+
     let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
@@ -451,7 +462,7 @@ fn insert_test_job(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
-            schema::job::organization_id.eq(1),
+            schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq("127.0.0.1"),
             schema::job::status.eq(JobStatus::Pending),
             schema::job::spec_id.eq(spec_id),

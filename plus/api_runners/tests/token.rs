@@ -1,8 +1,14 @@
 #![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for runner token rotation endpoint.
 
+mod common;
+
 use bencher_api_tests::TestServer;
-use bencher_json::JsonRunnerToken;
+use bencher_json::{JsonJob, JsonRunnerToken};
+use common::{
+    associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
+    insert_test_job, insert_test_spec,
+};
 use futures_concurrency::future::Join as _;
 use http::StatusCode;
 
@@ -269,5 +275,134 @@ async fn old_token_rejected_after_rotation() {
         resp.status(),
         StatusCode::OK,
         "New token should authenticate successfully"
+    );
+}
+
+// Rotating a token on an archived runner should fail.
+#[tokio::test]
+async fn token_rotate_archived_runner() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "tokenarchived@example.com").await;
+
+    // Create a runner
+    let body = serde_json::json!({ "name": "Archived Token Runner" });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/runners"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let runner: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+
+    // Archive the runner
+    let body = serde_json::json!({ "archived": true });
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/runners/{}", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Try to rotate token on the archived runner — should fail
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/token", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_ne!(
+        resp.status(),
+        StatusCode::CREATED,
+        "Token rotation on archived runner should not succeed"
+    );
+}
+
+// Rotating a token while the runner has in-flight jobs should succeed,
+// and the old token should be invalidated.
+#[tokio::test]
+async fn token_rotate_with_inflight_jobs() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "tokeninflight@example.com").await;
+    let org = server.create_org(&admin, "Token Inflight Org").await;
+    let project = server
+        .create_project(&admin, &org, "Token Inflight Project")
+        .await;
+
+    // Create runner and set up infrastructure
+    let runner = create_runner(&server, &admin.token, "Inflight Token Runner").await;
+    let original_token: String = runner.token.as_ref().to_owned();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    let (_, spec_id) = insert_test_spec(&server);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let _job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    // Claim the job
+    let claim_body = serde_json::json!({ "poll_timeout": 5 });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {original_token}"))
+        .json(&claim_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    assert!(claimed.is_some(), "Should claim a job");
+
+    // Rotate token while job is in-flight (Claimed status)
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/token", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::CREATED,
+        "Token rotation should succeed even with in-flight jobs"
+    );
+    let new: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let new_token: String = new.token.as_ref().to_owned();
+
+    // Old token should be rejected
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {original_token}"))
+        .json(&claim_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::UNAUTHORIZED,
+        "Old token should be rejected after rotation"
+    );
+
+    // New token should authenticate
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {new_token}"))
+        .json(&claim_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "New token should authenticate after rotation"
     );
 }

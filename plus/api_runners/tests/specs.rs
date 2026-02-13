@@ -394,3 +394,159 @@ async fn claim_job_spec_mismatch() {
         "Runner should claim job after spec association"
     );
 }
+
+// =============================================================================
+// Runner Specs Get Endpoint Tests
+// =============================================================================
+
+// GET /v0/runners/{runner}/specs - list returns specs after adding them via API
+#[tokio::test]
+async fn runner_specs_get_after_add() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "rspecget@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Spec Get Runner").await;
+    let (spec_uuid, _spec_id) = insert_test_spec(&server);
+
+    // Add spec via API
+    let body = serde_json::json!({"spec": spec_uuid.to_string()});
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // List specs via GET
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let specs: JsonSpecs = resp.json().await.expect("Failed to parse response");
+    assert_eq!(specs.0.len(), 1);
+    let first_spec = specs.0.first().expect("Expected at least one spec");
+    assert_eq!(first_spec.uuid, spec_uuid);
+}
+
+// GET /v0/runners/{runner}/specs - empty list after spec removal
+#[tokio::test]
+async fn runner_specs_get_after_removal() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "rspecgetrem@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Spec GetRem Runner").await;
+    let (spec_uuid, _spec_id) = insert_test_spec(&server);
+
+    // Add spec
+    let body = serde_json::json!({"spec": spec_uuid.to_string()});
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Remove spec
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/runners/{}/specs/{}", runner.uuid, spec_uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // List should now be empty
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let specs: JsonSpecs = resp.json().await.expect("Failed to parse response");
+    assert!(specs.0.is_empty(), "Specs should be empty after removal");
+}
+
+// GET /v0/runners/{runner}/specs - multiple specs returns all of them
+#[tokio::test]
+async fn runner_specs_get_multiple() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "rspecgetmulti@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Spec GetMulti Runner").await;
+
+    let (spec1_uuid, _) =
+        insert_test_spec_full(&server, "x86_64", 1, 0x8000_0000, 5_368_709_120, false);
+    let (spec2_uuid, _) = insert_test_spec_full(
+        &server,
+        "aarch64",
+        2,
+        0x0001_0000_0000,
+        10_737_418_240,
+        true,
+    );
+
+    // Add both specs
+    for spec_uuid in [spec1_uuid, spec2_uuid] {
+        let body = serde_json::json!({"spec": spec_uuid.to_string()});
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+            .header("Authorization", server.bearer(&admin.token))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    // List should have 2
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let specs: JsonSpecs = resp.json().await.expect("Failed to parse response");
+    assert_eq!(specs.0.len(), 2);
+    let uuids: Vec<_> = specs.0.iter().map(|s| s.uuid).collect();
+    assert!(uuids.contains(&spec1_uuid));
+    assert!(uuids.contains(&spec2_uuid));
+}
+
+// GET /v0/runners/{runner}/specs - non-admin gets 403
+#[tokio::test]
+async fn runner_specs_get_forbidden_for_non_admin() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "rspecgetforbid@example.com").await;
+    let user = server.signup("User", "rspecgetuser@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Spec GetForbid Runner").await;
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}

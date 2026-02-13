@@ -1121,3 +1121,70 @@ async fn channel_token_rotation_invalidates_old_token() {
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }
+
+// =============================================================================
+// Cancellation Tests
+// =============================================================================
+
+/// When a job is canceled while a runner has an active WebSocket channel,
+/// the runner receives `ServerMessage::Cancel` on the next heartbeat and
+/// can acknowledge with `RunnerMessage::Canceled`, which closes the connection.
+#[tokio::test]
+async fn channel_canceled_message_over_ws() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "canceled-ws").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Transition to Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Cancel the job directly in DB (simulating user/admin cancellation)
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
+
+    // Next heartbeat should detect cancellation and return Cancel
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Cancel),
+        "Expected Cancel message after job cancellation, got: {resp:?}"
+    );
+
+    // Server closes the connection after sending Cancel
+    assert_ws_closed(&mut ws).await;
+
+    // Verify job remains in Canceled state
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+}
+
+/// Runner acknowledges cancellation with `RunnerMessage::Canceled`.
+/// The server should transition the job and close the connection.
+#[tokio::test]
+async fn channel_runner_sends_canceled() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "runner-canceled").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Transition to Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Runner sends Canceled (e.g., it detected the cancel signal itself)
+    send_msg(&mut ws, &RunnerMessage::Canceled).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for Canceled message, got: {resp:?}"
+    );
+
+    // Server should close the connection
+    assert_ws_closed(&mut ws).await;
+
+    // Job should be in Canceled state
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+}

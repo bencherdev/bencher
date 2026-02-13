@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use bencher_json::{DateTime, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig};
+use bencher_json::{DateTime, JobPriority, JobStatus, JobUuid, JsonJob, Timeout};
 use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
 
 use crate::{
     context::DbConnection,
-    error::issue_error,
     macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
     model::{
         organization::OrganizationId,
@@ -17,6 +16,8 @@ use crate::{
     },
     schema::{self, job as job_table},
 };
+
+pub use super::job_config::JobConfig;
 
 crate::macros::typed_id::typed_id!(JobId);
 
@@ -32,8 +33,8 @@ pub struct QueryJob {
     pub organization_id: OrganizationId,
     pub source_ip: SourceIp,
     pub spec_id: SpecId,
-    pub config: String,
-    pub timeout: i32,
+    pub config: JobConfig,
+    pub timeout: Timeout,
     pub priority: JobPriority,
     pub status: JobStatus,
     pub runner_id: Option<RunnerId>,
@@ -52,17 +53,6 @@ impl QueryJob {
     fn_get_id!(job, JobId, JobUuid);
     fn_get_uuid!(job, JobId, JobUuid);
     fn_from_uuid!(job, JobUuid, Job);
-
-    /// Parse the job config from JSON string.
-    pub fn parse_config(&self) -> Result<JsonJobConfig, HttpError> {
-        serde_json::from_str(&self.config).map_err(|e| {
-            issue_error(
-                "Invalid job config",
-                "Job config stored in database could not be parsed",
-                e,
-            )
-        })
-    }
 
     /// Convert to JSON for public API (config is not included).
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
@@ -98,8 +88,8 @@ pub struct InsertJob {
     pub organization_id: OrganizationId,
     pub source_ip: SourceIp,
     pub spec_id: SpecId,
-    pub config: String,
-    pub timeout: i32,
+    pub config: JobConfig,
+    pub timeout: Timeout,
     pub priority: JobPriority,
     pub status: JobStatus,
     pub created: DateTime,
@@ -112,14 +102,12 @@ impl InsertJob {
         organization_id: OrganizationId,
         source_ip: SourceIp,
         spec_id: SpecId,
-        config: &JsonJobConfig,
-        timeout: i32,
+        config: JobConfig,
+        timeout: Timeout,
         priority: JobPriority,
-    ) -> Result<Self, HttpError> {
-        let config = serde_json::to_string(config)
-            .map_err(|e| issue_error("Invalid job config", "Failed to serialize job config", e))?;
+    ) -> Self {
         let now = DateTime::now();
-        Ok(Self {
+        Self {
             uuid: JobUuid::new(),
             report_id,
             organization_id,
@@ -131,7 +119,7 @@ impl InsertJob {
             status: JobStatus::default(),
             created: now,
             modified: now,
-        })
+        }
     }
 }
 
@@ -289,7 +277,7 @@ pub fn recover_orphaned_claimed_jobs(
     {
         Ok(jobs) => jobs,
         Err(e) => {
-            slog::error!(log, "Failed to query orphaned claimed jobs: {e}");
+            slog::error!(log, "Failed to query orphaned claimed jobs"; "error" => %e);
             return 0;
         },
     };
@@ -331,7 +319,7 @@ pub fn recover_orphaned_claimed_jobs(
     }
 
     if recovered > 0 {
-        slog::info!(log, "Recovered {recovered} orphaned claimed job(s)");
+        slog::info!(log, "Recovered orphaned claimed jobs"; "count" => recovered);
     }
 
     recovered
@@ -352,9 +340,10 @@ fn check_job_timeout(
     let elapsed = (now.timestamp() - started.timestamp()).max(0);
     #[expect(
         clippy::cast_possible_wrap,
-        reason = "job timeout and grace period fit in i64"
+        reason = "timeout max 86400 + grace period fits in i64"
     )]
-    let limit = i64::from(job.timeout) + job_timeout_grace_period.as_secs() as i64;
+    let limit =
+        u64::from(u32::from(job.timeout)) as i64 + job_timeout_grace_period.as_secs() as i64;
     if elapsed <= limit {
         return false;
     }

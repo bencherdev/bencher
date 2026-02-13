@@ -98,13 +98,15 @@ pub fn associate_runner_spec(server: &TestServer, runner_id: i32, spec_id: i32) 
 }
 
 /// Insert a test job directly into the database. Returns the job UUID.
-/// Uses a default `organization_id` of 1 and `source_ip` of "127.0.0.1".
+/// Looks up the `organization_id` from the project associated with the report.
 pub fn insert_test_job(server: &TestServer, report_id: i32, spec_id: i32) -> JobUuid {
+    let project_id = get_project_id_from_report(server, report_id);
+    let organization_id = get_organization_id_from_project_id(server, project_id);
     insert_test_job_full(
         server,
         report_id,
         bencher_json::ProjectUuid::new(),
-        1,
+        organization_id,
         TEST_SOURCE_IP,
         JobPriority::default(),
         spec_id,
@@ -118,11 +120,13 @@ pub fn insert_test_job_with_project(
     project_uuid: bencher_json::ProjectUuid,
     spec_id: i32,
 ) -> JobUuid {
+    let project_id = get_project_id_from_report(server, report_id);
+    let organization_id = get_organization_id_from_project_id(server, project_id);
     insert_test_job_full(
         server,
         report_id,
         project_uuid,
-        1,
+        organization_id,
         TEST_SOURCE_IP,
         JobPriority::default(),
         spec_id,
@@ -141,6 +145,8 @@ pub fn insert_test_job_with_timeout(
     let now = DateTime::now();
     let job_uuid = JobUuid::new();
     let project_uuid = bencher_json::ProjectUuid::new();
+    let project_id = get_project_id_from_report(server, report_id);
+    let organization_id = get_organization_id_from_project_id(server, project_id);
 
     let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
@@ -153,7 +159,7 @@ pub fn insert_test_job_with_timeout(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
-            schema::job::organization_id.eq(1),
+            schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq(TEST_SOURCE_IP),
             schema::job::status.eq(JobStatus::Pending),
             schema::job::spec_id.eq(spec_id),
@@ -319,6 +325,8 @@ pub fn insert_test_job_with_optional_fields(
     let mut conn = server.db_conn();
     let now = DateTime::now();
     let job_uuid = JobUuid::new();
+    let project_id = get_project_id_from_report(server, report_id);
+    let organization_id = get_organization_id_from_project_id(server, project_id);
 
     // Create a JsonJobConfig with optional fields populated
     let config = serde_json::json!({
@@ -339,7 +347,7 @@ pub fn insert_test_job_with_optional_fields(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
-            schema::job::organization_id.eq(1),
+            schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq(TEST_SOURCE_IP),
             schema::job::status.eq(JobStatus::Pending),
             schema::job::spec_id.eq(spec_id),
@@ -365,6 +373,8 @@ pub fn insert_test_job_with_invalid_config(
     let mut conn = server.db_conn();
     let now = DateTime::now();
     let job_uuid = JobUuid::new();
+    let project_id = get_project_id_from_report(server, report_id);
+    let organization_id = get_organization_id_from_project_id(server, project_id);
 
     // Invalid config - missing required fields like digest, timeout, etc.
     let config = serde_json::json!({
@@ -375,7 +385,7 @@ pub fn insert_test_job_with_invalid_config(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
-            schema::job::organization_id.eq(1),
+            schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq(TEST_SOURCE_IP),
             schema::job::status.eq(JobStatus::Pending),
             schema::job::spec_id.eq(spec_id),
@@ -391,9 +401,25 @@ pub fn insert_test_job_with_invalid_config(
     job_uuid
 }
 
-/// Get organization ID from project ID.
+/// Get project ID from report ID.
 #[expect(clippy::expect_used)]
+pub fn get_project_id_from_report(server: &TestServer, report_id: i32) -> i32 {
+    let mut conn = server.db_conn();
+    schema::report::table
+        .filter(schema::report::id.eq(report_id))
+        .select(schema::report::project_id)
+        .first(&mut conn)
+        .expect("Failed to get project ID from report")
+}
+
+/// Get organization ID from project ID.
 pub fn get_organization_id(server: &TestServer, project_id: i32) -> i32 {
+    get_organization_id_from_project_id(server, project_id)
+}
+
+/// Get organization ID from project ID (by primary key).
+#[expect(clippy::expect_used)]
+pub fn get_organization_id_from_project_id(server: &TestServer, project_id: i32) -> i32 {
     let mut conn = server.db_conn();
     schema::project::table
         .filter(schema::project::id.eq(project_id))

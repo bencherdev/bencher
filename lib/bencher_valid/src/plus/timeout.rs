@@ -16,6 +16,8 @@ const MAX_TIMEOUT: u32 = 86_400;
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
 pub struct Timeout(u32);
 
 impl TryFrom<u32> for Timeout {
@@ -69,6 +71,46 @@ impl Visitor<'_> for TimeoutVisitor {
         E: de::Error,
     {
         v.try_into().map_err(E::custom)
+    }
+}
+
+#[cfg(feature = "db")]
+mod db {
+    use super::Timeout;
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for Timeout
+    where
+        DB: diesel::backend::Backend,
+        for<'a> i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>
+            + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            #[expect(
+                clippy::cast_possible_wrap,
+                reason = "Timeout max 86400, always fits in i32"
+            )]
+            let val = self.0 as i32;
+            out.set_value(val);
+            Ok(diesel::serialize::IsNull::No)
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for Timeout
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            #[expect(
+                clippy::cast_sign_loss,
+                reason = "Timeout stored as i32 but CHECK constraint ensures > 0"
+            )]
+            let timeout = i32::from_sql(bytes)? as u32;
+            timeout.try_into().map_err(Into::into)
+        }
     }
 }
 

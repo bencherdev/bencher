@@ -24,6 +24,9 @@ impl HeartbeatTasks {
         self.cancel(&job_id);
 
         // Opportunistically clean up finished tasks to prevent unbounded growth.
+        // DashMap is unordered (HashMap-based), so we cannot short-circuit the
+        // retain scan. This is acceptable because the map is expected to be small
+        // (one entry per active job on this server).
         self.inner.retain(|_, h| !h.is_finished());
 
         self.inner.insert(job_id, handle);

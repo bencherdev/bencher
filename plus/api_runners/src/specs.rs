@@ -95,8 +95,11 @@ async fn post_inner(
     path_params: RunnerSpecsParams,
     json_runner_spec: JsonNewRunnerSpec,
 ) -> Result<JsonSpec, HttpError> {
-    let query_runner = QueryRunner::from_resource_id(auth_conn!(context), &path_params.runner)?;
-    let query_spec = QuerySpec::from_resource_id(auth_conn!(context), &json_runner_spec.spec)?;
+    let (query_runner, query_spec) = auth_conn!(context, |conn| {
+        let query_runner = QueryRunner::from_resource_id(conn, &path_params.runner)?;
+        let query_spec = QuerySpec::from_resource_id(conn, &json_runner_spec.spec)?;
+        Ok::<_, HttpError>((query_runner, query_spec))
+    })?;
 
     let insert = InsertRunnerSpec {
         runner_id: query_runner.id,
