@@ -257,8 +257,9 @@ async fn try_claim_job(
             modified: now,
         }))
     } else {
-        // Job was claimed by another runner
-        // This is okay, and better than holding the lock
+        // Defensive: the UPDATE matched 0 rows despite SELECT finding a pending job.
+        // Under the current single-writer lock this should not happen, but we
+        // handle it gracefully by returning None (no job claimed this iteration).
         Ok(None)
     }
 }

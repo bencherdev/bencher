@@ -5,7 +5,7 @@ mod common;
 
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
-use bencher_json::{JobStatus, JobUuid, JsonJob, RunnerUuid};
+use bencher_json::{JobStatus, JobUuid, JsonJob, JsonRunnerToken, RunnerUuid};
 use bencher_schema::schema;
 use common::{
     associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
@@ -1041,4 +1041,76 @@ async fn channel_job_timeout() {
 
     // Verify job is marked as Canceled (not Failed — distinguishes from heartbeat timeout)
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+}
+
+// =============================================================================
+// Token Rotation Tests
+// =============================================================================
+
+/// After rotating a runner's token, the old token cannot open a WS channel,
+/// but the new token can.
+#[tokio::test]
+async fn channel_token_rotation_invalidates_old_token() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-tokenrot@example.com").await;
+    let org = server.create_org(&admin, "Ws tokenrot").await;
+    let project = server
+        .create_project(&admin, &org, "Ws tokenrot proj")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner tokenrot").await;
+    let original_token = runner.token.to_string();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+    let claimed = claim_job(&server, runner.uuid, &original_token).await;
+    assert_eq!(claimed.uuid, job_uuid);
+    assert_eq!(claimed.status, JobStatus::Claimed);
+
+    // Open WS with original token and send Running
+    let mut ws = connect_ws(&server, runner.uuid, &original_token, job_uuid).await;
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Close the WebSocket
+    ws.close(None).await.expect("Failed to close WebSocket");
+
+    // Rotate the runner token via admin API
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/token", runner.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Rotation request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let new_runner: JsonRunnerToken = resp
+        .json()
+        .await
+        .expect("Failed to parse rotation response");
+    let new_token: String = new_runner.token.as_ref().to_owned();
+
+    // Old token should be rejected on WS channel
+    let request = ws_request(&server, runner.uuid, &original_token, job_uuid);
+    match tokio_tungstenite::connect_async(request).await {
+        Err(_) => {}, // Rejected at HTTP level
+        Ok((mut ws, _)) => {
+            assert_ws_closed(&mut ws).await;
+        },
+    }
+
+    // New token should work for WS connection
+    let mut ws = connect_ws(&server, runner.uuid, &new_token, job_uuid).await;
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    ws.close(None).await.expect("Failed to close WebSocket");
 }

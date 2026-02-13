@@ -7,15 +7,24 @@
 
 mod common;
 
+use std::sync::Arc;
+
 use bencher_api_tests::TestServer;
-use bencher_json::{JobPriority, JobStatus, JsonJob, JsonUpdateJobResponse};
+use bencher_json::{DateTime, JobPriority, JobStatus, JsonJob, JsonUpdateJobResponse};
+use bencher_schema::{
+    context::HeartbeatTasks,
+    model::runner::{JobId, recover_orphaned_claimed_jobs, spawn_heartbeat_timeout},
+    schema,
+};
 use common::{
     associate_runner_spec, create_runner, create_test_report, get_job_priority, get_project_id,
-    get_runner_id, insert_test_job, insert_test_job_full, insert_test_spec, insert_test_spec_full,
-    set_job_runner_id, set_job_status,
+    get_runner_id, insert_test_job, insert_test_job_full, insert_test_job_with_invalid_config,
+    insert_test_spec, insert_test_spec_full, set_job_runner_id, set_job_status,
 };
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures_concurrency::future::Join as _;
 use http::StatusCode;
+use tokio::sync::Mutex;
 
 // POST /v0/runners/{runner}/jobs - claim job with valid token (no jobs available)
 #[tokio::test]
@@ -307,10 +316,10 @@ async fn claim_job_canceled_pending() {
     // Create test infrastructure and a pending job
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
-    let _job_uuid = insert_test_job(&server, report_id, spec_id);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
 
     // Cancel the pending job before claiming
-    set_job_status(&server, _job_uuid, JobStatus::Canceled);
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
 
     // Try to claim - should get None since only Pending jobs are claimable
     let body = serde_json::json!({ "poll_timeout": 1 });
@@ -3243,7 +3252,7 @@ async fn free_tier_blocked_same_org_different_runner() {
     assert_eq!(claimed.as_ref().map(|j| j.uuid), Some(job1));
 
     // Set to running
-    set_job_status(&server, job1, bencher_json::JobStatus::Running);
+    set_job_status(&server, job1, JobStatus::Running);
     set_job_runner_id(&server, job1, runner1_id);
 
     // Runner2 tries to claim second job — same org, should be blocked
@@ -3290,7 +3299,7 @@ async fn mixed_tier_free_blocked_enterprise_claimable() {
         JobPriority::Free,
         spec_id,
     );
-    set_job_status(&server, blocking_job, bencher_json::JobStatus::Running);
+    set_job_status(&server, blocking_job, JobStatus::Running);
     set_job_runner_id(&server, blocking_job, runner_id);
 
     // Insert a Free tier job (should be blocked) and an Enterprise tier job (should be claimable)
@@ -3532,5 +3541,262 @@ async fn claim_no_pending_jobs_succeeds() {
         StatusCode::CREATED,
         "Claim with no pending jobs should succeed: {}",
         resp.text().await.unwrap_or_default()
+    );
+}
+
+// =============================================================================
+// Recovery Tests
+// =============================================================================
+
+/// Test that `recover_orphaned_claimed_jobs` marks orphaned Claimed jobs as Failed.
+/// A job is "orphaned" when it's been in Claimed state longer than the heartbeat timeout.
+#[tokio::test]
+async fn recover_orphaned_claimed_jobs_marks_as_failed() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "recover-orphan@example.com").await;
+    let org = server.create_org(&admin, "Recover Orphan").await;
+    let project = server
+        .create_project(&admin, &org, "Recover Orphan proj")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    // Set job to Claimed with an old claimed timestamp (5 minutes ago)
+    let old_timestamp: i64 = DateTime::now().timestamp() - 300;
+    let old_time: DateTime = old_timestamp.try_into().expect("Invalid timestamp");
+    {
+        let mut conn = server.db_conn();
+        diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
+            .set((
+                schema::job::status.eq(JobStatus::Claimed),
+                schema::job::claimed.eq(Some(old_time)),
+                schema::job::modified.eq(old_time),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to set job to claimed");
+    }
+
+    // Call recover_orphaned_claimed_jobs with a 5-second timeout
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    let heartbeat_timeout = std::time::Duration::from_secs(5);
+    let mut conn = server.db_conn();
+    let recovered = recover_orphaned_claimed_jobs(&log, &mut conn, heartbeat_timeout);
+    assert_eq!(recovered, 1, "Expected 1 orphaned job to be recovered");
+
+    // Verify job is now Failed
+    let status: JobStatus = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::status)
+        .first(&mut conn)
+        .expect("Failed to get job status");
+    assert_eq!(
+        status,
+        JobStatus::Failed,
+        "Orphaned claimed job should be Failed"
+    );
+}
+
+/// Test that `spawn_heartbeat_timeout` marks a Running job as Failed after timeout.
+/// Simulates what `spawn_job_recovery` does for in-flight jobs on server restart.
+///
+/// Uses a short real timeout because `spawn_heartbeat_timeout` compares
+/// `DateTime::now()` (system clock) against `last_heartbeat`, so virtual-time
+/// manipulation alone cannot trigger the failure path.
+#[tokio::test]
+async fn spawn_heartbeat_timeout_fails_running_job() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "hb-running@example.com").await;
+    let org = server.create_org(&admin, "Hb Running").await;
+    let project = server.create_project(&admin, &org, "Hb Running proj").await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    // Set job to Running via direct DB update (last_heartbeat stays NULL)
+    set_job_status(&server, job_uuid, JobStatus::Running);
+
+    // Get the JobId for spawn_heartbeat_timeout
+    let job_id: JobId = {
+        let mut conn = server.db_conn();
+        schema::job::table
+            .filter(schema::job::uuid.eq(job_uuid))
+            .select(schema::job::id)
+            .first(&mut conn)
+            .expect("Failed to get job ID")
+    };
+
+    // Create the infrastructure spawn_heartbeat_timeout needs
+    let connection = Arc::new(Mutex::new(server.db_conn()));
+    let heartbeat_tasks = HeartbeatTasks::new();
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    // Use a short real timeout so the test completes quickly
+    let timeout = std::time::Duration::from_millis(100);
+    let grace_period = std::time::Duration::from_secs(60);
+
+    spawn_heartbeat_timeout(
+        log,
+        timeout,
+        connection,
+        job_id,
+        &heartbeat_tasks,
+        grace_period,
+    );
+
+    // Wait for the spawned task to fire and complete
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    // Verify the job is now Failed
+    let mut conn = server.db_conn();
+    let status: JobStatus = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::status)
+        .first(&mut conn)
+        .expect("Failed to get job status");
+    assert_eq!(
+        status,
+        JobStatus::Failed,
+        "Running job should be Failed after heartbeat timeout"
+    );
+}
+
+/// Claiming a job with invalid config (missing required fields) fails gracefully.
+/// The claim endpoint parses the config after claiming, so the job transitions to
+/// Claimed but the response is an error.
+#[tokio::test]
+async fn claim_job_invalid_config() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "invalid-config@example.com").await;
+    let org = server.create_org(&admin, "Invalid Config").await;
+    let project = server
+        .create_project(&admin, &org, "Invalid Config proj")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+
+    // Insert a job with invalid config (missing required fields like digest, timeout)
+    insert_test_job_with_invalid_config(&server, report_id, spec_id);
+
+    let runner = create_runner(&server, &admin.token, "Invalid Config Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    // Try to claim the job — parse_config should fail, returning an error
+    let body = serde_json::json!({ "poll_timeout": 1 });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {runner_token}"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    // The claim should fail because the config cannot be parsed
+    assert_ne!(
+        resp.status(),
+        StatusCode::OK,
+        "Claiming a job with invalid config should not succeed"
+    );
+}
+
+/// Heartbeat timeout for a claimed job without a WS channel.
+/// Simulates what `spawn_job_recovery` does on server restart: spawns heartbeat
+/// timeouts for in-flight jobs that were claimed but never opened a WS connection.
+///
+/// Uses a short real timeout because `spawn_heartbeat_timeout` compares
+/// `DateTime::now()` (system clock) against `last_heartbeat`, so virtual-time
+/// manipulation alone cannot trigger the failure path.
+#[tokio::test]
+async fn heartbeat_timeout_claimed_job_without_ws() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "hb-nows@example.com").await;
+    let org = server.create_org(&admin, "Hb No WS").await;
+    let project = server.create_project(&admin, &org, "Hb No WS proj").await;
+
+    let (_, spec_id) = insert_test_spec(&server);
+    let runner = create_runner(&server, &admin.token, "No WS Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    // Claim the job via the REST API (no WS connection opened).
+    // This sets last_heartbeat to DateTime::now().
+    let body = serde_json::json!({ "poll_timeout": 5 });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
+        .header("Authorization", format!("Bearer {runner_token}"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let claimed = claimed.expect("Expected to claim a job");
+    assert_eq!(claimed.uuid, job_uuid);
+    assert_eq!(claimed.status, JobStatus::Claimed);
+
+    // Get the JobId for spawn_heartbeat_timeout
+    let job_id: JobId = {
+        let mut conn = server.db_conn();
+        schema::job::table
+            .filter(schema::job::uuid.eq(job_uuid))
+            .select(schema::job::id)
+            .first(&mut conn)
+            .expect("Failed to get job ID")
+    };
+
+    // Clear last_heartbeat so the freshness check is skipped
+    {
+        let mut conn = server.db_conn();
+        diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
+            .set(schema::job::last_heartbeat.eq(None::<DateTime>))
+            .execute(&mut conn)
+            .expect("Failed to clear last_heartbeat");
+    }
+
+    // Simulate server recovery: spawn heartbeat timeout for the claimed job
+    let connection = Arc::new(Mutex::new(server.db_conn()));
+    let heartbeat_tasks = HeartbeatTasks::new();
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    // Use a short real timeout so the test completes quickly
+    let timeout = std::time::Duration::from_millis(100);
+    let grace_period = std::time::Duration::from_secs(60);
+
+    spawn_heartbeat_timeout(
+        log,
+        timeout,
+        connection,
+        job_id,
+        &heartbeat_tasks,
+        grace_period,
+    );
+
+    // Wait for the spawned task to fire and complete
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    // Verify the job is now Failed (heartbeat timeout, no WS interaction)
+    let mut conn = server.db_conn();
+    let status: JobStatus = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::status)
+        .first(&mut conn)
+        .expect("Failed to get job status");
+    assert_eq!(
+        status,
+        JobStatus::Failed,
+        "Claimed job should be Failed after heartbeat timeout without WS"
     );
 }

@@ -30,6 +30,7 @@
 "MeasureSlug" = "Slug"
 "UserSlug" = "Slug"
 "RunnerSlug" = "Slug"
+"SpecSlug" = "Slug"
 # Resource ID
 "ResourceId" = "Uuid | Slug"
 # Name ID

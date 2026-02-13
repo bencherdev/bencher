@@ -8265,10 +8265,10 @@
           {
             "in": "path",
             "name": "spec",
-            "description": "The UUID for a spec.",
+            "description": "The UUID or slug for a spec.",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/SpecUuid"
+              "$ref": "#/components/schemas/ResourceId"
             }
           }
         ],
@@ -9174,6 +9174,22 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "description": "Filter by spec name, exact match.",
+            "schema": {
+              "$ref": "#/components/schemas/ResourceName"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "description": "Search by spec name, slug, or UUID.",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
+            }
           }
         ],
         "responses": {
@@ -9318,10 +9334,10 @@
           {
             "in": "path",
             "name": "spec",
-            "description": "The UUID for a spec.",
+            "description": "The UUID or slug for a spec.",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/SpecUuid"
+              "$ref": "#/components/schemas/ResourceId"
             }
           }
         ],
@@ -9392,10 +9408,10 @@
           {
             "in": "path",
             "name": "spec",
-            "description": "The UUID for a spec.",
+            "description": "The UUID or slug for a spec.",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/SpecUuid"
+              "$ref": "#/components/schemas/ResourceId"
             }
           }
         ],
@@ -9453,16 +9469,16 @@
           "specs"
         ],
         "summary": "Update a spec",
-        "description": "Update a hardware spec on the server. The user must be an admin to use this endpoint. Can only be used to archive or unarchive a spec.",
+        "description": "Update a hardware spec on the server. The user must be an admin to use this endpoint.",
         "operationId": "spec_patch",
         "parameters": [
           {
             "in": "path",
             "name": "spec",
-            "description": "The UUID for a spec.",
+            "description": "The UUID or slug for a spec.",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/SpecUuid"
+              "$ref": "#/components/schemas/ResourceId"
             }
           }
         ],
@@ -12953,7 +12969,7 @@
             "description": "The preferred slug for the runner. If not provided, the slug will be generated from the name.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/RunnerSlug"
               }
             ]
           }
@@ -12967,10 +12983,10 @@
         "type": "object",
         "properties": {
           "spec": {
-            "description": "The UUID of the spec to associate with the runner.",
+            "description": "The UUID or slug of the spec to associate with the runner.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/SpecUuid"
+                "$ref": "#/components/schemas/ResourceId"
               }
             ]
           }
@@ -13015,17 +13031,35 @@
               }
             ]
           },
+          "name": {
+            "description": "The name of the spec.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          },
           "network": {
             "description": "Whether the VM has network access",
             "default": false,
             "type": "boolean"
+          },
+          "slug": {
+            "nullable": true,
+            "description": "The preferred slug for the spec. If not provided, the slug will be generated from the name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SpecSlug"
+              }
+            ]
           }
         },
         "required": [
           "architecture",
           "cpu",
           "disk",
-          "memory"
+          "memory",
+          "name"
         ]
       },
       "JsonNewSso": {
@@ -14729,7 +14763,7 @@
             "$ref": "#/components/schemas/ResourceName"
           },
           "slug": {
-            "$ref": "#/components/schemas/Slug"
+            "$ref": "#/components/schemas/RunnerSlug"
           },
           "specs": {
             "type": "array",
@@ -15264,8 +15298,14 @@
           "modified": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "name": {
+            "$ref": "#/components/schemas/ResourceName"
+          },
           "network": {
             "type": "boolean"
+          },
+          "slug": {
+            "$ref": "#/components/schemas/SpecSlug"
           },
           "uuid": {
             "$ref": "#/components/schemas/SpecUuid"
@@ -15278,7 +15318,9 @@
           "disk",
           "memory",
           "modified",
+          "name",
           "network",
+          "slug",
           "uuid"
         ]
       },
@@ -15935,20 +15977,38 @@
             "description": "The new slug for the runner.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Slug"
+                "$ref": "#/components/schemas/RunnerSlug"
               }
             ]
           }
         }
       },
       "JsonUpdateSpec": {
-        "description": "Update a spec (archive/unarchive only)",
+        "description": "Update a spec",
         "type": "object",
         "properties": {
           "archived": {
             "nullable": true,
             "description": "Set whether the spec is archived.",
             "type": "boolean"
+          },
+          "name": {
+            "nullable": true,
+            "description": "The new name for the spec.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "description": "The new slug for the spec.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SpecSlug"
+              }
+            ]
           }
         }
       },
@@ -16523,6 +16583,9 @@
           "type": "string"
         }
       },
+      "RunnerSlug": {
+        "$ref": "#/components/schemas/Slug"
+      },
       "RunnerUuid": {
         "type": "string",
         "format": "uuid"
@@ -16593,6 +16656,9 @@
       },
       "Slug": {
         "type": "string"
+      },
+      "SpecSlug": {
+        "$ref": "#/components/schemas/Slug"
       },
       "SpecUuid": {
         "type": "string",
@@ -16960,6 +17026,13 @@
       },
       "SpecsSort": {
         "oneOf": [
+          {
+            "description": "Sort by spec name.",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          },
           {
             "description": "Sort by creation date.",
             "type": "string",

@@ -61,6 +61,8 @@ export enum JobStatus {
 	Canceled = "canceled",
 }
 
+export type ResourceName = string;
+
 export enum Architecture {
 	X86_64 = "X86_64",
 	Aarch64 = "Aarch64",
@@ -69,6 +71,8 @@ export enum Architecture {
 /** A hardware spec */
 export interface JsonSpec {
 	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
 	/** CPU architecture */
 	architecture: Architecture;
 	cpu: number;
@@ -191,8 +195,6 @@ export interface JsonBranch {
 	archived?: string;
 }
 
-export type ResourceName = string;
-
 export interface JsonTestbed {
 	uuid: Uuid;
 	project: Uuid;
@@ -313,13 +315,11 @@ export type JsonReportResults = JsonReportIteration[];
 
 export type JsonResultsMap = Record<BenchmarkName, JsonMetricsMap>;
 
-export type Slug = string;
-
 /** A benchmark runner */
 export interface JsonRunner {
 	uuid: Uuid;
 	name: ResourceName;
-	slug: string;
+	slug: Slug;
 	specs: Uuid[];
 	archived?: string;
 	last_heartbeat?: string;
@@ -360,6 +360,11 @@ export type RunContext = Record<string, string>;
 export type RunnerResourceId = Uuid | Slug;
 
 export type Secret = string;
+
+export type Slug = string;
+
+/** A spec UUID or slug. */
+export type SpecResourceId = Uuid | Slug;
 
 /** A testbed UUID, slug, or name. */
 export type TestbedNameId = Uuid | Slug | string;
@@ -588,17 +593,24 @@ export interface JsonNewRunner {
 	 * The preferred slug for the runner.
 	 * If not provided, the slug will be generated from the name.
 	 */
-	slug?: string;
+	slug?: Slug;
 }
 
 /** Add a spec to a runner */
 export interface JsonNewRunnerSpec {
-	/** The UUID of the spec to associate with the runner. */
-	spec: Uuid;
+	/** The UUID or slug of the spec to associate with the runner. */
+	spec: SpecResourceId;
 }
 
 /** Create a new spec */
 export interface JsonNewSpec {
+	/** The name of the spec. */
+	name: ResourceName;
+	/**
+	 * The preferred slug for the spec.
+	 * If not provided, the slug will be generated from the name.
+	 */
+	slug?: Slug;
 	/** CPU architecture */
 	architecture: Architecture;
 	/** Number of CPUs */
@@ -907,13 +919,17 @@ export interface JsonUpdateRunner {
 	/** The new name for the runner. */
 	name?: ResourceName;
 	/** The new slug for the runner. */
-	slug?: string;
+	slug?: Slug;
 	/** Set whether the runner is archived. */
 	archived?: boolean;
 }
 
-/** Update a spec (archive/unarchive only) */
+/** Update a spec */
 export interface JsonUpdateSpec {
+	/** The new name for the spec. */
+	name?: ResourceName;
+	/** The new slug for the spec. */
+	slug?: Slug;
 	/** Set whether the spec is archived. */
 	archived?: boolean;
 }

@@ -130,6 +130,7 @@ pub fn insert_test_job_with_project(
 }
 
 /// Insert a test job with a custom timeout (in seconds). Returns the job UUID.
+#[expect(clippy::expect_used)]
 pub fn insert_test_job_with_timeout(
     server: &TestServer,
     report_id: i32,
