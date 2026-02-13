@@ -183,32 +183,11 @@ async fn handle_websocket(
                 break;
             },
             Err(_elapsed) => {
-                slog::warn!(log, "Heartbeat timeout, marking job as failed"; "job_id" => ?job_id);
-                let now = DateTime::now();
-                let update = UpdateJob {
-                    status: Some(JobStatus::Failed),
-                    completed: Some(Some(now)),
-                    modified: Some(now),
-                    ..Default::default()
-                };
-                let updated = diesel::update(
-                    schema::job::table
-                        .filter(schema::job::id.eq(job_id))
-                        .filter(
-                            schema::job::status
-                                .eq(JobStatus::Claimed)
-                                .or(schema::job::status.eq(JobStatus::Running)),
-                        ),
-                )
-                .set(&update)
-                .execute(write_conn!(context))?;
-                if updated == 0 {
-                    slog::info!(log, "Heartbeat timeout: job already in terminal state"; "job_id" => ?job_id);
-                }
+                let reason = handle_timeout(log, context, job_id).await?;
                 drop(
                     tx.send(Message::Close(Some(CloseFrame {
                         code: CloseCode::Policy,
-                        reason: "heartbeat timeout".into(),
+                        reason: reason.into(),
                     })))
                     .await,
                 );
@@ -272,6 +251,67 @@ async fn handle_websocket(
     }
 
     Ok(())
+}
+
+/// Handle a heartbeat timeout by reading the job and deciding the right status.
+///
+/// If the job has exceeded its configured timeout + grace period, it is marked `Canceled`
+/// (ran too long). Otherwise it is marked `Failed` (lost contact with runner).
+/// Returns the close reason string for the WebSocket close frame.
+async fn handle_timeout(
+    log: &slog::Logger,
+    context: &ApiContext,
+    job_id: JobId,
+) -> Result<&'static str, Box<dyn std::error::Error + Send + Sync>> {
+    let job: QueryJob = schema::job::table
+        .filter(schema::job::id.eq(job_id))
+        .first(auth_conn!(context))?;
+
+    if job.status.is_terminal() {
+        slog::info!(log, "Heartbeat timeout: job already in terminal state"; "job_id" => ?job_id);
+        return Ok("heartbeat timeout");
+    }
+
+    let (status, reason) = if let Some(started) = job.started {
+        let now = DateTime::now();
+        let elapsed = (now.timestamp() - started.timestamp()).max(0);
+        #[expect(
+            clippy::cast_possible_wrap,
+            reason = "job timeout and grace period fit in i64"
+        )]
+        let limit = i64::from(job.timeout) + context.job_timeout_grace_period.as_secs() as i64;
+        if elapsed > limit {
+            (JobStatus::Canceled, "job timeout exceeded")
+        } else {
+            (JobStatus::Failed, "heartbeat timeout")
+        }
+    } else {
+        (JobStatus::Failed, "heartbeat timeout")
+    };
+
+    slog::warn!(log, "Marking job"; "job_id" => ?job_id, "status" => ?status, "reason" => reason);
+    let now = DateTime::now();
+    let update = UpdateJob {
+        status: Some(status),
+        completed: Some(Some(now)),
+        modified: Some(now),
+        ..Default::default()
+    };
+    let updated = diesel::update(
+        schema::job::table
+            .filter(schema::job::id.eq(job_id))
+            .filter(
+                schema::job::status
+                    .eq(JobStatus::Claimed)
+                    .or(schema::job::status.eq(JobStatus::Running)),
+            ),
+    )
+    .set(&update)
+    .execute(write_conn!(context))?;
+    if updated == 0 {
+        slog::info!(log, "Timeout: job already in terminal state"; "job_id" => ?job_id);
+    }
+    Ok(reason)
 }
 
 /// Check if a response/message pair represents a terminal state that should close the connection.
