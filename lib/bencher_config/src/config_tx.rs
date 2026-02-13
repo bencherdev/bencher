@@ -330,6 +330,8 @@ async fn into_context(
         #[cfg(feature = "plus")]
         oci_storage,
         #[cfg(feature = "plus")]
+        clock: bencher_json::Clock::System,
+        #[cfg(feature = "plus")]
         heartbeat_timeout,
         #[cfg(feature = "plus")]
         job_timeout_grace_period,
@@ -525,7 +527,7 @@ async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
 
     // First, fail any claimed jobs that have been orphaned (claimed longer ago
     // than the heartbeat timeout without transitioning to Running).
-    recover_orphaned_claimed_jobs(log, conn, context.heartbeat_timeout);
+    recover_orphaned_claimed_jobs(log, conn, context.heartbeat_timeout, &context.clock);
 
     // Then schedule heartbeat timeouts for remaining in-flight jobs.
     let in_flight_jobs: Vec<QueryJob> = match schema::job::table
@@ -559,6 +561,7 @@ async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
             job.id,
             &context.heartbeat_tasks,
             context.job_timeout_grace_period,
+            context.clock.clone(),
         );
     }
 }

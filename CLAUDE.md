@@ -175,6 +175,7 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - Database model fields should use strong validated types (e.g., `ProjectId`, `ProjectUuid`, `ProjectName`, `DateTime`, `VersionNumber`) with Diesel `ToSql`/`FromSql` impls rather than raw primitives (`i32`, `i64`, `String`). All conversion happens inside the Diesel impls, not in the model layer.
 - Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
 - All time-based tests should be deterministic and use time manipulation not real wall-clock time
+- Use `bencher_json::Clock::Custom` (behind the `test-clock` feature) to inject a fake clock in tests instead of calling `DateTime::now()` directly. `Clock` is available on `ApiContext`.
 - Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
 - Always pass strong types (`MyTypeId`, `MyTypeUuid`, etc) into a function instead of its stringly typed equivalent, even in tests
 

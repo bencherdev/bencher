@@ -151,6 +151,7 @@ pub fn spawn_heartbeat_timeout(
     job_id: JobId,
     heartbeat_tasks: &crate::context::HeartbeatTasks,
     job_timeout_grace_period: std::time::Duration,
+    clock: bencher_json::Clock,
 ) {
     let join_handle = tokio::spawn({
         let heartbeat_tasks = heartbeat_tasks.clone();
@@ -177,13 +178,13 @@ pub fn spawn_heartbeat_timeout(
             }
 
             // Check job timeout: if running longer than timeout + grace period, cancel it
-            if check_job_timeout(&log, &job, job_timeout_grace_period, &mut conn) {
+            if check_job_timeout(&log, &job, job_timeout_grace_period, &mut conn, &clock) {
                 return;
             }
 
             // If the runner reconnected and sent a recent heartbeat, don't fail the job
             if let Some(last_heartbeat) = job.last_heartbeat {
-                let now = DateTime::now();
+                let now = clock.now();
                 let elapsed = (now.timestamp() - last_heartbeat.timestamp()).max(0);
                 if elapsed < i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) {
                     // Heartbeat is recent, runner reconnected — schedule another timeout
@@ -205,6 +206,7 @@ pub fn spawn_heartbeat_timeout(
                         job_id,
                         &heartbeat_tasks,
                         job_timeout_grace_period,
+                        clock,
                     );
                     return;
                 }
@@ -212,7 +214,7 @@ pub fn spawn_heartbeat_timeout(
 
             // Mark the job as failed
             slog::warn!(log, "Heartbeat timeout, marking job as failed"; "job_id" => ?job_id);
-            let now = DateTime::now();
+            let now = clock.now();
             let update = UpdateJob {
                 status: Some(JobStatus::Failed),
                 completed: Some(Some(now)),
@@ -260,10 +262,11 @@ pub fn recover_orphaned_claimed_jobs(
     log: &slog::Logger,
     conn: &mut DbConnection,
     heartbeat_timeout: std::time::Duration,
+    clock: &bencher_json::Clock,
 ) -> usize {
     let heartbeat_timeout =
         chrono::Duration::from_std(heartbeat_timeout).unwrap_or(chrono::Duration::MAX);
-    let cutoff = DateTime::now() - heartbeat_timeout;
+    let cutoff = clock.now() - heartbeat_timeout;
 
     // Find claimed jobs where claimed (or created, if claimed is NULL) is older than the cutoff
     let orphaned_jobs: Vec<QueryJob> = match schema::job::table
@@ -290,7 +293,7 @@ pub fn recover_orphaned_claimed_jobs(
         }
 
         slog::warn!(log, "Recovering orphaned claimed job"; "job_id" => ?job.id);
-        let now = DateTime::now();
+        let now = clock.now();
         let update = UpdateJob {
             status: Some(JobStatus::Failed),
             completed: Some(Some(now)),
@@ -332,11 +335,12 @@ fn check_job_timeout(
     job: &QueryJob,
     job_timeout_grace_period: std::time::Duration,
     conn: &mut DbConnection,
+    clock: &bencher_json::Clock,
 ) -> bool {
     let Some(started) = job.started else {
         return false;
     };
-    let now = DateTime::now();
+    let now = clock.now();
     let elapsed = (now.timestamp() - started.timestamp()).max(0);
     #[expect(
         clippy::cast_possible_wrap,

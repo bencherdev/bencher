@@ -20,8 +20,9 @@ mod local;
 mod storage;
 mod types;
 
+pub use bencher_json::Clock;
 pub use bencher_json::ProjectUuid;
 pub use bencher_json::system::config::DEFAULT_MAX_BODY_SIZE;
 pub use error::OciError;
-pub use storage::{BlobBody, Clock, ListTagsResult, MAX_CONCURRENCY, OciStorage, OciStorageError};
+pub use storage::{BlobBody, ListTagsResult, MAX_CONCURRENCY, OciStorage, OciStorageError};
 pub use types::{Digest, DigestError, Reference, Tag, UploadId};

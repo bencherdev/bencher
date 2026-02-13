@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use bencher_json::{DateTime, JobStatus, JobUuid, RunnerResourceId};
+use bencher_json::{JobStatus, JobUuid, RunnerResourceId};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -150,6 +150,7 @@ pub async fn runner_job_channel(
             job_id,
             &context.heartbeat_tasks,
             context.job_timeout_grace_period,
+            context.clock.clone(),
         );
     }
 
@@ -276,7 +277,7 @@ async fn handle_timeout(
         return Ok("heartbeat timeout");
     }
 
-    let now = DateTime::now();
+    let now = context.clock.now();
 
     let (status, reason) = if let Some(started) = job.started {
         let elapsed = (now.timestamp() - started.timestamp()).max(0);
@@ -410,7 +411,7 @@ async fn handle_running(
     context: &ApiContext,
     job_id: JobId,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let now = DateTime::now();
+    let now = context.clock.now();
 
     // Try reconnection case first: already Running, just update heartbeat
     let reconnect_update = UpdateJob {
@@ -472,7 +473,7 @@ async fn handle_heartbeat(
     context: &ApiContext,
     job_id: JobId,
 ) -> Result<Option<ServerMessage>, Box<dyn std::error::Error + Send + Sync>> {
-    let now = DateTime::now();
+    let now = context.clock.now();
 
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
@@ -522,7 +523,7 @@ async fn handle_completed(
     stderr: Option<String>,
     output: Option<HashMap<Utf8PathBuf, String>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let now = DateTime::now();
+    let now = context.clock.now();
 
     let update = UpdateJob {
         status: Some(JobStatus::Completed),
@@ -572,7 +573,7 @@ async fn handle_failed(
     stdout: Option<String>,
     stderr: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let now = DateTime::now();
+    let now = context.clock.now();
 
     let update = UpdateJob {
         status: Some(JobStatus::Failed),
@@ -623,7 +624,7 @@ async fn handle_canceled(
     context: &ApiContext,
     job_id: JobId,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let now = DateTime::now();
+    let now = context.clock.now();
 
     // Try to transition from Claimed or Running to Canceled
     let update = UpdateJob {

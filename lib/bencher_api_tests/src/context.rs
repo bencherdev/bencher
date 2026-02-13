@@ -52,7 +52,7 @@ impl TestServer {
     pub async fn new_with_clock(
         upload_timeout: u64,
         max_body_size: u64,
-        clock: bencher_oci_storage::Clock,
+        clock: bencher_json::Clock,
     ) -> Self {
         Self::build(Some(upload_timeout), Some(max_body_size), Some(clock)).await
     }
@@ -62,7 +62,7 @@ impl TestServer {
     async fn build(
         upload_timeout: Option<u64>,
         max_body_size: Option<u64>,
-        clock: Option<bencher_oci_storage::Clock>,
+        clock: Option<bencher_json::Clock>,
     ) -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {
@@ -121,6 +121,7 @@ impl TestServer {
             licensor: bencher_license::Licensor::self_hosted().expect("Failed to create licensor"),
             recaptcha_client: None,
             is_bencher_cloud: false,
+            clock: clock.clone().unwrap_or(bencher_json::Clock::System),
             oci_storage: bencher_oci_storage::OciStorage::try_from_config(
                 log.clone(),
                 None,

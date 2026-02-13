@@ -940,8 +940,9 @@ async fn upload_session_expired() {
     let base_time = chrono::Utc::now().timestamp();
     let mock_time = Arc::new(AtomicI64::new(base_time));
     let time_ref = mock_time.clone();
-    let clock =
-        bencher_oci_storage::Clock::Custom(Arc::new(move || time_ref.load(Ordering::Relaxed)));
+    let clock = bencher_oci_storage::Clock::Custom(Arc::new(move || {
+        bencher_json::DateTime::try_from(time_ref.load(Ordering::Relaxed)).unwrap()
+    }));
 
     // 1-second upload timeout
     let server = TestServer::new_with_clock(1, 1_073_741_824, clock).await;

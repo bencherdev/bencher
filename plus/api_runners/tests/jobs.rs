@@ -3583,7 +3583,12 @@ async fn recover_orphaned_claimed_jobs_marks_as_failed() {
     let log = slog::Logger::root(slog::Discard, slog::o!());
     let heartbeat_timeout = std::time::Duration::from_secs(5);
     let mut conn = server.db_conn();
-    let recovered = recover_orphaned_claimed_jobs(&log, &mut conn, heartbeat_timeout);
+    let recovered = recover_orphaned_claimed_jobs(
+        &log,
+        &mut conn,
+        heartbeat_timeout,
+        &bencher_json::Clock::System,
+    );
     assert_eq!(recovered, 1, "Expected 1 orphaned job to be recovered");
 
     // Verify job is now Failed
@@ -3645,6 +3650,7 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
         job_id,
         &heartbeat_tasks,
         grace_period,
+        bencher_json::Clock::System,
     );
 
     // Use virtual time to advance past the timeout without wall-clock wait
@@ -3783,6 +3789,7 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
         job_id,
         &heartbeat_tasks,
         grace_period,
+        bencher_json::Clock::System,
     );
 
     // Use virtual time to advance past the timeout without wall-clock wait
