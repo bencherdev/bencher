@@ -3,7 +3,7 @@ use bencher_json::{DateTime, JsonRunnerToken, RunnerResourceId};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::resource_conflict_err,
+    error::{conflict_error, resource_conflict_err},
     model::{
         runner::{QueryRunner, UpdateRunner},
         user::{admin::AdminUser, auth::BearerToken},
@@ -60,6 +60,10 @@ async fn post_inner(
     path_params: RunnerTokenParams,
 ) -> Result<JsonRunnerToken, HttpError> {
     let query_runner = QueryRunner::from_resource_id(auth_conn!(context), &path_params.runner)?;
+
+    if query_runner.is_archived() {
+        return Err(conflict_error("Cannot rotate token for an archived runner"));
+    }
 
     // Generate new token
     let token = generate_runner_token();

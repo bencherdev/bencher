@@ -8,7 +8,7 @@ use bencher_json::{
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{conflict_error, forbidden_error, resource_conflict_err, resource_not_found_err},
+    error::{conflict_error, forbidden_error, resource_conflict_err},
     model::{
         runner::{QueryJob, UpdateJob},
         spec::QuerySpec,
@@ -184,7 +184,7 @@ async fn try_claim_job(
         .order((priority.desc(), created.asc(), id.asc()))
         .first(&mut *conn)
         .optional()
-        .map_err(resource_not_found_err!(Job))?;
+        .map_err(|e| HttpError::for_internal_error(format!("Failed to query pending jobs: {e}")))?;
 
     let Some(query_job) = pending_job else {
         return Ok(None);

@@ -50,7 +50,7 @@ uuid = { workspace = true, features = ["v4"], optional = true }
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
-bencher_json = { workspace = true, features = ["server", "schema", "db"] }
+bencher_json = { workspace = true, features = ["server", "schema", "db", "test-clock"] }
 bencher_schema.workspace = true
 diesel.workspace = true
 futures-concurrency.workspace = true

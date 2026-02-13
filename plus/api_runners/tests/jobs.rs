@@ -3643,6 +3643,9 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
     let timeout = std::time::Duration::from_secs(5);
     let grace_period = std::time::Duration::from_secs(60);
 
+    // Pause time before spawning so the sleep timer is registered in virtual time
+    tokio::time::pause();
+
     spawn_heartbeat_timeout(
         log,
         timeout,
@@ -3653,9 +3656,12 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
         bencher_json::Clock::System,
     );
 
-    // Use virtual time to advance past the timeout without wall-clock wait
-    tokio::time::pause();
+    // Let the spawned task start and register its sleep(5s) timer
+    tokio::task::yield_now().await;
+    // Advance past the 5s timeout
     tokio::time::advance(std::time::Duration::from_secs(6)).await;
+    // Let the spawned task complete after the timer fires
+    tokio::task::yield_now().await;
     tokio::time::resume();
 
     // Verify the job is now Failed
@@ -3782,6 +3788,9 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     let timeout = std::time::Duration::from_secs(5);
     let grace_period = std::time::Duration::from_secs(60);
 
+    // Pause time before spawning so the sleep timer is registered in virtual time
+    tokio::time::pause();
+
     spawn_heartbeat_timeout(
         log,
         timeout,
@@ -3792,9 +3801,12 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
         bencher_json::Clock::System,
     );
 
-    // Use virtual time to advance past the timeout without wall-clock wait
-    tokio::time::pause();
+    // Let the spawned task start and register its sleep(5s) timer
+    tokio::task::yield_now().await;
+    // Advance past the 5s timeout
     tokio::time::advance(std::time::Duration::from_secs(6)).await;
+    // Let the spawned task complete after the timer fires
+    tokio::task::yield_now().await;
     tokio::time::resume();
 
     // Verify the job is now Failed (heartbeat timeout, no WS interaction)

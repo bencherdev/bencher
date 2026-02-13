@@ -993,7 +993,22 @@ async fn channel_completed_with_stderr_only() {
 #[tokio::test]
 #[expect(clippy::panic)]
 async fn channel_job_timeout() {
-    let server = TestServer::new().await;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicI64, Ordering},
+    };
+
+    // Use a mock clock so that `context.clock.now()` returns controllable time.
+    // Without this, `DateTime::now()` returns real wall-clock time which doesn't
+    // advance with `tokio::time::advance()`.
+    let base_time = bencher_json::DateTime::now().timestamp();
+    let mock_time = Arc::new(AtomicI64::new(base_time));
+    let time_ref = mock_time.clone();
+    let clock = bencher_json::Clock::Custom(Arc::new(move || {
+        bencher_json::DateTime::try_from(time_ref.load(Ordering::Relaxed)).unwrap()
+    }));
+
+    let server = TestServer::new_with_clock(3600, 1024 * 1024, clock).await;
     let admin = server.signup("Admin", "ws-jobtimeout@example.com").await;
     let org = server.create_org(&admin, "Ws jobtimeout").await;
     let project = server
@@ -1018,7 +1033,7 @@ async fn channel_job_timeout() {
 
     let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
 
-    // Send Running to start the job (sets the `started` timestamp)
+    // Send Running to start the job (sets the `started` timestamp via mock clock)
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
@@ -1029,9 +1044,12 @@ async fn channel_job_timeout() {
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
 
-    // Pause tokio time and advance past job timeout (10s) + grace period (60s) = 70s.
-    // The heartbeat timeout handler fires at 5s, sees the job has exceeded its
-    // timeout + grace period, and marks it as Canceled (not Failed).
+    // Advance mock clock past job timeout (10s) + grace period (60s) = 70s.
+    mock_time.fetch_add(75, Ordering::Relaxed);
+
+    // Pause tokio time and advance past the heartbeat timeout (5s) so the
+    // handler fires. It will read the mock clock which is now 75s ahead,
+    // see the job has exceeded its timeout + grace period, and mark it Canceled.
     tokio::time::pause();
     tokio::time::advance(std::time::Duration::from_secs(75)).await;
     tokio::time::resume();
