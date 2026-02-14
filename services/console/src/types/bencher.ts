@@ -24,6 +24,8 @@ export type CardCvc = string;
 
 export type CardNumber = string;
 
+export type Cpu = number;
+
 export type DateTime = string;
 
 export type DateTimeMillis = number;
@@ -38,9 +40,101 @@ export type ExpirationYear = number;
 
 export type GitHash = string;
 
+export type GracePeriod = number;
+
+export type HeartbeatTimeout = number;
+
+/** An OCI image digest (e.g., "sha256:abc123...") */
+export type ImageDigest = string;
+
 export type Index = number;
 
 export type Iteration = number;
+
+/** Job status */
+export enum JobStatus {
+	Pending = "pending",
+	Claimed = "claimed",
+	Running = "running",
+	Completed = "completed",
+	Failed = "failed",
+	Canceled = "canceled",
+}
+
+export type ResourceName = string;
+
+export enum Architecture {
+	X86_64 = "x86_64",
+	Aarch64 = "aarch64",
+	Riscv64 = "riscv64",
+}
+
+/** A hardware spec */
+export interface JsonSpec {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	/** CPU architecture */
+	architecture: Architecture;
+	cpu: number;
+	memory: number;
+	disk: number;
+	network: boolean;
+	archived?: string;
+	created: string;
+	modified: string;
+}
+
+export type Url = string;
+
+export type Timeout = number;
+
+/**
+ * Job configuration sent to runners.
+ * 
+ * Contains the execution details needed for a runner to execute a job.
+ * Designed to minimize data leakage - runners only learn what's necessary
+ * to pull and execute an OCI image. Resource requirements (cpu, memory,
+ * disk, network) are in the associated spec.
+ */
+export interface JsonJobConfig {
+	/** Registry URL for pulling the OCI image (e.g., `https://registry.bencher.dev`) */
+	registry: Url;
+	/** Project UUID for OCI authentication scoping */
+	project: Uuid;
+	/** Image digest - must be immutable (e.g., "sha256:abc123...") */
+	digest: ImageDigest;
+	/** Entrypoint override (like Docker ENTRYPOINT) */
+	entrypoint?: string[];
+	/** Command override (like Docker CMD) */
+	cmd?: string[];
+	/** Environment variables passed to the container */
+	env?: Record<string, string>;
+	/** Maximum execution time in seconds */
+	timeout: Timeout;
+	/** File paths to read from the VM after job completion */
+	file_paths?: string[];
+}
+
+/** A benchmark job */
+export interface JsonJob {
+	uuid: Uuid;
+	status: JobStatus;
+	/** Resource spec for this job */
+	spec: JsonSpec;
+	/** Job configuration (only included when claimed by a runner) */
+	config?: JsonJobConfig;
+	runner?: Uuid;
+	claimed?: string;
+	started?: string;
+	completed?: string;
+	exit_code?: number;
+	created: string;
+	modified: string;
+}
+
+/** A list of jobs */
+export type JsonJobs = JsonJob[];
 
 /** A measure UUID, slug, or name. */
 export type MeasureNameId = Uuid | Slug | string;
@@ -101,8 +195,6 @@ export interface JsonBranch {
 	modified: string;
 	archived?: string;
 }
-
-export type ResourceName = string;
 
 export interface JsonTestbed {
 	uuid: Uuid;
@@ -224,6 +316,24 @@ export type JsonReportResults = JsonReportIteration[];
 
 export type JsonResultsMap = Record<BenchmarkName, JsonMetricsMap>;
 
+/** A benchmark runner */
+export interface JsonRunner {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	specs: Uuid[];
+	archived?: string;
+	last_heartbeat?: string;
+	created: string;
+	modified: string;
+}
+
+/** List of runners */
+export type JsonRunners = JsonRunner[];
+
+/** List of specs */
+export type JsonSpecs = JsonSpec[];
+
 export type Jwt = string;
 
 export type LastFour = string;
@@ -240,22 +350,28 @@ export type NonEmpty = string;
 /** An organization UUID or slug. */
 export type OrganizationResourceId = Uuid | Slug;
 
+export type PollTimeout = number;
+
 /** An project UUID or slug. */
 export type ProjectResourceId = Uuid | Slug;
 
 export type RunContext = Record<string, string>;
 
+/** A runner UUID or slug. */
+export type RunnerResourceId = Uuid | Slug;
+
 export type Secret = string;
 
 export type Slug = string;
+
+/** A spec UUID or slug. */
+export type SpecResourceId = Uuid | Slug;
 
 /** A testbed UUID, slug, or name. */
 export type TestbedNameId = Uuid | Slug | string;
 
 /** An testbed UUID or slug. */
 export type TestbedResourceId = Uuid | Slug;
-
-export type Url = string;
 
 export type UserName = string;
 
@@ -309,6 +425,12 @@ export interface JsonCardDetails {
 export interface JsonCheckout {
 	session: string;
 	url: string;
+}
+
+/** Request to claim a job (runner agent endpoint) */
+export interface JsonClaimJob {
+	/** Maximum time to wait for a job (long-poll), in seconds (1-600) */
+	poll_timeout?: PollTimeout;
 }
 
 export interface JsonConfirm {
@@ -462,6 +584,44 @@ export interface JsonNewProject {
 	 * Creating a `private` project requires a valid Bencher Plus subscription.
 	 */
 	visibility?: Visibility;
+}
+
+/** Create a new runner */
+export interface JsonNewRunner {
+	/** The name of the runner. */
+	name: ResourceName;
+	/**
+	 * The preferred slug for the runner.
+	 * If not provided, the slug will be generated from the name.
+	 */
+	slug?: Slug;
+}
+
+/** Add a spec to a runner */
+export interface JsonNewRunnerSpec {
+	/** The UUID or slug of the spec to associate with the runner. */
+	spec: SpecResourceId;
+}
+
+/** Create a new spec */
+export interface JsonNewSpec {
+	/** The name of the spec. */
+	name: ResourceName;
+	/**
+	 * The preferred slug for the spec.
+	 * If not provided, the slug will be generated from the name.
+	 */
+	slug?: Slug;
+	/** CPU architecture */
+	architecture: Architecture;
+	/** Number of CPUs */
+	cpu: number;
+	/** Memory size in bytes */
+	memory: number;
+	/** Disk size in bytes */
+	disk: number;
+	/** Whether the VM has network access */
+	network?: boolean;
 }
 
 export interface JsonNewSso {
@@ -682,6 +842,13 @@ export interface JsonReport {
 	created: string;
 }
 
+/** Runner token response (returned on create or rotate) */
+export interface JsonRunnerToken {
+	uuid: Uuid;
+	/** The runner token. Only shown once - store it securely! */
+	token: Secret;
+}
+
 export interface JsonSignup {
 	name: UserName;
 	slug?: Slug;
@@ -713,6 +880,59 @@ export enum UpdateAlertStatus {
 export interface JsonUpdateAlert {
 	/** The new status of the alert. */
 	status?: UpdateAlertStatus;
+}
+
+/**
+ * Restricted job status for runner update requests.
+ * 
+ * Only allows the statuses that a runner can set when updating a job:
+ * Running, Completed, or Failed. Pending, Claimed, and Canceled are
+ * server-managed statuses that runners cannot set.
+ */
+export enum JobUpdateStatus {
+	Running = "running",
+	Completed = "completed",
+	Failed = "failed",
+}
+
+/** Update job status (runner agent endpoint) */
+export interface JsonUpdateJob {
+	/** New job status (running, completed, failed) */
+	status: JobUpdateStatus;
+	/** Exit code (required for completed/failed) */
+	exit_code?: number;
+	/** Standard output */
+	stdout?: string;
+	/** Standard error */
+	stderr?: string;
+	/** File path to contents map */
+	output?: Record<string, string> | undefined;
+}
+
+/** Response to job update */
+export interface JsonUpdateJobResponse {
+	/** The current status of the job after the update */
+	status: JobStatus;
+}
+
+/** Update a runner */
+export interface JsonUpdateRunner {
+	/** The new name for the runner. */
+	name?: ResourceName;
+	/** The new slug for the runner. */
+	slug?: Slug;
+	/** Set whether the runner is archived. */
+	archived?: boolean;
+}
+
+/** Update a spec */
+export interface JsonUpdateSpec {
+	/** The new name for the spec. */
+	name?: ResourceName;
+	/** The new slug for the spec. */
+	slug?: Slug;
+	/** Set whether the spec is archived. */
+	archived?: boolean;
 }
 
 export interface JsonUpdateUser {
@@ -771,6 +991,22 @@ export interface JsonUsage {
 	end_time: string;
 	/** The metrics usage amount. */
 	usage?: number;
+}
+
+/**
+ * Job priority — determines scheduling order and concurrency limits.
+ * 
+ * Priority tiers:
+ * - Enterprise (300): Unlimited concurrent jobs
+ * - Team (200): Unlimited concurrent jobs
+ * - Free (100): 1 concurrent job per organization
+ * - Unclaimed (0): 1 concurrent job per source IP
+ */
+export enum JobPriority {
+	Unclaimed = "unclaimed",
+	Free = "free",
+	Team = "team",
+	Enterprise = "enterprise",
 }
 
 export enum OrganizationPermission {

@@ -1,6 +1,6 @@
 #[cfg(feature = "server")]
 use regex as _;
-#[cfg(all(test, not(feature = "wasm")))]
+#[cfg(test)]
 use wasm_bindgen_test as _;
 
 mod benchmark_name;
@@ -9,6 +9,8 @@ mod date_time;
 mod email;
 mod error;
 mod git_hash;
+#[cfg(feature = "plus")]
+mod image_digest;
 mod index;
 mod jwt;
 mod model;
@@ -26,6 +28,8 @@ mod user_name;
 mod wasm;
 
 pub use crate::git_hash::GitHash;
+#[cfg(feature = "plus")]
+pub use crate::image_digest::ImageDigest;
 pub use crate::slug::{BASE_36, Slug};
 pub use crate::url::Url;
 pub use benchmark_name::BenchmarkName;
@@ -47,8 +51,9 @@ pub use name_id::NameId;
 pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
 pub use plus::{
-    CardBrand, CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, LastFour,
-    LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus, RecaptchaAction, RecaptchaScore,
+    Architecture, CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth,
+    ExpirationYear, GracePeriod, HeartbeatTimeout, LastFour, LicensedPlanId, Memory, MeteredPlanId,
+    PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, Timeout,
 };
 pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;

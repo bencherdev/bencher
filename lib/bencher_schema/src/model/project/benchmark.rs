@@ -54,7 +54,7 @@ impl QueryBenchmark {
     fn_get!(benchmark, BenchmarkId);
     fn_get_id!(benchmark, BenchmarkId, BenchmarkUuid);
     fn_get_uuid!(benchmark, BenchmarkId, BenchmarkUuid);
-    fn_from_uuid!(benchmark, BenchmarkUuid, Benchmark);
+    fn_from_uuid!(project_id, ProjectId, benchmark, BenchmarkUuid, Benchmark);
 
     pub async fn get_or_create(
         context: &ApiContext,

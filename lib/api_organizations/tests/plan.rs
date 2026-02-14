@@ -10,7 +10,7 @@ use http::StatusCode;
 
 // GET /v0/organizations/{organization}/plan - view plan
 #[tokio::test]
-async fn test_plan_get() {
+async fn plan_get() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "planget@example.com").await;
     let org = server.create_org(&user, "Plan Org").await;
@@ -34,7 +34,7 @@ async fn test_plan_get() {
 
 // GET /v0/organizations/{organization}/plan - requires auth
 #[tokio::test]
-async fn test_plan_requires_auth() {
+async fn plan_requires_auth() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "planauth@example.com").await;
     let org = server.create_org(&user, "Plan Auth Org").await;
@@ -57,7 +57,7 @@ async fn test_plan_requires_auth() {
 
 // GET /v0/organizations/{organization}/plan - not found org
 #[tokio::test]
-async fn test_plan_org_not_found() {
+async fn plan_org_not_found() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "plannotfound@example.com").await;
 

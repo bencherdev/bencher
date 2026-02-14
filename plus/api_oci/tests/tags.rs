@@ -3,8 +3,8 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
-    clippy::redundant_test_prefix,
-    clippy::indexing_slicing
+    clippy::indexing_slicing,
+    clippy::too_many_lines
 )]
 //! Integration tests for OCI tags endpoint.
 
@@ -45,7 +45,7 @@ async fn upload_blob_and_create_manifest(
 
 // GET /v2/{name}/tags/list - List tags (empty)
 #[tokio::test]
-async fn test_tags_list_empty() {
+async fn tags_list_empty() {
     let server = TestServer::new().await;
     let user = server.signup("Tags User", "tagsempty@example.com").await;
     let org = server.create_org(&user, "Tags Org").await;
@@ -76,7 +76,7 @@ async fn test_tags_list_empty() {
 
 // GET /v2/{name}/tags/list - List tags with manifests
 #[tokio::test]
-async fn test_tags_list_with_manifests() {
+async fn tags_list_with_manifests() {
     let server = TestServer::new().await;
     let user = server.signup("TagsList User", "tagslist@example.com").await;
     let org = server.create_org(&user, "TagsList Org").await;
@@ -135,7 +135,7 @@ async fn test_tags_list_with_manifests() {
 
 // GET /v2/{name}/tags/list - Pagination with n parameter
 #[tokio::test]
-async fn test_tags_list_pagination_n() {
+async fn tags_list_pagination_n() {
     let server = TestServer::new().await;
     let user = server.signup("TagsPage User", "tagspage@example.com").await;
     let org = server.create_org(&user, "TagsPage Org").await;
@@ -184,7 +184,7 @@ async fn test_tags_list_pagination_n() {
 
 // GET /v2/{name}/tags/list - Pagination with last parameter
 #[tokio::test]
-async fn test_tags_list_pagination_last() {
+async fn tags_list_pagination_last() {
     let server = TestServer::new().await;
     let user = server.signup("TagsLast User", "tagslast@example.com").await;
     let org = server.create_org(&user, "TagsLast Org").await;
@@ -241,7 +241,7 @@ async fn test_tags_list_pagination_last() {
 
 // GET /v2/{name}/tags/list - Unauthenticated (should fail)
 #[tokio::test]
-async fn test_tags_list_unauthenticated() {
+async fn tags_list_unauthenticated() {
     let server = TestServer::new().await;
     let user = server
         .signup("TagsUnauth User", "tagsunauth@example.com")
@@ -266,7 +266,7 @@ async fn test_tags_list_unauthenticated() {
 
 // OPTIONS /v2/{name}/tags/list - CORS preflight
 #[tokio::test]
-async fn test_tags_options() {
+async fn tags_options() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -285,7 +285,7 @@ async fn test_tags_options() {
 
 // GET /v2/{name}/tags/list - Link header present when more results exist
 #[tokio::test]
-async fn test_tags_list_pagination_link_header() {
+async fn tags_list_pagination_link_header() {
     let server = TestServer::new().await;
     let user = server.signup("TagsLink User", "tagslink@example.com").await;
     let org = server.create_org(&user, "TagsLink Org").await;
@@ -375,7 +375,7 @@ async fn test_tags_list_pagination_link_header() {
 
 // GET /v2/{name}/tags/list - No Link header when all results fit
 #[tokio::test]
-async fn test_tags_list_no_link_header_when_complete() {
+async fn tags_list_no_link_header_when_complete() {
     let server = TestServer::new().await;
     let user = server
         .signup("TagsNoLink User", "tagsnolink@example.com")
@@ -435,7 +435,7 @@ async fn test_tags_list_no_link_header_when_complete() {
 
 // GET /v2/{name}/tags/list - Follow pagination via Link header
 #[tokio::test]
-async fn test_tags_list_follow_pagination() {
+async fn tags_list_follow_pagination() {
     let server = TestServer::new().await;
     let user = server
         .signup("TagsFollow User", "tagsfollow@example.com")
@@ -570,7 +570,7 @@ async fn test_tags_list_follow_pagination() {
 
 // GET /v2/{name}/tags/list?n=0 - n=0 should be clamped to 1
 #[tokio::test]
-async fn test_tags_list_pagination_n_zero_clamped() {
+async fn tags_list_pagination_n_zero_clamped() {
     let server = TestServer::new().await;
     let user = server
         .signup("TagsNZero User", "tagsnzero@example.com")
@@ -627,7 +627,7 @@ async fn test_tags_list_pagination_n_zero_clamped() {
 
 // GET /v2/{name}/tags/list?n=999999 - large n should be clamped to MAX_PAGE_SIZE
 #[tokio::test]
-async fn test_tags_list_pagination_n_large_clamped() {
+async fn tags_list_pagination_n_large_clamped() {
     let server = TestServer::new().await;
     let user = server
         .signup("TagsNLarge User", "tagsnlarge@example.com")
@@ -683,7 +683,7 @@ async fn test_tags_list_pagination_n_large_clamped() {
 
 // GET /v2/{name}/tags/list?last=<invalid> - invalid cursor should be rejected
 #[tokio::test]
-async fn test_tags_list_invalid_last_cursor() {
+async fn tags_list_invalid_last_cursor() {
     let server = TestServer::new().await;
     let user = server
         .signup("TagsBadCursor User", "tagsbadcursor@example.com")
@@ -714,7 +714,7 @@ async fn test_tags_list_invalid_last_cursor() {
 
 // GET /v2/{name}/tags/list?n=-1 - Negative n should be rejected (u32 can't be negative)
 #[tokio::test]
-async fn test_tags_list_pagination_n_negative() {
+async fn tags_list_pagination_n_negative() {
     let server = TestServer::new().await;
     let user = server.signup("TagsNNeg User", "tagsnneg@example.com").await;
     let org = server.create_org(&user, "TagsNNeg Org").await;
@@ -740,7 +740,7 @@ async fn test_tags_list_pagination_n_negative() {
 
 // GET /v2/{name}/tags/list?n=abc - Non-integer n should be rejected
 #[tokio::test]
-async fn test_tags_list_pagination_n_non_integer() {
+async fn tags_list_pagination_n_non_integer() {
     let server = TestServer::new().await;
     let user = server.signup("TagsNStr User", "tagsnstr@example.com").await;
     let org = server.create_org(&user, "TagsNStr Org").await;

@@ -120,7 +120,7 @@ pub struct OciLocalStorage {
     /// Unix timestamp of the last stale upload cleanup (for debouncing)
     last_cleanup: AtomicI64,
     /// Clock for getting the current time (injectable for testing)
-    clock: crate::storage::Clock,
+    clock: crate::Clock,
 }
 
 impl OciLocalStorage {
@@ -133,7 +133,7 @@ impl OciLocalStorage {
         database_path: &Path,
         upload_timeout: u64,
         max_body_size: u64,
-        clock: crate::storage::Clock,
+        clock: crate::Clock,
     ) -> Self {
         let base_dir = database_path
             .parent()
@@ -300,7 +300,7 @@ impl OciLocalStorage {
         let state = UploadState {
             repository: repository.to_string(),
             size: 0,
-            created_at: self.clock.now(),
+            created_at: self.clock.timestamp(),
         };
         self.save_upload_state(&upload_id, &state).await?;
 
@@ -470,7 +470,7 @@ impl OciLocalStorage {
     /// Debounced: skips if a cleanup ran within the last `upload_timeout` seconds,
     /// since stale uploads can't appear faster than the timeout period.
     fn spawn_stale_upload_cleanup(&self) {
-        let now = self.clock.now();
+        let now = self.clock.timestamp();
         let last = self.last_cleanup.load(Ordering::Acquire);
         let timeout_secs = i64::try_from(self.upload_timeout).unwrap_or(i64::MAX);
         if now.saturating_sub(last) < timeout_secs {
@@ -906,14 +906,14 @@ async fn cleanup_stale_uploads_local(
     log: &Logger,
     uploads_dir: &Path,
     upload_timeout: u64,
-    clock: crate::storage::Clock,
+    clock: crate::Clock,
 ) {
     let Ok(mut entries) = fs::read_dir(uploads_dir).await else {
         // Directory doesn't exist or can't be read - nothing to clean up
         return;
     };
 
-    let now = clock.now();
+    let now = clock.timestamp();
     let timeout_secs = i64::try_from(upload_timeout).unwrap_or(i64::MAX);
 
     loop {
@@ -988,13 +988,7 @@ mod tests {
     fn test_storage(tmp: &tempfile::TempDir) -> OciLocalStorage {
         let db_path = tmp.path().join("bencher.db");
         let log = Logger::root(slog::Discard, slog::o!());
-        OciLocalStorage::new(
-            log,
-            &db_path,
-            3600,
-            1_073_741_824,
-            crate::storage::Clock::System,
-        )
+        OciLocalStorage::new(log, &db_path, 3600, 0x4000_0000, crate::Clock::System)
     }
 
     /// Create a minimal OCI manifest JSON for testing
@@ -1169,13 +1163,7 @@ mod tests {
 
         // Run cleanup with 1-second timeout
         let log = Logger::root(slog::Discard, slog::o!());
-        cleanup_stale_uploads_local(
-            &log,
-            &storage.uploads_dir(),
-            1,
-            crate::storage::Clock::System,
-        )
-        .await;
+        cleanup_stale_uploads_local(&log, &storage.uploads_dir(), 1, crate::Clock::System).await;
 
         // Upload dir should be gone
         let upload_dir = storage.upload_dir(&upload_id);

@@ -1,8 +1,4 @@
-#![expect(
-    unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
-)]
+#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for auth confirm endpoint.
 
 use bencher_api_tests::TestServer;
@@ -11,7 +7,7 @@ use http::StatusCode;
 
 // POST /v0/auth/confirm - invalid token format
 #[tokio::test]
-async fn test_confirm_invalid_token_format() {
+async fn confirm_invalid_token_format() {
     let server = TestServer::new().await;
 
     let body = serde_json::json!({
@@ -32,7 +28,7 @@ async fn test_confirm_invalid_token_format() {
 
 // POST /v0/auth/confirm - empty token
 #[tokio::test]
-async fn test_confirm_empty_token() {
+async fn confirm_empty_token() {
     let server = TestServer::new().await;
 
     let body = serde_json::json!({
@@ -52,7 +48,7 @@ async fn test_confirm_empty_token() {
 
 // POST /v0/auth/confirm - successful confirmation with valid token
 #[tokio::test]
-async fn test_confirm_success() {
+async fn confirm_success() {
     let server = TestServer::new().await;
 
     // First signup
@@ -101,7 +97,7 @@ async fn test_confirm_success() {
 
 // POST /v0/auth/confirm - token for non-existent user
 #[tokio::test]
-async fn test_confirm_nonexistent_user() {
+async fn confirm_nonexistent_user() {
     let server = TestServer::new().await;
 
     // Generate auth token for a user that doesn't exist

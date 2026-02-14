@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/projects - list all public projects
 #[tokio::test]
-async fn test_projects_list_public() {
+async fn projects_list_public() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -27,7 +27,7 @@ async fn test_projects_list_public() {
 
 // GET /v0/projects - list with auth header
 #[tokio::test]
-async fn test_projects_list_authenticated() {
+async fn projects_list_authenticated() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projlistauth@example.com").await;
 
@@ -44,7 +44,7 @@ async fn test_projects_list_authenticated() {
 
 // GET /v0/projects/{project} - get a project
 #[tokio::test]
-async fn test_projects_get() {
+async fn projects_get() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projget@example.com").await;
     let org = server.create_org(&user, "Project Org").await;
@@ -66,7 +66,7 @@ async fn test_projects_get() {
 
 // GET /v0/projects/{project} - by UUID
 #[tokio::test]
-async fn test_projects_get_by_uuid() {
+async fn projects_get_by_uuid() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projuuid@example.com").await;
     let org = server.create_org(&user, "UUID Org").await;
@@ -85,7 +85,7 @@ async fn test_projects_get_by_uuid() {
 
 // GET /v0/projects/{project} - not found
 #[tokio::test]
-async fn test_projects_get_not_found() {
+async fn projects_get_not_found() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projnotfound@example.com").await;
 
@@ -102,7 +102,7 @@ async fn test_projects_get_not_found() {
 
 // PATCH /v0/projects/{project} - update a project
 #[tokio::test]
-async fn test_projects_update() {
+async fn projects_update() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projupdate@example.com").await;
     let org = server.create_org(&user, "Update Org").await;
@@ -129,7 +129,7 @@ async fn test_projects_update() {
 
 // PATCH /v0/projects/{project} - update URL
 #[tokio::test]
-async fn test_projects_update_url() {
+async fn projects_update_url() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projurlupd@example.com").await;
     let org = server.create_org(&user, "URL Update Org").await;
@@ -156,7 +156,7 @@ async fn test_projects_update_url() {
 
 // DELETE /v0/projects/{project} - delete a project
 #[tokio::test]
-async fn test_projects_delete() {
+async fn projects_delete() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projdelete@example.com").await;
     let org = server.create_org(&user, "Delete Org").await;

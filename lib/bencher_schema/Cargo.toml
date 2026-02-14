@@ -15,9 +15,11 @@ plus = [
     "dep:bencher_google_index",
     "dep:bencher_oci_storage",
     "dep:dashmap",
+    "dep:hex",
     "dep:http",
     "dep:reqwest",
     "dep:serde_json",
+    "dep:sha2",
     "bencher_adapter/plus",
     "bencher_billing/plus",
     "bencher_json/plus",
@@ -53,7 +55,8 @@ chrono.workspace = true
 css-inline.workspace = true
 dashmap = { workspace = true, optional = true }
 derive_more.workspace = true
-diesel = { workspace = true, features = ["chrono", "sqlite"] }
+diesel = { workspace = true, features = ["chrono", "sqlite", "32-column-tables"] }
+hex = { workspace = true, optional = true }
 diesel_migrations.workspace = true
 dropshot.workspace = true
 http = { workspace = true, optional = true }
@@ -62,12 +65,13 @@ regex.workspace = true
 rusqlite = { workspace = true, features = ["backup"] }
 serde_json = { workspace = true, optional = true }
 serde_urlencoded.workspace = true
+sha2 = { workspace = true, optional = true }
 oso.workspace = true
 reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }
 sentry = { workspace = true, optional = true }
 slog.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["fs", "rt-multi-thread", "time"] }
 tokio-rustls.workspace = true
 url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }

@@ -344,7 +344,7 @@ async fn handle_unclaimed_project(
     // If authenticated, claim the organization for the user
     if let PublicUser::Auth(auth_user) = public_user {
         organization
-            .claim(context, &auth_user.user)
+            .claim(log, context, &auth_user.user)
             .await
             .map_err(|e| {
                 slog::error!(

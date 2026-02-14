@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/users/{user}/tokens - list tokens (after creating one)
 #[tokio::test]
-async fn test_tokens_list() {
+async fn tokens_list() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "tokenslist@example.com").await;
 
@@ -48,7 +48,7 @@ async fn test_tokens_list() {
 
 // POST /v0/users/{user}/tokens - create token
 #[tokio::test]
-async fn test_tokens_create() {
+async fn tokens_create() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "tokenscreate@example.com").await;
 
@@ -73,7 +73,7 @@ async fn test_tokens_create() {
 
 // POST /v0/users/{user}/tokens - create token with TTL
 #[tokio::test]
-async fn test_tokens_create_with_ttl() {
+async fn tokens_create_with_ttl() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "tokensttl@example.com").await;
 
@@ -97,7 +97,7 @@ async fn test_tokens_create_with_ttl() {
 
 // GET /v0/users/{user}/tokens/{token} - view token
 #[tokio::test]
-async fn test_tokens_get() {
+async fn tokens_get() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "tokensget@example.com").await;
 
@@ -138,7 +138,7 @@ async fn test_tokens_get() {
 
 // GET /v0/users/{user}/tokens/{token} - token not found
 #[tokio::test]
-async fn test_tokens_get_not_found() {
+async fn tokens_get_not_found() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "tokensnotfound@example.com")
@@ -161,7 +161,7 @@ async fn test_tokens_get_not_found() {
 
 // PATCH /v0/users/{user}/tokens/{token} - update token
 #[tokio::test]
-async fn test_tokens_update() {
+async fn tokens_update() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "tokensupdate@example.com").await;
 
@@ -207,7 +207,7 @@ async fn test_tokens_update() {
 
 // POST /v0/users/{user}/tokens - cannot create token for other user
 #[tokio::test]
-async fn test_tokens_create_other_user_forbidden() {
+async fn tokens_create_other_user_forbidden() {
     let server = TestServer::new().await;
     let user1 = server.signup("User One", "token1@example.com").await;
     let user2 = server.signup("User Two", "token2@example.com").await;

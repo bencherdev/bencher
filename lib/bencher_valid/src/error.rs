@@ -36,6 +36,9 @@ pub enum ValidError {
     UrlToUrl(crate::Url, url::ParseError),
     #[error("Failed to validate git hash: {0}")]
     GitHash(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate image digest: {0}")]
+    ImageDigest(String),
     #[error("Failed to validate secret: {0}")]
     Secret(String),
     #[error("Invalid model boundary: {0}")]
@@ -55,6 +58,31 @@ pub enum ValidError {
     #[error("Failed to parse plot index: {0}")]
     IndexStr(std::num::ParseIntError),
 
+    #[cfg(feature = "plus")]
+    #[error("Invalid CPU count: {0}")]
+    Cpu(u32),
+    #[cfg(feature = "plus")]
+    #[error("Invalid memory size: {0}")]
+    Memory(u64),
+    #[cfg(feature = "plus")]
+    #[error("Invalid disk size: {0}")]
+    Disk(u64),
+    #[cfg(feature = "plus")]
+    #[error("Invalid timeout: {0}")]
+    Timeout(u32),
+    #[cfg(feature = "plus")]
+    #[error("Invalid heartbeat timeout: {0}")]
+    HeartbeatTimeout(u32),
+    #[cfg(feature = "plus")]
+    #[error("Invalid poll timeout: {0}")]
+    PollTimeout(u32),
+    #[cfg(feature = "plus")]
+    #[error("Invalid grace period: {0}")]
+    GracePeriod(u32),
+
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate architecture: {0}")]
+    Architecture(String),
     #[cfg(feature = "plus")]
     #[error("Failed to validate plan level: {0}")]
     PlanLevel(String),

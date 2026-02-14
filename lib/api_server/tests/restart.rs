@@ -1,8 +1,4 @@
-#![expect(
-    unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
-)]
+#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for server restart endpoint.
 
 use bencher_api_tests::TestServer;
@@ -10,7 +6,7 @@ use http::StatusCode;
 
 // POST /v0/server/restart - requires admin auth
 #[tokio::test]
-async fn test_restart_requires_auth() {
+async fn restart_requires_auth() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -26,7 +22,7 @@ async fn test_restart_requires_auth() {
 
 // POST /v0/server/restart - non-admin cannot restart
 #[tokio::test]
-async fn test_restart_forbidden_for_non_admin() {
+async fn restart_forbidden_for_non_admin() {
     let server = TestServer::new().await;
     // First user is admin
     let _admin = server
@@ -55,7 +51,7 @@ async fn test_restart_forbidden_for_non_admin() {
 // POST /v0/server/restart - admin can trigger restart with delay
 // Note: We don't actually restart the server in tests, just verify the endpoint accepts the request
 #[tokio::test]
-async fn test_restart_as_admin_with_delay() {
+async fn restart_as_admin_with_delay() {
     let server = TestServer::new().await;
     // First user is admin
     let admin = server

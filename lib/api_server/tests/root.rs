@@ -1,15 +1,11 @@
-#![expect(
-    unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
-)]
+#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for server root endpoint.
 
 use bencher_api_tests::TestServer;
 
 // GET / - root path is accessible
 #[tokio::test]
-async fn test_root_get() {
+async fn root_get() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -25,7 +21,7 @@ async fn test_root_get() {
 
 // POST / - only available with plus feature
 #[tokio::test]
-async fn test_root_post() {
+async fn root_post() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -47,7 +43,7 @@ async fn test_root_post() {
 
 // GET / - with auth header still works
 #[tokio::test]
-async fn test_root_get_with_auth() {
+async fn root_get_with_auth() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "rootauth@example.com").await;
 

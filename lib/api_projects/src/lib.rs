@@ -10,6 +10,7 @@ mod alerts;
 mod allowed;
 mod benchmarks;
 mod branches;
+mod jobs;
 mod measures;
 mod metrics;
 mod perf;
@@ -24,6 +25,7 @@ mod macros;
 pub struct Api;
 
 impl bencher_endpoint::Registrar for Api {
+    #[expect(clippy::too_many_lines, reason = "registration")]
     fn register(
         api_description: &mut dropshot::ApiDescription<bencher_schema::ApiContext>,
         http_options: bool,
@@ -55,6 +57,17 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(reports::proj_reports_get)?;
         api_description.register(reports::proj_report_get)?;
         api_description.register(reports::proj_report_delete)?;
+
+        // Jobs
+        #[cfg(feature = "plus")]
+        {
+            if http_options {
+                api_description.register(jobs::proj_jobs_options)?;
+                api_description.register(jobs::proj_job_options)?;
+            }
+            api_description.register(jobs::proj_jobs_get)?;
+            api_description.register(jobs::proj_job_get)?;
+        }
 
         // Perf
         if http_options {

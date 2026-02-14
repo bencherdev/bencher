@@ -28,7 +28,7 @@ use crate::{
         BencherResource, forbidden_error, issue_error, resource_not_found_error, unauthorized_error,
     },
     macros::{
-        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
@@ -63,16 +63,10 @@ impl QueryOrganization {
     fn_eq_resource_id!(organization, OrganizationResourceId);
     fn_from_resource_id!(organization, Organization, OrganizationResourceId);
 
-    pub fn from_uuid(conn: &mut DbConnection, uuid: OrganizationUuid) -> Result<Self, HttpError> {
-        schema::organization::table
-            .filter(schema::organization::uuid.eq(uuid))
-            .first(conn)
-            .map_err(resource_not_found_err!(Organization, uuid))
-    }
-
     fn_get!(organization, OrganizationId);
     fn_get_id!(organization, OrganizationId, OrganizationUuid);
     fn_get_uuid!(organization, OrganizationId, OrganizationUuid);
+    fn_from_uuid!(organization, OrganizationUuid, Organization);
 
     pub async fn get_or_create_from_user(
         context: &ApiContext,
@@ -248,6 +242,7 @@ impl QueryOrganization {
 
     pub async fn claim(
         &self,
+        log: &slog::Logger,
         context: &ApiContext,
         query_user: &QueryUser,
     ) -> Result<(), HttpError> {
@@ -260,8 +255,56 @@ impl QueryOrganization {
 
         Self::join(context, self.uuid, query_user).await?;
 
+        // Upgrade any pending Unclaimed jobs for this organization to Free priority
+        #[cfg(feature = "plus")]
+        self.upgrade_pending_jobs(log, context).await?;
+        #[cfg(not(feature = "plus"))]
+        let _ = log;
+
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserClaim);
+
+        Ok(())
+    }
+
+    /// When an organization is claimed, upgrade all of its pending jobs
+    /// from `Unclaimed` priority to `Free` priority.
+    #[cfg(feature = "plus")]
+    async fn upgrade_pending_jobs(
+        &self,
+        log: &slog::Logger,
+        context: &ApiContext,
+    ) -> Result<(), HttpError> {
+        use bencher_json::{JobPriority, JobStatus};
+
+        let count = diesel::update(
+            schema::job::table
+                .filter(schema::job::organization_id.eq(self.id))
+                .filter(schema::job::status.eq(JobStatus::Pending))
+                .filter(schema::job::priority.eq(JobPriority::Unclaimed)),
+        )
+        .set((
+            schema::job::priority.eq(JobPriority::Free),
+            schema::job::modified.eq(DateTime::now()),
+        ))
+        .execute(write_conn!(context))
+        .map_err(|e| {
+            issue_error(
+                "Failed to upgrade pending job priorities",
+                &format!(
+                    "Failed to upgrade pending Unclaimed jobs to Free for organization ({}).",
+                    self.uuid,
+                ),
+                e,
+            )
+        })?;
+
+        slog::info!(
+            log,
+            "Upgraded {count} pending job(s) from Unclaimed to Free priority";
+            "organization" => %self.uuid,
+            "count" => count,
+        );
 
         Ok(())
     }

@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/projects/{project}/measures - list measures
 #[tokio::test]
-async fn test_measures_list() {
+async fn measures_list() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "measurelist@example.com").await;
     let org = server.create_org(&user, "Measure Org").await;
@@ -32,7 +32,7 @@ async fn test_measures_list() {
 
 // POST /v0/projects/{project}/measures - create measure
 #[tokio::test]
-async fn test_measures_create() {
+async fn measures_create() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "measurecreate@example.com")
@@ -65,7 +65,7 @@ async fn test_measures_create() {
 
 // POST /v0/projects/{project}/measures - create with auto-generated slug
 #[tokio::test]
-async fn test_measures_create_auto_slug() {
+async fn measures_create_auto_slug() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "measureautoslug@example.com")
@@ -96,7 +96,7 @@ async fn test_measures_create_auto_slug() {
 
 // DELETE /v0/projects/{project}/measures/{measure} - delete measure
 #[tokio::test]
-async fn test_measures_delete() {
+async fn measures_delete() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "measuredelete@example.com")

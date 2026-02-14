@@ -1,0 +1,14 @@
+DROP INDEX IF EXISTS index_job_report_id;
+DROP INDEX IF EXISTS index_runner_token_hash;
+DROP INDEX IF EXISTS index_job_spec_id;
+DROP INDEX IF EXISTS index_job_pending;
+DROP INDEX IF EXISTS index_job_org_in_flight;
+DROP INDEX IF EXISTS index_job_source_ip_in_flight;
+DROP INDEX IF EXISTS index_job_in_flight;
+DROP INDEX IF EXISTS index_job_runner_id;
+DROP TABLE IF EXISTS job;
+DROP INDEX IF EXISTS index_runner_spec_runner_id;
+DROP INDEX IF EXISTS index_runner_spec_spec_id;
+DROP TABLE IF EXISTS runner_spec;
+DROP TABLE IF EXISTS spec;
+DROP TABLE IF EXISTS runner;

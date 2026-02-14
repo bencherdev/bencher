@@ -82,6 +82,7 @@ impl From<CardBrand> for String {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg_attr(not(any(feature = "wasm", test)), expect(dead_code))]
 pub fn is_valid_card_brand(card_brand: &str) -> bool {
     matches!(
         card_brand,

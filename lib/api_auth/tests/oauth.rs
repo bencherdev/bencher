@@ -1,15 +1,11 @@
-#![expect(
-    unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
-)]
+#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for OAuth endpoints (GitHub, Google).
 
 use bencher_api_tests::TestServer;
 
 // GET /v0/auth/github - OAuth redirect (requires plus feature)
 #[tokio::test]
-async fn test_github_oauth_redirect() {
+async fn github_oauth_redirect() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -33,7 +29,7 @@ async fn test_github_oauth_redirect() {
 
 // POST /v0/auth/github - OAuth callback without state
 #[tokio::test]
-async fn test_github_oauth_callback_no_state() {
+async fn github_oauth_callback_no_state() {
     let server = TestServer::new().await;
 
     let body = serde_json::json!({
@@ -54,7 +50,7 @@ async fn test_github_oauth_callback_no_state() {
 
 // GET /v0/auth/google - OAuth redirect (requires plus feature)
 #[tokio::test]
-async fn test_google_oauth_redirect() {
+async fn google_oauth_redirect() {
     let server = TestServer::new().await;
 
     let resp = server
@@ -78,7 +74,7 @@ async fn test_google_oauth_redirect() {
 
 // POST /v0/auth/google - OAuth callback without state
 #[tokio::test]
-async fn test_google_oauth_callback_no_state() {
+async fn google_oauth_callback_no_state() {
     let server = TestServer::new().await;
 
     let body = serde_json::json!({
@@ -99,7 +95,7 @@ async fn test_google_oauth_callback_no_state() {
 
 // Verify OAuth endpoints exist (OPTIONS check would be here in production)
 #[tokio::test]
-async fn test_oauth_endpoints_exist() {
+async fn oauth_endpoints_exist() {
     let server = TestServer::new().await;
 
     // Just verify the endpoints respond (any response is fine)

@@ -78,6 +78,7 @@ impl From<PlanLevel> for String {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg_attr(not(any(feature = "wasm", test)), expect(dead_code))]
 pub fn is_valid_plan_level(plan_level: &str) -> bool {
     matches!(
         plan_level,

@@ -35,29 +35,10 @@ use sha2::{Digest as _, Sha256};
 use slog::Logger;
 use thiserror::Error;
 
+use bencher_json::Clock;
+
 use crate::local::{LocalBlobBody, OciLocalStorage};
 use crate::types::{Digest, UploadId};
-
-/// A clock that returns the current Unix timestamp in seconds.
-#[derive(Clone)]
-pub enum Clock {
-    /// Uses `chrono::Utc::now().timestamp()` — the real system clock.
-    System,
-    /// Allows injecting a custom time source for testing.
-    #[cfg(any(test, feature = "test-clock"))]
-    Custom(std::sync::Arc<dyn Fn() -> i64 + Send + Sync>),
-}
-
-impl Clock {
-    /// Returns the current Unix timestamp in seconds.
-    pub fn now(&self) -> i64 {
-        match self {
-            Self::System => Utc::now().timestamp(),
-            #[cfg(any(test, feature = "test-clock"))]
-            Self::Custom(f) => f(),
-        }
-    }
-}
 
 pub(crate) fn report_cleanup_error(log: &Logger, context: &str, error: &impl std::fmt::Display) {
     slog::warn!(log, "OCI cleanup error"; "context" => context, "error" => %error);
@@ -1001,7 +982,7 @@ impl OciS3Storage {
     /// Debounced: skips if a cleanup ran within the last `upload_timeout` seconds,
     /// since stale uploads can't appear faster than the timeout period.
     fn spawn_stale_upload_cleanup(&self) {
-        let now = self.clock.now();
+        let now = self.clock.timestamp();
         let last = self.last_cleanup.load(Ordering::Acquire);
         let timeout_secs = i64::try_from(self.upload_timeout).unwrap_or(i64::MAX);
         if now.saturating_sub(last) < timeout_secs {
@@ -1062,7 +1043,7 @@ impl OciS3Storage {
             s3_upload_id,
             repository: repository.to_string(),
             parts: Vec::new(),
-            created_at: self.clock.now(),
+            created_at: self.clock.timestamp(),
         };
         self.save_upload_state(&upload_id, &state).await?;
 
@@ -2101,7 +2082,7 @@ async fn cleanup_stale_uploads_s3(
         }
     }
 
-    let now = clock.now();
+    let now = clock.timestamp();
     let timeout_secs = i64::try_from(upload_timeout).unwrap_or(i64::MAX);
 
     for prefix in all_prefixes {

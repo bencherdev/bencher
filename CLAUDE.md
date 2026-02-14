@@ -60,7 +60,7 @@ Running the seed tests:
 
 ```bash
 cargo fmt                      # Format Rust code
-cargo clippy --no-deps --all-features -- -Dwarnings  # Lint Rust code
+cargo clippy --no-deps --all-targets --all-features -- -Dwarnings  # Lint Rust code
 cargo check --no-default-features  # Verify build without Plus features
 
 cd services/console
@@ -111,7 +111,9 @@ lib/
   bencher_valid/     # Input validation (compiled to WASM for frontend)
 plus/             # Bencher Plus (commercial) features
   api_oci/           # OCI Distribution Spec registry endpoints
+  api_runners/       # Runner management and agent endpoints (Plus)
   bencher_oci_storage/ # OCI blob/manifest storage (S3-backed)
+  bencher_otel/      # OpenTelemetry instrumentation (Plus)
 tasks/            # Build tasks invoked via cargo aliases
 xtask/            # Administrative tasks (local only, not CI)
 ```
@@ -170,8 +172,12 @@ The API server includes an OCI Distribution Spec compliant container registry, r
   - `cargo check --no-default-features`
   - `cargo gen-types` (if the API changed at all)
 - Use idiomatic, strong types instead of `String` and `serde_json::Value` where possible
+- Database model fields should use strong validated types (e.g., `ProjectId`, `ProjectUuid`, `ProjectName`, `DateTime`, `VersionNumber`) with Diesel `ToSql`/`FromSql` impls rather than raw primitives (`i32`, `i64`, `String`). All conversion happens inside the Diesel impls, not in the model layer.
 - Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
 - All time-based tests should be deterministic and use time manipulation not real wall-clock time
+- Use `bencher_json::Clock::Custom` (behind the `test-clock` feature) to inject a fake clock in tests instead of calling `DateTime::now()` directly. `Clock` is available on `ApiContext`.
+- Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
+- Always pass strong types (`MyTypeId`, `MyTypeUuid`, etc) into a function instead of its stringly typed equivalent, even in tests
 
 ### Frontend (TypeScript)
 
@@ -211,6 +217,25 @@ When adding a new crate, update both Dockerfiles:
 - `services/api/Dockerfile`
 - `services/console/Dockerfile`
 
+## Runner System (Plus Feature)
+
+Bare metal benchmark runners that claim and execute jobs from the API. Server-scoped (runners serve all projects).
+
+**Key concepts:**
+- **Runner**: A registered agent authenticated via `bencher_runner_`-prefixed tokens (SHA-256 hashed in DB)
+- **Job**: Linked to a report, follows state machine: `pending → claimed → running → completed/failed/canceled`
+- **Claim endpoint**: Long-poll POST that atomically claims pending jobs (priority DESC, FIFO within tier)
+- **WebSocket channel**: Persistent connection for heartbeat and status updates during job execution
+
+**Key files:**
+- `plus/api_runners/` - Runner CRUD, token rotation, job claiming, job updates, WebSocket channel
+- `lib/bencher_json/src/runner/` - Shared JSON types (`JsonRunner`, `JsonJob`, `JobStatus`)
+- `lib/bencher_schema/src/model/runner/` - Database models and queries
+- `lib/api_projects/src/jobs.rs` - Project-scoped job listing (public API)
+- `lib/bencher_schema/migrations/2026-02-02-120000_runner/` - Migration for `runner` and `job` tables
+
+**Runner authentication** is separate from user auth — runner tokens use `Authorization: Bearer bencher_runner_<token>` and are validated by hashing and looking up `token_hash` in the `runner` table.
+
 ## Key Coordination Points
 
 Changes in these areas often require updates across multiple files:
@@ -218,6 +243,7 @@ Changes in these areas often require updates across multiple files:
 - **Rust types with `#[typeshare]`** → run `npm run typeshare` in console
 - **New crate** → update workspace `Cargo.toml` + both Dockerfiles
 - **Validation types** → may need WASM rebuild (`npm run wasm` in console)
+- **Runner endpoints** → behind `plus` feature flag; runner model in `bencher_schema` also gated on `plus`
 
 ## Documentation
 

@@ -52,6 +52,8 @@ COPY lib/bencher_valid bencher_valid
 RUN cargo init --lib bencher_api_tests
 
 WORKDIR /usr/src/bencher/plus
+COPY plus/api_runners api_runners
+COPY plus/api_specs api_specs
 COPY plus/api_oci api_oci
 COPY plus/bencher_billing bencher_billing
 COPY plus/bencher_bing_index bencher_bing_index

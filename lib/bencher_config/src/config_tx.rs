@@ -7,7 +7,9 @@ use std::{
 
 use bencher_endpoint::Registrar;
 #[cfg(feature = "plus")]
-use bencher_json::system::config::JsonPlus;
+use bencher_json::system::config::{
+    DEFAULT_HEARTBEAT_TIMEOUT_SECS, DEFAULT_JOB_TIMEOUT_GRACE_PERIOD_SECS, JsonPlus,
+};
 use bencher_json::{
     JsonConfig,
     system::config::{
@@ -18,13 +20,19 @@ use bencher_json::{
 use bencher_rbac::init_rbac;
 use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
-use bencher_schema::{context::RateLimiting, model::server::QueryServer, write_conn};
+use bencher_schema::{
+    context::RateLimiting,
+    model::{runner::job::spawn_heartbeat_timeout, server::QueryServer},
+    write_conn,
+};
 use bencher_token::TokenKey;
 use diesel::{
     Connection as _,
     connection::SimpleConnection as _,
     r2d2::{ConnectionManager, Pool},
 };
+#[cfg(feature = "plus")]
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
@@ -108,11 +116,14 @@ impl ConfigTx {
             plus,
         }) = config;
 
+        let request_body_max_bytes = server.request_body_max_bytes;
+
         debug!(log, "Creating internal configuration");
         let context = into_context(
             log,
             console,
             security,
+            request_body_max_bytes,
             smtp,
             database,
             restart_tx,
@@ -134,7 +145,10 @@ impl ConfigTx {
         let config_dropshot = into_config_dropshot(server);
 
         #[cfg(feature = "plus")]
-        spawn_stats(log.clone(), &context).await?;
+        spawn_job_recovery(log, &context).await;
+
+        #[cfg(feature = "plus")]
+        spawn_stats(log, &context).await?;
 
         let mut api_description = ApiDescription::new();
         debug!(log, "Registering server APIs");
@@ -159,6 +173,7 @@ impl ConfigTx {
 }
 
 #[expect(
+    clippy::too_many_arguments,
     clippy::too_many_lines,
     reason = "Context initialization needs to handle DB setup, PRAGMAs, migrations, and pool creation"
 )]
@@ -166,6 +181,7 @@ async fn into_context(
     log: &Logger,
     console: JsonConsole,
     security: JsonSecurity,
+    request_body_max_bytes: usize,
     smtp: Option<JsonSmtp>,
     json_database: JsonDatabase,
     restart_tx: Sender<()>,
@@ -242,6 +258,23 @@ async fn into_context(
     #[cfg(feature = "plus")]
     let rate_limiting = plus.as_ref().and_then(|plus| plus.rate_limiting);
 
+    #[cfg(feature = "plus")]
+    let heartbeat_timeout = std::time::Duration::from_secs(
+        plus.as_ref()
+            .and_then(|p| p.runners.as_ref())
+            .map_or(u64::from(DEFAULT_HEARTBEAT_TIMEOUT_SECS), |r| {
+                u64::from(u32::from(r.heartbeat_timeout))
+            }),
+    );
+    #[cfg(feature = "plus")]
+    let job_timeout_grace_period = std::time::Duration::from_secs(
+        plus.as_ref()
+            .and_then(|p| p.runners.as_ref())
+            .map_or(u64::from(DEFAULT_JOB_TIMEOUT_GRACE_PERIOD_SECS), |r| {
+                u64::from(u32::from(r.job_timeout_grace_period))
+            }),
+    );
+
     info!(log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
     let Plus {
@@ -270,6 +303,7 @@ async fn into_context(
     debug!(log, "Creating API context");
     Ok(ApiContext {
         console_url,
+        request_body_max_bytes,
         token_key,
         rbac,
         messenger: smtp.into(),
@@ -295,6 +329,14 @@ async fn into_context(
         is_bencher_cloud,
         #[cfg(feature = "plus")]
         oci_storage,
+        #[cfg(feature = "plus")]
+        clock: bencher_json::Clock::System,
+        #[cfg(feature = "plus")]
+        heartbeat_timeout,
+        #[cfg(feature = "plus")]
+        job_timeout_grace_period,
+        #[cfg(feature = "plus")]
+        heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
     })
 }
 
@@ -473,7 +515,59 @@ fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
 }
 
 #[cfg(feature = "plus")]
-async fn spawn_stats(log: Logger, context: &ApiContext) -> Result<(), ConfigTxError> {
+async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
+    use bencher_json::JobStatus;
+    use bencher_schema::{
+        model::runner::{QueryJob, recover_orphaned_claimed_jobs},
+        schema,
+    };
+    use diesel::BoolExpressionMethods as _;
+
+    let conn = &mut *context.database.connection.lock().await;
+
+    // First, fail any claimed jobs that have been orphaned (claimed longer ago
+    // than the heartbeat timeout without transitioning to Running).
+    recover_orphaned_claimed_jobs(log, conn, context.heartbeat_timeout, &context.clock);
+
+    // Then schedule heartbeat timeouts for remaining in-flight jobs.
+    let in_flight_jobs: Vec<QueryJob> = match schema::job::table
+        .filter(
+            schema::job::status
+                .eq(JobStatus::Claimed)
+                .or(schema::job::status.eq(JobStatus::Running)),
+        )
+        .load(conn)
+    {
+        Ok(jobs) => jobs,
+        Err(e) => {
+            error!(log, "Failed to query in-flight jobs for recovery: {e}");
+            return;
+        },
+    };
+
+    let count = in_flight_jobs.len();
+    if count > 0 {
+        info!(
+            log,
+            "Found {count} in-flight job(s), scheduling heartbeat timeout recovery"
+        );
+    }
+
+    for job in in_flight_jobs {
+        spawn_heartbeat_timeout(
+            log.clone(),
+            context.heartbeat_timeout,
+            context.database.connection.clone(),
+            job.id,
+            &context.heartbeat_tasks,
+            context.job_timeout_grace_period,
+            context.clock.clone(),
+        );
+    }
+}
+
+#[cfg(feature = "plus")]
+async fn spawn_stats(log: &Logger, context: &ApiContext) -> Result<(), ConfigTxError> {
     let query_server =
         QueryServer::get_or_create(write_conn!(context)).map_err(ConfigTxError::ServerId)?;
     info!(log, "Bencher API Server ID: {}", query_server.uuid);

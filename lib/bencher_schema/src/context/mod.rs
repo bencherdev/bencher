@@ -18,6 +18,8 @@ use url::Url;
 use crate::model::project::QueryProject;
 
 mod database;
+#[cfg(feature = "plus")]
+mod heartbeat_tasks;
 mod indexer;
 mod messenger;
 #[cfg(feature = "plus")]
@@ -29,6 +31,8 @@ mod stats;
 #[cfg(feature = "plus")]
 use bencher_recaptcha::RecaptchaClient;
 pub use database::{DataStore, DataStoreError, Database, DbConnection};
+#[cfg(feature = "plus")]
+pub use heartbeat_tasks::HeartbeatTasks;
 #[cfg(feature = "plus")]
 pub use indexer::{IndexError, Indexer};
 #[cfg(feature = "plus")]
@@ -42,6 +46,7 @@ pub use stats::StatsSettings;
 
 pub struct ApiContext {
     pub console_url: Url,
+    pub request_body_max_bytes: usize,
     pub token_key: TokenKey,
     pub rbac: Rbac,
     pub messenger: Messenger,
@@ -67,6 +72,14 @@ pub struct ApiContext {
     pub is_bencher_cloud: bool,
     #[cfg(feature = "plus")]
     pub oci_storage: OciStorage,
+    #[cfg(feature = "plus")]
+    pub clock: bencher_json::Clock,
+    #[cfg(feature = "plus")]
+    pub heartbeat_timeout: std::time::Duration,
+    #[cfg(feature = "plus")]
+    pub job_timeout_grace_period: std::time::Duration,
+    #[cfg(feature = "plus")]
+    pub heartbeat_tasks: HeartbeatTasks,
 }
 
 #[macro_export]

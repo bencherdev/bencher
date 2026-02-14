@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/organizations/{organization}/projects - list projects
 #[tokio::test]
-async fn test_projects_list_empty() {
+async fn projects_list_empty() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projlist@example.com").await;
     let org = server.create_org(&user, "Projects Org").await;
@@ -33,7 +33,7 @@ async fn test_projects_list_empty() {
 
 // GET /v0/organizations/{organization}/projects - list with projects
 #[tokio::test]
-async fn test_projects_list_with_project() {
+async fn projects_list_with_project() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projlistwith@example.com").await;
     let org = server.create_org(&user, "Projects With Org").await;
@@ -55,7 +55,7 @@ async fn test_projects_list_with_project() {
 
 // POST /v0/organizations/{organization}/projects - create project
 #[tokio::test]
-async fn test_projects_create() {
+async fn projects_create() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projcreate@example.com").await;
     let org = server.create_org(&user, "Create Project Org").await;
@@ -82,7 +82,7 @@ async fn test_projects_create() {
 
 // POST /v0/organizations/{organization}/projects - create with URL
 #[tokio::test]
-async fn test_projects_create_with_url() {
+async fn projects_create_with_url() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projurl@example.com").await;
     let org = server.create_org(&user, "URL Project Org").await;
@@ -107,7 +107,7 @@ async fn test_projects_create_with_url() {
 
 // POST /v0/organizations/{organization}/projects - duplicate slug fails
 #[tokio::test]
-async fn test_projects_create_duplicate_slug() {
+async fn projects_create_duplicate_slug() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "projdup@example.com").await;
     let org = server.create_org(&user, "Dup Project Org").await;

@@ -29,6 +29,8 @@ pub struct TestServer {
     pub url: String,
     /// Token key for generating test tokens (private - use `token_key()` accessor)
     token_key: TokenKey,
+    /// Database path for test setup (private - use `db_conn()` accessor)
+    db_path: String,
     /// Keep the temp file alive for the duration of the test
     db_file: NamedTempFile,
 }
@@ -50,7 +52,7 @@ impl TestServer {
     pub async fn new_with_clock(
         upload_timeout: u64,
         max_body_size: u64,
-        clock: bencher_oci_storage::Clock,
+        clock: bencher_json::Clock,
     ) -> Self {
         Self::build(Some(upload_timeout), Some(max_body_size), Some(clock)).await
     }
@@ -60,7 +62,7 @@ impl TestServer {
     async fn build(
         upload_timeout: Option<u64>,
         max_body_size: Option<u64>,
-        clock: Option<bencher_oci_storage::Clock>,
+        clock: Option<bencher_json::Clock>,
     ) -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {
@@ -104,6 +106,7 @@ impl TestServer {
 
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
+            request_body_max_bytes: 1024 * 1024,
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
             rbac,
             messenger: Messenger::default(),
@@ -118,6 +121,7 @@ impl TestServer {
             licensor: bencher_license::Licensor::self_hosted().expect("Failed to create licensor"),
             recaptcha_client: None,
             is_bencher_cloud: false,
+            clock: clock.clone().unwrap_or(bencher_json::Clock::System),
             oci_storage: bencher_oci_storage::OciStorage::try_from_config(
                 log.clone(),
                 None,
@@ -127,9 +131,12 @@ impl TestServer {
                 clock,
             )
             .expect("Failed to create OCI storage"),
+            heartbeat_timeout: std::time::Duration::from_secs(5),
+            job_timeout_grace_period: std::time::Duration::from_secs(60),
+            heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
         };
 
-        Self::start_server(context, &log, token_key, db_file)
+        Self::start_server(context, &log, token_key, db_path, db_file)
     }
 
     #[cfg(not(feature = "plus"))]
@@ -182,6 +189,7 @@ impl TestServer {
         let _ = (upload_timeout, max_body_size);
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
+            request_body_max_bytes: 1024 * 1024,
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
             rbac,
             messenger: Messenger::default(),
@@ -189,7 +197,7 @@ impl TestServer {
             restart_tx,
         };
 
-        Self::start_server(context, &log, token_key, db_file)
+        Self::start_server(context, &log, token_key, db_path, db_file)
     }
 
     #[expect(clippy::expect_used)]
@@ -197,6 +205,7 @@ impl TestServer {
         context: ApiContext,
         log: &slog::Logger,
         token_key: TokenKey,
+        db_path: String,
         db_file: NamedTempFile,
     ) -> Self {
         // Create API description and register endpoints
@@ -239,8 +248,16 @@ impl TestServer {
             client,
             url,
             token_key,
+            db_path,
             db_file,
         }
+    }
+
+    /// Get a database connection for test setup.
+    /// Use this to insert test data directly into the database.
+    #[expect(clippy::expect_used)]
+    pub fn db_conn(&self) -> DbConnection {
+        DbConnection::establish(&self.db_path).expect("Failed to establish database connection")
     }
 
     /// Get the token key for generating test tokens

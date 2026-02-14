@@ -21,7 +21,7 @@ plus = [
 bencher_api.workspace = true
 bencher_config.workspace = true
 bencher_endpoint.workspace = true
-bencher_json = { workspace = true, features = ["server", "schema", "db"] }
+bencher_json = { workspace = true, features = ["server", "schema", "db", "test-clock"] }
 bencher_license = { workspace = true, optional = true }
 bencher_oci_storage = { workspace = true, optional = true, features = ["test-clock"] }
 bencher_rbac.workspace = true

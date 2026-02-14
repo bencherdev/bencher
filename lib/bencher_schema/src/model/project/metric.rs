@@ -1,14 +1,15 @@
 use bencher_json::{JsonMetric, JsonNewMetric, MetricUuid};
+#[cfg(feature = "plus")]
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 #[cfg(feature = "plus")]
+use crate::error::resource_not_found_err;
+#[cfg(feature = "plus")]
 use crate::model::organization::OrganizationId;
-use crate::{
-    context::DbConnection,
-    error::resource_not_found_err,
-    schema::{self, metric as metric_table},
-};
+#[cfg(feature = "plus")]
+use crate::schema;
+use crate::{context::DbConnection, macros::fn_get::fn_from_uuid, schema::metric as metric_table};
 
 use super::{
     measure::{MeasureId, QueryMeasure},
@@ -34,12 +35,7 @@ pub struct QueryMetric {
 }
 
 impl QueryMetric {
-    pub fn from_uuid(conn: &mut DbConnection, uuid: MetricUuid) -> Result<Self, HttpError> {
-        schema::metric::table
-            .filter(schema::metric::uuid.eq(uuid))
-            .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Metric, uuid))
-    }
+    fn_from_uuid!(metric, MetricUuid, Metric);
 
     #[cfg(feature = "plus")]
     pub fn usage(

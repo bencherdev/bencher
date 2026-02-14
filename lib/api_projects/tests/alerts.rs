@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/projects/{project}/alerts - list alerts (empty)
 #[tokio::test]
-async fn test_alerts_list_empty() {
+async fn alerts_list_empty() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "alertlist@example.com").await;
     let org = server.create_org(&user, "Alert Org").await;
@@ -34,7 +34,7 @@ async fn test_alerts_list_empty() {
 
 // GET /v0/projects/{project}/alerts - with pagination
 #[tokio::test]
-async fn test_alerts_list_with_pagination() {
+async fn alerts_list_with_pagination() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "alertpage@example.com").await;
     let org = server.create_org(&user, "Alert Page Org").await;
@@ -59,7 +59,7 @@ async fn test_alerts_list_with_pagination() {
 
 // GET /v0/projects/{project}/alerts/{alert} - not found
 #[tokio::test]
-async fn test_alerts_get_not_found() {
+async fn alerts_get_not_found() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "alertnotfound@example.com")

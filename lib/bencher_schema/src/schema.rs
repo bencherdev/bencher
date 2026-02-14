@@ -71,6 +71,30 @@ diesel::table! {
 }
 
 diesel::table! {
+    job (id) {
+        id -> Integer,
+        uuid -> Text,
+        report_id -> Integer,
+        organization_id -> Integer,
+        source_ip -> Text,
+        spec_id -> Integer,
+        config -> Text,
+        timeout -> Integer,
+        priority -> Integer,
+        status -> Integer,
+        runner_id -> Nullable<Integer>,
+        claimed -> Nullable<BigInt>,
+        started -> Nullable<BigInt>,
+        completed -> Nullable<BigInt>,
+        last_heartbeat -> Nullable<BigInt>,
+        last_billed_minute -> Nullable<Integer>,
+        exit_code -> Nullable<Integer>,
+        created -> BigInt,
+        modified -> BigInt,
+    }
+}
+
+diesel::table! {
     measure (id) {
         id -> Integer,
         uuid -> Text,
@@ -249,10 +273,49 @@ diesel::table! {
 }
 
 diesel::table! {
+    runner (id) {
+        id -> Integer,
+        uuid -> Text,
+        name -> Text,
+        slug -> Text,
+        token_hash -> Text,
+        last_heartbeat -> Nullable<BigInt>,
+        created -> BigInt,
+        modified -> BigInt,
+        archived -> Nullable<BigInt>,
+    }
+}
+
+diesel::table! {
+    runner_spec (id) {
+        id -> Integer,
+        runner_id -> Integer,
+        spec_id -> Integer,
+    }
+}
+
+diesel::table! {
     server (id) {
         id -> Integer,
         uuid -> Text,
         created -> BigInt,
+    }
+}
+
+diesel::table! {
+    spec (id) {
+        id -> Integer,
+        uuid -> Text,
+        name -> Text,
+        slug -> Text,
+        architecture -> Text,
+        cpu -> Integer,
+        memory -> BigInt,
+        disk -> BigInt,
+        network -> Bool,
+        created -> BigInt,
+        modified -> BigInt,
+        archived -> Nullable<BigInt>,
     }
 }
 
@@ -336,6 +399,10 @@ diesel::joinable!(boundary -> model (model_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
 diesel::joinable!(head_version -> version (version_id));
+diesel::joinable!(job -> organization (organization_id));
+diesel::joinable!(job -> report (report_id));
+diesel::joinable!(job -> runner (runner_id));
+diesel::joinable!(job -> spec (spec_id));
 diesel::joinable!(measure -> project (project_id));
 diesel::joinable!(metric -> measure (measure_id));
 diesel::joinable!(metric -> report_benchmark (report_benchmark_id));
@@ -360,6 +427,8 @@ diesel::joinable!(report -> user (user_id));
 diesel::joinable!(report -> version (version_id));
 diesel::joinable!(report_benchmark -> benchmark (benchmark_id));
 diesel::joinable!(report_benchmark -> report (report_id));
+diesel::joinable!(runner_spec -> runner (runner_id));
+diesel::joinable!(runner_spec -> spec (spec_id));
 diesel::joinable!(sso -> organization (organization_id));
 diesel::joinable!(testbed -> project (project_id));
 diesel::joinable!(threshold -> branch (branch_id));
@@ -376,6 +445,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     branch,
     head,
     head_version,
+    job,
     measure,
     metric,
     model,
@@ -391,7 +461,10 @@ diesel::allow_tables_to_appear_in_same_query!(
     project_role,
     report,
     report_benchmark,
+    runner,
+    runner_spec,
     server,
+    spec,
     sso,
     testbed,
     threshold,

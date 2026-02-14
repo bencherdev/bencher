@@ -48,7 +48,7 @@ impl QueryTestbed {
     fn_get!(testbed, TestbedId);
     fn_get_id!(testbed, TestbedId, TestbedUuid);
     fn_get_uuid!(testbed, TestbedId, TestbedUuid);
-    fn_from_uuid!(testbed, TestbedUuid, Testbed);
+    fn_from_uuid!(project_id, ProjectId, testbed, TestbedUuid, Testbed);
 
     pub async fn get_or_create(
         context: &ApiContext,

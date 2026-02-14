@@ -1,28 +1,33 @@
 use core::fmt;
+use std::sync::LazyLock;
 
 use opentelemetry::metrics::Meter;
 use uuid::Uuid;
 
-pub struct ApiMeter {
-    meter: Meter,
-}
+static METER: LazyLock<Meter> = LazyLock::new(|| opentelemetry::global::meter(ApiMeter::NAME));
+
+pub struct ApiMeter;
 
 impl ApiMeter {
     const NAME: &str = "bencher_api";
 
-    fn new() -> Self {
-        let meter = opentelemetry::global::meter(Self::NAME);
-        ApiMeter { meter }
-    }
-
     pub fn increment(api_counter: ApiCounter) {
-        let counter = Self::new()
-            .meter
+        let counter = METER
             .u64_counter(api_counter.name().to_owned())
             .with_description(api_counter.description().to_owned())
             .build();
         let attributes = api_counter.attributes();
         counter.add(1, &attributes);
+    }
+
+    pub fn record(api_histogram: ApiHistogram, value: f64) {
+        let histogram = METER
+            .f64_histogram(api_histogram.name().to_owned())
+            .with_description(api_histogram.description().to_owned())
+            .with_unit(api_histogram.unit().to_owned())
+            .build();
+        let attributes = api_histogram.attributes();
+        histogram.record(value, &attributes);
     }
 }
 
@@ -78,6 +83,17 @@ pub enum ApiCounter {
     OciManifestPush,
     OciManifestPull,
     OciTagsList,
+
+    RunnerRequestMax(IntervalKind),
+
+    // Runner metrics
+    RunnerCreate,
+    RunnerUpdate,
+    RunnerTokenRotate,
+    RunnerJobClaim,
+    RunnerJobUpdate(JobStatusKind),
+    RunnerHeartbeatTimeout,
+    RunnerJobTimeout,
 
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
@@ -137,6 +153,17 @@ impl ApiCounter {
             Self::OciManifestPush => "oci.manifest.push",
             Self::OciManifestPull => "oci.manifest.pull",
             Self::OciTagsList => "oci.tags.list",
+
+            Self::RunnerRequestMax(_) => "runner.request.max",
+
+            // Runner metrics
+            Self::RunnerCreate => "runner.create",
+            Self::RunnerUpdate => "runner.update",
+            Self::RunnerTokenRotate => "runner.token.rotate",
+            Self::RunnerJobClaim => "runner.job.claim",
+            Self::RunnerJobUpdate(_) => "runner.job.update",
+            Self::RunnerHeartbeatTimeout => "runner.heartbeat.timeout",
+            Self::RunnerJobTimeout => "runner.job.timeout",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
@@ -201,6 +228,21 @@ impl ApiCounter {
             Self::OciManifestPull => "Counts the number of OCI manifest pulls",
             Self::OciTagsList => "Counts the number of OCI tags list requests",
 
+            Self::RunnerRequestMax(_) => "Counts the number of runner request maximums reached",
+
+            // Runner metrics
+            Self::RunnerCreate => "Counts the number of runner creations",
+            Self::RunnerUpdate => "Counts the number of runner updates",
+            Self::RunnerTokenRotate => "Counts the number of runner token rotations",
+            Self::RunnerJobClaim => "Counts the number of runner job claims",
+            Self::RunnerJobUpdate(_) => "Counts the number of runner job status updates",
+            Self::RunnerHeartbeatTimeout => {
+                "Counts the number of jobs failed due to heartbeat timeout"
+            },
+            Self::RunnerJobTimeout => {
+                "Counts the number of jobs canceled due to exceeding job timeout"
+            },
+
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
             Self::SelfHostedServerStats(_) => "Counts the number of self-hosted server stats sent",
@@ -230,7 +272,13 @@ impl ApiCounter {
             | Self::OciBlobPull
             | Self::OciManifestPush
             | Self::OciManifestPull
-            | Self::OciTagsList => Vec::new(),
+            | Self::OciTagsList
+            | Self::RunnerCreate
+            | Self::RunnerUpdate
+            | Self::RunnerTokenRotate
+            | Self::RunnerJobClaim
+            | Self::RunnerHeartbeatTimeout
+            | Self::RunnerJobTimeout => Vec::new(),
             Self::UserSignup(auth_method)
             | Self::UserLogin(auth_method)
             | Self::UserSsoJoin(auth_method) => auth_method.attributes(),
@@ -242,13 +290,15 @@ impl ApiCounter {
             | Self::CreateMax(interval_kind, authorization_kind) => {
                 vec![interval_kind.into(), authorization_kind.into()]
             },
-            Self::RunUnclaimedMax(interval_kind)
+            Self::RunnerRequestMax(interval_kind)
+            | Self::RunUnclaimedMax(interval_kind)
             | Self::RunClaimedMax(interval_kind)
             | Self::UserTokenMax(interval_kind)
             | Self::UserOrganizationMax(interval_kind)
             | Self::UserInviteMax(interval_kind) => {
                 vec![interval_kind.into()]
             },
+            Self::RunnerJobUpdate(status_kind) => vec![status_kind.into()],
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(server_uuid)
             | Self::SelfHostedServerStats(server_uuid) => self_hosted_attributes(server_uuid),
@@ -380,8 +430,119 @@ impl AuthorizationKind {
     const KEY: &str = "authorization";
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum JobStatusKind {
+    Running,
+    Completed,
+    Failed,
+    Canceled,
+}
+
+impl fmt::Display for JobStatusKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Running => write!(f, "running"),
+            Self::Completed => write!(f, "completed"),
+            Self::Failed => write!(f, "failed"),
+            Self::Canceled => write!(f, "canceled"),
+        }
+    }
+}
+
+impl From<JobStatusKind> for opentelemetry::KeyValue {
+    fn from(status_kind: JobStatusKind) -> Self {
+        opentelemetry::KeyValue::new(JobStatusKind::KEY, status_kind.to_string())
+    }
+}
+
+impl JobStatusKind {
+    const KEY: &str = "job.status";
+}
+
 fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
     const KEY: &str = "server.uuid";
 
     vec![opentelemetry::KeyValue::new(KEY, server_uuid.to_string())]
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ApiHistogram {
+    /// Time a job spent waiting in the queue before being claimed.
+    JobQueueDuration(PriorityTier),
+}
+
+impl ApiHistogram {
+    fn name(&self) -> &str {
+        match self {
+            Self::JobQueueDuration(_) => "job.queue.duration",
+        }
+    }
+
+    fn description(&self) -> &str {
+        match self {
+            Self::JobQueueDuration(_) => {
+                "Time a job spent waiting in the queue before being claimed"
+            },
+        }
+    }
+
+    fn unit(&self) -> &str {
+        match self {
+            Self::JobQueueDuration(_) => "s",
+        }
+    }
+
+    fn attributes(self) -> Vec<opentelemetry::KeyValue> {
+        match self {
+            Self::JobQueueDuration(tier) => vec![tier.into()],
+        }
+    }
+}
+
+/// Priority tier for job scheduling.
+#[derive(Debug, Clone, Copy)]
+pub enum PriorityTier {
+    /// Enterprise tier (priority >= 300) - unlimited concurrency
+    Enterprise,
+    /// Team tier (priority 200-299) - unlimited concurrency
+    Team,
+    /// Free tier (priority 100-199) - 1 concurrent job per organization
+    Free,
+    /// Unclaimed tier (priority < 100) - 1 concurrent job per source IP
+    Unclaimed,
+}
+
+impl fmt::Display for PriorityTier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Enterprise => write!(f, "enterprise"),
+            Self::Team => write!(f, "team"),
+            Self::Free => write!(f, "free"),
+            Self::Unclaimed => write!(f, "unclaimed"),
+        }
+    }
+}
+
+impl From<PriorityTier> for opentelemetry::KeyValue {
+    fn from(tier: PriorityTier) -> Self {
+        opentelemetry::KeyValue::new(PriorityTier::KEY, tier.to_string())
+    }
+}
+
+impl PriorityTier {
+    const KEY: &str = "job.priority.tier";
+
+    /// Determine the priority tier from a priority value.
+    #[must_use]
+    pub fn from_priority(priority: i32) -> Self {
+        if priority >= 300 {
+            Self::Enterprise
+        } else if priority >= 200 {
+            Self::Team
+        } else if priority >= 100 {
+            Self::Free
+        } else {
+            Self::Unclaimed
+        }
+    }
 }

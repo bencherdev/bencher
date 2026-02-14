@@ -46,7 +46,9 @@ pub async fn org_claim_post(
     body: TypedBody<JsonNewClaim>,
 ) -> Result<ResponseCreated<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let log = &rqctx.log;
     let json = post_inner(
+        log,
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
@@ -57,6 +59,7 @@ pub async fn org_claim_post(
 }
 
 async fn post_inner(
+    log: &slog::Logger,
     context: &ApiContext,
     path_params: OrgClaimParams,
     _json_claim: JsonNewClaim,
@@ -64,7 +67,9 @@ async fn post_inner(
 ) -> Result<JsonOrganization, HttpError> {
     let query_organization =
         QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
-    query_organization.claim(context, &auth_user.user).await?;
+    query_organization
+        .claim(log, context, &auth_user.user)
+        .await?;
 
     Ok(query_organization.into_json(auth_conn!(context)))
 }

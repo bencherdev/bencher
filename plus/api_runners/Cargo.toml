@@ -1,0 +1,62 @@
+[package]
+name = "api_runners"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+plus = [
+    "bencher_endpoint/plus",
+    "bencher_json/plus",
+    "bencher_schema/plus",
+    "dep:camino",
+    "dep:diesel",
+    "dep:dropshot",
+    "dep:futures",
+    "dep:hex",
+    "dep:rand",
+    "dep:schemars",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:slog",
+    "dep:tokio",
+    "dep:tokio-tungstenite",
+    "dep:uuid",
+]
+sentry = ["bencher_schema/sentry"]
+otel = ["bencher_endpoint/otel", "bencher_schema/otel", "dep:bencher_otel"]
+
+[dependencies]
+bencher_endpoint = { workspace = true, optional = true }
+bencher_json = { workspace = true, features = ["server", "schema", "db"], optional = true }
+bencher_otel = { workspace = true, optional = true }
+bencher_schema = { workspace = true, optional = true }
+camino = { workspace = true, optional = true }
+diesel = { workspace = true, optional = true }
+dropshot = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+hex = { workspace = true, optional = true }
+rand = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+slog = { workspace = true, optional = true }
+tokio = { workspace = true, features = ["time"], optional = true }
+tokio-tungstenite = { workspace = true, optional = true }
+uuid = { workspace = true, features = ["v4"], optional = true }
+
+[dev-dependencies]
+bencher_api_tests.workspace = true
+bencher_json = { workspace = true, features = ["server", "schema", "db", "test-clock"] }
+bencher_schema.workspace = true
+diesel.workspace = true
+futures-concurrency.workspace = true
+http.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util"] }
+
+[lints]
+workspace = true

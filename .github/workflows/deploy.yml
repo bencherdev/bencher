@@ -73,9 +73,6 @@ jobs:
       - name: Deploy Local API to Fly.io
         working-directory: ./services/api
         run: flyctl deploy --local-only --config fly/fly.dev.toml --wait-timeout 300
-      - name: Scale up Dev Machines
-        working-directory: ./services/api
-        run: flyctl scale vm performance-8x --app bencher-api-dev
       - name: Run Smoke Test
         id: smoke-test
         continue-on-error: true
@@ -89,10 +86,22 @@ jobs:
           --api-url https://bencher-api-dev.fly.dev \
           --username eustace.bagge@nowhere.com \
           --password "${{ secrets.TEST_BENCHER_API_TOKEN_ADMIN }}"
-      - name: Scale down Dev Machines
+      - name: OCI Conformance Test Summary
         if: always()
-        working-directory: ./services/api
-        run: flyctl scale vm shared-cpu-1x --app bencher-api-dev
+        run: |
+          echo "## OCI Conformance Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f ./oci-conformance-results/test-output.log ]; then
+            echo "<details>" >> $GITHUB_STEP_SUMMARY
+            echo "<summary>Test Output</summary>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat ./oci-conformance-results/test-output.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No test output found." >> $GITHUB_STEP_SUMMARY
+          fi
       - name: Check Smoke Test Result
         if: steps.smoke-test.outcome == 'failure'
         run: exit 1

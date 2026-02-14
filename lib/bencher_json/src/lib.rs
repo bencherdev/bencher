@@ -9,8 +9,9 @@ pub use bencher_valid::{
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
-    CardBrand, CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, LastFour,
-    LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus, RecaptchaAction, RecaptchaScore,
+    CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
+    LastFour, LicensedPlanId, Memory, MeteredPlanId, PlanLevel, PlanStatus, RecaptchaAction,
+    RecaptchaScore, Timeout,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -19,12 +20,17 @@ use serde::{Deserialize, Serialize};
 use serde_yaml as _;
 
 pub mod big_int;
+pub mod clock;
 #[cfg(feature = "plus")]
 pub mod oci;
 pub mod organization;
 pub mod pagination;
 pub mod project;
 pub mod run;
+#[cfg(feature = "plus")]
+pub mod runner;
+#[cfg(feature = "plus")]
+pub mod spec;
 pub mod system;
 pub(crate) mod typed_db;
 pub(crate) mod typed_slug;
@@ -32,7 +38,10 @@ pub(crate) mod typed_uuid;
 pub mod urlencoded;
 pub mod user;
 
+#[cfg(feature = "plus")]
+pub use bencher_valid::Architecture;
 pub use big_int::BigInt;
+pub use clock::Clock;
 pub use organization::{
     JsonNewOrganization, JsonOrganization, JsonOrganizations, OrganizationResourceId,
     OrganizationSlug, OrganizationUuid,
@@ -77,12 +86,23 @@ pub use project::{
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
 };
 pub use run::JsonNewRun;
+#[cfg(feature = "plus")]
+pub use runner::{
+    JobPriority, JobStatus, JobUpdateStatus, JobUuid, JsonClaimJob, JsonJob, JsonJobConfig,
+    JsonNewRunner, JsonRunner, JsonRunnerToken, JsonRunners, JsonUpdateJob, JsonUpdateJobResponse,
+    JsonUpdateRunner, RunnerResourceId, RunnerSlug, RunnerUuid,
+};
+#[cfg(feature = "plus")]
+pub use spec::{
+    JsonNewRunnerSpec, JsonNewSpec, JsonSpec, JsonSpecs, JsonUpdateSpec, SpecResourceId, SpecSlug,
+    SpecUuid,
+};
 pub use system::{
     auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonSignup},
     backup::{JsonBackup, JsonBackupCreated},
     config::{JsonConfig, JsonConsole},
     restart::JsonRestart,
-    spec::JsonSpec,
+    spec::JsonOpenApiSpec,
     version::JsonApiVersion,
 };
 #[cfg(feature = "plus")]

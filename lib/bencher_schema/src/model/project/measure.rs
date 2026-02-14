@@ -54,7 +54,7 @@ impl QueryMeasure {
     fn_get!(measure, MeasureId);
     fn_get_id!(measure, MeasureId, MeasureUuid);
     fn_get_uuid!(measure, MeasureId, MeasureUuid);
-    fn_from_uuid!(measure, MeasureUuid, Measure);
+    fn_from_uuid!(project_id, ProjectId, measure, MeasureUuid, Measure);
 
     pub async fn get_or_create(
         context: &ApiContext,

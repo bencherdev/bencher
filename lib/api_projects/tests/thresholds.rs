@@ -11,7 +11,7 @@ use http::StatusCode;
 
 // GET /v0/projects/{project}/thresholds - list thresholds
 #[tokio::test]
-async fn test_thresholds_list() {
+async fn thresholds_list() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "thresholdlist@example.com")
@@ -38,7 +38,7 @@ async fn test_thresholds_list() {
 
 // GET /v0/projects/{project}/thresholds - requires auth
 #[tokio::test]
-async fn test_thresholds_list_requires_auth() {
+async fn thresholds_list_requires_auth() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "thresholdauth@example.com")
@@ -66,7 +66,7 @@ async fn test_thresholds_list_requires_auth() {
 
 // GET /v0/projects/{project}/thresholds/{threshold} - not found
 #[tokio::test]
-async fn test_thresholds_get_not_found() {
+async fn thresholds_get_not_found() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "thresholdnotfound@example.com")

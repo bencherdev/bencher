@@ -1,27 +1,43 @@
 #![cfg(feature = "plus")]
 
+mod architecture;
 mod brand;
+mod cpu;
 mod cvc;
+mod disk;
 mod entitlements;
+mod grace_period;
+mod heartbeat_timeout;
 mod last_four;
+mod memory;
 mod month;
 mod number;
 mod plan_id;
 mod plan_level;
 mod plan_status;
+mod poll_timeout;
 mod recaptcha_action;
 mod recaptcha_score;
+mod timeout;
 mod year;
 
+pub use architecture::Architecture;
 pub use brand::CardBrand;
+pub use cpu::Cpu;
 pub use cvc::CardCvc;
+pub use disk::Disk;
 pub use entitlements::Entitlements;
+pub use grace_period::GracePeriod;
+pub use heartbeat_timeout::HeartbeatTimeout;
 pub use last_four::LastFour;
+pub use memory::Memory;
 pub use month::ExpirationMonth;
 pub use number::CardNumber;
 pub use plan_id::{LicensedPlanId, MeteredPlanId};
 pub use plan_level::PlanLevel;
 pub use plan_status::PlanStatus;
+pub use poll_timeout::PollTimeout;
 pub use recaptcha_action::RecaptchaAction;
 pub use recaptcha_score::RecaptchaScore;
+pub use timeout::Timeout;
 pub use year::ExpirationYear;

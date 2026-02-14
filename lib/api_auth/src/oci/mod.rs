@@ -395,39 +395,39 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_scope_valid() {
+    fn parse_scope_valid() {
         let (repo, actions) = parse_scope("repository:org/project:pull,push").unwrap();
         assert_eq!(repo, Some("org/project".to_owned()));
         assert_eq!(actions, vec![OciAction::Pull, OciAction::Push]);
     }
 
     #[test]
-    fn test_parse_scope_single_action() {
+    fn parse_scope_single_action() {
         let (repo, actions) = parse_scope("repository:myrepo:pull").unwrap();
         assert_eq!(repo, Some("myrepo".to_owned()));
         assert_eq!(actions, vec![OciAction::Pull]);
     }
 
     #[test]
-    fn test_parse_scope_invalid_format() {
+    fn parse_scope_invalid_format() {
         let result = parse_scope("invalid");
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_parse_scope_invalid_resource_type() {
+    fn parse_scope_invalid_resource_type() {
         let result = parse_scope("image:myrepo:pull");
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_parse_scope_invalid_action() {
+    fn parse_scope_invalid_action() {
         let result = parse_scope("repository:myrepo:delete");
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_is_valid_host_valid() {
+    fn is_valid_host_valid() {
         assert!(is_valid_host("localhost"));
         assert!(is_valid_host("example.com"));
         assert!(is_valid_host("sub.example.com"));
@@ -437,7 +437,7 @@ mod tests {
     }
 
     #[test]
-    fn test_is_valid_host_invalid() {
+    fn is_valid_host_invalid() {
         assert!(!is_valid_host(""));
         // Header injection attempts
         assert!(!is_valid_host("evil.com\r\nX-Injected: true"));
@@ -448,7 +448,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_scope_sanitizes_quotes() {
+    fn parse_scope_sanitizes_quotes() {
         // Quotes in repository name are stripped by scope sanitization
         // before reaching parse_scope, but parse_scope itself should
         // handle the already-sanitized input correctly

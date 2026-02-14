@@ -13,11 +13,13 @@ table = ["dep:tabled"]
 server = ["bencher_context/server", "bencher_valid/server"]
 schema = ["dep:schemars", "bencher_context/schema", "ordered-float/schemars"]
 db = ["dep:diesel", "dep:serde_yaml", "bencher_valid/db"]
-plus = ["bencher_valid/plus"]
+plus = ["dep:camino", "bencher_valid/plus"]
+test-clock = []
 
 [dependencies]
 bencher_context.workspace = true
 bencher_valid = { workspace = true, features = ["schema"] }
+camino = { workspace = true, features = ["serde1"], optional = true }
 derive_more.workspace = true
 diesel = { workspace = true, optional = true }
 ordered-float = { workspace = true, features = ["serde"] }
