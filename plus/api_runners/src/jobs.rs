@@ -242,7 +242,7 @@ async fn try_claim_job(
             uuid: query_job.uuid,
             status: JobStatus::Claimed,
             spec: json_spec,
-            config: Some(query_job.config.into()),
+            config: Some(query_job.config),
             runner: Some(runner_token.runner_uuid),
             claimed: Some(now),
             started: None,

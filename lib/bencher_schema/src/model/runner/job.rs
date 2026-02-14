@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bencher_json::{DateTime, JobPriority, JobStatus, JobUuid, JsonJob, Timeout};
+use bencher_json::{DateTime, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig, Timeout};
 use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
@@ -17,8 +17,6 @@ use crate::{
     schema::{self, job as job_table},
 };
 
-pub use super::job_config::JobConfig;
-
 crate::macros::typed_id::typed_id!(JobId);
 
 #[derive(
@@ -33,7 +31,7 @@ pub struct QueryJob {
     pub organization_id: OrganizationId,
     pub source_ip: SourceIp,
     pub spec_id: SpecId,
-    pub config: JobConfig,
+    pub config: JsonJobConfig,
     pub timeout: Timeout,
     pub priority: JobPriority,
     pub status: JobStatus,
@@ -88,7 +86,7 @@ pub struct InsertJob {
     pub organization_id: OrganizationId,
     pub source_ip: SourceIp,
     pub spec_id: SpecId,
-    pub config: JobConfig,
+    pub config: JsonJobConfig,
     pub timeout: Timeout,
     pub priority: JobPriority,
     pub status: JobStatus,
@@ -102,7 +100,7 @@ impl InsertJob {
         organization_id: OrganizationId,
         source_ip: SourceIp,
         spec_id: SpecId,
-        config: JobConfig,
+        config: JsonJobConfig,
         timeout: Timeout,
         priority: JobPriority,
     ) -> Self {

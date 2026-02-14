@@ -17,13 +17,12 @@ use crate::{
 };
 
 pub mod job;
-mod job_config;
 pub mod runner_spec;
 mod source_ip;
 mod token_hash;
 
 pub use job::{
-    InsertJob, JobConfig, JobId, QueryJob, UpdateJob, recover_orphaned_claimed_jobs,
+    InsertJob, JobId, QueryJob, UpdateJob, recover_orphaned_claimed_jobs,
     spawn_heartbeat_timeout,
 };
 pub use runner_spec::{InsertRunnerSpec, QueryRunnerSpec, RunnerSpecId};

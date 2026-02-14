@@ -88,6 +88,8 @@ pub struct JsonClaimJob {
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct JsonJobConfig {
     /// Registry URL for pulling the OCI image (e.g., `https://registry.bencher.dev`)
     pub registry: Url,
@@ -110,4 +112,37 @@ pub struct JsonJobConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "schema", schemars(with = "Option<Vec<String>>"))]
     pub file_paths: Option<Vec<Utf8PathBuf>>,
+}
+
+#[cfg(feature = "db")]
+mod db {
+    use super::JsonJobConfig;
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for JsonJobConfig
+    where
+        DB: diesel::backend::Backend,
+        for<'a> String: diesel::serialize::ToSql<diesel::sql_types::Text, DB>
+            + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            let json = serde_json::to_string(self)?;
+            out.set_value(json);
+            Ok(diesel::serialize::IsNull::No)
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Text, DB> for JsonJobConfig
+    where
+        DB: diesel::backend::Backend,
+        String: diesel::deserialize::FromSql<diesel::sql_types::Text, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            let json_str = String::from_sql(bytes)?;
+            let config: JsonJobConfig = serde_json::from_str(&json_str)?;
+            Ok(config)
+        }
+    }
 }
