@@ -350,11 +350,13 @@ async fn handle_runner_message(
     match msg {
         RunnerMessage::Running => {
             slog::info!(log, "Job running"; "job_id" => ?job_id);
-            handle_running(log, context, job_id).await?;
+            if let Some(cancel) = handle_running(log, context, job_id).await? {
+                return Ok(cancel);
+            }
         },
         RunnerMessage::Heartbeat => {
             slog::debug!(log, "Job heartbeat"; "job_id" => ?job_id);
-            if let Some(cancel) = handle_heartbeat(context, job_id).await? {
+            if let Some(cancel) = handle_heartbeat(log, context, job_id).await? {
                 return Ok(cancel);
             }
         },
@@ -410,7 +412,7 @@ async fn handle_running(
     log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<Option<ServerMessage>, Box<dyn std::error::Error + Send + Sync>> {
     let now = context.clock.now();
 
     // Try reconnection case first: already Running, just update heartbeat
@@ -429,7 +431,7 @@ async fn handle_running(
 
     if updated > 0 {
         slog::info!(log, "Runner reconnected to running job"; "job_id" => ?job_id);
-        return Ok(());
+        return Ok(None);
     }
 
     // Try normal transition: Claimed -> Running
@@ -453,7 +455,7 @@ async fn handle_running(
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
             bencher_otel::JobStatusKind::Running,
         ));
-        return Ok(());
+        return Ok(None);
     }
 
     // Neither matched — check if job was canceled
@@ -462,14 +464,15 @@ async fn handle_running(
         .first(auth_conn!(context))?;
     if current_job.status == JobStatus::Canceled {
         slog::info!(log, "Job was canceled before Running transition"; "job_id" => ?job_id);
-        return Ok(());
+        return Ok(Some(ServerMessage::Cancel));
     }
     slog::warn!(log, "Unexpected job state during Running transition"; "job_id" => ?job_id, "status" => ?current_job.status);
-    Ok(())
+    Ok(None)
 }
 
-/// Handle a Heartbeat message: update `last_heartbeat` and check for cancellation.
+/// Handle a Heartbeat message: update `last_heartbeat` and check for cancellation and timeout.
 async fn handle_heartbeat(
+    log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,
 ) -> Result<Option<ServerMessage>, Box<dyn std::error::Error + Send + Sync>> {
@@ -483,6 +486,44 @@ async fn handle_heartbeat(
     // Check if job was canceled
     if job.status == JobStatus::Canceled {
         return Ok(Some(ServerMessage::Cancel));
+    }
+
+    // Check if job has exceeded its timeout
+    if let Some(started) = job.started {
+        let elapsed = (now.timestamp() - started.timestamp()).max(0);
+        #[expect(
+            clippy::cast_possible_wrap,
+            reason = "timeout max 86400 + grace period fits in i64"
+        )]
+        let limit = u64::from(u32::from(job.timeout)) as i64
+            + context.job_timeout_grace_period.as_secs() as i64;
+        if elapsed > limit {
+            slog::warn!(log, "Job timeout exceeded during heartbeat"; "job_id" => ?job_id, "elapsed" => elapsed, "limit" => limit);
+            let cancel_update = UpdateJob {
+                status: Some(JobStatus::Canceled),
+                completed: Some(Some(now)),
+                modified: Some(now),
+                ..Default::default()
+            };
+            let updated = diesel::update(
+                schema::job::table
+                    .filter(schema::job::id.eq(job_id))
+                    .filter(
+                        schema::job::status
+                            .eq(JobStatus::Claimed)
+                            .or(schema::job::status.eq(JobStatus::Running)),
+                    ),
+            )
+            .set(&cancel_update)
+            .execute(write_conn!(context))?;
+            if updated > 0 {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+                    bencher_otel::JobStatusKind::Canceled,
+                ));
+            }
+            return Ok(Some(ServerMessage::Cancel));
+        }
     }
 
     let update = UpdateJob {
@@ -542,9 +583,23 @@ async fn handle_completed(
     .execute(write_conn!(context))?;
 
     if updated == 0 {
-        slog::warn!(log, "Invalid state transition to Completed (concurrent state change)"; "job_id" => ?job_id);
+        // Re-read the job to determine what happened
+        let job: QueryJob = schema::job::table
+            .filter(schema::job::id.eq(job_id))
+            .first(auth_conn!(context))
+            .map_err(resource_not_found_err!(Job, job_id))?;
+
+        if job.status == JobStatus::Completed {
+            slog::debug!(log, "Job already completed (idempotent duplicate)"; "job_id" => ?job_id);
+            return Ok(());
+        }
+        if job.status.is_terminal() {
+            slog::warn!(log, "Job already in terminal state, completion report lost"; "job_id" => ?job_id, "current_status" => ?job.status);
+            return Ok(());
+        }
         return Err(format!(
-            "Invalid state transition to Completed for job {job_id:?}, expected Running"
+            "Invalid state transition to Completed for job {job_id:?}, expected Running but found {:?}",
+            job.status
         )
         .into());
     }
@@ -596,9 +651,23 @@ async fn handle_failed(
     .execute(write_conn!(context))?;
 
     if updated == 0 {
-        slog::warn!(log, "Invalid state transition to Failed (concurrent state change)"; "job_id" => ?job_id);
+        // Re-read the job to determine what happened
+        let job: QueryJob = schema::job::table
+            .filter(schema::job::id.eq(job_id))
+            .first(auth_conn!(context))
+            .map_err(resource_not_found_err!(Job, job_id))?;
+
+        if job.status == JobStatus::Failed {
+            slog::debug!(log, "Job already failed (idempotent duplicate)"; "job_id" => ?job_id);
+            return Ok(());
+        }
+        if job.status.is_terminal() {
+            slog::warn!(log, "Job already in terminal state, failure report lost"; "job_id" => ?job_id, "current_status" => ?job.status);
+            return Ok(());
+        }
         return Err(format!(
-            "Invalid state transition to Failed for job {job_id:?}, expected Claimed or Running"
+            "Invalid state transition to Failed for job {job_id:?}, expected Claimed or Running but found {:?}",
+            job.status
         )
         .into());
     }

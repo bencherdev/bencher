@@ -1206,3 +1206,549 @@ async fn channel_runner_sends_canceled() {
     // Job should be in Canceled state
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
 }
+
+// =============================================================================
+// Bug Fix 1: handle_running returns Cancel on concurrent cancellation
+// =============================================================================
+
+/// When a job is canceled between WS connect and the Running message,
+/// the server should return Cancel (not Ack) so the runner doesn't execute.
+#[tokio::test]
+async fn channel_running_cancel_on_concurrent_cancellation() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "run-cancel").await;
+
+    // Connect WS while job is still Claimed
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Cancel the job in DB (simulating concurrent user cancellation)
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
+
+    // Send Running — the conditional UPDATE will match 0 rows because job is
+    // now Canceled (not Claimed or Running). handle_running re-reads the job,
+    // detects the cancellation, and returns Cancel.
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Cancel),
+        "Expected Cancel when Running sent on concurrently-canceled job, got: {resp:?}"
+    );
+
+    // Server should close the connection after sending Cancel
+    assert_ws_closed(&mut ws).await;
+
+    // Job remains Canceled
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+}
+
+/// When a job is canceled after it was Running (reconnection scenario),
+/// the Running message should also return Cancel.
+#[tokio::test]
+async fn channel_running_cancel_on_reconnect_to_canceled_job() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "recon-cancel").await;
+
+    // Transition to Running
+    set_job_status(&server, job_uuid, JobStatus::Running);
+
+    // Cancel it (simulating concurrent cancellation during reconnect)
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
+
+    // Open a new WS connection (job is Canceled, but the channel only checks
+    // Claimed|Running at connect time, so we set it to Running first then cancel)
+    // We need to use a different approach: set up Running, connect, cancel, send Running
+    // Actually, the channel checks status at connection time, so let's do it properly:
+    // 1. Set to Running (allows WS connect for reconnection)
+    set_job_status(&server, job_uuid, JobStatus::Running);
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // 2. Cancel between connect and first message
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
+
+    // 3. Send Running (reconnection attempt)
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Cancel),
+        "Expected Cancel when reconnecting to canceled job, got: {resp:?}"
+    );
+
+    assert_ws_closed(&mut ws).await;
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+}
+
+// =============================================================================
+// Bug Fix 2: handle_completed/handle_failed idempotency on concurrent changes
+// =============================================================================
+
+/// Completed message after job was concurrently canceled should succeed gracefully.
+/// Before the fix, this would return an error and close the connection ungracefully.
+#[tokio::test]
+async fn channel_completed_after_concurrent_cancel() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) =
+        setup_claimed_job(&server, "done-vs-cancel").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Transition to Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Cancel the job in DB (simulating timeout task or admin action)
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
+
+    // Send Completed — the UPDATE matches 0 rows (status is Canceled, not Running).
+    // After the fix, handle_completed re-reads, sees terminal state, returns Ok.
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            exit_code: 0,
+            stdout: Some("benchmark results\n".into()),
+            stderr: None,
+            output: None,
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for Completed after concurrent cancel, got: {resp:?}"
+    );
+
+    // Connection should close gracefully (terminal message)
+    assert_ws_closed(&mut ws).await;
+
+    // Job stays Canceled (not overwritten to Completed)
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+}
+
+/// Completed message after job was concurrently failed (by timeout) should succeed.
+#[tokio::test]
+async fn channel_completed_after_concurrent_failure() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) =
+        setup_claimed_job(&server, "done-vs-fail").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Transition to Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Mark job Failed in DB (simulating heartbeat timeout on a different connection)
+    set_job_status(&server, job_uuid, JobStatus::Failed);
+
+    // Send Completed — should gracefully handle the race
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            exit_code: 0,
+            stdout: None,
+            stderr: None,
+            output: None,
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for Completed after concurrent failure, got: {resp:?}"
+    );
+
+    assert_ws_closed(&mut ws).await;
+
+    // Job stays Failed (the concurrent timeout won the race)
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+}
+
+/// Completed message when job is already Completed (idempotent duplicate).
+#[tokio::test]
+async fn channel_completed_idempotent_duplicate() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) =
+        setup_claimed_job(&server, "done-idem").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Transition to Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Set job to Completed directly in DB (simulating a concurrent completion)
+    set_job_status(&server, job_uuid, JobStatus::Completed);
+
+    // Send Completed — this is an idempotent duplicate
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            exit_code: 0,
+            stdout: None,
+            stderr: None,
+            output: None,
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for idempotent Completed, got: {resp:?}"
+    );
+
+    assert_ws_closed(&mut ws).await;
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+}
+
+/// Failed message after job was concurrently canceled should succeed gracefully.
+#[tokio::test]
+async fn channel_failed_after_concurrent_cancel() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) =
+        setup_claimed_job(&server, "fail-vs-cancel").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Transition to Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Cancel the job in DB
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
+
+    // Send Failed — should handle the race gracefully
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Failed {
+            exit_code: Some(1),
+            error: "benchmark crashed".to_owned(),
+            stdout: None,
+            stderr: None,
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for Failed after concurrent cancel, got: {resp:?}"
+    );
+
+    assert_ws_closed(&mut ws).await;
+
+    // Job stays Canceled
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+}
+
+/// Failed message after job was concurrently completed should succeed gracefully.
+#[tokio::test]
+async fn channel_failed_after_concurrent_completion() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) =
+        setup_claimed_job(&server, "fail-vs-done").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Transition to Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Set job to Completed in DB (simulating a race)
+    set_job_status(&server, job_uuid, JobStatus::Completed);
+
+    // Send Failed — should handle gracefully
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Failed {
+            exit_code: Some(137),
+            error: "killed".to_owned(),
+            stdout: None,
+            stderr: None,
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for Failed after concurrent completion, got: {resp:?}"
+    );
+
+    assert_ws_closed(&mut ws).await;
+
+    // Job stays Completed (the other path won)
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+}
+
+/// Failed message when job is already Failed (idempotent duplicate).
+#[tokio::test]
+async fn channel_failed_idempotent_duplicate() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) =
+        setup_claimed_job(&server, "fail-idem").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Transition to Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Set job to Failed directly in DB
+    set_job_status(&server, job_uuid, JobStatus::Failed);
+
+    // Send Failed — idempotent duplicate
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Failed {
+            exit_code: Some(1),
+            error: "crash".to_owned(),
+            stdout: None,
+            stderr: None,
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for idempotent Failed, got: {resp:?}"
+    );
+
+    assert_ws_closed(&mut ws).await;
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+}
+
+/// Completed still errors on unexpected non-terminal state (Claimed).
+/// This verifies the fix didn't weaken the safety check.
+#[tokio::test]
+async fn channel_completed_rejects_non_terminal_unexpected_state() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) =
+        setup_claimed_job(&server, "done-bad-state").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Job is Claimed (not Running) — send Completed directly
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            exit_code: 0,
+            stdout: None,
+            stderr: None,
+            output: None,
+        },
+    )
+    .await;
+
+    // Should still error — Claimed is not a terminal state, so the error branch fires
+    assert_ws_closed(&mut ws).await;
+
+    // Job should remain Claimed
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Claimed);
+}
+
+// =============================================================================
+// Bug Fix 3: Heartbeat handler checks job timeout
+// =============================================================================
+
+/// Heartbeat detects job timeout and returns Cancel, even while runner is active.
+/// This is the key fix: before, only `handle_timeout` (triggered by WS silence)
+/// checked job timeout. Now `handle_heartbeat` also checks, so an active runner
+/// sending heartbeats can't hold a job past its timeout.
+#[tokio::test]
+async fn channel_heartbeat_detects_job_timeout() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicI64, Ordering},
+    };
+
+    let base_time = bencher_json::DateTime::now().timestamp();
+    let mock_time = Arc::new(AtomicI64::new(base_time));
+    let time_ref = mock_time.clone();
+    let clock = bencher_json::Clock::Custom(Arc::new(move || {
+        bencher_json::DateTime::try_from(time_ref.load(Ordering::Relaxed)).unwrap()
+    }));
+
+    let server = TestServer::new_with_clock(3600, 1024 * 1024, clock).await;
+    let admin = server.signup("Admin", "ws-hb-timeout@example.com").await;
+    let org = server.create_org(&admin, "Ws hb timeout").await;
+    let project = server
+        .create_project(&admin, &org, "Ws hb timeout proj")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner hb timeout").await;
+    let runner_token = runner.token.to_string();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+
+    // Job with 10 second timeout
+    let job_uuid = insert_test_job_with_timeout(&server, report_id, spec_id, 10);
+
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+    let claimed = claim_job(&server, runner.uuid, &runner_token).await;
+    assert_eq!(claimed.uuid, job_uuid);
+
+    let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
+
+    // Send Running (sets `started` timestamp via mock clock)
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Heartbeat while within timeout should return Ack
+    mock_time.fetch_add(5, Ordering::Relaxed);
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for heartbeat within timeout, got: {resp:?}"
+    );
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Advance mock clock past timeout (10s) + grace period (60s) = 70s
+    // Total elapsed is now 5 + 70 = 75s
+    mock_time.fetch_add(70, Ordering::Relaxed);
+
+    // Send Heartbeat — should detect timeout and return Cancel
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Cancel),
+        "Expected Cancel when heartbeat detects job timeout, got: {resp:?}"
+    );
+
+    // Connection should close after Cancel
+    assert_ws_closed(&mut ws).await;
+
+    // Job should be Canceled (timeout exceeded, not Failed)
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+}
+
+/// Heartbeat does NOT cancel when job is within timeout + grace period.
+/// This verifies the timeout check doesn't trigger too early.
+#[tokio::test]
+async fn channel_heartbeat_no_false_timeout() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicI64, Ordering},
+    };
+
+    let base_time = bencher_json::DateTime::now().timestamp();
+    let mock_time = Arc::new(AtomicI64::new(base_time));
+    let time_ref = mock_time.clone();
+    let clock = bencher_json::Clock::Custom(Arc::new(move || {
+        bencher_json::DateTime::try_from(time_ref.load(Ordering::Relaxed)).unwrap()
+    }));
+
+    let server = TestServer::new_with_clock(3600, 1024 * 1024, clock).await;
+    let admin = server.signup("Admin", "ws-hb-noto@example.com").await;
+    let org = server.create_org(&admin, "Ws hb noto").await;
+    let project = server
+        .create_project(&admin, &org, "Ws hb noto proj")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner hb noto").await;
+    let runner_token = runner.token.to_string();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+
+    // Job with 10 second timeout (grace period is 60s, so limit = 70s)
+    let job_uuid = insert_test_job_with_timeout(&server, report_id, spec_id, 10);
+
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+    let claimed = claim_job(&server, runner.uuid, &runner_token).await;
+    assert_eq!(claimed.uuid, job_uuid);
+
+    let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Advance to just under the limit (69s, limit is 70s)
+    mock_time.fetch_add(69, Ordering::Relaxed);
+
+    // Heartbeat should still return Ack (within timeout + grace)
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack when within timeout+grace, got: {resp:?}"
+    );
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// Heartbeat timeout check before job has started (no `started` timestamp).
+/// Jobs in Claimed state have no `started`, so the timeout check should be skipped.
+#[tokio::test]
+async fn channel_heartbeat_timeout_skipped_before_running() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicI64, Ordering},
+    };
+
+    let base_time = bencher_json::DateTime::now().timestamp();
+    let mock_time = Arc::new(AtomicI64::new(base_time));
+    let time_ref = mock_time.clone();
+    let clock = bencher_json::Clock::Custom(Arc::new(move || {
+        bencher_json::DateTime::try_from(time_ref.load(Ordering::Relaxed)).unwrap()
+    }));
+
+    let server = TestServer::new_with_clock(3600, 1024 * 1024, clock).await;
+    let admin = server
+        .signup("Admin", "ws-hb-nostart@example.com")
+        .await;
+    let org = server.create_org(&admin, "Ws hb nostart").await;
+    let project = server
+        .create_project(&admin, &org, "Ws hb nostart proj")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner hb nostart").await;
+    let runner_token = runner.token.to_string();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+
+    // Job with very short timeout (1 second)
+    let job_uuid = insert_test_job_with_timeout(&server, report_id, spec_id, 1);
+
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+    let claimed = claim_job(&server, runner.uuid, &runner_token).await;
+    assert_eq!(claimed.uuid, job_uuid);
+
+    let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
+
+    // Advance clock well past the timeout, but don't send Running (no `started` timestamp)
+    mock_time.fetch_add(500, Ordering::Relaxed);
+
+    // Heartbeat should still return Ack because job has no `started` timestamp
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack when job has no started timestamp, got: {resp:?}"
+    );
+
+    // Job should still be Claimed
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Claimed);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
