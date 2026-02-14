@@ -279,10 +279,10 @@ diesel::table! {
         name -> Text,
         slug -> Text,
         token_hash -> Text,
-        archived -> Nullable<BigInt>,
         last_heartbeat -> Nullable<BigInt>,
         created -> BigInt,
         modified -> BigInt,
+        archived -> Nullable<BigInt>,
     }
 }
 
@@ -313,9 +313,9 @@ diesel::table! {
         memory -> BigInt,
         disk -> BigInt,
         network -> Bool,
-        archived -> Nullable<BigInt>,
         created -> BigInt,
         modified -> BigInt,
+        archived -> Nullable<BigInt>,
     }
 }
 

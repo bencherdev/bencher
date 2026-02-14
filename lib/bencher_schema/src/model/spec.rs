@@ -31,9 +31,9 @@ pub struct QuerySpec {
     pub memory: Memory,
     pub disk: Disk,
     pub network: bool,
-    pub archived: Option<DateTime>,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl QuerySpec {
@@ -100,8 +100,8 @@ impl InsertSpec {
 pub struct UpdateSpec {
     pub name: Option<ResourceName>,
     pub slug: Option<SpecSlug>,
-    pub archived: Option<Option<DateTime>>,
     pub modified: Option<DateTime>,
+    pub archived: Option<Option<DateTime>>,
 }
 
 impl From<JsonUpdateSpec> for UpdateSpec {

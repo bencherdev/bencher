@@ -40,10 +40,10 @@ pub struct QueryRunner {
     pub name: ResourceName,
     pub slug: RunnerSlug,
     pub token_hash: TokenHash,
-    pub archived: Option<DateTime>,
     pub last_heartbeat: Option<DateTime>,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl QueryRunner {
@@ -108,9 +108,9 @@ pub struct UpdateRunner {
     pub name: Option<ResourceName>,
     pub slug: Option<RunnerSlug>,
     pub token_hash: Option<TokenHash>,
-    pub archived: Option<Option<DateTime>>,
     pub last_heartbeat: Option<Option<DateTime>>,
     pub modified: Option<DateTime>,
+    pub archived: Option<Option<DateTime>>,
 }
 
 impl From<JsonUpdateRunner> for UpdateRunner {

@@ -5,11 +5,10 @@ CREATE TABLE runner (
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     token_hash TEXT NOT NULL,
-
-    archived BIGINT,
     last_heartbeat BIGINT,
     created BIGINT NOT NULL,
-    modified BIGINT NOT NULL
+    modified BIGINT NOT NULL,
+    archived BIGINT
 );
 -- Spec: server-scoped resource requirements for jobs
 CREATE TABLE spec (
@@ -22,9 +21,9 @@ CREATE TABLE spec (
     memory BIGINT NOT NULL CHECK (memory > 0),
     disk BIGINT NOT NULL CHECK (disk > 0),
     network BOOLEAN NOT NULL DEFAULT 0,
-    archived BIGINT,
     created BIGINT NOT NULL,
-    modified BIGINT NOT NULL
+    modified BIGINT NOT NULL,
+    archived BIGINT
 );
 -- Runner-Spec: many-to-many association
 CREATE TABLE runner_spec (
