@@ -122,6 +122,10 @@ async fn claim_job_inner(
 /// - Unclaimed: 1 concurrent job per source IP
 ///
 /// Returns `Ok(Some(job))` if a job was claimed, `Ok(None)` if no eligible jobs available.
+#[expect(
+    clippy::too_many_lines,
+    reason = "Job claiming logic is self-contained"
+)]
 async fn try_claim_job(
     context: &ApiContext,
     runner_token: &RunnerToken,
@@ -250,6 +254,7 @@ async fn try_claim_job(
             exit_code: None,
             created: query_job.created,
             modified: now,
+            output: None,
         }))
     } else {
         // Defensive: the UPDATE matched 0 rows despite SELECT finding a pending job.

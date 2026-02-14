@@ -2,7 +2,7 @@
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk, TotalCount};
 use bencher_json::{
-    JobStatus, JobUuid, JsonDirection, JsonJob, JsonPagination, ProjectResourceId, runner::JsonJobs,
+    JobStatus, JobUuid, JsonDirection, JsonPagination, ProjectResourceId, runner::JsonJobs,
 };
 use bencher_schema::{
     context::ApiContext,
@@ -192,9 +192,15 @@ pub async fn proj_job_options(
 pub async fn proj_job_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjJobParams>,
-) -> Result<ResponseOk<JsonJob>, HttpError> {
+) -> Result<ResponseOk<bencher_json::runner::JsonJob>, HttpError> {
     let public_user = PublicUser::new(&rqctx).await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &public_user).await?;
+    let json = get_one_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        &public_user,
+        &rqctx.log,
+    )
+    .await?;
     Ok(Get::response_ok(json, public_user.is_auth()))
 }
 
@@ -202,7 +208,8 @@ async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjJobParams,
     public_user: &PublicUser,
-) -> Result<JsonJob, HttpError> {
+    log: &slog::Logger,
+) -> Result<bencher_json::runner::JsonJob, HttpError> {
     let query_project = QueryProject::is_allowed_public(
         public_conn!(context, public_user),
         &context.rbac,
@@ -210,16 +217,34 @@ async fn get_one_inner(
         public_user,
     )?;
 
-    let job: QueryJob = schema::job::table
+    let job_uuid = path_params.job;
+
+    let query_job: QueryJob = schema::job::table
         .inner_join(schema::report::table)
         .filter(schema::report::project_id.eq(query_project.id))
-        .filter(schema::job::uuid.eq(path_params.job))
+        .filter(schema::job::uuid.eq(job_uuid))
         .select(QueryJob::as_select())
         .first(public_conn!(context, public_user))
-        .map_err(resource_not_found_err!(
-            Job,
-            (&query_project, path_params.job)
-        ))?;
+        .map_err(resource_not_found_err!(Job, (&query_project, job_uuid)))?;
 
-    job.into_json(public_conn!(context, public_user))
+    let is_terminal = query_job.status.is_terminal();
+    let mut job = query_job.into_json(public_conn!(context, public_user))?;
+
+    // Fetch output from blob storage for terminal jobs
+    if is_terminal {
+        job.output = match context
+            .oci_storage()
+            .job_output()
+            .get(query_project.uuid, job_uuid)
+            .await
+        {
+            Ok(output) => output,
+            Err(e) => {
+                slog::warn!(log, "Failed to retrieve job output"; "job_uuid" => %job_uuid, "error" => %e);
+                None
+            },
+        };
+    }
+
+    Ok(job)
 }

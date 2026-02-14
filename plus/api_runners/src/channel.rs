@@ -13,7 +13,10 @@ use bencher_schema::{
     schema, write_conn,
 };
 use camino::Utf8PathBuf;
-use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _,
+    RunQueryDsl as _,
+};
 use dropshot::WebsocketConnectionRaw;
 use dropshot::{Path, RequestContext, WebsocketChannelResult, WebsocketConnection, channel};
 use futures::{SinkExt as _, StreamExt as _};
@@ -122,8 +125,6 @@ pub async fn runner_job_channel(
         .into());
     }
 
-    let job_id = job.id;
-
     // Upgrade to WebSocket and handle messages
     let mut ws_config = WebSocketConfig::default();
     ws_config.max_message_size = Some(context.request_body_max_bytes);
@@ -137,17 +138,17 @@ pub async fn runner_job_channel(
 
     let heartbeat_timeout = context.heartbeat_timeout;
 
-    handle_websocket(&log, context, job_id, ws_stream, heartbeat_timeout).await?;
+    handle_websocket(&log, context, &job, ws_stream, heartbeat_timeout).await?;
 
     // After WS disconnect, check if job is still in-flight and spawn a timeout task
-    let job = QueryJob::get(auth_conn!(context), job_id)?;
+    let job = QueryJob::get(auth_conn!(context), job.id)?;
     if !job.status.is_terminal() {
-        slog::info!(log, "WS disconnected for in-flight job, spawning heartbeat timeout"; "job_id" => ?job_id);
+        slog::info!(log, "WS disconnected for in-flight job, spawning heartbeat timeout"; "job_id" => ?job.id);
         spawn_heartbeat_timeout(
             log,
             heartbeat_timeout,
             context.database.connection.clone(),
-            job_id,
+            job.id,
             &context.heartbeat_tasks,
             context.job_timeout_grace_period,
             context.clock.clone(),
@@ -165,7 +166,7 @@ pub async fn runner_job_channel(
 async fn handle_websocket(
     log: &slog::Logger,
     context: &ApiContext,
-    job_id: JobId,
+    job: &QueryJob,
     ws_stream: tokio_tungstenite::WebSocketStream<WebsocketConnectionRaw>,
     heartbeat_timeout: Duration,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -184,7 +185,7 @@ async fn handle_websocket(
                 break;
             },
             Err(_elapsed) => {
-                let reason = handle_timeout(log, context, job_id).await?;
+                let reason = handle_timeout(log, context, job.id).await?;
                 if let Err(e) = tx
                     .send(Message::Close(Some(CloseFrame {
                         code: CloseCode::Policy,
@@ -217,7 +218,7 @@ async fn handle_websocket(
                     },
                 };
 
-                let response = handle_runner_message(log, context, job_id, &runner_msg).await?;
+                let response = handle_runner_message(log, context, job, &runner_msg).await?;
 
                 // Reset heartbeat only on valid protocol messages
                 last_heartbeat = tokio::time::Instant::now();
@@ -344,19 +345,19 @@ fn terminal_close_reason(
 async fn handle_runner_message(
     log: &slog::Logger,
     context: &ApiContext,
-    job_id: JobId,
+    job: &QueryJob,
     msg: &RunnerMessage,
 ) -> Result<ServerMessage, Box<dyn std::error::Error + Send + Sync>> {
     match msg {
         RunnerMessage::Running => {
-            slog::info!(log, "Job running"; "job_id" => ?job_id);
-            if let Some(cancel) = handle_running(log, context, job_id).await? {
+            slog::info!(log, "Job running"; "job_id" => ?job.id);
+            if let Some(cancel) = handle_running(log, context, job.id).await? {
                 return Ok(cancel);
             }
         },
         RunnerMessage::Heartbeat => {
-            slog::debug!(log, "Job heartbeat"; "job_id" => ?job_id);
-            if let Some(cancel) = handle_heartbeat(log, context, job_id).await? {
+            slog::debug!(log, "Job heartbeat"; "job_id" => ?job.id);
+            if let Some(cancel) = handle_heartbeat(log, context, job.id).await? {
                 return Ok(cancel);
             }
         },
@@ -366,11 +367,11 @@ async fn handle_runner_message(
             stderr,
             output,
         } => {
-            slog::info!(log, "Job completed"; "job_id" => ?job_id, "exit_code" => exit_code);
+            slog::info!(log, "Job completed"; "job_id" => ?job.id, "exit_code" => exit_code);
             handle_completed(
                 log,
                 context,
-                job_id,
+                job,
                 *exit_code,
                 stdout.clone(),
                 stderr.clone(),
@@ -384,20 +385,21 @@ async fn handle_runner_message(
             stdout,
             stderr,
         } => {
-            slog::warn!(log, "Job failed"; "job_id" => ?job_id, "exit_code" => ?exit_code, "error" => &error);
+            slog::warn!(log, "Job failed"; "job_id" => ?job.id, "exit_code" => ?exit_code, "error" => &error);
             handle_failed(
                 log,
                 context,
-                job_id,
+                job,
                 *exit_code,
+                error.clone(),
                 stdout.clone(),
                 stderr.clone(),
             )
             .await?;
         },
         RunnerMessage::Canceled => {
-            slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job_id);
-            handle_canceled(log, context, job_id).await?;
+            slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job.id);
+            handle_canceled(log, context, job.id).await?;
         },
     }
 
@@ -558,7 +560,7 @@ async fn handle_heartbeat(
 async fn handle_completed(
     log: &slog::Logger,
     context: &ApiContext,
-    job_id: JobId,
+    job: &QueryJob,
     exit_code: i32,
     stdout: Option<String>,
     stderr: Option<String>,
@@ -576,7 +578,7 @@ async fn handle_completed(
 
     let updated = diesel::update(
         schema::job::table
-            .filter(schema::job::id.eq(job_id))
+            .filter(schema::job::id.eq(job.id))
             .filter(schema::job::status.eq(JobStatus::Running)),
     )
     .set(&update)
@@ -584,22 +586,22 @@ async fn handle_completed(
 
     if updated == 0 {
         // Re-read the job to determine what happened
-        let job: QueryJob = schema::job::table
-            .filter(schema::job::id.eq(job_id))
+        let current_job: QueryJob = schema::job::table
+            .filter(schema::job::id.eq(job.id))
             .first(auth_conn!(context))
-            .map_err(resource_not_found_err!(Job, job_id))?;
+            .map_err(resource_not_found_err!(Job, job.id))?;
 
-        if job.status == JobStatus::Completed {
-            slog::debug!(log, "Job already completed (idempotent duplicate)"; "job_id" => ?job_id);
+        if current_job.status == JobStatus::Completed {
+            slog::debug!(log, "Job already completed (idempotent duplicate)"; "job_id" => ?job.id);
             return Ok(());
         }
-        if job.status.is_terminal() {
-            slog::warn!(log, "Job already in terminal state, completion report lost"; "job_id" => ?job_id, "current_status" => ?job.status);
+        if current_job.status.is_terminal() {
+            slog::warn!(log, "Job already in terminal state, completion report lost"; "job_id" => ?job.id, "current_status" => ?current_job.status);
             return Ok(());
         }
         return Err(format!(
-            "Invalid state transition to Completed for job {job_id:?}, expected Running but found {:?}",
-            job.status
+            "Invalid state transition to Completed for job {:?}, expected Running but found {:?}",
+            job.id, current_job.status
         )
         .into());
     }
@@ -609,10 +611,17 @@ async fn handle_completed(
         bencher_otel::JobStatusKind::Completed,
     ));
 
-    // TODO: Store output somewhere (job table or separate results table)
-    drop(stdout);
-    drop(stderr);
-    drop(output);
+    // Store output in blob storage (best-effort)
+    let job_output = bencher_json::runner::JsonJobOutput {
+        exit_code: Some(exit_code),
+        stdout,
+        stderr,
+        output,
+        error: None,
+    };
+    if let Err(e) = store_job_output(context, job, &job_output).await {
+        slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
+    }
 
     Ok(())
 }
@@ -623,8 +632,9 @@ async fn handle_completed(
 async fn handle_failed(
     log: &slog::Logger,
     context: &ApiContext,
-    job_id: JobId,
+    job: &QueryJob,
     exit_code: Option<i32>,
+    error: String,
     stdout: Option<String>,
     stderr: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -640,7 +650,7 @@ async fn handle_failed(
 
     let updated = diesel::update(
         schema::job::table
-            .filter(schema::job::id.eq(job_id))
+            .filter(schema::job::id.eq(job.id))
             .filter(
                 schema::job::status
                     .eq(JobStatus::Claimed)
@@ -652,22 +662,22 @@ async fn handle_failed(
 
     if updated == 0 {
         // Re-read the job to determine what happened
-        let job: QueryJob = schema::job::table
-            .filter(schema::job::id.eq(job_id))
+        let current_job: QueryJob = schema::job::table
+            .filter(schema::job::id.eq(job.id))
             .first(auth_conn!(context))
-            .map_err(resource_not_found_err!(Job, job_id))?;
+            .map_err(resource_not_found_err!(Job, job.id))?;
 
-        if job.status == JobStatus::Failed {
-            slog::debug!(log, "Job already failed (idempotent duplicate)"; "job_id" => ?job_id);
+        if current_job.status == JobStatus::Failed {
+            slog::debug!(log, "Job already failed (idempotent duplicate)"; "job_id" => ?job.id);
             return Ok(());
         }
-        if job.status.is_terminal() {
-            slog::warn!(log, "Job already in terminal state, failure report lost"; "job_id" => ?job_id, "current_status" => ?job.status);
+        if current_job.status.is_terminal() {
+            slog::warn!(log, "Job already in terminal state, failure report lost"; "job_id" => ?job.id, "current_status" => ?current_job.status);
             return Ok(());
         }
         return Err(format!(
-            "Invalid state transition to Failed for job {job_id:?}, expected Claimed or Running but found {:?}",
-            job.status
+            "Invalid state transition to Failed for job {:?}, expected Claimed or Running but found {:?}",
+            job.id, current_job.status
         )
         .into());
     }
@@ -677,9 +687,45 @@ async fn handle_failed(
         bencher_otel::JobStatusKind::Failed,
     ));
 
-    // TODO: Store output somewhere (job table or separate results table)
-    drop(stdout);
-    drop(stderr);
+    // Store output in blob storage (best-effort)
+    let job_output = bencher_json::runner::JsonJobOutput {
+        exit_code,
+        stdout,
+        stderr,
+        output: None,
+        error: Some(error),
+    };
+    if let Err(e) = store_job_output(context, job, &job_output).await {
+        slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
+    }
+
+    Ok(())
+}
+
+/// Store job output in blob storage.
+///
+/// Looks up the project UUID from job → report → project, then stores
+/// the output JSON blob.
+async fn store_job_output(
+    context: &ApiContext,
+    job: &QueryJob,
+    job_output: &bencher_json::runner::JsonJobOutput,
+) -> Result<(), dropshot::HttpError> {
+    // Look up project UUID: job → report → project
+    let project_uuid = schema::job::table
+        .inner_join(schema::report::table)
+        .inner_join(schema::project::table.on(schema::report::project_id.eq(schema::project::id)))
+        .filter(schema::job::id.eq(job.id))
+        .select(schema::project::uuid)
+        .first::<bencher_json::ProjectUuid>(auth_conn!(context))
+        .map_err(resource_not_found_err!(Job, job.id))?;
+
+    context
+        .oci_storage()
+        .job_output()
+        .put(project_uuid, job.uuid, job_output)
+        .await
+        .map_err(|e| dropshot::HttpError::for_internal_error(e.to_string()))?;
 
     Ok(())
 }

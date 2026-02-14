@@ -40,6 +40,9 @@ pub struct JsonJob {
     pub exit_code: Option<i32>,
     pub created: DateTime,
     pub modified: DateTime,
+    /// Job output (stdout, stderr, files) from blob storage, included for terminal jobs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output: Option<JsonJobOutput>,
 }
 
 /// Update job status (runner agent endpoint)
@@ -59,6 +62,26 @@ pub struct JsonUpdateJob {
     #[typeshare(typescript(type = "Record<string, string> | undefined"))]
     #[cfg_attr(feature = "schema", schemars(with = "Option<HashMap<String, String>>"))]
     pub output: Option<HashMap<Utf8PathBuf, String>>,
+}
+
+/// Job output stored in blob storage after job completion or failure.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonJobOutput {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<String>,
+    /// File path to contents map
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[typeshare(typescript(type = "Record<string, string> | undefined"))]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<HashMap<String, String>>"))]
+    pub output: Option<HashMap<Utf8PathBuf, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// Response to job update

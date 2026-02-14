@@ -74,6 +74,7 @@ impl QueryJob {
             exit_code: self.exit_code,
             created: self.created,
             modified: self.modified,
+            output: None,
         })
     }
 }

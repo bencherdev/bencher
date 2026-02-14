@@ -318,6 +318,11 @@ impl OciStorage {
         }
     }
 
+    /// Returns a view type for job output storage operations.
+    pub fn job_output(&self) -> crate::job_output::JobOutput<'_> {
+        crate::job_output::JobOutput::new(self)
+    }
+
     /// Returns the configured maximum body size in bytes
     pub fn max_body_size(&self) -> u64 {
         match self {
@@ -1912,6 +1917,71 @@ impl OciS3Storage {
             .await;
 
         Ok(referrers)
+    }
+
+    // ==================== Job Output ====================
+
+    /// S3 key for a job output blob.
+    fn job_output_key(&self, project: ProjectUuid, job: bencher_json::JobUuid) -> String {
+        format!("{}/output/v0/jobs/{job}", self.key_prefix(&project))
+    }
+
+    pub(crate) async fn put_job_output(
+        &self,
+        project: ProjectUuid,
+        job: bencher_json::JobUuid,
+        output: &bencher_json::runner::JsonJobOutput,
+    ) -> Result<(), OciStorageError> {
+        let key = self.job_output_key(project, job);
+        let data = serde_json::to_vec(output).map_err(|e| OciStorageError::Json(e.to_string()))?;
+
+        self.client
+            .put_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&key)
+            .body(data.into())
+            .content_type("application/json")
+            .send()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn get_job_output(
+        &self,
+        project: ProjectUuid,
+        job: bencher_json::JobUuid,
+    ) -> Result<Option<bencher_json::runner::JsonJobOutput>, OciStorageError> {
+        let key = self.job_output_key(project, job);
+
+        match self
+            .client
+            .get_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&key)
+            .send()
+            .await
+        {
+            Ok(response) => {
+                let data = response
+                    .body
+                    .collect()
+                    .await
+                    .map_err(|e| OciStorageError::S3(e.to_string()))?
+                    .into_bytes();
+                let output = serde_json::from_slice(&data)
+                    .map_err(|e| OciStorageError::Json(e.to_string()))?;
+                Ok(Some(output))
+            },
+            Err(e) => {
+                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
+                    Ok(None)
+                } else {
+                    Err(OciStorageError::S3(e.to_string()))
+                }
+            },
+        }
     }
 }
 
