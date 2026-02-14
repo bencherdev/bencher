@@ -11,7 +11,7 @@ use serde::{
 use crate::ValidError;
 
 const MIN_CPU: u32 = 1;
-const MAX_CPU: u32 = 256;
+const MAX_CPU: u32 = i32::MAX as u32;
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
@@ -56,7 +56,7 @@ impl Visitor<'_> for CpuVisitor {
     type Value = Cpu;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a CPU count between 1 and 256")
+        formatter.write_str("a CPU count between 1 and 2147483647")
     }
 
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
@@ -90,7 +90,7 @@ mod db {
         ) -> diesel::serialize::Result {
             #[expect(
                 clippy::cast_possible_wrap,
-                reason = "CPU count max 256, always fits in i32"
+                reason = "CPU count max i32::MAX, always fits in i32"
             )]
             let val = self.0 as i32;
             out.set_value(val);
@@ -133,6 +133,6 @@ mod tests {
         assert_eq!(true, is_valid_cpu(Cpu::MAX.into()));
 
         assert_eq!(false, is_valid_cpu(0));
-        assert_eq!(false, is_valid_cpu(257));
+        assert_eq!(false, is_valid_cpu(i32::MAX as u32 + 1));
     }
 }

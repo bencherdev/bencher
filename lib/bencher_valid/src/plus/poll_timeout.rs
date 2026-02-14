@@ -11,7 +11,7 @@ use serde::{
 use crate::ValidError;
 
 const MIN_POLL_TIMEOUT: u32 = 1;
-const MAX_POLL_TIMEOUT: u32 = 600;
+const MAX_POLL_TIMEOUT: u32 = 900;
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
@@ -54,7 +54,7 @@ impl Visitor<'_> for PollTimeoutVisitor {
     type Value = PollTimeout;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a poll timeout in seconds between 1 and 600")
+        formatter.write_str("a poll timeout in seconds between 1 and 900")
     }
 
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
@@ -90,6 +90,6 @@ mod tests {
         assert_eq!(true, is_valid_poll_timeout(PollTimeout::MAX.into()));
 
         assert_eq!(false, is_valid_poll_timeout(0));
-        assert_eq!(false, is_valid_poll_timeout(601));
+        assert_eq!(false, is_valid_poll_timeout(901));
     }
 }

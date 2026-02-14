@@ -1286,8 +1286,7 @@ async fn channel_running_cancel_on_reconnect_to_canceled_job() {
 #[tokio::test]
 async fn channel_completed_after_concurrent_cancel() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) =
-        setup_claimed_job(&server, "done-vs-cancel").await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "done-vs-cancel").await;
 
     let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
 
@@ -1329,8 +1328,7 @@ async fn channel_completed_after_concurrent_cancel() {
 #[tokio::test]
 async fn channel_completed_after_concurrent_failure() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) =
-        setup_claimed_job(&server, "done-vs-fail").await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "done-vs-fail").await;
 
     let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
 
@@ -1370,8 +1368,7 @@ async fn channel_completed_after_concurrent_failure() {
 #[tokio::test]
 async fn channel_completed_idempotent_duplicate() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) =
-        setup_claimed_job(&server, "done-idem").await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "done-idem").await;
 
     let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
 
@@ -1408,8 +1405,7 @@ async fn channel_completed_idempotent_duplicate() {
 #[tokio::test]
 async fn channel_failed_after_concurrent_cancel() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) =
-        setup_claimed_job(&server, "fail-vs-cancel").await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "fail-vs-cancel").await;
 
     let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
 
@@ -1449,8 +1445,7 @@ async fn channel_failed_after_concurrent_cancel() {
 #[tokio::test]
 async fn channel_failed_after_concurrent_completion() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) =
-        setup_claimed_job(&server, "fail-vs-done").await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "fail-vs-done").await;
 
     let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
 
@@ -1490,8 +1485,7 @@ async fn channel_failed_after_concurrent_completion() {
 #[tokio::test]
 async fn channel_failed_idempotent_duplicate() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) =
-        setup_claimed_job(&server, "fail-idem").await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "fail-idem").await;
 
     let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
 
@@ -1529,8 +1523,7 @@ async fn channel_failed_idempotent_duplicate() {
 #[tokio::test]
 async fn channel_completed_rejects_non_terminal_unexpected_state() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) =
-        setup_claimed_job(&server, "done-bad-state").await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "done-bad-state").await;
 
     let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
 
@@ -1653,9 +1646,7 @@ async fn channel_heartbeat_no_false_timeout() {
     let server = TestServer::new_with_clock(3600, 1024 * 1024, clock).await;
     let admin = server.signup("Admin", "ws-hb-noto@example.com").await;
     let org = server.create_org(&admin, "Ws hb noto").await;
-    let project = server
-        .create_project(&admin, &org, "Ws hb noto proj")
-        .await;
+    let project = server.create_project(&admin, &org, "Ws hb noto proj").await;
 
     let runner = create_runner(&server, &admin.token, "Runner hb noto").await;
     let runner_token = runner.token.to_string();
@@ -1711,9 +1702,7 @@ async fn channel_heartbeat_timeout_skipped_before_running() {
     }));
 
     let server = TestServer::new_with_clock(3600, 1024 * 1024, clock).await;
-    let admin = server
-        .signup("Admin", "ws-hb-nostart@example.com")
-        .await;
+    let admin = server.signup("Admin", "ws-hb-nostart@example.com").await;
     let org = server.create_org(&admin, "Ws hb nostart").await;
     let project = server
         .create_project(&admin, &org, "Ws hb nostart proj")

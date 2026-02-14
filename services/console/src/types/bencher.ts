@@ -64,8 +64,9 @@ export enum JobStatus {
 export type ResourceName = string;
 
 export enum Architecture {
-	X86_64 = "X86_64",
-	Aarch64 = "Aarch64",
+	X86_64 = "x86_64",
+	Aarch64 = "aarch64",
+	Riscv64 = "riscv64",
 }
 
 /** A hardware spec */

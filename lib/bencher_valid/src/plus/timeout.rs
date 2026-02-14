@@ -11,7 +11,7 @@ use serde::{
 use crate::ValidError;
 
 const MIN_TIMEOUT: u32 = 1;
-const MAX_TIMEOUT: u32 = 86_400;
+const MAX_TIMEOUT: u32 = i32::MAX as u32;
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
@@ -56,7 +56,7 @@ impl Visitor<'_> for TimeoutVisitor {
     type Value = Timeout;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a timeout in seconds between 1 and 86400")
+        formatter.write_str("a timeout in seconds between 1 and 2147483647")
     }
 
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
@@ -90,7 +90,7 @@ mod db {
         ) -> diesel::serialize::Result {
             #[expect(
                 clippy::cast_possible_wrap,
-                reason = "Timeout max 86400, always fits in i32"
+                reason = "Timeout max i32::MAX, always fits in i32"
             )]
             let val = self.0 as i32;
             out.set_value(val);
@@ -132,6 +132,6 @@ mod tests {
         assert_eq!(true, is_valid_timeout(Timeout::MAX.into()));
 
         assert_eq!(false, is_valid_timeout(0));
-        assert_eq!(false, is_valid_timeout(86_401));
+        assert_eq!(false, is_valid_timeout(i32::MAX as u32 + 1));
     }
 }

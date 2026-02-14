@@ -10,16 +10,18 @@ use crate::ValidError;
 
 const X86_64: &str = "x86_64";
 const AARCH64: &str = "aarch64";
+const RISCV64: &str = "riscv64";
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(try_from = "String", into = "String")]
+#[serde(try_from = "String", into = "String", rename_all = "snake_case")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub enum Architecture {
     X86_64,
     Aarch64,
+    Riscv64,
 }
 
 #[cfg(feature = "db")]
@@ -38,6 +40,7 @@ impl TryFrom<String> for Architecture {
         match architecture.as_str() {
             X86_64 => Ok(Self::X86_64),
             AARCH64 => Ok(Self::Aarch64),
+            RISCV64 => Ok(Self::Riscv64),
             _ => Err(ValidError::Architecture(architecture)),
         }
     }
@@ -56,6 +59,7 @@ impl AsRef<str> for Architecture {
         match self {
             Self::X86_64 => X86_64,
             Self::Aarch64 => AARCH64,
+            Self::Riscv64 => RISCV64,
         }
     }
 }
@@ -69,7 +73,7 @@ impl From<Architecture> for String {
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[cfg_attr(not(any(feature = "wasm", test)), expect(dead_code))]
 pub fn is_valid_architecture(architecture: &str) -> bool {
-    matches!(architecture, X86_64 | AARCH64)
+    matches!(architecture, X86_64 | AARCH64 | RISCV64)
 }
 
 #[cfg(test)]
@@ -81,6 +85,7 @@ mod tests {
     fn architecture_valid() {
         assert_eq!(true, is_valid_architecture("x86_64"));
         assert_eq!(true, is_valid_architecture("aarch64"));
+        assert_eq!(true, is_valid_architecture("riscv64"));
     }
 
     #[test]
@@ -106,6 +111,11 @@ mod tests {
         assert_eq!(arch, Architecture::Aarch64);
         let json = serde_json::to_string(&arch).unwrap();
         assert_eq!(json, "\"aarch64\"");
+
+        let arch: Architecture = serde_json::from_str("\"riscv64\"").unwrap();
+        assert_eq!(arch, Architecture::Riscv64);
+        let json = serde_json::to_string(&arch).unwrap();
+        assert_eq!(json, "\"riscv64\"");
 
         let err = serde_json::from_str::<Architecture>("\"invalid\"");
         assert!(err.is_err());

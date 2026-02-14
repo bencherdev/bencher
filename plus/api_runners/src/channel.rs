@@ -283,7 +283,7 @@ async fn handle_timeout(
         let elapsed = (now.timestamp() - started.timestamp()).max(0);
         #[expect(
             clippy::cast_possible_wrap,
-            reason = "timeout max 86400 + grace period fits in i64"
+            reason = "timeout max i32::MAX + grace period fits in i64"
         )]
         let limit = u64::from(u32::from(job.timeout)) as i64
             + context.job_timeout_grace_period.as_secs() as i64;
@@ -493,7 +493,7 @@ async fn handle_heartbeat(
         let elapsed = (now.timestamp() - started.timestamp()).max(0);
         #[expect(
             clippy::cast_possible_wrap,
-            reason = "timeout max 86400 + grace period fits in i64"
+            reason = "timeout max i32::MAX + grace period fits in i64"
         )]
         let limit = u64::from(u32::from(job.timeout)) as i64
             + context.job_timeout_grace_period.as_secs() as i64;

@@ -10,8 +10,8 @@ use serde::{
 
 use crate::ValidError;
 
-const MIN_HEARTBEAT_TIMEOUT: u32 = 10;
-const MAX_HEARTBEAT_TIMEOUT: u32 = 300;
+const MIN_HEARTBEAT_TIMEOUT: u32 = 1;
+const MAX_HEARTBEAT_TIMEOUT: u32 = 900;
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
@@ -54,7 +54,7 @@ impl Visitor<'_> for HeartbeatTimeoutVisitor {
     type Value = HeartbeatTimeout;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a heartbeat timeout in seconds between 10 and 300")
+        formatter.write_str("a heartbeat timeout in seconds between 1 and 900")
     }
 
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
@@ -88,7 +88,7 @@ mod tests {
             true,
             is_valid_heartbeat_timeout(HeartbeatTimeout::MIN.into())
         );
-        assert_eq!(true, is_valid_heartbeat_timeout(10));
+        assert_eq!(true, is_valid_heartbeat_timeout(1));
         assert_eq!(true, is_valid_heartbeat_timeout(90));
         assert_eq!(
             true,
@@ -96,7 +96,6 @@ mod tests {
         );
 
         assert_eq!(false, is_valid_heartbeat_timeout(0));
-        assert_eq!(false, is_valid_heartbeat_timeout(9));
-        assert_eq!(false, is_valid_heartbeat_timeout(301));
+        assert_eq!(false, is_valid_heartbeat_timeout(901));
     }
 }

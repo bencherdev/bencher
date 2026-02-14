@@ -10,8 +10,8 @@ use serde::{
 
 use crate::ValidError;
 
-const MIN_GRACE_PERIOD: u32 = 10;
-const MAX_GRACE_PERIOD: u32 = 600;
+const MIN_GRACE_PERIOD: u32 = 1;
+const MAX_GRACE_PERIOD: u32 = 900;
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
@@ -54,7 +54,7 @@ impl Visitor<'_> for GracePeriodVisitor {
     type Value = GracePeriod;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a grace period in seconds between 10 and 600")
+        formatter.write_str("a grace period in seconds between 1 and 900")
     }
 
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
@@ -85,12 +85,11 @@ mod tests {
     #[test]
     fn boundary() {
         assert_eq!(true, is_valid_grace_period(GracePeriod::MIN.into()));
-        assert_eq!(true, is_valid_grace_period(10));
+        assert_eq!(true, is_valid_grace_period(1));
         assert_eq!(true, is_valid_grace_period(60));
         assert_eq!(true, is_valid_grace_period(GracePeriod::MAX.into()));
 
         assert_eq!(false, is_valid_grace_period(0));
-        assert_eq!(false, is_valid_grace_period(9));
-        assert_eq!(false, is_valid_grace_period(601));
+        assert_eq!(false, is_valid_grace_period(901));
     }
 }
