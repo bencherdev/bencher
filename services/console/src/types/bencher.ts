@@ -44,7 +44,13 @@ export type GracePeriod = number;
 
 export type HeartbeatTimeout = number;
 
-/** An OCI image digest (e.g., "sha256:abc123...") */
+/**
+ * An OCI image digest in the format `algorithm:hex`.
+ * 
+ * Supports:
+ * - `sha256:` followed by 64 hex characters
+ * - `sha512:` followed by 128 hex characters
+ */
 export type ImageDigest = string;
 
 export type Index = number;
