@@ -293,6 +293,7 @@ dependencies = [
  "serde",
  "serde_json",
  "slog",
+ "thiserror 2.0.17",
  "tokio",
  "tokio-tungstenite",
  "uuid 1.19.0",

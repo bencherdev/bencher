@@ -36,7 +36,7 @@ A pull-based runner agent architecture where runners claim jobs from the API, ex
 1. CLI pushes benchmark OCI image to `registry.bencher.dev/{project}:{tag}`
 2. CLI submits run to API via `POST /v0/run` with `image` digest and `spec`
 3. API creates Report (pending results) and Job linked to that Report
-4. Runner claims job from API, receives `JsonJobConfig` with short-lived OCI token and spec details
+4. Runner claims job from API, receives `JsonClaimedJob` with config, short-lived OCI token, and full spec
 5. Runner pulls image from registry using project-scoped OCI token
 6. Runner executes image in Firecracker microVM, reports results via WebSocket
 7. Server runs adapter on job output to parse results into the Report
@@ -173,17 +173,55 @@ The job config is designed to minimize data sent to runners, reducing leakage ri
 - **Isolated execution**: VM resources (cpu, memory, disk) and network access are defined in the spec table
 - **OCI-based**: All benchmark code is packaged in an OCI image, pulled from the Bencher registry
 
+**Timeout denormalization:** The `timeout` field exists in both `JsonJobConfig` (stored in the `job.config` TEXT column) and as a separate `job.timeout` column. This is intentional:
+- `config.timeout`: Sent to the runner so it can enforce a **local** timeout on the VM
+- `job.timeout`: Same base value, denormalized into a separate DB column so the server can check it without parsing the JSON config on every heartbeat
+- The server enforces `job.timeout + job_timeout_grace_period` (grace period is a server-level `Duration` on `ApiContext`), making the server-side hard timeout slightly longer than the runner's local timeout. This gives the runner time to transmit results after its local timeout fires before the server forcibly cancels.
+
+## Claimed Job Response
+
+The claim endpoint returns a dedicated `JsonClaimedJob` type (not `JsonJob`) containing everything a runner needs to execute a job. This is a standalone type — not a wrapper around `JsonJob` — because the fields required for execution differ from the fields exposed in project-scoped job queries.
+
+| Field       | Type              | Description                                          |
+| ----------- | ----------------- | ---------------------------------------------------- |
+| uuid        | `JobUuid`         | Job's unique identifier                              |
+| spec        | `JsonSpec`        | Full spec details (architecture, cpu, memory, etc.)  |
+| config      | `JsonJobConfig`   | Execution config — **required** (always present for claimed jobs) |
+| oci_token   | `Jwt`             | Short-lived, project-scoped OCI pull token — **required** |
+| timeout     | `Timeout`         | Maximum execution time in seconds                    |
+| created     | `DateTime`        | Job creation timestamp                               |
+
+**Key differences from `JsonJob`:**
+- `config` is **required** (not `Option`) — a claimed job always has config
+- `oci_token` is a separate field, not part of `JsonJobConfig`, because config is stored in the DB at job creation time but the token is generated fresh at claim time
+- `spec` is the full `JsonSpec` object (not just a `SpecId`), so the runner has hardware constraints without an additional API call
+- Omits fields irrelevant to runners: `report_id`, `organization_id`, `source_ip`, `priority`, `status`, `runner_id`, timestamps for claim/start/complete/heartbeat, billing fields
+
 ## Job Submission via `/v0/run`
 
 The existing `POST /v0/run` endpoint is extended with optional fields for runner-based execution:
 
-| Field       | Type                           | Required | Description                                    |
-| ----------- | ------------------------------ | -------- | ---------------------------------------------- |
-| `image`     | `ImageDigest`                  | No       | OCI image digest for runner execution          |
-| `spec`      | `SpecResourceId`               | No       | Target hardware spec (UUID or slug)            |
-| `results`   | `Vec<String>`                  | No*      | BMF results (existing field, now optional)      |
+| Field        | Type                           | Required | Description                                    |
+| ------------ | ------------------------------ | -------- | ---------------------------------------------- |
+| `image`      | `ImageDigest`                  | No       | OCI image digest for runner execution          |
+| `spec`       | `SpecResourceId`               | No       | Target hardware spec (UUID or slug)            |
+| `results`    | `Vec<String>`                  | No*      | BMF results (existing field, now optional)      |
+| `start_time` | `DateTime`                     | No**     | Benchmark start time                           |
+| `end_time`   | `DateTime`                     | No**     | Benchmark end time                             |
 
 \* `results` is required for direct submission (no runner). When `image` and `spec` are provided, `results` is omitted and the runner produces output that the server parses.
+
+\*\* `start_time` and `end_time` are optional when `image` is provided. For runner jobs the benchmark hasn't executed yet at submission time, so the server fills both with `now()` as placeholders. When the job completes and the adapter runs, both are updated on the Report: `start_time` = `job.started` (when the runner began execution) and `end_time` = `job.completed` (when the job reached terminal state). The Report DB columns remain `NOT NULL` — no schema migration is needed. In-progress reports will have `start_time == end_time == report creation time`, so they won't appear in perf queries with time filters (acceptable since they have no results yet).
+
+### Validation Rules
+
+| `image` | `spec` | `results` | Mode   | Behavior                                           |
+| ------- | ------ | --------- | ------ | -------------------------------------------------- |
+| set     | set    | empty     | Runner | Create Report + Job, runner executes               |
+| unset   | unset  | non-empty | Direct | Process results immediately (existing behavior)    |
+| set     | unset  | —         | Error  | Spec required for runner execution                 |
+| unset   | set    | —         | Error  | Image required for runner execution                |
+| set     | set    | non-empty | Error  | Cannot provide both results and image              |
 
 **Submission flow:**
 
@@ -191,17 +229,21 @@ The existing `POST /v0/run` endpoint is extended with optional fields for runner
 CLI calls POST /v0/run with { image, spec, branch, testbed, ... }
                 │
                 ▼
-1. API creates Report (project, branch, testbed, adapter)
-   - Report has no results yet (pending runner output)
+1. API validates submission mode (see Validation Rules above)
                 │
                 ▼
-2. API creates Job linked to Report
+2. API creates Report (project, branch, testbed, adapter)
+   - Report has no results yet (pending runner output)
+   - start_time and end_time set to now() as placeholders
+                │
+                ▼
+3. API creates Job linked to Report
    - Builds JsonJobConfig from image digest + registry URL
    - Sets priority based on org's plan tier
    - Status = Pending
                 │
                 ▼
-3. Job waits in queue for a runner with matching spec
+4. Job waits in queue for a runner with matching spec
 ```
 
 **Result processing (server-side):**
@@ -211,6 +253,7 @@ When a runner completes a job, the server runs the configured adapter on the job
 - Adapter parsing happens on the API server, not the runner
 - The runner is a dumb executor — it doesn't know about adapters, metrics, or thresholds
 - If output parsing fails, the Report records the error but the job itself is still `Completed`
+- The Report's `start_time` is updated to `job.started` and `end_time` to `job.completed`, replacing the placeholders set at report creation
 
 ## API Endpoints
 
@@ -263,7 +306,7 @@ Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
 
 | Method    | Endpoint                                  | Description                                            |
 | --------- | ----------------------------------------- | ------------------------------------------------------ |
-| POST      | `/v0/runners/{runner}/jobs`               | Long-poll to claim a job (from any accessible project) |
+| POST      | `/v0/runners/{runner}/jobs`               | Long-poll to claim a job; returns `Option<JsonClaimedJob>` |
 | PATCH     | `/v0/runners/{runner}/jobs/{job}`         | Update job status (running, completed, failed)         |
 | WebSocket | `/v0/runners/{runner}/jobs/{job}/channel` | Heartbeat and status updates during job execution      |
 
@@ -276,19 +319,25 @@ Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
    - Update job status to `Claimed`
    - Set `runner_id`, `claimed` timestamp, and `last_heartbeat`
 5. If no matching jobs, polls every 1 second until `poll_timeout` (default 30s, max 600s) or job arrives
-6. Returns `Option<JsonJob>` — job with config and short-lived OCI token if claimed, `None` on timeout
-7. Records OTel metrics: queue duration histogram and claim counter
+6. Generates a short-lived, project-scoped OCI pull token (see [OCI Authentication for Runners](#oci-authentication-for-runners))
+7. Returns `Option<JsonClaimedJob>` — claimed job with config, OCI token, and full spec if claimed, `None` on timeout
+8. Records OTel metrics: queue duration histogram and claim counter
 
 ## OCI Authentication for Runners
 
-> **TODO**: The OCI token is not yet included in the claim response. `JsonJobConfig` currently has `registry`, `project`, and `digest` but no token field. This needs to be implemented.
+The claim response includes a **short-lived, project-scoped OCI pull token** in the `oci_token` field of `JsonClaimedJob`. This token is generated at claim time — not stored in the DB alongside the job config — via a new `TokenKey::new_oci_runner()` method.
 
-The job claim response will include a **short-lived, project-scoped OCI token** (as a new `oci_token` field on `JsonJobConfig` or alongside it in the claim response). This token:
-- Is scoped to `Pull` access for the specific project's images only
-- Has a short TTL (minutes, not days)
+**Token generation:**
+- `new_oci_runner()` accepts a `RunnerUuid` as the JWT subject (instead of `Email` used for user tokens)
 - Uses the `Oci` JWT audience (separate from user/server audiences), which already exists in the OCI auth system
+- Scoped to `Pull`-only access for the specific project's images
+- Short TTL (minutes, not days)
 
-This minimizes the blast radius of a compromised runner: even with the token, the runner can only pull images from the one project for the claimed job, and only for a short window.
+**Security properties:**
+- Token is **not** part of `JsonJobConfig` — config is persisted in the DB at job creation time, but the OCI token must be freshly generated at claim time with a short TTL
+- Scoped to a single project — even with the token, a compromised runner can only pull images from the one project for the claimed job
+- Short-lived — limits the window of exposure if a token is leaked
+- `RunnerUuid` subject allows audit trail linking OCI pulls back to the specific runner
 
 ## WebSocket Job Execution Channel
 
@@ -439,19 +488,14 @@ Job output (stdout, stderr, file contents) is stored in the **same OCI storage b
 {project_uuid}/output/v0/jobs/{job_uuid}
 ```
 
-### Output Types
+### Output Type
 
-**Completed (`JsonJobOutputCompleted`):**
-- `exit_code: i32`
+**`JsonJobOutput` (flat struct):**
+- `exit_code: Option<i32>`
+- `error: Option<String>` — present when the job failed
 - `stdout: Option<String>`
 - `stderr: Option<String>`
 - `output: Option<HashMap<Utf8PathBuf, String>>` — file path to contents map
-
-**Failed (`JsonJobOutputFailed`):**
-- `error: String` (required, serves as discriminator)
-- `exit_code: Option<i32>`
-- `stdout: Option<String>`
-- `stderr: Option<String>`
 
 ### Storage Flow
 
@@ -472,7 +516,7 @@ Job output (stdout, stderr, file contents) is stored in the **same OCI storage b
 ```
 1. Idle: Long-poll POST /v0/runners/{runner}/jobs
                 │
-                ▼ (job received with JsonJobConfig + OCI token)
+                ▼ (JsonClaimedJob received with config, OCI token, and full spec)
 2. Job "claimed" implicitly via claim response
                 │
                 ▼
@@ -595,7 +639,8 @@ This token is scoped to:
 
 - **One job per report**: A Report has at most one Job. Benchmark suites cannot be split across multiple specs within a single report. Users submit separate runs for different specs.
 - **No automatic retry**: Failed jobs stay failed. Users re-submit explicitly. See [Retry Policy](#retry-policy).
-- **OCI token delivery**: Short-lived, project-scoped token included in claim response (option c). See [OCI Authentication for Runners](#oci-authentication-for-runners).
+- **OCI token delivery**: Short-lived, project-scoped token included in `JsonClaimedJob` claim response (separate from `JsonJobConfig` since config is persisted at creation but the token is generated at claim time). See [OCI Authentication for Runners](#oci-authentication-for-runners).
+- **Separate claim response type**: `JsonClaimedJob` is a standalone type (not wrapping `JsonJob`) because the fields needed for execution differ from project-scoped job queries. See [Claimed Job Response](#claimed-job-response).
 
 ## Open Questions
 

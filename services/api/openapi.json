@@ -12078,31 +12078,16 @@
         ]
       },
       "JsonJobOutput": {
-        "description": "Job output stored in blob storage after job completion or failure.\n\nDeserialization tries `Failed` first (which has a required `error` field), then falls back to `Completed`.",
-        "anyOf": [
-          {
-            "description": "Output from a failed job (tried first — has required `error` field as discriminator)",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonJobOutputFailed"
-              }
-            ]
-          },
-          {
-            "description": "Output from a completed job",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonJobOutputCompleted"
-              }
-            ]
-          }
-        ]
-      },
-      "JsonJobOutputCompleted": {
-        "description": "Output from a completed job.",
+        "description": "Job output stored in blob storage after job completion or failure.",
         "type": "object",
         "properties": {
+          "error": {
+            "nullable": true,
+            "description": "Error message (present when the job failed).",
+            "type": "string"
+          },
           "exit_code": {
+            "nullable": true,
             "type": "integer",
             "format": "int32"
           },
@@ -12122,35 +12107,7 @@
             "nullable": true,
             "type": "string"
           }
-        },
-        "required": [
-          "exit_code"
-        ]
-      },
-      "JsonJobOutputFailed": {
-        "description": "Output from a failed job.",
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string"
-          },
-          "exit_code": {
-            "nullable": true,
-            "type": "integer",
-            "format": "int32"
-          },
-          "stderr": {
-            "nullable": true,
-            "type": "string"
-          },
-          "stdout": {
-            "nullable": true,
-            "type": "string"
-          }
-        },
-        "required": [
-          "error"
-        ]
+        }
       },
       "JsonJobs": {
         "description": "A list of jobs",

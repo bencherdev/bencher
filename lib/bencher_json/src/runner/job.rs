@@ -42,7 +42,6 @@ pub struct JsonJob {
     pub modified: DateTime,
     /// Job output (stdout, stderr, files) from blob storage, included for terminal jobs.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[typeshare(typescript(type = "JsonJobOutputFailed | JsonJobOutputCompleted | undefined"))]
     pub output: Option<JsonJobOutput>,
 }
 
@@ -66,62 +65,15 @@ pub struct JsonUpdateJob {
 }
 
 /// Job output stored in blob storage after job completion or failure.
-///
-/// Deserialization tries `Failed` first (which has a required `error` field),
-/// then falls back to `Completed`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(untagged)]
-pub enum JsonJobOutput {
-    /// Output from a failed job (tried first — has required `error` field as discriminator)
-    Failed(JsonJobOutputFailed),
-    /// Output from a completed job
-    Completed(JsonJobOutputCompleted),
-}
-
-impl JsonJobOutput {
-    pub fn exit_code(&self) -> Option<i32> {
-        match self {
-            Self::Completed(c) => Some(c.exit_code),
-            Self::Failed(f) => f.exit_code,
-        }
-    }
-
-    pub fn stdout(&self) -> Option<&str> {
-        match self {
-            Self::Completed(c) => c.stdout.as_deref(),
-            Self::Failed(f) => f.stdout.as_deref(),
-        }
-    }
-
-    pub fn stderr(&self) -> Option<&str> {
-        match self {
-            Self::Completed(c) => c.stderr.as_deref(),
-            Self::Failed(f) => f.stderr.as_deref(),
-        }
-    }
-
-    pub fn error(&self) -> Option<&str> {
-        match self {
-            Self::Completed(_) => None,
-            Self::Failed(f) => Some(&f.error),
-        }
-    }
-
-    pub fn output(&self) -> Option<&HashMap<Utf8PathBuf, String>> {
-        match self {
-            Self::Completed(c) => c.output.as_ref(),
-            Self::Failed(_) => None,
-        }
-    }
-}
-
-/// Output from a completed job.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonJobOutputCompleted {
-    pub exit_code: i32,
+pub struct JsonJobOutput {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    /// Error message (present when the job failed).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stdout: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -131,20 +83,6 @@ pub struct JsonJobOutputCompleted {
     #[typeshare(typescript(type = "Record<string, string> | undefined"))]
     #[cfg_attr(feature = "schema", schemars(with = "Option<HashMap<String, String>>"))]
     pub output: Option<HashMap<Utf8PathBuf, String>>,
-}
-
-/// Output from a failed job.
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonJobOutputFailed {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub exit_code: Option<i32>,
-    pub error: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stdout: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stderr: Option<String>,
 }
 
 /// Response to job update
@@ -198,6 +136,146 @@ pub struct JsonJobConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "schema", schemars(with = "Option<Vec<String>>"))]
     pub file_paths: Option<Vec<Utf8PathBuf>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn round_trip_all_fields() {
+        let mut output_files = HashMap::new();
+        output_files.insert(Utf8PathBuf::from("/tmp/results.json"), "{}".to_owned());
+
+        let original = JsonJobOutput {
+            exit_code: Some(0),
+            error: Some("oops".into()),
+            stdout: Some("hello".into()),
+            stderr: Some("world".into()),
+            output: Some(output_files),
+        };
+
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: JsonJobOutput = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.exit_code, Some(0));
+        assert_eq!(deserialized.error.as_deref(), Some("oops"));
+        assert_eq!(deserialized.stdout.as_deref(), Some("hello"));
+        assert_eq!(deserialized.stderr.as_deref(), Some("world"));
+        assert_eq!(deserialized.output.as_ref().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn round_trip_completed_shape() {
+        let original = JsonJobOutput {
+            exit_code: Some(0),
+            error: None,
+            stdout: Some("stdout".into()),
+            stderr: Some("stderr".into()),
+            output: Some(HashMap::new()),
+        };
+
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: JsonJobOutput = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.exit_code, Some(0));
+        assert!(deserialized.error.is_none());
+        assert_eq!(deserialized.stdout.as_deref(), Some("stdout"));
+        assert_eq!(deserialized.stderr.as_deref(), Some("stderr"));
+    }
+
+    #[test]
+    fn round_trip_failed_shape() {
+        let original = JsonJobOutput {
+            exit_code: Some(1),
+            error: Some("something broke".into()),
+            stdout: Some("stdout".into()),
+            stderr: Some("stderr".into()),
+            output: None,
+        };
+
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: JsonJobOutput = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.exit_code, Some(1));
+        assert_eq!(deserialized.error.as_deref(), Some("something broke"));
+        assert!(deserialized.output.is_none());
+    }
+
+    #[test]
+    fn round_trip_minimal() {
+        let original = JsonJobOutput {
+            exit_code: None,
+            error: None,
+            stdout: None,
+            stderr: None,
+            output: None,
+        };
+
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: JsonJobOutput = serde_json::from_str(&json).unwrap();
+
+        assert!(deserialized.exit_code.is_none());
+        assert!(deserialized.error.is_none());
+        assert!(deserialized.stdout.is_none());
+        assert!(deserialized.stderr.is_none());
+        assert!(deserialized.output.is_none());
+    }
+
+    #[test]
+    fn round_trip_with_output_files() {
+        let mut files = HashMap::new();
+        files.insert(
+            Utf8PathBuf::from("/tmp/results.json"),
+            r#"{"metric": 42}"#.to_owned(),
+        );
+        files.insert(Utf8PathBuf::from("/tmp/log.txt"), "log data".to_owned());
+
+        let original = JsonJobOutput {
+            exit_code: Some(0),
+            error: None,
+            stdout: None,
+            stderr: None,
+            output: Some(files),
+        };
+
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: JsonJobOutput = serde_json::from_str(&json).unwrap();
+
+        let output = deserialized.output.as_ref().unwrap();
+        assert_eq!(output.len(), 2);
+        assert_eq!(
+            output.get(Utf8PathBuf::from("/tmp/results.json").as_path()),
+            Some(&r#"{"metric": 42}"#.to_owned())
+        );
+    }
+
+    #[test]
+    fn backwards_compat_completed_json() {
+        // JSON matching the old JsonJobOutputCompleted shape
+        let json =
+            r#"{"exit_code":0,"stdout":"hello","stderr":"world","output":{"/tmp/f.txt":"data"}}"#;
+        let deserialized: JsonJobOutput = serde_json::from_str(json).unwrap();
+
+        assert_eq!(deserialized.exit_code, Some(0));
+        assert!(deserialized.error.is_none());
+        assert_eq!(deserialized.stdout.as_deref(), Some("hello"));
+        assert_eq!(deserialized.stderr.as_deref(), Some("world"));
+        assert_eq!(deserialized.output.as_ref().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn backwards_compat_failed_json() {
+        // JSON matching the old JsonJobOutputFailed shape
+        let json = r#"{"exit_code":1,"error":"something broke","stdout":"out","stderr":"err"}"#;
+        let deserialized: JsonJobOutput = serde_json::from_str(json).unwrap();
+
+        assert_eq!(deserialized.exit_code, Some(1));
+        assert_eq!(deserialized.error.as_deref(), Some("something broke"));
+        assert_eq!(deserialized.stdout.as_deref(), Some("out"));
+        assert_eq!(deserialized.stderr.as_deref(), Some("err"));
+        assert!(deserialized.output.is_none());
+    }
 }
 
 #[cfg(feature = "db")]

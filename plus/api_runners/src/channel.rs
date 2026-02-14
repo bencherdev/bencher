@@ -28,6 +28,30 @@ use tokio_tungstenite::tungstenite::{
 
 use crate::runner_token::RunnerToken;
 
+/// Errors from WebSocket channel operations during runner job execution.
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum ChannelError {
+    #[error("{0}")]
+    Http(#[from] dropshot::HttpError),
+
+    #[error("{0}")]
+    Diesel(#[from] diesel::result::Error),
+
+    #[error("{0}")]
+    WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
+
+    #[error("{0}")]
+    Json(#[from] serde_json::Error),
+
+    /// Job is in an unexpected state for the requested transition.
+    #[error("Invalid state transition to {target:?} for job {job_id:?}, found {current:?}")]
+    InvalidStateTransition {
+        job_id: JobId,
+        target: JobStatus,
+        current: JobStatus,
+    },
+}
+
 /// Path parameters for the job channel endpoint.
 #[derive(Deserialize, JsonSchema)]
 pub struct RunnerJobChannelParams {
@@ -166,7 +190,7 @@ async fn handle_websocket(
     job: &QueryJob,
     ws_stream: tokio_tungstenite::WebSocketStream<WebsocketConnectionRaw>,
     heartbeat_timeout: Duration,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(), ChannelError> {
     let (mut tx, mut rx) = ws_stream.split();
     let mut last_heartbeat = tokio::time::Instant::now();
 
@@ -265,7 +289,7 @@ async fn handle_timeout(
     log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,
-) -> Result<&'static str, Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<&'static str, ChannelError> {
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
         .first(auth_conn!(context))?;
@@ -344,7 +368,7 @@ async fn handle_runner_message(
     context: &ApiContext,
     job: &QueryJob,
     msg: &RunnerMessage,
-) -> Result<ServerMessage, Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<ServerMessage, ChannelError> {
     match msg {
         RunnerMessage::Running => {
             slog::info!(log, "Job running"; "job_id" => ?job.id);
@@ -411,7 +435,7 @@ async fn handle_running(
     log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,
-) -> Result<Option<ServerMessage>, Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<Option<ServerMessage>, ChannelError> {
     let now = context.clock.now();
 
     // Try reconnection case first: already Running, just update heartbeat
@@ -474,7 +498,7 @@ async fn handle_heartbeat(
     log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,
-) -> Result<Option<ServerMessage>, Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<Option<ServerMessage>, ChannelError> {
     let now = context.clock.now();
 
     let job: QueryJob = schema::job::table
@@ -562,7 +586,7 @@ async fn handle_completed(
     stdout: Option<String>,
     stderr: Option<String>,
     output: Option<HashMap<Utf8PathBuf, String>>,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(), ChannelError> {
     let now = context.clock.now();
 
     let update = UpdateJob {
@@ -596,11 +620,11 @@ async fn handle_completed(
             slog::warn!(log, "Job already in terminal state, completion report lost"; "job_id" => ?job.id, "current_status" => ?current_job.status);
             return Ok(());
         }
-        return Err(format!(
-            "Invalid state transition to Completed for job {:?}, expected Running but found {:?}",
-            job.id, current_job.status
-        )
-        .into());
+        return Err(ChannelError::InvalidStateTransition {
+            job_id: job.id,
+            target: JobStatus::Completed,
+            current: current_job.status,
+        });
     }
 
     #[cfg(feature = "otel")]
@@ -609,14 +633,13 @@ async fn handle_completed(
     ));
 
     // Store output in blob storage (best-effort)
-    let job_output = bencher_json::runner::JsonJobOutput::Completed(
-        bencher_json::runner::JsonJobOutputCompleted {
-            exit_code,
-            stdout,
-            stderr,
-            output,
-        },
-    );
+    let job_output = bencher_json::runner::JsonJobOutput {
+        exit_code: Some(exit_code),
+        error: None,
+        stdout,
+        stderr,
+        output,
+    };
     if let Err(e) = store_job_output(context, job, &job_output).await {
         slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
     }
@@ -635,7 +658,7 @@ async fn handle_failed(
     error: String,
     stdout: Option<String>,
     stderr: Option<String>,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(), ChannelError> {
     let now = context.clock.now();
 
     let update = UpdateJob {
@@ -673,11 +696,11 @@ async fn handle_failed(
             slog::warn!(log, "Job already in terminal state, failure report lost"; "job_id" => ?job.id, "current_status" => ?current_job.status);
             return Ok(());
         }
-        return Err(format!(
-            "Invalid state transition to Failed for job {:?}, expected Claimed or Running but found {:?}",
-            job.id, current_job.status
-        )
-        .into());
+        return Err(ChannelError::InvalidStateTransition {
+            job_id: job.id,
+            target: JobStatus::Failed,
+            current: current_job.status,
+        });
     }
 
     #[cfg(feature = "otel")]
@@ -686,13 +709,13 @@ async fn handle_failed(
     ));
 
     // Store output in blob storage (best-effort)
-    let job_output =
-        bencher_json::runner::JsonJobOutput::Failed(bencher_json::runner::JsonJobOutputFailed {
-            exit_code,
-            error,
-            stdout,
-            stderr,
-        });
+    let job_output = bencher_json::runner::JsonJobOutput {
+        exit_code,
+        error: Some(error),
+        stdout,
+        stderr,
+        output: None,
+    };
     if let Err(e) = store_job_output(context, job, &job_output).await {
         slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
     }
@@ -726,7 +749,7 @@ async fn handle_canceled(
     log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(), ChannelError> {
     let now = context.clock.now();
 
     // Try to transition from Claimed or Running to Canceled
@@ -769,9 +792,9 @@ async fn handle_canceled(
     }
 
     slog::warn!(log, "Invalid state transition to Canceled (concurrent state change)"; "job_id" => ?job_id, "current_status" => ?job.status);
-    Err(format!(
-        "Invalid state transition from {:?} to Canceled for job {job_id:?}, expected Claimed or Running",
-        job.status
-    )
-    .into())
+    Err(ChannelError::InvalidStateTransition {
+        job_id,
+        target: JobStatus::Canceled,
+        current: job.status,
+    })
 }
