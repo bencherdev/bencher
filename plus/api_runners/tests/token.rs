@@ -4,7 +4,7 @@
 mod common;
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonJob, JsonRunnerToken};
+use bencher_json::{JsonClaimedJob, JsonRunnerToken};
 use common::{
     associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
     insert_test_job, insert_test_spec,
@@ -357,7 +357,7 @@ async fn token_rotate_with_inflight_jobs() {
         .await
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
     assert!(claimed.is_some(), "Should claim a job");
 
     // Rotate token while job is in-flight (Claimed status)

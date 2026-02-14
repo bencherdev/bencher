@@ -10,8 +10,8 @@ pub mod job_priority;
 pub mod job_status;
 
 pub use job::{
-    JobUuid, JsonClaimJob, JsonJob, JsonJobConfig, JsonJobOutput, JsonJobs, JsonUpdateJob,
-    JsonUpdateJobResponse,
+    JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob, JsonJobConfig, JsonJobOutput, JsonJobs,
+    JsonUpdateJob, JsonUpdateJobResponse,
 };
 pub use job_priority::JobPriority;
 pub use job_status::{JobStatus, JobUpdateStatus};

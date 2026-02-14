@@ -282,6 +282,7 @@ dependencies = [
  "bencher_oci_storage",
  "bencher_otel",
  "bencher_schema",
+ "bencher_token",
  "camino",
  "diesel",
  "dropshot",

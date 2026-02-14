@@ -10,7 +10,9 @@ mod common;
 use std::sync::Arc;
 
 use bencher_api_tests::TestServer;
-use bencher_json::{DateTime, JobPriority, JobStatus, JsonJob, JsonUpdateJobResponse};
+use bencher_json::{
+    DateTime, JobPriority, JobStatus, JsonClaimedJob, JsonJob, JsonUpdateJobResponse,
+};
 use bencher_schema::{
     context::HeartbeatTasks,
     model::runner::{JobId, recover_orphaned_claimed_jobs, spawn_heartbeat_timeout},
@@ -333,7 +335,7 @@ async fn claim_job_canceled_pending() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
     assert!(
         claimed.is_none(),
         "Canceled pending job should not be claimable"
@@ -386,13 +388,10 @@ mod job_lifecycle {
             .expect("Request failed");
 
         assert_eq!(resp.status(), StatusCode::OK);
-        let claimed_job: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+        let claimed_job: Option<JsonClaimedJob> =
+            resp.json().await.expect("Failed to parse response");
         let claimed_job = claimed_job.expect("Expected to claim a job");
         assert_eq!(claimed_job.uuid, job_uuid);
-        assert_eq!(claimed_job.status, JobStatus::Claimed);
-        assert_eq!(claimed_job.runner, Some(runner.uuid));
-        assert!(claimed_job.claimed.is_some());
-        assert!(claimed_job.started.is_none());
 
         // Step 2: Update to running
         let body = serde_json::json!({
@@ -484,7 +483,8 @@ mod job_lifecycle {
             .expect("Request failed");
 
         assert_eq!(resp.status(), StatusCode::OK);
-        let claimed_job: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+        let claimed_job: Option<JsonClaimedJob> =
+            resp.json().await.expect("Failed to parse response");
         assert!(claimed_job.is_some());
 
         // Step 2: Update to running
@@ -650,8 +650,8 @@ mod job_lifecycle {
         assert_eq!(resp1.status(), StatusCode::OK);
         assert_eq!(resp2.status(), StatusCode::OK);
 
-        let job1: Option<JsonJob> = resp1.json().await.expect("Failed to parse response 1");
-        let job2: Option<JsonJob> = resp2.json().await.expect("Failed to parse response 2");
+        let job1: Option<JsonClaimedJob> = resp1.json().await.expect("Failed to parse response 1");
+        let job2: Option<JsonClaimedJob> = resp2.json().await.expect("Failed to parse response 2");
 
         // Exactly one runner should have claimed the job
         let claimed_count = [&job1, &job2]
@@ -770,7 +770,8 @@ mod job_spec {
             .expect("Request failed");
 
         assert_eq!(resp.status(), StatusCode::OK);
-        let claimed_job: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+        let claimed_job: Option<JsonClaimedJob> =
+            resp.json().await.expect("Failed to parse response");
         let claimed_job = claimed_job.expect("Expected to claim a job");
 
         // Verify spec is present and has correct values
@@ -779,11 +780,8 @@ mod job_spec {
         assert_eq!(u64::from(claimed_job.spec.disk), 10_737_418_240); // 10 GB
         assert!(!claimed_job.spec.network);
 
-        // Verify config is present and has correct values
-        let config: &JsonJobConfig = claimed_job
-            .config
-            .as_ref()
-            .expect("Expected config to be present");
+        // Verify config has correct values
+        let config: &JsonJobConfig = &claimed_job.config;
         assert_eq!(config.project, project.uuid);
         assert_eq!(
             config.digest.as_ref(),
@@ -828,14 +826,12 @@ mod job_spec {
             .expect("Request failed");
 
         assert_eq!(resp.status(), StatusCode::OK);
-        let claimed_job: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+        let claimed_job: Option<JsonClaimedJob> =
+            resp.json().await.expect("Failed to parse response");
         let claimed_job = claimed_job.expect("Expected to claim a job");
         assert_eq!(claimed_job.uuid, job_uuid);
 
-        let config = claimed_job
-            .config
-            .as_ref()
-            .expect("Expected config to be present");
+        let config = &claimed_job.config;
 
         // Verify optional fields
         let entrypoint = config.entrypoint.as_ref().expect("Expected entrypoint");
@@ -1064,7 +1060,7 @@ mod priority_scheduling {
             .expect("Request failed");
 
         assert_eq!(resp.status(), StatusCode::OK);
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, high_job,
@@ -1102,7 +1098,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, medium_job,
@@ -1140,7 +1136,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, low_job,
@@ -1199,7 +1195,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         assert!(claimed.is_some(), "Expected to claim first job");
 
         // Mark job as running (not completed)
@@ -1224,7 +1220,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         assert!(
             claimed.is_none(),
             "Expected no job to be claimed due to org concurrency limit"
@@ -1283,7 +1279,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         assert!(claimed.is_some(), "Expected to claim first job");
 
         // Mark job as running
@@ -1308,7 +1304,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         assert!(
             claimed.is_none(),
             "Expected no job to be claimed due to IP concurrency limit"
@@ -1366,7 +1362,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
@@ -1394,7 +1390,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let second_claimed = claimed.expect("Expected to claim second job with different IP");
 
         // Verify both jobs were claimed
@@ -1456,7 +1452,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running (not completed)
@@ -1484,7 +1480,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let second_claimed = claimed.expect("Enterprise tier should allow concurrent jobs");
 
         // Verify both distinct jobs were claimed
@@ -1581,13 +1577,12 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim Enterprise job");
         assert_eq!(
             claimed.uuid, enterprise_job,
             "Expected Enterprise job to be claimed, skipping blocked Free tier job"
         );
-        assert_eq!(claimed.status, JobStatus::Claimed);
     }
 
     // Test Team tier (200-299) unlimited concurrency
@@ -1641,7 +1636,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
@@ -1669,7 +1664,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let second_claimed = claimed.expect("Team tier should allow concurrent jobs");
 
         assert!(
@@ -1747,7 +1742,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, first_job,
@@ -1785,7 +1780,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, second_job,
@@ -1823,7 +1818,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, third_job,
@@ -1892,7 +1887,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
@@ -1920,7 +1915,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let second_claimed =
             claimed.expect("Different orgs should allow concurrent Free tier jobs");
 
@@ -1980,7 +1975,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let first_claimed = claimed.expect("Expected to claim first job");
 
         let body = serde_json::json!({ "status": "running" });
@@ -2007,7 +2002,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         assert!(
             claimed.is_none(),
             "Second job should be blocked while first is running"
@@ -2038,7 +2033,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let second_claimed = claimed.expect("Second job should be claimable after first completes");
 
         // Verify we got the second job (not the completed first one)
@@ -2141,7 +2136,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim Team tier job");
         assert_eq!(
             claimed.uuid, team_job,
@@ -2258,7 +2253,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim unblocked Free tier job");
         assert_eq!(
             claimed.uuid, free_unblocked,
@@ -2336,7 +2331,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, first_job,
@@ -2374,7 +2369,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, second_job,
@@ -2412,7 +2407,7 @@ mod priority_scheduling {
             .await
             .expect("Request failed");
 
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, third_job,
@@ -2475,7 +2470,7 @@ mod invalid_transitions {
             .await
             .expect("Request failed");
         assert_eq!(resp.status(), StatusCode::OK);
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         assert!(claimed.is_some());
 
         match target_status {
@@ -2750,7 +2745,7 @@ mod poll_timeout_boundaries {
             .expect("Request failed");
 
         assert_eq!(resp.status(), StatusCode::OK);
-        let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         assert!(claimed.is_some(), "Expected to claim a job");
     }
 }
@@ -2845,8 +2840,8 @@ mod concurrency_safety {
         assert_eq!(resp1.status(), StatusCode::OK);
         assert_eq!(resp2.status(), StatusCode::OK);
 
-        let job1: Option<JsonJob> = resp1.json().await.expect("Failed to parse response 1");
-        let job2: Option<JsonJob> = resp2.json().await.expect("Failed to parse response 2");
+        let job1: Option<JsonClaimedJob> = resp1.json().await.expect("Failed to parse response 1");
+        let job2: Option<JsonClaimedJob> = resp2.json().await.expect("Failed to parse response 2");
 
         let claimed_count = [&job1, &job2].iter().filter(|j| j.is_some()).count();
 
@@ -2938,8 +2933,8 @@ mod concurrency_safety {
         assert_eq!(resp1.status(), StatusCode::OK);
         assert_eq!(resp2.status(), StatusCode::OK);
 
-        let job1: Option<JsonJob> = resp1.json().await.expect("Failed to parse response 1");
-        let job2: Option<JsonJob> = resp2.json().await.expect("Failed to parse response 2");
+        let job1: Option<JsonClaimedJob> = resp1.json().await.expect("Failed to parse response 1");
+        let job2: Option<JsonClaimedJob> = resp2.json().await.expect("Failed to parse response 2");
 
         let claimed_count = [&job1, &job2].iter().filter(|j| j.is_some()).count();
 
@@ -3060,7 +3055,7 @@ async fn runner_multiple_specs_claims_matching_jobs() {
         .await
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::OK);
-    let first: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let first: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
     let first = first.expect("Expected to claim first job");
 
     // Second claim should get the other job
@@ -3073,7 +3068,7 @@ async fn runner_multiple_specs_claims_matching_jobs() {
         .await
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::OK);
-    let second: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let second: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
     let second = second.expect("Expected to claim second job");
 
     // Both jobs should have been claimed (order depends on priority/FIFO)
@@ -3243,7 +3238,7 @@ async fn free_tier_blocked_same_org_different_runner() {
         .send()
         .await
         .expect("Request failed");
-    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
     assert_eq!(claimed.as_ref().map(|j| j.uuid), Some(job1));
 
     // Set to running
@@ -3259,7 +3254,7 @@ async fn free_tier_blocked_same_org_different_runner() {
         .send()
         .await
         .expect("Request failed");
-    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
     assert!(
         claimed.is_none(),
         "Free tier: second job should be blocked for same org"
@@ -3327,7 +3322,7 @@ async fn mixed_tier_free_blocked_enterprise_claimable() {
         .send()
         .await
         .expect("Request failed");
-    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
+    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
     assert_eq!(
         claimed.as_ref().map(|j| j.uuid),
         Some(enterprise_job),
@@ -3752,10 +3747,9 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
         .await
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
     let claimed = claimed.expect("Expected to claim a job");
     assert_eq!(claimed.uuid, job_uuid);
-    assert_eq!(claimed.status, JobStatus::Claimed);
 
     // Get the JobId for spawn_heartbeat_timeout
     let job_id: JobId = {

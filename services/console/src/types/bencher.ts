@@ -445,6 +445,27 @@ export interface JsonClaimJob {
 	poll_timeout?: PollTimeout;
 }
 
+/**
+ * A claimed job returned to the runner agent.
+ * 
+ * Standalone type containing everything a runner needs to execute a job.
+ * Config and OCI token are always present (not Optional) since
+ * they are guaranteed at claim time.
+ */
+export interface JsonClaimedJob {
+	uuid: Uuid;
+	/** Full spec details (architecture, cpu, memory, etc.) */
+	spec: JsonSpec;
+	/** Execution config — always present for claimed jobs */
+	config: JsonJobConfig;
+	/** Short-lived, project-scoped OCI pull token */
+	oci_token: Jwt;
+	/** Maximum execution time in seconds */
+	timeout: Timeout;
+	/** Job creation timestamp */
+	created: string;
+}
+
 export interface JsonConfirm {
 	token: Jwt;
 }

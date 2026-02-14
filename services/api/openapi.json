@@ -7934,7 +7934,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonJob"
+                  "$ref": "#/components/schemas/JsonClaimedJob"
                 }
               }
             }
@@ -11585,6 +11585,63 @@
             ]
           }
         }
+      },
+      "JsonClaimedJob": {
+        "description": "A claimed job returned to the runner agent.\n\nStandalone type containing everything a runner needs to execute a job. Config and OCI token are always present (not Optional) since they are guaranteed at claim time.",
+        "type": "object",
+        "properties": {
+          "config": {
+            "description": "Execution config — always present for claimed jobs",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonJobConfig"
+              }
+            ]
+          },
+          "created": {
+            "description": "Job creation timestamp",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "oci_token": {
+            "description": "Short-lived, project-scoped OCI pull token",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Jwt"
+              }
+            ]
+          },
+          "spec": {
+            "description": "Full spec details (architecture, cpu, memory, etc.)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonSpec"
+              }
+            ]
+          },
+          "timeout": {
+            "description": "Maximum execution time in seconds",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Timeout"
+              }
+            ]
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/JobUuid"
+          }
+        },
+        "required": [
+          "config",
+          "created",
+          "oci_token",
+          "spec",
+          "timeout",
+          "uuid"
+        ]
       },
       "JsonCloud": {
         "type": "object",

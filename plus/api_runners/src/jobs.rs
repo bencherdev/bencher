@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use bencher_endpoint::{CorsResponse, Endpoint, Patch, Post, ResponseOk};
 use bencher_json::{
-    DateTime, JobPriority, JobStatus, JobUpdateStatus, JobUuid, JsonClaimJob, JsonJob, JsonSpec,
-    JsonUpdateJob, JsonUpdateJobResponse, RunnerResourceId,
+    DateTime, JobPriority, JobStatus, JobUpdateStatus, JobUuid, JsonClaimJob, JsonClaimedJob,
+    JsonSpec, JsonUpdateJob, JsonUpdateJobResponse, RunnerResourceId,
 };
 use bencher_schema::{
     auth_conn,
@@ -15,6 +15,7 @@ use bencher_schema::{
     },
     schema, write_conn,
 };
+use bencher_token::OciAction;
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
     RunQueryDsl as _, dsl::exists, dsl::not,
@@ -73,7 +74,7 @@ pub async fn runner_jobs_post(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<RunnerJobsParams>,
     body: TypedBody<JsonClaimJob>,
-) -> Result<ResponseOk<Option<JsonJob>>, HttpError> {
+) -> Result<ResponseOk<Option<JsonClaimedJob>>, HttpError> {
     let context = rqctx.context();
     let path_params = path_params.into_inner();
     let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
@@ -92,7 +93,7 @@ async fn claim_job_inner(
     context: &ApiContext,
     runner_token: RunnerToken,
     claim_request: JsonClaimJob,
-) -> Result<Option<JsonJob>, HttpError> {
+) -> Result<Option<JsonClaimedJob>, HttpError> {
     let poll_timeout = claim_request
         .poll_timeout
         .map_or(DEFAULT_POLL_TIMEOUT, u32::from);
@@ -122,10 +123,13 @@ async fn claim_job_inner(
 /// - Unclaimed: 1 concurrent job per source IP
 ///
 /// Returns `Ok(Some(job))` if a job was claimed, `Ok(None)` if no eligible jobs available.
+/// OCI runner token TTL: 10 minutes (enough for image pull, short enough to limit exposure)
+const OCI_RUNNER_TOKEN_TTL: u32 = 600;
+
 async fn try_claim_job(
     context: &ApiContext,
     runner_token: &RunnerToken,
-) -> Result<Option<JsonJob>, HttpError> {
+) -> Result<Option<JsonClaimedJob>, HttpError> {
     use schema::job::dsl::{created, id, organization_id, priority, source_ip, status};
 
     // Tier 1: Enterprise/Team (priority >= 200) - no concurrency limit
@@ -220,11 +224,12 @@ async fn try_claim_job(
 
     if let Some(json_spec) = json_spec {
         Ok(Some(build_claimed_job(
+            context,
             query_job,
             runner_token,
             json_spec,
             now,
-        )))
+        )?))
     } else {
         // Defensive: the UPDATE matched 0 rows despite SELECT finding a pending job.
         // Under the current single-writer lock this should not happen, but we
@@ -234,11 +239,12 @@ async fn try_claim_job(
 }
 
 fn build_claimed_job(
+    context: &ApiContext,
     query_job: QueryJob,
     runner_token: &RunnerToken,
     json_spec: JsonSpec,
     now: DateTime,
-) -> JsonJob {
+) -> Result<JsonClaimedJob, HttpError> {
     #[cfg(feature = "otel")]
     {
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
@@ -256,20 +262,30 @@ fn build_claimed_job(
             queue_duration_secs,
         );
     }
+    #[cfg(not(feature = "otel"))]
+    let _ = now;
 
-    JsonJob {
+    let timeout = query_job.config.timeout;
+    let oci_token = context
+        .token_key
+        .new_oci_runner(
+            runner_token.runner_uuid,
+            OCI_RUNNER_TOKEN_TTL,
+            Some(query_job.config.project.to_string()),
+            vec![OciAction::Pull],
+        )
+        .map_err(|e| {
+            HttpError::for_internal_error(format!("Failed to generate OCI runner token: {e}"))
+        })?;
+
+    Ok(JsonClaimedJob {
         uuid: query_job.uuid,
-        status: JobStatus::Claimed,
         spec: json_spec,
-        config: Some(query_job.config),
-        runner: Some(runner_token.runner_uuid),
-        claimed: Some(now),
-        started: None,
-        completed: None,
+        config: query_job.config,
+        oci_token,
+        timeout,
         created: query_job.created,
-        modified: now,
-        output: None,
-    }
+    })
 }
 
 #[derive(Deserialize, JsonSchema)]

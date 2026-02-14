@@ -8,6 +8,13 @@ use jsonwebtoken::{
     errors::ErrorKind as JsonWebTokenErrorKind,
 };
 
+#[cfg(feature = "plus")]
+use bencher_json::RunnerUuid;
+
+#[cfg(feature = "plus")]
+use crate::RunnerOciClaims;
+#[cfg(feature = "plus")]
+use crate::claims::RunnerOciTokenClaims;
 use crate::{
     Audience, Claims, InviteClaims, OAuthClaims, OciAction, OciClaims, OciScopeClaims, OrgClaims,
     StateClaims, TokenError,
@@ -92,6 +99,33 @@ impl TokenKey {
         self.new_jwt(Audience::Oci, email, ttl, None, None, Some(oci_claims))
     }
 
+    #[cfg(feature = "plus")]
+    pub fn new_oci_runner(
+        &self,
+        runner_uuid: RunnerUuid,
+        ttl: u32,
+        repository: Option<String>,
+        actions: Vec<OciAction>,
+    ) -> Result<Jwt, TokenError> {
+        let now = Utc::now().timestamp();
+        let claims = RunnerOciTokenClaims {
+            aud: Audience::Oci.into(),
+            exp: now.checked_add(i64::from(ttl)).unwrap_or(now),
+            iat: now,
+            iss: self.issuer.clone(),
+            sub: runner_uuid,
+            oci: Some(OciScopeClaims {
+                repository,
+                actions,
+            }),
+        };
+        Jwt::from_str(
+            &encode(&HEADER, &claims, &self.encoding)
+                .map_err(|e| TokenError::Encode { error: e })?,
+        )
+        .map_err(TokenError::Parse)
+    }
+
     fn validate(
         &self,
         token: &Jwt,
@@ -141,6 +175,29 @@ impl TokenKey {
 
     pub fn validate_oci(&self, token: &Jwt) -> Result<OciClaims, TokenError> {
         self.validate(token, &[Audience::Oci])?.claims.try_into()
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn validate_oci_runner(&self, token: &Jwt) -> Result<RunnerOciClaims, TokenError> {
+        let mut validation = Validation::new(ALGORITHM);
+        validation.set_audience(&[Audience::Oci]);
+        validation.set_issuer(&[self.issuer.as_str()]);
+        validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
+
+        let token_data: TokenData<RunnerOciTokenClaims> =
+            decode(token.as_ref(), &self.decoding, &validation)
+                .map_err(|error| TokenError::Decode { error })?;
+        let exp = token_data.claims.exp;
+        let now = Utc::now().timestamp();
+        if exp < now {
+            Err(TokenError::Expired {
+                exp,
+                now,
+                error: JsonWebTokenErrorKind::ExpiredSignature.into(),
+            })
+        } else {
+            token_data.claims.try_into()
+        }
     }
 }
 
@@ -350,5 +407,85 @@ mod tests {
             .unwrap();
 
         assert!(secret_key.validate_auth(&token).is_err());
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn jwt_oci_runner_round_trip() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let runner_uuid = bencher_json::RunnerUuid::new();
+        let repository = Some("test-org/test-project".to_owned());
+        let actions = vec![OciAction::Pull];
+
+        let token = secret_key
+            .new_oci_runner(runner_uuid, TTL, repository.clone(), actions.clone())
+            .unwrap();
+
+        let claims = secret_key.validate_oci_runner(&token).unwrap();
+
+        assert_eq!(claims.aud, Audience::Oci.to_string());
+        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
+        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
+        assert_eq!(claims.sub, runner_uuid);
+        assert_eq!(claims.runner_uuid(), runner_uuid);
+        assert_eq!(claims.oci.repository, repository);
+        assert_eq!(claims.oci.actions, actions);
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn jwt_oci_runner_expired() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let runner_uuid = bencher_json::RunnerUuid::new();
+        let now = chrono::Utc::now().timestamp();
+        let claims = crate::claims::RunnerOciTokenClaims {
+            aud: Audience::Oci.to_string(),
+            exp: now - 100,
+            iat: now - 200,
+            iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
+            sub: runner_uuid,
+            oci: Some(OciScopeClaims {
+                repository: None,
+                actions: vec![OciAction::Pull],
+            }),
+        };
+        let token = Jwt::from_str(
+            &jsonwebtoken::encode(&super::HEADER, &claims, &secret_key.encoding).unwrap(),
+        )
+        .unwrap();
+
+        assert!(secret_key.validate_oci_runner(&token).is_err());
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn jwt_user_oci_rejected_as_runner_oci() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        // Create a user OCI token (sub is Email)
+        let token = secret_key
+            .new_oci(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
+            .unwrap();
+
+        // Should fail to validate as runner OCI (Email is not a valid UUID)
+        assert!(secret_key.validate_oci_runner(&token).is_err());
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn jwt_runner_oci_rejected_as_user_oci() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let runner_uuid = bencher_json::RunnerUuid::new();
+
+        // Create a runner OCI token (sub is RunnerUuid)
+        let token = secret_key
+            .new_oci_runner(runner_uuid, TTL, None, vec![OciAction::Pull])
+            .unwrap();
+
+        // Should fail to validate as user OCI (UUID is not a valid Email)
+        assert!(secret_key.validate_oci(&token).is_err());
     }
 }
