@@ -594,6 +594,12 @@ impl OciStorage {
     }
 }
 
+/// Check whether an S3 SDK error is a 404 Not Found response.
+fn is_s3_not_found<E>(err: &aws_sdk_s3::error::SdkError<E>) -> bool {
+    err.raw_response()
+        .is_some_and(|r| r.status().as_u16() == 404)
+}
+
 impl OciS3Storage {
     /// Creates a new S3 storage instance
     fn new(
@@ -651,15 +657,12 @@ impl OciS3Storage {
 
     // ==================== S3 Error Helpers ====================
 
-    /// Maps an S3 SDK error, converting 404 responses to the provided not-found error
+    /// Maps an S3 SDK error, converting 404 responses to the provided not-found error.
     fn map_s3_error<E: std::fmt::Display>(
         err: &aws_sdk_s3::error::SdkError<E>,
         not_found_error: OciStorageError,
     ) -> OciStorageError {
-        if err
-            .raw_response()
-            .is_some_and(|r| r.status().as_u16() == 404)
-        {
+        if is_s3_not_found(err) {
             not_found_error
         } else {
             OciStorageError::S3(err.to_string())
@@ -1363,7 +1366,7 @@ impl OciS3Storage {
         {
             Ok(_) => Ok(true),
             Err(e) => {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
+                if is_s3_not_found(&e) {
                     Ok(false)
                 } else {
                     Err(OciStorageError::S3(e.to_string()))
@@ -1504,7 +1507,7 @@ impl OciS3Storage {
         {
             Ok(_) => Ok(true),
             Err(e) => {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
+                if is_s3_not_found(&e) {
                     Ok(false)
                 } else {
                     Err(OciStorageError::S3(e.to_string()))
@@ -1975,7 +1978,7 @@ impl OciS3Storage {
                 Ok(Some(output))
             },
             Err(e) => {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
+                if is_s3_not_found(&e) {
                     Ok(None)
                 } else {
                     Err(OciStorageError::S3(e.to_string()))

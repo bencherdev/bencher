@@ -13,10 +13,7 @@ use bencher_schema::{
     schema, write_conn,
 };
 use camino::Utf8PathBuf;
-use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _,
-    RunQueryDsl as _,
-};
+use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::WebsocketConnectionRaw;
 use dropshot::{Path, RequestContext, WebsocketChannelResult, WebsocketConnection, channel};
 use futures::{SinkExt as _, StreamExt as _};
@@ -612,13 +609,14 @@ async fn handle_completed(
     ));
 
     // Store output in blob storage (best-effort)
-    let job_output = bencher_json::runner::JsonJobOutput {
-        exit_code: Some(exit_code),
-        stdout,
-        stderr,
-        output,
-        error: None,
-    };
+    let job_output = bencher_json::runner::JsonJobOutput::Completed(
+        bencher_json::runner::JsonJobOutputCompleted {
+            exit_code,
+            stdout,
+            stderr,
+            output,
+        },
+    );
     if let Err(e) = store_job_output(context, job, &job_output).await {
         slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
     }
@@ -688,13 +686,13 @@ async fn handle_failed(
     ));
 
     // Store output in blob storage (best-effort)
-    let job_output = bencher_json::runner::JsonJobOutput {
-        exit_code,
-        stdout,
-        stderr,
-        output: None,
-        error: Some(error),
-    };
+    let job_output =
+        bencher_json::runner::JsonJobOutput::Failed(bencher_json::runner::JsonJobOutputFailed {
+            exit_code,
+            error,
+            stdout,
+            stderr,
+        });
     if let Err(e) = store_job_output(context, job, &job_output).await {
         slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
     }
@@ -703,22 +701,12 @@ async fn handle_failed(
 }
 
 /// Store job output in blob storage.
-///
-/// Looks up the project UUID from job → report → project, then stores
-/// the output JSON blob.
 async fn store_job_output(
     context: &ApiContext,
     job: &QueryJob,
     job_output: &bencher_json::runner::JsonJobOutput,
 ) -> Result<(), dropshot::HttpError> {
-    // Look up project UUID: job → report → project
-    let project_uuid = schema::job::table
-        .inner_join(schema::report::table)
-        .inner_join(schema::project::table.on(schema::report::project_id.eq(schema::project::id)))
-        .filter(schema::job::id.eq(job.id))
-        .select(schema::project::uuid)
-        .first::<bencher_json::ProjectUuid>(auth_conn!(context))
-        .map_err(resource_not_found_err!(Job, job.id))?;
+    let project_uuid = job.config.project;
 
     context
         .oci_storage()

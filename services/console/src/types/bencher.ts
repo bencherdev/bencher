@@ -116,16 +116,6 @@ export interface JsonJobConfig {
 	file_paths?: string[];
 }
 
-/** Job output stored in blob storage after job completion or failure. */
-export interface JsonJobOutput {
-	exit_code?: number;
-	stdout?: string;
-	stderr?: string;
-	/** File path to contents map */
-	output?: Record<string, string> | undefined;
-	error?: string;
-}
-
 /** A benchmark job */
 export interface JsonJob {
 	uuid: Uuid;
@@ -142,7 +132,7 @@ export interface JsonJob {
 	created: string;
 	modified: string;
 	/** Job output (stdout, stderr, files) from blob storage, included for terminal jobs. */
-	output?: JsonJobOutput;
+	output?: JsonJobOutputFailed | JsonJobOutputCompleted | undefined;
 }
 
 /** A list of jobs */
@@ -453,6 +443,23 @@ export interface JsonCustomer {
 	uuid: Uuid;
 	name: NonEmpty;
 	email: Email;
+}
+
+/** Output from a completed job. */
+export interface JsonJobOutputCompleted {
+	exit_code: number;
+	stdout?: string;
+	stderr?: string;
+	/** File path to contents map */
+	output?: Record<string, string> | undefined;
+}
+
+/** Output from a failed job. */
+export interface JsonJobOutputFailed {
+	exit_code?: number;
+	error: string;
+	stdout?: string;
+	stderr?: string;
 }
 
 export enum PlanLevel {

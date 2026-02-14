@@ -42,6 +42,7 @@ pub struct JsonJob {
     pub modified: DateTime,
     /// Job output (stdout, stderr, files) from blob storage, included for terminal jobs.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[typeshare(typescript(type = "JsonJobOutputFailed | JsonJobOutputCompleted | undefined"))]
     pub output: Option<JsonJobOutput>,
 }
 
@@ -65,12 +66,62 @@ pub struct JsonUpdateJob {
 }
 
 /// Job output stored in blob storage after job completion or failure.
+///
+/// Deserialization tries `Failed` first (which has a required `error` field),
+/// then falls back to `Completed`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(untagged)]
+pub enum JsonJobOutput {
+    /// Output from a failed job (tried first — has required `error` field as discriminator)
+    Failed(JsonJobOutputFailed),
+    /// Output from a completed job
+    Completed(JsonJobOutputCompleted),
+}
+
+impl JsonJobOutput {
+    pub fn exit_code(&self) -> Option<i32> {
+        match self {
+            Self::Completed(c) => Some(c.exit_code),
+            Self::Failed(f) => f.exit_code,
+        }
+    }
+
+    pub fn stdout(&self) -> Option<&str> {
+        match self {
+            Self::Completed(c) => c.stdout.as_deref(),
+            Self::Failed(f) => f.stdout.as_deref(),
+        }
+    }
+
+    pub fn stderr(&self) -> Option<&str> {
+        match self {
+            Self::Completed(c) => c.stderr.as_deref(),
+            Self::Failed(f) => f.stderr.as_deref(),
+        }
+    }
+
+    pub fn error(&self) -> Option<&str> {
+        match self {
+            Self::Completed(_) => None,
+            Self::Failed(f) => Some(&f.error),
+        }
+    }
+
+    pub fn output(&self) -> Option<&HashMap<Utf8PathBuf, String>> {
+        match self {
+            Self::Completed(c) => c.output.as_ref(),
+            Self::Failed(_) => None,
+        }
+    }
+}
+
+/// Output from a completed job.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonJobOutput {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub exit_code: Option<i32>,
+pub struct JsonJobOutputCompleted {
+    pub exit_code: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stdout: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -80,8 +131,20 @@ pub struct JsonJobOutput {
     #[typeshare(typescript(type = "Record<string, string> | undefined"))]
     #[cfg_attr(feature = "schema", schemars(with = "Option<HashMap<String, String>>"))]
     pub output: Option<HashMap<Utf8PathBuf, String>>,
+}
+
+/// Output from a failed job.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonJobOutputFailed {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<String>,
+    pub exit_code: Option<i32>,
+    pub error: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<String>,
 }
 
 /// Response to job update

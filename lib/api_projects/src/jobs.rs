@@ -2,7 +2,7 @@
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk, TotalCount};
 use bencher_json::{
-    JobStatus, JobUuid, JsonDirection, JsonPagination, ProjectResourceId, runner::JsonJobs,
+    JobStatus, JobUuid, JsonDirection, JsonJob, JsonPagination, ProjectResourceId, runner::JsonJobs,
 };
 use bencher_schema::{
     context::ApiContext,
@@ -192,7 +192,7 @@ pub async fn proj_job_options(
 pub async fn proj_job_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjJobParams>,
-) -> Result<ResponseOk<bencher_json::runner::JsonJob>, HttpError> {
+) -> Result<ResponseOk<JsonJob>, HttpError> {
     let public_user = PublicUser::new(&rqctx).await?;
     let json = get_one_inner(
         rqctx.context(),
@@ -209,7 +209,7 @@ async fn get_one_inner(
     path_params: ProjJobParams,
     public_user: &PublicUser,
     log: &slog::Logger,
-) -> Result<bencher_json::runner::JsonJob, HttpError> {
+) -> Result<JsonJob, HttpError> {
     let query_project = QueryProject::is_allowed_public(
         public_conn!(context, public_user),
         &context.rbac,
