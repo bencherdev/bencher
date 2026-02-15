@@ -88,7 +88,6 @@ diesel::table! {
         completed -> Nullable<BigInt>,
         last_heartbeat -> Nullable<BigInt>,
         last_billed_minute -> Nullable<Integer>,
-        exit_code -> Nullable<Integer>,
         created -> BigInt,
         modified -> BigInt,
     }

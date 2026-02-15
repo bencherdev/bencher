@@ -165,6 +165,7 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 ### Rust
 
 - Always run `cargo fmt` and `cargo clippy` when testing or before committing
+- Run `cargo fmt` one final time after all changes are complete (including any generated code or lint fixes), since clippy fixes and other automated changes can introduce formatting drift
 - Use `#[expect(...)]` instead of `#[allow(...)]` for lint suppression
 - Do **NOT** suppress a lint outside of a test module without explicit approval
 - All dependency versions go in the workspace `Cargo.toml`
@@ -178,6 +179,7 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - Use `bencher_json::Clock::Custom` (behind the `test-clock` feature) to inject a fake clock in tests instead of calling `DateTime::now()` directly. `Clock` is available on `ApiContext`.
 - Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
 - Always pass strong types (`MyTypeId`, `MyTypeUuid`, etc) into a function instead of its stringly typed equivalent, even in tests
+- Do not use `Box<dyn Error>` (or `Box<dyn std::error::Error + Send + Sync>`) as a return type. Use `HttpError` for API endpoint errors or define specific `thiserror` error enums. The only acceptable uses of `Box<dyn Error>` are when wrapping third-party APIs that return boxed errors (e.g., diesel migrations, dropshot server creation).
 
 ### Frontend (TypeScript)
 

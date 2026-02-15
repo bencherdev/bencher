@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bencher_endpoint::{CorsResponse, Endpoint, Patch, Post, ResponseOk};
 use bencher_json::{
-    DateTime, JobPriority, JobStatus, JobUpdateStatus, JobUuid, JsonClaimJob, JsonJob,
+    DateTime, JobPriority, JobStatus, JobUpdateStatus, JobUuid, JsonClaimJob, JsonJob, JsonSpec,
     JsonUpdateJob, JsonUpdateJobResponse, RunnerResourceId,
 };
 use bencher_schema::{
@@ -219,43 +219,56 @@ async fn try_claim_job(
     drop(conn);
 
     if let Some(json_spec) = json_spec {
-        #[cfg(feature = "otel")]
-        {
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
-
-            // Record queue duration (time from creation to claim)
-            #[expect(
-                clippy::cast_precision_loss,
-                reason = "queue duration in seconds fits in f64 mantissa"
-            )]
-            let queue_duration_secs =
-                ((now.timestamp() - query_job.created.timestamp()) as f64).max(0.0);
-            let tier = bencher_otel::PriorityTier::from_priority(query_job.priority.into());
-            bencher_otel::ApiMeter::record(
-                bencher_otel::ApiHistogram::JobQueueDuration(tier),
-                queue_duration_secs,
-            );
-        }
-
-        // Return job with config for runner
-        Ok(Some(JsonJob {
-            uuid: query_job.uuid,
-            status: JobStatus::Claimed,
-            spec: json_spec,
-            config: Some(query_job.config),
-            runner: Some(runner_token.runner_uuid),
-            claimed: Some(now),
-            started: None,
-            completed: None,
-            exit_code: None,
-            created: query_job.created,
-            modified: now,
-        }))
+        Ok(Some(build_claimed_job(
+            query_job,
+            runner_token,
+            json_spec,
+            now,
+        )))
     } else {
         // Defensive: the UPDATE matched 0 rows despite SELECT finding a pending job.
         // Under the current single-writer lock this should not happen, but we
         // handle it gracefully by returning None (no job claimed this iteration).
         Ok(None)
+    }
+}
+
+fn build_claimed_job(
+    query_job: QueryJob,
+    runner_token: &RunnerToken,
+    json_spec: JsonSpec,
+    now: DateTime,
+) -> JsonJob {
+    #[cfg(feature = "otel")]
+    {
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
+
+        // Record queue duration (time from creation to claim)
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "queue duration in seconds fits in f64 mantissa"
+        )]
+        let queue_duration_secs =
+            ((now.timestamp() - query_job.created.timestamp()) as f64).max(0.0);
+        let tier = bencher_otel::PriorityTier::from_priority(query_job.priority.into());
+        bencher_otel::ApiMeter::record(
+            bencher_otel::ApiHistogram::JobQueueDuration(tier),
+            queue_duration_secs,
+        );
+    }
+
+    JsonJob {
+        uuid: query_job.uuid,
+        status: JobStatus::Claimed,
+        spec: json_spec,
+        config: Some(query_job.config),
+        runner: Some(runner_token.runner_uuid),
+        claimed: Some(now),
+        started: None,
+        completed: None,
+        created: query_job.created,
+        modified: now,
+        output: None,
     }
 }
 
@@ -353,10 +366,6 @@ async fn update_job_inner(
         status: Some(new_status),
         started: (update_request.status == JobUpdateStatus::Running).then_some(Some(now)),
         completed: update_request.status.is_terminal().then_some(Some(now)),
-        exit_code: update_request
-            .status
-            .is_terminal()
-            .then_some(update_request.exit_code),
         modified: Some(now),
         ..Default::default()
     };

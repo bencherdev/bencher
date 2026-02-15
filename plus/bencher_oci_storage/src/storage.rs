@@ -318,6 +318,11 @@ impl OciStorage {
         }
     }
 
+    /// Returns a view type for job output storage operations.
+    pub fn job_output(&self) -> crate::job_output::JobOutput<'_> {
+        crate::job_output::JobOutput::new(self)
+    }
+
     /// Returns the configured maximum body size in bytes
     pub fn max_body_size(&self) -> u64 {
         match self {
@@ -589,6 +594,12 @@ impl OciStorage {
     }
 }
 
+/// Check whether an S3 SDK error is a 404 Not Found response.
+fn is_s3_not_found<E>(err: &aws_sdk_s3::error::SdkError<E>) -> bool {
+    err.raw_response()
+        .is_some_and(|r| r.status().as_u16() == 404)
+}
+
 impl OciS3Storage {
     /// Creates a new S3 storage instance
     fn new(
@@ -646,15 +657,12 @@ impl OciS3Storage {
 
     // ==================== S3 Error Helpers ====================
 
-    /// Maps an S3 SDK error, converting 404 responses to the provided not-found error
+    /// Maps an S3 SDK error, converting 404 responses to the provided not-found error.
     fn map_s3_error<E: std::fmt::Display>(
         err: &aws_sdk_s3::error::SdkError<E>,
         not_found_error: OciStorageError,
     ) -> OciStorageError {
-        if err
-            .raw_response()
-            .is_some_and(|r| r.status().as_u16() == 404)
-        {
+        if is_s3_not_found(err) {
             not_found_error
         } else {
             OciStorageError::S3(err.to_string())
@@ -1358,7 +1366,7 @@ impl OciS3Storage {
         {
             Ok(_) => Ok(true),
             Err(e) => {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
+                if is_s3_not_found(&e) {
                     Ok(false)
                 } else {
                     Err(OciStorageError::S3(e.to_string()))
@@ -1499,7 +1507,7 @@ impl OciS3Storage {
         {
             Ok(_) => Ok(true),
             Err(e) => {
-                if e.raw_response().is_some_and(|r| r.status().as_u16() == 404) {
+                if is_s3_not_found(&e) {
                     Ok(false)
                 } else {
                     Err(OciStorageError::S3(e.to_string()))
@@ -1912,6 +1920,74 @@ impl OciS3Storage {
             .await;
 
         Ok(referrers)
+    }
+
+    // ==================== Job Output ====================
+
+    /// S3 key for a job output blob.
+    fn job_output_key(&self, project: ProjectUuid, job: bencher_json::JobUuid) -> String {
+        format!("{}/output/v0/jobs/{job}", self.key_prefix(&project))
+    }
+
+    pub(crate) async fn put_job_output(
+        &self,
+        project: ProjectUuid,
+        job: bencher_json::JobUuid,
+        output: &bencher_json::runner::JsonJobOutput,
+    ) -> Result<(), OciStorageError> {
+        let key = self.job_output_key(project, job);
+        let data = serde_json::to_vec(output).map_err(|e| OciStorageError::Json(e.to_string()))?;
+
+        self.client
+            .put_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&key)
+            .body(data.into())
+            .content_type("application/json")
+            // Job output is immutable once stored (terminal jobs don't change),
+            // so allow aggressive caching.
+            .cache_control("public, max-age=31536000, immutable")
+            .send()
+            .await
+            .map_err(|e| OciStorageError::S3(e.to_string()))?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn get_job_output(
+        &self,
+        project: ProjectUuid,
+        job: bencher_json::JobUuid,
+    ) -> Result<Option<bencher_json::runner::JsonJobOutput>, OciStorageError> {
+        let key = self.job_output_key(project, job);
+
+        match self
+            .client
+            .get_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&key)
+            .send()
+            .await
+        {
+            Ok(response) => {
+                let data = response
+                    .body
+                    .collect()
+                    .await
+                    .map_err(|e| OciStorageError::S3(e.to_string()))?
+                    .into_bytes();
+                let output = serde_json::from_slice(&data)
+                    .map_err(|e| OciStorageError::Json(e.to_string()))?;
+                Ok(Some(output))
+            },
+            Err(e) => {
+                if is_s3_not_found(&e) {
+                    Ok(None)
+                } else {
+                    Err(OciStorageError::S3(e.to_string()))
+                }
+            },
+        }
     }
 }
 

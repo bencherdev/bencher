@@ -11945,13 +11945,17 @@
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
-          "exit_code": {
-            "nullable": true,
-            "type": "integer",
-            "format": "int32"
-          },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
+          },
+          "output": {
+            "nullable": true,
+            "description": "Job output (stdout, stderr, files) from blob storage, included for terminal jobs.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonJobOutput"
+              }
+            ]
           },
           "runner": {
             "nullable": true,
@@ -12067,6 +12071,38 @@
           "registry",
           "timeout"
         ]
+      },
+      "JsonJobOutput": {
+        "description": "Job output stored in blob storage after job completion or failure.",
+        "type": "object",
+        "properties": {
+          "error": {
+            "nullable": true,
+            "description": "Error message (present when the job failed).",
+            "type": "string"
+          },
+          "exit_code": {
+            "nullable": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          "output": {
+            "nullable": true,
+            "description": "File path to contents map",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "stderr": {
+            "nullable": true,
+            "type": "string"
+          },
+          "stdout": {
+            "nullable": true,
+            "type": "string"
+          }
+        }
       },
       "JsonJobs": {
         "description": "A list of jobs",

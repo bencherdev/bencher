@@ -329,15 +329,6 @@ async fn channel_lifecycle_completed() {
     assert!(matches!(resp, ServerMessage::Ack));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
 
-    // Verify exit code in DB
-    let mut conn = server.db_conn();
-    let exit_code: Option<i32> = schema::job::table
-        .filter(schema::job::uuid.eq(job_uuid))
-        .select(schema::job::exit_code)
-        .first(&mut conn)
-        .expect("Failed to get exit code");
-    assert_eq!(exit_code, Some(0));
-
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
@@ -369,15 +360,6 @@ async fn channel_lifecycle_failed() {
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
-
-    // Verify exit code in DB
-    let mut conn = server.db_conn();
-    let exit_code: Option<i32> = schema::job::table
-        .filter(schema::job::uuid.eq(job_uuid))
-        .select(schema::job::exit_code)
-        .first(&mut conn)
-        .expect("Failed to get exit code");
-    assert_eq!(exit_code, Some(1));
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }
@@ -565,15 +547,6 @@ async fn channel_lifecycle_with_full_spec() {
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
-
-    // Verify exit code in DB
-    let mut conn = server.db_conn();
-    let exit_code: Option<i32> = schema::job::table
-        .filter(schema::job::uuid.eq(job_uuid))
-        .select(schema::job::exit_code)
-        .first(&mut conn)
-        .expect("Failed to get exit code");
-    assert_eq!(exit_code, Some(0));
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }

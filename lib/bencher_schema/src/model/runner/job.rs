@@ -41,7 +41,6 @@ pub struct QueryJob {
     pub completed: Option<DateTime>,
     pub last_heartbeat: Option<DateTime>,
     pub last_billed_minute: Option<i32>,
-    pub exit_code: Option<i32>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -71,9 +70,9 @@ impl QueryJob {
             claimed: self.claimed,
             started: self.started,
             completed: self.completed,
-            exit_code: self.exit_code,
             created: self.created,
             modified: self.modified,
+            output: None,
         })
     }
 }
@@ -131,7 +130,6 @@ pub struct UpdateJob {
     pub completed: Option<Option<DateTime>>,
     pub last_heartbeat: Option<Option<DateTime>>,
     pub last_billed_minute: Option<Option<i32>>,
-    pub exit_code: Option<Option<i32>>,
     pub modified: Option<DateTime>,
 }
 

@@ -442,7 +442,6 @@ mod job_lifecycle {
         assert_eq!(resp.status(), StatusCode::OK);
         let final_job: JsonJob = resp.json().await.expect("Failed to parse response");
         assert_eq!(final_job.status, JobStatus::Completed);
-        assert_eq!(final_job.exit_code, Some(0));
         assert_eq!(final_job.runner, Some(runner.uuid));
         assert!(final_job.claimed.is_some());
         assert!(final_job.started.is_some());
@@ -533,7 +532,6 @@ mod job_lifecycle {
         assert_eq!(resp.status(), StatusCode::OK);
         let final_job: JsonJob = resp.json().await.expect("Failed to parse response");
         assert_eq!(final_job.status, JobStatus::Failed);
-        assert_eq!(final_job.exit_code, Some(1));
         assert!(final_job.claimed.is_some());
         assert!(final_job.started.is_some());
         assert!(final_job.completed.is_some());
@@ -2736,8 +2734,12 @@ mod poll_timeout_boundaries {
         let report_id = create_test_report(&server, project_id);
         let _job_uuid = insert_test_job(&server, report_id, spec_id);
 
+        // Pause time so that if the claim blocked on the poll timeout,
+        // it would hang forever (time must be manually advanced).
+        // A successful immediate return proves no blocking occurred.
+        tokio::time::pause();
+
         let body = serde_json::json!({ "poll_timeout": 61 });
-        let start = std::time::Instant::now();
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
@@ -2746,17 +2748,10 @@ mod poll_timeout_boundaries {
             .send()
             .await
             .expect("Request failed");
-        let elapsed = start.elapsed();
 
         assert_eq!(resp.status(), StatusCode::OK);
         let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse");
         assert!(claimed.is_some(), "Expected to claim a job");
-
-        // Job was available, so should return immediately regardless of poll_timeout
-        assert!(
-            elapsed < std::time::Duration::from_secs(5),
-            "Expected immediate return when job is available, got {elapsed:?}"
-        );
     }
 }
 

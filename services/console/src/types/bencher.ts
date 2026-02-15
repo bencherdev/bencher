@@ -116,6 +116,17 @@ export interface JsonJobConfig {
 	file_paths?: string[];
 }
 
+/** Job output stored in blob storage after job completion or failure. */
+export interface JsonJobOutput {
+	exit_code?: number;
+	/** Error message (present when the job failed). */
+	error?: string;
+	stdout?: string;
+	stderr?: string;
+	/** File path to contents map */
+	output?: Record<string, string> | undefined;
+}
+
 /** A benchmark job */
 export interface JsonJob {
 	uuid: Uuid;
@@ -128,9 +139,10 @@ export interface JsonJob {
 	claimed?: string;
 	started?: string;
 	completed?: string;
-	exit_code?: number;
 	created: string;
 	modified: string;
+	/** Job output (stdout, stderr, files) from blob storage, included for terminal jobs. */
+	output?: JsonJobOutput;
 }
 
 /** A list of jobs */

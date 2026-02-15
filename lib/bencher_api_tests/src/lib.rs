@@ -33,6 +33,8 @@ use libsqlite3_sys as _;
 use bencher_config as _;
 
 mod context;
+#[cfg(feature = "plus")]
+pub mod helpers;
 pub mod oci;
 mod seed;
 
