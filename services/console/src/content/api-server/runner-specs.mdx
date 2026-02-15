@@ -7,13 +7,13 @@ paths:
   - path: /v0/runners/{runner}/specs
     method: get
     headers: auth
-    cli: null
+    cli: runner spec list RUNNER
   - path: /v0/runners/{runner}/specs
     method: post
     headers: auth
-    cli: null
+    cli: runner spec add RUNNER
   - path: /v0/runners/{runner}/specs/{spec}
     method: delete
     headers: auth
-    cli: null
+    cli: runner spec remove RUNNER SPEC
 ---
