@@ -2158,7 +2158,7 @@ async fn cleanup_stale_uploads_s3(
         }
     }
 
-    let now = clock.timestamp();
+    let (now, os_now) = clock.timestamps();
     let timeout_secs = i64::try_from(upload_timeout).unwrap_or(i64::MAX);
 
     for prefix in all_prefixes {
@@ -2201,6 +2201,10 @@ async fn cleanup_stale_uploads_s3(
             Err(_) => None,
         };
 
+        // `now` (from Clock) is used for `state.created_at` because both are
+        // in the application time domain.
+        // `os_now` is used for S3 `LastModified` because both are in the OS
+        // wall-clock time domain.
         let is_stale = match &state {
             Some(s) => now.saturating_sub(s.created_at) > timeout_secs,
             None => {
@@ -2211,7 +2215,7 @@ async fn cleanup_stale_uploads_s3(
                     &client,
                     &config,
                     &format!("{global_prefix}/{upload_id}/"),
-                    now,
+                    os_now,
                     timeout_secs,
                 )
                 .await
