@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct List {
     pub project: ProjectResourceId,
     pub status: Option<JobStatus>,
@@ -18,7 +18,7 @@ pub struct List {
     pub backend: PubBackend,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Pagination {
     pub sort: Option<ProjJobsSort>,
     pub direction: Option<JsonDirection>,
