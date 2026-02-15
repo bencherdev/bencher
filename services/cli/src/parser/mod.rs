@@ -14,6 +14,8 @@ pub mod user;
 use compose::{CliDown, CliLogs, CliUp};
 use mock::CliMock;
 use organization::{CliOrganization, member::CliMember};
+#[cfg(feature = "plus")]
+use project::job::CliJob;
 use project::{
     CliProject, alert::CliAlert, archive::CliArchive, benchmark::CliBenchmark, branch::CliBranch,
     measure::CliMeasure, metric::CliMetric, perf::CliPerf, plot::CliPlot, report::CliReport,
@@ -73,6 +75,10 @@ pub enum CliSub {
     /// Manage reports
     #[clap(subcommand)]
     Report(CliReport),
+    #[cfg(feature = "plus")]
+    /// Manage jobs
+    #[clap(subcommand)]
+    Job(CliJob),
     /// Query benchmark data
     Perf(CliPerf),
     /// Manage plots
