@@ -7,21 +7,21 @@ paths:
   - path: /v0/runners
     method: get
     headers: auth
-    cli: null
+    cli: runner list
   - path: /v0/runners
     method: post
     headers: auth
-    cli: null
+    cli: runner create
   - path: /v0/runners/{runner}
     method: get
     headers: auth
-    cli: null
+    cli: runner view RUNNER
   - path: /v0/runners/{runner}
     method: patch
     headers: auth
-    cli: null
+    cli: runner update RUNNER
   - path: /v0/runners/{runner}/token
     method: post
     headers: auth
-    cli: null
+    cli: runner token RUNNER
 ---

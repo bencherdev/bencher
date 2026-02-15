@@ -22,6 +22,10 @@ use project::{
     testbed::CliTestbed, threshold::CliThreshold,
 };
 use run::CliRun;
+#[cfg(feature = "plus")]
+use system::runner::CliRunner;
+#[cfg(feature = "plus")]
+use system::spec::CliSpec;
 use system::{auth::CliAuth, server::CliServer};
 use user::{CliUser, token::CliToken};
 
@@ -114,6 +118,15 @@ pub enum CliSub {
     /// Manage user API tokens
     #[clap(subcommand)]
     Token(CliToken),
+
+    #[cfg(feature = "plus")]
+    /// Manage runners
+    #[clap(subcommand)]
+    Runner(CliRunner),
+    #[cfg(feature = "plus")]
+    /// Manage hardware specs
+    #[clap(subcommand)]
+    Spec(CliSpec),
 
     /// Server commands
     #[clap(subcommand)]

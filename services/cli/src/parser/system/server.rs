@@ -7,7 +7,7 @@ pub enum CliServer {
     /// Server version
     Version(CliVersion),
     /// Server `OpenAPI` Spec
-    Spec(CliSpec),
+    Spec(CliOpenApiSpec),
     /// Restart server
     Restart(CliRestart),
     /// Manager server config
@@ -27,7 +27,7 @@ pub struct CliVersion {
 }
 
 #[derive(Parser, Debug)]
-pub struct CliSpec {
+pub struct CliOpenApiSpec {
     #[clap(flatten)]
     pub backend: CliBackend,
 }

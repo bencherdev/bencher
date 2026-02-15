@@ -70,11 +70,24 @@ from_client!(
 #[cfg(feature = "plus")]
 from_client!(
     SsoUuid,
+    RunnerUuid,
+    SpecUuid,
     Entitlements,
     ExpirationMonth,
     ExpirationYear,
     JobUuid
 );
+
+#[cfg(feature = "plus")]
+impl From<bencher_json::Architecture> for types::Architecture {
+    fn from(arch: bencher_json::Architecture) -> Self {
+        match arch {
+            bencher_json::Architecture::X86_64 => Self::X8664,
+            bencher_json::Architecture::Aarch64 => Self::Aarch64,
+            bencher_json::Architecture::Riscv64 => Self::Riscv64,
+        }
+    }
+}
 
 /// This type allows for forwards compatibility with the API response types.
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -166,6 +179,11 @@ try_from_client!(
     JsonSso,
     JsonUsage,
     JsonServerStats,
+    JsonRunners,
+    JsonRunner,
+    JsonRunnerToken,
+    JsonSpecs,
+    JsonSpec,
     JsonJobs,
     JsonJob
 );
@@ -218,7 +236,11 @@ into_uuids!(
 );
 
 #[cfg(feature = "plus")]
-into_uuids!(JsonSsos[JsonSso]);
+into_uuids!(
+    JsonSsos[JsonSso],
+    JsonRunners[JsonRunner],
+    JsonSpecs[JsonSpec]
+);
 
 macro_rules! into_uuid {
     ($($name:ident),*) => {
@@ -253,7 +275,7 @@ into_uuid!(
 );
 
 #[cfg(feature = "plus")]
-into_uuid!(JsonSso);
+into_uuid!(JsonSso, JsonRunner, JsonSpec);
 
 macro_rules! from_slug {
     ($($name:ident),*) => {
@@ -276,6 +298,9 @@ from_slug!(
     MeasureSlug,
     UserSlug
 );
+
+#[cfg(feature = "plus")]
+from_slug!(RunnerSlug, SpecSlug);
 
 macro_rules! from_resource_id {
     ($($from:ident),*) => {
@@ -301,6 +326,9 @@ from_resource_id!(
     MeasureResourceId,
     UserResourceId
 );
+
+#[cfg(feature = "plus")]
+from_resource_id!(RunnerResourceId, SpecResourceId);
 
 macro_rules! from_name_id {
     ($($from:ident),*) => {

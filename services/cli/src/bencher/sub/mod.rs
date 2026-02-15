@@ -34,6 +34,10 @@ pub use project::{archive::ArchiveError, report::ThresholdsError, threshold::Thr
 use run::Run;
 pub use run::{RunError, runner::output::Output};
 pub use sub_cmd::SubCmd;
+#[cfg(feature = "plus")]
+use system::runner::Runner;
+#[cfg(feature = "plus")]
+use system::spec::Spec;
 use system::{auth::Auth, server::Server};
 use user::{token::Token, user::User};
 
@@ -66,6 +70,10 @@ pub enum Sub {
     Alert(Alert),
     User(User),
     Token(Token),
+    #[cfg(feature = "plus")]
+    Runner(Runner),
+    #[cfg(feature = "plus")]
+    Spec(Spec),
     Server(Server),
     Auth(Auth),
 }
@@ -107,6 +115,10 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Alert(alert) => Self::Alert(alert.try_into()?),
             CliSub::User(user) => Self::User(user.try_into()?),
             CliSub::Token(token) => Self::Token(token.try_into()?),
+            #[cfg(feature = "plus")]
+            CliSub::Runner(runner) => Self::Runner(runner.try_into()?),
+            #[cfg(feature = "plus")]
+            CliSub::Spec(spec) => Self::Spec(spec.try_into()?),
             CliSub::Server(server) => Self::Server(server.try_into()?),
             CliSub::Auth(auth) => Self::Auth(auth.try_into()?),
         })
@@ -144,6 +156,10 @@ impl SubCmd for Sub {
             Self::Alert(alert) => alert.exec().await,
             Self::User(user) => user.exec().await,
             Self::Token(token) => token.exec().await,
+            #[cfg(feature = "plus")]
+            Self::Runner(runner) => runner.exec().await,
+            #[cfg(feature = "plus")]
+            Self::Spec(spec) => spec.exec().await,
             Self::Server(server) => server.exec().await,
             Self::Auth(auth) => auth.exec().await,
         }
