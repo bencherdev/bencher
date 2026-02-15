@@ -22,9 +22,18 @@ use bencher_schema::{
     },
     public_conn,
 };
-use bencher_token::{OciAction, OciClaims};
+use bencher_token::{OciAction, OciClaims, OciScopeClaims, RunnerOciClaims};
 use dropshot::{ClientErrorStatusCode, HttpError, RequestContext};
 use slog::Logger;
+
+/// Identity that can pull from the OCI registry.
+///
+/// Pull endpoints accept both user OCI tokens (sub: `Email`) and
+/// runner OCI tokens (sub: `RunnerUuid`).
+pub enum OciPullIdentity {
+    User(OciClaims),
+    Runner(RunnerOciClaims),
+}
 
 // Re-export from api_auth
 pub use api_auth::oci::unauthorized_with_www_authenticate;
@@ -123,6 +132,80 @@ pub fn validate_oci_access(
     Ok(claims)
 }
 
+/// Validate that OCI scope claims grant access to the specified repository and action.
+///
+/// This is the shared logic between user and runner OCI tokens: both carry an
+/// [`OciScopeClaims`] with an optional repository and a list of actions.
+fn validate_oci_scope(
+    oci: &OciScopeClaims,
+    repository: &str,
+    required_action: &OciAction,
+) -> Result<(), HttpError> {
+    // Check repository matches (if token has a specific repository)
+    if let Some(token_repo) = &oci.repository
+        && token_repo != repository
+    {
+        return Err(HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::FORBIDDEN,
+            oci_error_body(
+                OCI_ERROR_DENIED,
+                &format!("Token not valid for repository: {repository}"),
+            ),
+        ));
+    }
+
+    // Check action is allowed
+    if !oci.actions.contains(required_action) {
+        return Err(HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::FORBIDDEN,
+            oci_error_body(
+                OCI_ERROR_DENIED,
+                &format!("Token does not permit {required_action:?} action"),
+            ),
+        ));
+    }
+
+    Ok(())
+}
+
+/// Try to validate a bearer token as either a runner OCI token or a user OCI token,
+/// then check that it grants pull access to the specified repository.
+///
+/// Runner tokens are tried first because in production the vast majority of OCI pull
+/// requests come from runners. Only server admins pull otherwise, so we optimise for
+/// the common case.
+fn validate_pull_identity(
+    context: &ApiContext,
+    token: &Jwt,
+    repository: &str,
+) -> Result<OciPullIdentity, HttpError> {
+    // Try runner token first (common case)
+    if let Ok(runner_claims) = context.token_key.validate_oci_runner(token) {
+        validate_oci_scope(&runner_claims.oci, repository, &OciAction::Pull)?;
+        return Ok(OciPullIdentity::Runner(runner_claims));
+    }
+
+    // Fall back to user token
+    let user_claims = context.token_key.validate_oci(token).map_err(|_err| {
+        HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::UNAUTHORIZED,
+            oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid or expired token"),
+        )
+    })?;
+    validate_oci_scope(&user_claims.oci, repository, &OciAction::Pull)?;
+    Ok(OciPullIdentity::User(user_claims))
+}
+
+/// Result of pull access validation
+pub struct OciPullAccess {
+    /// The validated pull identity (user or runner)
+    #[expect(dead_code, reason = "May be used in the future for audit logging")]
+    pub identity: OciPullIdentity,
+}
+
 /// Result of pull/push access validation (for simple operations that don't need project info)
 pub struct OciAccess {
     /// The validated OCI claims
@@ -133,6 +216,7 @@ pub struct OciAccess {
 /// Require pull access for an OCI operation
 ///
 /// Validates the bearer token and checks it grants pull access to the specified repository.
+/// Accepts both user OCI tokens and runner OCI tokens.
 /// Use this for simple read operations that don't need project info.
 #[expect(
     clippy::map_err_ignore,
@@ -141,19 +225,19 @@ pub struct OciAccess {
 pub async fn require_pull_access(
     rqctx: &RequestContext<ApiContext>,
     repository: &str,
-) -> Result<OciAccess, HttpError> {
+) -> Result<OciPullAccess, HttpError> {
     let context = rqctx.context();
     let scope = format!("repository:{repository}:pull");
     let token = extract_oci_bearer_token(rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, repository, &OciAction::Pull)
+    let identity = validate_pull_identity(context, &token, repository)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
 
     // Apply rate limiting
     #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+    apply_auth_rate_limit(&rqctx.log, context, &identity).await?;
 
-    Ok(OciAccess { claims })
+    Ok(OciPullAccess { identity })
 }
 
 /// Require push access for an OCI operation (simple ops like delete, not project creation)
@@ -176,9 +260,9 @@ pub async fn require_push_access(
     let claims = validate_oci_access(context, &token, repository, &OciAction::Push)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
 
-    // Apply rate limiting
+    // Apply rate limiting (push is always a user token)
     #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &claims).await?;
+    apply_user_rate_limit(&rqctx.log, context, &claims).await?;
 
     Ok(OciAccess { claims })
 }
@@ -411,12 +495,32 @@ async fn handle_nonexistent_project(
     }
 }
 
-/// Apply rate limiting for authenticated OCI requests
+/// Apply rate limiting for authenticated OCI pull requests
 ///
-/// Uses `user_request` rate limiting for authenticated users based on their UUID.
-/// This is used for pull operations (GET/HEAD) where the user has a valid OCI token.
+/// - `User` identity: looks up the user by email and applies `user_request` rate limiting.
+/// - `Runner` identity: skips rate limiting (runners already have per-runner rate limiting
+///   on the claim endpoint).
 #[cfg(feature = "plus")]
-pub async fn apply_auth_rate_limit(
+async fn apply_auth_rate_limit(
+    log: &Logger,
+    context: &ApiContext,
+    identity: &OciPullIdentity,
+) -> Result<(), HttpError> {
+    match identity {
+        OciPullIdentity::User(claims) => apply_user_rate_limit(log, context, claims).await,
+        OciPullIdentity::Runner(claims) => {
+            slog::debug!(log, "Skipping rate limit for runner OCI pull"; "runner_uuid" => %claims.sub);
+            Ok(())
+        },
+    }
+}
+
+/// Apply rate limiting for a user OCI token
+///
+/// Looks up the user by email and applies `user_request` rate limiting.
+/// Used by push endpoints and the base endpoint which only accept user tokens.
+#[cfg(feature = "plus")]
+pub(crate) async fn apply_user_rate_limit(
     log: &Logger,
     context: &ApiContext,
     claims: &OciClaims,

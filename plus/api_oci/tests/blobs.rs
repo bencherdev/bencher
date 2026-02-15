@@ -11,6 +11,7 @@
 
 use bencher_api_tests::TestServer;
 use bencher_api_tests::oci::compute_digest;
+use bencher_json::RunnerUuid;
 use bencher_token::OciAction;
 use http::StatusCode;
 
@@ -901,5 +902,234 @@ async fn blob_head_push_only_token_rejected() {
         resp.status(),
         StatusCode::UNAUTHORIZED,
         "Push-only token should not be able to read a blob"
+    );
+}
+
+// =============================================================================
+// Runner OCI Token Pull Tests
+// =============================================================================
+
+// Runner OCI token should be able to pull (GET) a blob
+#[tokio::test]
+async fn blob_get_runner_oci_token() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("RunnerPull User", "runnerpullblob@example.com")
+        .await;
+    let org = server.create_org(&user, "RunnerPull Org").await;
+    let project = server
+        .create_project(&user, &org, "RunnerPull Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload a blob with a user push token
+    let blob_data = b"runner pull test blob content";
+    let digest = compute_digest(blob_data);
+
+    let upload_resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Upload failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    // Pull using a runner OCI token
+    let runner_uuid: RunnerUuid = "00000000-0000-4000-8000-000000000001"
+        .parse()
+        .expect("valid UUID");
+    let runner_token = server.oci_runner_pull_token(runner_uuid, project_slug);
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
+        .header("Authorization", format!("Bearer {}", runner_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "Runner OCI token should be able to pull a blob"
+    );
+    let body = resp.bytes().await.expect("Failed to read body");
+    assert_eq!(body.as_ref(), blob_data);
+}
+
+// Runner OCI token should be able to check (HEAD) a blob exists
+#[tokio::test]
+async fn blob_head_runner_oci_token() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("RunnerHead User", "runnerheadblob@example.com")
+        .await;
+    let org = server.create_org(&user, "RunnerHead Org").await;
+    let project = server
+        .create_project(&user, &org, "RunnerHead Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload a blob
+    let blob_data = b"runner head test blob content";
+    let digest = compute_digest(blob_data);
+
+    let upload_resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Upload failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    // HEAD using a runner OCI token
+    let runner_uuid: RunnerUuid = "00000000-0000-4000-8000-000000000002"
+        .parse()
+        .expect("valid UUID");
+    let runner_token = server.oci_runner_pull_token(runner_uuid, project_slug);
+
+    let resp = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
+        .header("Authorization", format!("Bearer {}", runner_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "Runner OCI token should be able to HEAD a blob"
+    );
+    assert!(resp.headers().contains_key("docker-content-digest"));
+}
+
+// Runner OCI token scoped to a different repository should be rejected
+#[tokio::test]
+async fn blob_get_runner_oci_token_wrong_repo() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("RunnerWrongRepo User", "runnerwrongrepo@example.com")
+        .await;
+    let org = server.create_org(&user, "RunnerWrongRepo Org").await;
+    let project = server
+        .create_project(&user, &org, "RunnerWrongRepo Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload a blob
+    let blob_data = b"runner wrong repo test blob";
+    let digest = compute_digest(blob_data);
+
+    let upload_resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Upload failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    // Try to pull with a runner token scoped to a DIFFERENT repository
+    let runner_uuid: RunnerUuid = "00000000-0000-4000-8000-000000000003"
+        .parse()
+        .expect("valid UUID");
+    let wrong_repo_token = server.oci_runner_pull_token(runner_uuid, "some-other-project");
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
+        .header("Authorization", format!("Bearer {}", wrong_repo_token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    // require_pull_access maps all auth/scope errors to 401 with WWW-Authenticate
+    assert_eq!(
+        resp.status(),
+        StatusCode::UNAUTHORIZED,
+        "Runner token scoped to wrong repository should be rejected"
+    );
+}
+
+// Runner OCI token with only Push action should be rejected for pull
+#[tokio::test]
+async fn blob_get_runner_oci_token_push_only() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("RunnerPushOnly User", "runnerpushonly@example.com")
+        .await;
+    let org = server.create_org(&user, "RunnerPushOnly Org").await;
+    let project = server
+        .create_project(&user, &org, "RunnerPushOnly Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload a blob
+    let blob_data = b"runner push-only action test blob";
+    let digest = compute_digest(blob_data);
+
+    let upload_resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )))
+        .header("Authorization", format!("Bearer {}", push_token))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data.to_vec())
+        .send()
+        .await
+        .expect("Upload failed");
+    assert_eq!(upload_resp.status(), StatusCode::CREATED);
+
+    // Try to pull with a runner token that only has Push action (not Pull)
+    let runner_uuid: RunnerUuid = "00000000-0000-4000-8000-000000000004"
+        .parse()
+        .expect("valid UUID");
+    let push_only_runner_token =
+        server.oci_runner_token(runner_uuid, project_slug, &[OciAction::Push]);
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
+        .header(
+            "Authorization",
+            format!("Bearer {}", push_only_runner_token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    // require_pull_access maps all auth/scope errors to 401 with WWW-Authenticate
+    assert_eq!(
+        resp.status(),
+        StatusCode::UNAUTHORIZED,
+        "Runner token with only Push action should be rejected for pull"
     );
 }

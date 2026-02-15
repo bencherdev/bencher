@@ -1,5 +1,6 @@
 //! OCI-specific test helpers
 
+use bencher_json::RunnerUuid;
 use bencher_token::OciAction;
 use sha2::{Digest as _, Sha256};
 
@@ -47,6 +48,41 @@ impl TestServer {
             project.slug.as_ref(),
             &[OciAction::Pull, OciAction::Push],
         )
+    }
+
+    /// Generate a runner OCI token for pull access to a project.
+    ///
+    /// Creates a valid runner OCI JWT token scoped to the given project slug.
+    #[expect(clippy::expect_used)]
+    pub fn oci_runner_pull_token(&self, runner_uuid: RunnerUuid, project_slug: &str) -> String {
+        self.token_key()
+            .new_oci_runner(
+                runner_uuid,
+                u32::MAX,
+                Some(project_slug.to_owned()),
+                vec![OciAction::Pull],
+            )
+            .expect("Failed to create runner OCI token")
+            .to_string()
+    }
+
+    /// Generate a runner OCI token with the specified repository and actions.
+    #[expect(clippy::expect_used)]
+    pub fn oci_runner_token(
+        &self,
+        runner_uuid: RunnerUuid,
+        repository: &str,
+        actions: &[OciAction],
+    ) -> String {
+        self.token_key()
+            .new_oci_runner(
+                runner_uuid,
+                u32::MAX,
+                Some(repository.to_owned()),
+                actions.to_vec(),
+            )
+            .expect("Failed to create runner OCI token")
+            .to_string()
     }
 
     /// Upload a single blob and return its digest.
