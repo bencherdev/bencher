@@ -62,7 +62,6 @@ CREATE TABLE job (
     completed BIGINT,
     last_heartbeat BIGINT,
     last_billed_minute INTEGER,
-    exit_code INTEGER,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
     FOREIGN KEY (report_id) REFERENCES report (id) ON DELETE CASCADE,

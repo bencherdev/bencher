@@ -593,7 +593,6 @@ async fn handle_completed(
     let update = UpdateJob {
         status: Some(JobStatus::Completed),
         completed: Some(Some(now)),
-        exit_code: Some(Some(exit_code)),
         modified: Some(now),
         ..Default::default()
     };
@@ -665,7 +664,6 @@ async fn handle_failed(
     let update = UpdateJob {
         status: Some(JobStatus::Failed),
         completed: Some(Some(now)),
-        exit_code: Some(exit_code),
         modified: Some(now),
         ..Default::default()
     };

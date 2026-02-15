@@ -37,7 +37,6 @@ pub struct JsonJob {
     pub claimed: Option<DateTime>,
     pub started: Option<DateTime>,
     pub completed: Option<DateTime>,
-    pub exit_code: Option<i32>,
     pub created: DateTime,
     pub modified: DateTime,
     /// Job output (stdout, stderr, files) from blob storage, included for terminal jobs.

@@ -442,7 +442,6 @@ mod job_lifecycle {
         assert_eq!(resp.status(), StatusCode::OK);
         let final_job: JsonJob = resp.json().await.expect("Failed to parse response");
         assert_eq!(final_job.status, JobStatus::Completed);
-        assert_eq!(final_job.exit_code, Some(0));
         assert_eq!(final_job.runner, Some(runner.uuid));
         assert!(final_job.claimed.is_some());
         assert!(final_job.started.is_some());
@@ -533,7 +532,6 @@ mod job_lifecycle {
         assert_eq!(resp.status(), StatusCode::OK);
         let final_job: JsonJob = resp.json().await.expect("Failed to parse response");
         assert_eq!(final_job.status, JobStatus::Failed);
-        assert_eq!(final_job.exit_code, Some(1));
         assert!(final_job.claimed.is_some());
         assert!(final_job.started.is_some());
         assert!(final_job.completed.is_some());

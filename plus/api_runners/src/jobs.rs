@@ -266,7 +266,6 @@ fn build_claimed_job(
         claimed: Some(now),
         started: None,
         completed: None,
-        exit_code: None,
         created: query_job.created,
         modified: now,
         output: None,
@@ -367,10 +366,6 @@ async fn update_job_inner(
         status: Some(new_status),
         started: (update_request.status == JobUpdateStatus::Running).then_some(Some(now)),
         completed: update_request.status.is_terminal().then_some(Some(now)),
-        exit_code: update_request
-            .status
-            .is_terminal()
-            .then_some(update_request.exit_code),
         modified: Some(now),
         ..Default::default()
     };
