@@ -35,8 +35,8 @@ impl Clock {
     ///   OS-level timestamps (filesystem mtime, S3 `LastModified`, …)
     ///   that are outside the application's control.
     ///
-    /// In production (`Clock::System`) both values come from a single
-    /// `SystemTime::now()` call and are identical.
+    /// In production (`Clock::System`) both values come from
+    /// `DateTime::now()` and are identical.
     pub fn timestamps(&self) -> (i64, i64) {
         let os_now = Self::system_timestamp();
         match self {
@@ -47,12 +47,6 @@ impl Clock {
     }
 
     fn system_timestamp() -> i64 {
-        i64::try_from(
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
-        )
-        .unwrap_or(i64::MAX)
+        DateTime::now().timestamp()
     }
 }
