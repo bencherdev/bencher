@@ -20,6 +20,7 @@ use crate::model::project::QueryProject;
 mod database;
 #[cfg(feature = "plus")]
 mod heartbeat_tasks;
+#[cfg(feature = "plus")]
 mod indexer;
 mod messenger;
 #[cfg(feature = "plus")]

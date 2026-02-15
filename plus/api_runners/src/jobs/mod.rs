@@ -228,7 +228,6 @@ async fn try_claim_job(
             query_job,
             runner_token,
             json_spec,
-            now,
         )?))
     } else {
         // Defensive: the UPDATE matched 0 rows despite SELECT finding a pending job.
@@ -243,13 +242,13 @@ fn build_claimed_job(
     query_job: QueryJob,
     runner_token: &RunnerToken,
     json_spec: JsonSpec,
-    now: DateTime,
 ) -> Result<JsonClaimedJob, HttpError> {
     #[cfg(feature = "otel")]
     {
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
 
         // Record queue duration (time from creation to claim)
+        let now = DateTime::now();
         #[expect(
             clippy::cast_precision_loss,
             reason = "queue duration in seconds fits in f64 mantissa"
@@ -262,8 +261,6 @@ fn build_claimed_job(
             queue_duration_secs,
         );
     }
-    #[cfg(not(feature = "otel"))]
-    let _ = now;
 
     let timeout = query_job.config.timeout;
     let oci_token = context

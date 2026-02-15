@@ -1,5 +1,3 @@
-#![cfg(feature = "plus")]
-
 use bencher_bing_index::BingIndex;
 use bencher_google_index::GoogleIndex;
 use bencher_json::system::config::{JsonBingIndex, JsonGoogleIndex, JsonIndex};

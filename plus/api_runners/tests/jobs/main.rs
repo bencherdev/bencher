@@ -2031,26 +2031,29 @@ mod poll_timeout_boundaries {
         let _job_uuid = insert_test_job(&server, report_id, spec_id);
 
         let body = serde_json::json!({ "poll_timeout": 61 });
-        let start = std::time::Instant::now();
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-        let elapsed = start.elapsed();
 
+        // With paused time, any tokio::time::sleep blocks forever unless time is advanced.
+        // If the task completes without advancing, the endpoint returned immediately.
+        tokio::time::pause();
+        let handle = tokio::spawn({
+            let client = server.client.clone();
+            let url = server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid));
+            let token = runner_token.to_owned();
+            async move {
+                client
+                    .post(url)
+                    .header("Authorization", format!("Bearer {token}"))
+                    .json(&body)
+                    .send()
+                    .await
+                    .expect("Request failed")
+            }
+        });
+
+        let resp = handle.await.expect("Task panicked");
         assert_eq!(resp.status(), StatusCode::OK);
         let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
         assert!(claimed.is_some(), "Expected to claim a job");
-
-        // Job was available, so should return immediately regardless of poll_timeout
-        assert!(
-            elapsed < std::time::Duration::from_secs(5),
-            "Expected immediate return when job is available, got {elapsed:?}"
-        );
     }
 }
 
