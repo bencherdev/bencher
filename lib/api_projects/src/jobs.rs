@@ -187,7 +187,8 @@ pub async fn proj_job_options(
 /// View a job
 ///
 /// ➕ Bencher Plus: View a job for a project.
-/// The job output is included in the response for terminal (completed, failed, or canceled) jobs.
+/// The job output is included in the response for terminal (completed, failed, or canceled) jobs
+/// only when the user is authenticated and has `view` permissions for the project.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {
@@ -236,8 +237,8 @@ async fn get_one_inner(
     let is_terminal = query_job.status.is_terminal();
     let mut job = query_job.into_json(public_conn!(context, public_user))?;
 
-    // Fetch output from blob storage for terminal jobs
-    if is_terminal {
+    // Fetch output from blob storage for terminal jobs only when authenticated
+    if is_terminal && public_user.is_auth() {
         job.output = match context
             .oci_storage()
             .job_output()
