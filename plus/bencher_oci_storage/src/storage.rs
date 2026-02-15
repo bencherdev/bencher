@@ -1944,6 +1944,9 @@ impl OciS3Storage {
             .key(&key)
             .body(data.into())
             .content_type("application/json")
+            // Job output is immutable once stored (terminal jobs don't change),
+            // so allow aggressive caching.
+            .cache_control("public, max-age=31536000, immutable")
             .send()
             .await
             .map_err(|e| OciStorageError::S3(e.to_string()))?;

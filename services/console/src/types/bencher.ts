@@ -139,7 +139,6 @@ export interface JsonJob {
 	claimed?: string;
 	started?: string;
 	completed?: string;
-	exit_code?: number;
 	created: string;
 	modified: string;
 	/** Job output (stdout, stderr, files) from blob storage, included for terminal jobs. */

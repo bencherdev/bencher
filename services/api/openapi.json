@@ -11945,11 +11945,6 @@
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
-          "exit_code": {
-            "nullable": true,
-            "type": "integer",
-            "format": "int32"
-          },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
           },

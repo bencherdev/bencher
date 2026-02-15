@@ -780,3 +780,248 @@ async fn non_member_private_project_jobs() {
         resp.status()
     );
 }
+
+// =============================================================================
+// Single job GET tests (get_one_inner output-fetching path)
+// =============================================================================
+
+/// Helper: write job output JSON to the local OCI storage path.
+///
+/// The test server uses local filesystem OCI storage at `{db_parent}/oci/`.
+/// Job output is stored at `{oci_dir}/{project_uuid}/output/v0/jobs/{job_uuid}`.
+#[expect(clippy::expect_used)]
+fn write_job_output(
+    server: &TestServer,
+    project_uuid: bencher_json::ProjectUuid,
+    job_uuid: bencher_json::JobUuid,
+    output: &serde_json::Value,
+) {
+    let oci_dir = server
+        .db_path()
+        .parent()
+        .expect("db has parent")
+        .join("oci");
+    let output_dir = oci_dir
+        .join(project_uuid.to_string())
+        .join("output")
+        .join("v0")
+        .join("jobs");
+    std::fs::create_dir_all(&output_dir).expect("Failed to create output directory");
+    let output_path = output_dir.join(job_uuid.to_string());
+    std::fs::write(
+        &output_path,
+        serde_json::to_vec(output).expect("Failed to serialize"),
+    )
+    .expect("Failed to write job output");
+}
+
+// GET /v0/projects/{project}/jobs/{job} - pending job has no output
+#[tokio::test]
+async fn job_get_pending_no_output() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "jobgetpending@example.com")
+        .await;
+    let org = server.create_org(&user, "Job GetPending Org").await;
+    let project = server
+        .create_project(&user, &org, "Job GetPending Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let now = bencher_json::DateTime::now();
+    let job_uuid = insert_test_job(&server, report_id, project.uuid, now);
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let job: bencher_json::JsonJob = resp.json().await.expect("Failed to parse response");
+    assert_eq!(job.uuid, job_uuid);
+    assert_eq!(job.status, bencher_json::JobStatus::Pending);
+    // Pending jobs should not have output fetched
+    assert!(job.output.is_none());
+}
+
+// GET /v0/projects/{project}/jobs/{job} - completed job with stored output
+#[tokio::test]
+async fn job_get_completed_with_output() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "jobgetcompleted@example.com")
+        .await;
+    let org = server.create_org(&user, "Job GetCompleted Org").await;
+    let project = server
+        .create_project(&user, &org, "Job GetCompleted Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let now = bencher_json::DateTime::now();
+    let job_uuid = insert_test_job(&server, report_id, project.uuid, now);
+
+    // Set job to completed (terminal state)
+    set_job_status(&server, job_uuid, bencher_json::JobStatus::Completed);
+
+    // Write output to local OCI storage
+    let output_json = serde_json::json!({
+        "exit_code": 0,
+        "stdout": "benchmark results here",
+        "stderr": "some warnings"
+    });
+    write_job_output(&server, project.uuid, job_uuid, &output_json);
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let job: bencher_json::JsonJob = resp.json().await.expect("Failed to parse response");
+    assert_eq!(job.uuid, job_uuid);
+    assert_eq!(job.status, bencher_json::JobStatus::Completed);
+    // Terminal job should have output fetched from blob storage
+    let output = job.output.expect("Expected output for completed job");
+    assert_eq!(output.exit_code, Some(0));
+    assert_eq!(output.stdout.as_deref(), Some("benchmark results here"));
+    assert_eq!(output.stderr.as_deref(), Some("some warnings"));
+}
+
+// GET /v0/projects/{project}/jobs/{job} - completed job without stored output (graceful)
+#[tokio::test]
+async fn job_get_completed_no_stored_output() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "jobgetnooutput@example.com")
+        .await;
+    let org = server.create_org(&user, "Job GetNoOutput Org").await;
+    let project = server
+        .create_project(&user, &org, "Job GetNoOutput Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let now = bencher_json::DateTime::now();
+    let job_uuid = insert_test_job(&server, report_id, project.uuid, now);
+
+    // Set job to completed but do NOT write any output to storage
+    set_job_status(&server, job_uuid, bencher_json::JobStatus::Completed);
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let job: bencher_json::JsonJob = resp.json().await.expect("Failed to parse response");
+    assert_eq!(job.uuid, job_uuid);
+    assert_eq!(job.status, bencher_json::JobStatus::Completed);
+    // Should gracefully return None when no output is stored
+    assert!(job.output.is_none());
+}
+
+// GET /v0/projects/{project}/jobs/{job} - failed job with stored output
+#[tokio::test]
+async fn job_get_failed_with_output() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "jobgetfailed@example.com").await;
+    let org = server.create_org(&user, "Job GetFailed Org").await;
+    let project = server
+        .create_project(&user, &org, "Job GetFailed Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let now = bencher_json::DateTime::now();
+    let job_uuid = insert_test_job(&server, report_id, project.uuid, now);
+
+    // Set job to failed (terminal state)
+    set_job_status(&server, job_uuid, bencher_json::JobStatus::Failed);
+
+    // Write error output to local OCI storage
+    let output_json = serde_json::json!({
+        "exit_code": 1,
+        "error": "container crashed",
+        "stdout": "partial output",
+        "stderr": "fatal error: out of memory"
+    });
+    write_job_output(&server, project.uuid, job_uuid, &output_json);
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let job: bencher_json::JsonJob = resp.json().await.expect("Failed to parse response");
+    assert_eq!(job.uuid, job_uuid);
+    assert_eq!(job.status, bencher_json::JobStatus::Failed);
+    // Failed jobs are terminal and should also have output fetched
+    let output = job.output.expect("Expected output for failed job");
+    assert_eq!(output.exit_code, Some(1));
+    assert_eq!(output.error.as_deref(), Some("container crashed"));
+    assert_eq!(output.stdout.as_deref(), Some("partial output"));
+    assert_eq!(output.stderr.as_deref(), Some("fatal error: out of memory"));
+}
+
+// GET /v0/projects/{project}/jobs/{job} - running job has no output
+#[tokio::test]
+async fn job_get_running_no_output() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "jobgetrunning@example.com")
+        .await;
+    let org = server.create_org(&user, "Job GetRunning Org").await;
+    let project = server
+        .create_project(&user, &org, "Job GetRunning Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let now = bencher_json::DateTime::now();
+    let job_uuid = insert_test_job(&server, report_id, project.uuid, now);
+
+    // Set job to running (non-terminal)
+    set_job_status(&server, job_uuid, bencher_json::JobStatus::Running);
+
+    // Even if output exists in storage, running jobs should not fetch it
+    let output_json = serde_json::json!({
+        "exit_code": 0,
+        "stdout": "should not be returned"
+    });
+    write_job_output(&server, project.uuid, job_uuid, &output_json);
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let job: bencher_json::JsonJob = resp.json().await.expect("Failed to parse response");
+    assert_eq!(job.uuid, job_uuid);
+    assert_eq!(job.status, bencher_json::JobStatus::Running);
+    // Running is non-terminal, so output should not be fetched
+    assert!(job.output.is_none());
+}
