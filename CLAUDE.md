@@ -250,3 +250,5 @@ Changes in these areas often require updates across multiple files:
 ## Documentation
 
 Available locally at `services/console/src/content/` or online at https://bencher.dev/docs/.
+
+See [`services/console/CLAUDE.md`](services/console/CLAUDE.md) for console-specific guides, including how to add API documentation pages.
