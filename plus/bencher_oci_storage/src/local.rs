@@ -962,7 +962,7 @@ async fn cleanup_stale_uploads_local(
         return;
     };
 
-    let now = clock.timestamp();
+    let (now, os_now) = clock.timestamps();
     let timeout_secs = i64::try_from(upload_timeout).unwrap_or(i64::MAX);
 
     loop {
@@ -983,13 +983,18 @@ async fn cleanup_stale_uploads_local(
                 // a race where `start_upload` has created the directory but has
                 // not yet written state.json — deleting the directory in that
                 // window would break the in-progress upload.
+                //
+                // `now` (from Clock) is used for `state.created_at` because both
+                // are in the application time domain.
+                // `os_now` is used for filesystem metadata because both are in
+                // the OS wall-clock time domain.
                 let state_path = entry.path().join("state.json");
                 let is_stale = match fs::read(&state_path).await {
                     Ok(data) => match serde_json::from_slice::<UploadState>(&data) {
                         Ok(state) => now.saturating_sub(state.created_at) > timeout_secs,
-                        Err(_) => dir_is_stale(&entry, now, timeout_secs).await,
+                        Err(_) => dir_is_stale(&entry, os_now, timeout_secs).await,
                     },
-                    Err(_) => dir_is_stale(&entry, now, timeout_secs).await,
+                    Err(_) => dir_is_stale(&entry, os_now, timeout_secs).await,
                 };
 
                 // Remove stale uploads
