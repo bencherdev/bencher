@@ -8765,7 +8765,6 @@ dependencies = [
  "bencher_json",
  "clap",
  "pretty_assertions",
- "reqwest",
  "serde_json",
 ]
 

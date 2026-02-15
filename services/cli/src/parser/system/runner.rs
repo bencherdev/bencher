@@ -1,4 +1,4 @@
-use bencher_json::{ResourceName, RunnerResourceId, RunnerSlug};
+use bencher_json::{ResourceName, RunnerResourceId, RunnerSlug, SpecResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};
@@ -19,6 +19,9 @@ pub enum CliRunner {
     Update(CliRunnerUpdate),
     /// Rotate a runner token
     Token(CliRunnerToken),
+    /// Manage runner specs
+    #[clap(subcommand)]
+    Spec(CliRunnerSpec),
 }
 
 #[derive(Parser, Debug)]
@@ -98,6 +101,53 @@ pub struct CliRunnerUpdate {
 pub struct CliRunnerToken {
     /// Runner slug or UUID
     pub runner: RunnerResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CliRunnerSpec {
+    /// List specs for a runner
+    #[clap(alias = "ls")]
+    List(CliRunnerSpecList),
+    /// Add a spec to a runner
+    #[clap(alias = "create")]
+    Add(CliRunnerSpecAdd),
+    /// Remove a spec from a runner
+    #[clap(alias = "rm")]
+    Remove(CliRunnerSpecRemove),
+}
+
+#[derive(Parser, Debug)]
+pub struct CliRunnerSpecList {
+    /// Runner slug or UUID
+    pub runner: RunnerResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliRunnerSpecAdd {
+    /// Runner slug or UUID
+    pub runner: RunnerResourceId,
+
+    /// Spec slug or UUID
+    #[clap(long)]
+    pub spec: SpecResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliRunnerSpecRemove {
+    /// Runner slug or UUID
+    pub runner: RunnerResourceId,
+
+    /// Spec slug or UUID
+    pub spec: SpecResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

@@ -1851,15 +1851,25 @@ impl SeedTest {
         assert_eq!(runner.name.as_ref(), "Test Runner");
         assert!(runner.specs.is_empty(), "Expected no specs for new runner");
 
-        // Assign spec to runner via API (no CLI command for runner-spec association)
-        let client = reqwest::blocking::Client::new();
-        let resp = client
-            .post(format!("{host}/v0/runners/{runner_uuid}/specs"))
-            .header("Authorization", format!("Bearer {admin_token}"))
-            .json(&serde_json::json!({ "spec": spec_uuid.to_string() }))
-            .send()?;
-        assert_eq!(resp.status(), reqwest::StatusCode::CREATED, "{resp:?}");
-        let _spec: bencher_json::JsonSpec = resp.json()?;
+        // Add spec to runner
+        // cargo run -- runner spec add --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --spec test-spec test-runner
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "spec",
+            "add",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--spec",
+            "test-spec",
+            "test-runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _spec: bencher_json::JsonSpec =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
         // View runner again (spec should now be assigned)
         // cargo run -- runner view --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-runner

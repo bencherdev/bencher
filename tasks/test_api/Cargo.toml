@@ -16,7 +16,6 @@ bencher_json = { workspace = true, features = ["client"] }
 anyhow.workspace = true
 clap.workspace = true
 pretty_assertions.workspace = true
-reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls"] }
 serde_json.workspace = true
 
 [lints]
