@@ -915,39 +915,6 @@ export interface JsonUpdateAlert {
 	status?: UpdateAlertStatus;
 }
 
-/**
- * Restricted job status for runner update requests.
- * 
- * Only allows the statuses that a runner can set when updating a job:
- * Running, Completed, or Failed. Pending, Claimed, and Canceled are
- * server-managed statuses that runners cannot set.
- */
-export enum JobUpdateStatus {
-	Running = "running",
-	Completed = "completed",
-	Failed = "failed",
-}
-
-/** Update job status (runner agent endpoint) */
-export interface JsonUpdateJob {
-	/** New job status (running, completed, failed) */
-	status: JobUpdateStatus;
-	/** Exit code (required for completed/failed) */
-	exit_code?: number;
-	/** Standard output */
-	stdout?: string;
-	/** Standard error */
-	stderr?: string;
-	/** File path to contents map */
-	output?: Record<string, string> | undefined;
-}
-
-/** Response to job update */
-export interface JsonUpdateJobResponse {
-	/** The current status of the job after the update */
-	status: JobStatus;
-}
-
 /** Update a runner */
 export interface JsonUpdateRunner {
 	/** The new name for the runner. */

@@ -7949,101 +7949,6 @@
       }
     },
     "/v0/runners/{runner}/jobs/{job}": {
-      "patch": {
-        "tags": [
-          "runners"
-        ],
-        "summary": "Update job status",
-        "description": "Update the status of a job being executed. Authenticated via runner token. Used to mark jobs as running, completed, or failed.",
-        "operationId": "runner_job_patch",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "job",
-            "description": "The UUID for a job.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/JobUuid"
-            }
-          },
-          {
-            "in": "path",
-            "name": "runner",
-            "description": "The slug or UUID for a runner.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonUpdateJob"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonUpdateJobResponse"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
-    "/v0/runners/{runner}/jobs/{job}/channel": {
       "get": {
         "tags": [
           "runners"
@@ -11204,15 +11109,6 @@
           "completed",
           "failed",
           "canceled"
-        ]
-      },
-      "JobUpdateStatus": {
-        "description": "Restricted job status for runner update requests.\n\nOnly allows the statuses that a runner can set when updating a job: Running, Completed, or Failed. Pending, Claimed, and Canceled are server-managed statuses that runners cannot set.",
-        "type": "string",
-        "enum": [
-          "running",
-          "completed",
-          "failed"
         ]
       },
       "JobUuid": {
@@ -15846,64 +15742,6 @@
         },
         "required": [
           "config"
-        ]
-      },
-      "JsonUpdateJob": {
-        "description": "Update job status (runner agent endpoint)",
-        "type": "object",
-        "properties": {
-          "exit_code": {
-            "nullable": true,
-            "description": "Exit code (required for completed/failed)",
-            "type": "integer",
-            "format": "int32"
-          },
-          "output": {
-            "nullable": true,
-            "description": "File path to contents map",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "status": {
-            "description": "New job status (running, completed, failed)",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JobUpdateStatus"
-              }
-            ]
-          },
-          "stderr": {
-            "nullable": true,
-            "description": "Standard error",
-            "type": "string"
-          },
-          "stdout": {
-            "nullable": true,
-            "description": "Standard output",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
-        ]
-      },
-      "JsonUpdateJobResponse": {
-        "description": "Response to job update",
-        "type": "object",
-        "properties": {
-          "status": {
-            "description": "The current status of the job after the update",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JobStatus"
-              }
-            ]
-          }
-        },
-        "required": [
-          "status"
         ]
       },
       "JsonUpdateMeasure": {
