@@ -15,6 +15,10 @@ pub struct RunOutput {
     pub exit_code: i32,
     /// Stdout output from the benchmark.
     pub stdout: String,
+    /// Stderr output from the benchmark.
+    pub stderr: String,
+    /// Optional output file contents.
+    pub output_file: Option<Vec<u8>>,
 }
 
 /// Environment variables that are blocked for security reasons.
@@ -102,6 +106,9 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
 
     let output = execute(&config, None)?;
     println!("{}", output.stdout);
+    if !output.stderr.is_empty() {
+        eprintln!("{}", output.stderr);
+    }
     Ok(())
 }
 

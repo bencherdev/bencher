@@ -24,10 +24,6 @@ pub struct TaskDaemon {
     #[arg(long, env = "BENCHER_RUNNER")]
     pub runner: String,
 
-    /// Comma-separated labels for job matching.
-    #[arg(long, env = "BENCHER_RUNNER_LABELS", value_delimiter = ',')]
-    pub labels: Vec<String>,
-
     /// Long-poll timeout in seconds (max 60).
     #[arg(long, default_value = "55")]
     pub poll_timeout: u32,

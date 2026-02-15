@@ -214,6 +214,8 @@ pub fn run_firecracker(
     Ok(RunOutput {
         exit_code,
         stdout: results.stdout,
+        stderr: results.stderr,
+        output_file: results.output_file,
     })
 }
 
@@ -252,8 +254,12 @@ mod tests {
         let output = RunOutput {
             exit_code: 42,
             stdout: "hello".to_owned(),
+            stderr: "warnings".to_owned(),
+            output_file: Some(vec![1, 2, 3]),
         };
         assert_eq!(output.exit_code, 42);
         assert_eq!(output.stdout, "hello");
+        assert_eq!(output.stderr, "warnings");
+        assert_eq!(output.output_file, Some(vec![1, 2, 3]));
     }
 }

@@ -39,7 +39,6 @@ pub struct DaemonConfig {
     pub host: Url,
     pub token: String,
     pub runner: String,
-    pub labels: Vec<String>,
     pub poll_timeout_secs: u32,
     pub tuning: TuningConfig,
     /// CPU layout for isolating benchmark cores from housekeeping tasks.
@@ -65,9 +64,6 @@ impl Daemon {
         println!("Bencher Runner Daemon starting...");
         println!("  Host: {}", self.config.host);
         println!("  Runner: {}", self.config.runner);
-        if !self.config.labels.is_empty() {
-            println!("  Labels: {}", self.config.labels.join(", "));
-        }
         println!("  Poll timeout: {}s", self.config.poll_timeout_secs);
 
         // Log CPU layout
@@ -92,8 +88,7 @@ impl Daemon {
         )?;
 
         let claim_request = ClaimRequest {
-            labels: self.config.labels.clone(),
-            poll_timeout_seconds: self.config.poll_timeout_secs,
+            poll_timeout: self.config.poll_timeout_secs,
         };
 
         println!("Polling for jobs...");
@@ -111,7 +106,7 @@ impl Daemon {
                     let job_uuid = job.uuid;
                     println!("Claimed job: {job_uuid}");
 
-                    let ws_url = client.websocket_url(&job_uuid)?;
+                    let ws_url = client.websocket_url(job_uuid.as_ref())?;
                     match execute_job(&self.config, &job, &ws_url) {
                         Ok(JobOutcome::Completed { .. }) => {
                             println!("Job {job_uuid} completed successfully");

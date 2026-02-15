@@ -7,9 +7,10 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 #[cfg(target_os = "linux")]
-use super::DaemonConfig;
+use bencher_json::JsonClaimedJob;
+
 #[cfg(target_os = "linux")]
-use super::api_client::ClaimedJob;
+use super::DaemonConfig;
 #[cfg(target_os = "linux")]
 use super::error::{DaemonError, WebSocketError};
 #[cfg(target_os = "linux")]
@@ -33,7 +34,7 @@ pub enum JobOutcome {
 #[expect(clippy::print_stdout)]
 pub fn execute_job(
     config: &DaemonConfig,
-    job: &ClaimedJob,
+    job: &JsonClaimedJob,
     ws_url: &url::Url,
 ) -> Result<JobOutcome, DaemonError> {
     println!("Connecting WebSocket for job {}...", job.uuid);
@@ -81,8 +82,8 @@ pub fn execute_job(
         let mut ws_guard = ws
             .lock()
             .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-        // Send Cancelled message to notify server
-        drop(ws_guard.send_message(&RunnerMessage::Cancelled));
+        // Send Canceled message to notify server
+        drop(ws_guard.send_message(&RunnerMessage::Canceled));
         ws_guard.close();
         return Ok(JobOutcome::Canceled);
     }
@@ -90,9 +91,31 @@ pub fn execute_job(
     // Send result
     let outcome = match result {
         Ok(output) => {
+            // Build file output map from output_file bytes and config file_paths
+            let file_output = output.output_file.and_then(|bytes| {
+                job.config
+                    .file_paths
+                    .as_ref()
+                    .and_then(|paths| paths.first())
+                    .map(|path| {
+                        let mut map = std::collections::HashMap::new();
+                        map.insert(path.clone(), String::from_utf8_lossy(&bytes).into_owned());
+                        map
+                    })
+            });
             let msg = RunnerMessage::Completed {
                 exit_code: output.exit_code,
-                output: Some(output.stdout),
+                stdout: if output.stdout.is_empty() {
+                    None
+                } else {
+                    Some(output.stdout)
+                },
+                stderr: if output.stderr.is_empty() {
+                    None
+                } else {
+                    Some(output.stderr)
+                },
+                output: file_output,
             };
             let mut ws_guard = ws
                 .lock()
@@ -111,6 +134,8 @@ pub fn execute_job(
             let msg = RunnerMessage::Failed {
                 exit_code: None,
                 error: error_msg.clone(),
+                stdout: None,
+                stderr: None,
             };
             let mut ws_guard = ws
                 .lock()
@@ -129,58 +154,77 @@ pub fn execute_job(
     Ok(outcome)
 }
 
-/// Build a runner Config from the claimed job spec and daemon config.
+/// Build a runner Config from the claimed job and daemon config.
 ///
-/// All values come directly from the job spec - there are no daemon defaults.
+/// Resource requirements (cpu, memory, disk, network) come from the spec.
+/// Execution details (registry, project, digest, entrypoint, cmd, env, timeout,
+/// file_paths) come from the config. The OCI token is passed through for
+/// authenticated image pulls.
+///
 /// Memory and disk are converted from bytes (API) to MiB (Firecracker).
 /// CPU layout from the daemon config is passed through for core isolation.
 #[cfg(target_os = "linux")]
-fn build_config_from_job(daemon_config: &DaemonConfig, job: &ClaimedJob) -> crate::Config {
+fn build_config_from_job(daemon_config: &DaemonConfig, job: &JsonClaimedJob) -> crate::Config {
     let spec = &job.spec;
+    let config = &job.config;
+
+    // Extract values from newtypes
+    let cpu = u32::from(spec.cpu);
+    let memory_bytes = u64::from(spec.memory);
+    let disk_bytes = u64::from(spec.disk);
+    let timeout_secs = u32::from(config.timeout);
 
     // Convert bytes to MiB for Firecracker (rounds up)
-    let memory_mib = bytes_to_mib(spec.memory);
-    let disk_mib = bytes_to_mib(spec.disk);
+    let memory_mib = bytes_to_mib(memory_bytes);
+    let disk_mib = bytes_to_mib(disk_bytes);
 
     // Build OCI image URL: registry/project/images@digest
-    let registry_str = spec.registry.as_str().trim_end_matches('/');
-    let oci_image = format!("{registry_str}/{}/images@{}", spec.project, spec.digest);
+    let registry_str = config.registry.as_ref().trim_end_matches('/');
+    let oci_image = format!("{registry_str}/{}/images@{}", config.project, config.digest);
 
-    // vcpu is u32 in the spec, but Config expects u8
+    // cpu is u32 from the spec, but Config expects u8
     // Clamp to u8::MAX if larger (unlikely in practice)
-    let vcpus = if spec.vcpu > u32::from(u8::MAX) {
+    let vcpus = if cpu > u32::from(u8::MAX) {
         u8::MAX
     } else {
-        // This cast is safe because we just checked that vcpu <= u8::MAX
+        // This cast is safe because we just checked that cpu <= u8::MAX
         #[expect(
             clippy::cast_possible_truncation,
             reason = "Checked that value fits in u8 above"
         )]
-        let result = spec.vcpu as u8;
+        let result = cpu as u8;
         result
     };
 
-    let mut config = crate::Config::new(oci_image)
+    let mut runner_config = crate::Config::new(oci_image)
+        .with_token(job.oci_token.to_string())
         .with_vcpus(vcpus)
         .with_memory_mib(memory_mib)
         .with_disk_mib(disk_mib)
-        .with_timeout_secs(u64::from(spec.timeout))
+        .with_timeout_secs(u64::from(timeout_secs))
         .with_network(spec.network)
-        .with_entrypoint_opt(spec.entrypoint.clone())
-        .with_cmd_opt(spec.cmd.clone())
-        .with_env_opt(spec.env.clone());
+        .with_entrypoint_opt(config.entrypoint.clone())
+        .with_cmd_opt(config.cmd.clone())
+        .with_env_opt(config.env.clone());
+
+    // Map first file_path to output_file (vsock supports one file via port 5005)
+    if let Some(ref paths) = config.file_paths {
+        if let Some(first_path) = paths.first() {
+            runner_config = runner_config.with_output_file(first_path.to_string());
+        }
+    }
 
     // Pass through CPU layout for core isolation
     if daemon_config.cpu_layout.has_isolation() {
-        config = config.with_cpu_layout(daemon_config.cpu_layout.clone());
+        runner_config = runner_config.with_cpu_layout(daemon_config.cpu_layout.clone());
     }
 
     // Pass through max output size if configured
     if let Some(max_output_size) = daemon_config.max_output_size {
-        config = config.with_max_output_size(max_output_size);
+        runner_config = runner_config.with_max_output_size(max_output_size);
     }
 
-    config
+    runner_config
 }
 
 #[cfg(target_os = "linux")]
@@ -217,15 +261,17 @@ mod tests {
     use super::*;
     use crate::units::mib_to_bytes;
 
+    /// Construct a `JsonClaimedJob` for testing by building the JSON
+    /// with the proper nested structure and deserializing.
     fn test_job(
-        vcpu: u32,
+        cpu: u32,
         memory_bytes: u64,
         disk_bytes: u64,
         timeout: u32,
         network: bool,
-    ) -> ClaimedJob {
+    ) -> JsonClaimedJob {
         test_job_with_options(
-            vcpu,
+            cpu,
             memory_bytes,
             disk_bytes,
             timeout,
@@ -233,11 +279,12 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
     }
 
     fn test_job_with_options(
-        vcpu: u32,
+        cpu: u32,
         memory_bytes: u64,
         disk_bytes: u64,
         timeout: u32,
@@ -245,27 +292,37 @@ mod tests {
         entrypoint: Option<Vec<String>>,
         cmd: Option<Vec<String>>,
         env: Option<std::collections::HashMap<String, String>>,
-    ) -> ClaimedJob {
-        let spec_json = serde_json::json!({
-            "registry": "https://registry.bencher.dev",
-            "project": "11111111-2222-3333-4444-555555555555",
-            "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
-            "vcpu": vcpu,
-            "memory": memory_bytes,
-            "disk": disk_bytes,
+        file_paths: Option<Vec<String>>,
+    ) -> JsonClaimedJob {
+        let json = serde_json::json!({
+            "uuid": "550e8400-e29b-41d4-a716-446655440000",
+            "spec": {
+                "uuid": "00000000-0000-0000-0000-000000000001",
+                "name": "test-spec",
+                "slug": "test-spec",
+                "architecture": "x86_64",
+                "cpu": cpu,
+                "memory": memory_bytes,
+                "disk": disk_bytes,
+                "network": network,
+                "created": "2025-01-01T00:00:00Z",
+                "modified": "2025-01-01T00:00:00Z"
+            },
+            "config": {
+                "registry": "https://registry.bencher.dev",
+                "project": "11111111-2222-3333-4444-555555555555",
+                "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+                "entrypoint": entrypoint,
+                "cmd": cmd,
+                "env": env,
+                "timeout": timeout,
+                "file_paths": file_paths,
+            },
+            "oci_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
             "timeout": timeout,
-            "network": network,
-            "entrypoint": entrypoint,
-            "cmd": cmd,
-            "env": env,
+            "created": "2025-01-01T00:00:00Z"
         });
-        let spec: super::super::api_client::JobSpec = serde_json::from_value(spec_json).unwrap();
-
-        ClaimedJob {
-            uuid: uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
-            spec,
-            timeout_seconds: timeout,
-        }
+        serde_json::from_value(json).expect("Failed to construct test JsonClaimedJob")
     }
 
     // --- build_config_from_job ---
@@ -275,7 +332,6 @@ mod tests {
             host: url::Url::parse("https://api.bencher.dev").unwrap(),
             token: "bencher_runner_test".to_owned(),
             runner: "test-runner".to_owned(),
-            labels: vec![],
             poll_timeout_secs: 30,
             tuning: crate::TuningConfig::disabled(),
             cpu_layout: crate::cpu::CpuLayout::with_core_count(4),
@@ -294,7 +350,6 @@ mod tests {
     #[test]
     fn converts_memory_bytes_to_mib() {
         let daemon_config = test_daemon_config();
-        // 1 GiB in bytes = 1073741824
         let job = test_job(1, mib_to_bytes(2048), mib_to_bytes(1024), 300, false);
         let result = build_config_from_job(&daemon_config, &job);
         assert_eq!(result.memory_mib, 2048);
@@ -303,7 +358,6 @@ mod tests {
     #[test]
     fn converts_disk_bytes_to_mib() {
         let daemon_config = test_daemon_config();
-        // 10 GiB in bytes
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(10240), 300, false);
         let result = build_config_from_job(&daemon_config, &job);
         assert_eq!(result.disk_mib, 10240);
@@ -338,6 +392,17 @@ mod tests {
     }
 
     #[test]
+    fn oci_token_passed_through() {
+        let daemon_config = test_daemon_config();
+        let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
+        let result = build_config_from_job(&daemon_config, &job);
+        assert!(
+            result.token.is_some(),
+            "OCI token should be passed to config"
+        );
+    }
+
+    #[test]
     fn network_enabled() {
         let daemon_config = test_daemon_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, true);
@@ -365,6 +430,7 @@ mod tests {
             Some(vec!["/bin/sh".to_owned()]),
             Some(vec!["-c".to_owned(), "cargo bench".to_owned()]),
             None,
+            None,
         );
         let result = build_config_from_job(&daemon_config, &job);
         assert_eq!(result.entrypoint.unwrap(), vec!["/bin/sh"]);
@@ -387,11 +453,30 @@ mod tests {
             None,
             None,
             Some(env.clone()),
+            None,
         );
         let result = build_config_from_job(&daemon_config, &job);
         let result_env = result.env.unwrap();
         assert_eq!(result_env.get("RUST_LOG").unwrap(), "debug");
         assert_eq!(result_env.get("CI").unwrap(), "true");
+    }
+
+    #[test]
+    fn file_paths_mapped_to_output_file() {
+        let daemon_config = test_daemon_config();
+        let job = test_job_with_options(
+            1,
+            mib_to_bytes(512),
+            mib_to_bytes(1024),
+            300,
+            false,
+            None,
+            None,
+            None,
+            Some(vec!["/tmp/results.json".to_owned()]),
+        );
+        let result = build_config_from_job(&daemon_config, &job);
+        assert_eq!(result.output_file.as_deref(), Some("/tmp/results.json"));
     }
 
     #[test]
@@ -409,6 +494,7 @@ mod tests {
             Some(vec!["/bin/bash".to_owned()]),
             Some(vec!["-c".to_owned(), "make bench".to_owned()]),
             Some(env),
+            Some(vec!["/output/bench.txt".to_owned()]),
         );
         let result = build_config_from_job(&daemon_config, &job);
         assert_eq!(result.vcpus, 8);
@@ -419,6 +505,8 @@ mod tests {
         assert!(result.entrypoint.is_some());
         assert!(result.cmd.is_some());
         assert!(result.env.is_some());
+        assert!(result.token.is_some());
+        assert_eq!(result.output_file.as_deref(), Some("/output/bench.txt"));
     }
 
     #[test]

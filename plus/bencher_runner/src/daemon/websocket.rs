@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use std::net::TcpStream;
 use std::time::Duration;
 
+use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 use tungstenite::handshake::client::generate_key;
 use tungstenite::http::Request;
@@ -17,13 +19,23 @@ pub enum RunnerMessage {
     Heartbeat,
     Completed {
         exit_code: i32,
-        output: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        stdout: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        stderr: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        output: Option<HashMap<Utf8PathBuf, String>>,
     },
     Failed {
+        #[serde(skip_serializing_if = "Option::is_none")]
         exit_code: Option<i32>,
         error: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        stdout: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        stderr: Option<String>,
     },
-    Cancelled,
+    Canceled,
 }
 
 #[derive(Debug, Deserialize)]
@@ -178,6 +190,7 @@ fn set_read_timeout(
 }
 
 #[cfg(test)]
+#[expect(clippy::indexing_slicing, reason = "Test assertions on JSON values")]
 mod tests {
     use super::*;
 
@@ -196,57 +209,81 @@ mod tests {
     }
 
     #[test]
-    fn completed_serializes_with_output() {
+    fn completed_serializes_with_all_fields() {
+        let mut output = HashMap::new();
+        output.insert(
+            Utf8PathBuf::from("/tmp/results.json"),
+            "benchmark results here".to_owned(),
+        );
         let msg = RunnerMessage::Completed {
             exit_code: 0,
-            output: Some("benchmark results here".to_owned()),
+            stdout: Some("stdout output".to_owned()),
+            stderr: Some("stderr output".to_owned()),
+            output: Some(output),
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "completed");
         assert_eq!(json["exit_code"], 0);
-        assert_eq!(json["output"], "benchmark results here");
+        assert_eq!(json["stdout"], "stdout output");
+        assert_eq!(json["stderr"], "stderr output");
+        assert_eq!(
+            json["output"]["/tmp/results.json"],
+            "benchmark results here"
+        );
     }
 
     #[test]
-    fn completed_serializes_with_null_output() {
+    fn completed_serializes_minimal() {
         let msg = RunnerMessage::Completed {
             exit_code: 1,
+            stdout: None,
+            stderr: None,
             output: None,
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "completed");
         assert_eq!(json["exit_code"], 1);
-        assert!(json["output"].is_null());
+        assert!(json.get("stdout").is_none());
+        assert!(json.get("stderr").is_none());
+        assert!(json.get("output").is_none());
     }
 
     #[test]
-    fn failed_serializes_with_exit_code() {
+    fn failed_serializes_with_all_fields() {
         let msg = RunnerMessage::Failed {
             exit_code: Some(137),
             error: "OOM killed".to_owned(),
+            stdout: Some("partial stdout".to_owned()),
+            stderr: Some("error details".to_owned()),
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "failed");
         assert_eq!(json["exit_code"], 137);
         assert_eq!(json["error"], "OOM killed");
+        assert_eq!(json["stdout"], "partial stdout");
+        assert_eq!(json["stderr"], "error details");
     }
 
     #[test]
-    fn failed_serializes_with_null_exit_code() {
+    fn failed_serializes_minimal() {
         let msg = RunnerMessage::Failed {
             exit_code: None,
             error: "timeout".to_owned(),
+            stdout: None,
+            stderr: None,
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "failed");
-        assert!(json["exit_code"].is_null());
+        assert!(json.get("exit_code").is_none());
         assert_eq!(json["error"], "timeout");
+        assert!(json.get("stdout").is_none());
+        assert!(json.get("stderr").is_none());
     }
 
     #[test]
-    fn cancelled_serializes() {
-        let json = serde_json::to_string(&RunnerMessage::Cancelled).unwrap();
-        assert_eq!(json, r#"{"event":"cancelled"}"#);
+    fn canceled_serializes() {
+        let json = serde_json::to_string(&RunnerMessage::Canceled).unwrap();
+        assert_eq!(json, r#"{"event":"canceled"}"#);
     }
 
     // --- ServerMessage deserialization ---
@@ -277,7 +314,7 @@ mod tests {
 
     #[test]
     fn empty_json_fails() {
-        let result = serde_json::from_str::<ServerMessage>(r#"{}"#);
+        let result = serde_json::from_str::<ServerMessage>("{}");
         assert!(result.is_err());
     }
 }

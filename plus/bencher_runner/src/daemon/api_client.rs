@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
+use bencher_json::JsonClaimedJob;
+use serde::Serialize;
 use url::Url;
 use uuid::Uuid;
 
@@ -27,53 +27,7 @@ pub struct RunnerApiClient {
 
 #[derive(Serialize)]
 pub struct ClaimRequest {
-    pub labels: Vec<String>,
-    pub poll_timeout_seconds: u32,
-}
-
-#[derive(Deserialize)]
-pub struct ClaimResponse {
-    pub job: Option<ClaimedJob>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ClaimedJob {
-    pub uuid: Uuid,
-    pub spec: JobSpec,
-    pub timeout_seconds: u32,
-}
-
-/// OCI-based job specification.
-///
-/// This struct mirrors `JsonJobSpec` from `bencher_json` but is kept local
-/// to avoid tight coupling between the runner and the main JSON types.
-#[derive(Debug, Deserialize)]
-pub struct JobSpec {
-    /// The OCI registry URL where the image is hosted.
-    pub registry: Url,
-    /// The project UUID that owns the image.
-    pub project: Uuid,
-    /// The image digest (e.g., "sha256:...").
-    pub digest: String,
-    /// Optional entrypoint override for the container.
-    #[serde(default)]
-    pub entrypoint: Option<Vec<String>>,
-    /// Optional command override for the container.
-    #[serde(default)]
-    pub cmd: Option<Vec<String>>,
-    /// Optional environment variables for the container.
-    #[serde(default)]
-    pub env: Option<HashMap<String, String>>,
-    /// Number of vCPUs to allocate.
-    pub vcpu: u32,
-    /// Memory size in bytes.
-    pub memory: u64,
-    /// Disk size in bytes.
-    pub disk: u64,
-    /// Timeout in seconds.
-    pub timeout: u32,
-    /// Whether to enable network access.
-    pub network: bool,
+    pub poll_timeout: u32,
 }
 
 impl RunnerApiClient {
@@ -95,7 +49,10 @@ impl RunnerApiClient {
         })
     }
 
-    pub fn claim_job(&self, request: &ClaimRequest) -> Result<Option<ClaimedJob>, ApiClientError> {
+    pub fn claim_job(
+        &self,
+        request: &ClaimRequest,
+    ) -> Result<Option<JsonClaimedJob>, ApiClientError> {
         let url = format!("{}v0/runners/{}/jobs", self.host.as_str(), self.runner);
 
         let body = serde_json::to_value(request)
@@ -112,12 +69,12 @@ impl RunnerApiClient {
                 None => ApiClientError::Http(e.to_string()),
             })?;
 
-        let claim: ClaimResponse = response
+        let claimed: Option<JsonClaimedJob> = response
             .into_body()
             .read_json()
             .map_err(|e| ApiClientError::Http(format!("Failed to parse claim response: {e}")))?;
 
-        Ok(claim.job)
+        Ok(claimed)
     }
 
     pub fn websocket_url(&self, job_uuid: &Uuid) -> Result<Url, ApiClientError> {
@@ -132,7 +89,7 @@ impl RunnerApiClient {
             .strip_prefix(self.host.scheme())
             .unwrap_or(host_str);
         let ws_url_str = format!(
-            "{scheme}{without_scheme}v0/runners/{}/jobs/{job_uuid}/channel",
+            "{scheme}{without_scheme}v0/runners/{}/jobs/{job_uuid}",
             self.runner
         );
 
@@ -161,6 +118,7 @@ fn classify_ureq_error(err: &ureq::Error) -> Option<ApiClientError> {
 }
 
 #[cfg(test)]
+#[expect(clippy::indexing_slicing, reason = "Test assertions on JSON values")]
 mod tests {
     use super::*;
 
@@ -220,7 +178,7 @@ mod tests {
         assert_eq!(ws_url.scheme(), "ws");
         assert_eq!(
             ws_url.as_str(),
-            "ws://localhost:61016/v0/runners/my-runner/jobs/550e8400-e29b-41d4-a716-446655440000/channel"
+            "ws://localhost:61016/v0/runners/my-runner/jobs/550e8400-e29b-41d4-a716-446655440000"
         );
     }
 
@@ -233,8 +191,7 @@ mod tests {
         assert_eq!(ws_url.scheme(), "wss");
         assert!(
             ws_url.as_str().starts_with("wss://api.bencher.dev/"),
-            "URL was: {}",
-            ws_url
+            "URL was: {ws_url}",
         );
     }
 
@@ -259,117 +216,15 @@ mod tests {
 
     #[test]
     fn claim_request_serializes() {
-        let req = ClaimRequest {
-            labels: vec!["gpu".to_owned(), "arm64".to_owned()],
-            poll_timeout_seconds: 55,
-        };
+        let req = ClaimRequest { poll_timeout: 55 };
         let json = serde_json::to_value(&req).unwrap();
-        assert_eq!(json["labels"], serde_json::json!(["gpu", "arm64"]));
-        assert_eq!(json["poll_timeout_seconds"], 55);
+        assert_eq!(json["poll_timeout"], 55);
     }
 
     #[test]
-    fn claim_request_empty_labels() {
-        let req = ClaimRequest {
-            labels: vec![],
-            poll_timeout_seconds: 30,
-        };
+    fn claim_request_zero_timeout() {
+        let req = ClaimRequest { poll_timeout: 0 };
         let json = serde_json::to_value(&req).unwrap();
-        assert_eq!(json["labels"], serde_json::json!([]));
-    }
-
-    // --- ClaimResponse deserialization ---
-
-    #[test]
-    fn claim_response_with_no_job() {
-        let json = r#"{"job": null}"#;
-        let resp: ClaimResponse = serde_json::from_str(json).unwrap();
-        assert!(resp.job.is_none());
-    }
-
-    #[test]
-    fn claim_response_with_job() {
-        let json = r#"{
-            "job": {
-                "uuid": "550e8400-e29b-41d4-a716-446655440000",
-                "timeout_seconds": 600,
-                "spec": {
-                    "registry": "https://registry.bencher.dev",
-                    "project": "11111111-2222-3333-4444-555555555555",
-                    "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
-                    "vcpu": 2,
-                    "memory": 1073741824,
-                    "disk": 10737418240,
-                    "timeout": 300,
-                    "network": false
-                }
-            }
-        }"#;
-        let resp: ClaimResponse = serde_json::from_str(json).unwrap();
-        let job = resp.job.unwrap();
-        assert_eq!(
-            job.uuid,
-            Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap()
-        );
-        assert_eq!(job.timeout_seconds, 600);
-        assert_eq!(job.spec.vcpu, 2);
-        assert_eq!(job.spec.memory, 0x4000_0000); // 1 GiB
-    }
-
-    // --- JobSpec deserialization ---
-
-    #[test]
-    fn job_spec_minimal() {
-        let json = r#"{
-            "registry": "https://registry.bencher.dev",
-            "project": "11111111-2222-3333-4444-555555555555",
-            "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
-            "vcpu": 1,
-            "memory": 536870912,
-            "disk": 1073741824,
-            "timeout": 60,
-            "network": false
-        }"#;
-        let spec: JobSpec = serde_json::from_str(json).unwrap();
-        assert_eq!(spec.vcpu, 1);
-        assert_eq!(spec.memory, 536_870_912); // 512 MiB
-        assert_eq!(spec.disk, 0x4000_0000); // 1 GiB
-        assert_eq!(spec.timeout, 60);
-        assert!(!spec.network);
-        assert!(spec.entrypoint.is_none());
-        assert!(spec.cmd.is_none());
-        assert!(spec.env.is_none());
-    }
-
-    #[test]
-    fn job_spec_full() {
-        let json = r#"{
-            "registry": "https://registry.bencher.dev",
-            "project": "11111111-2222-3333-4444-555555555555",
-            "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
-            "entrypoint": ["/bin/sh"],
-            "cmd": ["-c", "cargo bench"],
-            "env": {"RUST_LOG": "debug", "CI": "true"},
-            "vcpu": 4,
-            "memory": 2147483648,
-            "disk": 10737418240,
-            "timeout": 300,
-            "network": true
-        }"#;
-        let spec: JobSpec = serde_json::from_str(json).unwrap();
-        assert_eq!(
-            spec.entrypoint.as_deref(),
-            Some(&["/bin/sh".to_owned()][..])
-        );
-        assert_eq!(
-            spec.cmd.as_deref(),
-            Some(&["-c".to_owned(), "cargo bench".to_owned()][..])
-        );
-        let env = spec.env.as_ref().unwrap();
-        assert_eq!(env.len(), 2);
-        assert_eq!(env.get("RUST_LOG").unwrap(), "debug");
-        assert_eq!(spec.vcpu, 4);
-        assert_eq!(spec.memory, 0x8000_0000); // 2 GiB
-        assert!(spec.network);
+        assert_eq!(json["poll_timeout"], 0);
     }
 }

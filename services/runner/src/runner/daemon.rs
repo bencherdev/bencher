@@ -38,7 +38,6 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
                 host,
                 token: task.token,
                 runner: task.runner,
-                labels: task.labels,
                 poll_timeout_secs: task.poll_timeout,
                 tuning,
                 cpu_layout,
