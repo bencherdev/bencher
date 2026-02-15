@@ -11,6 +11,7 @@ default = []
 plus = [
     "bencher_endpoint/plus",
     "bencher_json/plus",
+    "bencher_oci_storage",
     "bencher_schema/plus",
     "dep:camino",
     "dep:diesel",
@@ -33,6 +34,7 @@ otel = ["bencher_endpoint/otel", "bencher_schema/otel", "dep:bencher_otel"]
 [dependencies]
 bencher_endpoint = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"], optional = true }
+bencher_oci_storage = { workspace = true, optional = true }
 bencher_otel = { workspace = true, optional = true }
 bencher_schema = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }

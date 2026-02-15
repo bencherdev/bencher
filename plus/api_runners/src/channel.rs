@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 
 use bencher_json::{JobStatus, JobUuid, RunnerResourceId};
+use bencher_oci_storage::OciStorageError;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -728,17 +729,13 @@ async fn store_job_output(
     context: &ApiContext,
     job: &QueryJob,
     job_output: &bencher_json::runner::JsonJobOutput,
-) -> Result<(), dropshot::HttpError> {
+) -> Result<(), OciStorageError> {
     let project_uuid = job.config.project;
-
     context
         .oci_storage()
         .job_output()
         .put(project_uuid, job.uuid, job_output)
         .await
-        .map_err(|e| dropshot::HttpError::for_internal_error(e.to_string()))?;
-
-    Ok(())
 }
 
 /// Handle a Canceled message: runner acknowledges cancellation, ensure job is in Canceled state.
