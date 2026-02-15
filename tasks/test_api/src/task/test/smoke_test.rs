@@ -199,6 +199,7 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
                 admin_token: Some(admin_token.clone()),
                 token: Some(token),
                 is_bencher_cloud: true,
+                no_git: false,
             };
             SeedTest::try_from(task)?.exec()?;
 
@@ -210,6 +211,7 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
                 admin_token: None,
                 token: None,
                 is_bencher_cloud: false,
+                no_git: false,
             };
             SeedTest::try_from(task)?.exec()?;
 

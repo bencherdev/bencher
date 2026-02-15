@@ -55,6 +55,7 @@ Running the seed tests:
 4. In another terminal:
   - Bencher Cloud: `cargo test-api seed --is-bencher-cloud`
   - Bencher Self-Hosted: `cargo test-api seed`
+  - If running in a separate `jj` workspace (no `.git` directory), add `--no-git`. The anonymous report tests derive the project name from the git repo; without git they fall back to `"Project"` instead of `"bencher"`, and the `--no-git` flag adjusts assertions accordingly.
 
 ### Linting & Formatting
 

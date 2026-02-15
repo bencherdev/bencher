@@ -21,6 +21,7 @@ const MEASURE_ARG: &str = "--measure";
 const MEASURE_SLUG: &str = "screams";
 
 const REPO_NAME: &str = "bencher";
+const NO_GIT_NAME: &str = "Project";
 const UNCLAIMED_SLUG: &str = "unclaimed";
 const CLAIMED_SLUG: &str = "claimed";
 
@@ -35,6 +36,7 @@ pub struct SeedTest {
     pub admin_token: Jwt,
     pub token: Jwt,
     pub is_bencher_cloud: bool,
+    pub no_git: bool,
 }
 
 impl TryFrom<TaskSeedTest> for SeedTest {
@@ -46,18 +48,24 @@ impl TryFrom<TaskSeedTest> for SeedTest {
             admin_token,
             token,
             is_bencher_cloud,
+            no_git,
         } = test;
         Ok(Self {
             url: url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into()),
             admin_token: admin_token.unwrap_or_else(Jwt::test_admin_token),
             token: token.unwrap_or_else(Jwt::test_token),
             is_bencher_cloud,
+            no_git,
         })
     }
 }
 
 #[expect(deprecated)]
 impl SeedTest {
+    fn project_name(&self) -> &str {
+        if self.no_git { NO_GIT_NAME } else { REPO_NAME }
+    }
+
     #[expect(clippy::cognitive_complexity, clippy::too_many_lines)]
     pub fn exec(&self) -> anyhow::Result<()> {
         let host = self.url.as_ref();
@@ -1481,16 +1489,22 @@ impl SeedTest {
                     json.project.uuid.as_ref(),
                     json.project.organization.as_ref()
                 );
-                assert_eq!(json.project.name.as_ref(), REPO_NAME);
-                assert!(
-                    json.project.slug.to_string().starts_with(REPO_NAME),
-                    "{json:?}"
-                );
-                assert_eq!(
-                    json.project.slug.to_string().len(),
-                    REPO_NAME.len() + 1 + 7 + 1 + 13,
-                    "{json:?}"
-                );
+                assert_eq!(json.project.name.as_ref(), self.project_name());
+                if self.no_git {
+                    // Without git, there is no repo name or hash in the slug
+                    // The slug is just the testbed fingerprint
+                    assert_eq!(json.project.slug.to_string().len(), 13, "{json:?}");
+                } else {
+                    assert!(
+                        json.project.slug.to_string().starts_with(REPO_NAME),
+                        "{json:?}"
+                    );
+                    assert_eq!(
+                        json.project.slug.to_string().len(),
+                        REPO_NAME.len() + 1 + 7 + 1 + 13,
+                        "{json:?}"
+                    );
+                }
                 assert_eq!(json.project.claimed, None);
                 anonymous_project.replace(json.project);
             }
@@ -1518,7 +1532,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(json.project.name.as_ref(), REPO_NAME);
+        assert_eq!(json.project.name.as_ref(), self.project_name());
         assert_eq!(json.project.slug.to_string(), UNCLAIMED_SLUG);
         assert_eq!(json.project.claimed, None);
         let organization_uuid = json.project.organization;
@@ -1542,7 +1556,7 @@ impl SeedTest {
         let json: bencher_json::JsonOrganization =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.uuid, organization_uuid);
-        assert_eq!(json.name.as_ref(), REPO_NAME);
+        assert_eq!(json.name.as_ref(), self.project_name());
         assert_eq!(json.slug.to_string(), UNCLAIMED_SLUG);
         assert!(json.claimed.is_some(), "{json:?}");
 
@@ -1571,7 +1585,7 @@ impl SeedTest {
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, organization_uuid);
-        assert_eq!(json.project.name.as_ref(), REPO_NAME);
+        assert_eq!(json.project.name.as_ref(), self.project_name());
         assert_eq!(json.project.slug.to_string(), UNCLAIMED_SLUG);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
@@ -1630,7 +1644,7 @@ impl SeedTest {
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, muriel_bagge_org_uuid);
-        assert_eq!(json.project.name.as_ref(), REPO_NAME);
+        assert_eq!(json.project.name.as_ref(), self.project_name());
         assert_eq!(json.project.slug.to_string(), CLAIMED_SLUG);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
@@ -1660,7 +1674,8 @@ impl SeedTest {
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, muriel_bagge_org_uuid);
-        assert_eq!(json.project.name.as_ref(), format!("{REPO_NAME} (1)"));
+        let project_name = self.project_name();
+        assert_eq!(json.project.name.as_ref(), format!("{project_name} (1)"));
         assert_eq!(json.project.slug.to_string(), bencher_one);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
@@ -1690,7 +1705,7 @@ impl SeedTest {
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, muriel_bagge_org_uuid);
-        assert_eq!(json.project.name.as_ref(), format!("{REPO_NAME} (2)"));
+        assert_eq!(json.project.name.as_ref(), format!("{project_name} (2)"));
         assert_eq!(json.project.slug.to_string(), bencher_two);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
