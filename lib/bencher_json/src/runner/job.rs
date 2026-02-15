@@ -72,7 +72,6 @@ pub const MIN_POLL_TIMEOUT: u32 = 1;
 /// Maximum poll timeout in seconds.
 pub const MAX_POLL_TIMEOUT: u32 = 60;
 
-
 /// Request to claim a job (runner agent endpoint)
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -25,15 +25,17 @@ impl TryFrom<TaskRun> for Run {
             }
         };
 
+        let vcpus = task.vcpus.map(bencher_runner::Cpu::try_from).transpose()?;
+
         Ok(Self {
             args: RunArgs {
                 image: task.image,
                 token: task.token,
-                vcpus: task.vcpus,
-                memory_mib: task.memory,
+                vcpus,
                 timeout_secs: task.timeout,
                 output_file: task.output,
                 max_output_size: task.max_output_size,
+                network: task.network,
                 tuning,
             },
         })

@@ -22,6 +22,25 @@ pub struct Disk(u64);
 impl Disk {
     pub const MIN: Self = Self(MIN_DISK);
     pub const MAX: Self = Self(MAX_DISK);
+
+    /// Convert bytes to mebibytes (MiB), rounding up.
+    ///
+    /// Returns `u64` since consumers like `create_ext4_with_size` expect `u64`.
+    /// For Firecracker's `u32` fields, callers cast at the boundary.
+    #[must_use]
+    pub const fn to_mib(self) -> u64 {
+        let bytes = self.0;
+        if bytes == 0 {
+            return 0;
+        }
+        bytes.div_ceil(1024 * 1024)
+    }
+
+    /// Create from a value in mebibytes (MiB).
+    #[must_use]
+    pub const fn from_mib(mib: u64) -> Self {
+        Self(mib * 1024 * 1024)
+    }
 }
 
 impl TryFrom<u64> for Disk {
@@ -132,5 +151,30 @@ mod tests {
 
         assert_eq!(false, is_valid_disk(0));
         assert_eq!(false, is_valid_disk(u64::MAX));
+    }
+
+    #[test]
+    fn to_mib_exact() {
+        let d = Disk::try_from(512 * 1024 * 1024u64).unwrap();
+        assert_eq!(d.to_mib(), 512);
+    }
+
+    #[test]
+    fn to_mib_rounds_up() {
+        let d = Disk::try_from(512 * 1024 * 1024u64 + 1).unwrap();
+        assert_eq!(d.to_mib(), 513);
+    }
+
+    #[test]
+    fn to_mib_one_byte() {
+        let d = Disk::try_from(1u64).unwrap();
+        assert_eq!(d.to_mib(), 1); // rounds up
+    }
+
+    #[test]
+    fn from_mib_round_trip() {
+        let d = Disk::from_mib(2048);
+        assert_eq!(d.to_mib(), 2048);
+        assert_eq!(u64::from(d), 2048 * 1024 * 1024);
     }
 }

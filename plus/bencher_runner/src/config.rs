@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use bencher_json::{Cpu, Disk, Memory};
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
@@ -31,15 +32,15 @@ pub struct Config {
 
     /// Number of vCPUs to allocate to the VM.
     #[serde(default = "default_vcpus")]
-    pub vcpus: u8,
+    pub vcpus: Cpu,
 
-    /// Memory size in MiB.
-    #[serde(default = "default_memory_mib")]
-    pub memory_mib: u32,
+    /// Memory size in bytes.
+    #[serde(default = "default_memory")]
+    pub memory: Memory,
 
-    /// Disk size in MiB.
-    #[serde(default = "default_disk_mib")]
-    pub disk_mib: u32,
+    /// Disk size in bytes.
+    #[serde(default = "default_disk")]
+    pub disk: Disk,
 
     /// Kernel command line arguments.
     #[serde(default = "default_kernel_cmdline")]
@@ -91,16 +92,16 @@ pub struct Config {
     pub cpu_layout: Option<CpuLayout>,
 }
 
-const fn default_vcpus() -> u8 {
-    1
+fn default_vcpus() -> Cpu {
+    Cpu::MIN
 }
 
-const fn default_memory_mib() -> u32 {
-    512
+fn default_memory() -> Memory {
+    Memory::from_mib(512)
 }
 
-const fn default_disk_mib() -> u32 {
-    1024 // 1 GiB
+fn default_disk() -> Disk {
+    Disk::from_mib(1024) // 1 GiB
 }
 
 fn default_kernel_cmdline() -> String {
@@ -128,8 +129,8 @@ impl Config {
             kernel: None,
             token: None,
             vcpus: default_vcpus(),
-            memory_mib: default_memory_mib(),
-            disk_mib: default_disk_mib(),
+            memory: default_memory(),
+            disk: default_disk(),
             kernel_cmdline: default_kernel_cmdline(),
             timeout_secs: default_timeout_secs(),
             output_file: None,
@@ -155,8 +156,8 @@ impl Config {
             kernel: Some(kernel),
             token: None,
             vcpus: default_vcpus(),
-            memory_mib: default_memory_mib(),
-            disk_mib: default_disk_mib(),
+            memory: default_memory(),
+            disk: default_disk(),
             kernel_cmdline: default_kernel_cmdline(),
             timeout_secs: default_timeout_secs(),
             output_file: None,
@@ -178,22 +179,22 @@ impl Config {
 
     /// Set the number of vCPUs.
     #[must_use]
-    pub fn with_vcpus(mut self, vcpus: u8) -> Self {
+    pub fn with_vcpus(mut self, vcpus: Cpu) -> Self {
         self.vcpus = vcpus;
         self
     }
 
-    /// Set the memory size in MiB.
+    /// Set the memory.
     #[must_use]
-    pub fn with_memory_mib(mut self, memory_mib: u32) -> Self {
-        self.memory_mib = memory_mib;
+    pub fn with_memory(mut self, memory: Memory) -> Self {
+        self.memory = memory;
         self
     }
 
-    /// Set the disk size in MiB.
+    /// Set the disk size.
     #[must_use]
-    pub fn with_disk_mib(mut self, disk_mib: u32) -> Self {
-        self.disk_mib = disk_mib;
+    pub fn with_disk(mut self, disk: Disk) -> Self {
+        self.disk = disk;
         self
     }
 
@@ -297,9 +298,9 @@ mod tests {
     fn config_new_defaults() {
         let config = Config::new("my-image:latest");
         assert_eq!(config.oci_image, "my-image:latest");
-        assert_eq!(config.vcpus, 1);
-        assert_eq!(config.memory_mib, 512);
-        assert_eq!(config.disk_mib, 1024);
+        assert_eq!(config.vcpus, Cpu::MIN);
+        assert_eq!(config.memory, Memory::from_mib(512));
+        assert_eq!(config.disk, Disk::from_mib(1024));
         assert_eq!(config.timeout_secs, 300);
         assert!(!config.network);
         assert!(config.kernel.is_none());
@@ -322,9 +323,9 @@ mod tests {
         let env: HashMap<String, String> = [("RUST_LOG".to_owned(), "debug".to_owned())].into();
         let config = Config::new("img")
             .with_token("jwt-token")
-            .with_vcpus(4)
-            .with_memory_mib(2048)
-            .with_disk_mib(4096)
+            .with_vcpus(Cpu::try_from(4).unwrap())
+            .with_memory(Memory::from_mib(2048))
+            .with_disk(Disk::from_mib(4096))
             .with_timeout_secs(600)
             .with_output_file("/tmp/results.json")
             .with_network(true)
@@ -333,9 +334,9 @@ mod tests {
             .with_env(env.clone());
 
         assert_eq!(config.token.unwrap(), "jwt-token");
-        assert_eq!(config.vcpus, 4);
-        assert_eq!(config.memory_mib, 2048);
-        assert_eq!(config.disk_mib, 4096);
+        assert_eq!(config.vcpus, Cpu::try_from(4).unwrap());
+        assert_eq!(config.memory, Memory::from_mib(2048));
+        assert_eq!(config.disk, Disk::from_mib(4096));
         assert_eq!(config.timeout_secs, 600);
         assert_eq!(config.output_file.unwrap(), "/tmp/results.json");
         assert!(config.network);
@@ -347,16 +348,16 @@ mod tests {
     #[test]
     fn config_serde_round_trip() {
         let config = Config::new("ghcr.io/test/bench:v1")
-            .with_vcpus(2)
-            .with_memory_mib(1024)
+            .with_vcpus(Cpu::try_from(2).unwrap())
+            .with_memory(Memory::from_mib(1024))
             .with_output_file("/output.json");
 
         let json = serde_json::to_string(&config).unwrap();
         let parsed: Config = serde_json::from_str(&json).unwrap();
 
         assert_eq!(parsed.oci_image, "ghcr.io/test/bench:v1");
-        assert_eq!(parsed.vcpus, 2);
-        assert_eq!(parsed.memory_mib, 1024);
+        assert_eq!(parsed.vcpus, Cpu::try_from(2).unwrap());
+        assert_eq!(parsed.memory, Memory::from_mib(1024));
         assert_eq!(parsed.output_file.unwrap(), "/output.json");
         // Optional None fields should not appear in JSON
         assert!(!json.contains("\"token\""));
@@ -368,9 +369,9 @@ mod tests {
         let json = r#"{"oci_image": "test:latest"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(config.oci_image, "test:latest");
-        assert_eq!(config.vcpus, 1);
-        assert_eq!(config.memory_mib, 512);
-        assert_eq!(config.disk_mib, 1024);
+        assert_eq!(config.vcpus, Cpu::MIN);
+        assert_eq!(config.memory, Memory::from_mib(512));
+        assert_eq!(config.disk, Disk::from_mib(1024));
         assert_eq!(config.timeout_secs, 300);
         assert!(!config.network);
     }

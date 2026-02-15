@@ -61,16 +61,16 @@ pub struct RunArgs {
     pub image: String,
     /// JWT token for registry authentication.
     pub token: Option<String>,
-    /// Number of vCPUs.
-    pub vcpus: u8,
-    /// Memory in MiB.
-    pub memory_mib: u32,
+    /// Optional vCPU count override.
+    pub vcpus: Option<bencher_json::Cpu>,
     /// Execution timeout in seconds.
     pub timeout_secs: u64,
     /// Output file path inside guest.
     pub output_file: Option<String>,
     /// Maximum size in bytes for collected stdout/stderr.
     pub max_output_size: Option<usize>,
+    /// Whether to enable network access in the VM.
+    pub network: bool,
     /// Host tuning configuration.
     pub tuning: TuningConfig,
 }
@@ -84,10 +84,12 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     let _tuning_guard = crate::tuning::apply(&args.tuning);
 
     // Build config from args
-    let config = crate::Config::new(args.image.clone())
-        .with_vcpus(args.vcpus)
-        .with_memory_mib(args.memory_mib)
-        .with_timeout_secs(args.timeout_secs);
+    let mut config = crate::Config::new(args.image.clone())
+        .with_timeout_secs(args.timeout_secs)
+        .with_network(args.network);
+    if let Some(vcpus) = args.vcpus {
+        config = config.with_vcpus(vcpus);
+    }
     let config = if let Some(ref token) = args.token {
         config.with_token(token.clone())
     } else {
@@ -204,7 +206,7 @@ pub fn execute(
         config.kernel.as_ref().map_or("(system)", |p| p.as_str())
     );
     println!("  vCPUs: {}", config.vcpus);
-    println!("  Memory: {} MiB", config.memory_mib);
+    println!("  Memory: {} MiB", config.memory.to_mib());
     println!("  Timeout: {} seconds", config.timeout_secs);
 
     // Create a temporary work directory
@@ -276,9 +278,9 @@ pub fn execute(
     // Step 6: Create ext4 rootfs
     println!(
         "Creating ext4 at {rootfs_path} ({} MiB)...",
-        config.disk_mib
+        config.disk.to_mib()
     );
-    bencher_rootfs::create_ext4_with_size(&unpack_dir, &rootfs_path, u64::from(config.disk_mib))?;
+    bencher_rootfs::create_ext4_with_size(&unpack_dir, &rootfs_path, config.disk.to_mib())?;
 
     // Step 7: Find Firecracker binary - use bundled or find on system
     let firecracker_bin = if crate::firecracker_bin::FIRECRACKER_BUNDLED {
@@ -292,12 +294,22 @@ pub fn execute(
 
     // Step 8: Run benchmark in Firecracker microVM
     println!("Launching Firecracker microVM...");
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "CPU count fits in u8 for Firecracker"
+    )]
+    let vcpus = u32::from(config.vcpus) as u8;
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "Practical memory fits in u32 MiB for Firecracker"
+    )]
+    let memory_mib = config.memory.to_mib() as u32;
     let fc_config = FirecrackerJobConfig {
         firecracker_bin,
         kernel_path: kernel_path.to_string(),
         rootfs_path: rootfs_path.to_string(),
-        vcpus: config.vcpus,
-        memory_mib: config.memory_mib,
+        vcpus,
+        memory_mib,
         boot_args: config.kernel_cmdline.clone(),
         timeout_secs: config.timeout_secs,
         work_dir: work_dir.to_string(),

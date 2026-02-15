@@ -9042,6 +9042,7 @@ dependencies = [
  "bencher_oci",
  "bencher_rootfs",
  "bencher_runner",
+ "bencher_valid",
  "camino",
  "clap",
  "flate2",

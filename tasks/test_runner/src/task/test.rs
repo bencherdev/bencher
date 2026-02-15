@@ -197,8 +197,8 @@ fn run_benchmark() -> anyhow::Result<()> {
     // Kernel cmdline: kernel parameters first, then init=/init last
     // (parameters after init= can be passed as init arguments)
     let config = bencher_runner::Config::new(oci_image.clone())
-        .with_vcpus(1)
-        .with_memory_mib(256)
+        .with_vcpus(bencher_valid::Cpu::MIN)
+        .with_memory(bencher_valid::Memory::from_mib(256))
         .with_kernel_cmdline("earlyprintk=serial,ttyS0,115200 console=ttyS0,115200 loglevel=7 reboot=k panic=1 pci=off nokaslr devtmpfs.mount=1 root=/dev/vda ro init=/init");
 
     println!("VM Configuration:");
@@ -208,7 +208,7 @@ fn run_benchmark() -> anyhow::Result<()> {
     );
     println!("  OCI Image: {}", config.oci_image);
     println!("  vCPUs: {}", config.vcpus);
-    println!("  Memory: {} MiB", config.memory_mib);
+    println!("  Memory: {} MiB", config.memory.to_mib());
     println!();
 
     println!("Running benchmark...");

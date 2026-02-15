@@ -15,8 +15,6 @@ use super::DaemonConfig;
 use super::error::{DaemonError, WebSocketError};
 #[cfg(target_os = "linux")]
 use super::websocket::{JobChannel, RunnerMessage, ServerMessage};
-#[cfg(target_os = "linux")]
-use crate::units::bytes_to_mib;
 
 pub enum JobOutcome {
     Completed {
@@ -156,52 +154,28 @@ pub fn execute_job(
 
 /// Build a runner Config from the claimed job and daemon config.
 ///
-/// Resource requirements (cpu, memory, disk, network) come from the spec.
+/// Resource requirements (cpu, memory, disk, network) come from the spec as
+/// strong types and are passed through directly.
 /// Execution details (registry, project, digest, entrypoint, cmd, env, timeout,
 /// file_paths) come from the config. The OCI token is passed through for
 /// authenticated image pulls.
 ///
-/// Memory and disk are converted from bytes (API) to MiB (Firecracker).
 /// CPU layout from the daemon config is passed through for core isolation.
 #[cfg(target_os = "linux")]
 fn build_config_from_job(daemon_config: &DaemonConfig, job: &JsonClaimedJob) -> crate::Config {
     let spec = &job.spec;
     let config = &job.config;
 
-    // Extract values from newtypes
-    let cpu = u32::from(spec.cpu);
-    let memory_bytes = u64::from(spec.memory);
-    let disk_bytes = u64::from(spec.disk);
-    let timeout_secs = u32::from(config.timeout);
-
-    // Convert bytes to MiB for Firecracker (rounds up)
-    let memory_mib = bytes_to_mib(memory_bytes);
-    let disk_mib = bytes_to_mib(disk_bytes);
-
     // Build OCI image URL: registry/project/images@digest
     let registry_str = config.registry.as_ref().trim_end_matches('/');
     let oci_image = format!("{registry_str}/{}/images@{}", config.project, config.digest);
 
-    // cpu is u32 from the spec, but Config expects u8
-    // Clamp to u8::MAX if larger (unlikely in practice)
-    let vcpus = if cpu > u32::from(u8::MAX) {
-        u8::MAX
-    } else {
-        // This cast is safe because we just checked that cpu <= u8::MAX
-        #[expect(
-            clippy::cast_possible_truncation,
-            reason = "Checked that value fits in u8 above"
-        )]
-        let result = cpu as u8;
-        result
-    };
-
     let mut runner_config = crate::Config::new(oci_image)
         .with_token(job.oci_token.to_string())
-        .with_vcpus(vcpus)
-        .with_memory_mib(memory_mib)
-        .with_disk_mib(disk_mib)
-        .with_timeout_secs(u64::from(timeout_secs))
+        .with_vcpus(spec.cpu)
+        .with_memory(spec.memory)
+        .with_disk(spec.disk)
+        .with_timeout_secs(u64::from(u32::from(config.timeout)))
         .with_network(spec.network)
         .with_entrypoint_opt(config.entrypoint.clone())
         .with_cmd_opt(config.cmd.clone())
@@ -260,6 +234,7 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
 mod tests {
     use super::*;
     use crate::units::mib_to_bytes;
+    use bencher_json::{Cpu, Disk, Memory};
 
     /// Construct a `JsonClaimedJob` for testing by building the JSON
     /// with the proper nested structure and deserializing.
@@ -344,32 +319,32 @@ mod tests {
         let daemon_config = test_daemon_config();
         let job = test_job(4, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
         let result = build_config_from_job(&daemon_config, &job);
-        assert_eq!(result.vcpus, 4);
+        assert_eq!(result.vcpus, Cpu::try_from(4).unwrap());
     }
 
     #[test]
-    fn converts_memory_bytes_to_mib() {
+    fn converts_memory_from_job() {
         let daemon_config = test_daemon_config();
         let job = test_job(1, mib_to_bytes(2048), mib_to_bytes(1024), 300, false);
         let result = build_config_from_job(&daemon_config, &job);
-        assert_eq!(result.memory_mib, 2048);
+        assert_eq!(result.memory, Memory::from_mib(2048));
     }
 
     #[test]
-    fn converts_disk_bytes_to_mib() {
+    fn converts_disk_from_job() {
         let daemon_config = test_daemon_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(10240), 300, false);
         let result = build_config_from_job(&daemon_config, &job);
-        assert_eq!(result.disk_mib, 10240);
+        assert_eq!(result.disk, Disk::from_mib(10240));
     }
 
     #[test]
-    fn memory_rounds_up() {
+    fn memory_preserves_bytes() {
         let daemon_config = test_daemon_config();
-        // 512 MiB + 1 byte should round up to 513 MiB
+        // 512 MiB + 1 byte - strong type preserves exact byte value
         let job = test_job(1, mib_to_bytes(512) + 1, mib_to_bytes(1024), 300, false);
         let result = build_config_from_job(&daemon_config, &job);
-        assert_eq!(result.memory_mib, 513);
+        assert_eq!(result.memory.to_mib(), 513);
     }
 
     #[test]
@@ -497,9 +472,9 @@ mod tests {
             Some(vec!["/output/bench.txt".to_owned()]),
         );
         let result = build_config_from_job(&daemon_config, &job);
-        assert_eq!(result.vcpus, 8);
-        assert_eq!(result.memory_mib, 4096);
-        assert_eq!(result.disk_mib, 20480);
+        assert_eq!(result.vcpus, Cpu::try_from(8).unwrap());
+        assert_eq!(result.memory, Memory::from_mib(4096));
+        assert_eq!(result.disk, Disk::from_mib(20480));
         assert_eq!(result.timeout_secs, 900);
         assert!(result.network);
         assert!(result.entrypoint.is_some());

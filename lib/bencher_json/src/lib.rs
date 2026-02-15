@@ -88,9 +88,10 @@ pub use project::{
 pub use run::JsonNewRun;
 #[cfg(feature = "plus")]
 pub use runner::{
-    DEFAULT_POLL_TIMEOUT, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, JobPriority, JobStatus, JobUuid,
-    JsonClaimJob, JsonClaimedJob, JsonJob, JsonJobConfig, JsonJobs, JsonNewRunner, JsonRunner,
-    JsonRunnerToken, JsonRunners, JsonUpdateRunner, RunnerResourceId, RunnerSlug, RunnerUuid,
+    DEFAULT_POLL_TIMEOUT, JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob,
+    JsonJobConfig, JsonJobs, JsonNewRunner, JsonRunner, JsonRunnerToken, JsonRunners,
+    JsonUpdateRunner, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, RunnerResourceId, RunnerSlug,
+    RunnerUuid,
 };
 #[cfg(feature = "plus")]
 pub use spec::{

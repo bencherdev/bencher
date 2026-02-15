@@ -1142,6 +1142,203 @@ CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
                 }
             },
         },
+        // =======================================================================
+        // File output edge cases
+        // =======================================================================
+        Scenario {
+            name: "missing_file_output",
+            description: "Missing output file doesn't crash runner",
+            // --output points to a path the guest never creates.
+            // The runner should still succeed (exit 0) without crashing.
+            dockerfile: r#"FROM busybox
+CMD ["echo", "no file written"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--output", "/nonexistent/path.json"],
+            validate: |output| {
+                // Runner should not crash, regardless of exit code.
+                // A non-zero exit is acceptable (file not found), but a crash is not.
+                let combined = format!("{}{}", output.stdout, output.stderr);
+                if combined.contains("panic") || combined.contains("SIGSEGV") {
+                    bail!("Runner crashed when output file is missing: {combined}")
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "large_file_output",
+            description: "Large output file (~2 MB) transferred via vsock",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /tmp/output.json && echo done"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "completed_with_all_fields",
+            description: "Stdout + stderr + output file simultaneously",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\":true}' > /tmp/out.json"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--output", "/tmp/out.json"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                if !output.stdout.contains("stdout_marker") {
+                    bail!("Expected 'stdout_marker' in stdout, got: {}", output.stdout)
+                }
+                if !output.stderr.contains("stderr_marker") {
+                    bail!("Expected 'stderr_marker' in stderr, got: {}", output.stderr)
+                }
+                Ok(())
+            },
+        },
+        // =======================================================================
+        // OCI image variations
+        // =======================================================================
+        Scenario {
+            name: "multi_layer_image",
+            description: "3 RUN layers creating files in different directories",
+            dockerfile: r#"FROM busybox
+RUN echo "a" > /tmp/file_a.txt
+RUN mkdir -p /opt && echo "b" > /opt/file_b.txt
+RUN echo "c" > /var/file_c.txt
+CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                let has_all = output.stdout.contains('a')
+                    && output.stdout.contains('b')
+                    && output.stdout.contains('c');
+                if has_all {
+                    Ok(())
+                } else {
+                    bail!("Expected 'a', 'b', 'c' in output, got: {}", output.stdout)
+                }
+            },
+        },
+        Scenario {
+            name: "image_with_symlinks",
+            description: "Symbolic links preserved through OCI unpack + ext4",
+            dockerfile: r#"FROM busybox
+RUN echo "target" > /tmp/target.txt && ln -s /tmp/target.txt /tmp/link.txt
+CMD ["cat", "/tmp/link.txt"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                if output.stdout.contains("target") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'target' in output (via symlink), got: {}",
+                        output.stdout
+                    )
+                }
+            },
+        },
+        // =======================================================================
+        // Error / edge case scenarios
+        // =======================================================================
+        Scenario {
+            name: "failed_with_partial_output",
+            description: "Writes stdout+stderr then exits non-zero",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo partial_stdout && echo partial_stderr >&2 && exit 1"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                // The runner may succeed (exit 0) even when the guest exits non-zero.
+                // The key property: partial output is captured despite non-zero guest exit.
+                let combined = format!("{}{}", output.stdout, output.stderr);
+                if combined.contains("partial_stdout") || combined.contains("partial_stderr") {
+                    Ok(())
+                } else {
+                    bail!("Expected partial output to be captured, got: {combined}")
+                }
+            },
+        },
+        Scenario {
+            name: "minimum_timeout",
+            description: "1-second timeout kills long-running process",
+            dockerfile: r#"FROM busybox
+CMD ["sleep", "3600"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "1"],
+            validate: |output| {
+                if output.exit_code == 0 {
+                    bail!("Expected non-zero exit for 1s timeout on sleep 3600")
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "max_output_size_truncation",
+            description: "Output truncated when --max-output-size is small",
+            // Generate ~50 KB of output, but limit to 1024 bytes.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "dd if=/dev/zero bs=1024 count=50 2>/dev/null | tr '\\0' 'X'"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--max-output-size", "1024"],
+            validate: |output| {
+                // Output should be bounded — not the full ~50KB
+                if output.stdout.len() > 4096 {
+                    bail!(
+                        "Output too large ({} bytes), --max-output-size not enforced",
+                        output.stdout.len()
+                    )
+                }
+                // Runner didn't OOM or crash — that's a pass
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "env_var_sanitization",
+            description: "LD_PRELOAD and LD_LIBRARY_PATH blocked, safe vars pass",
+            dockerfile: r#"FROM busybox
+ENV LD_PRELOAD=/evil.so
+ENV LD_LIBRARY_PATH=/evil
+ENV SAFE_VAR=safe_value
+CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH SAFE=$SAFE_VAR"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                if !output.stdout.contains("SAFE=safe_value") {
+                    bail!(
+                        "Expected 'SAFE=safe_value' in output, got: {}",
+                        output.stdout
+                    )
+                }
+                if output.stdout.contains("LD_PRELOAD=/evil") {
+                    bail!("LD_PRELOAD was NOT sanitized! Output: {}", output.stdout)
+                }
+                if output.stdout.contains("LD_LIBRARY_PATH=/evil") {
+                    bail!(
+                        "LD_LIBRARY_PATH was NOT sanitized! Output: {}",
+                        output.stdout
+                    )
+                }
+                Ok(())
+            },
+        },
     ]
 }
 

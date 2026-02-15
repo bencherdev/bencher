@@ -35,13 +35,9 @@ pub struct TaskRun {
     #[arg(long)]
     pub token: Option<String>,
 
-    /// Number of vCPUs.
-    #[arg(long, default_value = "1")]
-    pub vcpus: u8,
-
-    /// Memory in MiB.
-    #[arg(long, default_value = "512")]
-    pub memory: u32,
+    /// Number of vCPUs (overrides default for testing).
+    #[arg(long)]
+    pub vcpus: Option<u32>,
 
     /// Execution timeout in seconds.
     #[arg(long, default_value = "300")]
@@ -54,6 +50,10 @@ pub struct TaskRun {
     /// Maximum size in bytes for collected stdout/stderr (default: 10 MiB).
     #[arg(long)]
     pub max_output_size: Option<usize>,
+
+    /// Enable network access in the VM.
+    #[arg(long)]
+    pub network: bool,
 
     // --- Host tuning flags ---
     /// Disable all host tuning optimizations.
