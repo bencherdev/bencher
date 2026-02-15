@@ -59,6 +59,7 @@ impl From<CliPagination<CliRunnersSort>> for Pagination {
         Self {
             sort: sort.map(|sort| match sort {
                 CliRunnersSort::Name => RunnersSort::Name,
+                CliRunnersSort::Created => RunnersSort::Created,
             }),
             direction: direction.map(Into::into),
             page,

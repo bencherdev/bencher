@@ -36,6 +36,8 @@ pub enum RunnersSort {
     /// Sort by runner name.
     #[default]
     Name,
+    /// Sort by creation date.
+    Created,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -146,6 +148,10 @@ fn get_ls_query<'q>(
             Some(JsonDirection::Desc) => {
                 query.order((schema::runner::name.desc(), schema::runner::slug.desc()))
             },
+        },
+        RunnersSort::Created => match pagination_params.direction {
+            Some(JsonDirection::Asc) => query.order(schema::runner::created.asc()),
+            Some(JsonDirection::Desc) | None => query.order(schema::runner::created.desc()),
         },
     }
 }

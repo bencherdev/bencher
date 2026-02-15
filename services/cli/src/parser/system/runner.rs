@@ -47,6 +47,8 @@ pub struct CliRunnerList {
 pub enum CliRunnersSort {
     /// Name of the runner
     Name,
+    /// Date time the runner was created
+    Created,
 }
 
 #[derive(Parser, Debug)]

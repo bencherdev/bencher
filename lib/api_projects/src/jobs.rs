@@ -187,10 +187,10 @@ pub async fn proj_job_options(
 /// View a job
 ///
 /// ➕ Bencher Plus: View a job for a project.
-/// The job output is included in the response for terminal (completed, failed, or canceled) jobs
-/// only when the user is authenticated and has `view` permissions for the project.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// The job output is only included in the response for terminal (completed, failed, or canceled) jobs
+/// when the user is authenticated and has `view` permissions for the project.
 #[endpoint {
     method = GET,
     path = "/v0/projects/{project}/jobs/{job}",
