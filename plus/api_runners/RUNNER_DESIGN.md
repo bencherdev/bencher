@@ -128,7 +128,6 @@ Represents a benchmark execution request linked to a report.
 | completed          | `Option<DateTime>`  | When job reached terminal state                      |
 | last_heartbeat     | `Option<DateTime>`  | Last heartbeat for this job                          |
 | last_billed_minute | `Option<i32>`       | Minutes billed so far (prevents double-counting)     |
-| exit_code          | `Option<i32>`       | Process exit code from the benchmark                 |
 | created            | `DateTime`          | Creation timestamp                                   |
 | modified           | `DateTime`          | Last modification timestamp                          |
 

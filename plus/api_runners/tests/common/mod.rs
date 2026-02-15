@@ -1,17 +1,17 @@
 // Each test file (`jobs.rs`, `channel.rs`, etc.) includes this module separately,
 // so not all helpers are used by every test binary.
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 //! Shared test helpers for `api_runners` integration tests.
 //!
-//! Note: Similar helpers exist in `lib/api_projects/tests/jobs.rs`.
-//! They are kept separate because the two test suites live in different
-//! crates and have slightly different signatures. Both copies use UUID-based
-//! slugs to avoid UNIQUE constraint collisions across tests.
+//! Common helpers (`get_project_id`, `create_test_report`, `set_job_status`,
+//! `base_timestamp`) are re-exported from `bencher_api_tests::helpers`.
+//! Runner-specific helpers live here.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{
-    BranchUuid, DateTime, JobPriority, JobStatus, JobUuid, JsonRunnerToken, SpecUuid,
+pub use bencher_api_tests::helpers::{
+    base_timestamp, create_test_report, get_project_id, set_job_status,
 };
+use bencher_json::{DateTime, JobPriority, JobStatus, JobUuid, JsonRunnerToken, SpecUuid};
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
@@ -54,7 +54,7 @@ pub fn insert_test_spec_full(
     network: bool,
 ) -> (SpecUuid, i32) {
     let mut conn = server.db_conn();
-    let now = DateTime::now();
+    let now = base_timestamp();
     let spec_uuid = SpecUuid::new();
     let name = format!("test-spec-{spec_uuid}");
     let slug = format!("test-spec-{spec_uuid}");
@@ -142,7 +142,7 @@ pub fn insert_test_job_with_timeout(
     timeout_secs: i32,
 ) -> JobUuid {
     let mut conn = server.db_conn();
-    let now = DateTime::now();
+    let now = base_timestamp();
     let job_uuid = JobUuid::new();
     let project_uuid = bencher_json::ProjectUuid::new();
     let project_id = get_project_id_from_report(server, report_id);
@@ -187,7 +187,7 @@ pub fn insert_test_job_full(
     spec_id: i32,
 ) -> JobUuid {
     let mut conn = server.db_conn();
-    let now = DateTime::now();
+    let now = base_timestamp();
     let job_uuid = JobUuid::new();
 
     // Create a valid JsonJobConfig as JSON
@@ -218,102 +218,6 @@ pub fn insert_test_job_full(
     job_uuid
 }
 
-/// Create minimal test infrastructure (testbed, version, branch, head, report).
-/// Returns the report ID.
-#[expect(clippy::expect_used)]
-pub fn create_test_report(server: &TestServer, project_id: i32) -> i32 {
-    let mut conn = server.db_conn();
-    let now = DateTime::now();
-
-    let testbed_uuid = bencher_json::TestbedUuid::new();
-    diesel::insert_into(schema::testbed::table)
-        .values((
-            schema::testbed::uuid.eq(&testbed_uuid),
-            schema::testbed::project_id.eq(project_id),
-            schema::testbed::name.eq("test-testbed"),
-            schema::testbed::slug.eq(&format!("test-testbed-{testbed_uuid}")),
-            schema::testbed::created.eq(&now),
-            schema::testbed::modified.eq(&now),
-        ))
-        .execute(&mut conn)
-        .expect("Failed to insert testbed");
-    let testbed_id: i32 = schema::testbed::table
-        .filter(schema::testbed::uuid.eq(&testbed_uuid))
-        .select(schema::testbed::id)
-        .first(&mut conn)
-        .expect("Failed to get testbed ID");
-
-    let version_uuid = bencher_json::VersionUuid::new();
-    diesel::insert_into(schema::version::table)
-        .values((
-            schema::version::uuid.eq(&version_uuid),
-            schema::version::project_id.eq(project_id),
-            schema::version::number.eq(1),
-        ))
-        .execute(&mut conn)
-        .expect("Failed to insert version");
-    let version_id: i32 = schema::version::table
-        .filter(schema::version::uuid.eq(&version_uuid))
-        .select(schema::version::id)
-        .first(&mut conn)
-        .expect("Failed to get version ID");
-
-    let branch_uuid = BranchUuid::new();
-    diesel::insert_into(schema::branch::table)
-        .values((
-            schema::branch::uuid.eq(&branch_uuid),
-            schema::branch::project_id.eq(project_id),
-            schema::branch::name.eq("main"),
-            schema::branch::slug.eq(&format!("main-{branch_uuid}")),
-            schema::branch::created.eq(&now),
-            schema::branch::modified.eq(&now),
-        ))
-        .execute(&mut conn)
-        .expect("Failed to insert branch");
-    let branch_id: i32 = schema::branch::table
-        .filter(schema::branch::uuid.eq(&branch_uuid))
-        .select(schema::branch::id)
-        .first(&mut conn)
-        .expect("Failed to get branch ID");
-
-    let head_uuid = bencher_json::HeadUuid::new();
-    diesel::insert_into(schema::head::table)
-        .values((
-            schema::head::uuid.eq(&head_uuid),
-            schema::head::branch_id.eq(branch_id),
-            schema::head::created.eq(&now),
-        ))
-        .execute(&mut conn)
-        .expect("Failed to insert head");
-    let head_id: i32 = schema::head::table
-        .filter(schema::head::uuid.eq(&head_uuid))
-        .select(schema::head::id)
-        .first(&mut conn)
-        .expect("Failed to get head ID");
-
-    let report_uuid = bencher_json::ReportUuid::new();
-    diesel::insert_into(schema::report::table)
-        .values((
-            schema::report::uuid.eq(&report_uuid),
-            schema::report::project_id.eq(project_id),
-            schema::report::head_id.eq(head_id),
-            schema::report::version_id.eq(version_id),
-            schema::report::testbed_id.eq(testbed_id),
-            schema::report::adapter.eq(0),
-            schema::report::start_time.eq(&now),
-            schema::report::end_time.eq(&now),
-            schema::report::created.eq(&now),
-        ))
-        .execute(&mut conn)
-        .expect("Failed to insert report");
-
-    schema::report::table
-        .filter(schema::report::uuid.eq(&report_uuid))
-        .select(schema::report::id)
-        .first(&mut conn)
-        .expect("Failed to get report ID")
-}
-
 /// Insert a test job with optional fields populated. Returns the job UUID.
 #[expect(clippy::expect_used)]
 pub fn insert_test_job_with_optional_fields(
@@ -323,7 +227,7 @@ pub fn insert_test_job_with_optional_fields(
     spec_id: i32,
 ) -> JobUuid {
     let mut conn = server.db_conn();
-    let now = DateTime::now();
+    let now = base_timestamp();
     let job_uuid = JobUuid::new();
     let project_id = get_project_id_from_report(server, report_id);
     let organization_id = get_organization_id_from_project_id(server, project_id);
@@ -371,7 +275,7 @@ pub fn insert_test_job_with_invalid_config(
     spec_id: i32,
 ) -> JobUuid {
     let mut conn = server.db_conn();
-    let now = DateTime::now();
+    let now = base_timestamp();
     let job_uuid = JobUuid::new();
     let project_id = get_project_id_from_report(server, report_id);
     let organization_id = get_organization_id_from_project_id(server, project_id);
@@ -426,27 +330,6 @@ pub fn get_organization_id_from_project_id(server: &TestServer, project_id: i32)
         .select(schema::project::organization_id)
         .first(&mut conn)
         .expect("Failed to get organization ID")
-}
-
-/// Get project ID from slug.
-#[expect(clippy::expect_used)]
-pub fn get_project_id(server: &TestServer, project_slug: &str) -> i32 {
-    let mut conn = server.db_conn();
-    schema::project::table
-        .filter(schema::project::slug.eq(project_slug))
-        .select(schema::project::id)
-        .first(&mut conn)
-        .expect("Failed to get project ID")
-}
-
-/// Set the job status directly in the database (for testing state transitions).
-#[expect(clippy::expect_used)]
-pub fn set_job_status(server: &TestServer, job_uuid: JobUuid, status: JobStatus) {
-    let mut conn = server.db_conn();
-    diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
-        .set(schema::job::status.eq(status))
-        .execute(&mut conn)
-        .expect("Failed to set job status");
 }
 
 /// Set the `runner_id` directly in the database (for testing preconditions).

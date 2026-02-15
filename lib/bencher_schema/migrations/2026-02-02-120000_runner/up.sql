@@ -55,7 +55,7 @@ CREATE TABLE job (
     config TEXT NOT NULL,
     timeout INTEGER NOT NULL DEFAULT 3600 CHECK (timeout > 0),
     priority INTEGER NOT NULL DEFAULT 0 CHECK (priority >= 0),
-    status INTEGER NOT NULL DEFAULT 0 CHECK (status >= 0 AND status <= 5),
+    status INTEGER NOT NULL DEFAULT 0 CHECK (status >= 0),
     runner_id INTEGER,
     claimed BIGINT,
     started BIGINT,
