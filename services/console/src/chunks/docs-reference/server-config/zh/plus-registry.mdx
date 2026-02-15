@@ -25,3 +25,4 @@ Bencher 可以作为符合 OCI 标准的容器/工件注册表运行。
 | data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |  ---   |  是   |                      AWS 秘密访问密钥。                       |
 |   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |  ---   |  是   |           S3 访问点 ARN。访问点名称后可选路径前缀。           |
 |       upload_timeout         |                                3600                                 |  3600  |  否   | 上传会话超时时间（秒）。过期上传在启动新上传时被清理。 |
+|       max_body_size          |                            1073741824                               | 1073741824 |  否   | Blob 和清单上传的最大正文大小（字节）。超过此限制的请求将被拒绝并返回 413 Payload Too Large。默认值：1 GiB。 |

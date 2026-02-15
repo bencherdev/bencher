@@ -252,3 +252,13 @@ Changes in these areas often require updates across multiple files:
 Available locally at `services/console/src/content/` or online at https://bencher.dev/docs/.
 
 See [`services/console/CLAUDE.md`](services/console/CLAUDE.md) for console-specific guides, including how to add API documentation pages.
+
+### Server Configuration Documentation
+
+Server config types live in `lib/bencher_json/src/system/config/`. The corresponding documentation chunks live in `services/console/src/chunks/docs-reference/server-config/`.
+
+When adding a new config field:
+1. Update the Rust type in `lib/bencher_json/src/system/config/`
+2. Update the documentation chunks in all 9 language directories (`en`, `de`, `es`, `fr`, `ja`, `ko`, `pt`, `ru`, `zh`)
+3. Update the example config in `services/console/src/chunks/docs-reference/server-config/example.mdx`
+4. If adding a new subsection under `plus`, create a new `plus-<name>.mdx` chunk in all 9 languages and import/render it in each language's `plus.mdx`

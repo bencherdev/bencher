@@ -7506,7 +7506,7 @@
           "runners"
         ],
         "summary": "List runners",
-        "description": "List all runners on the server. The user must be an admin to use this endpoint.",
+        "description": "➕ Bencher Plus: List all runners on the server. The user must be an admin to use this endpoint.",
         "operationId": "runners_get",
         "parameters": [
           {
@@ -7633,7 +7633,7 @@
           "runners"
         ],
         "summary": "Create a runner",
-        "description": "Create a new runner on the server. The user must be an admin to use this endpoint. Returns the runner token which is only shown once.",
+        "description": "➕ Bencher Plus: Create a new runner on the server. The user must be an admin to use this endpoint. Returns the runner token which is only shown once.",
         "operationId": "runners_post",
         "requestBody": {
           "content": {
@@ -7708,7 +7708,7 @@
           "runners"
         ],
         "summary": "View a runner",
-        "description": "View a runner on the server. The user must be an admin to use this endpoint.",
+        "description": "➕ Bencher Plus: View a runner on the server. The user must be an admin to use this endpoint.",
         "operationId": "runner_get",
         "parameters": [
           {
@@ -7782,7 +7782,7 @@
           "runners"
         ],
         "summary": "Update a runner",
-        "description": "Update a runner on the server. The user must be an admin to use this endpoint. Can be used to archive or unarchive a runner.",
+        "description": "➕ Bencher Plus: Update a runner on the server. The user must be an admin to use this endpoint. Can be used to archive or unarchive a runner.",
         "operationId": "runner_patch",
         "parameters": [
           {
@@ -7868,7 +7868,7 @@
           "runners"
         ],
         "summary": "Claim a job",
-        "description": "Long-poll to claim a pending job for execution. Authenticated via runner token. Returns a job if one is available, or empty response on timeout.",
+        "description": "➕ Bencher Plus: Long-poll to claim a pending job for execution. Authenticated via runner token. Returns a job if one is available, or empty response on timeout.",
         "operationId": "runner_jobs_post",
         "parameters": [
           {
@@ -7954,7 +7954,7 @@
           "runners"
         ],
         "summary": "WebSocket channel for job execution",
-        "description": "Establishes a persistent connection for heartbeat and status updates. Authentication is via runner token in the Authorization header.",
+        "description": "➕ Bencher Plus: Establishes a persistent connection for heartbeat and status updates. Authentication is via runner token in the Authorization header.",
         "operationId": "runner_job_channel",
         "parameters": [
           {
@@ -7995,7 +7995,7 @@
           "runners"
         ],
         "summary": "List specs for a runner",
-        "description": "List all hardware specs associated with a runner. The user must be an admin to use this endpoint.",
+        "description": "➕ Bencher Plus: List all hardware specs associated with a runner. The user must be an admin to use this endpoint.",
         "operationId": "runner_specs_get",
         "parameters": [
           {
@@ -8069,7 +8069,7 @@
           "runners"
         ],
         "summary": "Add a spec to a runner",
-        "description": "Associate a hardware spec with a runner. The user must be an admin to use this endpoint.",
+        "description": "➕ Bencher Plus: Associate a hardware spec with a runner. The user must be an admin to use this endpoint.",
         "operationId": "runner_specs_post",
         "parameters": [
           {
@@ -8155,7 +8155,7 @@
           "runners"
         ],
         "summary": "Remove a spec from a runner",
-        "description": "Remove the association between a hardware spec and a runner. The user must be an admin to use this endpoint.",
+        "description": "➕ Bencher Plus: Remove the association between a hardware spec and a runner. The user must be an admin to use this endpoint.",
         "operationId": "runner_spec_delete",
         "parameters": [
           {
@@ -8233,7 +8233,7 @@
           "runners"
         ],
         "summary": "Rotate runner token",
-        "description": "Generate a new token for a runner, invalidating the old one. The user must be an admin to use this endpoint. Returns the new token which is only shown once.",
+        "description": "➕ Bencher Plus: Generate a new token for a runner, invalidating the old one. The user must be an admin to use this endpoint. Returns the new token which is only shown once.",
         "operationId": "runner_token_post",
         "parameters": [
           {
@@ -9031,7 +9031,7 @@
           "specs"
         ],
         "summary": "List specs",
-        "description": "List all hardware specs on the server. The user must be an admin to use this endpoint.",
+        "description": "➕ Bencher Plus: List all hardware specs on the server. The user must be an admin to use this endpoint.",
         "operationId": "specs_get",
         "parameters": [
           {
@@ -9158,7 +9158,7 @@
           "specs"
         ],
         "summary": "Create a spec",
-        "description": "Create a new hardware spec on the server. The user must be an admin to use this endpoint.",
+        "description": "➕ Bencher Plus: Create a new hardware spec on the server. The user must be an admin to use this endpoint.",
         "operationId": "specs_post",
         "requestBody": {
           "content": {
@@ -9233,7 +9233,7 @@
           "specs"
         ],
         "summary": "View a spec",
-        "description": "View a hardware spec on the server. The user must be an admin to use this endpoint.",
+        "description": "➕ Bencher Plus: View a hardware spec on the server. The user must be an admin to use this endpoint.",
         "operationId": "spec_get",
         "parameters": [
           {
@@ -9307,7 +9307,7 @@
           "specs"
         ],
         "summary": "Delete a spec",
-        "description": "Delete a hardware spec from the server. The user must be an admin to use this endpoint. Returns 409 Conflict if the spec is referenced by runners or jobs.",
+        "description": "➕ Bencher Plus: Delete a hardware spec from the server. The user must be an admin to use this endpoint. Returns 409 Conflict if the spec is referenced by runners or jobs.",
         "operationId": "spec_delete",
         "parameters": [
           {
@@ -9374,7 +9374,7 @@
           "specs"
         ],
         "summary": "Update a spec",
-        "description": "Update a hardware spec on the server. The user must be an admin to use this endpoint.",
+        "description": "➕ Bencher Plus: Update a hardware spec on the server. The user must be an admin to use this endpoint.",
         "operationId": "spec_patch",
         "parameters": [
           {

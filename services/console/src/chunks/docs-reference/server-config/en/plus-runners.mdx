@@ -1,0 +1,11 @@
+### `plus.runners`
+
+This section configures the runner system for bare metal benchmark execution.
+Runners are server-scoped agents that claim and execute benchmark jobs.
+
+If this section is not configured, Bencher will use the default values.
+
+|           Name            | Example | Default | Required |                                          Description                                           |
+| :-----------------------: | :-----: | :-----: | :------: | :--------------------------------------------------------------------------------------------: |
+|    heartbeat_timeout      |   90    |   90    |    No    | Time in seconds without a heartbeat before marking a job as failed.                            |
+| job_timeout_grace_period  |   60    |   60    |    No    | Extra time in seconds beyond a job's configured timeout before the server cancels it.          |

@@ -1,0 +1,11 @@
+### `plus.runners`
+
+Cette section configure le système de runners pour l'exécution de benchmarks sur bare metal.
+Les runners sont des agents à l'échelle du serveur qui réclament et exécutent des tâches de benchmark.
+
+Si cette section n'est pas configurée, Bencher utilisera les valeurs par défaut.
+
+|           Nom             | Exemple | Par défaut | Requis |                                          Description                                           |
+| :-----------------------: | :-----: | :--------: | :----: | :--------------------------------------------------------------------------------------------: |
+|    heartbeat_timeout      |   90    |     90     |  Non   | Temps en secondes sans battement de cœur avant de marquer une tâche comme échouée.             |
+| job_timeout_grace_period  |   60    |     60     |  Non   | Temps supplémentaire en secondes au-delà du délai configuré d'une tâche avant que le serveur ne l'annule. |

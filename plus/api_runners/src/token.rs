@@ -37,7 +37,7 @@ pub async fn runner_token_options(
 
 /// Rotate runner token
 ///
-/// Generate a new token for a runner, invalidating the old one.
+/// ➕ Bencher Plus: Generate a new token for a runner, invalidating the old one.
 /// The user must be an admin to use this endpoint.
 /// Returns the new token which is only shown once.
 #[endpoint {

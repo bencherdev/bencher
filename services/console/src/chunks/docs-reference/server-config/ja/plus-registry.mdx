@@ -25,3 +25,4 @@ S3ベースのストレージを設定してください。
 | data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |    ---     |  はい  |                                    AWSシークレットアクセスキー。                              |
 |   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |    ---     |  はい  |           S3アクセスポイントARN。アクセスポイント名の後にオプションのパスプレフィックス。     |
 |       upload_timeout         |                                3600                                 |    3600    | いいえ | アップロードセッションのタイムアウト（秒）。古いアップロードは新しいアップロード開始時にクリーンアップされます。 |
+|       max_body_size          |                            1073741824                               | 1073741824 | いいえ | Blobおよびマニフェストアップロードの最大ボディサイズ（バイト）。この制限を超えるリクエストは413 Payload Too Largeで拒否されます。デフォルト：1 GiB。 |
