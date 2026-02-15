@@ -63,6 +63,10 @@ pub struct RunArgs {
     pub token: Option<String>,
     /// Optional vCPU count override.
     pub vcpus: Option<bencher_json::Cpu>,
+    /// Optional memory override (in bytes).
+    pub memory: Option<bencher_json::Memory>,
+    /// Optional disk size override (in bytes).
+    pub disk: Option<bencher_json::Disk>,
     /// Execution timeout in seconds.
     pub timeout_secs: u64,
     /// Output file path inside guest.
@@ -89,6 +93,12 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         .with_network(args.network);
     if let Some(vcpus) = args.vcpus {
         config = config.with_vcpus(vcpus);
+    }
+    if let Some(memory) = args.memory {
+        config = config.with_memory(memory);
+    }
+    if let Some(disk) = args.disk {
+        config = config.with_disk(disk);
     }
     let config = if let Some(ref token) = args.token {
         config.with_token(token.clone())

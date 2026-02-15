@@ -35,7 +35,7 @@ mod run;
 pub mod tuning;
 pub mod units;
 
-pub use bencher_json::Cpu;
+pub use bencher_json::{Cpu, Disk, Memory};
 pub use config::Config;
 pub use error::RunnerError;
 pub use jail::ResourceLimits;

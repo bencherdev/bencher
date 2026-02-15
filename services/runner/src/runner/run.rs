@@ -26,12 +26,16 @@ impl TryFrom<TaskRun> for Run {
         };
 
         let vcpus = task.vcpus.map(bencher_runner::Cpu::try_from).transpose()?;
+        let memory = task.memory.map(bencher_runner::Memory::from_mib);
+        let disk = task.disk.map(bencher_runner::Disk::from_mib);
 
         Ok(Self {
             args: RunArgs {
                 image: task.image,
                 token: task.token,
                 vcpus,
+                memory,
+                disk,
                 timeout_secs: task.timeout,
                 output_file: task.output,
                 max_output_size: task.max_output_size,

@@ -39,6 +39,14 @@ pub struct TaskRun {
     #[arg(long)]
     pub vcpus: Option<u32>,
 
+    /// Memory in MiB (overrides default for testing).
+    #[arg(long)]
+    pub memory: Option<u64>,
+
+    /// Disk size in MiB (overrides default for testing).
+    #[arg(long)]
+    pub disk: Option<u64>,
+
     /// Execution timeout in seconds.
     #[arg(long, default_value = "300")]
     pub timeout: u64,
