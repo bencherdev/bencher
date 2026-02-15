@@ -1,5 +1,7 @@
 #[cfg(feature = "plus")]
 use bencher_json::PlanLevel;
+#[cfg(feature = "plus")]
+use bencher_json::RunnerUuid;
 use bencher_json::{
     DateTime, Email, Jwt, OrganizationUuid, organization::member::OrganizationRole,
 };
@@ -193,5 +195,62 @@ impl TryFrom<Claims> for OciClaims {
 impl OciClaims {
     pub fn email(&self) -> &Email {
         &self.sub
+    }
+}
+
+/// Raw JWT claims for runner OCI tokens (used for encoding/decoding).
+///
+/// Uses `RunnerUuid` as the subject instead of `Email`,
+/// so this cannot be confused with user OCI tokens.
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct RunnerOciTokenClaims {
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub iss: String,
+    pub sub: RunnerUuid,
+    pub oci: Option<OciScopeClaims>,
+}
+
+/// Validated runner OCI token claims.
+///
+/// Guarantees that the `oci` scope is present (not `Option`).
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone)]
+pub struct RunnerOciClaims {
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub iss: String,
+    pub sub: RunnerUuid,
+    pub oci: OciScopeClaims,
+}
+
+#[cfg(feature = "plus")]
+impl TryFrom<RunnerOciTokenClaims> for RunnerOciClaims {
+    type Error = TokenError;
+
+    fn try_from(claims: RunnerOciTokenClaims) -> Result<Self, Self::Error> {
+        match claims.oci {
+            Some(oci) => Ok(Self {
+                aud: claims.aud,
+                exp: claims.exp,
+                iat: claims.iat,
+                iss: claims.iss,
+                sub: claims.sub,
+                oci,
+            }),
+            None => Err(TokenError::RunnerOci {
+                error: JsonWebTokenErrorKind::MissingRequiredClaim("oci".into()).into(),
+            }),
+        }
+    }
+}
+
+#[cfg(feature = "plus")]
+impl RunnerOciClaims {
+    pub fn runner_uuid(&self) -> RunnerUuid {
+        self.sub
     }
 }

@@ -20,6 +20,7 @@ plus = [
     "dep:bencher_schema",
     "bencher_schema/plus",
     "dep:bencher_token",
+    "bencher_token/plus",
     "dep:bytes",
     "dep:dropshot",
     "dep:futures",

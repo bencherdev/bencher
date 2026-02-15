@@ -4,7 +4,7 @@
 mod common;
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonJob, JsonSpec, JsonSpecs};
+use bencher_json::{JsonClaimedJob, JsonSpec, JsonSpecs};
 use common::{
     associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
     insert_test_job, insert_test_spec, insert_test_spec_full,
@@ -308,7 +308,7 @@ async fn claim_job_no_specs() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
     assert!(
         claimed.is_none(),
         "Runner with no specs should not claim any job"
@@ -368,7 +368,7 @@ async fn claim_job_spec_mismatch() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
     assert!(
         claimed.is_none(),
         "Runner should not claim job with mismatched spec"
@@ -388,7 +388,7 @@ async fn claim_job_spec_mismatch() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
     assert!(
         claimed.is_some(),
         "Runner should claim job after spec association"

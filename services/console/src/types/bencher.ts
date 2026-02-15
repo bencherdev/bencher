@@ -445,6 +445,27 @@ export interface JsonClaimJob {
 	poll_timeout?: PollTimeout;
 }
 
+/**
+ * A claimed job returned to the runner agent.
+ * 
+ * Standalone type containing everything a runner needs to execute a job.
+ * Config and OCI token are always present (not Optional) since
+ * they are guaranteed at claim time.
+ */
+export interface JsonClaimedJob {
+	uuid: Uuid;
+	/** Full spec details (architecture, cpu, memory, etc.) */
+	spec: JsonSpec;
+	/** Execution config — always present for claimed jobs */
+	config: JsonJobConfig;
+	/** Short-lived, project-scoped OCI pull token */
+	oci_token: Jwt;
+	/** Maximum execution time in seconds */
+	timeout: Timeout;
+	/** Job creation timestamp */
+	created: string;
+}
+
 export interface JsonConfirm {
 	token: Jwt;
 }
@@ -892,39 +913,6 @@ export enum UpdateAlertStatus {
 export interface JsonUpdateAlert {
 	/** The new status of the alert. */
 	status?: UpdateAlertStatus;
-}
-
-/**
- * Restricted job status for runner update requests.
- * 
- * Only allows the statuses that a runner can set when updating a job:
- * Running, Completed, or Failed. Pending, Claimed, and Canceled are
- * server-managed statuses that runners cannot set.
- */
-export enum JobUpdateStatus {
-	Running = "running",
-	Completed = "completed",
-	Failed = "failed",
-}
-
-/** Update job status (runner agent endpoint) */
-export interface JsonUpdateJob {
-	/** New job status (running, completed, failed) */
-	status: JobUpdateStatus;
-	/** Exit code (required for completed/failed) */
-	exit_code?: number;
-	/** Standard output */
-	stdout?: string;
-	/** Standard error */
-	stderr?: string;
-	/** File path to contents map */
-	output?: Record<string, string> | undefined;
-}
-
-/** Response to job update */
-export interface JsonUpdateJobResponse {
-	/** The current status of the job after the update */
-	status: JobStatus;
 }
 
 /** Update a runner */

@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use bencher_valid::{DateTime, ImageDigest, PollTimeout, Timeout, Url};
+use bencher_valid::{DateTime, ImageDigest, Jwt, PollTimeout, Timeout, Url};
 use camino::Utf8PathBuf;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::RunnerUuid;
-use super::job_status::{JobStatus, JobUpdateStatus};
+use super::job_status::JobStatus;
 use crate::ProjectUuid;
 use crate::spec::JsonSpec;
 
@@ -44,25 +44,6 @@ pub struct JsonJob {
     pub output: Option<JsonJobOutput>,
 }
 
-/// Update job status (runner agent endpoint)
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonUpdateJob {
-    /// New job status (running, completed, failed)
-    pub status: JobUpdateStatus,
-    /// Exit code (required for completed/failed)
-    pub exit_code: Option<i32>,
-    /// Standard output
-    pub stdout: Option<String>,
-    /// Standard error
-    pub stderr: Option<String>,
-    /// File path to contents map
-    #[typeshare(typescript(type = "Record<string, string> | undefined"))]
-    #[cfg_attr(feature = "schema", schemars(with = "Option<HashMap<String, String>>"))]
-    pub output: Option<HashMap<Utf8PathBuf, String>>,
-}
-
 /// Job output stored in blob storage after job completion or failure.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,15 +65,6 @@ pub struct JsonJobOutput {
     pub output: Option<HashMap<Utf8PathBuf, String>>,
 }
 
-/// Response to job update
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonUpdateJobResponse {
-    /// The current status of the job after the update
-    pub status: JobStatus,
-}
-
 /// Request to claim a job (runner agent endpoint)
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -100,6 +72,28 @@ pub struct JsonUpdateJobResponse {
 pub struct JsonClaimJob {
     /// Maximum time to wait for a job (long-poll), in seconds (1-600)
     pub poll_timeout: Option<PollTimeout>,
+}
+
+/// A claimed job returned to the runner agent.
+///
+/// Standalone type containing everything a runner needs to execute a job.
+/// Config and OCI token are always present (not Optional) since
+/// they are guaranteed at claim time.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonClaimedJob {
+    pub uuid: JobUuid,
+    /// Full spec details (architecture, cpu, memory, etc.)
+    pub spec: JsonSpec,
+    /// Execution config — always present for claimed jobs
+    pub config: JsonJobConfig,
+    /// Short-lived, project-scoped OCI pull token
+    pub oci_token: Jwt,
+    /// Maximum execution time in seconds
+    pub timeout: Timeout,
+    /// Job creation timestamp
+    pub created: DateTime,
 }
 
 /// Job configuration sent to runners.

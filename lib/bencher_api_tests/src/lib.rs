@@ -35,6 +35,7 @@ use bencher_config as _;
 mod context;
 #[cfg(feature = "plus")]
 pub mod helpers;
+#[cfg(feature = "plus")]
 pub mod oci;
 mod seed;
 

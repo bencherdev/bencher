@@ -10,11 +10,10 @@ pub mod job_priority;
 pub mod job_status;
 
 pub use job::{
-    JobUuid, JsonClaimJob, JsonJob, JsonJobConfig, JsonJobOutput, JsonJobs, JsonUpdateJob,
-    JsonUpdateJobResponse,
+    JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob, JsonJobConfig, JsonJobOutput, JsonJobs,
 };
 pub use job_priority::JobPriority;
-pub use job_status::{JobStatus, JobUpdateStatus};
+pub use job_status::JobStatus;
 
 crate::typed_uuid::typed_uuid!(RunnerUuid);
 crate::typed_slug::typed_slug!(RunnerSlug, ResourceName);

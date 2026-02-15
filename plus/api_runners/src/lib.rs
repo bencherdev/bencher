@@ -12,14 +12,13 @@ use serde_json as _;
 #[cfg(test)]
 use tokio as _;
 
-mod channel;
 mod jobs;
 mod runner_token;
 mod runners;
 mod specs;
 mod token;
 
-pub use channel::{RunnerMessage, ServerMessage};
+pub use jobs::websocket::{RunnerMessage, ServerMessage};
 pub use runners::RUNNER_TOKEN_LENGTH;
 
 pub struct Api;
@@ -58,13 +57,11 @@ impl bencher_endpoint::Registrar for Api {
         // Runner Agent Endpoints (runner token auth)
         if http_options {
             api_description.register(jobs::runner_jobs_options)?;
-            api_description.register(jobs::runner_job_options)?;
         }
         api_description.register(jobs::runner_jobs_post)?;
-        api_description.register(jobs::runner_job_patch)?;
 
         // WebSocket channel for job execution
-        api_description.register(channel::runner_job_channel)?;
+        api_description.register(jobs::websocket::runner_job_channel)?;
 
         Ok(())
     }

@@ -392,7 +392,7 @@ async fn runner_delete_restricted_by_fk() {
         .await
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<bencher_json::JsonJob> = resp.json().await.expect("Failed to parse");
+    let claimed: Option<bencher_json::JsonClaimedJob> = resp.json().await.expect("Failed to parse");
     assert!(claimed.is_some());
 
     // Try to delete the runner directly in the DB — should fail due to ON DELETE RESTRICT

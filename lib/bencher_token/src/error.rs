@@ -18,4 +18,6 @@ pub enum TokenError {
     OAuthState { error: jsonwebtoken::errors::Error },
     #[error("Invalid OCI token: {error}")]
     Oci { error: jsonwebtoken::errors::Error },
+    #[error("Invalid runner OCI token: {error}")]
+    RunnerOci { error: jsonwebtoken::errors::Error },
 }

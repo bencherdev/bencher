@@ -1,20 +1,21 @@
+pub(crate) mod websocket;
+
 use std::time::Duration;
 
-use bencher_endpoint::{CorsResponse, Endpoint, Patch, Post, ResponseOk};
+use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseOk};
 use bencher_json::{
-    DateTime, JobPriority, JobStatus, JobUpdateStatus, JobUuid, JsonClaimJob, JsonJob, JsonSpec,
-    JsonUpdateJob, JsonUpdateJobResponse, RunnerResourceId,
+    DateTime, JobPriority, JobStatus, JsonClaimJob, JsonClaimedJob, JsonSpec, RunnerResourceId,
 };
 use bencher_schema::{
-    auth_conn,
     context::ApiContext,
-    error::{conflict_error, forbidden_error, resource_conflict_err},
+    error::resource_conflict_err,
     model::{
         runner::{QueryJob, UpdateJob},
         spec::QuerySpec,
     },
-    schema, write_conn,
+    schema,
 };
+use bencher_token::OciAction;
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
     RunQueryDsl as _, dsl::exists, dsl::not,
@@ -73,7 +74,7 @@ pub async fn runner_jobs_post(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<RunnerJobsParams>,
     body: TypedBody<JsonClaimJob>,
-) -> Result<ResponseOk<Option<JsonJob>>, HttpError> {
+) -> Result<ResponseOk<Option<JsonClaimedJob>>, HttpError> {
     let context = rqctx.context();
     let path_params = path_params.into_inner();
     let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
@@ -92,7 +93,7 @@ async fn claim_job_inner(
     context: &ApiContext,
     runner_token: RunnerToken,
     claim_request: JsonClaimJob,
-) -> Result<Option<JsonJob>, HttpError> {
+) -> Result<Option<JsonClaimedJob>, HttpError> {
     let poll_timeout = claim_request
         .poll_timeout
         .map_or(DEFAULT_POLL_TIMEOUT, u32::from);
@@ -122,10 +123,13 @@ async fn claim_job_inner(
 /// - Unclaimed: 1 concurrent job per source IP
 ///
 /// Returns `Ok(Some(job))` if a job was claimed, `Ok(None)` if no eligible jobs available.
+/// OCI runner token TTL: 10 minutes (enough for image pull, short enough to limit exposure)
+const OCI_RUNNER_TOKEN_TTL: u32 = 600;
+
 async fn try_claim_job(
     context: &ApiContext,
     runner_token: &RunnerToken,
-) -> Result<Option<JsonJob>, HttpError> {
+) -> Result<Option<JsonClaimedJob>, HttpError> {
     use schema::job::dsl::{created, id, organization_id, priority, source_ip, status};
 
     // Tier 1: Enterprise/Team (priority >= 200) - no concurrency limit
@@ -220,11 +224,11 @@ async fn try_claim_job(
 
     if let Some(json_spec) = json_spec {
         Ok(Some(build_claimed_job(
+            context,
             query_job,
             runner_token,
             json_spec,
-            now,
-        )))
+        )?))
     } else {
         // Defensive: the UPDATE matched 0 rows despite SELECT finding a pending job.
         // Under the current single-writer lock this should not happen, but we
@@ -234,16 +238,17 @@ async fn try_claim_job(
 }
 
 fn build_claimed_job(
+    context: &ApiContext,
     query_job: QueryJob,
     runner_token: &RunnerToken,
     json_spec: JsonSpec,
-    now: DateTime,
-) -> JsonJob {
+) -> Result<JsonClaimedJob, HttpError> {
     #[cfg(feature = "otel")]
     {
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
 
         // Record queue duration (time from creation to claim)
+        let now = DateTime::now();
         #[expect(
             clippy::cast_precision_loss,
             reason = "queue duration in seconds fits in f64 mantissa"
@@ -257,158 +262,25 @@ fn build_claimed_job(
         );
     }
 
-    JsonJob {
-        uuid: query_job.uuid,
-        status: JobStatus::Claimed,
-        spec: json_spec,
-        config: Some(query_job.config),
-        runner: Some(runner_token.runner_uuid),
-        claimed: Some(now),
-        started: None,
-        completed: None,
-        created: query_job.created,
-        modified: now,
-        output: None,
-    }
-}
-
-#[derive(Deserialize, JsonSchema)]
-pub struct RunnerJobParams {
-    /// The slug or UUID for a runner.
-    pub runner: RunnerResourceId,
-    /// The UUID for a job.
-    pub job: JobUuid,
-}
-
-#[endpoint {
-    method = OPTIONS,
-    path = "/v0/runners/{runner}/jobs/{job}",
-    tags = ["runners"]
-}]
-pub async fn runner_job_options(
-    _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<RunnerJobParams>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Patch.into()]))
-}
-
-/// Update job status
-///
-/// Update the status of a job being executed.
-/// Authenticated via runner token.
-/// Used to mark jobs as running, completed, or failed.
-#[endpoint {
-    method = PATCH,
-    path = "/v0/runners/{runner}/jobs/{job}",
-    tags = ["runners"]
-}]
-pub async fn runner_job_patch(
-    rqctx: RequestContext<ApiContext>,
-    path_params: Path<RunnerJobParams>,
-    body: TypedBody<JsonUpdateJob>,
-) -> Result<ResponseOk<JsonUpdateJobResponse>, HttpError> {
-    let context = rqctx.context();
-    let path_params = path_params.into_inner();
-    let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
-
-    // Per-runner rate limiting
-    #[cfg(feature = "plus")]
-    context
-        .rate_limiting
-        .runner_request(runner_token.runner_uuid)?;
-
-    let json = update_job_inner(context, runner_token, path_params.job, body.into_inner()).await?;
-    Ok(Patch::auth_response_ok(json))
-}
-
-async fn update_job_inner(
-    context: &ApiContext,
-    runner_token: RunnerToken,
-    job_uuid: JobUuid,
-    update_request: JsonUpdateJob,
-) -> Result<JsonUpdateJobResponse, HttpError> {
-    let job = QueryJob::from_uuid(auth_conn!(context), job_uuid)?;
-
-    // Verify this runner owns this job
-    if job.runner_id != Some(runner_token.runner_id) {
-        return Err(forbidden_error("Job is not assigned to this runner"));
-    }
-
-    // Early canceled check: if job was already canceled, tell the runner immediately
-    if job.status == JobStatus::Canceled {
-        return Ok(JsonUpdateJobResponse {
-            status: JobStatus::Canceled,
-        });
-    }
-
-    // Verify valid state transition
-    let valid_transition = matches!(
-        (job.status, update_request.status),
-        (
-            JobStatus::Claimed,
-            JobUpdateStatus::Running | JobUpdateStatus::Failed
-        ) | (
-            JobStatus::Running,
-            JobUpdateStatus::Completed | JobUpdateStatus::Failed
+    let timeout = query_job.config.timeout;
+    let oci_token = context
+        .token_key
+        .new_oci_runner(
+            runner_token.runner_uuid,
+            OCI_RUNNER_TOKEN_TTL,
+            Some(query_job.config.project.to_string()),
+            vec![OciAction::Pull],
         )
-    );
+        .map_err(|e| {
+            HttpError::for_internal_error(format!("Failed to generate OCI runner token: {e}"))
+        })?;
 
-    if !valid_transition {
-        return Err(conflict_error(format!(
-            "Invalid status transition from {:?} to {:?}",
-            job.status, update_request.status
-        )));
-    }
-
-    let new_status: JobStatus = update_request.status.into();
-    let now = DateTime::now();
-    let job_update = UpdateJob {
-        status: Some(new_status),
-        started: (update_request.status == JobUpdateStatus::Running).then_some(Some(now)),
-        completed: update_request.status.is_terminal().then_some(Some(now)),
-        modified: Some(now),
-        ..Default::default()
-    };
-
-    // Use status filter on UPDATE to prevent TOCTOU races
-    let updated = diesel::update(
-        schema::job::table
-            .filter(schema::job::id.eq(job.id))
-            .filter(schema::job::status.eq(job.status)),
-    )
-    .set(&job_update)
-    .execute(write_conn!(context))
-    .map_err(resource_conflict_err!(Job, job))?;
-
-    if updated == 0 {
-        // Re-read to check if job was canceled between our read and write
-        let current_job = QueryJob::from_uuid(auth_conn!(context), job_uuid)?;
-        if current_job.status == JobStatus::Canceled {
-            return Ok(JsonUpdateJobResponse {
-                status: JobStatus::Canceled,
-            });
-        }
-        return Err(conflict_error(format!(
-            "Concurrent status change: job is now {:?}, expected {:?}",
-            current_job.status, job.status
-        )));
-    }
-
-    // Cancel any pending heartbeat timeout for this job
-    if update_request.status.is_terminal() {
-        #[cfg(feature = "plus")]
-        context.heartbeat_tasks.cancel(&job.id);
-    }
-
-    #[cfg(feature = "otel")]
-    {
-        let status_kind = match update_request.status {
-            JobUpdateStatus::Running => bencher_otel::JobStatusKind::Running,
-            JobUpdateStatus::Completed => bencher_otel::JobStatusKind::Completed,
-            JobUpdateStatus::Failed => bencher_otel::JobStatusKind::Failed,
-        };
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(status_kind));
-    }
-
-    Ok(JsonUpdateJobResponse { status: new_status })
+    Ok(JsonClaimedJob {
+        uuid: query_job.uuid,
+        spec: json_spec,
+        config: query_job.config,
+        oci_token,
+        timeout,
+        created: query_job.created,
+    })
 }

@@ -1,17 +1,12 @@
-#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
-//! Integration tests for the WebSocket job channel endpoint.
-
-mod common;
-
-use api_runners::{RunnerMessage, ServerMessage};
-use bencher_api_tests::TestServer;
-use bencher_json::{JobStatus, JobUuid, JsonJob, JsonRunnerToken, RunnerUuid};
-use bencher_schema::schema;
-use common::{
+use super::common::{
     associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
     insert_test_job, insert_test_job_with_optional_fields, insert_test_job_with_timeout,
     insert_test_spec, set_job_status,
 };
+use api_runners::{RunnerMessage, ServerMessage};
+use bencher_api_tests::TestServer;
+use bencher_json::{JobStatus, JobUuid, JsonClaimedJob, JsonRunnerToken, RunnerUuid};
+use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
 use http::StatusCode;
@@ -32,7 +27,11 @@ fn ws_url(server: &TestServer, path: &str) -> String {
 
 /// Claim a pending job for a runner via the REST API.
 #[expect(clippy::expect_used)]
-async fn claim_job(server: &TestServer, runner_uuid: RunnerUuid, runner_token: &str) -> JsonJob {
+async fn claim_job(
+    server: &TestServer,
+    runner_uuid: RunnerUuid,
+    runner_token: &str,
+) -> JsonClaimedJob {
     let body = serde_json::json!({ "poll_timeout": 5 });
     let resp = server
         .client
@@ -47,7 +46,7 @@ async fn claim_job(server: &TestServer, runner_uuid: RunnerUuid, runner_token: &
         StatusCode::OK,
         "Claim job response should be OK"
     );
-    let claimed: Option<JsonJob> = resp.json().await.expect("Failed to parse response");
+    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
     claimed.expect("Expected to claim a job")
 }
 
@@ -74,11 +73,6 @@ async fn setup_claimed_job(server: &TestServer, suffix: &str) -> (RunnerUuid, St
     associate_runner_spec(server, runner_id, spec_id);
     let claimed = claim_job(server, runner.uuid, &runner_token).await;
     assert_eq!(claimed.uuid, job_uuid, "Claimed job UUID should match");
-    assert_eq!(
-        claimed.status,
-        JobStatus::Claimed,
-        "Claimed job status should be Claimed"
-    );
 
     (runner.uuid, runner_token, job_uuid)
 }
@@ -93,7 +87,7 @@ fn ws_request(
 ) -> http::Request<()> {
     let url = ws_url(
         server,
-        &format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}/channel"),
+        &format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}"),
     );
     let mut request = url.into_client_request().expect("Failed to build request");
     request.headers_mut().insert(
@@ -181,7 +175,7 @@ async fn channel_invalid_token() {
 
     let url = ws_url(
         &server,
-        &format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}/channel"),
+        &format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}"),
     );
     let mut request = url.into_client_request().expect("Failed to build request");
     request.headers_mut().insert(
@@ -511,10 +505,9 @@ async fn channel_lifecycle_with_full_spec() {
     associate_runner_spec(&server, runner_id, spec_id);
     let claimed = claim_job(&server, runner.uuid, &runner_token).await;
     assert_eq!(claimed.uuid, job_uuid);
-    assert_eq!(claimed.status, JobStatus::Claimed);
 
     // Verify the config has optional fields
-    let config = claimed.config.as_ref().expect("Expected config");
+    let config = &claimed.config;
     assert!(config.entrypoint.is_some());
     assert!(config.cmd.is_some());
     assert!(config.env.is_some());
@@ -1002,7 +995,6 @@ async fn channel_job_timeout() {
     associate_runner_spec(&server, runner_id, spec_id);
     let claimed = claim_job(&server, runner.uuid, &runner_token).await;
     assert_eq!(claimed.uuid, job_uuid);
-    assert_eq!(claimed.status, JobStatus::Claimed);
 
     let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
 
@@ -1068,7 +1060,6 @@ async fn channel_token_rotation_invalidates_old_token() {
     associate_runner_spec(&server, runner_id, spec_id);
     let claimed = claim_job(&server, runner.uuid, &original_token).await;
     assert_eq!(claimed.uuid, job_uuid);
-    assert_eq!(claimed.status, JobStatus::Claimed);
 
     // Open WS with original token and send Running
     let mut ws = connect_ws(&server, runner.uuid, &original_token, job_uuid).await;

@@ -53,9 +53,9 @@ pub(crate) enum ChannelError {
     },
 }
 
-/// Path parameters for the job channel endpoint.
+/// Path parameters for the job WebSocket endpoint.
 #[derive(Deserialize, JsonSchema)]
-pub struct RunnerJobChannelParams {
+pub struct RunnerJobParams {
     /// The slug or UUID for a runner.
     pub runner: RunnerResourceId,
     /// The UUID for a job.
@@ -110,12 +110,12 @@ pub enum ServerMessage {
 /// Authentication is via runner token in the Authorization header.
 #[channel {
     protocol = WEBSOCKETS,
-    path = "/v0/runners/{runner}/jobs/{job}/channel",
+    path = "/v0/runners/{runner}/jobs/{job}",
     tags = ["runners"]
 }]
 pub async fn runner_job_channel(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<RunnerJobChannelParams>,
+    path_params: Path<RunnerJobParams>,
     conn: WebsocketConnection,
 ) -> WebsocketChannelResult {
     let context = rqctx.context();
