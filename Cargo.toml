@@ -66,7 +66,7 @@ bencher_recaptcha = { path = "plus/bencher_recaptcha" }
 anyhow = "1.0"
 assert_cmd = "2.0"
 async-compression = "0.4"
-async-openai = "0.27"
+async-openai = "0.32"
 async-stripe = "0.41"
 async-trait = "0.1"
 aws-credential-types = "1.2"
