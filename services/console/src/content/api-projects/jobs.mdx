@@ -1,0 +1,15 @@
+---
+title: "Project Jobs"
+description: "The Bencher Project Jobs REST API"
+heading: "Project Jobs REST API"
+sortOrder: 3
+paths:
+  - path: /v0/projects/{project}/jobs
+    method: get
+    headers: pub
+    cli: job list PROJECT
+  - path: /v0/projects/{project}/jobs/{job}
+    method: get
+    headers: pub
+    cli: job view PROJECT JOB
+---

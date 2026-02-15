@@ -68,7 +68,13 @@ from_client!(
 );
 
 #[cfg(feature = "plus")]
-from_client!(SsoUuid, Entitlements, ExpirationMonth, ExpirationYear);
+from_client!(
+    SsoUuid,
+    Entitlements,
+    ExpirationMonth,
+    ExpirationYear,
+    JobUuid
+);
 
 /// This type allows for forwards compatibility with the API response types.
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -159,7 +165,9 @@ try_from_client!(
     JsonSsos,
     JsonSso,
     JsonUsage,
-    JsonServerStats
+    JsonServerStats,
+    JsonJobs,
+    JsonJob
 );
 
 impl From<bencher_json::DateTime> for types::DateTime {

@@ -14,6 +14,8 @@ use compose::{down::Down, logs::Logs, up::Up};
 use mock::Mock;
 pub use mock::MockError;
 use organization::{member::Member, organization::Organization};
+#[cfg(feature = "plus")]
+use project::job::Job;
 use project::{
     alert::Alert,
     archive::{Archive, ArchiveAction},
@@ -51,6 +53,8 @@ pub enum Sub {
     Sso(organization::sso::Sso),
     Project(Project),
     Report(Report),
+    #[cfg(feature = "plus")]
+    Job(Job),
     Perf(Perf),
     Plot(Plot),
     Branch(Branch),
@@ -90,6 +94,8 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Sso(sso) => Self::Sso(sso.try_into()?),
             CliSub::Project(project) => Self::Project(project.try_into()?),
             CliSub::Report(report) => Self::Report(report.try_into()?),
+            #[cfg(feature = "plus")]
+            CliSub::Job(job) => Self::Job(job.try_into()?),
             CliSub::Perf(perf) => Self::Perf(perf.try_into()?),
             CliSub::Plot(plot) => Self::Plot(plot.try_into()?),
             CliSub::Branch(branch) => Self::Branch(branch.try_into()?),
@@ -125,6 +131,8 @@ impl SubCmd for Sub {
             Self::Sso(sso) => sso.exec().await,
             Self::Project(project) => project.exec().await,
             Self::Report(report) => report.exec().await,
+            #[cfg(feature = "plus")]
+            Self::Job(job) => job.exec().await,
             Self::Perf(perf) => perf.exec().await,
             Self::Plot(plot) => plot.exec().await,
             Self::Branch(branch) => branch.exec().await,

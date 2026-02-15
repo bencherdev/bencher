@@ -53,7 +53,8 @@ pub async fn proj_jobs_options(
 
 /// List jobs for a project
 ///
-/// List all jobs for a project.
+/// ➕ Bencher Plus: List all jobs for a project.
+/// The job output is not included in the list response.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 /// By default, the jobs are sorted by creation date time in reverse chronological order.
@@ -185,7 +186,8 @@ pub async fn proj_job_options(
 
 /// View a job
 ///
-/// View a job for a project.
+/// ➕ Bencher Plus: View a job for a project.
+/// The job output is included in the response for terminal (completed, failed, or canceled) jobs.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {

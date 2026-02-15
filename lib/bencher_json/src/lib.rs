@@ -89,8 +89,8 @@ pub use run::JsonNewRun;
 #[cfg(feature = "plus")]
 pub use runner::{
     JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob, JsonJobConfig,
-    JsonNewRunner, JsonRunner, JsonRunnerToken, JsonRunners, JsonUpdateRunner, RunnerResourceId,
-    RunnerSlug, RunnerUuid,
+    JsonJobs, JsonNewRunner, JsonRunner, JsonRunnerToken, JsonRunners, JsonUpdateRunner,
+    RunnerResourceId, RunnerSlug, RunnerUuid,
 };
 #[cfg(feature = "plus")]
 pub use spec::{
