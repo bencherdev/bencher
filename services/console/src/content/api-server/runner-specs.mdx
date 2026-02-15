@@ -1,0 +1,19 @@
+---
+title: "Runner Specs"
+description: "The Bencher Runner Specs REST API"
+heading: "Runner Specs REST API"
+sortOrder: 4
+paths:
+  - path: /v0/runners/{runner}/specs
+    method: get
+    headers: auth
+    cli: runner spec list RUNNER
+  - path: /v0/runners/{runner}/specs
+    method: post
+    headers: auth
+    cli: runner spec add RUNNER
+  - path: /v0/runners/{runner}/specs/{spec}
+    method: delete
+    headers: auth
+    cli: runner spec remove RUNNER SPEC
+---

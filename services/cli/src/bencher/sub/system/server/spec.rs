@@ -1,26 +1,26 @@
 use crate::{
     CliError,
     bencher::{backend::PubBackend, sub::SubCmd},
-    parser::system::server::CliSpec,
+    parser::system::server::CliOpenApiSpec,
 };
 
 #[derive(Debug, Clone)]
-pub struct Spec {
+pub struct OpenApiSpec {
     pub backend: PubBackend,
 }
 
-impl TryFrom<CliSpec> for Spec {
+impl TryFrom<CliOpenApiSpec> for OpenApiSpec {
     type Error = CliError;
 
-    fn try_from(spec: CliSpec) -> Result<Self, Self::Error> {
-        let CliSpec { backend } = spec;
+    fn try_from(spec: CliOpenApiSpec) -> Result<Self, Self::Error> {
+        let CliOpenApiSpec { backend } = spec;
         Ok(Self {
             backend: backend.try_into()?,
         })
     }
 }
 
-impl SubCmd for Spec {
+impl SubCmd for OpenApiSpec {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend

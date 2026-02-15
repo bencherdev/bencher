@@ -1,0 +1,27 @@
+---
+title: "Specs"
+description: "The Bencher Specs REST API"
+heading: "Specs REST API"
+sortOrder: 6
+paths:
+  - path: /v0/specs
+    method: get
+    headers: auth
+    cli: spec list
+  - path: /v0/specs
+    method: post
+    headers: auth
+    cli: spec create
+  - path: /v0/specs/{spec}
+    method: get
+    headers: auth
+    cli: spec view SPEC
+  - path: /v0/specs/{spec}
+    method: patch
+    headers: auth
+    cli: spec update SPEC
+  - path: /v0/specs/{spec}
+    method: delete
+    headers: auth
+    cli: spec delete SPEC
+---

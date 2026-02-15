@@ -38,7 +38,7 @@ pub async fn runner_specs_options(
 
 /// List specs for a runner
 ///
-/// List all hardware specs associated with a runner.
+/// ➕ Bencher Plus: List all hardware specs associated with a runner.
 /// The user must be an admin to use this endpoint.
 #[endpoint {
     method = GET,
@@ -72,7 +72,7 @@ async fn get_ls_inner(
 
 /// Add a spec to a runner
 ///
-/// Associate a hardware spec with a runner.
+/// ➕ Bencher Plus: Associate a hardware spec with a runner.
 /// The user must be an admin to use this endpoint.
 #[endpoint {
     method = POST,
@@ -136,7 +136,7 @@ pub async fn runner_spec_options(
 
 /// Remove a spec from a runner
 ///
-/// Remove the association between a hardware spec and a runner.
+/// ➕ Bencher Plus: Remove the association between a hardware spec and a runner.
 /// The user must be an admin to use this endpoint.
 #[endpoint {
     method = DELETE,

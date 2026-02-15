@@ -36,6 +36,8 @@ pub enum RunnersSort {
     /// Sort by runner name.
     #[default]
     Name,
+    /// Sort by creation date.
+    Created,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -64,7 +66,7 @@ pub async fn runners_options(
 
 /// List runners
 ///
-/// List all runners on the server.
+/// ➕ Bencher Plus: List all runners on the server.
 /// The user must be an admin to use this endpoint.
 #[endpoint {
     method = GET,
@@ -147,12 +149,16 @@ fn get_ls_query<'q>(
                 query.order((schema::runner::name.desc(), schema::runner::slug.desc()))
             },
         },
+        RunnersSort::Created => match pagination_params.direction {
+            Some(JsonDirection::Asc) => query.order(schema::runner::created.asc()),
+            Some(JsonDirection::Desc) | None => query.order(schema::runner::created.desc()),
+        },
     }
 }
 
 /// Create a runner
 ///
-/// Create a new runner on the server.
+/// ➕ Bencher Plus: Create a new runner on the server.
 /// The user must be an admin to use this endpoint.
 /// Returns the runner token which is only shown once.
 #[endpoint {
@@ -227,7 +233,7 @@ pub async fn runner_options(
 
 /// View a runner
 ///
-/// View a runner on the server.
+/// ➕ Bencher Plus: View a runner on the server.
 /// The user must be an admin to use this endpoint.
 #[endpoint {
     method = GET,
@@ -256,7 +262,7 @@ async fn get_one_inner(
 
 /// Update a runner
 ///
-/// Update a runner on the server.
+/// ➕ Bencher Plus: Update a runner on the server.
 /// The user must be an admin to use this endpoint.
 /// Can be used to archive or unarchive a runner.
 #[endpoint {

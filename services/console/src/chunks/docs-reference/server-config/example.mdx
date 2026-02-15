@@ -62,7 +62,12 @@
         "secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
         "access_point": "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry"
       },
-      "upload_timeout": 3600
+      "upload_timeout": 3600,
+      "max_body_size": 1073741824
+    },
+    "runners": {
+      "heartbeat_timeout": 90,
+      "job_timeout_grace_period": 60
     },
     "rate_limiting": {
       "window": 86400,

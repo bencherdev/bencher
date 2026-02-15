@@ -62,7 +62,7 @@ pub async fn specs_options(
 
 /// List specs
 ///
-/// List all hardware specs on the server.
+/// ➕ Bencher Plus: List all hardware specs on the server.
 /// The user must be an admin to use this endpoint.
 #[endpoint {
     method = GET,
@@ -146,7 +146,7 @@ fn get_ls_query<'q>(
 
 /// Create a spec
 ///
-/// Create a new hardware spec on the server.
+/// ➕ Bencher Plus: Create a new hardware spec on the server.
 /// The user must be an admin to use this endpoint.
 #[endpoint {
     method = POST,
@@ -196,7 +196,7 @@ pub async fn spec_options(
 
 /// View a spec
 ///
-/// View a hardware spec on the server.
+/// ➕ Bencher Plus: View a hardware spec on the server.
 /// The user must be an admin to use this endpoint.
 #[endpoint {
     method = GET,
@@ -223,7 +223,7 @@ async fn get_one_inner(
 
 /// Update a spec
 ///
-/// Update a hardware spec on the server.
+/// ➕ Bencher Plus: Update a hardware spec on the server.
 /// The user must be an admin to use this endpoint.
 #[endpoint {
     method = PATCH,
@@ -260,7 +260,7 @@ async fn patch_inner(
 
 /// Delete a spec
 ///
-/// Delete a hardware spec from the server.
+/// ➕ Bencher Plus: Delete a hardware spec from the server.
 /// The user must be an admin to use this endpoint.
 /// Returns 409 Conflict if the spec is referenced by runners or jobs.
 #[endpoint {

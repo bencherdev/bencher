@@ -21,6 +21,7 @@ const MEASURE_ARG: &str = "--measure";
 const MEASURE_SLUG: &str = "screams";
 
 const REPO_NAME: &str = "bencher";
+const NO_GIT_NAME: &str = "Project";
 const UNCLAIMED_SLUG: &str = "unclaimed";
 const CLAIMED_SLUG: &str = "claimed";
 
@@ -35,6 +36,7 @@ pub struct SeedTest {
     pub admin_token: Jwt,
     pub token: Jwt,
     pub is_bencher_cloud: bool,
+    pub no_git: bool,
 }
 
 impl TryFrom<TaskSeedTest> for SeedTest {
@@ -46,18 +48,24 @@ impl TryFrom<TaskSeedTest> for SeedTest {
             admin_token,
             token,
             is_bencher_cloud,
+            no_git,
         } = test;
         Ok(Self {
             url: url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into()),
             admin_token: admin_token.unwrap_or_else(Jwt::test_admin_token),
             token: token.unwrap_or_else(Jwt::test_token),
             is_bencher_cloud,
+            no_git,
         })
     }
 }
 
 #[expect(deprecated)]
 impl SeedTest {
+    fn project_name(&self) -> &str {
+        if self.no_git { NO_GIT_NAME } else { REPO_NAME }
+    }
+
     #[expect(clippy::cognitive_complexity, clippy::too_many_lines)]
     pub fn exec(&self) -> anyhow::Result<()> {
         let host = self.url.as_ref();
@@ -1481,16 +1489,22 @@ impl SeedTest {
                     json.project.uuid.as_ref(),
                     json.project.organization.as_ref()
                 );
-                assert_eq!(json.project.name.as_ref(), REPO_NAME);
-                assert!(
-                    json.project.slug.to_string().starts_with(REPO_NAME),
-                    "{json:?}"
-                );
-                assert_eq!(
-                    json.project.slug.to_string().len(),
-                    REPO_NAME.len() + 1 + 7 + 1 + 13,
-                    "{json:?}"
-                );
+                assert_eq!(json.project.name.as_ref(), self.project_name());
+                if self.no_git {
+                    // Without git, there is no repo name or hash in the slug
+                    // The slug is just the testbed fingerprint
+                    assert_eq!(json.project.slug.to_string().len(), 13, "{json:?}");
+                } else {
+                    assert!(
+                        json.project.slug.to_string().starts_with(REPO_NAME),
+                        "{json:?}"
+                    );
+                    assert_eq!(
+                        json.project.slug.to_string().len(),
+                        REPO_NAME.len() + 1 + 7 + 1 + 13,
+                        "{json:?}"
+                    );
+                }
                 assert_eq!(json.project.claimed, None);
                 anonymous_project.replace(json.project);
             }
@@ -1518,7 +1532,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(json.project.name.as_ref(), REPO_NAME);
+        assert_eq!(json.project.name.as_ref(), self.project_name());
         assert_eq!(json.project.slug.to_string(), UNCLAIMED_SLUG);
         assert_eq!(json.project.claimed, None);
         let organization_uuid = json.project.organization;
@@ -1542,7 +1556,7 @@ impl SeedTest {
         let json: bencher_json::JsonOrganization =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.uuid, organization_uuid);
-        assert_eq!(json.name.as_ref(), REPO_NAME);
+        assert_eq!(json.name.as_ref(), self.project_name());
         assert_eq!(json.slug.to_string(), UNCLAIMED_SLUG);
         assert!(json.claimed.is_some(), "{json:?}");
 
@@ -1571,7 +1585,7 @@ impl SeedTest {
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, organization_uuid);
-        assert_eq!(json.project.name.as_ref(), REPO_NAME);
+        assert_eq!(json.project.name.as_ref(), self.project_name());
         assert_eq!(json.project.slug.to_string(), UNCLAIMED_SLUG);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
@@ -1630,7 +1644,7 @@ impl SeedTest {
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, muriel_bagge_org_uuid);
-        assert_eq!(json.project.name.as_ref(), REPO_NAME);
+        assert_eq!(json.project.name.as_ref(), self.project_name());
         assert_eq!(json.project.slug.to_string(), CLAIMED_SLUG);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
@@ -1660,7 +1674,8 @@ impl SeedTest {
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, muriel_bagge_org_uuid);
-        assert_eq!(json.project.name.as_ref(), format!("{REPO_NAME} (1)"));
+        let project_name = self.project_name();
+        assert_eq!(json.project.name.as_ref(), format!("{project_name} (1)"));
         assert_eq!(json.project.slug.to_string(), bencher_one);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
@@ -1690,7 +1705,7 @@ impl SeedTest {
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.project.organization, muriel_bagge_org_uuid);
-        assert_eq!(json.project.name.as_ref(), format!("{REPO_NAME} (2)"));
+        assert_eq!(json.project.name.as_ref(), format!("{project_name} (2)"));
         assert_eq!(json.project.slug.to_string(), bencher_two);
         assert!(json.project.claimed.is_some(), "{json:?}");
 
@@ -1718,6 +1733,224 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let _json: bencher_json::JsonServerStats =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        self.runner_spec_exec()?;
+
+        Ok(())
+    }
+
+    #[cfg(feature = "plus")]
+    #[expect(clippy::too_many_lines)]
+    fn runner_spec_exec(&self) -> anyhow::Result<()> {
+        let host = self.url.as_ref();
+        let admin_token = self.admin_token.as_ref();
+
+        // Create a spec
+        // cargo run -- spec create --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Test Spec" --architecture x86_64 --cpu 4 --memory 8589934592 --disk 107374182400
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "spec",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--name",
+            "Test Spec",
+            "--architecture",
+            "x86_64",
+            "--cpu",
+            "4",
+            "--memory",
+            "8589934592",
+            "--disk",
+            "107374182400",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let spec: bencher_json::JsonSpec =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(spec.name.as_ref(), "Test Spec");
+        assert_eq!(AsRef::<str>::as_ref(&spec.slug), "test-spec");
+        let spec_uuid = spec.uuid;
+
+        // List specs
+        // cargo run -- spec list --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["spec", "list", HOST_ARG, host, TOKEN_ARG, admin_token])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let specs: bencher_json::JsonSpecs =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(specs.0.len(), 1);
+
+        // View spec
+        // cargo run -- spec view --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-spec
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "spec",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "test-spec",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let spec: bencher_json::JsonSpec =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(spec.uuid, spec_uuid);
+
+        // Create a runner
+        // cargo run -- runner create --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Test Runner"
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--name",
+            "Test Runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let runner_token: bencher_json::JsonRunnerToken =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        let runner_uuid = runner_token.uuid;
+
+        // List runners
+        // cargo run -- runner list --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["runner", "list", HOST_ARG, host, TOKEN_ARG, admin_token])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let runners: bencher_json::JsonRunners =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(runners.0.len(), 1);
+
+        // View runner (no specs assigned yet)
+        // cargo run -- runner view --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-runner
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "test-runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let runner: bencher_json::JsonRunner =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(runner.uuid, runner_uuid);
+        assert_eq!(runner.name.as_ref(), "Test Runner");
+        assert!(runner.specs.is_empty(), "Expected no specs for new runner");
+
+        // Add spec to runner
+        // cargo run -- runner spec add --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --spec test-spec test-runner
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "spec",
+            "add",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--spec",
+            "test-spec",
+            "test-runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _spec: bencher_json::JsonSpec =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // View runner again (spec should now be assigned)
+        // cargo run -- runner view --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-runner
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "test-runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let runner: bencher_json::JsonRunner =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(runner.specs.len(), 1, "Expected one spec for runner");
+        assert_eq!(
+            runner.specs.first().copied(),
+            Some(spec_uuid),
+            "Expected spec UUID to match"
+        );
+
+        // Rotate runner token
+        // cargo run -- runner token --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-runner
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "token",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "test-runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let new_token: bencher_json::JsonRunnerToken =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(new_token.uuid, runner_uuid);
+
+        // Update runner name
+        // cargo run -- runner update --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Updated Runner" test-runner
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "update",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--name",
+            "Updated Runner",
+            "test-runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let runner: bencher_json::JsonRunner =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(runner.name.as_ref(), "Updated Runner");
+
+        // Update spec name
+        // cargo run -- spec update --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Updated Spec" test-spec
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "spec",
+            "update",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--name",
+            "Updated Spec",
+            "test-spec",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let spec: bencher_json::JsonSpec =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(spec.name.as_ref(), "Updated Spec");
 
         Ok(())
     }

@@ -15,6 +15,9 @@ pub struct TaskSeedTest {
     /// Is Bencher Cloud
     #[clap(long)]
     pub is_bencher_cloud: bool,
+    /// Running outside of a git repo
+    #[clap(long)]
+    pub no_git: bool,
 }
 
 #[derive(Parser, Debug)]

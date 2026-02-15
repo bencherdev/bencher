@@ -68,9 +68,37 @@ paths:
 - `src/components/docs/api/Operation.astro` — Renders each endpoint by looking up `path`+`method` in `public/download/openapi.json`
 - `src/i18n/utils.ts` — `getEnOnlyCollection()` loads and sorts entries; `getEnOnlyPaths()` generates static paths
 
+### Updating endpoint descriptions
+
+Endpoint summaries and descriptions displayed on API docs pages come from Rust doc comments on the endpoint handler functions (e.g., `/// List runners` / `/// ➕ Bencher Plus: List all runners...`). After changing any endpoint doc comment, run `cargo gen-types` to regenerate `openapi.json` and sync the updated descriptions into the docs.
+
 ### Verification
 
 Run `cd services/console && npm run dev` and navigate to the new page URL. Confirm:
 - The page renders with endpoint details (summary, parameters, etc.)
 - The page title appears in the API sidebar under the correct collection heading
 - The sidebar ordering matches the intended `sortOrder` position
+
+### API endpoint ordering convention
+
+Within a single page's `paths` array, list endpoints in this order: `GET` (list), `POST` (create), `GET` (view), `PATCH` (update), `DELETE` (delete).
+
+## Server Config Reference Docs
+
+The server config reference page (`/docs/reference/server-config/`) uses a chunk-based architecture. Parent pages import from `src/chunks/docs-reference/server-config/{lang}/`.
+
+### Languages
+
+All config doc chunks must exist in 9 language directories: `en`, `de`, `es`, `fr`, `ja`, `ko`, `pt`, `ru`, `zh`.
+
+### `plus.mdx` composition pattern
+
+Each language's `plus.mdx` imports sub-chunk components (e.g., `plus-github.mdx`, `plus-registry.mdx`, `plus-runners.mdx`) and renders them in order. When adding a new Plus config subsection:
+
+1. Create `plus-<name>.mdx` in all 9 language directories with translated content
+2. Add `import Plus<Name> from "./plus-<name>.mdx";` to each language's `plus.mdx`
+3. Add `<Plus<Name> />` in the appropriate position within each language's `plus.mdx`
+
+### Example config
+
+The shared example config lives at `src/chunks/docs-reference/server-config/example.mdx`. Update it when adding new config fields or sections.

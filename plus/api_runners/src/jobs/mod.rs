@@ -62,7 +62,7 @@ pub async fn runner_jobs_options(
 
 /// Claim a job
 ///
-/// Long-poll to claim a pending job for execution.
+/// ➕ Bencher Plus: Long-poll to claim a pending job for execution.
 /// Authenticated via runner token.
 /// Returns a job if one is available, or empty response on timeout.
 #[endpoint {

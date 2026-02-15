@@ -25,3 +25,4 @@ S3 기반 스토리지를 구성하세요.
 | data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |  ---   |   예   |                                 AWS 시크릿 액세스 키.                                 |
 |   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |  ---   |   예   |           S3 액세스 포인트 ARN. 액세스 포인트 이름 뒤에 선택적 경로 접두사.           |
 |       upload_timeout         |                                3600                                 |  3600  | 아니오 | 업로드 세션 타임아웃(초). 오래된 업로드는 새 업로드 시작 시 정리됩니다. |
+|       max_body_size          |                            1073741824                               | 1073741824 | 아니오 | Blob 및 매니페스트 업로드의 최대 본문 크기(바이트). 이 제한을 초과하는 요청은 413 Payload Too Large로 거부됩니다. 기본값: 1 GiB. |

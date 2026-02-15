@@ -106,7 +106,7 @@ pub enum ServerMessage {
 
 /// WebSocket channel for job execution
 ///
-/// Establishes a persistent connection for heartbeat and status updates.
+/// ➕ Bencher Plus: Establishes a persistent connection for heartbeat and status updates.
 /// Authentication is via runner token in the Authorization header.
 #[channel {
     protocol = WEBSOCKETS,

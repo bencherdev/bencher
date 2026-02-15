@@ -10,7 +10,7 @@ mod version;
 #[derive(Debug)]
 pub enum Server {
     Version(version::Version),
-    Spec(spec::Spec),
+    Spec(spec::OpenApiSpec),
     Restart(restart::Restart),
     Config(config::Config),
     Backup(backup::Backup),

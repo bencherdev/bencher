@@ -1,0 +1,27 @@
+---
+title: "Runners"
+description: "The Bencher Runners REST API"
+heading: "Runners REST API"
+sortOrder: 3
+paths:
+  - path: /v0/runners
+    method: get
+    headers: auth
+    cli: runner list
+  - path: /v0/runners
+    method: post
+    headers: auth
+    cli: runner create
+  - path: /v0/runners/{runner}
+    method: get
+    headers: auth
+    cli: runner view RUNNER
+  - path: /v0/runners/{runner}
+    method: patch
+    headers: auth
+    cli: runner update RUNNER
+  - path: /v0/runners/{runner}/token
+    method: post
+    headers: auth
+    cli: runner token RUNNER
+---
