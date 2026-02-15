@@ -1719,6 +1719,214 @@ impl SeedTest {
         let _json: bencher_json::JsonServerStats =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
+        self.runner_spec_exec()?;
+
+        Ok(())
+    }
+
+    #[cfg(feature = "plus")]
+    #[expect(clippy::too_many_lines)]
+    fn runner_spec_exec(&self) -> anyhow::Result<()> {
+        let host = self.url.as_ref();
+        let admin_token = self.admin_token.as_ref();
+
+        // Create a spec
+        // cargo run -- spec create --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Test Spec" --architecture x86_64 --cpu 4 --memory 8589934592 --disk 107374182400
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "spec",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--name",
+            "Test Spec",
+            "--architecture",
+            "x86_64",
+            "--cpu",
+            "4",
+            "--memory",
+            "8589934592",
+            "--disk",
+            "107374182400",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let spec: bencher_json::JsonSpec =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(spec.name.as_ref(), "Test Spec");
+        assert_eq!(AsRef::<str>::as_ref(&spec.slug), "test-spec");
+        let spec_uuid = spec.uuid;
+
+        // List specs
+        // cargo run -- spec list --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["spec", "list", HOST_ARG, host, TOKEN_ARG, admin_token])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let specs: bencher_json::JsonSpecs =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(specs.0.len(), 1);
+
+        // View spec
+        // cargo run -- spec view --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-spec
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "spec",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "test-spec",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let spec: bencher_json::JsonSpec =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(spec.uuid, spec_uuid);
+
+        // Create a runner
+        // cargo run -- runner create --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Test Runner"
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--name",
+            "Test Runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let runner_token: bencher_json::JsonRunnerToken =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        let runner_uuid = runner_token.uuid;
+
+        // List runners
+        // cargo run -- runner list --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["runner", "list", HOST_ARG, host, TOKEN_ARG, admin_token])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let runners: bencher_json::JsonRunners =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(runners.0.len(), 1);
+
+        // View runner (no specs assigned yet)
+        // cargo run -- runner view --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-runner
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "test-runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let runner: bencher_json::JsonRunner =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(runner.uuid, runner_uuid);
+        assert_eq!(runner.name.as_ref(), "Test Runner");
+        assert!(runner.specs.is_empty(), "Expected no specs for new runner");
+
+        // Assign spec to runner via API (no CLI command for runner-spec association)
+        let client = reqwest::blocking::Client::new();
+        let resp = client
+            .post(format!("{host}/v0/runners/{runner_uuid}/specs"))
+            .header("Authorization", format!("Bearer {admin_token}"))
+            .json(&serde_json::json!({ "spec": spec_uuid.to_string() }))
+            .send()?;
+        assert_eq!(resp.status(), reqwest::StatusCode::CREATED, "{resp:?}");
+        let _spec: bencher_json::JsonSpec = resp.json()?;
+
+        // View runner again (spec should now be assigned)
+        // cargo run -- runner view --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-runner
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "test-runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let runner: bencher_json::JsonRunner =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(runner.specs.len(), 1, "Expected one spec for runner");
+        assert_eq!(
+            runner.specs.first().copied(),
+            Some(spec_uuid),
+            "Expected spec UUID to match"
+        );
+
+        // Rotate runner token
+        // cargo run -- runner token --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-runner
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "token",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "test-runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let new_token: bencher_json::JsonRunnerToken =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(new_token.uuid, runner_uuid);
+
+        // Update runner name
+        // cargo run -- runner update --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Updated Runner" test-runner
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "update",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--name",
+            "Updated Runner",
+            "test-runner",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let runner: bencher_json::JsonRunner =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(runner.name.as_ref(), "Updated Runner");
+
+        // Update spec name
+        // cargo run -- spec update --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Updated Spec" test-spec
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "spec",
+            "update",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--name",
+            "Updated Spec",
+            "test-spec",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let spec: bencher_json::JsonSpec =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(spec.name.as_ref(), "Updated Spec");
+
         Ok(())
     }
 
