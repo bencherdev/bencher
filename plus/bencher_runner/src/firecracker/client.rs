@@ -156,10 +156,23 @@ impl FirecrackerClient {
                         break;
                     }
                 },
-                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
-                Err(e) if e.kind() == std::io::ErrorKind::TimedOut => break,
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    eprintln!("Warning: Firecracker API read terminated early (WouldBlock) for PUT {path}, {read_bytes} bytes read so far", read_bytes = response.len());
+                    break;
+                },
+                Err(e) if e.kind() == std::io::ErrorKind::TimedOut => {
+                    eprintln!("Warning: Firecracker API read timed out for PUT {path}, {read_bytes} bytes read so far", read_bytes = response.len());
+                    break;
+                },
                 Err(e) => return Err(FirecrackerError::Io(e)),
             }
+        }
+
+        if !response.is_empty() && !response_complete(&response) {
+            eprintln!(
+                "Warning: Firecracker API response for PUT {path} may be truncated ({} bytes received)",
+                response.len()
+            );
         }
 
         parse_http_response(&response)
