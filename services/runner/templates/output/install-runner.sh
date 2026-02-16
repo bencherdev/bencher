@@ -15,7 +15,7 @@ fi
 
 set -uo pipefail
 
-APP_NAME=bencher-runner
+APP_NAME=runner
 APP_VERSION="${BENCHER_RUNNER_VERSION:-0.5.10}"
 ARTIFACT_DOWNLOAD_URL="${INSTALLER_DOWNLOAD_URL:-https://bencher.dev/download/$APP_VERSION}"
 PRINT_VERBOSE=${INSTALLER_PRINT_VERBOSE:-0}
@@ -115,11 +115,11 @@ download_binary_and_run_installer() {
     case "$_arch" in
         "x86_64")
             _artifact_name="$APP_NAME-v${APP_VERSION}-linux-x86-64"
-            _bin="bencher-runner"
+            _bin="runner"
             ;;
         "aarch64")
             _artifact_name="$APP_NAME-v${APP_VERSION}-linux-arm-64"
-            _bin="bencher-runner"
+            _bin="runner"
             ;;
         *)
             err "Bencher Runner only supports Linux x86_64 and aarch64"

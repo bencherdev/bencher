@@ -1749,7 +1749,7 @@ fn find_runner_bin() -> Result<Utf8PathBuf> {
     let runner_bin = workspace_root.join("target/debug/runner");
 
     if !runner_bin.exists() {
-        bail!("Runner binary not found at {runner_bin}. Run `cargo build -p bencher_runner_bin`");
+        bail!("Runner binary not found at {runner_bin}. Run `cargo build -p bencher_runner_cli`");
     }
 
     Ok(runner_bin)

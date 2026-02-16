@@ -15,7 +15,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUNNER_BIN_NAME: bencher-runner
+  RUNNER_BIN_NAME: runner
 
 jobs:
   test_runner:
@@ -110,7 +110,7 @@ jobs:
       - name: Build bencher-init (static musl)
         run: cargo zigbuild --release --target ${{ matrix.init-target }} -p bencher_init
       - name: Build bencher-runner (release)
-        run: cargo zigbuild --release --target ${{ matrix.target }} -p bencher_runner --features plus
+        run: cargo zigbuild --release --target ${{ matrix.target }} -p bencher_runner_cli --features plus
       - name: Rename Runner binary
         run: mv ./target/${{ matrix.target }}/release/${{ env.RUNNER_BIN_NAME }} ${{ env.RUNNER_BIN_NAME }}-${{ env.RUNNER_VERSION }}-${{ matrix.build }}
       - name: Upload Runner Artifact

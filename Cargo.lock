@@ -1569,7 +1569,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bencher_runner_bin"
+name = "bencher_runner_cli"
 version = "0.5.10"
 dependencies = [
  "anyhow",

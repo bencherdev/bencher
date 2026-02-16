@@ -1,5 +1,5 @@
 [package]
-name = "bencher_runner_bin"
+name = "bencher_runner_cli"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

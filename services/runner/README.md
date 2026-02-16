@@ -83,7 +83,7 @@ The scenario tests each build a Docker image, convert it to OCI, and boot a Fire
 ```bash
 # Build the runner binary first
 BENCHER_INIT_PATH=$(pwd)/target/x86_64-unknown-linux-musl/debug/bencher-init \
-  cargo build -p bencher_runner_bin --features plus
+  cargo build -p bencher_runner_cli --features plus
 
 # Run all scenarios
 BENCHER_INIT_PATH=$(pwd)/target/x86_64-unknown-linux-musl/debug/bencher-init \
@@ -224,7 +224,7 @@ docker version
 mkfs.ext4 -V
 
 # Run prerequisite check
-cargo test -p bencher_runner_bin --test integration --features plus -- check_prerequisites --nocapture
+cargo test -p bencher_runner_cli --test integration --features plus -- check_prerequisites --nocapture
 ```
 
 Expected output:

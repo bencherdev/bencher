@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
 pub use daemon::TaskDaemon;
 
 #[derive(Parser, Debug)]
-#[command(name = "bencher-runner")]
+#[command(name = "runner")]
 #[command(about = "Execute benchmarks in isolated Firecracker microVMs", long_about = None)]
 pub struct TaskRunner {
     #[command(subcommand)]

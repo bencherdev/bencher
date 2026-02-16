@@ -16,7 +16,7 @@ env:
   API_DOCKER_IMAGE: bencher-api
   CONSOLE_DOCKER_IMAGE: bencher-console
   CLI_BIN_NAME: bencher
-  RUNNER_BIN_NAME: bencher-runner
+  RUNNER_BIN_NAME: runner
 
 jobs:
   release_smoke_tests:
