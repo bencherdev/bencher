@@ -9,29 +9,22 @@ use camino::{Utf8Path, Utf8PathBuf};
 use crate::parser::TaskOci;
 
 /// Map `std::env::consts::ARCH` to OCI platform architecture names.
-fn current_oci_arch() -> &'static str {
-    match std::env::consts::ARCH {
-        "x86_64" => "amd64",
-        "aarch64" => "arm64",
-        arch => panic!("Unsupported architecture: {arch}"),
-    }
-}
-
-/// Map `std::env::consts::ARCH` to Rust target triples for musl builds.
-fn current_target_triple() -> &'static str {
-    match std::env::consts::ARCH {
-        "x86_64" => "x86_64-unknown-linux-musl",
-        "aarch64" => "aarch64-unknown-linux-musl",
-        arch => panic!("Unsupported architecture: {arch}"),
+fn current_oci_arch() -> anyhow::Result<&'static str> {
+    use std::env::consts::ARCH;
+    match ARCH {
+        "x86_64" => Ok("amd64"),
+        "aarch64" => Ok("arm64"),
+        arch => anyhow::bail!("Unsupported architecture: {arch}"),
     }
 }
 
 /// Get the busybox download URL for the current architecture.
-fn busybox_url() -> &'static str {
-    match std::env::consts::ARCH {
-        "x86_64" => "https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox",
-        "aarch64" => "https://busybox.net/downloads/binaries/1.35.0-aarch64-linux-musl/busybox",
-        arch => panic!("Unsupported architecture: {arch}"),
+fn busybox_url() -> anyhow::Result<&'static str> {
+    use std::env::consts::ARCH;
+    match ARCH {
+        "x86_64" => Ok("https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox"),
+        "aarch64" => Ok("https://busybox.net/downloads/binaries/1.35.0-aarch64-linux-musl/busybox"),
+        arch => anyhow::bail!("Unsupported architecture: {arch}"),
     }
 }
 
@@ -123,7 +116,7 @@ fn create_rootfs(rootfs: &Utf8Path) -> anyhow::Result<()> {
 
 /// Download and install busybox.
 fn install_busybox(rootfs: &Utf8Path) -> anyhow::Result<()> {
-    let busybox_url = busybox_url();
+    let busybox_url = busybox_url()?;
     let busybox_path = rootfs.join("bin/busybox");
 
     println!("Downloading busybox...");
@@ -173,17 +166,12 @@ fn install_busybox(rootfs: &Utf8Path) -> anyhow::Result<()> {
 /// to the default target (glibc), and finally to a mock shell script.
 /// The binary must be statically linked to run inside the minimal busybox rootfs.
 fn install_bencher(rootfs: &Utf8Path) -> anyhow::Result<()> {
-    let workspace_root = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Failed to get parent directory")
-        .parent()
-        .expect("Failed to get workspace root")
-        .to_owned();
+    let workspace_root = super::workspace_root();
 
     let bencher_dst = rootfs.join("usr/bin/bencher");
 
     // Try musl (statically linked) first — required for minimal rootfs
-    let target_triple = current_target_triple();
+    let target_triple = super::musl_target_triple()?;
     println!("Building bencher CLI (musl, {target_triple})...");
     let musl_status = Command::new("cargo")
         .args([
@@ -420,8 +408,11 @@ fn package_as_oci(rootfs: &Utf8Path, oci_path: &Utf8Path) -> anyhow::Result<()> 
     let layer_blob_path = oci_path.join(format!("blobs/sha256/{layer_digest}"));
     fs::rename(&layer_tar, &layer_blob_path)?;
 
+    // Resolve architecture once for config and index
+    let oci_arch = current_oci_arch()?;
+
     // Create config
-    let config = create_image_config(&diff_id);
+    let config = create_image_config(&diff_id, oci_arch);
     let config_bytes = serde_json::to_vec(&config)?;
     let config_digest = sha256_hex(&config_bytes);
     let config_size = config_bytes.len();
@@ -440,7 +431,7 @@ fn package_as_oci(rootfs: &Utf8Path, oci_path: &Utf8Path) -> anyhow::Result<()> 
     )?;
 
     // Create index.json
-    let index = create_index(&manifest_digest, manifest_bytes.len());
+    let index = create_index(&manifest_digest, manifest_bytes.len(), oci_arch);
     fs::write(
         oci_path.join("index.json"),
         serde_json::to_vec_pretty(&index)?,
@@ -505,9 +496,9 @@ fn sha256_hex(data: &[u8]) -> String {
 }
 
 /// Create OCI image config.
-fn create_image_config(diff_id: &str) -> serde_json::Value {
+fn create_image_config(diff_id: &str, oci_arch: &str) -> serde_json::Value {
     serde_json::json!({
-        "architecture": current_oci_arch(),
+        "architecture": oci_arch,
         "os": "linux",
         "config": {
             "Entrypoint": ["/usr/bin/bencher"],
@@ -548,7 +539,7 @@ fn create_manifest(
 }
 
 /// Create OCI index.
-fn create_index(manifest_digest: &str, manifest_size: usize) -> serde_json::Value {
+fn create_index(manifest_digest: &str, manifest_size: usize, oci_arch: &str) -> serde_json::Value {
     serde_json::json!({
         "schemaVersion": 2,
         "manifests": [
@@ -557,7 +548,7 @@ fn create_index(manifest_digest: &str, manifest_size: usize) -> serde_json::Valu
                 "digest": format!("sha256:{manifest_digest}"),
                 "size": manifest_size,
                 "platform": {
-                    "architecture": current_oci_arch(),
+                    "architecture": oci_arch,
                     "os": "linux"
                 }
             }

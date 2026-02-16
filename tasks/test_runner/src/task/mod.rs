@@ -74,6 +74,25 @@ impl Sub {
     }
 }
 
+/// Get the workspace root directory.
+pub(super) fn workspace_root() -> camino::Utf8PathBuf {
+    camino::Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("Failed to find workspace root")
+        .to_owned()
+}
+
+/// Map `std::env::consts::ARCH` to Rust target triples for musl builds.
+pub(super) fn musl_target_triple() -> anyhow::Result<&'static str> {
+    use std::env::consts::ARCH;
+    match ARCH {
+        "x86_64" => Ok("x86_64-unknown-linux-musl"),
+        "aarch64" => Ok("aarch64-unknown-linux-musl"),
+        arch => anyhow::bail!("Unsupported architecture: {arch}"),
+    }
+}
+
 /// Get the work directory for test artifacts.
 pub fn work_dir() -> camino::Utf8PathBuf {
     let dir = camino::Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))

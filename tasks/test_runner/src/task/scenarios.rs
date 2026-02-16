@@ -99,6 +99,9 @@ impl Scenarios {
         println!("  mkfs.ext4: available");
         println!();
 
+        // Build bencher-init + runner CLI once up front
+        let runner_bin = ensure_runner_bin()?;
+
         let scenarios = all_scenarios();
 
         if let Some(name) = &self.scenario {
@@ -108,10 +111,10 @@ impl Scenarios {
                 .find(|s| s.name == name)
                 .with_context(|| format!("Unknown scenario: {name}"))?;
 
-            run_scenario(scenario)
+            run_scenario(scenario, &runner_bin)
         } else {
             // Run all scenarios
-            run_all_scenarios(&scenarios)
+            run_all_scenarios(&scenarios, &runner_bin)
         }
     }
 }
@@ -126,7 +129,7 @@ fn list_scenarios() {
 }
 
 /// Run all scenarios.
-fn run_all_scenarios(scenarios: &[Scenario]) -> Result<()> {
+fn run_all_scenarios(scenarios: &[Scenario], runner_bin: &Utf8Path) -> Result<()> {
     let mut passed = 0;
     let mut failed = 0;
     let mut errors: Vec<(&str, String)> = Vec::new();
@@ -135,7 +138,7 @@ fn run_all_scenarios(scenarios: &[Scenario]) -> Result<()> {
         print!("Running {}... ", scenario.name);
         std::io::Write::flush(&mut std::io::stdout())?;
 
-        match run_scenario(scenario) {
+        match run_scenario(scenario, runner_bin) {
             Ok(()) => {
                 println!("PASSED");
                 passed += 1;
@@ -166,16 +169,21 @@ fn run_all_scenarios(scenarios: &[Scenario]) -> Result<()> {
 }
 
 /// Run a single scenario.
-fn run_scenario(scenario: &Scenario) -> Result<()> {
+fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     // Build the Docker image
     let image_path = build_test_image(scenario.name, scenario.dockerfile)
         .with_context(|| format!("Failed to build image for {}", scenario.name))?;
 
     // Run the runner (with optional cancellation)
     let output = if let Some(secs) = scenario.cancel_after_secs {
-        run_runner_with_cancel(&image_path, scenario.extra_args, Duration::from_secs(secs))
+        run_runner_with_cancel(
+            &image_path,
+            scenario.extra_args,
+            Duration::from_secs(secs),
+            runner_bin,
+        )
     } else {
-        run_runner(&image_path, scenario.extra_args)
+        run_runner(&image_path, scenario.extra_args, runner_bin)
     }
     .with_context(|| format!("Failed to run scenario {}", scenario.name))?;
 
@@ -1706,9 +1714,8 @@ fn run_runner_with_cancel(
     image_path: &Utf8Path,
     args: &[&str],
     delay: Duration,
+    runner_bin: &Utf8Path,
 ) -> Result<ScenarioOutput> {
-    let runner_bin = find_runner_bin()?;
-
     let mut child = Command::new(runner_bin.as_str())
         .arg("run")
         .arg("--image")
@@ -1762,27 +1769,54 @@ fn run_runner_with_cancel(
     }
 }
 
-/// Find the runner binary.
-fn find_runner_bin() -> Result<Utf8PathBuf> {
-    let workspace_root = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|p| p.parent())
-        .expect("Failed to find workspace root")
-        .to_owned();
+/// Build bencher-init for the musl target and the runner CLI with `BENCHER_INIT_PATH`,
+/// then return the path to the runner binary.
+fn ensure_runner_bin() -> Result<Utf8PathBuf> {
+    let workspace_root = super::workspace_root();
+    let target_triple = super::musl_target_triple()?;
+
+    // Step 1: Build bencher-init (musl, statically linked)
+    println!("Building bencher-init ({target_triple})...");
+    let status = Command::new("cargo")
+        .args(["build", "--target", target_triple, "-p", "bencher_init"])
+        .current_dir(&workspace_root)
+        .status()
+        .context("Failed to spawn cargo build for bencher-init")?;
+    if !status.success() {
+        bail!("cargo build -p bencher_init --target {target_triple} failed");
+    }
+
+    let init_path = workspace_root.join(format!("target/{target_triple}/debug/bencher-init"));
+    if !init_path.exists() {
+        bail!("bencher-init binary not found at {init_path} after build");
+    }
+
+    // Step 2: Build runner CLI with BENCHER_INIT_PATH pointing to the init binary
+    println!("Building runner CLI (BENCHER_INIT_PATH={init_path})...");
+    let status = Command::new("cargo")
+        .args(["build", "-p", "bencher_runner_cli"])
+        .env("BENCHER_INIT_PATH", &init_path)
+        .current_dir(&workspace_root)
+        .status()
+        .context("Failed to spawn cargo build for runner CLI")?;
+    if !status.success() {
+        bail!("cargo build -p bencher_runner_cli failed");
+    }
 
     let runner_bin = workspace_root.join("target/debug/runner");
-
     if !runner_bin.exists() {
-        bail!("Runner binary not found at {runner_bin}. Run `cargo build -p bencher_runner_cli`");
+        bail!("Runner binary not found at {runner_bin} after build");
     }
 
     Ok(runner_bin)
 }
 
 /// Run the runner and capture output.
-fn run_runner(image_path: &Utf8Path, args: &[&str]) -> Result<ScenarioOutput> {
-    let runner_bin = find_runner_bin()?;
-
+fn run_runner(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
     let output = Command::new(runner_bin.as_str())
         .arg("run")
         .arg("--image")
