@@ -10,6 +10,31 @@ use tar::{Archive, EntryType};
 
 use crate::error::OciError;
 
+/// Normalize a path by collapsing `.` and `..` components lexically.
+///
+/// Unlike `canonicalize`, this does not touch the filesystem and works on
+/// paths that may not yet exist. A leading `..` that cannot be collapsed
+/// is preserved so that `safe_join` will still reject it.
+fn normalize_path(path: &std::path::Path) -> PathBuf {
+    let mut components = Vec::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::ParentDir => {
+                // Pop the last normal component; if there is none, keep the `..`
+                // so that `safe_join` can reject it as a traversal attempt.
+                if matches!(components.last(), Some(std::path::Component::Normal(_))) {
+                    components.pop();
+                } else {
+                    components.push(component);
+                }
+            },
+            std::path::Component::CurDir => {},
+            _ => components.push(component),
+        }
+    }
+    components.iter().collect()
+}
+
 /// Safely join a path component to a target directory, preventing path traversal.
 ///
 /// Strips leading `/` and rejects any path that would escape `target_dir`
@@ -176,7 +201,11 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
                     .unwrap_or(std::path::Path::new(""))
                     .join(&link_name)
             };
-            safe_join(target_dir, &resolved)?;
+            // Normalize the path (collapse `..` components) before checking
+            // traversal. Symlinks like `usr/bin/../../bin/env` are legitimate
+            // and resolve to `bin/env` which stays inside the rootfs.
+            let normalized = normalize_path(&resolved);
+            safe_join(target_dir, &normalized)?;
         }
 
         // Record directory permissions for deferred application
