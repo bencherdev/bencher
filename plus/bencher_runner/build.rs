@@ -84,20 +84,42 @@ fn main() {
     let is_release = env::var("PROFILE").unwrap_or_default() == "release";
 
     // --- bencher-init ---
-    let init_path = find_init_binary()
-        .unwrap_or_else(|| panic!("bencher-init binary not found. Build it first with: cargo build --release --target x86_64-unknown-linux-musl -p bencher_init\nOr set BENCHER_INIT_PATH to a pre-built binary.\nThe init binary MUST be statically linked (musl) to run inside the Firecracker VM."));
-    generate_binary_module("init", &init_path, is_release, &out_dir);
+    let init_path = find_init_binary();
+    if is_release {
+        let init_path = init_path.unwrap_or_else(|| panic!("bencher-init binary not found. Build it first with: cargo build --release --target x86_64-unknown-linux-musl -p bencher_init\nOr set BENCHER_INIT_PATH to a pre-built binary.\nThe init binary MUST be statically linked (musl) to run inside the Firecracker VM."));
+        generate_binary_module("init", &init_path, is_release, &out_dir);
+    } else if let Some(init_path) = init_path {
+        generate_binary_module("init", &init_path, is_release, &out_dir);
+    } else {
+        eprintln!("WARNING: bencher-init not found, generating stub module for debug build");
+        generate_stub_module("init", &out_dir);
+    }
 
     // --- firecracker ---
-    let firecracker_path = find_or_download_firecracker(&out_dir)
-        .unwrap_or_else(|| panic!("firecracker binary not found. Set BENCHER_FIRECRACKER_PATH or ensure download succeeds."));
-    generate_binary_module("firecracker", &firecracker_path, is_release, &out_dir);
+    let firecracker_path = find_or_download_firecracker(&out_dir);
+    if is_release {
+        let firecracker_path = firecracker_path.unwrap_or_else(|| panic!("firecracker binary not found. Set BENCHER_FIRECRACKER_PATH or ensure download succeeds."));
+        generate_binary_module("firecracker", &firecracker_path, is_release, &out_dir);
+    } else if let Some(firecracker_path) = firecracker_path {
+        generate_binary_module("firecracker", &firecracker_path, is_release, &out_dir);
+    } else {
+        eprintln!("WARNING: firecracker not found, generating stub module for debug build");
+        generate_stub_module("firecracker", &out_dir);
+    }
 
     // --- kernel (vmlinux) ---
-    let kernel_path = find_or_download_kernel(&out_dir).unwrap_or_else(|| {
-        panic!("vmlinux kernel not found. Set BENCHER_KERNEL_PATH or ensure download succeeds.")
-    });
-    generate_binary_module("kernel", &kernel_path, is_release, &out_dir);
+    let kernel_path = find_or_download_kernel(&out_dir);
+    if is_release {
+        let kernel_path = kernel_path.unwrap_or_else(|| {
+            panic!("vmlinux kernel not found. Set BENCHER_KERNEL_PATH or ensure download succeeds.")
+        });
+        generate_binary_module("kernel", &kernel_path, is_release, &out_dir);
+    } else if let Some(kernel_path) = kernel_path {
+        generate_binary_module("kernel", &kernel_path, is_release, &out_dir);
+    } else {
+        eprintln!("WARNING: vmlinux kernel not found, generating stub module for debug build");
+        generate_stub_module("kernel", &out_dir);
+    }
 
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=BENCHER_INIT_PATH");
@@ -458,26 +480,30 @@ fn generate_stub_modules() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set"));
 
     for name in &["init", "firecracker", "kernel"] {
-        let module_path = out_dir.join(format!("{name}_generated.rs"));
-        let name_upper = name.to_uppercase();
+        generate_stub_module(name, &out_dir);
+    }
+}
 
-        let code = format!(
-            r#"// Generated {name} module - stub for non-Linux platforms.
+/// Generate a single stub module for a binary that is not available.
+fn generate_stub_module(name: &str, out_dir: &Path) {
+    let module_path = out_dir.join(format!("{name}_generated.rs"));
+    let name_upper = name.to_uppercase();
+
+    let code = format!(
+        r#"// Generated {name} module - stub (binary not available).
 
 /// Get the {name} binary bytes.
 ///
-/// On non-Linux platforms, this panics as the runner is not supported.
+/// This is a stub — the {name} binary was not available at build time.
 #[expect(clippy::panic)]
 pub fn {name}_bytes() -> &'static [u8] {{
-    panic!("{name} not available on this platform - runner requires Linux")
+    panic!("{name} binary not available - build it first or set the corresponding env var")
 }}
 
 /// Whether the {name} binary is bundled.
 pub const {name_upper}_BUNDLED: bool = false;
 "#
-        );
+    );
 
-        fs::write(&module_path, code)
-            .unwrap_or_else(|_| panic!("Failed to write {name} stub module"));
-    }
+    fs::write(&module_path, code).unwrap_or_else(|_| panic!("Failed to write {name} stub module"));
 }
