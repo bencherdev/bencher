@@ -184,6 +184,8 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - Always prefer to use `thiserror` for error types
 - Do not use `Box<dyn Error>` (or `Box<dyn std::error::Error + Send + Sync>`) as a return type. Use `HttpError` for API endpoint errors or define specific `thiserror` error enums. The only acceptable uses of `Box<dyn Error>` are when wrapping third-party APIs that return boxed errors (e.g., diesel migrations, dropshot server creation).
 - Do **NOT** use `dyn std::any::Any` without explicit justification and approval
+- When adding workspace dependencies without extra options (no `optional`, no `features`), use the shorthand `dep.workspace = true` form instead of `dep = { workspace = true }`
+- Use `camino` (`Utf8Path`/`Utf8PathBuf`) for file paths whenever practical instead of `std::path::Path`/`PathBuf`
 - Use `clap` for CLI argument parsing
   - The `clap` struct definitions should live in a separate `parser` module
   - The subcommand handler logic should live in a separate module named after the binary for production code (ie `bencher`) or a module named `task` for `tasks/*` crates

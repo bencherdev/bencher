@@ -68,6 +68,7 @@ bencher_runner = { path = "plus/bencher_runner" }
 bencher_oci = { path = "plus/bencher_oci" }
 bencher_rootfs = { path = "plus/bencher_rootfs" }
 bencher_init = { path = "plus/bencher_init" }
+bencher_output_protocol = { path = "plus/bencher_output_protocol" }
 # crates.io
 anyhow = "1.0"
 backhand = "0.18"

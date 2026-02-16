@@ -13,6 +13,7 @@ plus = [
     "bencher_json/client",
     "bencher_json/plus",
     "dep:bencher_oci",
+    "dep:bencher_output_protocol",
     "dep:bencher_rootfs",
     "dep:camino",
     "dep:serde",
@@ -30,6 +31,7 @@ plus = [
 
 [dependencies]
 bencher_json = { workspace = true, optional = true }
+bencher_output_protocol = { workspace = true, optional = true }
 bencher_oci = { workspace = true, optional = true }
 bencher_rootfs = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }

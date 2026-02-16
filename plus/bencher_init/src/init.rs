@@ -10,6 +10,7 @@ use std::path::Path;
 use std::process::ExitCode;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use camino::{Utf8Path, Utf8PathBuf};
 use serde::Deserialize;
 
 /// Vsock ports for result communication.
@@ -46,7 +47,7 @@ struct Config {
     #[serde(default)]
     env: Vec<(String, String)>,
     /// Optional output file paths to send back.
-    file_paths: Option<Vec<String>>,
+    file_paths: Option<Vec<Utf8PathBuf>>,
     /// Maximum size in bytes for collected stdout/stderr.
     #[serde(default = "default_max_output_size")]
     max_output_size: usize,
@@ -590,7 +591,10 @@ fn wait_for_child(
 }
 
 /// Send benchmark results via vsock.
-fn send_results(result: &BenchmarkResult, file_paths: Option<&[String]>) -> Result<(), InitError> {
+fn send_results(
+    result: &BenchmarkResult,
+    file_paths: Option<&[Utf8PathBuf]>,
+) -> Result<(), InitError> {
     // Send stdout
     send_vsock(ports::STDOUT, &result.stdout)?;
 
@@ -616,24 +620,14 @@ fn send_results(result: &BenchmarkResult, file_paths: Option<&[String]>) -> Resu
 
 /// Encode output files using the length-prefixed binary protocol.
 ///
-/// Wire format:
-/// ```text
-/// [u32 file_count, little-endian]
-/// For each file:
-///   [u32 path_len, little-endian]
-///   [path_len bytes of UTF-8 path]
-///   [u64 content_len, little-endian]
-///   [content_len bytes of file content]
-/// ```
-///
 /// Files that don't exist or fail to read are silently skipped.
 /// Returns an empty `Vec` if no files were successfully read.
-fn encode_output_files(paths: &[String]) -> Vec<u8> {
+fn encode_output_files(paths: &[Utf8PathBuf]) -> Vec<u8> {
     // First pass: collect successfully read files
-    let mut files: Vec<(&str, Vec<u8>)> = Vec::new();
+    let mut files: Vec<(&Utf8Path, Vec<u8>)> = Vec::new();
     for path in paths {
-        if Path::new(path).exists() {
-            match fs::read(path) {
+        if Path::new(path.as_str()).exists() {
+            match fs::read(path.as_str()) {
                 Ok(content) => files.push((path, content)),
                 Err(e) => eprintln!("failed to read output file {path}: {e}"),
             }
@@ -644,35 +638,10 @@ fn encode_output_files(paths: &[String]) -> Vec<u8> {
         return Vec::new();
     }
 
-    // Second pass: encode
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "file count will not exceed u32"
-    )]
-    let file_count = files.len() as u32;
-    let mut buf = Vec::new();
-    buf.extend_from_slice(&file_count.to_le_bytes());
-
-    for (path, content) in &files {
-        let path_bytes = path.as_bytes();
-        #[expect(
-            clippy::cast_possible_truncation,
-            reason = "path length will not exceed u32"
-        )]
-        let path_len = path_bytes.len() as u32;
-        buf.extend_from_slice(&path_len.to_le_bytes());
-        buf.extend_from_slice(path_bytes);
-
-        #[expect(
-            clippy::cast_possible_truncation,
-            reason = "content length will not exceed u64"
-        )]
-        let content_len = content.len() as u64;
-        buf.extend_from_slice(&content_len.to_le_bytes());
-        buf.extend_from_slice(content);
-    }
-
-    buf
+    // Second pass: encode using shared protocol
+    let encode_input: Vec<(&Utf8Path, &[u8])> =
+        files.iter().map(|(p, c)| (*p, c.as_slice())).collect();
+    bencher_output_protocol::encode(&encode_input)
 }
 
 /// Close a file descriptor, logging any error.
