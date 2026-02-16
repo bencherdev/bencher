@@ -45,7 +45,7 @@ uuid = { workspace = true, features = ["v4", "serde"], optional = true }
 # Linux-only dependencies
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = { workspace = true }
-nix = { workspace = true, features = ["feature", "sched", "signal"] }
+nix = { workspace = true, features = ["feature", "poll", "sched", "signal"] }
 
 [build-dependencies]
 flate2 = { workspace = true }

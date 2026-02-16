@@ -157,11 +157,17 @@ impl FirecrackerClient {
                     }
                 },
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    eprintln!("Warning: Firecracker API read terminated early (WouldBlock) for PUT {path}, {read_bytes} bytes read so far", read_bytes = response.len());
+                    eprintln!(
+                        "Warning: Firecracker API read terminated early (WouldBlock) for PUT {path}, {read_bytes} bytes read so far",
+                        read_bytes = response.len()
+                    );
                     break;
                 },
                 Err(e) if e.kind() == std::io::ErrorKind::TimedOut => {
-                    eprintln!("Warning: Firecracker API read timed out for PUT {path}, {read_bytes} bytes read so far", read_bytes = response.len());
+                    eprintln!(
+                        "Warning: Firecracker API read timed out for PUT {path}, {read_bytes} bytes read so far",
+                        read_bytes = response.len()
+                    );
                     break;
                 },
                 Err(e) => return Err(FirecrackerError::Io(e)),

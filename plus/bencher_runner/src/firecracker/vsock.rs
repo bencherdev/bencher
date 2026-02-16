@@ -6,12 +6,21 @@
 //! paths before VM boot.
 
 use std::io::Read;
+use std::os::fd::AsFd;
 use std::os::unix::net::UnixListener;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
+
 use crate::firecracker::error::FirecrackerError;
+
+/// Poll timeout for vsock listeners (50ms).
+///
+/// Using `LazyLock` because `PollTimeout::try_from` is not const.
+static POLL_TIMEOUT: std::sync::LazyLock<PollTimeout> =
+    std::sync::LazyLock::new(|| PollTimeout::try_from(50).expect("50ms fits in PollTimeout"));
 
 /// Vsock port constants matching bencher-init.
 mod ports {
@@ -106,7 +115,7 @@ impl VsockListener {
         cancel_flag: Option<&Arc<AtomicBool>>,
     ) -> Result<VsockResults, FirecrackerError> {
         let start = std::time::Instant::now();
-        let poll_interval = Duration::from_millis(50);
+        let poll_timeout = *POLL_TIMEOUT;
 
         let mut stdout_data: Option<Vec<u8>> = None;
         let mut stderr_data: Option<Vec<u8>> = None;
@@ -121,17 +130,50 @@ impl VsockListener {
                     return Err(FirecrackerError::Cancelled);
                 }
             }
-            // Try to accept and read from each listener
-            if stdout_data.is_none() {
+
+            // Build poll fds for listeners we still need data from
+            let mut fds = [
+                PollFd::new(self.stdout_listener.as_fd(), PollFlags::POLLIN),
+                PollFd::new(self.stderr_listener.as_fd(), PollFlags::POLLIN),
+                PollFd::new(self.exit_code_listener.as_fd(), PollFlags::POLLIN),
+                PollFd::new(self.output_file_listener.as_fd(), PollFlags::POLLIN),
+            ];
+
+            match poll(&mut fds, poll_timeout) {
+                Ok(_) => {},
+                Err(nix::errno::Errno::EINTR) => continue,
+                Err(e) => {
+                    return Err(FirecrackerError::VsockCollection(format!("poll: {e}")));
+                },
+            }
+
+            // Try to accept and read from each listener that has activity
+            if stdout_data.is_none()
+                && fds[0]
+                    .revents()
+                    .is_some_and(|r| r.intersects(PollFlags::POLLIN))
+            {
                 stdout_data = try_accept_and_read(&self.stdout_listener);
             }
-            if stderr_data.is_none() {
+            if stderr_data.is_none()
+                && fds[1]
+                    .revents()
+                    .is_some_and(|r| r.intersects(PollFlags::POLLIN))
+            {
                 stderr_data = try_accept_and_read(&self.stderr_listener);
             }
-            if exit_code_data.is_none() {
+            if exit_code_data.is_none()
+                && fds[2]
+                    .revents()
+                    .is_some_and(|r| r.intersects(PollFlags::POLLIN))
+            {
                 exit_code_data = try_accept_and_read(&self.exit_code_listener);
             }
-            if output_file_data.is_none() {
+            if output_file_data.is_none()
+                && fds[3]
+                    .revents()
+                    .is_some_and(|r| r.intersects(PollFlags::POLLIN))
+            {
                 output_file_data = try_accept_and_read(&self.output_file_listener);
             }
 
@@ -151,8 +193,6 @@ impl VsockListener {
                 }
                 break;
             }
-
-            std::thread::sleep(poll_interval);
         }
 
         let exit_code = String::from_utf8_lossy(&exit_code_data.unwrap_or_default())
