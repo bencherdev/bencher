@@ -91,17 +91,12 @@ pub fn execute_job(
     // Send result
     let outcome = match result {
         Ok(output) => {
-            // Build file output map from output_file bytes and config file_paths
-            let file_output = output.output_file.and_then(|bytes| {
-                job.config
-                    .file_paths
-                    .as_ref()
-                    .and_then(|paths| paths.first())
-                    .map(|path| {
-                        let mut map = std::collections::HashMap::new();
-                        map.insert(path.clone(), String::from_utf8_lossy(&bytes).into_owned());
-                        map
-                    })
+            // Convert output files from HashMap<Utf8PathBuf, Vec<u8>> to HashMap<Utf8PathBuf, String>
+            let file_output = output.output_files.map(|files| {
+                files
+                    .into_iter()
+                    .map(|(path, bytes)| (path, String::from_utf8_lossy(&bytes).into_owned()))
+                    .collect::<std::collections::HashMap<_, _>>()
             });
             let msg = RunnerMessage::Completed {
                 exit_code: output.exit_code,
@@ -183,12 +178,8 @@ fn build_config_from_job(daemon_config: &DaemonConfig, job: &JsonClaimedJob) -> 
         .with_cmd_opt(config.cmd.clone())
         .with_env_opt(config.env.clone());
 
-    // Map first file_path to output_file (vsock supports one file via port 5005)
-    if let Some(ref paths) = config.file_paths {
-        if let Some(first_path) = paths.first() {
-            runner_config = runner_config.with_output_file(first_path.to_string());
-        }
-    }
+    // Pass all file paths through for multi-file output extraction
+    runner_config = runner_config.with_file_paths_opt(config.file_paths.clone());
 
     // Pass through CPU layout for core isolation
     if daemon_config.cpu_layout.has_isolation() {
@@ -235,6 +226,8 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
 #[cfg(target_os = "linux")]
 mod tests {
     use super::*;
+    use camino::Utf8PathBuf;
+
     use crate::units::mib_to_bytes;
     use bencher_json::{Cpu, Disk, Memory};
 
@@ -439,7 +432,7 @@ mod tests {
     }
 
     #[test]
-    fn file_paths_mapped_to_output_file() {
+    fn file_paths_passed_through() {
         let daemon_config = test_daemon_config();
         let job = test_job_with_options(
             1,
@@ -453,7 +446,34 @@ mod tests {
             Some(vec!["/tmp/results.json".to_owned()]),
         );
         let result = build_config_from_job(&daemon_config, &job);
-        assert_eq!(result.output_file.as_deref(), Some("/tmp/results.json"));
+        assert_eq!(
+            result.file_paths.as_deref(),
+            Some([Utf8PathBuf::from("/tmp/results.json")].as_slice())
+        );
+    }
+
+    #[test]
+    fn multiple_file_paths_passed_through() {
+        let daemon_config = test_daemon_config();
+        let job = test_job_with_options(
+            1,
+            mib_to_bytes(512),
+            mib_to_bytes(1024),
+            300,
+            false,
+            None,
+            None,
+            None,
+            Some(vec![
+                "/tmp/results.json".to_owned(),
+                "/tmp/metrics.csv".to_owned(),
+            ]),
+        );
+        let result = build_config_from_job(&daemon_config, &job);
+        let paths = result.file_paths.unwrap();
+        assert_eq!(paths.len(), 2);
+        assert_eq!(paths[0], Utf8PathBuf::from("/tmp/results.json"));
+        assert_eq!(paths[1], Utf8PathBuf::from("/tmp/metrics.csv"));
     }
 
     #[test]
@@ -483,7 +503,10 @@ mod tests {
         assert!(result.cmd.is_some());
         assert!(result.env.is_some());
         assert!(result.token.is_some());
-        assert_eq!(result.output_file.as_deref(), Some("/output/bench.txt"));
+        assert_eq!(
+            result.file_paths.as_deref(),
+            Some([Utf8PathBuf::from("/output/bench.txt")].as_slice())
+        );
     }
 
     #[test]

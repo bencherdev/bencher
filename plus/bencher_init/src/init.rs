@@ -17,7 +17,7 @@ mod ports {
     pub const STDOUT: u32 = 5000;
     pub const STDERR: u32 = 5001;
     pub const EXIT_CODE: u32 = 5002;
-    pub const OUTPUT_FILE: u32 = 5005;
+    pub const OUTPUT_FILES: u32 = 5005;
 }
 
 /// Vsock CID for host.
@@ -45,8 +45,8 @@ struct Config {
     /// Environment variables.
     #[serde(default)]
     env: Vec<(String, String)>,
-    /// Optional output file to send back.
-    output_file: Option<String>,
+    /// Optional output file paths to send back.
+    file_paths: Option<Vec<String>>,
     /// Maximum size in bytes for collected stdout/stderr.
     #[serde(default = "default_max_output_size")]
     max_output_size: usize,
@@ -192,7 +192,7 @@ fn run_init() -> Result<(), InitError> {
 
     // Step 7: Send results via vsock, fall back to serial
     console_log("sending results via vsock...");
-    match send_results(&result, config.output_file.as_deref()) {
+    match send_results(&result, config.file_paths.as_deref()) {
         Ok(()) => console_log("results sent via vsock"),
         Err(e) => {
             console_log(&format!(
@@ -590,7 +590,7 @@ fn wait_for_child(
 }
 
 /// Send benchmark results via vsock.
-fn send_results(result: &BenchmarkResult, output_file: Option<&str>) -> Result<(), InitError> {
+fn send_results(result: &BenchmarkResult, file_paths: Option<&[String]>) -> Result<(), InitError> {
     // Send stdout
     send_vsock(ports::STDOUT, &result.stdout)?;
 
@@ -601,17 +601,78 @@ fn send_results(result: &BenchmarkResult, output_file: Option<&str>) -> Result<(
     let exit_code_str = result.exit_code.to_string();
     send_vsock(ports::EXIT_CODE, exit_code_str.as_bytes())?;
 
-    // Send output file if specified and exists
-    if let Some(path) = output_file {
-        if Path::new(path).exists() {
-            match fs::read(path) {
-                Ok(content) => send_vsock(ports::OUTPUT_FILE, &content)?,
-                Err(e) => eprintln!("failed to read output file {path}: {e}"),
+    // Send output files if specified, using the length-prefixed binary protocol
+    if let Some(paths) = file_paths {
+        if !paths.is_empty() {
+            let encoded = encode_output_files(paths);
+            if !encoded.is_empty() {
+                send_vsock(ports::OUTPUT_FILES, &encoded)?;
             }
         }
     }
 
     Ok(())
+}
+
+/// Encode output files using the length-prefixed binary protocol.
+///
+/// Wire format:
+/// ```text
+/// [u32 file_count, little-endian]
+/// For each file:
+///   [u32 path_len, little-endian]
+///   [path_len bytes of UTF-8 path]
+///   [u64 content_len, little-endian]
+///   [content_len bytes of file content]
+/// ```
+///
+/// Files that don't exist or fail to read are silently skipped.
+/// Returns an empty `Vec` if no files were successfully read.
+fn encode_output_files(paths: &[String]) -> Vec<u8> {
+    // First pass: collect successfully read files
+    let mut files: Vec<(&str, Vec<u8>)> = Vec::new();
+    for path in paths {
+        if Path::new(path).exists() {
+            match fs::read(path) {
+                Ok(content) => files.push((path, content)),
+                Err(e) => eprintln!("failed to read output file {path}: {e}"),
+            }
+        }
+    }
+
+    if files.is_empty() {
+        return Vec::new();
+    }
+
+    // Second pass: encode
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "file count will not exceed u32"
+    )]
+    let file_count = files.len() as u32;
+    let mut buf = Vec::new();
+    buf.extend_from_slice(&file_count.to_le_bytes());
+
+    for (path, content) in &files {
+        let path_bytes = path.as_bytes();
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "path length will not exceed u32"
+        )]
+        let path_len = path_bytes.len() as u32;
+        buf.extend_from_slice(&path_len.to_le_bytes());
+        buf.extend_from_slice(path_bytes);
+
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "content length will not exceed u64"
+        )]
+        let content_len = content.len() as u64;
+        buf.extend_from_slice(&content_len.to_le_bytes());
+        buf.extend_from_slice(content);
+    }
+
+    buf
 }
 
 /// Close a file descriptor, logging any error.

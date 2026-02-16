@@ -27,7 +27,7 @@ mod ports {
     pub const STDOUT: u32 = 5000;
     pub const STDERR: u32 = 5001;
     pub const EXIT_CODE: u32 = 5002;
-    pub const OUTPUT_FILE: u32 = 5005;
+    pub const OUTPUT_FILES: u32 = 5005;
 }
 
 /// Maximum data size per port (10 MiB).
@@ -42,8 +42,8 @@ pub struct VsockResults {
     pub stderr: String,
     /// Exit code as a string.
     pub exit_code: String,
-    /// Optional output file contents.
-    pub output_file: Option<Vec<u8>>,
+    /// Optional output files (length-prefixed binary protocol).
+    pub output_files: Option<Vec<u8>>,
 }
 
 /// Host-side vsock listener that accepts connections from Firecracker.
@@ -54,7 +54,7 @@ pub struct VsockListener {
     stdout_listener: UnixListener,
     stderr_listener: UnixListener,
     exit_code_listener: UnixListener,
-    output_file_listener: UnixListener,
+    output_files_listener: UnixListener,
 }
 
 impl VsockListener {
@@ -66,14 +66,14 @@ impl VsockListener {
         let stdout_path = format!("{vsock_uds_path}_{}", ports::STDOUT);
         let stderr_path = format!("{vsock_uds_path}_{}", ports::STDERR);
         let exit_code_path = format!("{vsock_uds_path}_{}", ports::EXIT_CODE);
-        let output_file_path = format!("{vsock_uds_path}_{}", ports::OUTPUT_FILE);
+        let output_files_path = format!("{vsock_uds_path}_{}", ports::OUTPUT_FILES);
 
         // Remove stale socket files
         for path in [
             &stdout_path,
             &stderr_path,
             &exit_code_path,
-            &output_file_path,
+            &output_files_path,
         ] {
             let _ = std::fs::remove_file(path);
         }
@@ -84,21 +84,21 @@ impl VsockListener {
             .map_err(|e| FirecrackerError::VsockCollection(format!("bind stderr: {e}")))?;
         let exit_code_listener = UnixListener::bind(&exit_code_path)
             .map_err(|e| FirecrackerError::VsockCollection(format!("bind exit_code: {e}")))?;
-        let output_file_listener = UnixListener::bind(&output_file_path)
-            .map_err(|e| FirecrackerError::VsockCollection(format!("bind output_file: {e}")))?;
+        let output_files_listener = UnixListener::bind(&output_files_path)
+            .map_err(|e| FirecrackerError::VsockCollection(format!("bind output_files: {e}")))?;
 
         // Set non-blocking so we can poll
         stdout_listener.set_nonblocking(true).ok();
         stderr_listener.set_nonblocking(true).ok();
         exit_code_listener.set_nonblocking(true).ok();
-        output_file_listener.set_nonblocking(true).ok();
+        output_files_listener.set_nonblocking(true).ok();
 
         Ok(Self {
             vsock_uds_path: vsock_uds_path.to_owned(),
             stdout_listener,
             stderr_listener,
             exit_code_listener,
-            output_file_listener,
+            output_files_listener,
         })
     }
 
@@ -120,7 +120,7 @@ impl VsockListener {
         let mut stdout_data: Option<Vec<u8>> = None;
         let mut stderr_data: Option<Vec<u8>> = None;
         let mut exit_code_data: Option<Vec<u8>> = None;
-        let mut output_file_data: Option<Vec<u8>> = None;
+        let mut output_files_data: Option<Vec<u8>> = None;
 
         // Poll until we have the exit code (required) or timeout
         while start.elapsed() < timeout {
@@ -136,7 +136,7 @@ impl VsockListener {
                 PollFd::new(self.stdout_listener.as_fd(), PollFlags::POLLIN),
                 PollFd::new(self.stderr_listener.as_fd(), PollFlags::POLLIN),
                 PollFd::new(self.exit_code_listener.as_fd(), PollFlags::POLLIN),
-                PollFd::new(self.output_file_listener.as_fd(), PollFlags::POLLIN),
+                PollFd::new(self.output_files_listener.as_fd(), PollFlags::POLLIN),
             ];
 
             match poll(&mut fds, poll_timeout) {
@@ -169,12 +169,12 @@ impl VsockListener {
             {
                 exit_code_data = try_accept_and_read(&self.exit_code_listener);
             }
-            if output_file_data.is_none()
+            if output_files_data.is_none()
                 && fds[3]
                     .revents()
                     .is_some_and(|r| r.intersects(PollFlags::POLLIN))
             {
-                output_file_data = try_accept_and_read(&self.output_file_listener);
+                output_files_data = try_accept_and_read(&self.output_files_listener);
             }
 
             // Exit code is the signal that results are complete
@@ -190,8 +190,8 @@ impl VsockListener {
                 if stderr_data.is_none() {
                     stderr_data = try_accept_and_read(&self.stderr_listener);
                 }
-                if output_file_data.is_none() {
-                    output_file_data = try_accept_and_read(&self.output_file_listener);
+                if output_files_data.is_none() {
+                    output_files_data = try_accept_and_read(&self.output_files_listener);
                 }
                 break;
             }
@@ -211,7 +211,7 @@ impl VsockListener {
             stdout: String::from_utf8_lossy(&stdout_data.unwrap_or_default()).into_owned(),
             stderr: String::from_utf8_lossy(&stderr_data.unwrap_or_default()).into_owned(),
             exit_code,
-            output_file: output_file_data,
+            output_files: output_files_data,
         })
     }
 
@@ -221,7 +221,7 @@ impl VsockListener {
             ports::STDOUT,
             ports::STDERR,
             ports::EXIT_CODE,
-            ports::OUTPUT_FILE,
+            ports::OUTPUT_FILES,
         ] {
             let path = format!("{}_{port}", self.vsock_uds_path);
             let _ = std::fs::remove_file(path);
@@ -325,6 +325,16 @@ mod tests {
         let (dir, listener) = listener_in_tmpdir();
         let base = dir.path().join("vsock").to_str().unwrap().to_owned();
 
+        // Build protocol-encoded data: 1 file, path="out.bin", content=\x00\x01\x02
+        let mut encoded = Vec::new();
+        encoded.extend_from_slice(&1u32.to_le_bytes()); // file_count
+        let path = b"out.bin";
+        encoded.extend_from_slice(&(path.len() as u32).to_le_bytes());
+        encoded.extend_from_slice(path);
+        let content = b"\x00\x01\x02";
+        encoded.extend_from_slice(&(content.len() as u64).to_le_bytes());
+        encoded.extend_from_slice(content);
+
         // Send data on all ports from a separate thread
         let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
@@ -332,7 +342,7 @@ mod tests {
             std::thread::sleep(Duration::from_millis(50));
             send_to_port(&base_clone, ports::STDOUT, b"benchmark output");
             send_to_port(&base_clone, ports::STDERR, b"some warnings");
-            send_to_port(&base_clone, ports::OUTPUT_FILE, b"\x00\x01\x02");
+            send_to_port(&base_clone, ports::OUTPUT_FILES, &encoded);
             send_to_port(&base_clone, ports::EXIT_CODE, b"0");
         });
 
@@ -344,7 +354,7 @@ mod tests {
         assert_eq!(results.stdout, "benchmark output");
         assert_eq!(results.stderr, "some warnings");
         assert_eq!(results.exit_code, "0");
-        assert_eq!(results.output_file, Some(vec![0x00, 0x01, 0x02]));
+        assert!(results.output_files.is_some());
     }
 
     #[test]
@@ -366,7 +376,7 @@ mod tests {
         assert_eq!(results.exit_code, "1");
         assert_eq!(results.stdout, "");
         assert_eq!(results.stderr, "");
-        assert_eq!(results.output_file, None);
+        assert_eq!(results.output_files, None);
     }
 
     #[test]

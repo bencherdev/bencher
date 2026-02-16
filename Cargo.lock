@@ -1574,6 +1574,7 @@ version = "0.5.10"
 dependencies = [
  "anyhow",
  "bencher_runner",
+ "camino",
  "clap",
  "url",
 ]

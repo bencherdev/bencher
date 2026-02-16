@@ -53,12 +53,12 @@ pub struct Config {
     #[serde(default = "default_timeout_secs")]
     pub timeout_secs: u64,
 
-    /// Path to an output file the benchmark will produce.
+    /// Paths to output files the benchmark will produce.
     ///
-    /// If specified, the init script will set `BENCHER_OUTPUT_FILE` environment
-    /// variable, and the file will be sent to the host via vsock port 5005.
+    /// If specified, the files will be read by the init process and sent to
+    /// the host via vsock port 5005 using a length-prefixed binary protocol.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub output_file: Option<String>,
+    pub file_paths: Option<Vec<Utf8PathBuf>>,
 
     /// Whether to enable network access in the VM.
     #[serde(default)]
@@ -133,7 +133,7 @@ impl Config {
             disk: default_disk(),
             kernel_cmdline: default_kernel_cmdline(),
             timeout_secs: default_timeout_secs(),
-            output_file: None,
+            file_paths: None,
             network: false,
             entrypoint: None,
             cmd: None,
@@ -160,7 +160,7 @@ impl Config {
             disk: default_disk(),
             kernel_cmdline: default_kernel_cmdline(),
             timeout_secs: default_timeout_secs(),
-            output_file: None,
+            file_paths: None,
             network: false,
             entrypoint: None,
             cmd: None,
@@ -212,14 +212,21 @@ impl Config {
         self
     }
 
-    /// Set the output file path (inside the guest VM).
+    /// Set the output file paths (inside the guest VM).
     ///
-    /// When set, `BENCHER_OUTPUT_FILE` environment variable will be available
-    /// to the benchmark, and the file's contents will be sent to the host
-    /// via vsock port 5005 after the benchmark completes.
+    /// When set, the files will be read by the init process after the
+    /// benchmark completes and sent to the host via vsock port 5005
+    /// using a length-prefixed binary protocol.
     #[must_use]
-    pub fn with_output_file<S: Into<String>>(mut self, output_file: S) -> Self {
-        self.output_file = Some(output_file.into());
+    pub fn with_file_paths(mut self, file_paths: Vec<Utf8PathBuf>) -> Self {
+        self.file_paths = Some(file_paths);
+        self
+    }
+
+    /// Set the output file paths from an Option.
+    #[must_use]
+    pub fn with_file_paths_opt(mut self, file_paths: Option<Vec<Utf8PathBuf>>) -> Self {
+        self.file_paths = file_paths;
         self
     }
 
@@ -305,7 +312,7 @@ mod tests {
         assert!(!config.network);
         assert!(config.kernel.is_none());
         assert!(config.token.is_none());
-        assert!(config.output_file.is_none());
+        assert!(config.file_paths.is_none());
         assert!(config.entrypoint.is_none());
         assert!(config.cmd.is_none());
         assert!(config.env.is_none());
@@ -327,7 +334,7 @@ mod tests {
             .with_memory(Memory::from_mib(2048))
             .with_disk(Disk::from_mib(4096))
             .with_timeout_secs(600)
-            .with_output_file("/tmp/results.json")
+            .with_file_paths(vec![Utf8PathBuf::from("/tmp/results.json")])
             .with_network(true)
             .with_entrypoint(vec!["/bin/sh".to_owned()])
             .with_cmd(vec!["-c".to_owned(), "echo hello".to_owned()])
@@ -338,7 +345,10 @@ mod tests {
         assert_eq!(config.memory, Memory::from_mib(2048));
         assert_eq!(config.disk, Disk::from_mib(4096));
         assert_eq!(config.timeout_secs, 600);
-        assert_eq!(config.output_file.unwrap(), "/tmp/results.json");
+        assert_eq!(
+            config.file_paths.unwrap(),
+            vec![Utf8PathBuf::from("/tmp/results.json")]
+        );
         assert!(config.network);
         assert_eq!(config.entrypoint.unwrap(), vec!["/bin/sh"]);
         assert_eq!(config.cmd.unwrap(), vec!["-c", "echo hello"]);
@@ -350,7 +360,7 @@ mod tests {
         let config = Config::new("ghcr.io/test/bench:v1")
             .with_vcpus(Cpu::try_from(2).unwrap())
             .with_memory(Memory::from_mib(1024))
-            .with_output_file("/output.json");
+            .with_file_paths(vec![Utf8PathBuf::from("/output.json")]);
 
         let json = serde_json::to_string(&config).unwrap();
         let parsed: Config = serde_json::from_str(&json).unwrap();
@@ -358,7 +368,10 @@ mod tests {
         assert_eq!(parsed.oci_image, "ghcr.io/test/bench:v1");
         assert_eq!(parsed.vcpus, Cpu::try_from(2).unwrap());
         assert_eq!(parsed.memory, Memory::from_mib(1024));
-        assert_eq!(parsed.output_file.unwrap(), "/output.json");
+        assert_eq!(
+            parsed.file_paths.unwrap(),
+            vec![Utf8PathBuf::from("/output.json")]
+        );
         // Optional None fields should not appear in JSON
         assert!(!json.contains("\"token\""));
         assert!(!json.contains("\"kernel\""));

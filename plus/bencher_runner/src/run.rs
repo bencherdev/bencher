@@ -1,5 +1,6 @@
 #![expect(clippy::print_stdout)]
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
@@ -17,8 +18,8 @@ pub struct RunOutput {
     pub stdout: String,
     /// Stderr output from the benchmark.
     pub stderr: String,
-    /// Optional output file contents.
-    pub output_file: Option<Vec<u8>>,
+    /// Optional output files: path → contents.
+    pub output_files: Option<HashMap<Utf8PathBuf, Vec<u8>>>,
 }
 
 /// Environment variables that are blocked for security reasons.
@@ -69,8 +70,8 @@ pub struct RunArgs {
     pub disk: Option<bencher_json::Disk>,
     /// Execution timeout in seconds.
     pub timeout_secs: u64,
-    /// Output file path inside guest.
-    pub output_file: Option<String>,
+    /// Output file paths inside guest.
+    pub file_paths: Option<Vec<Utf8PathBuf>>,
     /// Maximum size in bytes for collected stdout/stderr.
     pub max_output_size: Option<usize>,
     /// Whether to enable network access in the VM.
@@ -105,8 +106,8 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     } else {
         config
     };
-    let config = if let Some(ref output_file) = args.output_file {
-        config.with_output_file(output_file.clone())
+    let config = if let Some(ref file_paths) = args.file_paths {
+        config.with_file_paths(file_paths.clone())
     } else {
         config
     };
@@ -277,7 +278,7 @@ pub fn execute(
         &command,
         workdir,
         &env,
-        config.output_file.as_deref(),
+        config.file_paths.as_deref(),
         config.max_output_size,
     )?;
 
@@ -343,7 +344,7 @@ fn write_init_config(
     command: &[String],
     workdir: &str,
     env: &[(String, String)],
-    output_file: Option<&str>,
+    file_paths: Option<&[Utf8PathBuf]>,
     max_output_size: usize,
 ) -> Result<(), RunnerError> {
     use std::fs;
@@ -356,7 +357,7 @@ fn write_init_config(
         "command": command,
         "workdir": workdir,
         "env": env,
-        "output_file": output_file,
+        "file_paths": file_paths,
         "max_output_size": max_output_size,
     });
 

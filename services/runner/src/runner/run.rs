@@ -1,4 +1,5 @@
 use bencher_runner::{RunArgs, TuningConfig};
+use camino::Utf8PathBuf;
 
 use crate::parser::TaskRun;
 
@@ -37,7 +38,7 @@ impl TryFrom<TaskRun> for Run {
                 memory,
                 disk,
                 timeout_secs: task.timeout,
-                output_file: task.output,
+                file_paths: task.output.map(|f| vec![Utf8PathBuf::from(f)]),
                 max_output_size: task.max_output_size,
                 network: task.network,
                 tuning,
