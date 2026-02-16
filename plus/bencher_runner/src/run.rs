@@ -316,13 +316,13 @@ pub fn execute(
     let memory_mib = config.memory.to_mib() as u32;
     let fc_config = FirecrackerJobConfig {
         firecracker_bin,
-        kernel_path: kernel_path.to_string(),
-        rootfs_path: rootfs_path.to_string(),
+        kernel_path,
+        rootfs_path,
         vcpus,
         memory_mib,
         boot_args: config.kernel_cmdline.clone(),
         timeout_secs: config.timeout_secs,
-        work_dir: work_dir.to_string(),
+        work_dir: work_dir.to_owned(),
         cpu_layout: config.cpu_layout.clone(),
     };
 

@@ -82,11 +82,11 @@ impl JobChannel {
         let stream = self.ws.get_mut();
         set_nonblocking(stream, true)?;
         let result = self.ws.read();
-        // Restore blocking mode
-        let stream = self.ws.get_mut();
-        set_nonblocking(stream, false)?;
+        // Always restore blocking mode, even if read failed
+        let restore_result = set_nonblocking(self.ws.get_mut(), false);
 
-        match result {
+        // Process read result first (more informative error than restore failure)
+        let msg = match result {
             Ok(Message::Text(text)) => {
                 let msg: ServerMessage = serde_json::from_str(&text).map_err(|e| {
                     WebSocketError::UnexpectedMessage(format!(
@@ -110,7 +110,11 @@ impl JobChannel {
                 Ok(None)
             },
             Err(e) => Err(WebSocketError::Receive(e.to_string())),
-        }
+        };
+
+        // Then check restore (read errors take priority over restore errors)
+        restore_result?;
+        msg
     }
 
     pub fn read_message_timeout(

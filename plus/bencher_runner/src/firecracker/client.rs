@@ -181,7 +181,16 @@ impl FirecrackerClient {
             );
         }
 
-        parse_http_response(&response)
+        let (status, response_body) = parse_http_response(&response)?;
+
+        if status >= 300 && response_body.is_empty() {
+            eprintln!(
+                "Warning: Firecracker API returned HTTP {status} with no body for PUT {path} ({} bytes raw response)",
+                response.len()
+            );
+        }
+
+        Ok((status, response_body))
     }
 }
 

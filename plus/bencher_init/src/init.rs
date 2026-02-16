@@ -424,12 +424,19 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
             }
 
             // Exec the command
-            let program = CString::new(config.command[0].as_str()).unwrap();
-            let args: Vec<CString> = config
+            let Ok(program) = CString::new(config.command[0].as_str()) else {
+                eprintln!("invalid command: contains NUL byte");
+                unsafe { libc::_exit(127) };
+            };
+            let Ok(args): Result<Vec<CString>, _> = config
                 .command
                 .iter()
-                .map(|s| CString::new(s.as_str()).unwrap())
-                .collect();
+                .map(|s| CString::new(s.as_str()))
+                .collect()
+            else {
+                eprintln!("invalid argument: contains NUL byte");
+                unsafe { libc::_exit(127) };
+            };
             let argv: Vec<*const libc::c_char> = args
                 .iter()
                 .map(|s| s.as_ptr())
@@ -607,6 +614,17 @@ fn send_results(result: &BenchmarkResult, output_file: Option<&str>) -> Result<(
     Ok(())
 }
 
+/// Close a file descriptor, logging any error.
+fn close_fd(fd: RawFd) {
+    let ret = unsafe { libc::close(fd) };
+    if ret != 0 {
+        console_log(&format!(
+            "warning: close(fd={fd}) failed: {}",
+            io::Error::last_os_error()
+        ));
+    }
+}
+
 /// Vsock connect/send timeout in seconds.
 const VSOCK_TIMEOUT_SECS: i64 = 2;
 
@@ -655,7 +673,7 @@ fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
     };
 
     if ret != 0 {
-        unsafe { libc::close(fd) };
+        close_fd(fd);
         return Err(InitError::Vsock(format!(
             "connect to port {port}: {}",
             io::Error::last_os_error()
@@ -672,11 +690,11 @@ fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
             if err.raw_os_error() == Some(libc::EINTR) {
                 continue;
             }
-            unsafe { libc::close(fd) };
+            close_fd(fd);
             return Err(InitError::Vsock(format!("write to port {port}: {err}")));
         }
         if n == 0 {
-            unsafe { libc::close(fd) };
+            close_fd(fd);
             return Err(InitError::Vsock(format!(
                 "write to port {port}: connection closed"
             )));
@@ -684,7 +702,7 @@ fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
         sent += n as usize;
     }
 
-    unsafe { libc::close(fd) };
+    close_fd(fd);
     Ok(())
 }
 

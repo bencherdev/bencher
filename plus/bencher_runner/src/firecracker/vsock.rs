@@ -179,8 +179,10 @@ impl VsockListener {
 
             // Exit code is the signal that results are complete
             if exit_code_data.is_some() {
-                // Give a brief window for remaining data
-                std::thread::sleep(Duration::from_millis(100));
+                // Give a brief window for remaining data to arrive.
+                // 500ms balances latency vs reliability for stdout/stderr
+                // that may still be in flight when the exit code lands.
+                std::thread::sleep(Duration::from_millis(500));
                 // Final collection pass
                 if stdout_data.is_none() {
                     stdout_data = try_accept_and_read(&self.stdout_listener);
@@ -416,7 +418,7 @@ mod tests {
             std::thread::sleep(Duration::from_millis(50));
             // Send exit code first
             send_to_port(&base_clone, ports::EXIT_CODE, b"0");
-            // Then stdout arrives during the 100ms grace window
+            // Then stdout arrives during the 500ms grace window
             std::thread::sleep(Duration::from_millis(20));
             send_to_port(&base_clone, ports::STDOUT, b"late output");
         });

@@ -44,9 +44,9 @@ pub struct FirecrackerJobConfig {
     /// Path to the Firecracker binary.
     pub firecracker_bin: camino::Utf8PathBuf,
     /// Path to the kernel image.
-    pub kernel_path: String,
+    pub kernel_path: camino::Utf8PathBuf,
     /// Path to the ext4 rootfs image.
-    pub rootfs_path: String,
+    pub rootfs_path: camino::Utf8PathBuf,
     /// Number of vCPUs.
     pub vcpus: u8,
     /// Memory size in MiB.
@@ -56,7 +56,7 @@ pub struct FirecrackerJobConfig {
     /// Execution timeout in seconds.
     pub timeout_secs: u64,
     /// Working directory for temporary files (API socket, vsock UDS).
-    pub work_dir: String,
+    pub work_dir: camino::Utf8PathBuf,
     /// Optional CPU layout for core isolation via cpuset.
     pub cpu_layout: Option<CpuLayout>,
 }
@@ -135,13 +135,13 @@ pub fn run_firecracker(
     })?;
 
     client.put_boot_source(&BootSource {
-        kernel_image_path: config.kernel_path.clone(),
+        kernel_image_path: config.kernel_path.to_string(),
         boot_args: config.boot_args.clone(),
     })?;
 
     client.put_drive(&Drive {
         drive_id: "rootfs".to_owned(),
-        path_on_host: config.rootfs_path.clone(),
+        path_on_host: config.rootfs_path.to_string(),
         is_root_device: true,
         is_read_only: false,
     })?;

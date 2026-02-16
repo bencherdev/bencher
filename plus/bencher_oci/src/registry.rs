@@ -287,10 +287,25 @@ impl RegistryClient {
 
         let mut response = self.authenticated_request(&url, image_ref, &accept)?;
 
+        let content_length = response
+            .headers()
+            .get("content-length")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<usize>().ok());
+
         let bytes = response
             .body_mut()
             .read_to_vec()
             .map_err(|e| OciError::Registry(format!("Failed to read manifest: {e}")))?;
+
+        if let Some(expected_len) = content_length
+            && bytes.len() != expected_len
+        {
+            return Err(OciError::Registry(format!(
+                "Content-Length mismatch for manifest: expected {expected_len}, got {}",
+                bytes.len()
+            )));
+        }
 
         // Compute digest
         let hash = Sha256::digest(&bytes);
@@ -312,10 +327,25 @@ impl RegistryClient {
 
         let mut response = self.authenticated_request(&url, image_ref, "*/*")?;
 
+        let content_length = response
+            .headers()
+            .get("content-length")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<usize>().ok());
+
         let bytes = response
             .body_mut()
             .read_to_vec()
             .map_err(|e| OciError::Registry(format!("Failed to read blob: {e}")))?;
+
+        if let Some(expected_len) = content_length
+            && bytes.len() != expected_len
+        {
+            return Err(OciError::Registry(format!(
+                "Content-Length mismatch for blob {digest}: expected {expected_len}, got {}",
+                bytes.len()
+            )));
+        }
 
         // Verify digest
         let hash = Sha256::digest(&bytes);

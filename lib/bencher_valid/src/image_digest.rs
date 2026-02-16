@@ -85,9 +85,9 @@ impl Visitor<'_> for ImageDigestVisitor {
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_image_digest(digest: &str) -> bool {
     if let Some(hex) = digest.strip_prefix("sha256:") {
-        hex.len() == 64 && hex.chars().all(|c| c.is_ascii_hexdigit())
+        hex.len() == 64 && hex.chars().all(|c| matches!(c, '0'..='9' | 'a'..='f'))
     } else if let Some(hex) = digest.strip_prefix("sha512:") {
-        hex.len() == 128 && hex.chars().all(|c| c.is_ascii_hexdigit())
+        hex.len() == 128 && hex.chars().all(|c| matches!(c, '0'..='9' | 'a'..='f'))
     } else {
         false
     }
@@ -103,7 +103,6 @@ mod tests {
         // Valid sha256 digests (64 hex chars)
         for digest in [
             "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-            "sha256:ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789",
             "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
         ] {
             assert_eq!(true, is_valid_image_digest(digest), "{digest}");
@@ -133,6 +132,8 @@ mod tests {
             "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeff", // 65 chars
             // Invalid characters
             "sha256:ghijklmnopqrstuvwxyz0123456789abcdef0123456789abcdef0123456789", // 'g' is invalid
+            // Uppercase hex (OCI spec requires lowercase)
+            "sha256:ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789",
             // Wrong prefix
             "sha384:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
             "md5:0123456789abcdef0123456789abcdef",

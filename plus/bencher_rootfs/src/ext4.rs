@@ -212,7 +212,11 @@ mod tests {
         create_ext4_with_size(&source_dir, &image_path, 64).unwrap();
 
         let metadata = fs::metadata(&image_path).unwrap();
-        assert_eq!(metadata.len(), 64 * 1024 * 1024, "Logical size should be 64 MiB");
+        assert_eq!(
+            metadata.len(),
+            64 * 1024 * 1024,
+            "Logical size should be 64 MiB"
+        );
         // 64 MiB = 131072 512-byte blocks
         assert!(
             metadata.blocks() >= 131072,

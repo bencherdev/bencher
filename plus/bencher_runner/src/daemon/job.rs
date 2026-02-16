@@ -72,7 +72,9 @@ pub fn execute_job(
 
     // Stop heartbeat thread
     stop_flag.store(true, Ordering::SeqCst);
-    let _ = heartbeat.join();
+    if let Err(panic) = heartbeat.join() {
+        eprintln!("Warning: heartbeat thread panicked: {panic:?}");
+    }
 
     // Check if canceled
     if cancel_flag.load(Ordering::SeqCst) {
