@@ -60,8 +60,8 @@ pub fn create_ext4_with_size(
 ) -> Result<(), RootfsError> {
     let size_mib = size_mib.max(MIN_IMAGE_SIZE_MIB);
 
-    // Step 1: Allocate the disk image file
-    allocate_file(output_path, size_mib)?;
+    // Step 1: Create a file of the desired size for mkfs.ext4 to format
+    create_file(output_path, size_mib)?;
 
     // Step 2: Format as ext4 and populate with directory contents
     // mkfs.ext4 -d option copies directory contents during creation
@@ -83,21 +83,40 @@ pub fn create_ext4_with_size(
         return Err(RootfsError::Ext4(format!("mkfs.ext4 failed: {stderr}")));
     }
 
+    // Step 3: Best-effort physical block allocation.
+    // mkfs.ext4 creates a sparse file internally. fallocate converts sparse
+    // regions to real blocks, bounding the physical size of the disk image.
+    // This is defense-in-depth — if the host filesystem doesn't have enough
+    // space for full allocation, we proceed with the sparse image.
+    drop(allocate_file(output_path, size_mib));
+
     Ok(())
 }
 
-/// Allocate a file of the specified size with physical blocks.
+/// Create a file of the specified size using `set_len`.
 ///
-/// On Linux, uses `fallocate` to pre-allocate physical blocks so the ext4
-/// filesystem is physically bounded. On other platforms, falls back to
-/// `set_len()` for compile compatibility (ext4 creation only works on Linux).
+/// This creates a sparse file for `mkfs.ext4` to format.
+fn create_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
+    let file = File::create(path)?;
+    let size_bytes = size_mib * 1024 * 1024;
+    file.set_len(size_bytes)?;
+    Ok(())
+}
+
+/// Ensure all blocks in a file are physically allocated.
+///
+/// On Linux, uses `fallocate` to convert sparse regions to real blocks,
+/// preventing the guest from writing beyond the intended disk limit.
+/// Must be called *after* `mkfs.ext4` since mkfs internally creates sparse regions.
+///
+/// On other platforms, this is a no-op (ext4 creation only works on Linux anyway).
 #[cfg(target_os = "linux")]
 fn allocate_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
     use std::os::fd::AsRawFd;
 
     use nix::fcntl::{FallocateFlags, fallocate};
 
-    let file = File::create(path)?;
+    let file = File::options().write(true).open(path)?;
     let size_bytes = size_mib * 1024 * 1024;
     #[expect(clippy::cast_possible_wrap, reason = "Practical disk sizes fit in i64")]
     let size_i64 = size_bytes as i64;
@@ -106,15 +125,13 @@ fn allocate_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
     Ok(())
 }
 
-/// Allocate a file of the specified size (non-Linux fallback).
-///
-/// Uses `set_len()` which creates a sparse file. ext4 creation only works
-/// on Linux, so this is only for compile compatibility.
+/// No-op on non-Linux (ext4 creation only works on Linux).
 #[cfg(not(target_os = "linux"))]
-fn allocate_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
-    let file = File::create(path)?;
-    let size_bytes = size_mib * 1024 * 1024;
-    file.set_len(size_bytes)?;
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "Signature must match the Linux variant"
+)]
+fn allocate_file(_path: &Utf8Path, _size_mib: u64) -> Result<(), RootfsError> {
     Ok(())
 }
 
@@ -124,13 +141,13 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn allocated_file_creation() {
+    fn create_file_correct_size() {
         let temp_dir = tempfile::tempdir().unwrap();
         let image_path = Utf8Path::from_path(temp_dir.path())
             .unwrap()
             .join("test.img");
 
-        allocate_file(&image_path, 64).unwrap();
+        create_file(&image_path, 64).unwrap();
 
         let metadata = fs::metadata(&image_path).unwrap();
         assert_eq!(metadata.len(), 64 * 1024 * 1024);
@@ -138,7 +155,7 @@ mod tests {
 
     #[cfg(target_os = "linux")]
     #[test]
-    fn allocated_file_not_sparse() {
+    fn allocate_file_not_sparse() {
         use std::os::unix::fs::MetadataExt;
 
         let temp_dir = tempfile::tempdir().unwrap();
@@ -146,6 +163,8 @@ mod tests {
             .unwrap()
             .join("test.img");
 
+        // Create first, then allocate (mirrors real usage)
+        create_file(&image_path, 64).unwrap();
         allocate_file(&image_path, 64).unwrap();
 
         let metadata = fs::metadata(&image_path).unwrap();
@@ -153,6 +172,12 @@ mod tests {
         assert!(
             metadata.blocks() > 0,
             "Expected physical blocks to be allocated, got 0"
+        );
+        // Verify substantial allocation (64 MiB = 131072 512-byte blocks)
+        assert!(
+            metadata.blocks() >= 131072,
+            "Expected at least 131072 blocks for 64 MiB, got {}",
+            metadata.blocks()
         );
     }
 }

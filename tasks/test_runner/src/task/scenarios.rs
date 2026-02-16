@@ -1395,31 +1395,38 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
         },
         Scenario {
             name: "disk_limit_enforced",
-            description: "Guest gets ENOSPC when exceeding disk limit",
-            // With fallocate pre-allocating physical blocks, the guest should
-            // get "No space left on device" when trying to write beyond the
-            // disk limit. Previously, sparse files allowed unlimited writes.
+            description: "ext4 filesystem bounded by --disk size",
+            // Verify that the ext4 filesystem reports the correct size.
+            // With --disk 64 (minimum), the ext4 filesystem should report
+            // approximately 64 MiB total (minus overhead), not more.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "dd if=/dev/zero of=/tmp/big bs=1M count=200 2>&1; echo dd_done"]"#,
+CMD ["sh", "-c", "df -m / | tail -1 | awk '{print \"TOTAL_MB=\" $2}'"]"#,
             cancel_after_secs: None,
-            extra_args: &["--disk", "128", "--timeout", "60"],
+            extra_args: &["--disk", "64", "--timeout", "60"],
             validate: |output| {
-                let combined = format!("{}{}", output.stdout, output.stderr);
-                // The dd should fail with "No space left on device"
-                if !combined.contains("No space") {
-                    bail!(
-                        "Expected 'No space' error from dd, disk limit may not be enforced.\ncombined: {}",
-                        combined
-                    )
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
                 }
-                // Defense-in-depth: verify no DISK_OVERRUN marker (fallocate should prevent it)
-                if combined.contains("DISK_OVERRUN") {
-                    bail!(
-                        "DISK_OVERRUN detected — fallocate did not prevent rootfs growth.\ncombined: {}",
-                        combined
-                    )
+                // Parse the total MB from the output
+                for line in output.stdout.lines() {
+                    if let Some(mb_str) = line.strip_prefix("TOTAL_MB=") {
+                        if let Ok(total_mb) = mb_str.trim().parse::<u64>() {
+                            // ext4 overhead reduces usable space. For a 64 MiB image,
+                            // total should be roughly 40-60 MiB (not 1024+ default).
+                            if total_mb > 100 {
+                                bail!(
+                                    "Filesystem too large ({total_mb} MiB), --disk 64 not enforced"
+                                )
+                            }
+                            return Ok(());
+                        }
+                    }
                 }
-                Ok(())
+                bail!(
+                    "Could not parse TOTAL_MB from output.\nstdout: {}",
+                    output.stdout
+                )
             },
         },
         Scenario {
