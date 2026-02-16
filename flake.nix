@@ -67,6 +67,14 @@
             buildInputs = buildInputs ++ rust_tools ++ nix_tools;
           };
         };
+
+        # Run an app with `nix run` or more specifically `nix run .#bencher`
+        apps = rec {
+          default = bencher;
+          bencher = flake-utils.lib.mkApp {
+            drv = self.packages.${system}.bencher;
+          };
+        };
       }
     );
 }
