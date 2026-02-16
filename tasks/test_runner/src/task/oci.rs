@@ -197,15 +197,15 @@ fn install_bencher(rootfs: &Utf8Path) -> anyhow::Result<()> {
         .current_dir(&workspace_root)
         .status();
 
-    if let Ok(status) = musl_status {
-        if status.success() {
-            let musl_src = workspace_root.join(format!("target/{target_triple}/release/bencher"));
-            if musl_src.exists() {
-                fs::copy(&musl_src, &bencher_dst)?;
-                fs::set_permissions(&bencher_dst, fs::Permissions::from_mode(0o755))?;
-                println!("Bencher CLI installed (statically linked)");
-                return Ok(());
-            }
+    if let Ok(status) = musl_status
+        && status.success()
+    {
+        let musl_src = workspace_root.join(format!("target/{target_triple}/release/bencher"));
+        if musl_src.exists() {
+            fs::copy(&musl_src, &bencher_dst)?;
+            fs::set_permissions(&bencher_dst, fs::Permissions::from_mode(0o755))?;
+            println!("Bencher CLI installed (statically linked)");
+            return Ok(());
         }
     }
 
@@ -463,7 +463,7 @@ fn package_as_oci(rootfs: &Utf8Path, oci_path: &Utf8Path) -> anyhow::Result<()> 
 }
 
 /// Create a gzipped tarball of the rootfs.
-/// Returns the SHA256 digest of the uncompressed tar (for diff_ids).
+/// Returns the SHA256 digest of the uncompressed tar (for `diff_ids`).
 fn create_layer_tarball(rootfs: &Utf8Path, output: &Utf8Path) -> anyhow::Result<String> {
     use flate2::Compression;
     use flate2::write::GzEncoder;

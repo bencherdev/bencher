@@ -23,6 +23,20 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::parser::TaskScenarios;
 
+/// Extract the JSON substring between the first `{` and last `}` in a line.
+///
+/// The search targets are ASCII bytes, so the resulting indices are always at
+/// valid UTF-8 boundaries.
+#[expect(
+    clippy::string_slice,
+    reason = "{ and } are ASCII — indices are always UTF-8 safe"
+)]
+fn extract_json_substr(line: &str) -> &str {
+    let start = line.find('{').unwrap_or(0);
+    let end = line.rfind('}').map_or(line.len(), |p| p + 1);
+    &line[start..end]
+}
+
 /// Test scenario definition.
 struct Scenario {
     name: &'static str,
@@ -445,8 +459,7 @@ CMD ["id"]"#,
                 let combined = format!("{}{}", output.stdout, output.stderr);
                 if combined.contains("uid_map") || combined.contains("Operation not permitted") {
                     bail!(
-                        "uid_map error detected - likely getuid() called after unshare: {}",
-                        combined
+                        "uid_map error detected - likely getuid() called after unshare: {combined}"
                     )
                 }
                 if output.exit_code != 0 {
@@ -468,10 +481,7 @@ CMD ["echo", "kvm_test_ok"]"#,
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
                 if combined.contains("/dev/kvm") && combined.contains("not available") {
-                    bail!(
-                        "/dev/kvm not accessible in jail - bind mount likely lost: {}",
-                        combined
-                    )
+                    bail!("/dev/kvm not accessible in jail - bind mount likely lost: {combined}")
                 }
                 if output.exit_code != 0 {
                     bail!("Runner failed (exit {}): {}", output.exit_code, combined)
@@ -493,8 +503,7 @@ CMD ["cat", "/proc/version"]"#,
                 let combined = format!("{}{}", output.stdout, output.stderr);
                 if combined.contains("mount") && combined.contains("EPERM") {
                     bail!(
-                        "/proc mount failed - likely procfs mount in user namespace without PID namespace: {}",
-                        combined
+                        "/proc mount failed - likely procfs mount in user namespace without PID namespace: {combined}"
                     )
                 }
                 if output.exit_code != 0 {
@@ -520,11 +529,10 @@ CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
                     let combined = format!("{}{}", output.stdout, output.stderr);
                     if combined.contains("Read-only file system") {
                         bail!(
-                            "Rootfs is read-only - kernel cmdline likely has 'ro' instead of 'rw': {}",
-                            combined
+                            "Rootfs is read-only - kernel cmdline likely has 'ro' instead of 'rw': {combined}"
                         )
                     }
-                    bail!("Expected 'write_ok' in output, got: {}", combined)
+                    bail!("Expected 'write_ok' in output, got: {combined}")
                 }
             },
         },
@@ -548,7 +556,7 @@ CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
                 if combined.contains("timeout") || combined.contains("Timeout") {
                     Ok(())
                 } else {
-                    bail!("Expected timeout error in output, got: {}", combined)
+                    bail!("Expected timeout error in output, got: {combined}")
                 }
             },
         },
@@ -622,13 +630,12 @@ CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
                 // from the host. If we see > 50 PIDs, the PID namespace is likely broken.
                 if output.exit_code != 0 {
                     let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                    bail!("Runner failed (exit {}): {combined}", output.exit_code)
                 }
                 if let Ok(count) = output.stdout.trim().parse::<u32>() {
                     if count > 50 {
                         bail!(
-                            "Too many PIDs visible ({}), PID namespace may be leaking host PIDs",
-                            count
+                            "Too many PIDs visible ({count}), PID namespace may be leaking host PIDs"
                         )
                     }
                     Ok(())
@@ -706,20 +713,20 @@ CMD ["echo", "fast_benchmark"]"#,
                     bail!("No BENCHER_METRICS line found in stderr")
                 };
                 // Extract JSON between markers
-                let start = line.find('{').unwrap_or(0);
-                let end = line.rfind('}').map_or(line.len(), |p| p + 1);
-                let json_str = &line[start..end];
+                let json_str = extract_json_substr(line);
                 // Parse wall_clock_ms
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str) {
-                    if let Some(wall_ms) = json.get("wall_clock_ms").and_then(|v| v.as_u64()) {
-                        if wall_ms < 500 {
-                            bail!("wall_clock_ms too low ({wall_ms}ms), timing may be broken")
-                        }
-                        if wall_ms > 60_000 {
-                            bail!("wall_clock_ms too high ({wall_ms}ms)")
-                        }
-                        return Ok(());
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str)
+                    && let Some(wall_ms) = json
+                        .get("wall_clock_ms")
+                        .and_then(serde_json::Value::as_u64)
+                {
+                    if wall_ms < 500 {
+                        bail!("wall_clock_ms too low ({wall_ms}ms), timing may be broken")
                     }
+                    if wall_ms > 60_000 {
+                        bail!("wall_clock_ms too high ({wall_ms}ms)")
+                    }
+                    return Ok(());
                 }
                 bail!("Could not parse wall_clock_ms from metrics: {json_str}")
             },
@@ -748,13 +755,11 @@ CMD ["sleep", "3600"]"#,
                     }
                     bail!("No BENCHER_METRICS line and no timeout error")
                 };
-                let start = line.find('{').unwrap_or(0);
-                let end = line.rfind('}').map_or(line.len(), |p| p + 1);
-                let json_str = &line[start..end];
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str) {
-                    if json.get("timed_out") == Some(&serde_json::Value::Bool(true)) {
-                        return Ok(());
-                    }
+                let json_str = extract_json_substr(line);
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str)
+                    && json.get("timed_out") == Some(&serde_json::Value::Bool(true))
+                {
+                    return Ok(());
                 }
                 bail!("Expected timed_out: true in metrics: {json_str}")
             },
@@ -810,16 +815,15 @@ CMD ["echo", "transport_test"]"#,
                 let Some(line) = metrics_line else {
                     bail!("No BENCHER_METRICS line found in stderr")
                 };
-                let start = line.find('{').unwrap_or(0);
-                let end = line.rfind('}').map_or(line.len(), |p| p + 1);
-                let json_str = &line[start..end];
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str) {
-                    if let Some(transport) = json.get("transport").and_then(|v| v.as_str()) {
-                        if transport == "vsock" || transport == "serial" {
-                            return Ok(());
-                        }
-                        bail!("Unexpected transport type: {transport}")
+                let json_str = extract_json_substr(line);
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str)
+                    && let Some(transport) =
+                        json.get("transport").and_then(serde_json::Value::as_str)
+                {
+                    if transport == "vsock" || transport == "serial" {
+                        return Ok(());
                     }
+                    bail!("Unexpected transport type: {transport}")
                 }
                 bail!("Could not find transport in metrics: {json_str}")
             },
@@ -1200,6 +1204,28 @@ CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\
                 Ok(())
             },
         },
+        Scenario {
+            name: "multi_file_output",
+            description: "Multiple output files collected via vsock",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}' > /tmp/b.json && echo done"]"#,
+            cancel_after_secs: None,
+            extra_args: &[
+                "--timeout",
+                "60",
+                "--output",
+                "/tmp/a.json",
+                "--output",
+                "/tmp/b.json",
+            ],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                Ok(())
+            },
+        },
         // =======================================================================
         // OCI image variations
         // =======================================================================
@@ -1410,17 +1436,15 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print \"TOTAL_MB=\" $2}'"]"#,
                 }
                 // Parse the total MB from the output
                 for line in output.stdout.lines() {
-                    if let Some(mb_str) = line.strip_prefix("TOTAL_MB=") {
-                        if let Ok(total_mb) = mb_str.trim().parse::<u64>() {
-                            // ext4 overhead reduces usable space. For a 64 MiB image,
-                            // total should be roughly 40-60 MiB (not 1024+ default).
-                            if total_mb > 100 {
-                                bail!(
-                                    "Filesystem too large ({total_mb} MiB), --disk 64 not enforced"
-                                )
-                            }
-                            return Ok(());
+                    if let Some(mb_str) = line.strip_prefix("TOTAL_MB=")
+                        && let Ok(total_mb) = mb_str.trim().parse::<u64>()
+                    {
+                        // ext4 overhead reduces usable space. For a 64 MiB image,
+                        // total should be roughly 40-60 MiB (not 1024+ default).
+                        if total_mb > 100 {
+                            bail!("Filesystem too large ({total_mb} MiB), --disk 64 not enforced")
                         }
+                        return Ok(());
                     }
                 }
                 bail!(
@@ -1701,7 +1725,11 @@ fn run_runner_with_cancel(
 
     // Send SIGTERM to the runner process
     #[cfg(unix)]
-    #[expect(unsafe_code, reason = "libc::kill requires unsafe")]
+    #[expect(
+        unsafe_code,
+        clippy::cast_possible_wrap,
+        reason = "libc::kill requires unsafe; PID fits in i32"
+    )]
     // SAFETY: Sending a signal to a known child process we just spawned.
     unsafe {
         libc::kill(pid as i32, libc::SIGTERM);
@@ -1712,29 +1740,25 @@ fn run_runner_with_cancel(
     let grace = Duration::from_secs(30);
     let start = std::time::Instant::now();
     loop {
-        match child.try_wait()? {
-            Some(_) => {
-                // Process exited — collect remaining pipe output
-                let output = child.wait_with_output()?;
-                return Ok(ScenarioOutput {
-                    stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-                    stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-                    exit_code: output.status.code().unwrap_or(-1),
-                });
-            },
-            None => {
-                if start.elapsed() > grace {
-                    child.kill()?;
-                    let output = child.wait_with_output()?;
-                    bail!(
-                        "Runner did not exit within {grace:?} after SIGTERM — cancellation is broken.\nstdout: {}\nstderr: {}",
-                        String::from_utf8_lossy(&output.stdout),
-                        String::from_utf8_lossy(&output.stderr),
-                    );
-                }
-                std::thread::sleep(Duration::from_millis(100));
-            },
+        if let Some(_status) = child.try_wait()? {
+            // Process exited — collect remaining pipe output
+            let output = child.wait_with_output()?;
+            return Ok(ScenarioOutput {
+                stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+                stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+                exit_code: output.status.code().unwrap_or(-1),
+            });
         }
+        if start.elapsed() > grace {
+            child.kill()?;
+            let output = child.wait_with_output()?;
+            bail!(
+                "Runner did not exit within {grace:?} after SIGTERM — cancellation is broken.\nstdout: {}\nstderr: {}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr),
+            );
+        }
+        std::thread::sleep(Duration::from_millis(100));
     }
 }
 

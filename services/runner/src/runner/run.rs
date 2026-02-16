@@ -38,7 +38,11 @@ impl TryFrom<TaskRun> for Run {
                 memory,
                 disk,
                 timeout_secs: task.timeout,
-                file_paths: task.output.map(|f| vec![Utf8PathBuf::from(f)]),
+                file_paths: if task.output.is_empty() {
+                    None
+                } else {
+                    Some(task.output.into_iter().map(Utf8PathBuf::from).collect())
+                },
                 max_output_size: task.max_output_size,
                 network: task.network,
                 tuning,

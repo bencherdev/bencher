@@ -51,9 +51,9 @@ pub struct TaskRun {
     #[arg(long, default_value = "300")]
     pub timeout: u64,
 
-    /// Output file path inside guest.
+    /// Output file paths inside guest (may be repeated).
     #[arg(long)]
-    pub output: Option<String>,
+    pub output: Vec<String>,
 
     /// Maximum size in bytes for collected stdout/stderr (default: 10 MiB).
     #[arg(long)]
