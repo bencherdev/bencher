@@ -46,20 +46,23 @@
           deadnix # Nix dead code checker
           statix # Nix static code checker.
         ];
-      in {
-        # Build package with `nix build`
-        packages = rec {
-          default = bencher;
-          bencher = pkgs.rustPlatform.buildRustPackage {
-            name = "bencher";
+        mkPackage = pname:
+          pkgs.rustPlatform.buildRustPackage {
+            name = pname;
             src = ./.;
-            cargoBuildFlags = [ "--bin" "bencher"];
+            cargoBuildFlags = ["--bin" "${pname}"];
             cargoLock.lockFile = ./Cargo.lock;
             doCheck = false;
             inherit buildInputs;
             nativeBuildInputs = buildInputs;
             LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
           };
+      in {
+        # Build package with `nix build` or more specifically for example `nix run .#bencher`
+        packages = rec {
+          default = bencher;
+          bencher = mkPackage "bencher";
+          api = mkPackage "api";
         };
         # Enter reproducible development shell with `nix develop`
         devShells = {
@@ -68,11 +71,16 @@
           };
         };
 
-        # Run an app with `nix run` or more specifically `nix run .#bencher`
+        # Run an app with `nix run` or more specifically e.g.: `nix run .#bencher`
         apps = rec {
           default = bencher;
+          # nix run .#bencher
           bencher = flake-utils.lib.mkApp {
             drv = self.packages.${system}.bencher;
+          };
+          # nix run .#api
+          api = flake-utils.lib.mkApp {
+            drv = self.packages.${system}.api;
           };
         };
       }
