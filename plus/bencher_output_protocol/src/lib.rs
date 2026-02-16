@@ -22,6 +22,9 @@ pub enum DecodeError {
     /// Unexpected end of data while reading a field.
     #[error("unexpected end of data while reading {0}")]
     UnexpectedEof(&'static str),
+    /// Invalid UTF-8 in file path.
+    #[error("invalid UTF-8 in file path")]
+    InvalidUtf8Path,
 }
 
 /// Encode file path+content pairs into the length-prefixed binary protocol.
@@ -70,7 +73,9 @@ pub fn decode(data: &[u8]) -> Result<Vec<(Utf8PathBuf, Vec<u8>)>, DecodeError> {
         }
         #[expect(clippy::indexing_slicing, reason = "bounds checked above")]
         let path_slice = &data[cursor..cursor + path_len];
-        let path = Utf8PathBuf::from(String::from_utf8_lossy(path_slice).as_ref());
+        let path_str =
+            std::str::from_utf8(path_slice).map_err(|_utf8_err| DecodeError::InvalidUtf8Path)?;
+        let path = Utf8PathBuf::from(path_str);
         cursor += path_len;
 
         #[expect(
@@ -251,6 +256,22 @@ mod tests {
         assert!(
             err.to_string().contains("content length"),
             "expected 'content length' in error, got: {err}"
+        );
+    }
+
+    #[test]
+    fn decode_error_invalid_utf8_path() {
+        // file_count = 1, path_len = 3, then 3 bytes of invalid UTF-8
+        let mut data = Vec::new();
+        data.extend_from_slice(&1u32.to_le_bytes());
+        data.extend_from_slice(&3u32.to_le_bytes());
+        data.extend_from_slice(&[0xFF, 0xFE, 0xFD]); // invalid UTF-8
+        // Add content_len and content so the only error is the path
+        data.extend_from_slice(&0u64.to_le_bytes());
+        let err = decode(&data).unwrap_err();
+        assert!(
+            err.to_string().contains("invalid UTF-8"),
+            "expected 'invalid UTF-8' in error, got: {err}"
         );
     }
 

@@ -28,8 +28,16 @@ fn main() -> std::process::ExitCode {
         libc::write(libc::STDOUT_FILENO, msg.as_ptr().cast(), msg.len());
     }
 
-    // Method 2: Write directly to serial port 0x3F8 (COM1) using I/O ports
-    // This requires iopl(3) or ioperm to be called first on Linux
+    // Method 2: Write directly to COM1 serial port (0x3F8) for early boot diagnostics.
+    // This works before /dev is mounted because it uses raw x86 I/O port access.
+    //
+    // Protocol:
+    //   0x3FD = Line Status Register (LSR) — read to check transmitter status
+    //   0x3F8 = Data Register — write byte to transmit
+    //   0x20  = LSR bit 5 (THRE) — Transmit Holding Register Empty flag
+    //
+    // Loop: poll LSR until THRE is set, then write one byte to the data register.
+    // This requires iopl(3) or ioperm to be called first on Linux.
     #[cfg(target_arch = "x86_64")]
     unsafe {
         // Try to get I/O port access (may fail without root, but we're init)

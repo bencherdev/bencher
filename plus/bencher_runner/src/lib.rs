@@ -38,6 +38,8 @@ pub mod units;
 pub use bencher_json::{Cpu, Disk, Memory};
 pub use config::Config;
 pub use error::RunnerError;
+#[cfg(target_os = "linux")]
+pub use firecracker::FirecrackerLogLevel;
 pub use jail::ResourceLimits;
 pub use run::{RunArgs, RunOutput, execute, resolve_oci_image, run_with_args};
-pub use tuning::TuningConfig;
+pub use tuning::{PerfEventParanoid, Swappiness, TuningConfig};

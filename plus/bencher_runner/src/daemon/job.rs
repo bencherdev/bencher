@@ -191,6 +191,9 @@ fn build_config_from_job(daemon_config: &DaemonConfig, job: &JsonClaimedJob) -> 
         runner_config = runner_config.with_max_output_size(max_output_size);
     }
 
+    // Pass through Firecracker log level
+    runner_config.firecracker_log_level = daemon_config.firecracker_log_level;
+
     runner_config
 }
 
@@ -306,6 +309,7 @@ mod tests {
             tuning: crate::TuningConfig::disabled(),
             cpu_layout: crate::cpu::CpuLayout::with_core_count(4),
             max_output_size: None,
+            firecracker_log_level: crate::firecracker::FirecrackerLogLevel::default(),
         }
     }
 

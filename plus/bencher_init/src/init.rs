@@ -323,10 +323,16 @@ fn mount(
     flags: libc::c_ulong,
     data: Option<&str>,
 ) -> Result<(), InitError> {
-    let source = CString::new(source).unwrap();
-    let target = CString::new(target).unwrap();
-    let fstype = CString::new(fstype).unwrap();
-    let data = data.map(|d| CString::new(d).unwrap());
+    let source =
+        CString::new(source).map_err(|e| InitError::Mount(format!("invalid source: {e}")))?;
+    let target =
+        CString::new(target).map_err(|e| InitError::Mount(format!("invalid target: {e}")))?;
+    let fstype =
+        CString::new(fstype).map_err(|e| InitError::Mount(format!("invalid fstype: {e}")))?;
+    let data = data
+        .map(CString::new)
+        .transpose()
+        .map_err(|e| InitError::Mount(format!("invalid data: {e}")))?;
 
     let ret = unsafe {
         libc::mount(

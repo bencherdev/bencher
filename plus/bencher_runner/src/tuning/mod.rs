@@ -6,8 +6,19 @@
 //! informational message — this handles ARM and other platforms
 //! where certain controls do not exist.
 
+mod perf_event_paranoid;
+mod swappiness;
+
+pub use perf_event_paranoid::PerfEventParanoid;
+pub use swappiness::Swappiness;
+
 #[cfg(target_os = "linux")]
-use std::path::PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
+
+#[cfg(target_os = "linux")]
+const INTEL_NO_TURBO: &str = "/sys/devices/system/cpu/intel_pstate/no_turbo";
+#[cfg(target_os = "linux")]
+const CPUFREQ_BOOST: &str = "/sys/devices/system/cpu/cpufreq/boost";
 
 /// Host tuning configuration — all defaults optimize for benchmark accuracy.
 #[expect(
@@ -20,10 +31,10 @@ pub struct TuningConfig {
     pub disable_aslr: bool,
     /// Disable NMI watchdog (default: true).
     pub disable_nmi_watchdog: bool,
-    /// Target swappiness value (default: Some(10)).
-    pub swappiness: Option<u32>,
-    /// Target `perf_event_paranoid` value (default: Some(-1)).
-    pub perf_event_paranoid: Option<i32>,
+    /// Target swappiness value (default: Some(Swappiness(10))).
+    pub swappiness: Option<Swappiness>,
+    /// Target `perf_event_paranoid` value (default: Some(PerfEventParanoid(-1))).
+    pub perf_event_paranoid: Option<PerfEventParanoid>,
     /// Target CPU scaling governor (default: Some("performance")).
     pub governor: Option<String>,
     /// Disable SMT / hyper-threading (default: true).
@@ -37,8 +48,8 @@ impl Default for TuningConfig {
         Self {
             disable_aslr: true,
             disable_nmi_watchdog: true,
-            swappiness: Some(10),
-            perf_event_paranoid: Some(-1),
+            swappiness: Some(Swappiness::DEFAULT),
+            perf_event_paranoid: Some(PerfEventParanoid::DEFAULT),
             governor: Some("performance".to_owned()),
             disable_smt: true,
             disable_turbo: true,
@@ -67,7 +78,7 @@ impl TuningConfig {
 
 #[cfg(target_os = "linux")]
 struct SavedSetting {
-    path: PathBuf,
+    path: Utf8PathBuf,
     value: String,
     label: String,
 }
@@ -146,7 +157,7 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
 /// Read current value, write new value, and push restore entry onto the guard.
 #[cfg(target_os = "linux")]
 fn write_sysctl(guard: &mut TuningGuard, path: &str, value: &str, label: &str) {
-    let path = PathBuf::from(path);
+    let path = Utf8PathBuf::from(path);
 
     if !path.exists() {
         println!("  Tuning: {label} — skipped (path not found)");
@@ -166,7 +177,7 @@ fn write_sysctl(guard: &mut TuningGuard, path: &str, value: &str, label: &str) {
         return;
     }
 
-    if let Err(e) = std::fs::write(&path, value) {
+    if let Err(e) = std::fs::write(path.as_str(), value) {
         println!("  Tuning: {label} — skipped (write failed: {e})");
         return;
     }
@@ -182,9 +193,9 @@ fn write_sysctl(guard: &mut TuningGuard, path: &str, value: &str, label: &str) {
 /// Set the CPU scaling governor on all CPUs.
 #[cfg(target_os = "linux")]
 fn set_cpu_governor(guard: &mut TuningGuard, target: &str) {
-    let base = PathBuf::from("/sys/devices/system/cpu");
-    let Ok(entries) = std::fs::read_dir(&base) else {
-        println!("  Tuning: CPU governor — skipped (cannot read {base:?})");
+    let base = Utf8Path::new("/sys/devices/system/cpu");
+    let Ok(entries) = std::fs::read_dir(base) else {
+        println!("  Tuning: CPU governor — skipped (cannot read {base})");
         return;
     };
 
@@ -222,8 +233,10 @@ fn set_cpu_governor(guard: &mut TuningGuard, target: &str) {
         }
 
         println!("  Tuning: CPU governor ({name_str}) — set to {target} (was {current})");
+        let gov_utf8_path = Utf8PathBuf::try_from(gov_path)
+            .unwrap_or_else(|p| Utf8PathBuf::from(p.into_path_buf().to_string_lossy().as_ref()));
         guard.saved.push(SavedSetting {
-            path: gov_path,
+            path: gov_utf8_path,
             value: current,
             label: format!("CPU governor ({name_str})"),
         });
@@ -233,7 +246,7 @@ fn set_cpu_governor(guard: &mut TuningGuard, target: &str) {
 /// Disable SMT (simultaneous multi-threading / hyper-threading).
 #[cfg(target_os = "linux")]
 fn set_smt(guard: &mut TuningGuard) {
-    let path = PathBuf::from("/sys/devices/system/cpu/smt/control");
+    let path = Utf8PathBuf::from("/sys/devices/system/cpu/smt/control");
 
     if !path.exists() {
         println!("  Tuning: SMT — skipped (not available on this platform)");
@@ -253,7 +266,7 @@ fn set_smt(guard: &mut TuningGuard) {
         return;
     }
 
-    if let Err(e) = std::fs::write(&path, "off") {
+    if let Err(e) = std::fs::write(path.as_str(), "off") {
         println!("  Tuning: SMT — skipped (write failed: {e})");
         return;
     }
@@ -269,25 +282,10 @@ fn set_smt(guard: &mut TuningGuard) {
 /// Disable turboboost. Tries Intel pstate first, then generic cpufreq.
 #[cfg(target_os = "linux")]
 fn set_turbo(guard: &mut TuningGuard) {
-    let intel_path = PathBuf::from("/sys/devices/system/cpu/intel_pstate/no_turbo");
-    let generic_path = PathBuf::from("/sys/devices/system/cpu/cpufreq/boost");
-
-    if intel_path.exists() {
-        // Intel: write "1" to no_turbo to disable turbo
-        write_sysctl(
-            guard,
-            intel_path.to_str().unwrap_or_default(),
-            "1",
-            "turboboost (Intel)",
-        );
-    } else if generic_path.exists() {
-        // Generic: write "0" to boost to disable turbo
-        write_sysctl(
-            guard,
-            generic_path.to_str().unwrap_or_default(),
-            "0",
-            "turboboost (generic)",
-        );
+    if Utf8Path::new(INTEL_NO_TURBO).exists() {
+        write_sysctl(guard, INTEL_NO_TURBO, "1", "turboboost (Intel)");
+    } else if Utf8Path::new(CPUFREQ_BOOST).exists() {
+        write_sysctl(guard, CPUFREQ_BOOST, "0", "turboboost (generic)");
     } else {
         println!("  Tuning: turboboost — skipped (not available on this platform)");
     }
@@ -295,8 +293,8 @@ fn set_turbo(guard: &mut TuningGuard) {
 
 /// Restore a single setting. Used by the Drop impl.
 #[cfg(target_os = "linux")]
-fn restore(path: &PathBuf, value: &str, label: &str) {
-    match std::fs::write(path, value) {
+fn restore(path: &Utf8Path, value: &str, label: &str) {
+    match std::fs::write(path.as_str(), value) {
         Ok(()) => println!("  Tuning: {label} — restored to {value}"),
         Err(e) => println!("  Tuning: {label} — restore failed: {e}"),
     }
@@ -325,8 +323,11 @@ mod tests {
         let config = TuningConfig::default();
         assert!(config.disable_aslr);
         assert!(config.disable_nmi_watchdog);
-        assert_eq!(config.swappiness, Some(10));
-        assert_eq!(config.perf_event_paranoid, Some(-1));
+        assert_eq!(config.swappiness, Some(Swappiness::try_from(10).unwrap()));
+        assert_eq!(
+            config.perf_event_paranoid,
+            Some(PerfEventParanoid::try_from(-1).unwrap())
+        );
         assert_eq!(config.governor.as_deref(), Some("performance"));
         assert!(config.disable_smt);
         assert!(config.disable_turbo);
@@ -372,22 +373,23 @@ mod tests {
         use std::fs;
 
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("test_sysctl");
-        fs::write(&path, "original").unwrap();
+        let path = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let file_path = path.join("test_sysctl");
+        fs::write(&file_path, "original").unwrap();
 
         {
             let mut guard = TuningGuard { saved: Vec::new() };
             guard.saved.push(SavedSetting {
-                path: path.clone(),
+                path: file_path.clone(),
                 value: "original".to_owned(),
                 label: "test".to_owned(),
             });
             // Simulate the tuning having changed the value
-            fs::write(&path, "changed").unwrap();
-            assert_eq!(fs::read_to_string(&path).unwrap(), "changed");
+            fs::write(&file_path, "changed").unwrap();
+            assert_eq!(fs::read_to_string(&file_path).unwrap(), "changed");
         }
         // Guard dropped — should restore
-        assert_eq!(fs::read_to_string(&path).unwrap(), "original");
+        assert_eq!(fs::read_to_string(&file_path).unwrap(), "original");
     }
 
     #[cfg(target_os = "linux")]
@@ -396,8 +398,9 @@ mod tests {
         use std::fs;
 
         let dir = tempfile::tempdir().unwrap();
-        let path1 = dir.path().join("first");
-        let path2 = dir.path().join("second");
+        let base = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let path1 = base.join("first");
+        let path2 = base.join("second");
         fs::write(&path1, "a").unwrap();
         fs::write(&path2, "b").unwrap();
 

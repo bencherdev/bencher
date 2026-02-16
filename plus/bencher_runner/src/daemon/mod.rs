@@ -9,6 +9,8 @@ use std::sync::atomic::Ordering;
 use url::Url;
 
 use crate::cpu::CpuLayout;
+#[cfg(target_os = "linux")]
+use crate::firecracker::FirecrackerLogLevel;
 use crate::tuning::TuningConfig;
 
 mod api_client;
@@ -45,6 +47,9 @@ pub struct DaemonConfig {
     pub cpu_layout: CpuLayout,
     /// Maximum size in bytes for collected stdout/stderr.
     pub max_output_size: Option<usize>,
+    /// Firecracker process log level.
+    #[cfg(target_os = "linux")]
+    pub firecracker_log_level: FirecrackerLogLevel,
 }
 
 pub struct Daemon {

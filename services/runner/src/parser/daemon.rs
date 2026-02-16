@@ -64,4 +64,8 @@ pub struct TaskDaemon {
     /// Maximum size in bytes for collected stdout/stderr (default: 10 MiB).
     #[arg(long)]
     pub max_output_size: Option<usize>,
+
+    /// Firecracker process log level (default: warning).
+    #[arg(long, default_value = "warning")]
+    pub firecracker_log_level: String,
 }

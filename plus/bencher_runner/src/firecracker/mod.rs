@@ -24,6 +24,55 @@ use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
 
+/// Firecracker log level (maps to `--level` CLI flag).
+#[derive(Debug, Clone, Copy, Default)]
+pub enum FirecrackerLogLevel {
+    Off,
+    Error,
+    #[default]
+    Warning,
+    Info,
+    Debug,
+    Trace,
+}
+
+impl FirecrackerLogLevel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Off => "Off",
+            Self::Error => "Error",
+            Self::Warning => "Warning",
+            Self::Info => "Info",
+            Self::Debug => "Debug",
+            Self::Trace => "Trace",
+        }
+    }
+}
+
+impl std::fmt::Display for FirecrackerLogLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for FirecrackerLogLevel {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "off" => Ok(Self::Off),
+            "error" => Ok(Self::Error),
+            "warning" => Ok(Self::Warning),
+            "info" => Ok(Self::Info),
+            "debug" => Ok(Self::Debug),
+            "trace" => Ok(Self::Trace),
+            _ => Err(format!(
+                "invalid firecracker log level: {s} (expected: off, error, warning, info, debug, trace)"
+            )),
+        }
+    }
+}
+
 /// Guest CID (Context ID) for the Firecracker VM.
 ///
 /// In the vsock address space:
@@ -62,6 +111,8 @@ pub struct FirecrackerJobConfig {
     pub work_dir: camino::Utf8PathBuf,
     /// Optional CPU layout for core isolation via cpuset.
     pub cpu_layout: Option<CpuLayout>,
+    /// Firecracker process log level.
+    pub log_level: FirecrackerLogLevel,
 }
 
 /// Run a benchmark inside a Firecracker microVM.
@@ -116,8 +167,18 @@ pub fn run_firecracker(
 
     // Step 1: Start Firecracker process
     println!("Starting Firecracker process...");
-    let mut fc_process =
-        FirecrackerProcess::start(config.firecracker_bin.as_str(), &api_socket_path, &vm_id)?;
+    let housekeeping_cores = config
+        .cpu_layout
+        .as_ref()
+        .map(|l| l.housekeeping.clone())
+        .unwrap_or_default();
+    let mut fc_process = FirecrackerProcess::start(
+        config.firecracker_bin.as_str(),
+        &api_socket_path,
+        &vm_id,
+        config.log_level.as_str(),
+        housekeeping_cores,
+    )?;
 
     // Move Firecracker process into cgroup for CPU isolation
     if let Some(ref cg) = cgroup {
@@ -262,6 +323,51 @@ mod tests {
     #[test]
     fn parse_exit_code_empty() {
         assert_eq!(parse_exit_code(""), 1);
+    }
+
+    #[test]
+    fn log_level_default() {
+        let level = FirecrackerLogLevel::default();
+        assert_eq!(level.as_str(), "Warning");
+    }
+
+    #[test]
+    fn log_level_from_str() {
+        assert_eq!(
+            "error".parse::<FirecrackerLogLevel>().unwrap().as_str(),
+            "Error"
+        );
+        assert_eq!(
+            "WARNING".parse::<FirecrackerLogLevel>().unwrap().as_str(),
+            "Warning"
+        );
+        assert_eq!(
+            "Info".parse::<FirecrackerLogLevel>().unwrap().as_str(),
+            "Info"
+        );
+        assert_eq!(
+            "debug".parse::<FirecrackerLogLevel>().unwrap().as_str(),
+            "Debug"
+        );
+        assert_eq!(
+            "trace".parse::<FirecrackerLogLevel>().unwrap().as_str(),
+            "Trace"
+        );
+        assert_eq!(
+            "off".parse::<FirecrackerLogLevel>().unwrap().as_str(),
+            "Off"
+        );
+    }
+
+    #[test]
+    fn log_level_from_str_invalid() {
+        assert!("invalid".parse::<FirecrackerLogLevel>().is_err());
+    }
+
+    #[test]
+    fn log_level_display() {
+        assert_eq!(FirecrackerLogLevel::Error.to_string(), "Error");
+        assert_eq!(FirecrackerLogLevel::Warning.to_string(), "Warning");
     }
 
     #[test]

@@ -95,4 +95,8 @@ pub struct TaskRun {
     /// Set `perf_event_paranoid` value (default: -1).
     #[arg(long, allow_hyphen_values = true)]
     pub perf_event_paranoid: Option<i32>,
+
+    /// Firecracker process log level (default: warning).
+    #[arg(long, default_value = "warning")]
+    pub firecracker_log_level: String,
 }

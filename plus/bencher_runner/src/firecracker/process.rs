@@ -11,28 +11,32 @@ use crate::firecracker::error::FirecrackerError;
 pub struct FirecrackerProcess {
     child: Child,
     api_socket_path: String,
+    stderr_thread: Option<std::thread::JoinHandle<()>>,
 }
 
 impl FirecrackerProcess {
     /// Start a new Firecracker process.
     ///
-    /// Spawns `firecracker --api-sock <path> --id <id> --level Error`
+    /// Spawns `firecracker --api-sock <path> --id <id> --level <level>`
     /// and waits for the API socket to become ready.
+    /// A background thread reads stderr and prints lines prefixed with `[firecracker]`.
     pub fn start(
         firecracker_bin: &str,
         api_socket_path: &str,
         vm_id: &str,
+        log_level: &str,
+        housekeeping_cores: Vec<usize>,
     ) -> Result<Self, FirecrackerError> {
         // Remove stale socket if it exists
         let _ = std::fs::remove_file(api_socket_path);
 
-        let child = Command::new(firecracker_bin)
+        let mut child = Command::new(firecracker_bin)
             .arg("--api-sock")
             .arg(api_socket_path)
             .arg("--id")
             .arg(vm_id)
             .arg("--level")
-            .arg("Error")
+            .arg(log_level)
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::piped())
@@ -41,9 +45,27 @@ impl FirecrackerProcess {
                 FirecrackerError::ProcessStart(format!("failed to spawn {firecracker_bin}: {e}"))
             })?;
 
+        // Spawn a thread to read stderr line-by-line
+        let stderr = child.stderr.take().expect("stderr was piped");
+        let stderr_thread = std::thread::spawn(move || {
+            // Pin to housekeeping cores to avoid benchmark interference
+            if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
+                eprintln!("Warning: failed to pin stderr reader thread: {e}");
+            }
+            use std::io::BufRead;
+            let reader = std::io::BufReader::new(stderr);
+            for line in reader.lines() {
+                match line {
+                    Ok(line) => eprintln!("[firecracker] {line}"),
+                    Err(_) => break,
+                }
+            }
+        });
+
         let process = Self {
             child,
             api_socket_path: api_socket_path.to_owned(),
+            stderr_thread: Some(stderr_thread),
         };
 
         // Wait for the API socket to become ready
@@ -75,6 +97,7 @@ impl FirecrackerProcess {
         let poll_interval = Duration::from_millis(100);
         while start.elapsed() < grace {
             if let Ok(Some(_)) = self.child.try_wait() {
+                self.join_stderr_thread();
                 return;
             }
             std::thread::sleep(poll_interval);
@@ -88,11 +111,19 @@ impl FirecrackerProcess {
     pub fn kill(&mut self) {
         let _ = self.child.kill();
         let _ = self.child.wait();
+        self.join_stderr_thread();
     }
 
     /// Clean up socket files.
     pub fn cleanup(&self) {
         let _ = std::fs::remove_file(&self.api_socket_path);
+    }
+
+    /// Join the stderr reader thread if it exists.
+    fn join_stderr_thread(&mut self) {
+        if let Some(handle) = self.stderr_thread.take() {
+            let _ = handle.join();
+        }
     }
 }
 

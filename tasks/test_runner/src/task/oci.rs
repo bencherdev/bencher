@@ -28,6 +28,15 @@ fn busybox_url() -> anyhow::Result<&'static str> {
     }
 }
 
+/// Get the expected SHA256 hash of the busybox binary for the current architecture.
+fn busybox_sha256() -> &'static str {
+    match std::env::consts::ARCH {
+        "x86_64" => "6e123e7f3202a8c1e9b1f94d8941580a25135382b99e8d3e34fb858bba311348",
+        "aarch64" => "65643147a622ddf4689ade5f66a21f7cafb378ec595b4da3cd78c21412bf2230",
+        arch => panic!("Unsupported architecture: {arch}"),
+    }
+}
+
 #[derive(Debug)]
 pub struct Oci {}
 
@@ -127,6 +136,15 @@ fn install_busybox(rootfs: &Utf8Path) -> anyhow::Result<()> {
     }
 
     let bytes = response.bytes()?;
+
+    // Verify SHA256 checksum
+    let hash = sha256_hex(&bytes);
+    let expected = busybox_sha256();
+    anyhow::ensure!(
+        hash == expected,
+        "Busybox checksum mismatch: expected {expected}, got {hash}"
+    );
+
     let mut file = File::create(&busybox_path)?;
     file.write_all(&bytes)?;
 

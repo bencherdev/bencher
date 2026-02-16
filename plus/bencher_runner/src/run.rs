@@ -78,6 +78,9 @@ pub struct RunArgs {
     pub network: bool,
     /// Host tuning configuration.
     pub tuning: TuningConfig,
+    /// Firecracker process log level.
+    #[cfg(target_os = "linux")]
+    pub firecracker_log_level: crate::firecracker::FirecrackerLogLevel,
 }
 
 /// Run the `run` subcommand with parsed arguments.
@@ -111,11 +114,12 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     } else {
         config
     };
-    let config = if let Some(max_output_size) = args.max_output_size {
+    let mut config = if let Some(max_output_size) = args.max_output_size {
         config.with_max_output_size(max_output_size)
     } else {
         config
     };
+    config.firecracker_log_level = args.firecracker_log_level;
 
     let output = execute(&config, None)?;
     println!("{}", output.stdout);
@@ -325,12 +329,10 @@ pub fn execute(
         timeout_secs: config.timeout_secs,
         work_dir: work_dir.to_owned(),
         cpu_layout: config.cpu_layout.clone(),
+        log_level: config.firecracker_log_level,
     };
 
     let run_output = run_firecracker(&fc_config, cancel_flag)?;
-
-    // temp_dir is automatically cleaned up when dropped
-    drop(temp_dir);
 
     Ok(run_output)
 }

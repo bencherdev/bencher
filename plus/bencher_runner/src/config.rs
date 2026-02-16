@@ -5,6 +5,8 @@ use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::cpu::CpuLayout;
+#[cfg(target_os = "linux")]
+use crate::firecracker::FirecrackerLogLevel;
 
 /// Configuration for a benchmark run.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,6 +92,11 @@ pub struct Config {
     /// via cgroups cpuset. This field is not serialized.
     #[serde(skip)]
     pub cpu_layout: Option<CpuLayout>,
+
+    /// Firecracker process log level. This field is not serialized.
+    #[cfg(target_os = "linux")]
+    #[serde(skip)]
+    pub firecracker_log_level: FirecrackerLogLevel,
 }
 
 fn default_vcpus() -> Cpu {
@@ -140,6 +147,8 @@ impl Config {
             env: None,
             max_output_size: default_max_output_size(),
             cpu_layout: None,
+            #[cfg(target_os = "linux")]
+            firecracker_log_level: FirecrackerLogLevel::default(),
         }
     }
 
@@ -167,6 +176,8 @@ impl Config {
             env: None,
             max_output_size: default_max_output_size(),
             cpu_layout: None,
+            #[cfg(target_os = "linux")]
+            firecracker_log_level: FirecrackerLogLevel::default(),
         }
     }
 

@@ -1,4 +1,4 @@
-use bencher_runner::{RunArgs, TuningConfig};
+use bencher_runner::{FirecrackerLogLevel, PerfEventParanoid, RunArgs, Swappiness, TuningConfig};
 use camino::Utf8PathBuf;
 
 use crate::parser::TaskRun;
@@ -18,8 +18,16 @@ impl TryFrom<TaskRun> for Run {
             TuningConfig {
                 disable_aslr: !task.aslr,
                 disable_nmi_watchdog: !task.nmi_watchdog,
-                swappiness: task.swappiness.or(Some(10)),
-                perf_event_paranoid: task.perf_event_paranoid.or(Some(-1)),
+                swappiness: task
+                    .swappiness
+                    .map(Swappiness::try_from)
+                    .transpose()?
+                    .or(Some(Swappiness::DEFAULT)),
+                perf_event_paranoid: task
+                    .perf_event_paranoid
+                    .map(PerfEventParanoid::try_from)
+                    .transpose()?
+                    .or(Some(PerfEventParanoid::DEFAULT)),
                 governor: task.governor.or_else(|| Some("performance".to_owned())),
                 disable_smt: !task.smt,
                 disable_turbo: !task.turbo,
@@ -29,6 +37,11 @@ impl TryFrom<TaskRun> for Run {
         let vcpus = task.vcpus.map(bencher_runner::Cpu::try_from).transpose()?;
         let memory = task.memory.map(bencher_runner::Memory::from_mib);
         let disk = task.disk.map(bencher_runner::Disk::from_mib);
+
+        let firecracker_log_level: FirecrackerLogLevel = task
+            .firecracker_log_level
+            .parse()
+            .map_err(|e: String| anyhow::anyhow!(e))?;
 
         Ok(Self {
             args: RunArgs {
@@ -46,6 +59,7 @@ impl TryFrom<TaskRun> for Run {
                 max_output_size: task.max_output_size,
                 network: task.network,
                 tuning,
+                firecracker_log_level,
             },
         })
     }
