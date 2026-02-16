@@ -63,14 +63,20 @@ pub fn create_ext4_with_size(
     // Step 1: Create a file of the desired size for mkfs.ext4 to format
     create_file(output_path, size_mib)?;
 
-    // Step 2: Format as ext4 and populate with directory contents
-    // mkfs.ext4 -d option copies directory contents during creation
+    // Step 2: Format as ext4 and populate with directory contents.
+    // mkfs.ext4 -d copies directory contents during creation.
+    // -E nodiscard prevents mkfs from issuing DISCARD operations.
+    // lazy_itable_init=0 and lazy_journal_init=0 fully initialize metadata
+    // at creation time, preventing the guest kernel from deferring writes
+    // that could re-sparsify the backing file.
     let output = Command::new("mkfs.ext4")
         .args([
             "-F", // Force, even if the file exists
             "-q", // Quiet mode
             "-m",
             "0", // No reserved blocks
+            "-E",
+            "nodiscard,lazy_itable_init=0,lazy_journal_init=0",
             "-d",
             source_dir.as_str(), // Populate from directory
             output_path.as_str(),
@@ -83,12 +89,12 @@ pub fn create_ext4_with_size(
         return Err(RootfsError::Ext4(format!("mkfs.ext4 failed: {stderr}")));
     }
 
-    // Step 3: Best-effort physical block allocation.
+    // Step 3: Pre-allocate all physical blocks.
     // mkfs.ext4 creates a sparse file internally. fallocate converts sparse
-    // regions to real blocks, bounding the physical size of the disk image.
-    // This is defense-in-depth — if the host filesystem doesn't have enough
-    // space for full allocation, we proceed with the sparse image.
-    drop(allocate_file(output_path, size_mib));
+    // regions to real blocks, ensuring the host disk space is fully reserved.
+    // This prevents multiple concurrent VMs from over-committing host disk
+    // space through sparse file growth.
+    allocate_file(output_path, size_mib)?;
 
     Ok(())
 }
@@ -105,8 +111,9 @@ fn create_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
 
 /// Ensure all blocks in a file are physically allocated.
 ///
-/// On Linux, uses `fallocate` to convert sparse regions to real blocks,
-/// preventing the guest from writing beyond the intended disk limit.
+/// On Linux, uses `fallocate` to convert sparse regions to real blocks.
+/// This reserves the full disk space on the host, preventing concurrent VMs
+/// from over-committing through sparse file growth.
 /// Must be called *after* `mkfs.ext4` since mkfs internally creates sparse regions.
 ///
 /// On other platforms, this is a no-op (ext4 creation only works on Linux anyway).
@@ -177,6 +184,40 @@ mod tests {
         assert!(
             metadata.blocks() >= 131072,
             "Expected at least 131072 blocks for 64 MiB, got {}",
+            metadata.blocks()
+        );
+    }
+
+    /// Verify the full ext4 creation pipeline produces a non-sparse image.
+    ///
+    /// This is the key security test: after create_file + mkfs.ext4 + fallocate,
+    /// the resulting image must have all physical blocks allocated. If the image
+    /// were sparse, guest writes of non-zero data would grow the host file's
+    /// physical allocation, allowing concurrent VMs to over-commit host disk space.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn create_ext4_not_sparse() {
+        use std::os::unix::fs::MetadataExt;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let work_dir = Utf8Path::from_path(temp_dir.path()).unwrap();
+        let source_dir = work_dir.join("source");
+        let image_path = work_dir.join("test.ext4");
+
+        // Create a source directory with a small file
+        fs::create_dir_all(&source_dir).unwrap();
+        fs::write(source_dir.join("hello.txt"), "hello world").unwrap();
+
+        // Run the full pipeline: create_file -> mkfs.ext4 -> fallocate
+        create_ext4_with_size(&source_dir, &image_path, 64).unwrap();
+
+        let metadata = fs::metadata(&image_path).unwrap();
+        assert_eq!(metadata.len(), 64 * 1024 * 1024, "Logical size should be 64 MiB");
+        // 64 MiB = 131072 512-byte blocks
+        assert!(
+            metadata.blocks() >= 131072,
+            "ext4 image is sparse: expected at least 131072 blocks (64 MiB), got {}. \
+             Sparse images allow guest writes to over-commit host disk space.",
             metadata.blocks()
         );
     }

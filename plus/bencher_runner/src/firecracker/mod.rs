@@ -216,7 +216,6 @@ pub fn run_firecracker(
         stdout: results.stdout,
         stderr: results.stderr,
         output_file: results.output_file,
-        disk_overrun: false,
     })
 }
 
@@ -257,12 +256,10 @@ mod tests {
             stdout: "hello".to_owned(),
             stderr: "warnings".to_owned(),
             output_file: Some(vec![1, 2, 3]),
-            disk_overrun: false,
         };
         assert_eq!(output.exit_code, 42);
         assert_eq!(output.stdout, "hello");
         assert_eq!(output.stderr, "warnings");
         assert_eq!(output.output_file, Some(vec![1, 2, 3]));
-        assert!(!output.disk_overrun);
     }
 }
