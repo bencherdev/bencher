@@ -12,6 +12,7 @@ plus = [
     "dep:backhand",
     "dep:bencher_oci",
     "dep:camino",
+    "dep:tempfile",
     "dep:thiserror",
     "dep:nix",
     "bencher_oci/plus",
@@ -21,6 +22,7 @@ plus = [
 backhand = { workspace = true, optional = true }
 bencher_oci = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
+tempfile = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]

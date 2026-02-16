@@ -225,7 +225,7 @@ fn run_benchmark() -> anyhow::Result<()> {
         anyhow::bail!(
             "Benchmark failed with exit code {}. Stderr: {}",
             output.exit_code,
-            output.stdout
+            output.stderr
         );
     }
 

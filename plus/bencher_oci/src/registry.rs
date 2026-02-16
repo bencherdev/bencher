@@ -158,10 +158,11 @@ impl RegistryClient {
     /// Create a new registry client with a JWT token for authentication.
     pub fn with_token(token: &str) -> Result<Self, OciError> {
         let mut client = Self::new()?;
-        client.base_token = token
-            .parse()
-            .map_err(|e| OciError::Registry(format!("Invalid token: {e}")))
-            .ok();
+        client.base_token = Some(
+            token
+                .parse()
+                .map_err(|e| OciError::Registry(format!("Invalid token: {e}")))?,
+        );
         Ok(client)
     }
 
@@ -256,8 +257,7 @@ impl RegistryClient {
                     continue;
                 }
 
-                let (_, layer_bytes) = self.pull_blob(image_ref, layer_digest)?;
-                fs::write(&layer_path, &layer_bytes)?;
+                self.pull_blob_to_file(image_ref, layer_digest, &layer_path)?;
             }
         }
 
@@ -314,7 +314,7 @@ impl RegistryClient {
         Ok((computed_digest, bytes))
     }
 
-    /// Pull a blob from the registry.
+    /// Pull a blob from the registry into memory.
     fn pull_blob(
         &mut self,
         image_ref: &ImageReference,
@@ -360,6 +360,70 @@ impl RegistryClient {
         }
 
         Ok((digest.to_owned(), bytes))
+    }
+
+    /// Pull a blob from the registry and stream it directly to a file.
+    ///
+    /// This avoids loading entire layer blobs into memory.
+    fn pull_blob_to_file(
+        &mut self,
+        image_ref: &ImageReference,
+        digest: &str,
+        output_path: &Utf8Path,
+    ) -> Result<String, OciError> {
+        use std::io::{Read as _, Write as _};
+
+        let url = format!(
+            "https://{}/v2/{}/blobs/{digest}",
+            image_ref.registry, image_ref.repository
+        );
+
+        let mut response = self.authenticated_request(&url, image_ref, "*/*")?;
+
+        let content_length = response
+            .headers()
+            .get("content-length")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<u64>().ok());
+
+        let mut file = fs::File::create(output_path)?;
+        let mut hasher = Sha256::new();
+        let mut total_bytes: u64 = 0;
+        let mut buf = vec![0u8; 64 * 1024];
+
+        let mut reader = response.body_mut().as_reader();
+        loop {
+            let n = reader
+                .read(&mut buf)
+                .map_err(|e| OciError::Registry(format!("Failed to read blob stream: {e}")))?;
+            if n == 0 {
+                break;
+            }
+            let chunk = buf.get(..n).ok_or_else(|| {
+                OciError::Registry("Read returned more bytes than buffer size".to_owned())
+            })?;
+            hasher.update(chunk);
+            file.write_all(chunk)?;
+            total_bytes += n as u64;
+        }
+
+        if let Some(expected_len) = content_length
+            && total_bytes != expected_len
+        {
+            return Err(OciError::Registry(format!(
+                "Content-Length mismatch for blob {digest}: expected {expected_len}, got {total_bytes}",
+            )));
+        }
+
+        let computed = format!("sha256:{:x}", hasher.finalize());
+        if computed != digest {
+            return Err(OciError::DigestMismatch {
+                expected: digest.to_owned(),
+                actual: computed,
+            });
+        }
+
+        Ok(computed)
     }
 
     /// Make an authenticated request to the registry.

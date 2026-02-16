@@ -8,6 +8,33 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::parser::TaskOci;
 
+/// Map `std::env::consts::ARCH` to OCI platform architecture names.
+fn current_oci_arch() -> &'static str {
+    match std::env::consts::ARCH {
+        "x86_64" => "amd64",
+        "aarch64" => "arm64",
+        arch => panic!("Unsupported architecture: {arch}"),
+    }
+}
+
+/// Map `std::env::consts::ARCH` to Rust target triples for musl builds.
+fn current_target_triple() -> &'static str {
+    match std::env::consts::ARCH {
+        "x86_64" => "x86_64-unknown-linux-musl",
+        "aarch64" => "aarch64-unknown-linux-musl",
+        arch => panic!("Unsupported architecture: {arch}"),
+    }
+}
+
+/// Get the busybox download URL for the current architecture.
+fn busybox_url() -> &'static str {
+    match std::env::consts::ARCH {
+        "x86_64" => "https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox",
+        "aarch64" => "https://busybox.net/downloads/binaries/1.35.0-aarch64-linux-musl/busybox",
+        arch => panic!("Unsupported architecture: {arch}"),
+    }
+}
+
 #[derive(Debug)]
 pub struct Oci {}
 
@@ -96,7 +123,7 @@ fn create_rootfs(rootfs: &Utf8Path) -> anyhow::Result<()> {
 
 /// Download and install busybox.
 fn install_busybox(rootfs: &Utf8Path) -> anyhow::Result<()> {
-    let busybox_url = "https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox";
+    let busybox_url = busybox_url();
     let busybox_path = rootfs.join("bin/busybox");
 
     println!("Downloading busybox...");
@@ -156,13 +183,14 @@ fn install_bencher(rootfs: &Utf8Path) -> anyhow::Result<()> {
     let bencher_dst = rootfs.join("usr/bin/bencher");
 
     // Try musl (statically linked) first — required for minimal rootfs
-    println!("Building bencher CLI (musl)...");
+    let target_triple = current_target_triple();
+    println!("Building bencher CLI (musl, {target_triple})...");
     let musl_status = Command::new("cargo")
         .args([
             "build",
             "--release",
             "--target",
-            "x86_64-unknown-linux-musl",
+            target_triple,
             "-p",
             "bencher_cli",
         ])
@@ -171,7 +199,7 @@ fn install_bencher(rootfs: &Utf8Path) -> anyhow::Result<()> {
 
     if let Ok(status) = musl_status {
         if status.success() {
-            let musl_src = workspace_root.join("target/x86_64-unknown-linux-musl/release/bencher");
+            let musl_src = workspace_root.join(format!("target/{target_triple}/release/bencher"));
             if musl_src.exists() {
                 fs::copy(&musl_src, &bencher_dst)?;
                 fs::set_permissions(&bencher_dst, fs::Permissions::from_mode(0o755))?;
@@ -479,7 +507,7 @@ fn sha256_hex(data: &[u8]) -> String {
 /// Create OCI image config.
 fn create_image_config(diff_id: &str) -> serde_json::Value {
     serde_json::json!({
-        "architecture": "amd64",
+        "architecture": current_oci_arch(),
         "os": "linux",
         "config": {
             "Entrypoint": ["/usr/bin/bencher"],
@@ -529,7 +557,7 @@ fn create_index(manifest_digest: &str, manifest_size: usize) -> serde_json::Valu
                 "digest": format!("sha256:{manifest_digest}"),
                 "size": manifest_size,
                 "platform": {
-                    "architecture": "amd64",
+                    "architecture": current_oci_arch(),
                     "os": "linux"
                 }
             }

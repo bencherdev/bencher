@@ -163,6 +163,22 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
             continue;
         }
 
+        // Validate symlink targets stay within the target directory
+        if entry.header().entry_type() == EntryType::Symlink
+            && let Ok(Some(link_name)) = entry.link_name()
+        {
+            let resolved = if link_name.is_absolute() {
+                // Absolute symlink target: resolve relative to target_dir
+                link_name.to_path_buf()
+            } else {
+                // Relative symlink target: resolve relative to the entry's parent
+                path.parent()
+                    .unwrap_or(std::path::Path::new(""))
+                    .join(&link_name)
+            };
+            safe_join(target_dir, &resolved)?;
+        }
+
         // Record directory permissions for deferred application
         if entry.header().entry_type() == EntryType::Directory
             && let Ok(mode) = entry.header().mode()

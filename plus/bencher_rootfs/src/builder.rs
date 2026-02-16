@@ -64,25 +64,9 @@ pub fn build_rootfs_from_dir(
 }
 
 /// Create a temporary directory.
-fn tempdir() -> Result<TempDir, RootfsError> {
-    let path = std::env::temp_dir().join(format!("bencher-rootfs-{}", std::process::id()));
-    std::fs::create_dir_all(&path)?;
-    Ok(TempDir { path })
-}
-
-/// A temporary directory that is deleted when dropped.
-struct TempDir {
-    path: std::path::PathBuf,
-}
-
-impl TempDir {
-    fn path(&self) -> &std::path::Path {
-        &self.path
-    }
-}
-
-impl Drop for TempDir {
-    fn drop(&mut self) {
-        drop(std::fs::remove_dir_all(&self.path));
-    }
+fn tempdir() -> Result<tempfile::TempDir, RootfsError> {
+    tempfile::Builder::new()
+        .prefix("bencher-rootfs-")
+        .tempdir()
+        .map_err(RootfsError::from)
 }

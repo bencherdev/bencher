@@ -24,8 +24,8 @@ pub struct TaskDaemon {
     #[arg(long, env = "BENCHER_RUNNER")]
     pub runner: String,
 
-    /// Long-poll timeout in seconds (max 60).
-    #[arg(long, default_value = "55")]
+    /// Long-poll timeout in seconds (1-60).
+    #[arg(long, default_value = "55", value_parser = clap::value_parser!(u32).range(1..=60))]
     pub poll_timeout: u32,
 
     // --- Host tuning flags ---

@@ -173,11 +173,10 @@ pub fn run_firecracker(
         Ok(results) => results,
         Err(e) => {
             let elapsed = start_time.elapsed();
-            let cancelled = matches!(e, FirecrackerError::Cancelled);
             // Output metrics on timeout or cancellation
             let run_metrics = RunMetrics {
                 wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
-                timed_out: !cancelled,
+                timed_out: matches!(e, FirecrackerError::Timeout(_)),
                 transport: "vsock".to_owned(),
                 cgroup: None,
             };

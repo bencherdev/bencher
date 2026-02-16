@@ -77,7 +77,7 @@ pub const MAX_POLL_TIMEOUT: u32 = 60;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonClaimJob {
-    /// Maximum time to wait for a job (long-poll), in seconds (1-600)
+    /// Maximum time to wait for a job (long-poll), in seconds (1-60)
     pub poll_timeout: Option<PollTimeout>,
 }
 
