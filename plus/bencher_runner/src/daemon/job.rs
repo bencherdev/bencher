@@ -89,6 +89,12 @@ pub fn execute_job(
     // Send result
     let outcome = match result {
         Ok(output) => {
+            if output.disk_overrun {
+                eprintln!(
+                    "DISK_OVERRUN: rootfs exceeded expected disk size for job {}",
+                    job.uuid
+                );
+            }
             // Build file output map from output_file bytes and config file_paths
             let file_output = output.output_file.and_then(|bytes| {
                 job.config

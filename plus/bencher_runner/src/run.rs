@@ -19,6 +19,8 @@ pub struct RunOutput {
     pub stderr: String,
     /// Optional output file contents.
     pub output_file: Option<Vec<u8>>,
+    /// True if the rootfs file exceeded its expected size post-execution (defense-in-depth).
+    pub disk_overrun: bool,
 }
 
 /// Environment variables that are blocked for security reasons.
@@ -117,6 +119,9 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     };
 
     let output = execute(&config, None)?;
+    if output.disk_overrun {
+        eprintln!("DISK_OVERRUN: rootfs exceeded expected disk size");
+    }
     println!("{}", output.stdout);
     if !output.stderr.is_empty() {
         eprintln!("{}", output.stderr);
@@ -326,7 +331,19 @@ pub fn execute(
         cpu_layout: config.cpu_layout.clone(),
     };
 
-    let run_output = run_firecracker(&fc_config, cancel_flag)?;
+    let mut run_output = run_firecracker(&fc_config, cancel_flag)?;
+
+    // Defense-in-depth: verify rootfs didn't grow beyond expected size
+    let expected_bytes = config.disk.to_mib() * 1024 * 1024;
+    if let Ok(meta) = std::fs::metadata(&rootfs_path) {
+        if meta.len() > expected_bytes {
+            eprintln!(
+                "DISK_OVERRUN: rootfs size ({} bytes) exceeds expected size ({expected_bytes} bytes)",
+                meta.len()
+            );
+            run_output.disk_overrun = true;
+        }
+    }
 
     // temp_dir is automatically cleaned up when dropped
     drop(temp_dir);

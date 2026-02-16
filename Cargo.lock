@@ -1434,6 +1434,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tar",
+ "tempfile",
  "thiserror 2.0.17",
  "ureq",
  "zstd",
@@ -1539,6 +1540,7 @@ dependencies = [
  "backhand",
  "bencher_oci",
  "camino",
+ "nix 0.29.0",
  "tempfile",
  "thiserror 2.0.17",
 ]

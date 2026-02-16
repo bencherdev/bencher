@@ -40,5 +40,8 @@ tar = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 zstd = { workspace = true, optional = true }
 
+[dev-dependencies]
+tempfile = { workspace = true }
+
 [lints]
 workspace = true

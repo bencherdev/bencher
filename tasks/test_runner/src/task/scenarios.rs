@@ -1394,6 +1394,35 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
             },
         },
         Scenario {
+            name: "disk_limit_enforced",
+            description: "Guest gets ENOSPC when exceeding disk limit",
+            // With fallocate pre-allocating physical blocks, the guest should
+            // get "No space left on device" when trying to write beyond the
+            // disk limit. Previously, sparse files allowed unlimited writes.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "dd if=/dev/zero of=/tmp/big bs=1M count=200 2>&1; echo dd_done"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--disk", "128", "--timeout", "60"],
+            validate: |output| {
+                let combined = format!("{}{}", output.stdout, output.stderr);
+                // The dd should fail with "No space left on device"
+                if !combined.contains("No space") {
+                    bail!(
+                        "Expected 'No space' error from dd, disk limit may not be enforced.\ncombined: {}",
+                        combined
+                    )
+                }
+                // Defense-in-depth: verify no DISK_OVERRUN marker (fallocate should prevent it)
+                if combined.contains("DISK_OVERRUN") {
+                    bail!(
+                        "DISK_OVERRUN detected — fallocate did not prevent rootfs growth.\ncombined: {}",
+                        combined
+                    )
+                }
+                Ok(())
+            },
+        },
+        Scenario {
             name: "cpu_count_visible",
             description: "Guest sees 1 CPU with default vCPU count",
             dockerfile: r#"FROM busybox
@@ -1462,6 +1491,56 @@ CMD ["cat", "/data/file.txt"]"#,
                     Ok(())
                 } else {
                     bail!("Expected 'content_ok' in output, got: {}", output.stdout)
+                }
+            },
+        },
+        Scenario {
+            name: "file_permissions_preserved",
+            description: "Executable bit preserved through OCI unpack + ext4",
+            // chmod +x in a RUN layer must survive OCI layer extraction.
+            // If permissions are lost, `test -x` fails and we don't see "perm_ok".
+            dockerfile: r#"FROM busybox
+RUN mkdir -p /data && printf '#!/bin/sh\necho hello' > /data/test.sh && chmod +x /data/test.sh
+CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                if output.stdout.contains("perm_ok") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'perm_ok' (executable bit preserved), got: {}",
+                        output.stdout
+                    )
+                }
+            },
+        },
+        Scenario {
+            name: "directory_permissions_preserved",
+            description: "Directory permissions preserved through OCI unpack + ext4",
+            // chmod 750 on a directory in a RUN layer must survive extraction.
+            // stat -c '%a' prints the octal mode.
+            dockerfile: r#"FROM busybox
+RUN mkdir -p /data/restricted && chmod 750 /data/restricted
+CMD ["stat", "-c", "%a", "/data/restricted"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                if output.stdout.contains("750") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected '750' (directory permissions preserved), got: {}",
+                        output.stdout
+                    )
                 }
             },
         },

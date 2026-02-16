@@ -13,6 +13,7 @@ plus = [
     "dep:bencher_oci",
     "dep:camino",
     "dep:thiserror",
+    "dep:nix",
     "bencher_oci/plus",
 ]
 
@@ -21,6 +22,9 @@ backhand = { workspace = true, optional = true }
 bencher_oci = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+nix = { workspace = true, features = ["fs"], optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

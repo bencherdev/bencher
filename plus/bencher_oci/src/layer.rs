@@ -98,6 +98,19 @@ struct DeferredHardLink {
     link_target: PathBuf,
 }
 
+/// A deferred directory permission to apply after all entries are extracted.
+///
+/// Directory permissions must be applied after extraction because
+/// `create_dir_all` pre-creates intermediate directories with default mode,
+/// and `entry.unpack()` may not reliably re-apply permissions on
+/// already-existing directories across all entry orderings.
+struct DeferredDirPermission {
+    /// Path to the directory.
+    path: PathBuf,
+    /// Permission mode from the tar header.
+    mode: u32,
+}
+
 /// Extract a tar archive to a directory.
 ///
 /// Hard links are deferred until after all regular files are extracted,
@@ -112,6 +125,12 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
 
     // Collect hard links to create after all regular files are extracted
     let mut deferred_hardlinks: Vec<DeferredHardLink> = Vec::new();
+
+    // Collect directory permissions to apply after all entries are extracted.
+    // This is needed because `create_dir_all` pre-creates intermediate directories
+    // with default mode (0o755 via umask), and `entry.unpack()` may not reliably
+    // re-apply permissions on already-existing directories.
+    let mut deferred_dir_perms: Vec<DeferredDirPermission> = Vec::new();
 
     for entry in archive.entries()? {
         let mut entry = entry?;
@@ -144,6 +163,16 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
             continue;
         }
 
+        // Record directory permissions for deferred application
+        if entry.header().entry_type() == EntryType::Directory
+            && let Ok(mode) = entry.header().mode()
+        {
+            deferred_dir_perms.push(DeferredDirPermission {
+                path: target_path.clone().into_std_path_buf(),
+                mode,
+            });
+        }
+
         // Extract regular files, directories, symlinks, etc.
         entry.unpack(&target_path).map_err(|e| {
             OciError::LayerExtraction(format!("Failed to extract {}: {e}", path.display()))
@@ -159,6 +188,20 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
                 hardlink.link_path.display()
             ))
         })?;
+    }
+
+    // Apply deferred directory permissions (deepest first so parent permission
+    // restrictions don't block child updates)
+    deferred_dir_perms.sort_by(|a, b| {
+        b.path
+            .components()
+            .count()
+            .cmp(&a.path.components().count())
+    });
+    for dir_perm in &deferred_dir_perms {
+        use std::os::unix::fs::PermissionsExt as _;
+        let perms = std::fs::Permissions::from_mode(dir_perm.mode);
+        std::fs::set_permissions(&dir_perm.path, perms)?;
     }
 
     Ok(())
@@ -269,5 +312,147 @@ mod tests {
         let dir = Utf8Path::new("/rootfs");
         let result = safe_join(dir, std::path::Path::new("./usr/bin")).unwrap();
         assert_eq!(result, Utf8Path::new("/rootfs/./usr/bin"));
+    }
+
+    #[test]
+    fn test_directory_permissions_preserved() {
+        use std::os::unix::fs::PermissionsExt;
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let tar_path = temp_dir.path().join("test.tar");
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+
+        // Create a tar with a directory at mode 0o750
+        {
+            let tar_file = File::create(&tar_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Directory);
+            header.set_mode(0o750);
+            header.set_size(0);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "mydir/", std::io::empty())
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        // Extract
+        let reader = File::open(&tar_path).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+        extract_tar(reader, target).unwrap();
+
+        // Verify permissions
+        let meta = std::fs::metadata(extract_dir.join("mydir")).unwrap();
+        let mode = meta.permissions().mode() & 0o777;
+        assert_eq!(mode, 0o750, "Directory mode should be 0o750, got {mode:#o}");
+    }
+
+    #[test]
+    fn test_file_permissions_preserved() {
+        use std::os::unix::fs::PermissionsExt;
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let tar_path = temp_dir.path().join("test.tar");
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+
+        // Create a tar with a file at mode 0o755 (executable)
+        let content = b"#!/bin/sh\necho hello";
+        {
+            let tar_file = File::create(&tar_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_mode(0o755);
+            header.set_size(content.len() as u64);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "test.sh", &content[..])
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        // Extract
+        let reader = File::open(&tar_path).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+        extract_tar(reader, target).unwrap();
+
+        // Verify executable bit is set
+        let meta = std::fs::metadata(extract_dir.join("test.sh")).unwrap();
+        let mode = meta.permissions().mode() & 0o777;
+        assert_eq!(mode, 0o755, "File mode should be 0o755, got {mode:#o}");
+    }
+
+    #[test]
+    fn test_nested_directory_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let tar_path = temp_dir.path().join("test.tar");
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+
+        // Create a tar with nested dirs at different modes
+        {
+            let tar_file = File::create(&tar_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            // Parent directory at 0o755
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Directory);
+            header.set_mode(0o755);
+            header.set_size(0);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "parent/", std::io::empty())
+                .unwrap();
+
+            // Child directory at 0o700
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Directory);
+            header.set_mode(0o700);
+            header.set_size(0);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "parent/child/", std::io::empty())
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        // Extract
+        let reader = File::open(&tar_path).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+        extract_tar(reader, target).unwrap();
+
+        // Verify both directory permissions
+        let parent_mode = std::fs::metadata(extract_dir.join("parent"))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777;
+        let child_mode = std::fs::metadata(extract_dir.join("parent/child"))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777;
+
+        assert_eq!(
+            parent_mode, 0o755,
+            "Parent mode should be 0o755, got {parent_mode:#o}"
+        );
+        assert_eq!(
+            child_mode, 0o700,
+            "Child mode should be 0o700, got {child_mode:#o}"
+        );
     }
 }

@@ -60,8 +60,8 @@ pub fn create_ext4_with_size(
 ) -> Result<(), RootfsError> {
     let size_mib = size_mib.max(MIN_IMAGE_SIZE_MIB);
 
-    // Step 1: Create a sparse file of the desired size
-    create_sparse_file(output_path, size_mib)?;
+    // Step 1: Allocate the disk image file
+    allocate_file(output_path, size_mib)?;
 
     // Step 2: Format as ext4 and populate with directory contents
     // mkfs.ext4 -d option copies directory contents during creation
@@ -86,8 +86,32 @@ pub fn create_ext4_with_size(
     Ok(())
 }
 
-/// Create a sparse file of the specified size.
-fn create_sparse_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
+/// Allocate a file of the specified size with physical blocks.
+///
+/// On Linux, uses `fallocate` to pre-allocate physical blocks so the ext4
+/// filesystem is physically bounded. On other platforms, falls back to
+/// `set_len()` for compile compatibility (ext4 creation only works on Linux).
+#[cfg(target_os = "linux")]
+fn allocate_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
+    use std::os::fd::AsRawFd;
+
+    use nix::fcntl::{FallocateFlags, fallocate};
+
+    let file = File::create(path)?;
+    let size_bytes = size_mib * 1024 * 1024;
+    #[expect(clippy::cast_possible_wrap, reason = "Practical disk sizes fit in i64")]
+    let size_i64 = size_bytes as i64;
+    fallocate(file.as_raw_fd(), FallocateFlags::empty(), 0, size_i64)
+        .map_err(|e| RootfsError::Ext4(format!("fallocate failed: {e}")))?;
+    Ok(())
+}
+
+/// Allocate a file of the specified size (non-Linux fallback).
+///
+/// Uses `set_len()` which creates a sparse file. ext4 creation only works
+/// on Linux, so this is only for compile compatibility.
+#[cfg(not(target_os = "linux"))]
+fn allocate_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
     let file = File::create(path)?;
     let size_bytes = size_mib * 1024 * 1024;
     file.set_len(size_bytes)?;
@@ -100,15 +124,35 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn sparse_file_creation() {
+    fn allocated_file_creation() {
         let temp_dir = tempfile::tempdir().unwrap();
         let image_path = Utf8Path::from_path(temp_dir.path())
             .unwrap()
             .join("test.img");
 
-        create_sparse_file(&image_path, 64).unwrap();
+        allocate_file(&image_path, 64).unwrap();
 
         let metadata = fs::metadata(&image_path).unwrap();
         assert_eq!(metadata.len(), 64 * 1024 * 1024);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn allocated_file_not_sparse() {
+        use std::os::unix::fs::MetadataExt;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let image_path = Utf8Path::from_path(temp_dir.path())
+            .unwrap()
+            .join("test.img");
+
+        allocate_file(&image_path, 64).unwrap();
+
+        let metadata = fs::metadata(&image_path).unwrap();
+        // fallocate pre-allocates physical blocks, so blocks should be > 0
+        assert!(
+            metadata.blocks() > 0,
+            "Expected physical blocks to be allocated, got 0"
+        );
     }
 }
