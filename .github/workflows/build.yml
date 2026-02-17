@@ -230,3 +230,15 @@ jobs:
           nix_path: nixpkgs=channel:nixos-25.11
       - name: Nix build
         run: nix build .#bencher
+
+  build_api_nix:
+    name: Build Api Nix Package
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-25.11
+      - name: Nix build
+        run: nix build .#api
