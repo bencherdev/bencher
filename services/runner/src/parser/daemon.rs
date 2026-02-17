@@ -24,8 +24,8 @@ pub struct TaskDaemon {
     #[arg(long, env = "BENCHER_RUNNER")]
     pub runner: String,
 
-    /// Long-poll timeout in seconds (1-60).
-    #[arg(long, default_value = "55", value_parser = clap::value_parser!(u32).range(1..=60))]
+    /// Long-poll timeout in seconds (1-900).
+    #[arg(long, default_value = "55", value_parser = clap::value_parser!(u32).range(1..=900))]
     pub poll_timeout: u32,
 
     // --- Host tuning flags ---
@@ -61,7 +61,7 @@ pub struct TaskDaemon {
     #[arg(long, allow_hyphen_values = true)]
     pub perf_event_paranoid: Option<i32>,
 
-    /// Maximum size in bytes for collected stdout/stderr (default: 10 MiB).
+    /// Maximum size in bytes for collected stdout/stderr (default: 25 MiB).
     #[arg(long)]
     pub max_output_size: Option<usize>,
 

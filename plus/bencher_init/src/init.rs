@@ -30,9 +30,9 @@ const CONFIG_PATH: &str = "/etc/bencher/config.json";
 /// Signal flag for graceful shutdown.
 static SHUTDOWN_REQUESTED: AtomicBool = AtomicBool::new(false);
 
-/// Default maximum output size: 10 MiB, matching the host-side vsock `MAX_DATA_SIZE`.
+/// Default maximum output size: 25 MiB, matching the host-side vsock `MAX_DATA_SIZE`.
 const fn default_max_output_size() -> usize {
-    10 * 1024 * 1024
+    25 * 1024 * 1024
 }
 
 /// Benchmark configuration read from config file.

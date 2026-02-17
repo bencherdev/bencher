@@ -55,7 +55,7 @@ pub struct TaskRun {
     #[arg(long)]
     pub output: Vec<String>,
 
-    /// Maximum size in bytes for collected stdout/stderr (default: 10 MiB).
+    /// Maximum size in bytes for collected stdout/stderr (default: 25 MiB).
     #[arg(long)]
     pub max_output_size: Option<usize>,
 

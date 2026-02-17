@@ -82,7 +82,7 @@ pub struct Config {
     ///
     /// This limit is enforced on both sides: the guest-side init process
     /// truncates output at this size, and the host-side vsock reader stops
-    /// reading at the same cap. Defaults to 10 MiB.
+    /// reading at the same cap. Defaults to 25 MiB.
     #[serde(default = "default_max_output_size")]
     pub max_output_size: usize,
 
@@ -127,7 +127,7 @@ const fn default_timeout_secs() -> u64 {
 }
 
 const fn default_max_output_size() -> usize {
-    10 * 1024 * 1024 // 10 MiB
+    25 * 1024 * 1024 // 25 MiB
 }
 
 const fn default_max_file_count() -> u32 {
