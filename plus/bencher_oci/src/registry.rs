@@ -8,13 +8,12 @@
 use std::collections::HashMap;
 use std::fs;
 
+use crate::digest::DigestHasher;
+use crate::error::OciError;
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Deserialize;
-use sha2::{Digest as _, Sha256};
-
-use crate::error::OciError;
 
 /// Media types for manifests.
 const MANIFEST_MEDIA_TYPES: &[&str] = &[
@@ -160,6 +159,18 @@ fn select_platform_manifest(
     Ok(platform_match.unwrap_or(first))
 }
 
+/// Resolve the blob path for a given digest under the blobs directory.
+///
+/// OCI layout stores blobs at `blobs/<algorithm>/<hex>`.
+fn blob_path_for_digest(blobs_base: &Utf8Path, digest: &str) -> Result<Utf8PathBuf, OciError> {
+    let parsed: bencher_valid::ImageDigest = digest
+        .parse()
+        .map_err(|_err| OciError::InvalidReference(digest.to_owned()))?;
+    let dir = blobs_base.join(parsed.algorithm());
+    fs::create_dir_all(&dir)?;
+    Ok(dir.join(parsed.hex_hash()))
+}
+
 /// OCI registry client for pulling images.
 pub struct RegistryClient {
     /// HTTP agent.
@@ -205,9 +216,9 @@ impl RegistryClient {
         image_ref: &ImageReference,
         output_dir: &Utf8Path,
     ) -> Result<Utf8PathBuf, OciError> {
-        // Create output directory structure
-        let blobs_dir = output_dir.join("blobs").join("sha256");
-        fs::create_dir_all(&blobs_dir)?;
+        // Create output directory structure (sha256 dir always; sha512 created on demand)
+        let blobs_base = output_dir.join("blobs");
+        fs::create_dir_all(blobs_base.join("sha256"))?;
 
         // Write oci-layout file
         let layout_path = output_dir.join("oci-layout");
@@ -217,10 +228,7 @@ impl RegistryClient {
         let (manifest_digest, manifest_bytes) = self.pull_manifest(image_ref)?;
 
         // Save manifest blob
-        let manifest_hash = manifest_digest
-            .strip_prefix("sha256:")
-            .unwrap_or(&manifest_digest);
-        let manifest_path = blobs_dir.join(manifest_hash);
+        let manifest_path = blob_path_for_digest(&blobs_base, &manifest_digest)?;
         fs::write(&manifest_path, &manifest_bytes)?;
 
         // Parse manifest to determine type and extract layers/config
@@ -234,8 +242,7 @@ impl RegistryClient {
                 let (_, nested_bytes) = self.pull_blob(image_ref, &desc.digest)?;
 
                 // Save nested manifest blob
-                let nested_hash = desc.digest.strip_prefix("sha256:").unwrap_or(&desc.digest);
-                let nested_path = blobs_dir.join(nested_hash);
+                let nested_path = blob_path_for_digest(&blobs_base, &desc.digest)?;
                 fs::write(&nested_path, &nested_bytes)?;
 
                 let nested: bencher_json::oci::OciImageManifest =
@@ -247,8 +254,7 @@ impl RegistryClient {
                 let (_, nested_bytes) = self.pull_blob(image_ref, &desc.digest)?;
 
                 // Save nested manifest blob
-                let nested_hash = desc.digest.strip_prefix("sha256:").unwrap_or(&desc.digest);
-                let nested_path = blobs_dir.join(nested_hash);
+                let nested_path = blob_path_for_digest(&blobs_base, &desc.digest)?;
                 fs::write(&nested_path, &nested_bytes)?;
 
                 let nested: bencher_json::oci::OciImageManifest =
@@ -274,17 +280,13 @@ impl RegistryClient {
         // Pull config blob
         let config_digest = &image_manifest.config.digest;
         let (_, config_bytes) = self.pull_blob(image_ref, config_digest)?;
-        let config_hash = config_digest
-            .strip_prefix("sha256:")
-            .unwrap_or(config_digest);
-        let config_path = blobs_dir.join(config_hash);
+        let config_path = blob_path_for_digest(&blobs_base, config_digest)?;
         fs::write(&config_path, &config_bytes)?;
 
         // Pull layer blobs
         for layer in &image_manifest.layers {
             let layer_digest = &layer.digest;
-            let layer_hash = layer_digest.strip_prefix("sha256:").unwrap_or(layer_digest);
-            let layer_path = blobs_dir.join(layer_hash);
+            let layer_path = blob_path_for_digest(&blobs_base, layer_digest)?;
 
             // Skip if already downloaded
             if layer_path.exists() {
@@ -340,9 +342,18 @@ impl RegistryClient {
             )));
         }
 
-        // Compute digest
-        let hash = Sha256::digest(&bytes);
-        let computed_digest = format!("sha256:{hash:x}");
+        // Compute digest — use the algorithm from the reference when pulling by digest,
+        // otherwise default to SHA-256.
+        let algorithm = if image_ref.is_digest {
+            let parsed: bencher_valid::ImageDigest = image_ref
+                .reference
+                .parse()
+                .map_err(|_err| OciError::InvalidReference(image_ref.reference.clone()))?;
+            parsed.algorithm().to_owned()
+        } else {
+            "sha256".to_owned()
+        };
+        let computed_digest = DigestHasher::digest(&algorithm, &bytes)?;
 
         // Validate digest matches when pulling by digest
         if image_ref.is_digest && computed_digest != image_ref.reference {
@@ -389,13 +400,14 @@ impl RegistryClient {
         }
 
         // Verify digest
-        let hash = Sha256::digest(&bytes);
-        let computed = format!("sha256:{hash:x}");
+        let parsed: bencher_valid::ImageDigest = digest
+            .parse()
+            .map_err(|_err| OciError::InvalidReference(digest.to_owned()))?;
+        let computed = DigestHasher::digest(parsed.algorithm(), &bytes)?;
 
-        let expected = digest.to_owned();
-        if computed != expected {
+        if computed != digest {
             return Err(OciError::DigestMismatch {
-                expected,
+                expected: digest.to_owned(),
                 actual: computed,
             });
         }
@@ -427,8 +439,12 @@ impl RegistryClient {
             .and_then(|v| v.to_str().ok())
             .and_then(|v| v.parse::<u64>().ok());
 
+        let parsed: bencher_valid::ImageDigest = digest
+            .parse()
+            .map_err(|_err| OciError::InvalidReference(digest.to_owned()))?;
+
         let mut file = fs::File::create(output_path)?;
-        let mut hasher = Sha256::new();
+        let mut hasher = DigestHasher::from_algorithm(parsed.algorithm())?;
         let mut total_bytes: u64 = 0;
         let mut buf = vec![0u8; 64 * 1024];
 
@@ -456,7 +472,7 @@ impl RegistryClient {
             )));
         }
 
-        let computed = format!("sha256:{:x}", hasher.finalize());
+        let computed = hasher.finalize();
         if computed != digest {
             return Err(OciError::DigestMismatch {
                 expected: digest.to_owned(),

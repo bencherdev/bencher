@@ -39,7 +39,7 @@ impl Memory {
     /// Create from a value in mebibytes (MiB).
     #[must_use]
     pub const fn from_mib(mib: u64) -> Self {
-        Self(mib * 1024 * 1024)
+        Self(mib.saturating_mul(1024 * 1024))
     }
 }
 
@@ -176,5 +176,17 @@ mod tests {
         let m = Memory::from_mib(2048);
         assert_eq!(m.to_mib(), 2048);
         assert_eq!(u64::from(m), 2048 * 1024 * 1024);
+    }
+
+    #[test]
+    fn from_mib_overflow_saturates() {
+        let m = Memory::from_mib(u64::MAX);
+        assert_eq!(u64::from(m), u64::MAX);
+    }
+
+    #[test]
+    fn from_mib_zero() {
+        let m = Memory::from_mib(0);
+        assert_eq!(u64::from(m), 0);
     }
 }

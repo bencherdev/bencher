@@ -9,6 +9,7 @@ publish = false
 [features]
 default = []
 plus = [
+    "dep:bencher_valid",
     "dep:camino",
     "dep:flate2",
     "dep:oci-spec",
@@ -30,7 +31,7 @@ registry = [
 [dependencies]
 base64 = { workspace = true, optional = true }
 bencher_json = { workspace = true, optional = true, features = ["plus", "server"] }
-bencher_valid = { workspace = true, optional = true }
+bencher_valid = { workspace = true, optional = true, features = ["plus", "client"] }
 camino = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
 oci-spec = { workspace = true, optional = true }
@@ -43,6 +44,7 @@ thiserror = { workspace = true, optional = true }
 zstd = { workspace = true, optional = true }
 
 [dev-dependencies]
+pretty_assertions.workspace = true
 tempfile = { workspace = true }
 
 [lints]

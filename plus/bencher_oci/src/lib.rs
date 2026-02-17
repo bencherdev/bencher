@@ -4,6 +4,7 @@
 #[cfg(test)]
 use tempfile as _;
 
+mod digest;
 mod error;
 mod image;
 mod layer;

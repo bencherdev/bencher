@@ -34,4 +34,7 @@ pub enum OciError {
 
     #[error("Path traversal detected: {0}")]
     PathTraversal(String),
+
+    #[error("Unsupported digest algorithm: {0}")]
+    UnsupportedDigestAlgorithm(String),
 }

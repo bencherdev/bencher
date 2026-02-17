@@ -81,11 +81,14 @@ fn tracing_log(msg: String) {
 
 /// Verify a blob's digest.
 pub fn verify_digest(blob_path: &Utf8Path, expected_digest: &str) -> Result<(), OciError> {
-    use sha2::{Digest as _, Sha256};
     use std::io::Read as _;
 
+    let parsed: bencher_valid::ImageDigest = expected_digest
+        .parse()
+        .map_err(|_err| OciError::InvalidReference(expected_digest.to_owned()))?;
+
     let mut file = std::fs::File::open(blob_path)?;
-    let mut hasher = Sha256::new();
+    let mut hasher = crate::digest::DigestHasher::from_algorithm(parsed.algorithm())?;
     let mut buffer = [0u8; 8192];
 
     loop {
@@ -96,8 +99,7 @@ pub fn verify_digest(blob_path: &Utf8Path, expected_digest: &str) -> Result<(), 
         hasher.update(buffer.get(..bytes_read).unwrap_or_default());
     }
 
-    let hash = hasher.finalize();
-    let actual_digest = format!("sha256:{hash:x}");
+    let actual_digest = hasher.finalize();
 
     if actual_digest != expected_digest {
         return Err(OciError::DigestMismatch {
@@ -107,4 +109,73 @@ pub fn verify_digest(blob_path: &Utf8Path, expected_digest: &str) -> Result<(), 
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use camino::Utf8Path;
+
+    use super::verify_digest;
+    use crate::error::OciError;
+
+    #[test]
+    fn verify_digest_sha256_valid() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("blob");
+        std::fs::write(&file_path, b"").unwrap();
+        let path = Utf8Path::from_path(&file_path).unwrap();
+
+        // SHA-256 of empty bytes
+        verify_digest(
+            path,
+            "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn verify_digest_sha256_mismatch() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("blob");
+        std::fs::write(&file_path, b"data").unwrap();
+        let path = Utf8Path::from_path(&file_path).unwrap();
+
+        let result = verify_digest(
+            path,
+            "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        );
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, OciError::DigestMismatch { .. }),
+            "expected DigestMismatch, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn verify_digest_sha512_valid() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("blob");
+        std::fs::write(&file_path, b"").unwrap();
+        let path = Utf8Path::from_path(&file_path).unwrap();
+
+        // SHA-512 of empty bytes
+        verify_digest(
+            path,
+            "sha512:cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn verify_digest_unsupported_algorithm() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("blob");
+        std::fs::write(&file_path, b"").unwrap();
+        let path = Utf8Path::from_path(&file_path).unwrap();
+
+        // md5 is not a valid ImageDigest, so it fails at parse
+        let result = verify_digest(path, "md5:d41d8cd98f00b204e9800998ecf8427e");
+        assert!(result.is_err());
+    }
 }

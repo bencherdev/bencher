@@ -1434,6 +1434,7 @@ dependencies = [
  "camino",
  "flate2",
  "oci-spec",
+ "pretty_assertions",
  "serde",
  "serde_json",
  "sha2",

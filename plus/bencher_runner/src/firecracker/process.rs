@@ -46,7 +46,9 @@ impl FirecrackerProcess {
             })?;
 
         // Spawn a thread to read stderr line-by-line
-        let stderr = child.stderr.take().expect("stderr was piped");
+        let stderr = child.stderr.take().ok_or_else(|| {
+            FirecrackerError::ProcessStart("stderr was piped but not available".into())
+        })?;
         let stderr_thread = std::thread::spawn(move || {
             // Pin to housekeeping cores to avoid benchmark interference
             if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {

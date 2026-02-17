@@ -39,6 +39,20 @@ impl FromStr for ImageDigest {
     }
 }
 
+impl ImageDigest {
+    /// Return the algorithm portion of the digest (e.g. `"sha256"` or `"sha512"`).
+    #[must_use]
+    pub fn algorithm(&self) -> &str {
+        self.0.split_once(':').map_or("sha256", |(alg, _)| alg)
+    }
+
+    /// Return the hex hash portion of the digest (after the `:`).
+    #[must_use]
+    pub fn hex_hash(&self) -> &str {
+        self.0.split_once(':').map_or("", |(_, hex)| hex)
+    }
+}
+
 impl AsRef<str> for ImageDigest {
     fn as_ref(&self) -> &str {
         &self.0
@@ -160,6 +174,40 @@ mod tests {
     fn parse_invalid_digest() {
         let result: Result<super::ImageDigest, _> = "invalid".parse();
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn algorithm_sha256() {
+        let digest: super::ImageDigest =
+            "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+                .parse()
+                .unwrap();
+        assert_eq!(digest.algorithm(), "sha256");
+    }
+
+    #[test]
+    fn algorithm_sha512() {
+        let digest: super::ImageDigest = format!("sha512:{}", "a".repeat(128)).parse().unwrap();
+        assert_eq!(digest.algorithm(), "sha512");
+    }
+
+    #[test]
+    fn hex_hash_sha256() {
+        let digest: super::ImageDigest =
+            "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+                .parse()
+                .unwrap();
+        assert_eq!(
+            digest.hex_hash(),
+            "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+        );
+    }
+
+    #[test]
+    fn hex_hash_sha512() {
+        let hex = "a".repeat(128);
+        let digest: super::ImageDigest = format!("sha512:{hex}").parse().unwrap();
+        assert_eq!(digest.hex_hash(), hex);
     }
 
     #[test]
