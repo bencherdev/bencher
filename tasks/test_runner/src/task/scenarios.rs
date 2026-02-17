@@ -1648,6 +1648,11 @@ fn mkfs_available() -> bool {
 }
 
 /// Build a test OCI image from Dockerfile content.
+///
+/// Uses `docker buildx build --output type=oci` to produce a proper OCI Image
+/// Layout directory (with `oci-layout`, `index.json`, and `blobs/sha256/`).
+/// Plain `docker save` produces a Docker archive format which is incompatible
+/// with the runner's OCI parser.
 fn build_test_image(name: &str, dockerfile: &str) -> Result<Utf8PathBuf> {
     let build_dir = temp_dir().join(format!("build-{name}"));
     drop(fs::remove_dir_all(&build_dir));
@@ -1657,50 +1662,21 @@ fn build_test_image(name: &str, dockerfile: &str) -> Result<Utf8PathBuf> {
     let dockerfile_path = build_dir.join("Dockerfile");
     fs::write(&dockerfile_path, dockerfile)?;
 
-    // Build image
-    let tag = format!("bencher-test:{name}");
+    // Build and output as OCI layout directly
+    let oci_dir = temp_dir().join(format!("oci-{name}"));
+    drop(fs::remove_dir_all(&oci_dir));
+
+    let output_arg = format!("type=oci,tar=false,dest={oci_dir}");
     let output = Command::new("docker")
-        .args(["build", "-t", &tag, "."])
+        .args(["buildx", "build", "--output", &output_arg, "."])
         .current_dir(&build_dir)
         .output()?;
 
     if !output.status.success() {
         bail!(
-            "docker build failed: {}",
+            "docker buildx build failed: {}",
             String::from_utf8_lossy(&output.stderr)
         );
-    }
-
-    // Save as OCI layout
-    let oci_dir = temp_dir().join(format!("oci-{name}"));
-    drop(fs::remove_dir_all(&oci_dir));
-
-    let save_output = Command::new("docker").args(["save", &tag]).output()?;
-
-    if !save_output.status.success() {
-        bail!(
-            "docker save failed: {}",
-            String::from_utf8_lossy(&save_output.stderr)
-        );
-    }
-
-    // Extract tar to OCI directory
-    fs::create_dir_all(&oci_dir)?;
-
-    let mut child = Command::new("tar")
-        .args(["-xf", "-", "-C"])
-        .arg(oci_dir.as_str())
-        .stdin(std::process::Stdio::piped())
-        .spawn()?;
-
-    if let Some(stdin) = child.stdin.as_mut() {
-        use std::io::Write as _;
-        stdin.write_all(&save_output.stdout)?;
-    }
-
-    let status = child.wait()?;
-    if !status.success() {
-        bail!("tar extraction failed");
     }
 
     // Clean up build dir
