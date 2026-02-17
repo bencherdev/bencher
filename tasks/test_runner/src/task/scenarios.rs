@@ -405,11 +405,11 @@ CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
         Scenario {
             name: "output_flood",
             description: "Large output is truncated (not OOM)",
-            // Generate ~20MB of output - should be truncated to ~10MB limit
+            // Generate ~20MB of output - should be truncated to the 10MB limit
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && echo DONE"]"#,
             cancel_after_secs: None,
-            extra_args: &["--timeout", "120"],
+            extra_args: &["--timeout", "120", "--max-output-size", "10485760"],
             validate: |output| {
                 // The key test: the runner completes without OOM and output is bounded.
                 // The runner may return non-zero exit code (e.g., if the VM is killed
