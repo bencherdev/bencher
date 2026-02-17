@@ -72,7 +72,6 @@ export type ResourceName = string;
 export enum Architecture {
 	X86_64 = "x86_64",
 	Aarch64 = "aarch64",
-	Riscv64 = "riscv64",
 }
 
 /** A hardware spec */
@@ -447,7 +446,7 @@ export interface JsonCheckout {
 
 /** Request to claim a job (runner agent endpoint) */
 export interface JsonClaimJob {
-	/** Maximum time to wait for a job (long-poll), in seconds (1-600) */
+	/** Maximum time to wait for a job (long-poll), in seconds (1-60) */
 	poll_timeout?: PollTimeout;
 }
 

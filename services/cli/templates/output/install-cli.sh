@@ -653,9 +653,6 @@ get_architecture() {
         s390x)
             _cputype=s390x
             ;;
-        riscv64)
-            _cputype=riscv64gc
-            ;;
         loongarch64)
             _cputype=loongarch64
             ;;
@@ -688,9 +685,6 @@ get_architecture() {
                 else
                     _ostype="${_ostype}eabihf"
                 fi
-                ;;
-            riscv64gc)
-                err "Unsuppored Userland: riscv64 32-bit"
                 ;;
         esac
     fi

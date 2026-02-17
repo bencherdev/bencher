@@ -84,7 +84,6 @@ impl From<bencher_json::Architecture> for types::Architecture {
         match arch {
             bencher_json::Architecture::X86_64 => Self::X8664,
             bencher_json::Architecture::Aarch64 => Self::Aarch64,
-            bencher_json::Architecture::Riscv64 => Self::Riscv64,
         }
     }
 }

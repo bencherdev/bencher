@@ -10928,8 +10928,7 @@
         "type": "string",
         "enum": [
           "x86_64",
-          "aarch64",
-          "riscv64"
+          "aarch64"
         ]
       },
       "BenchmarkName": {
@@ -11473,7 +11472,7 @@
         "properties": {
           "poll_timeout": {
             "nullable": true,
-            "description": "Maximum time to wait for a job (long-poll), in seconds (1-600)",
+            "description": "Maximum time to wait for a job (long-poll), in seconds (1-60)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/PollTimeout"
