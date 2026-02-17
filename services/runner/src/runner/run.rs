@@ -1,4 +1,4 @@
-use bencher_runner::{FirecrackerLogLevel, PerfEventParanoid, RunArgs, Swappiness, TuningConfig};
+use bencher_runner::{PerfEventParanoid, RunArgs, Swappiness, TuningConfig};
 
 use crate::parser::TaskRun;
 
@@ -37,11 +37,6 @@ impl TryFrom<TaskRun> for Run {
         let memory = task.memory.map(bencher_runner::Memory::from_mib);
         let disk = task.disk.map(bencher_runner::Disk::from_mib);
 
-        let firecracker_log_level: FirecrackerLogLevel = task
-            .firecracker_log_level
-            .parse()
-            .map_err(|e: String| anyhow::anyhow!(e))?;
-
         Ok(Self {
             args: RunArgs {
                 image: task.image,
@@ -59,7 +54,7 @@ impl TryFrom<TaskRun> for Run {
                 max_file_count: task.max_file_count,
                 network: task.network,
                 tuning,
-                firecracker_log_level,
+                firecracker_log_level: task.firecracker_log_level,
             },
         })
     }

@@ -8,16 +8,14 @@ publish = false
 
 [features]
 default = ["plus"]
-plus = ["dep:bencher_runner"]
+plus = ["bencher_runner/plus"]
 
 [dependencies]
 anyhow = { workspace = true }
+bencher_runner.workspace = true
 camino = { workspace = true }
 clap = { workspace = true, features = ["env"] }
 url = { workspace = true }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-bencher_runner = { workspace = true, optional = true, features = ["plus"] }
 
 [lints]
 workspace = true

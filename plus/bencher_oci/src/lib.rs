@@ -1,5 +1,9 @@
 #![cfg(feature = "plus")]
 
+// tempfile is used in test modules
+#[cfg(test)]
+use tempfile as _;
+
 mod error;
 mod image;
 mod layer;

@@ -1,6 +1,6 @@
 use bencher_runner::cpu::CpuLayout;
 use bencher_runner::daemon::{Daemon, DaemonConfig, DaemonError};
-use bencher_runner::{FirecrackerLogLevel, PerfEventParanoid, Swappiness, TuningConfig};
+use bencher_runner::{PerfEventParanoid, Swappiness, TuningConfig};
 
 use crate::parser::TaskDaemon;
 
@@ -38,11 +38,6 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
         // Detect CPU layout for core isolation
         let cpu_layout = CpuLayout::detect();
 
-        let firecracker_log_level: FirecrackerLogLevel = task
-            .firecracker_log_level
-            .parse()
-            .map_err(|e: String| anyhow::anyhow!(e))?;
-
         Ok(Self {
             config: DaemonConfig {
                 host: task.host,
@@ -53,7 +48,7 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
                 cpu_layout,
                 max_output_size: task.max_output_size,
                 max_file_count: task.max_file_count,
-                firecracker_log_level,
+                firecracker_log_level: task.firecracker_log_level,
             },
         })
     }

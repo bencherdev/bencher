@@ -71,5 +71,5 @@ pub struct TaskDaemon {
 
     /// Firecracker process log level (default: warning).
     #[arg(long, default_value = "warning")]
-    pub firecracker_log_level: String,
+    pub firecracker_log_level: bencher_runner::FirecrackerLogLevel,
 }
