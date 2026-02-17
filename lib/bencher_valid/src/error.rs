@@ -79,6 +79,9 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Invalid grace period: {0}")]
     GracePeriod(u32),
+    #[cfg(feature = "plus")]
+    #[error("Failed to parse grace period: {0}")]
+    GracePeriodStr(std::num::ParseIntError),
 
     #[cfg(feature = "plus")]
     #[error("Failed to validate architecture: {0}")]

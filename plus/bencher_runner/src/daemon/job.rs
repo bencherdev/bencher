@@ -196,6 +196,11 @@ fn build_config_from_job(daemon_config: &DaemonConfig, job: &JsonClaimedJob) -> 
         runner_config = runner_config.with_max_file_count(max_file_count);
     }
 
+    // Pass through grace period if configured
+    if let Some(grace_period) = daemon_config.grace_period {
+        runner_config = runner_config.with_grace_period(grace_period);
+    }
+
     // Pass through Firecracker log level
     runner_config.firecracker_log_level = daemon_config.firecracker_log_level;
 
@@ -315,6 +320,7 @@ mod tests {
             cpu_layout: crate::cpu::CpuLayout::with_core_count(4),
             max_output_size: None,
             max_file_count: None,
+            grace_period: None,
             firecracker_log_level: crate::firecracker::FirecrackerLogLevel::default(),
         }
     }

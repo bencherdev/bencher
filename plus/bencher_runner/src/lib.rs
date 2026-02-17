@@ -45,7 +45,7 @@ pub mod tuning;
 pub mod units;
 
 #[cfg(feature = "plus")]
-pub use bencher_json::{Cpu, Disk, Memory};
+pub use bencher_json::{Cpu, Disk, GracePeriod, Memory};
 #[cfg(feature = "plus")]
 pub use config::Config;
 #[cfg(feature = "plus")]

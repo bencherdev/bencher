@@ -54,6 +54,7 @@ impl TryFrom<TaskRun> for Run {
                 max_file_count: task.max_file_count,
                 network: task.network,
                 tuning,
+                grace_period: task.grace_period,
                 firecracker_log_level: task.firecracker_log_level,
             },
         })

@@ -114,6 +114,7 @@ impl VsockListener {
         timeout: Duration,
         max_data_size: usize,
         cancel_flag: Option<&Arc<AtomicBool>>,
+        grace_period: Duration,
     ) -> Result<VsockResults, FirecrackerError> {
         let start = std::time::Instant::now();
         let poll_timeout = *POLL_TIMEOUT;
@@ -132,12 +133,41 @@ impl VsockListener {
                 }
             }
 
-            // Build poll fds for listeners we still need data from
+            // Build poll fds for listeners we still need data from.
+            // Use empty flags for already-collected ports so the kernel skips them.
             let mut fds = [
-                PollFd::new(self.stdout_listener.as_fd(), PollFlags::POLLIN),
-                PollFd::new(self.stderr_listener.as_fd(), PollFlags::POLLIN),
-                PollFd::new(self.exit_code_listener.as_fd(), PollFlags::POLLIN),
-                PollFd::new(self.output_files_listener.as_fd(), PollFlags::POLLIN),
+                PollFd::new(
+                    self.stdout_listener.as_fd(),
+                    if stdout_data.is_none() {
+                        PollFlags::POLLIN
+                    } else {
+                        PollFlags::empty()
+                    },
+                ),
+                PollFd::new(
+                    self.stderr_listener.as_fd(),
+                    if stderr_data.is_none() {
+                        PollFlags::POLLIN
+                    } else {
+                        PollFlags::empty()
+                    },
+                ),
+                PollFd::new(
+                    self.exit_code_listener.as_fd(),
+                    if exit_code_data.is_none() {
+                        PollFlags::POLLIN
+                    } else {
+                        PollFlags::empty()
+                    },
+                ),
+                PollFd::new(
+                    self.output_files_listener.as_fd(),
+                    if output_files_data.is_none() {
+                        PollFlags::POLLIN
+                    } else {
+                        PollFlags::empty()
+                    },
+                ),
             ];
 
             match poll(&mut fds, poll_timeout) {
@@ -181,9 +211,9 @@ impl VsockListener {
             // Exit code is the signal that results are complete
             if exit_code_data.is_some() {
                 // Give a brief window for remaining data to arrive.
-                // 500ms balances latency vs reliability for stdout/stderr
+                // The grace period balances latency vs reliability for stdout/stderr
                 // that may still be in flight when the exit code lands.
-                std::thread::sleep(Duration::from_millis(500));
+                std::thread::sleep(grace_period);
                 // Final collection pass
                 if stdout_data.is_none() {
                     stdout_data = try_accept_and_read(&self.stdout_listener, max_data_size);
@@ -276,6 +306,8 @@ mod tests {
 
     /// 10 MiB — matches the default `max_output_size`.
     const TEST_MAX_DATA_SIZE: usize = 10 * 1024 * 1024;
+    /// Short grace period for tests to avoid slowing down the test suite.
+    const TEST_GRACE_PERIOD: Duration = Duration::from_millis(50);
 
     /// Helper: create a VsockListener in a temp directory.
     fn listener_in_tmpdir() -> (tempfile::TempDir, VsockListener) {
@@ -354,7 +386,12 @@ mod tests {
         });
 
         let results = listener
-            .collect_results(Duration::from_secs(5), TEST_MAX_DATA_SIZE, None)
+            .collect_results(
+                Duration::from_secs(5),
+                TEST_MAX_DATA_SIZE,
+                None,
+                TEST_GRACE_PERIOD,
+            )
             .unwrap();
         sender.join().unwrap();
 
@@ -376,7 +413,12 @@ mod tests {
         });
 
         let results = listener
-            .collect_results(Duration::from_secs(5), TEST_MAX_DATA_SIZE, None)
+            .collect_results(
+                Duration::from_secs(5),
+                TEST_MAX_DATA_SIZE,
+                None,
+                TEST_GRACE_PERIOD,
+            )
             .unwrap();
         sender.join().unwrap();
 
@@ -391,7 +433,12 @@ mod tests {
         let (_dir, listener) = listener_in_tmpdir();
 
         // No data sent — should timeout with an error
-        let result = listener.collect_results(Duration::from_millis(200), TEST_MAX_DATA_SIZE, None);
+        let result = listener.collect_results(
+            Duration::from_millis(200),
+            TEST_MAX_DATA_SIZE,
+            None,
+            TEST_GRACE_PERIOD,
+        );
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -415,7 +462,12 @@ mod tests {
         });
 
         let results = listener
-            .collect_results(Duration::from_secs(5), TEST_MAX_DATA_SIZE, None)
+            .collect_results(
+                Duration::from_secs(5),
+                TEST_MAX_DATA_SIZE,
+                None,
+                TEST_GRACE_PERIOD,
+            )
             .unwrap();
         sender.join().unwrap();
 
@@ -435,13 +487,18 @@ mod tests {
             std::thread::sleep(Duration::from_millis(50));
             // Send exit code first
             send_to_port(&base_clone, ports::EXIT_CODE, b"0");
-            // Then stdout arrives during the 500ms grace window
+            // Then stdout arrives during the grace window
             std::thread::sleep(Duration::from_millis(20));
             send_to_port(&base_clone, ports::STDOUT, b"late output");
         });
 
         let results = listener
-            .collect_results(Duration::from_secs(5), TEST_MAX_DATA_SIZE, None)
+            .collect_results(
+                Duration::from_secs(5),
+                TEST_MAX_DATA_SIZE,
+                None,
+                TEST_GRACE_PERIOD,
+            )
             .unwrap();
         sender.join().unwrap();
 
@@ -507,6 +564,7 @@ mod tests {
             Duration::from_secs(5),
             TEST_MAX_DATA_SIZE,
             Some(&cancel_flag),
+            Duration::from_secs(1),
         );
 
         assert!(result.is_err());

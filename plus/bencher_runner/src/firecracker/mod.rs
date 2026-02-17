@@ -70,6 +70,8 @@ pub struct FirecrackerJobConfig {
     pub max_file_count: u32,
     /// Maximum data size in bytes per vsock port.
     pub max_output_size: usize,
+    /// Grace period after exit code before final collection.
+    pub grace_period: bencher_json::GracePeriod,
 }
 
 /// Run a benchmark inside a Firecracker microVM.
@@ -189,9 +191,14 @@ pub fn run_firecracker(
         Duration::from_secs(300) // Default 5 min
     };
 
+    let grace_period = Duration::from_secs(u64::from(u32::from(config.grace_period)));
     println!("Waiting for benchmark results (timeout: {timeout:?})...");
-    let results = match vsock_listener.collect_results(timeout, config.max_output_size, cancel_flag)
-    {
+    let results = match vsock_listener.collect_results(
+        timeout,
+        config.max_output_size,
+        cancel_flag,
+        grace_period,
+    ) {
         Ok(results) => results,
         Err(e) => {
             let elapsed = start_time.elapsed();

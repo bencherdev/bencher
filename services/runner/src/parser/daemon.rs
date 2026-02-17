@@ -69,6 +69,10 @@ pub struct TaskDaemon {
     #[arg(long)]
     pub max_file_count: Option<u32>,
 
+    /// Grace period in seconds after exit code before final collection.
+    #[arg(long)]
+    pub grace_period: Option<bencher_runner::GracePeriod>,
+
     /// Firecracker process log level (default: warning).
     #[arg(long, default_value = "warning")]
     pub firecracker_log_level: bencher_runner::FirecrackerLogLevel,

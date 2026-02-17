@@ -10,8 +10,8 @@ pub use bencher_valid::{
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
-    ImageDigest, LastFour, LicensedPlanId, Memory, MeteredPlanId, PlanLevel, PlanStatus,
-    RecaptchaAction, RecaptchaScore, Timeout,
+    GracePeriod, ImageDigest, LastFour, LicensedPlanId, Memory, MeteredPlanId, PlanLevel,
+    PlanStatus, RecaptchaAction, RecaptchaScore, Timeout,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;

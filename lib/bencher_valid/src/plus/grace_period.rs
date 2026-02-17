@@ -2,6 +2,7 @@ use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::fmt;
+use std::str::FromStr;
 
 use serde::{
     Deserialize, Deserializer, Serialize,
@@ -31,6 +32,15 @@ impl TryFrom<u32> for GracePeriod {
 impl From<GracePeriod> for u32 {
     fn from(period: GracePeriod) -> Self {
         period.0
+    }
+}
+
+impl FromStr for GracePeriod {
+    type Err = ValidError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let period: u32 = s.parse().map_err(ValidError::GracePeriodStr)?;
+        Self::try_from(period)
     }
 }
 

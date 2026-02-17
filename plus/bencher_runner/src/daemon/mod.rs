@@ -49,6 +49,8 @@ pub struct DaemonConfig {
     pub max_output_size: Option<usize>,
     /// Maximum number of output files to decode.
     pub max_file_count: Option<u32>,
+    /// Grace period in seconds after exit code before final collection.
+    pub grace_period: Option<bencher_json::GracePeriod>,
     /// Firecracker process log level.
     #[cfg(target_os = "linux")]
     pub firecracker_log_level: FirecrackerLogLevel,

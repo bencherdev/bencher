@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_json::{Cpu, Disk, Memory};
+use bencher_json::{Cpu, Disk, GracePeriod, Memory};
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
@@ -92,6 +92,13 @@ pub struct Config {
     #[serde(default = "default_max_file_count")]
     pub max_file_count: u32,
 
+    /// Grace period in seconds after exit code arrives before final
+    /// collection of remaining stdout/stderr/output files.
+    ///
+    /// Defaults to 1 second.
+    #[serde(default = "default_grace_period")]
+    pub grace_period: GracePeriod,
+
     /// CPU layout for isolating benchmark cores from housekeeping tasks.
     ///
     /// When set, the Firecracker process will be pinned to benchmark cores
@@ -132,6 +139,10 @@ const fn default_max_file_count() -> u32 {
     255
 }
 
+fn default_grace_period() -> GracePeriod {
+    GracePeriod::MIN
+}
+
 impl Config {
     /// Create a new configuration with the bundled kernel.
     ///
@@ -156,6 +167,7 @@ impl Config {
             env: None,
             max_output_size: default_max_output_size(),
             max_file_count: default_max_file_count(),
+            grace_period: default_grace_period(),
             cpu_layout: None,
             firecracker_log_level: FirecrackerLogLevel::default(),
         }
@@ -185,6 +197,7 @@ impl Config {
             env: None,
             max_output_size: default_max_output_size(),
             max_file_count: default_max_file_count(),
+            grace_period: default_grace_period(),
             cpu_layout: None,
             firecracker_log_level: FirecrackerLogLevel::default(),
         }
@@ -310,6 +323,13 @@ impl Config {
     #[must_use]
     pub fn with_max_file_count(mut self, max_file_count: u32) -> Self {
         self.max_file_count = max_file_count;
+        self
+    }
+
+    /// Set the grace period after exit code before final collection.
+    #[must_use]
+    pub fn with_grace_period(mut self, grace_period: GracePeriod) -> Self {
+        self.grace_period = grace_period;
         self
     }
 

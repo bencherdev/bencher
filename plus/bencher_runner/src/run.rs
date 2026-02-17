@@ -80,6 +80,8 @@ pub struct RunArgs {
     pub network: bool,
     /// Host tuning configuration.
     pub tuning: TuningConfig,
+    /// Grace period in seconds after exit code before final collection.
+    pub grace_period: bencher_json::GracePeriod,
     /// Firecracker process log level.
     #[cfg(target_os = "linux")]
     pub firecracker_log_level: crate::firecracker::FirecrackerLogLevel,
@@ -126,6 +128,7 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     } else {
         config
     };
+    config = config.with_grace_period(args.grace_period);
     config.firecracker_log_level = args.firecracker_log_level;
 
     let output = execute(&config, None)?;
@@ -339,6 +342,7 @@ pub fn execute(
         log_level: config.firecracker_log_level,
         max_file_count: config.max_file_count,
         max_output_size: config.max_output_size,
+        grace_period: config.grace_period,
     };
 
     let run_output = run_firecracker(&fc_config, cancel_flag)?;

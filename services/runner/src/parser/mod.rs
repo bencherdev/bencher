@@ -1,8 +1,11 @@
+#[cfg(feature = "plus")]
 mod daemon;
 
+#[cfg(feature = "plus")]
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 
+#[cfg(feature = "plus")]
 pub use daemon::TaskDaemon;
 
 #[derive(Parser, Debug)]
@@ -15,13 +18,16 @@ pub struct TaskRunner {
 
 #[derive(Subcommand, Debug)]
 pub enum TaskSub {
+    #[cfg(feature = "plus")]
     /// Run as a daemon, polling for and executing benchmark jobs.
     Daemon(TaskDaemon),
+    #[cfg(feature = "plus")]
     /// Pull image, create rootfs, and execute in isolated Firecracker microVM.
     Run(TaskRun),
 }
 
 /// Arguments for the `run` subcommand.
+#[cfg(feature = "plus")]
 #[expect(
     clippy::struct_excessive_bools,
     reason = "CLI flags map to independent tuning knobs"
@@ -100,6 +106,10 @@ pub struct TaskRun {
     /// Set `perf_event_paranoid` value (default: -1).
     #[arg(long, allow_hyphen_values = true)]
     pub perf_event_paranoid: Option<i32>,
+
+    /// Grace period in seconds after exit code before final collection (default: 1).
+    #[arg(long, default_value = "1")]
+    pub grace_period: bencher_runner::GracePeriod,
 
     /// Firecracker process log level (default: warning).
     #[arg(long, default_value = "warning")]
