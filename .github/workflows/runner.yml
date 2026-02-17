@@ -36,8 +36,10 @@ jobs:
         with:
           mold-version: ${{ inputs.mold-version }}
           cache-key: test-runner-${{ matrix.arch }}
-      - name: Install musl target
-        run: rustup target add ${{ matrix.arch }}-unknown-linux-musl
+      - name: Install musl toolchain
+        run: |
+          sudo apt-get update && sudo apt-get install -y musl-tools
+          rustup target add ${{ matrix.arch }}-unknown-linux-musl
       - name: Enable KVM
         if: matrix.arch == 'x86_64'
         run: |
@@ -61,8 +63,10 @@ jobs:
         with:
           mold-version: ${{ inputs.mold-version }}
           cache-key: test-runner-scenarios
-      - name: Install musl target
-        run: rustup target add x86_64-unknown-linux-musl
+      - name: Install musl toolchain
+        run: |
+          sudo apt-get update && sudo apt-get install -y musl-tools
+          rustup target add x86_64-unknown-linux-musl
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
