@@ -220,8 +220,8 @@ fn run_init() -> Result<(), InitError> {
 /// The kernel always mounts root read-only initially. The init process
 /// must remount it read-write so we can create directories like /proc, /sys, etc.
 fn remount_root_rw() -> Result<(), InitError> {
-    let source = CString::new("none").unwrap();
-    let target = CString::new("/").unwrap();
+    let source = c"none";
+    let target = c"/";
 
     let ret = unsafe {
         libc::mount(

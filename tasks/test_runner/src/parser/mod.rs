@@ -12,8 +12,6 @@ pub enum TaskSub {
     Test(TaskTest),
     /// Run integration test scenarios (requires Linux + KVM + Docker)
     Scenarios(TaskScenarios),
-    /// Only download/build the kernel
-    Kernel(TaskKernel),
     /// Only create the OCI image
     Oci(TaskOci),
     /// Clean up test artifacts
@@ -33,9 +31,6 @@ pub struct TaskScenarios {
     #[clap(long, short)]
     pub list: bool,
 }
-
-#[derive(Parser, Debug)]
-pub struct TaskKernel {}
 
 #[derive(Parser, Debug)]
 pub struct TaskOci {}

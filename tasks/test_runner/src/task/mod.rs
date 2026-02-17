@@ -3,13 +3,11 @@ use clap::Parser as _;
 use crate::parser::{TaskSub, TaskTask, TaskTest};
 
 mod clean;
-mod kernel;
 mod oci;
 mod scenarios;
 mod test;
 
 use clean::Clean;
-use kernel::Kernel;
 use oci::Oci;
 use scenarios::Scenarios;
 use test::Test;
@@ -23,7 +21,6 @@ pub struct Task {
 pub enum Sub {
     Test(Test),
     Scenarios(Scenarios),
-    Kernel(Kernel),
     Oci(Oci),
     Clean(Clean),
 }
@@ -45,7 +42,6 @@ impl TryFrom<TaskSub> for Sub {
         Ok(match sub {
             TaskSub::Test(test) => Self::Test(test.try_into()?),
             TaskSub::Scenarios(scenarios) => Self::Scenarios(scenarios.try_into()?),
-            TaskSub::Kernel(kernel) => Self::Kernel(kernel.try_into()?),
             TaskSub::Oci(oci) => Self::Oci(oci.try_into()?),
             TaskSub::Clean(clean) => Self::Clean(clean.try_into()?),
         })
@@ -67,7 +63,6 @@ impl Sub {
         match self {
             Self::Test(test) => test.exec(),
             Self::Scenarios(scenarios) => scenarios.exec(),
-            Self::Kernel(kernel) => kernel.exec(),
             Self::Oci(oci) => oci.exec(),
             Self::Clean(clean) => clean.exec(),
         }

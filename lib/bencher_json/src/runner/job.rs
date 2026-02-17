@@ -70,14 +70,14 @@ pub const DEFAULT_POLL_TIMEOUT: u32 = 30;
 /// Minimum poll timeout in seconds.
 pub const MIN_POLL_TIMEOUT: u32 = 1;
 /// Maximum poll timeout in seconds.
-pub const MAX_POLL_TIMEOUT: u32 = 60;
+pub const MAX_POLL_TIMEOUT: u32 = 900;
 
 /// Request to claim a job (runner agent endpoint)
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonClaimJob {
-    /// Maximum time to wait for a job (long-poll), in seconds (1-60)
+    /// Maximum time to wait for a job (long-poll), in seconds (1-900)
     pub poll_timeout: Option<PollTimeout>,
 }
 

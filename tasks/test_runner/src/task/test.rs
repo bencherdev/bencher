@@ -1,14 +1,12 @@
 //! Test runner orchestration.
 //!
 //! This module coordinates the full test:
-//! 1. Ensures the kernel is available
-//! 2. Creates the OCI image
-//! 3. Runs the VMM (directly on Linux, via Docker on macOS)
+//! 1. Creates the OCI image
+//! 2. Runs the VMM (directly on Linux, via Docker on macOS)
 
 use anyhow::Context as _;
 use camino::Utf8PathBuf;
 
-use super::kernel;
 use super::oci;
 use crate::docker;
 use crate::parser::TaskTest;
@@ -71,15 +69,11 @@ fn run_test_native() -> anyhow::Result<()> {
     println!("Running test natively with KVM...");
     println!();
 
-    // Step 1: Ensure kernel is available
-    kernel::ensure_kernel()?;
-    println!();
-
-    // Step 2: Create OCI image
+    // Step 1: Create OCI image
     oci::create_test_image()?;
     println!();
 
-    // Step 3: Run the benchmark
+    // Step 2: Run the benchmark
     run_benchmark()
 }
 
@@ -108,15 +102,11 @@ fn run_test_mock() -> anyhow::Result<()> {
     println!("Running mock test...");
     println!();
 
-    // Step 1: Ensure kernel is available
-    kernel::ensure_kernel()?;
-    println!();
-
-    // Step 2: Create OCI image
+    // Step 1: Create OCI image
     oci::create_test_image()?;
     println!();
 
-    // Step 3: Mock benchmark output (matches `bencher mock` format)
+    // Step 2: Mock benchmark output (matches `bencher mock` format)
     println!("=== Mock Benchmark Output ===");
     println!(
         r#"{{

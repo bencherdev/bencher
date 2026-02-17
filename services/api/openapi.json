@@ -11472,7 +11472,7 @@
         "properties": {
           "poll_timeout": {
             "nullable": true,
-            "description": "Maximum time to wait for a job (long-poll), in seconds (1-60)",
+            "description": "Maximum time to wait for a job (long-poll), in seconds (1-900)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/PollTimeout"
