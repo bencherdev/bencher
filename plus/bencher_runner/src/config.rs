@@ -115,12 +115,22 @@ fn default_vcpus() -> Cpu {
     Cpu::MIN
 }
 
+const DEFAULT_MEMORY: Memory = match Memory::from_mib(512) {
+    Some(m) => m,
+    None => panic!("default memory must be valid"),
+};
+
+const DEFAULT_DISK: Disk = match Disk::from_mib(1024) {
+    Some(d) => d,
+    None => panic!("default disk must be valid"),
+};
+
 fn default_memory() -> Memory {
-    Memory::from_mib(512)
+    DEFAULT_MEMORY
 }
 
 fn default_disk() -> Disk {
-    Disk::from_mib(1024) // 1 GiB
+    DEFAULT_DISK
 }
 
 fn default_kernel_cmdline() -> String {
@@ -354,8 +364,8 @@ mod tests {
         let config = Config::new("my-image:latest");
         assert_eq!(config.oci_image, "my-image:latest");
         assert_eq!(config.vcpus, Cpu::MIN);
-        assert_eq!(config.memory, Memory::from_mib(512));
-        assert_eq!(config.disk, Disk::from_mib(1024));
+        assert_eq!(config.memory, Memory::from_mib(512).unwrap());
+        assert_eq!(config.disk, Disk::from_mib(1024).unwrap());
         assert_eq!(config.timeout_secs, 300);
         assert!(!config.network);
         assert!(config.kernel.is_none());
@@ -379,8 +389,8 @@ mod tests {
         let config = Config::new("img")
             .with_token("jwt-token")
             .with_vcpus(Cpu::try_from(4).unwrap())
-            .with_memory(Memory::from_mib(2048))
-            .with_disk(Disk::from_mib(4096))
+            .with_memory(Memory::from_mib(2048).unwrap())
+            .with_disk(Disk::from_mib(4096).unwrap())
             .with_timeout_secs(600)
             .with_file_paths(vec![Utf8PathBuf::from("/tmp/results.json")])
             .with_network(true)
@@ -390,8 +400,8 @@ mod tests {
 
         assert_eq!(config.token.unwrap(), "jwt-token");
         assert_eq!(config.vcpus, Cpu::try_from(4).unwrap());
-        assert_eq!(config.memory, Memory::from_mib(2048));
-        assert_eq!(config.disk, Disk::from_mib(4096));
+        assert_eq!(config.memory, Memory::from_mib(2048).unwrap());
+        assert_eq!(config.disk, Disk::from_mib(4096).unwrap());
         assert_eq!(config.timeout_secs, 600);
         assert_eq!(
             config.file_paths.unwrap(),
@@ -407,7 +417,7 @@ mod tests {
     fn config_serde_round_trip() {
         let config = Config::new("ghcr.io/test/bench:v1")
             .with_vcpus(Cpu::try_from(2).unwrap())
-            .with_memory(Memory::from_mib(1024))
+            .with_memory(Memory::from_mib(1024).unwrap())
             .with_file_paths(vec![Utf8PathBuf::from("/output.json")]);
 
         let json = serde_json::to_string(&config).unwrap();
@@ -415,7 +425,7 @@ mod tests {
 
         assert_eq!(parsed.oci_image, "ghcr.io/test/bench:v1");
         assert_eq!(parsed.vcpus, Cpu::try_from(2).unwrap());
-        assert_eq!(parsed.memory, Memory::from_mib(1024));
+        assert_eq!(parsed.memory, Memory::from_mib(1024).unwrap());
         assert_eq!(
             parsed.file_paths.unwrap(),
             vec![Utf8PathBuf::from("/output.json")]
@@ -431,8 +441,8 @@ mod tests {
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(config.oci_image, "test:latest");
         assert_eq!(config.vcpus, Cpu::MIN);
-        assert_eq!(config.memory, Memory::from_mib(512));
-        assert_eq!(config.disk, Disk::from_mib(1024));
+        assert_eq!(config.memory, Memory::from_mib(512).unwrap());
+        assert_eq!(config.disk, Disk::from_mib(1024).unwrap());
         assert_eq!(config.timeout_secs, 300);
         assert!(!config.network);
     }

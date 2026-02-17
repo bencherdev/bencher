@@ -37,9 +37,15 @@ impl Memory {
     }
 
     /// Create from a value in mebibytes (MiB).
-    #[must_use]
-    pub const fn from_mib(mib: u64) -> Self {
-        Self(mib.saturating_mul(1024 * 1024))
+    ///
+    /// Returns `None` if the resulting byte value is outside the valid range.
+    pub const fn from_mib(mib: u64) -> Option<Self> {
+        let bytes = mib.saturating_mul(1024 * 1024);
+        if is_valid_memory(bytes) {
+            Some(Self(bytes))
+        } else {
+            None
+        }
     }
 }
 
@@ -132,8 +138,8 @@ mod db {
     }
 }
 
-pub fn is_valid_memory(memory: u64) -> bool {
-    (MIN_MEMORY..=MAX_MEMORY).contains(&memory)
+pub const fn is_valid_memory(memory: u64) -> bool {
+    memory >= MIN_MEMORY && memory <= MAX_MEMORY
 }
 
 #[cfg(test)]
@@ -173,20 +179,18 @@ mod tests {
 
     #[test]
     fn from_mib_round_trip() {
-        let m = Memory::from_mib(2048);
+        let m = Memory::from_mib(2048).unwrap();
         assert_eq!(m.to_mib(), 2048);
         assert_eq!(u64::from(m), 2048 * 1024 * 1024);
     }
 
     #[test]
-    fn from_mib_overflow_saturates() {
-        let m = Memory::from_mib(u64::MAX);
-        assert_eq!(u64::from(m), u64::MAX);
+    fn from_mib_overflow_returns_none() {
+        assert_eq!(Memory::from_mib(u64::MAX), None);
     }
 
     #[test]
-    fn from_mib_zero() {
-        let m = Memory::from_mib(0);
-        assert_eq!(u64::from(m), 0);
+    fn from_mib_zero_returns_none() {
+        assert_eq!(Memory::from_mib(0), None);
     }
 }

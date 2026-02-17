@@ -37,9 +37,15 @@ impl Disk {
     }
 
     /// Create from a value in mebibytes (MiB).
-    #[must_use]
-    pub const fn from_mib(mib: u64) -> Self {
-        Self(mib.saturating_mul(1024 * 1024))
+    ///
+    /// Returns `None` if the resulting byte value is outside the valid range.
+    pub const fn from_mib(mib: u64) -> Option<Self> {
+        let bytes = mib.saturating_mul(1024 * 1024);
+        if is_valid_disk(bytes) {
+            Some(Self(bytes))
+        } else {
+            None
+        }
     }
 }
 
@@ -132,8 +138,8 @@ mod db {
     }
 }
 
-pub fn is_valid_disk(disk: u64) -> bool {
-    (MIN_DISK..=MAX_DISK).contains(&disk)
+pub const fn is_valid_disk(disk: u64) -> bool {
+    disk >= MIN_DISK && disk <= MAX_DISK
 }
 
 #[cfg(test)]
@@ -173,20 +179,18 @@ mod tests {
 
     #[test]
     fn from_mib_round_trip() {
-        let d = Disk::from_mib(2048);
+        let d = Disk::from_mib(2048).unwrap();
         assert_eq!(d.to_mib(), 2048);
         assert_eq!(u64::from(d), 2048 * 1024 * 1024);
     }
 
     #[test]
-    fn from_mib_overflow_saturates() {
-        let d = Disk::from_mib(u64::MAX);
-        assert_eq!(u64::from(d), u64::MAX);
+    fn from_mib_overflow_returns_none() {
+        assert_eq!(Disk::from_mib(u64::MAX), None);
     }
 
     #[test]
-    fn from_mib_zero() {
-        let d = Disk::from_mib(0);
-        assert_eq!(u64::from(d), 0);
+    fn from_mib_zero_returns_none() {
+        assert_eq!(Disk::from_mib(0), None);
     }
 }

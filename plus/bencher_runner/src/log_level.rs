@@ -1,3 +1,8 @@
+/// Error type for invalid firecracker log level strings.
+#[derive(Debug, thiserror::Error)]
+#[error("Invalid firecracker log level: {0} (expected: off, error, warning, info, debug, trace)")]
+pub struct ParseLogLevelError(pub String);
+
 /// Firecracker log level (maps to `--level` CLI flag).
 #[derive(Debug, Clone, Copy, Default)]
 pub enum FirecrackerLogLevel {
@@ -30,7 +35,7 @@ impl std::fmt::Display for FirecrackerLogLevel {
 }
 
 impl std::str::FromStr for FirecrackerLogLevel {
-    type Err = String;
+    type Err = ParseLogLevelError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
@@ -40,9 +45,7 @@ impl std::str::FromStr for FirecrackerLogLevel {
             "info" => Ok(Self::Info),
             "debug" => Ok(Self::Debug),
             "trace" => Ok(Self::Trace),
-            _ => Err(format!(
-                "invalid firecracker log level: {s} (expected: off, error, warning, info, debug, trace)"
-            )),
+            _ => Err(ParseLogLevelError(s.to_owned())),
         }
     }
 }

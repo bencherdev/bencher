@@ -2,6 +2,7 @@ use bencher_runner::cpu::CpuLayout;
 use bencher_runner::daemon::{Daemon, DaemonConfig, DaemonError};
 use bencher_runner::{PerfEventParanoid, Swappiness, TuningConfig};
 
+use crate::error::RunnerCliError;
 use crate::parser::TaskDaemon;
 
 #[derive(Debug)]
@@ -10,7 +11,7 @@ pub struct DaemonRunner {
 }
 
 impl TryFrom<TaskDaemon> for DaemonRunner {
-    type Error = anyhow::Error;
+    type Error = RunnerCliError;
 
     fn try_from(task: TaskDaemon) -> Result<Self, Self::Error> {
         let tuning = if task.no_tuning {
@@ -56,11 +57,10 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
 }
 
 impl DaemonRunner {
-    pub fn exec(self) -> anyhow::Result<()> {
+    pub fn exec(self) -> Result<(), RunnerCliError> {
         let daemon = Daemon::new(self.config);
         match daemon.run() {
-            Ok(()) => Ok(()),
-            Err(DaemonError::Shutdown) => Ok(()),
+            Ok(()) | Err(DaemonError::Shutdown) => Ok(()),
             Err(e) => Err(e.into()),
         }
     }

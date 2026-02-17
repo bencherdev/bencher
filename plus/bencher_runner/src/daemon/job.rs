@@ -338,7 +338,7 @@ mod tests {
         let daemon_config = test_daemon_config();
         let job = test_job(1, mib_to_bytes(2048), mib_to_bytes(1024), 300, false);
         let result = build_config_from_job(&daemon_config, &job);
-        assert_eq!(result.memory, Memory::from_mib(2048));
+        assert_eq!(result.memory, Memory::from_mib(2048).unwrap());
     }
 
     #[test]
@@ -346,7 +346,7 @@ mod tests {
         let daemon_config = test_daemon_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(10240), 300, false);
         let result = build_config_from_job(&daemon_config, &job);
-        assert_eq!(result.disk, Disk::from_mib(10240));
+        assert_eq!(result.disk, Disk::from_mib(10240).unwrap());
     }
 
     #[test]
@@ -511,8 +511,8 @@ mod tests {
         );
         let result = build_config_from_job(&daemon_config, &job);
         assert_eq!(result.vcpus, Cpu::try_from(8).unwrap());
-        assert_eq!(result.memory, Memory::from_mib(4096));
-        assert_eq!(result.disk, Disk::from_mib(20480));
+        assert_eq!(result.memory, Memory::from_mib(4096).unwrap());
+        assert_eq!(result.disk, Disk::from_mib(20480).unwrap());
         assert_eq!(result.timeout_secs, 900);
         assert!(result.network);
         assert!(result.entrypoint.is_some());

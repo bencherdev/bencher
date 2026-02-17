@@ -21,3 +21,13 @@ pub use layer::LayerCompression;
 #[cfg(feature = "registry")]
 pub use registry::{ImageReference, RegistryClient};
 pub use unpack::{unpack, verify_digest};
+
+/// Map the Rust `std::env::consts::ARCH` value to the OCI architecture name.
+pub(crate) fn oci_arch() -> &'static str {
+    use std::env::consts::ARCH;
+    match ARCH {
+        "x86_64" => "amd64",
+        "aarch64" => "arm64",
+        arch => arch,
+    }
+}

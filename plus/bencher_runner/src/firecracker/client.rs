@@ -2,8 +2,9 @@
 
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
-use std::path::Path;
 use std::time::Duration;
+
+use camino::Utf8Path;
 
 use crate::firecracker::config::{Action, BootSource, Drive, MachineConfig, VsockConfig};
 use crate::firecracker::error::FirecrackerError;
@@ -27,7 +28,7 @@ impl FirecrackerClient {
         let poll_interval = Duration::from_millis(50);
 
         while start.elapsed() < timeout {
-            if Path::new(&self.socket_path).exists() {
+            if Utf8Path::new(&self.socket_path).exists() {
                 // Try to connect
                 if let Ok(mut stream) = UnixStream::connect(&self.socket_path) {
                     stream.set_read_timeout(Some(Duration::from_secs(1))).ok();

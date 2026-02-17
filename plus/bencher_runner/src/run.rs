@@ -142,9 +142,10 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
 /// Non-Linux stub for `run_with_args`.
 #[cfg(not(target_os = "linux"))]
 pub fn run_with_args(_args: &RunArgs) -> Result<(), RunnerError> {
-    Err(RunnerError::Config(
-        "bencher-runner requires Linux".to_owned(),
-    ))
+    Err(
+        crate::error::ConfigError::UnsupportedPlatform("bencher-runner requires Linux".to_owned())
+            .into(),
+    )
 }
 
 /// Resolve an OCI image source to a local path.
@@ -235,10 +236,9 @@ pub fn execute(
     println!("  Timeout: {} seconds", config.timeout_secs);
 
     // Create a temporary work directory
-    let temp_dir = tempfile::tempdir()
-        .map_err(|e| RunnerError::Config(format!("Failed to create temp directory: {e}")))?;
-    let work_dir = Utf8Path::from_path(temp_dir.path())
-        .ok_or_else(|| RunnerError::Config("Temp directory path is not UTF-8".to_owned()))?;
+    let temp_dir = tempfile::tempdir().map_err(crate::error::ConfigError::TempDir)?;
+    let work_dir =
+        Utf8Path::from_path(temp_dir.path()).ok_or(crate::error::ConfigError::NonUtf8TempDir)?;
 
     let unpack_dir = work_dir.join("rootfs");
     let rootfs_path = work_dir.join("rootfs.ext4");
@@ -248,7 +248,7 @@ pub fn execute(
         kernel.clone()
     } else if crate::kernel::KERNEL_BUNDLED {
         let kernel_dest = work_dir.join("vmlinux");
-        crate::kernel::write_kernel_to_file(kernel_dest.as_std_path())?;
+        crate::kernel::write_kernel_to_file(&kernel_dest)?;
         println!("  Extracted bundled kernel to {kernel_dest}");
         kernel_dest
     } else {
@@ -270,9 +270,7 @@ pub fn execute(
     let env = sanitize_env(&oci_image.env());
 
     if command.is_empty() {
-        return Err(RunnerError::Config(
-            "OCI image has no CMD or ENTRYPOINT set".to_owned(),
-        ));
+        return Err(crate::error::ConfigError::MissingCommand.into());
     }
 
     println!("  Command: {}", command.join(" "));
@@ -310,7 +308,7 @@ pub fn execute(
     // Step 7: Find Firecracker binary - use bundled or find on system
     let firecracker_bin = if crate::firecracker_bin::FIRECRACKER_BUNDLED {
         let fc_dest = work_dir.join("firecracker");
-        crate::firecracker_bin::write_firecracker_to_file(fc_dest.as_std_path())?;
+        crate::firecracker_bin::write_firecracker_to_file(&fc_dest)?;
         println!("  Extracted bundled firecracker to {fc_dest}");
         fc_dest
     } else {
@@ -377,8 +375,8 @@ fn write_init_config(
     });
 
     let config_path = config_dir.join("config.json");
-    let config_str = serde_json::to_string_pretty(&config)
-        .map_err(|e| RunnerError::Config(format!("failed to serialize config: {e}")))?;
+    let config_str =
+        serde_json::to_string_pretty(&config).map_err(crate::error::ConfigError::Serialize)?;
     fs::write(&config_path, config_str)?;
 
     Ok(())
@@ -395,15 +393,17 @@ fn install_init_binary(rootfs: &camino::Utf8Path) -> Result<(), RunnerError> {
 
     if init::INIT_BUNDLED {
         // Use the bundled init binary
-        init::write_init_to_file(dest_path.as_std_path())?;
+        init::write_init_to_file(&dest_path)?;
     } else {
         // Fall back to searching for the binary on disk
         let init_binary = find_init_binary()?;
 
         std::fs::copy(&init_binary, &dest_path).map_err(|e| {
-            RunnerError::Config(format!(
-                "failed to copy init binary from {init_binary} to {dest_path}: {e}",
-            ))
+            crate::error::ConfigError::CopyInit {
+                src: init_binary.clone(),
+                dest: dest_path.clone(),
+                source: e,
+            }
         })?;
 
         // Make it executable
@@ -432,14 +432,16 @@ fn find_init_binary() -> Result<Utf8PathBuf, RunnerError> {
     ];
 
     for candidate in candidates.into_iter().flatten() {
-        if candidate.as_std_path().exists() {
+        if candidate.exists() {
             return Ok(candidate);
         }
     }
 
-    Err(RunnerError::Config(
-        "bencher-init binary not found. Build with: cargo build -p bencher_init".to_owned(),
-    ))
+    Err(crate::error::ConfigError::BinaryNotFound {
+        name: "bencher-init".to_owned(),
+        hint: "Build with: cargo build -p bencher_init".to_owned(),
+    }
+    .into())
 }
 
 /// Find the Firecracker binary on the system.
@@ -457,14 +459,17 @@ fn find_firecracker_binary() -> Result<Utf8PathBuf, RunnerError> {
     ];
 
     for candidate in candidates.into_iter().flatten() {
-        if candidate.as_std_path().exists() {
+        if candidate.exists() {
             return Ok(candidate);
         }
     }
 
-    Err(RunnerError::Config(
-        "firecracker binary not found. Install from: https://github.com/firecracker-microvm/firecracker/releases".to_owned(),
-    ))
+    Err(crate::error::ConfigError::BinaryNotFound {
+        name: "firecracker".to_owned(),
+        hint: "Install from: https://github.com/firecracker-microvm/firecracker/releases"
+            .to_owned(),
+    }
+    .into())
 }
 
 /// Find the kernel image on the system.
@@ -477,7 +482,7 @@ fn find_kernel() -> Result<Utf8PathBuf, RunnerError> {
     ];
 
     for candidate in candidates {
-        if std::path::Path::new(candidate).exists() {
+        if Utf8Path::new(candidate).exists() {
             return Ok(Utf8PathBuf::from(candidate));
         }
     }
@@ -494,9 +499,11 @@ fn find_kernel() -> Result<Utf8PathBuf, RunnerError> {
         }
     }
 
-    Err(RunnerError::Config(
-        "kernel image (vmlinux) not found. Place at /usr/local/share/bencher/vmlinux".to_owned(),
-    ))
+    Err(crate::error::ConfigError::BinaryNotFound {
+        name: "vmlinux".to_owned(),
+        hint: "Place at /usr/local/share/bencher/vmlinux".to_owned(),
+    }
+    .into())
 }
 
 /// Sanitize environment variables by removing dangerous ones.
@@ -510,9 +517,11 @@ fn sanitize_env(env: &[(String, String)]) -> Vec<(String, String)> {
 
     for (key, value) in env {
         let key_upper = key.to_uppercase();
-        let is_blocked = BLOCKED_ENV_VARS
-            .iter()
-            .any(|blocked| key_upper == *blocked || key_upper.starts_with(&format!("{blocked}_")));
+        let is_blocked = BLOCKED_ENV_VARS.iter().any(|blocked| {
+            key_upper == *blocked
+                || (key_upper.starts_with(blocked)
+                    && key_upper.as_bytes().get(blocked.len()) == Some(&b'_'))
+        });
 
         if is_blocked {
             blocked_count += 1;
@@ -534,9 +543,10 @@ pub fn execute(
     _config: &crate::Config,
     _cancel_flag: Option<&Arc<AtomicBool>>,
 ) -> Result<RunOutput, RunnerError> {
-    Err(RunnerError::Config(
+    Err(crate::error::ConfigError::UnsupportedPlatform(
         "Benchmark execution requires Linux with KVM support".to_owned(),
-    ))
+    )
+    .into())
 }
 
 #[cfg(test)]

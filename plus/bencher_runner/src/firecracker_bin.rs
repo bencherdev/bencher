@@ -16,7 +16,8 @@
 //! ```
 
 use std::io;
-use std::path::Path;
+
+use camino::Utf8Path;
 
 // Include the generated firecracker module
 include!(concat!(env!("OUT_DIR"), "/firecracker_generated.rs"));
@@ -32,7 +33,7 @@ include!(concat!(env!("OUT_DIR"), "/firecracker_generated.rs"));
 /// # Errors
 ///
 /// Returns an error if the file cannot be written.
-pub fn write_firecracker_to_file(path: &Path) -> io::Result<()> {
+pub fn write_firecracker_to_file(path: &Utf8Path) -> io::Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
     std::fs::write(path, firecracker_bytes())?;

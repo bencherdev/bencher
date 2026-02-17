@@ -1,5 +1,6 @@
 use clap::Parser as _;
 
+use crate::error::RunnerCliError;
 use crate::parser::{TaskRunner, TaskSub};
 
 #[cfg(all(feature = "plus", target_os = "linux"))]
@@ -28,7 +29,7 @@ pub enum Sub {
 }
 
 impl TryFrom<TaskRunner> for Runner {
-    type Error = anyhow::Error;
+    type Error = RunnerCliError;
 
     fn try_from(task: TaskRunner) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -38,7 +39,7 @@ impl TryFrom<TaskRunner> for Runner {
 }
 
 impl TryFrom<TaskSub> for Sub {
-    type Error = anyhow::Error;
+    type Error = RunnerCliError;
 
     #[cfg(all(feature = "plus", target_os = "linux"))]
     fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
@@ -55,26 +56,24 @@ impl TryFrom<TaskSub> for Sub {
 }
 
 impl Runner {
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new() -> Result<Self, RunnerCliError> {
         TaskRunner::parse().try_into()
     }
 
-    pub fn exec(self) -> anyhow::Result<()> {
+    pub fn exec(self) -> Result<(), RunnerCliError> {
         self.sub.exec()
     }
 }
 
 impl Sub {
-    pub fn exec(self) -> anyhow::Result<()> {
+    pub fn exec(self) -> Result<(), RunnerCliError> {
         match self {
             #[cfg(all(feature = "plus", target_os = "linux"))]
             Self::Daemon(daemon) => daemon.exec(),
             #[cfg(all(feature = "plus", target_os = "linux"))]
             Self::Run(run) => run.exec(),
             #[cfg(not(all(feature = "plus", target_os = "linux")))]
-            Self::Unsupported => {
-                anyhow::bail!("bencher-runner requires Linux with the `plus` feature")
-            },
+            Self::Unsupported => Err(RunnerCliError::Unsupported),
         }
     }
 }

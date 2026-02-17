@@ -16,7 +16,8 @@
 //! ```
 
 use std::io;
-use std::path::Path;
+
+use camino::Utf8Path;
 
 // Include the generated kernel module
 include!(concat!(env!("OUT_DIR"), "/kernel_generated.rs"));
@@ -30,7 +31,7 @@ include!(concat!(env!("OUT_DIR"), "/kernel_generated.rs"));
 /// # Errors
 ///
 /// Returns an error if the file cannot be written.
-pub fn write_kernel_to_file(path: &Path) -> io::Result<()> {
+pub fn write_kernel_to_file(path: &Utf8Path) -> io::Result<()> {
     std::fs::write(path, kernel_bytes())?;
     Ok(())
 }

@@ -34,6 +34,7 @@ pub mod init;
 pub mod jail;
 #[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod kernel;
+#[cfg(feature = "plus")]
 mod log_level;
 #[cfg(feature = "plus")]
 pub mod metrics;
@@ -49,9 +50,10 @@ pub use bencher_json::{Cpu, Disk, GracePeriod, Memory};
 #[cfg(feature = "plus")]
 pub use config::Config;
 #[cfg(feature = "plus")]
-pub use error::RunnerError;
+pub use error::{ConfigError, JailError, RunnerError};
 #[cfg(feature = "plus")]
 pub use jail::ResourceLimits;
+#[cfg(feature = "plus")]
 pub use log_level::FirecrackerLogLevel;
 #[cfg(feature = "plus")]
 pub use run::{RunArgs, RunOutput, execute, resolve_oci_image, run_with_args};

@@ -1586,10 +1586,11 @@ dependencies = [
 name = "bencher_runner_cli"
 version = "0.5.10"
 dependencies = [
- "anyhow",
+ "bencher_json",
  "bencher_runner",
  "camino",
  "clap",
+ "thiserror 2.0.17",
  "url",
 ]
 

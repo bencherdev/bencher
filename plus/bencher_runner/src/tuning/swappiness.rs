@@ -1,4 +1,4 @@
-use crate::error::RunnerError;
+use crate::error::{ConfigError, RunnerError};
 
 /// Validated swappiness value (0–200).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -16,9 +16,12 @@ impl TryFrom<u32> for Swappiness {
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         if value > Self::MAX {
-            return Err(RunnerError::Config(format!(
-                "swappiness {value} out of range (0–200)"
-            )));
+            return Err(ConfigError::OutOfRange {
+                name: "swappiness",
+                value: value.to_string(),
+                range: "0–200",
+            }
+            .into());
         }
         Ok(Self(value))
     }

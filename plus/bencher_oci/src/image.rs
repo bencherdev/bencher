@@ -10,6 +10,7 @@ use oci_spec::image::{
 use serde::{Deserialize, Serialize};
 
 use crate::error::OciError;
+use crate::oci_arch;
 
 /// OCI image layout file content.
 const OCI_LAYOUT_VERSION: &str = "1.0.0";
@@ -135,16 +136,6 @@ pub fn parse_index(image_dir: &Utf8Path) -> Result<ImageIndex, OciError> {
         .map_err(|e| OciError::InvalidLayout(format!("Invalid index.json: {e}")))?;
 
     Ok(index)
-}
-
-/// Map the Rust `std::env::consts::ARCH` value to the OCI architecture name.
-fn oci_arch() -> &'static str {
-    use std::env::consts::ARCH;
-    match ARCH {
-        "x86_64" => "amd64",
-        "aarch64" => "arm64",
-        arch => arch,
-    }
 }
 
 /// Get the manifest for the specified platform or the first manifest.

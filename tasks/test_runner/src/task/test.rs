@@ -5,7 +5,6 @@
 //! 2. Runs the VMM (directly on Linux, via Docker on macOS)
 
 use anyhow::Context as _;
-use camino::Utf8PathBuf;
 
 use super::oci;
 use crate::docker;
@@ -86,7 +85,7 @@ fn run_test_docker() -> anyhow::Result<()> {
     if docker::docker_kvm_available() {
         println!("Docker has KVM support, running full test...");
 
-        let workspace_root = get_workspace_root();
+        let workspace_root = super::workspace_root();
         let output = docker::run_in_docker(&workspace_root)?;
         println!("{output}");
         Ok(())
@@ -188,7 +187,7 @@ fn run_benchmark() -> anyhow::Result<()> {
     // (parameters after init= can be passed as init arguments)
     let config = bencher_runner::Config::new(oci_image.clone())
         .with_vcpus(bencher_valid::Cpu::MIN)
-        .with_memory(bencher_valid::Memory::from_mib(256))
+        .with_memory(bencher_valid::Memory::from_mib(256).expect("256 MiB is valid"))
         .with_kernel_cmdline("earlyprintk=serial,ttyS0,115200 console=ttyS0,115200 loglevel=7 reboot=k panic=1 pci=off nokaslr devtmpfs.mount=1 root=/dev/vda ro init=/init");
 
     println!("VM Configuration:");
@@ -235,14 +234,4 @@ fn run_benchmark() -> anyhow::Result<()> {
     drop(std::fs::remove_file(&rootfs_squashfs));
 
     Ok(())
-}
-
-/// Get the workspace root directory.
-fn get_workspace_root() -> Utf8PathBuf {
-    Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Failed to get parent directory")
-        .parent()
-        .expect("Failed to get workspace root")
-        .to_owned()
 }

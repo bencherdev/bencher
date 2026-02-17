@@ -1,4 +1,4 @@
-use crate::error::RunnerError;
+use crate::error::{ConfigError, RunnerError};
 
 /// Validated `perf_event_paranoid` value (-1 to 4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -17,9 +17,12 @@ impl TryFrom<i32> for PerfEventParanoid {
 
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         if !(Self::MIN..=Self::MAX).contains(&value) {
-            return Err(RunnerError::Config(format!(
-                "perf_event_paranoid {value} out of range (-1 to 4)"
-            )));
+            return Err(ConfigError::OutOfRange {
+                name: "perf_event_paranoid",
+                value: value.to_string(),
+                range: "-1 to 4",
+            }
+            .into());
         }
         Ok(Self(value))
     }

@@ -1,5 +1,6 @@
 use bencher_runner::{PerfEventParanoid, RunArgs, Swappiness, TuningConfig};
 
+use crate::error::RunnerCliError;
 use crate::parser::TaskRun;
 
 #[derive(Debug)]
@@ -8,7 +9,7 @@ pub struct Run {
 }
 
 impl TryFrom<TaskRun> for Run {
-    type Error = anyhow::Error;
+    type Error = RunnerCliError;
 
     fn try_from(task: TaskRun) -> Result<Self, Self::Error> {
         let tuning = if task.no_tuning {
@@ -34,8 +35,16 @@ impl TryFrom<TaskRun> for Run {
         };
 
         let vcpus = task.vcpus.map(bencher_runner::Cpu::try_from).transpose()?;
-        let memory = task.memory.map(bencher_runner::Memory::from_mib);
-        let disk = task.disk.map(bencher_runner::Disk::from_mib);
+        let memory = task
+            .memory
+            .map(|mib| {
+                bencher_runner::Memory::from_mib(mib).ok_or(RunnerCliError::InvalidMemory(mib))
+            })
+            .transpose()?;
+        let disk = task
+            .disk
+            .map(|mib| bencher_runner::Disk::from_mib(mib).ok_or(RunnerCliError::InvalidDisk(mib)))
+            .transpose()?;
 
         Ok(Self {
             args: RunArgs {
@@ -62,7 +71,7 @@ impl TryFrom<TaskRun> for Run {
 }
 
 impl Run {
-    pub fn exec(self) -> anyhow::Result<()> {
+    pub fn exec(self) -> Result<(), RunnerCliError> {
         bencher_runner::run_with_args(&self.args)?;
         Ok(())
     }

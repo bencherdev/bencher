@@ -99,7 +99,7 @@ jobs:
   runner:
     name: Runner
     needs: changes
-    if: ${{ needs.changes.outputs.runner == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' }}
+    if: ${{ needs.changes.outputs.runner == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
     uses: ./.github/workflows/runner.yml
     with:
       mold-version: "2.34.1"

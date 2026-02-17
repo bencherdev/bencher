@@ -182,11 +182,11 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
 - Always pass strong types (`MyTypeId`, `MyTypeUuid`, etc) into a function instead of its stringly typed equivalent, even in tests
 - Do **NOT** use shared, global mutable state
-- Always prefer to use `thiserror` for error types
+- Always use `thiserror` for error types in libraries and production binaries (`services/`). Do not use `anyhow` in those crates. `anyhow` is acceptable in `tasks/` crates (build tasks, test harnesses) where convenience outweighs structured errors.
 - Do not use `Box<dyn Error>` (or `Box<dyn std::error::Error + Send + Sync>`) as a return type. Use `HttpError` for API endpoint errors or define specific `thiserror` error enums. The only acceptable uses of `Box<dyn Error>` are when wrapping third-party APIs that return boxed errors (e.g., diesel migrations, dropshot server creation).
 - Do **NOT** use `dyn std::any::Any` without explicit justification and approval
 - When adding workspace dependencies without extra options (no `optional`, no `features`), use the shorthand `dep.workspace = true` form instead of `dep = { workspace = true }`
-- Use `camino` (`Utf8Path`/`Utf8PathBuf`) for file paths whenever practical instead of `std::path::Path`/`PathBuf`
+- Use `camino` (`Utf8Path`/`Utf8PathBuf`) for file paths whenever practical instead of `std::path::Path`/`PathBuf`. Exception: `tempfile::tempdir()` in tests may use `std::path` since it returns `TempDir` with `&Path`; convert via `Utf8Path::from_path()` at the boundary when needed.
 - Use `clap` for CLI argument parsing
   - The `clap` struct definitions should live in a separate `parser` module
   - The subcommand handler logic should live in a separate module named after the binary for production code (ie `bencher`) or a module named `task` for `tasks/*` crates

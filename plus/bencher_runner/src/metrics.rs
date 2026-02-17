@@ -3,7 +3,7 @@
 //! Collects timing and resource usage metrics during benchmark execution.
 //! Metrics are output as structured JSON on stderr for diagnostic purposes.
 
-use std::path::Path;
+use camino::Utf8Path;
 
 use serde::{Deserialize, Serialize};
 
@@ -48,7 +48,7 @@ pub struct CgroupMetrics {
 ///
 /// Reads `cpu.stat` and `memory.peak` from the cgroup directory.
 /// Returns `None` if the path doesn't exist.
-pub fn read_cgroup_metrics(cgroup_path: &Path) -> Option<CgroupMetrics> {
+pub fn read_cgroup_metrics(cgroup_path: &Utf8Path) -> Option<CgroupMetrics> {
     if !cgroup_path.exists() {
         return None;
     }
@@ -82,7 +82,7 @@ struct CpuStat {
     system_usec: u64,
 }
 
-fn read_cpu_stat(cgroup_path: &Path) -> Option<CpuStat> {
+fn read_cpu_stat(cgroup_path: &Utf8Path) -> Option<CpuStat> {
     let content = std::fs::read_to_string(cgroup_path.join("cpu.stat")).ok()?;
     let mut usage = None;
     let mut user = None;
@@ -105,7 +105,7 @@ fn read_cpu_stat(cgroup_path: &Path) -> Option<CpuStat> {
     })
 }
 
-fn read_file_u64(path: &Path) -> Option<u64> {
+fn read_file_u64(path: &Utf8Path) -> Option<u64> {
     std::fs::read_to_string(path).ok()?.trim().parse().ok()
 }
 
@@ -115,15 +115,20 @@ mod tests {
 
     use std::fs;
 
+    fn tempdir_utf8(dir: &tempfile::TempDir) -> &Utf8Path {
+        Utf8Path::from_path(dir.path()).expect("tempdir is UTF-8")
+    }
+
     // --- read_cpu_stat ---
 
     #[test]
     fn read_cpu_stat_normal() {
         let dir = tempfile::tempdir().unwrap();
+        let path = tempdir_utf8(&dir);
         let content = "usage_usec 12345\nuser_usec 6000\nsystem_usec 6345\nnr_periods 0\n";
-        fs::write(dir.path().join("cpu.stat"), content).unwrap();
+        fs::write(path.join("cpu.stat"), content).unwrap();
 
-        let stat = read_cpu_stat(dir.path()).unwrap();
+        let stat = read_cpu_stat(path).unwrap();
         assert_eq!(stat.usage_usec, 12345);
         assert_eq!(stat.user_usec, 6000);
         assert_eq!(stat.system_usec, 6345);
@@ -132,9 +137,10 @@ mod tests {
     #[test]
     fn read_cpu_stat_missing_fields_default_to_zero() {
         let dir = tempfile::tempdir().unwrap();
-        fs::write(dir.path().join("cpu.stat"), "usage_usec 100\n").unwrap();
+        let path = tempdir_utf8(&dir);
+        fs::write(path.join("cpu.stat"), "usage_usec 100\n").unwrap();
 
-        let stat = read_cpu_stat(dir.path()).unwrap();
+        let stat = read_cpu_stat(path).unwrap();
         assert_eq!(stat.usage_usec, 100);
         assert_eq!(stat.user_usec, 0);
         assert_eq!(stat.system_usec, 0);
@@ -143,13 +149,14 @@ mod tests {
     #[test]
     fn read_cpu_stat_malformed_values() {
         let dir = tempfile::tempdir().unwrap();
+        let path = tempdir_utf8(&dir);
         fs::write(
-            dir.path().join("cpu.stat"),
+            path.join("cpu.stat"),
             "usage_usec not_a_number\nuser_usec 100\nsystem_usec\n",
         )
         .unwrap();
 
-        let stat = read_cpu_stat(dir.path()).unwrap();
+        let stat = read_cpu_stat(path).unwrap();
         assert_eq!(stat.usage_usec, 0); // parse fails -> unwrap_or(0)
         assert_eq!(stat.user_usec, 100);
         assert_eq!(stat.system_usec, 0); // no value at all
@@ -158,9 +165,10 @@ mod tests {
     #[test]
     fn read_cpu_stat_empty_file() {
         let dir = tempfile::tempdir().unwrap();
-        fs::write(dir.path().join("cpu.stat"), "").unwrap();
+        let path = tempdir_utf8(&dir);
+        fs::write(path.join("cpu.stat"), "").unwrap();
 
-        let stat = read_cpu_stat(dir.path()).unwrap();
+        let stat = read_cpu_stat(path).unwrap();
         assert_eq!(stat.usage_usec, 0);
         assert_eq!(stat.user_usec, 0);
         assert_eq!(stat.system_usec, 0);
@@ -169,7 +177,8 @@ mod tests {
     #[test]
     fn read_cpu_stat_missing_file() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(read_cpu_stat(dir.path()).is_none());
+        let path = tempdir_utf8(&dir);
+        assert!(read_cpu_stat(path).is_none());
     }
 
     // --- read_file_u64 ---
@@ -177,7 +186,7 @@ mod tests {
     #[test]
     fn read_file_u64_normal() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("value");
+        let path = tempdir_utf8(&dir).join("value");
         fs::write(&path, "42\n").unwrap();
         assert_eq!(read_file_u64(&path), Some(42));
     }
@@ -185,7 +194,7 @@ mod tests {
     #[test]
     fn read_file_u64_with_whitespace() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("value");
+        let path = tempdir_utf8(&dir).join("value");
         fs::write(&path, "  1024  \n").unwrap();
         assert_eq!(read_file_u64(&path), Some(1024));
     }
@@ -193,20 +202,20 @@ mod tests {
     #[test]
     fn read_file_u64_non_numeric() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("value");
+        let path = tempdir_utf8(&dir).join("value");
         fs::write(&path, "not_a_number").unwrap();
         assert_eq!(read_file_u64(&path), None);
     }
 
     #[test]
     fn read_file_u64_missing_file() {
-        assert_eq!(read_file_u64(Path::new("/nonexistent/path")), None);
+        assert_eq!(read_file_u64(Utf8Path::new("/nonexistent/path")), None);
     }
 
     #[test]
     fn read_file_u64_negative_number() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("value");
+        let path = tempdir_utf8(&dir).join("value");
         fs::write(&path, "-1\n").unwrap();
         assert_eq!(read_file_u64(&path), None); // u64 can't parse negative
     }
@@ -216,14 +225,15 @@ mod tests {
     #[test]
     fn read_cgroup_metrics_full() {
         let dir = tempfile::tempdir().unwrap();
+        let path = tempdir_utf8(&dir);
         fs::write(
-            dir.path().join("cpu.stat"),
+            path.join("cpu.stat"),
             "usage_usec 5000\nuser_usec 3000\nsystem_usec 2000\n",
         )
         .unwrap();
-        fs::write(dir.path().join("memory.peak"), "1048576\n").unwrap();
+        fs::write(path.join("memory.peak"), "1048576\n").unwrap();
 
-        let metrics = read_cgroup_metrics(dir.path()).unwrap();
+        let metrics = read_cgroup_metrics(path).unwrap();
         assert_eq!(metrics.cpu_usage_us, Some(5000));
         assert_eq!(metrics.cpu_user_us, Some(3000));
         assert_eq!(metrics.cpu_system_us, Some(2000));
@@ -233,20 +243,21 @@ mod tests {
     #[test]
     fn read_cgroup_metrics_no_memory_peak() {
         let dir = tempfile::tempdir().unwrap();
+        let path = tempdir_utf8(&dir);
         fs::write(
-            dir.path().join("cpu.stat"),
+            path.join("cpu.stat"),
             "usage_usec 100\nuser_usec 50\nsystem_usec 50\n",
         )
         .unwrap();
 
-        let metrics = read_cgroup_metrics(dir.path()).unwrap();
+        let metrics = read_cgroup_metrics(path).unwrap();
         assert_eq!(metrics.cpu_usage_us, Some(100));
         assert_eq!(metrics.memory_peak_bytes, None);
     }
 
     #[test]
     fn read_cgroup_metrics_nonexistent_path() {
-        assert!(read_cgroup_metrics(Path::new("/nonexistent")).is_none());
+        assert!(read_cgroup_metrics(Utf8Path::new("/nonexistent")).is_none());
     }
 
     // --- format_metrics ---

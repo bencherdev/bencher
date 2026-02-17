@@ -1,10 +1,12 @@
 //! Cgroup v2 management for resource limits.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::RunnerError;
 use crate::cpu::CpuLayout;
+use crate::error::JailError;
 use crate::jail::ResourceLimits;
 
 /// Default cgroup v2 mount point.
@@ -15,25 +17,23 @@ const BENCHER_CGROUP_BASE: &str = "bencher";
 
 /// A cgroup manager for a single run.
 pub struct CgroupManager {
-    cgroup_path: PathBuf,
+    cgroup_path: Utf8PathBuf,
     created: bool,
 }
 
 impl CgroupManager {
     /// Create a new cgroup for the given run ID.
     pub fn new(run_id: &str) -> Result<Self, RunnerError> {
-        let cgroup_path = PathBuf::from(CGROUP_ROOT)
+        let cgroup_path = Utf8PathBuf::from(CGROUP_ROOT)
             .join(BENCHER_CGROUP_BASE)
             .join(run_id);
 
         // Ensure parent bencher cgroup exists
-        let parent = PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE);
+        let parent = Utf8PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE);
         if !parent.exists() {
-            fs::create_dir_all(&parent).map_err(|e| {
-                RunnerError::Jail(format!(
-                    "failed to create parent cgroup {}: {e}",
-                    parent.display()
-                ))
+            fs::create_dir_all(&parent).map_err(|e| JailError::CreateCgroup {
+                path: parent.clone(),
+                source: e,
             })?;
 
             // Enable controllers in parent
@@ -42,11 +42,9 @@ impl CgroupManager {
 
         // Create this run's cgroup
         if !cgroup_path.exists() {
-            fs::create_dir_all(&cgroup_path).map_err(|e| {
-                RunnerError::Jail(format!(
-                    "failed to create cgroup {}: {e}",
-                    cgroup_path.display()
-                ))
+            fs::create_dir_all(&cgroup_path).map_err(|e| JailError::CreateCgroup {
+                path: cgroup_path.clone(),
+                source: e,
             })?;
         }
 
@@ -61,7 +59,7 @@ impl CgroupManager {
     /// Enables cpu, memory, and pids controllers (required), and io/cpuset controllers
     /// (optional, for I/O throttling and CPU pinning). Returns an error if required
     /// controllers cannot be enabled.
-    fn enable_controllers(path: &Path) -> Result<(), RunnerError> {
+    fn enable_controllers(path: &Utf8Path) -> Result<(), RunnerError> {
         let subtree_control = path.join("cgroup.subtree_control");
 
         // Try to enable all controllers at once (most efficient)
@@ -70,10 +68,10 @@ impl CgroupManager {
             if fs::write(&subtree_control, "+cpu +memory +pids +io").is_err() {
                 // Fall back to enabling required controllers without io or cpuset
                 fs::write(&subtree_control, "+cpu +memory +pids").map_err(|e| {
-                    RunnerError::Jail(format!(
-                        "failed to enable required cgroup controllers (cpu, memory, pids) at {}: {e}",
-                        subtree_control.display()
-                    ))
+                    JailError::EnableControllers {
+                        path: subtree_control.clone(),
+                        source: e,
+                    }
                 })?;
             }
         }
@@ -82,10 +80,12 @@ impl CgroupManager {
         let enabled = fs::read_to_string(&subtree_control).unwrap_or_default();
         for required in ["cpu", "memory", "pids"] {
             if !enabled.contains(required) {
-                return Err(RunnerError::Jail(format!(
-                    "required cgroup controller '{required}' not enabled at {}. Enabled: {enabled}",
-                    subtree_control.display()
-                )));
+                return Err(JailError::MissingController {
+                    controller: required.to_owned(),
+                    path: subtree_control.clone(),
+                    enabled: enabled.clone(),
+                }
+                .into());
             }
         }
 
@@ -118,7 +118,7 @@ impl CgroupManager {
 
         // I/O limits - applied to all block devices
         // Note: This requires knowing the device major:minor. We attempt to
-        // discover common devices, but this may not work in all configurations.
+        // discover common devices, but this may not work in all configuration.
         if limits.io_read_bps.is_some() || limits.io_write_bps.is_some() {
             self.apply_io_limits(limits)?;
         }
@@ -248,13 +248,13 @@ impl CgroupManager {
     /// Write to a cgroup file.
     fn write_file(&self, name: &str, value: &str) -> Result<(), RunnerError> {
         let path = self.cgroup_path.join(name);
-        fs::write(&path, value)
-            .map_err(|e| RunnerError::Jail(format!("failed to write {}: {e}", path.display())))
+        fs::write(&path, value).map_err(|e| JailError::WriteCgroup { path, source: e })?;
+        Ok(())
     }
 
     /// Get the cgroup path.
     #[must_use]
-    pub fn path(&self) -> &Path {
+    pub fn path(&self) -> &Utf8Path {
         &self.cgroup_path
     }
 
@@ -263,10 +263,7 @@ impl CgroupManager {
         if self.created && self.cgroup_path.exists() {
             if let Err(e) = fs::remove_dir(&self.cgroup_path) {
                 // Log but don't fail - cgroup might still have processes
-                eprintln!(
-                    "Warning: failed to remove cgroup {}: {e}",
-                    self.cgroup_path.display()
-                );
+                eprintln!("Warning: failed to remove cgroup {}: {e}", self.cgroup_path);
             } else {
                 self.created = false;
             }
@@ -284,7 +281,7 @@ impl Drop for CgroupManager {
 /// Check if cgroup v2 is available.
 #[must_use]
 pub fn is_cgroup_v2_available() -> bool {
-    PathBuf::from(CGROUP_ROOT)
+    Utf8Path::new(CGROUP_ROOT)
         .join("cgroup.controllers")
         .exists()
 }

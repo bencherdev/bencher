@@ -10,6 +10,7 @@ use std::fs;
 
 use crate::digest::DigestHasher;
 use crate::error::OciError;
+use crate::oci_arch;
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -123,16 +124,6 @@ struct TokenResponse {
 impl TokenResponse {
     fn token(&self) -> Option<&str> {
         self.token.as_deref().or(self.access_token.as_deref())
-    }
-}
-
-/// Map the Rust `std::env::consts::ARCH` value to the OCI architecture name.
-fn oci_arch() -> &'static str {
-    use std::env::consts::ARCH;
-    match ARCH {
-        "x86_64" => "amd64",
-        "aarch64" => "arm64",
-        arch => arch,
     }
 }
 
