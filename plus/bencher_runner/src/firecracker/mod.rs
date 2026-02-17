@@ -115,6 +115,8 @@ pub struct FirecrackerJobConfig {
     pub log_level: FirecrackerLogLevel,
     /// Maximum number of output files to decode.
     pub max_file_count: u32,
+    /// Maximum data size in bytes per vsock port.
+    pub max_output_size: usize,
 }
 
 /// Run a benchmark inside a Firecracker microVM.
@@ -235,7 +237,8 @@ pub fn run_firecracker(
     };
 
     println!("Waiting for benchmark results (timeout: {timeout:?})...");
-    let results = match vsock_listener.collect_results(timeout, cancel_flag) {
+    let results = match vsock_listener.collect_results(timeout, config.max_output_size, cancel_flag)
+    {
         Ok(results) => results,
         Err(e) => {
             let elapsed = start_time.elapsed();

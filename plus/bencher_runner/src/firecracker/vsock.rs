@@ -30,9 +30,6 @@ mod ports {
     pub const OUTPUT_FILES: u32 = 5005;
 }
 
-/// Maximum data size per port (10 MiB).
-const MAX_DATA_SIZE: usize = 10 * 1024 * 1024;
-
 /// Results collected from the guest via vsock.
 #[derive(Debug)]
 pub struct VsockResults {
@@ -107,11 +104,15 @@ impl VsockListener {
     /// Waits up to `timeout` for the guest to send results on all ports.
     /// The exit code port is mandatory; stdout, stderr, and output file are optional.
     ///
+    /// `max_data_size` limits how many bytes are read per port, matching the
+    /// guest-side `max_output_size` so both sides enforce the same cap.
+    ///
     /// If `cancel_flag` is provided and set to `true`, collection stops early
     /// and returns a cancellation error.
     pub fn collect_results(
         &self,
         timeout: Duration,
+        max_data_size: usize,
         cancel_flag: Option<&Arc<AtomicBool>>,
     ) -> Result<VsockResults, FirecrackerError> {
         let start = std::time::Instant::now();
@@ -153,28 +154,28 @@ impl VsockListener {
                     .revents()
                     .is_some_and(|r| r.intersects(PollFlags::POLLIN))
             {
-                stdout_data = try_accept_and_read(&self.stdout_listener);
+                stdout_data = try_accept_and_read(&self.stdout_listener, max_data_size);
             }
             if stderr_data.is_none()
                 && fds[1]
                     .revents()
                     .is_some_and(|r| r.intersects(PollFlags::POLLIN))
             {
-                stderr_data = try_accept_and_read(&self.stderr_listener);
+                stderr_data = try_accept_and_read(&self.stderr_listener, max_data_size);
             }
             if exit_code_data.is_none()
                 && fds[2]
                     .revents()
                     .is_some_and(|r| r.intersects(PollFlags::POLLIN))
             {
-                exit_code_data = try_accept_and_read(&self.exit_code_listener);
+                exit_code_data = try_accept_and_read(&self.exit_code_listener, max_data_size);
             }
             if output_files_data.is_none()
                 && fds[3]
                     .revents()
                     .is_some_and(|r| r.intersects(PollFlags::POLLIN))
             {
-                output_files_data = try_accept_and_read(&self.output_files_listener);
+                output_files_data = try_accept_and_read(&self.output_files_listener, max_data_size);
             }
 
             // Exit code is the signal that results are complete
@@ -185,13 +186,14 @@ impl VsockListener {
                 std::thread::sleep(Duration::from_millis(500));
                 // Final collection pass
                 if stdout_data.is_none() {
-                    stdout_data = try_accept_and_read(&self.stdout_listener);
+                    stdout_data = try_accept_and_read(&self.stdout_listener, max_data_size);
                 }
                 if stderr_data.is_none() {
-                    stderr_data = try_accept_and_read(&self.stderr_listener);
+                    stderr_data = try_accept_and_read(&self.stderr_listener, max_data_size);
                 }
                 if output_files_data.is_none() {
-                    output_files_data = try_accept_and_read(&self.output_files_listener);
+                    output_files_data =
+                        try_accept_and_read(&self.output_files_listener, max_data_size);
                 }
                 break;
             }
@@ -236,7 +238,9 @@ impl Drop for VsockListener {
 }
 
 /// Try to accept a connection on a non-blocking listener and read all data.
-fn try_accept_and_read(listener: &UnixListener) -> Option<Vec<u8>> {
+///
+/// Reading stops once `max_data_size` bytes have been accumulated.
+fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<Vec<u8>> {
     let (mut stream, _) = listener.accept().ok()?;
 
     // Set blocking with a read timeout for the data stream
@@ -250,7 +254,7 @@ fn try_accept_and_read(listener: &UnixListener) -> Option<Vec<u8>> {
             Ok(0) => break,
             Ok(n) => {
                 data.extend_from_slice(&buf[..n]);
-                if data.len() >= MAX_DATA_SIZE {
+                if data.len() >= max_data_size {
                     break;
                 }
             },
@@ -269,6 +273,9 @@ mod tests {
 
     use std::io::Write;
     use std::os::unix::net::UnixStream;
+
+    /// 10 MiB — matches the default `max_output_size`.
+    const TEST_MAX_DATA_SIZE: usize = 10 * 1024 * 1024;
 
     /// Helper: create a VsockListener in a temp directory.
     fn listener_in_tmpdir() -> (tempfile::TempDir, VsockListener) {
@@ -347,7 +354,7 @@ mod tests {
         });
 
         let results = listener
-            .collect_results(Duration::from_secs(5), None)
+            .collect_results(Duration::from_secs(5), TEST_MAX_DATA_SIZE, None)
             .unwrap();
         sender.join().unwrap();
 
@@ -369,7 +376,7 @@ mod tests {
         });
 
         let results = listener
-            .collect_results(Duration::from_secs(5), None)
+            .collect_results(Duration::from_secs(5), TEST_MAX_DATA_SIZE, None)
             .unwrap();
         sender.join().unwrap();
 
@@ -384,7 +391,7 @@ mod tests {
         let (_dir, listener) = listener_in_tmpdir();
 
         // No data sent — should timeout with an error
-        let result = listener.collect_results(Duration::from_millis(200), None);
+        let result = listener.collect_results(Duration::from_millis(200), TEST_MAX_DATA_SIZE, None);
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -408,7 +415,7 @@ mod tests {
         });
 
         let results = listener
-            .collect_results(Duration::from_secs(5), None)
+            .collect_results(Duration::from_secs(5), TEST_MAX_DATA_SIZE, None)
             .unwrap();
         sender.join().unwrap();
 
@@ -434,7 +441,7 @@ mod tests {
         });
 
         let results = listener
-            .collect_results(Duration::from_secs(5), None)
+            .collect_results(Duration::from_secs(5), TEST_MAX_DATA_SIZE, None)
             .unwrap();
         sender.join().unwrap();
 
@@ -450,7 +457,7 @@ mod tests {
         listener.set_nonblocking(true).unwrap();
 
         // No connection pending
-        assert!(try_accept_and_read(&listener).is_none());
+        assert!(try_accept_and_read(&listener, TEST_MAX_DATA_SIZE).is_none());
     }
 
     #[test]
@@ -468,7 +475,7 @@ mod tests {
         // Brief delay to ensure the connection is ready
         std::thread::sleep(Duration::from_millis(10));
 
-        let data = try_accept_and_read(&listener).unwrap();
+        let data = try_accept_and_read(&listener, TEST_MAX_DATA_SIZE).unwrap();
         assert_eq!(data, b"hello");
     }
 
@@ -485,7 +492,7 @@ mod tests {
 
         std::thread::sleep(Duration::from_millis(10));
 
-        let data = try_accept_and_read(&listener).unwrap();
+        let data = try_accept_and_read(&listener, TEST_MAX_DATA_SIZE).unwrap();
         assert!(data.is_empty());
     }
 
@@ -496,7 +503,11 @@ mod tests {
         // Set the cancel flag before collecting
         let cancel_flag = Arc::new(AtomicBool::new(true));
 
-        let result = listener.collect_results(Duration::from_secs(5), Some(&cancel_flag));
+        let result = listener.collect_results(
+            Duration::from_secs(5),
+            TEST_MAX_DATA_SIZE,
+            Some(&cancel_flag),
+        );
 
         assert!(result.is_err());
         let err = result.unwrap_err();

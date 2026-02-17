@@ -78,11 +78,11 @@ pub struct Config {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub env: Option<HashMap<String, String>>,
 
-    /// Maximum size in bytes for collected stdout/stderr inside the guest VM.
+    /// Maximum size in bytes for collected stdout/stderr.
     ///
-    /// If a benchmark produces more output than this limit, the excess is
-    /// silently dropped. Defaults to 10 MiB, matching the host-side vsock
-    /// `MAX_DATA_SIZE`.
+    /// This limit is enforced on both sides: the guest-side init process
+    /// truncates output at this size, and the host-side vsock reader stops
+    /// reading at the same cap. Defaults to 10 MiB.
     #[serde(default = "default_max_output_size")]
     pub max_output_size: usize,
 

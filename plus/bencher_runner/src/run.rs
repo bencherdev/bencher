@@ -338,6 +338,7 @@ pub fn execute(
         cpu_layout: config.cpu_layout.clone(),
         log_level: config.firecracker_log_level,
         max_file_count: config.max_file_count,
+        max_output_size: config.max_output_size,
     };
 
     let run_output = run_firecracker(&fc_config, cancel_flag)?;
