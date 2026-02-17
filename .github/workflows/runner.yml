@@ -81,6 +81,10 @@ jobs:
       - name: Verify KVM
         run: |
           ls -la /dev/kvm
+      - name: Enable containerd image store
+        run: |
+          echo '{"features": {"containerd-snapshotter": true}}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker
       - name: Run scenarios
         run: cargo test-runner scenarios
 
