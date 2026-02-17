@@ -218,3 +218,15 @@ jobs:
           name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
           path: ./${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
           if-no-files-found: error
+
+  build_bencher_nix:
+    name: Build Bencher Nix Package
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-25.11
+      - name: Nix build
+        run: nix build .#bencher
