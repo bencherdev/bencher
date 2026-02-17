@@ -1,4 +1,6 @@
-use bencher_json::{BranchNameId, DateTime, GitHash, ProjectResourceId, TestbedNameId};
+use bencher_json::{
+    BranchNameId, DateTime, GitHash, MAX_FILE_PATHS_LEN, ProjectResourceId, TestbedNameId,
+};
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
@@ -139,11 +141,11 @@ pub struct CliRunCommand {
     pub build_time: bool,
 
     /// Benchmark command output file path
-    #[clap(long, conflicts_with = "file_size")]
+    #[clap(long, conflicts_with = "file_size", num_args = 1..=MAX_FILE_PATHS_LEN)]
     pub file: Option<Vec<Utf8PathBuf>>,
 
     /// Track the size of a file at the given file path
-    #[clap(long, conflicts_with = "file")]
+    #[clap(long, conflicts_with = "file", num_args = 1..=MAX_FILE_PATHS_LEN)]
     pub file_size: Option<Vec<Utf8PathBuf>>,
 
     #[clap(flatten)]

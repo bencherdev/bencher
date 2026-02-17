@@ -72,6 +72,8 @@ pub const MIN_POLL_TIMEOUT: u32 = 1;
 /// Maximum poll timeout in seconds.
 pub const MAX_POLL_TIMEOUT: u32 = 900;
 
+pub use crate::{MAX_CMD_LEN, MAX_ENTRYPOINT_LEN, MAX_FILE_PATHS_LEN};
+
 /// Request to claim a job (runner agent endpoint)
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,6 +105,61 @@ pub struct JsonClaimedJob {
     pub created: DateTime,
 }
 
+/// Job configuration validation errors.
+#[derive(Debug, thiserror::Error)]
+pub enum JobConfigError {
+    #[error("entrypoint length {0} exceeds maximum {MAX_ENTRYPOINT_LEN}")]
+    EntrypointTooLong(usize),
+    #[error("cmd length {0} exceeds maximum {MAX_CMD_LEN}")]
+    CmdTooLong(usize),
+    #[error("file_paths length {0} exceeds maximum {MAX_FILE_PATHS_LEN}")]
+    FilePathsTooLong(usize),
+}
+
+#[derive(Deserialize)]
+struct UncheckedJsonJobConfig {
+    pub registry: Url,
+    pub project: ProjectUuid,
+    pub digest: ImageDigest,
+    pub entrypoint: Option<Vec<String>>,
+    pub cmd: Option<Vec<String>>,
+    pub env: Option<HashMap<String, String>>,
+    pub timeout: Timeout,
+    pub file_paths: Option<Vec<Utf8PathBuf>>,
+}
+
+impl TryFrom<UncheckedJsonJobConfig> for JsonJobConfig {
+    type Error = JobConfigError;
+
+    fn try_from(unchecked: UncheckedJsonJobConfig) -> Result<Self, Self::Error> {
+        if let Some(entrypoint) = &unchecked.entrypoint
+            && entrypoint.len() > MAX_ENTRYPOINT_LEN
+        {
+            return Err(JobConfigError::EntrypointTooLong(entrypoint.len()));
+        }
+        if let Some(cmd) = &unchecked.cmd
+            && cmd.len() > MAX_CMD_LEN
+        {
+            return Err(JobConfigError::CmdTooLong(cmd.len()));
+        }
+        if let Some(file_paths) = &unchecked.file_paths
+            && file_paths.len() > MAX_FILE_PATHS_LEN
+        {
+            return Err(JobConfigError::FilePathsTooLong(file_paths.len()));
+        }
+        Ok(JsonJobConfig {
+            registry: unchecked.registry,
+            project: unchecked.project,
+            digest: unchecked.digest,
+            entrypoint: unchecked.entrypoint,
+            cmd: unchecked.cmd,
+            env: unchecked.env,
+            timeout: unchecked.timeout,
+            file_paths: unchecked.file_paths,
+        })
+    }
+}
+
 /// Job configuration sent to runners.
 ///
 /// Contains the execution details needed for a runner to execute a job.
@@ -111,6 +168,7 @@ pub struct JsonClaimedJob {
 /// disk, network) are in the associated spec.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(try_from = "UncheckedJsonJobConfig")]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
@@ -275,6 +333,61 @@ mod tests {
         assert_eq!(deserialized.stdout.as_deref(), Some("out"));
         assert_eq!(deserialized.stderr.as_deref(), Some("err"));
         assert!(deserialized.output.is_none());
+    }
+
+    fn job_config_json(entrypoint_len: usize, cmd_len: usize, file_paths_len: usize) -> String {
+        let entrypoint: Vec<String> = (0..entrypoint_len).map(|i| format!("arg{i}")).collect();
+        let cmd: Vec<String> = (0..cmd_len).map(|i| format!("cmd{i}")).collect();
+        let file_paths: Vec<String> = (0..file_paths_len).map(|i| format!("/f/{i}")).collect();
+        format!(
+            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","digest":"sha256:{digest}","entrypoint":{entrypoint},"cmd":{cmd},"timeout":300,"file_paths":{file_paths}}}"#,
+            digest = "a".repeat(64),
+            entrypoint = serde_json::to_string(&entrypoint).unwrap(),
+            cmd = serde_json::to_string(&cmd).unwrap(),
+            file_paths = serde_json::to_string(&file_paths).unwrap(),
+        )
+    }
+
+    #[test]
+    fn deserialize_entrypoint_too_long() {
+        let json = job_config_json(MAX_ENTRYPOINT_LEN + 1, 0, 0);
+        let result = serde_json::from_str::<JsonJobConfig>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("entrypoint length"), "{err}");
+    }
+
+    #[test]
+    fn deserialize_cmd_too_long() {
+        let json = job_config_json(0, MAX_CMD_LEN + 1, 0);
+        let result = serde_json::from_str::<JsonJobConfig>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("cmd length"), "{err}");
+    }
+
+    #[test]
+    fn deserialize_file_paths_too_long() {
+        let json = job_config_json(0, 0, MAX_FILE_PATHS_LEN + 1);
+        let result = serde_json::from_str::<JsonJobConfig>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("file_paths length"), "{err}");
+    }
+
+    #[test]
+    fn deserialize_at_max_boundary() {
+        let json = job_config_json(MAX_ENTRYPOINT_LEN, MAX_CMD_LEN, MAX_FILE_PATHS_LEN);
+        let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            config.entrypoint.as_ref().unwrap().len(),
+            MAX_ENTRYPOINT_LEN
+        );
+        assert_eq!(config.cmd.as_ref().unwrap().len(), MAX_CMD_LEN);
+        assert_eq!(
+            config.file_paths.as_ref().unwrap().len(),
+            MAX_FILE_PATHS_LEN
+        );
     }
 }
 
