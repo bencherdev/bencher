@@ -1,10 +1,14 @@
 use bencher_json::{
     BranchNameId, DateTime, GitHash, MAX_FILE_PATHS_LEN, ProjectResourceId, TestbedNameId,
 };
+#[cfg(feature = "plus")]
+use bencher_json::{MAX_ENTRYPOINT_LEN, SpecResourceId};
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
 use crate::parser::CliBackend;
+#[cfg(feature = "plus")]
+use crate::parser::check_env;
 
 use super::project::report::{
     CliReportAdapter, CliReportAverage, CliReportFold, CliReportThresholds,
@@ -68,6 +72,10 @@ pub struct CliRun {
     /// Do a dry run (no data is saved)
     #[clap(long)]
     pub dry_run: bool,
+
+    #[cfg(feature = "plus")]
+    #[clap(flatten)]
+    pub run_image: CliRunImage,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -235,4 +243,29 @@ pub struct CliRunCi {
     // TODO remove in due time
     #[clap(long, alias = "ci-no-metrics", hide = true)]
     pub ci_deprecated: bool,
+}
+
+/// OCI image and remote runner options (Bencher Plus).
+#[cfg(feature = "plus")]
+#[derive(Args, Debug)]
+pub struct CliRunImage {
+    /// OCI image tag or digest for remote runner execution
+    #[clap(long)]
+    pub image: Option<String>,
+
+    /// Hardware spec slug or UUID (requires: --image)
+    #[clap(long, requires = "image")]
+    pub spec: Option<SpecResourceId>,
+
+    /// Container entrypoint override (requires: --image)
+    #[clap(long, requires = "image", num_args = 1..=MAX_ENTRYPOINT_LEN)]
+    pub entrypoint: Option<Vec<String>>,
+
+    /// Environment variable in KEY=VALUE format (requires: --image)
+    #[clap(long, requires = "image", value_parser = check_env)]
+    pub env: Option<Vec<String>>,
+
+    /// Maximum execution time in seconds (requires: --image)
+    #[clap(long, requires = "image")]
+    pub timeout: Option<u32>,
 }

@@ -624,6 +624,32 @@ export interface JsonNewProject {
 	visibility?: Visibility;
 }
 
+/**
+ * Job configuration for a remote runner execution.
+ * 
+ * Sent as part of `JsonNewRun` when the CLI `--image` flag is used.
+ * The API server uses this to create a job for a bare metal runner
+ * instead of expecting locally-executed benchmark results.
+ */
+export interface JsonNewRunJob {
+	/** OCI image tag or digest (e.g. "my-tag" or "sha256:abc123...") */
+	image: string;
+	/** Hardware spec slug or UUID to run on */
+	spec?: SpecResourceId;
+	/** Container entrypoint override (like Docker ENTRYPOINT) */
+	entrypoint?: string[];
+	/** Command override (like Docker CMD) */
+	cmd?: string[];
+	/** Environment variables passed to the container */
+	env?: Record<string, string>;
+	/** Maximum execution time in seconds */
+	timeout?: Timeout;
+	/** File paths to collect from the VM after job completion */
+	file_paths?: string[];
+	/** Track the build time of the benchmark command */
+	build_time?: boolean;
+}
+
 /** Create a new runner */
 export interface JsonNewRunner {
 	/** The name of the runner. */

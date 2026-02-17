@@ -26,6 +26,10 @@ impl FilePath {
         Self(file_paths)
     }
 
+    pub fn paths(&self) -> &[Utf8PathBuf] {
+        &self.0
+    }
+
     pub fn get_results(&self) -> Result<Vec<String>, RunError> {
         let mut results = Vec::new();
         for path in &self.0 {

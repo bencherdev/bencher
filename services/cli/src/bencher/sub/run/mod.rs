@@ -1,7 +1,14 @@
 use std::{future::Future, pin::Pin};
 
+#[cfg(feature = "plus")]
+use std::collections::HashMap;
+
+#[cfg(feature = "plus")]
+use bencher_client::types::JsonNewRunJob;
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings};
 use bencher_comment::ReportComment;
+#[cfg(feature = "plus")]
+use bencher_json::SpecResourceId;
 use bencher_json::{DateTime, JsonReport, ProjectResourceId, RunContext, TestbedNameId};
 
 use crate::{
@@ -31,6 +38,16 @@ use crate::bencher::SubCmd;
 
 use super::project::report::Thresholds;
 
+#[cfg(feature = "plus")]
+#[derive(Debug)]
+struct RemoteImage {
+    image: String,
+    spec: Option<SpecResourceId>,
+    entrypoint: Option<Vec<String>>,
+    env: Option<HashMap<String, String>>,
+    timeout: Option<u32>,
+}
+
 #[derive(Debug)]
 #[expect(clippy::struct_excessive_bools)]
 pub struct Run {
@@ -52,6 +69,8 @@ pub struct Run {
     runner: Runner,
     #[expect(clippy::struct_field_names)]
     dry_run: bool,
+    #[cfg(feature = "plus")]
+    remote_image: Option<RemoteImage>,
     backend: PubBackend,
 }
 
@@ -75,8 +94,29 @@ impl TryFrom<CliRun> for Run {
             ci,
             cmd,
             dry_run,
+            #[cfg(feature = "plus")]
+            run_image,
             backend,
         } = run;
+        #[cfg(feature = "plus")]
+        let remote_image = run_image.image.map(|image| {
+            let env = run_image.env.map(|env_vec| {
+                env_vec
+                    .into_iter()
+                    .filter_map(|s| {
+                        let (key, value) = s.split_once('=')?;
+                        Some((key.to_owned(), value.to_owned()))
+                    })
+                    .collect::<HashMap<String, String>>()
+            });
+            RemoteImage {
+                image,
+                spec: run_image.spec,
+                entrypoint: run_image.entrypoint,
+                env,
+                timeout: run_image.timeout,
+            }
+        });
         Ok(Self {
             project: map_project(project)?,
             branch: branch.try_into().map_err(RunError::Branch)?,
@@ -95,6 +135,8 @@ impl TryFrom<CliRun> for Run {
             ci: ci.try_into().map_err(RunError::Ci)?,
             runner: cmd.try_into()?,
             dry_run,
+            #[cfg(feature = "plus")]
+            remote_image,
             backend: PubBackend::try_from(backend)?.log(false),
         })
     }
@@ -155,6 +197,15 @@ impl Run {
     }
 
     async fn generate_report(&self) -> Result<Option<JsonNewRun>, RunError> {
+        #[cfg(feature = "plus")]
+        if let Some(remote_image) = &self.remote_image {
+            return Ok(Some(self.generate_remote_report(remote_image)));
+        }
+
+        self.generate_local_report().await
+    }
+
+    async fn generate_local_report(&self) -> Result<Option<JsonNewRun>, RunError> {
         let start_time = DateTime::now();
         let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
@@ -204,7 +255,45 @@ impl Run {
                 fold: self.fold,
             }),
             context: Some(RunContext::current().into()),
+            job: None,
         }))
+    }
+
+    #[cfg(feature = "plus")]
+    fn generate_remote_report(&self, remote_image: &RemoteImage) -> JsonNewRun {
+        let cmd = self.runner.cmd_args();
+        let file_paths = self.runner.file_paths();
+        let build_time = self.runner.build_time();
+
+        let now = DateTime::now();
+        let (branch, hash, start_point) = self.branch.clone().into();
+        JsonNewRun {
+            project: self.project.clone().map(Into::into),
+            branch,
+            hash,
+            start_point,
+            testbed: self.testbed.clone().map(Into::into),
+            thresholds: self.thresholds.clone().into(),
+            start_time: now.into(),
+            end_time: now.into(),
+            results: Vec::new(),
+            settings: Some(JsonReportSettings {
+                adapter: Some(self.adapter),
+                average: self.average,
+                fold: self.fold,
+            }),
+            context: Some(RunContext::current().into()),
+            job: Some(JsonNewRunJob {
+                image: remote_image.image.clone(),
+                spec: remote_image.spec.clone().map(Into::into),
+                entrypoint: remote_image.entrypoint.clone(),
+                cmd,
+                env: remote_image.env.clone(),
+                timeout: remote_image.timeout.map(Into::into),
+                file_paths,
+                build_time: build_time.then_some(true),
+            }),
+        }
     }
 
     async fn display_results(&self, json_report: JsonReport) -> Result<(), RunError> {

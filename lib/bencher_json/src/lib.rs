@@ -95,8 +95,9 @@ pub const MAX_FILE_PATHS_LEN: usize = 255;
 #[cfg(feature = "plus")]
 pub use runner::{
     DEFAULT_POLL_TIMEOUT, JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob,
-    JsonJobConfig, JsonJobs, JsonNewRunner, JsonRunner, JsonRunnerToken, JsonRunners,
-    JsonUpdateRunner, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, RunnerResourceId, RunnerSlug, RunnerUuid,
+    JsonJobConfig, JsonJobs, JsonNewRunJob, JsonNewRunner, JsonRunner, JsonRunnerToken,
+    JsonRunners, JsonUpdateRunner, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, RunnerResourceId,
+    RunnerSlug, RunnerUuid,
 };
 #[cfg(feature = "plus")]
 pub use spec::{

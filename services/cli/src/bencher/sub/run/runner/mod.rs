@@ -103,6 +103,38 @@ impl fmt::Display for Runner {
 }
 
 impl Runner {
+    /// Extract the command as a list of arguments without executing it.
+    /// Returns `None` if there is no command (pipe, file-only modes).
+    pub fn cmd_args(&self) -> Option<Vec<String>> {
+        match self {
+            Self::Pipe(_) | Self::File(_) | Self::FileSize(_) => None,
+            Self::Command(command, _)
+            | Self::CommandToFile(command, _)
+            | Self::CommandToFileSize(command, _, _) => Some(command.to_args()),
+        }
+    }
+
+    /// Extract file paths as strings (for remote job `file_paths` field).
+    /// Returns `None` if no file paths are configured.
+    pub fn file_paths(&self) -> Option<Vec<String>> {
+        match self {
+            Self::CommandToFile(_, file_path) | Self::File(file_path) => {
+                Some(file_path.paths().iter().map(ToString::to_string).collect())
+            },
+            Self::Pipe(_) | Self::Command(..) | Self::CommandToFileSize(..) | Self::FileSize(_) => {
+                None
+            },
+        }
+    }
+
+    /// Whether build time tracking is enabled.
+    pub fn build_time(&self) -> bool {
+        matches!(
+            self,
+            Self::Command(_, Some(_)) | Self::CommandToFileSize(_, Some(_), _)
+        )
+    }
+
     pub async fn run(&self, log: bool) -> Result<Vec<Output>, RunError> {
         match self {
             Self::Pipe(pipe) => Ok(pipe.output().into()),

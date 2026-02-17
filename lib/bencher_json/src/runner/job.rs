@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::RunnerUuid;
 use super::job_status::JobStatus;
 use crate::ProjectUuid;
-use crate::spec::JsonSpec;
+use crate::spec::{JsonSpec, SpecResourceId};
 
 crate::typed_uuid::typed_uuid!(JobUuid);
 
@@ -63,6 +63,41 @@ pub struct JsonJobOutput {
     #[typeshare(typescript(type = "Record<string, string> | undefined"))]
     #[cfg_attr(feature = "schema", schemars(with = "Option<HashMap<String, String>>"))]
     pub output: Option<HashMap<Utf8PathBuf, String>>,
+}
+
+/// Job configuration for a remote runner execution.
+///
+/// Sent as part of `JsonNewRun` when the CLI `--image` flag is used.
+/// The API server uses this to create a job for a bare metal runner
+/// instead of expecting locally-executed benchmark results.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonNewRunJob {
+    /// OCI image tag or digest (e.g. "my-tag" or "sha256:abc123...")
+    pub image: String,
+    /// Hardware spec slug or UUID to run on
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spec: Option<SpecResourceId>,
+    /// Container entrypoint override (like Docker ENTRYPOINT)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entrypoint: Option<Vec<String>>,
+    /// Command override (like Docker CMD)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cmd: Option<Vec<String>>,
+    /// Environment variables passed to the container
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub env: Option<HashMap<String, String>>,
+    /// Maximum execution time in seconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<Timeout>,
+    /// File paths to collect from the VM after job completion
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<Vec<String>>"))]
+    pub file_paths: Option<Vec<Utf8PathBuf>>,
+    /// Track the build time of the benchmark command
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub build_time: Option<bool>,
 }
 
 /// Default poll timeout in seconds for job claiming long-poll.
