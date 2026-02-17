@@ -1,5 +1,4 @@
 #[cfg(target_os = "linux")]
-#[expect(clippy::print_stdout)]
 use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(target_os = "linux")]
 use std::sync::{Arc, Mutex};
@@ -16,6 +15,7 @@ use super::error::{DaemonError, WebSocketError};
 #[cfg(target_os = "linux")]
 use super::websocket::{JobChannel, RunnerMessage, ServerMessage};
 
+#[expect(dead_code)]
 pub enum JobOutcome {
     Completed {
         exit_code: i32,
@@ -29,7 +29,7 @@ pub enum JobOutcome {
 }
 
 #[cfg(target_os = "linux")]
-#[expect(clippy::print_stdout)]
+#[expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
 pub fn execute_job(
     config: &DaemonConfig,
     job: &JsonClaimedJob,
@@ -154,7 +154,7 @@ pub fn execute_job(
 /// Resource requirements (cpu, memory, disk, network) come from the spec as
 /// strong types and are passed through directly.
 /// Execution details (registry, project, digest, entrypoint, cmd, env, timeout,
-/// file_paths) come from the config. The OCI token is passed through for
+/// `file_paths`) come from the config. The OCI token is passed through for
 /// authenticated image pulls.
 ///
 /// CPU layout from the daemon config is passed through for core isolation.
@@ -237,6 +237,7 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
 
 #[cfg(test)]
 #[cfg(target_os = "linux")]
+#[expect(clippy::indexing_slicing, clippy::get_unwrap)]
 mod tests {
     use super::*;
     use camino::Utf8PathBuf;
@@ -266,6 +267,7 @@ mod tests {
         )
     }
 
+    #[expect(clippy::too_many_arguments, clippy::needless_pass_by_value)]
     fn test_job_with_options(
         cpu: u32,
         memory_bytes: u64,

@@ -4,7 +4,7 @@
 //! Instead of a custom VMM, we use Firecracker as an external process controlled
 //! via its REST API over a Unix domain socket.
 
-#![expect(clippy::print_stdout)]
+#![expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
 
 mod client;
 pub mod config;
@@ -47,11 +47,11 @@ use vsock::VsockListener;
 #[derive(Debug)]
 pub struct FirecrackerJobConfig {
     /// Path to the Firecracker binary.
-    pub firecracker_bin: camino::Utf8PathBuf,
+    pub firecracker_bin: Utf8PathBuf,
     /// Path to the kernel image.
-    pub kernel_path: camino::Utf8PathBuf,
+    pub kernel_path: Utf8PathBuf,
     /// Path to the ext4 rootfs image.
-    pub rootfs_path: camino::Utf8PathBuf,
+    pub rootfs_path: Utf8PathBuf,
     /// Number of vCPUs.
     pub vcpus: u8,
     /// Memory size in MiB.
@@ -61,7 +61,7 @@ pub struct FirecrackerJobConfig {
     /// Execution timeout in seconds.
     pub timeout_secs: u64,
     /// Working directory for temporary files (API socket, vsock UDS).
-    pub work_dir: camino::Utf8PathBuf,
+    pub work_dir: Utf8PathBuf,
     /// Optional CPU layout for core isolation via cpuset.
     pub cpu_layout: Option<CpuLayout>,
     /// Firecracker process log level.
@@ -86,6 +86,7 @@ pub struct FirecrackerJobConfig {
 /// 7. Cleans up (including cgroup)
 ///
 /// Returns the benchmark output including exit code and stdout.
+#[expect(clippy::too_many_lines)]
 pub fn run_firecracker(
     config: &FirecrackerJobConfig,
     cancel_flag: Option<&Arc<AtomicBool>>,
@@ -97,7 +98,7 @@ pub fn run_firecracker(
     let start_time = Instant::now();
 
     // Step 0: Create cgroup with cpuset if CPU layout is provided
-    let cgroup = if let Some(ref layout) = config.cpu_layout {
+    let cgroup = if let Some(layout) = &config.cpu_layout {
         if layout.has_isolation() {
             match crate::jail::CgroupManager::new(&vm_id) {
                 Ok(cg) => {
@@ -140,10 +141,10 @@ pub fn run_firecracker(
     )?;
 
     // Move Firecracker process into cgroup for CPU isolation
-    if let Some(ref cg) = cgroup {
-        if let Err(e) = cg.add_pid(fc_process.pid()) {
-            eprintln!("Warning: failed to add Firecracker to cgroup: {e}");
-        }
+    if let Some(cg) = &cgroup
+        && let Err(e) = cg.add_pid(fc_process.pid())
+    {
+        eprintln!("Warning: failed to add Firecracker to cgroup: {e}");
     }
 
     let client = fc_process.client();
@@ -241,9 +242,7 @@ pub fn run_firecracker(
 
     // Decode output files from the length-prefixed binary protocol
     let output_files = match results.output_files {
-        Some(ref data) if !data.is_empty() => {
-            Some(decode_output_files(data, config.max_file_count)?)
-        },
+        Some(data) if !data.is_empty() => Some(decode_output_files(&data, config.max_file_count)?),
         _ => None,
     };
 
@@ -271,6 +270,7 @@ fn parse_exit_code(s: &str) -> i32 {
 }
 
 #[cfg(test)]
+#[expect(clippy::get_unwrap)]
 mod tests {
     use super::*;
 

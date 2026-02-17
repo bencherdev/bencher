@@ -1,4 +1,5 @@
 #![expect(clippy::print_stdout)]
+#![cfg_attr(target_os = "linux", expect(clippy::print_stderr))]
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -108,12 +109,12 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     if let Some(disk) = args.disk {
         config = config.with_disk(disk);
     }
-    let config = if let Some(ref token) = args.token {
+    let config = if let Some(token) = &args.token {
         config.with_token(token.clone())
     } else {
         config
     };
-    let config = if let Some(ref file_paths) = args.file_paths {
+    let config = if let Some(file_paths) = &args.file_paths {
         config.with_file_paths(file_paths.clone())
     } else {
         config
@@ -244,7 +245,7 @@ pub fn execute(
     let rootfs_path = work_dir.join("rootfs.ext4");
 
     // Get kernel path - use bundled, provided, or find system kernel
-    let kernel_path = if let Some(ref kernel) = config.kernel {
+    let kernel_path = if let Some(kernel) = &config.kernel {
         kernel.clone()
     } else if crate::kernel::KERNEL_BUNDLED {
         let kernel_dest = work_dir.join("vmlinux");
@@ -262,7 +263,7 @@ pub fn execute(
     println!("Parsing OCI image config...");
     let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
     let command = oci_image.command();
-    let workdir = oci_image
+    let working_dir = oci_image
         .working_dir()
         .filter(|w| !w.is_empty())
         .unwrap_or("/");
@@ -274,7 +275,7 @@ pub fn execute(
     }
 
     println!("  Command: {}", command.join(" "));
-    println!("  WorkDir: {workdir}");
+    println!("  WorkDir: {working_dir}");
     if !env.is_empty() {
         println!("  Env: {} variables", env.len());
     }
@@ -288,7 +289,7 @@ pub fn execute(
     write_init_config(
         &unpack_dir,
         &command,
-        workdir,
+        working_dir,
         &env,
         config.file_paths.as_deref(),
         config.max_output_size,
@@ -353,7 +354,7 @@ pub fn execute(
 /// This creates `/etc/bencher/config.json` which is read by `bencher-init`.
 #[cfg(target_os = "linux")]
 fn write_init_config(
-    rootfs: &camino::Utf8Path,
+    rootfs: &Utf8Path,
     command: &[String],
     workdir: &str,
     env: &[(String, String)],
@@ -386,8 +387,9 @@ fn write_init_config(
 ///
 /// Uses the bundled init binary if available, otherwise falls back to searching on disk.
 #[cfg(target_os = "linux")]
-fn install_init_binary(rootfs: &camino::Utf8Path) -> Result<(), RunnerError> {
+fn install_init_binary(rootfs: &Utf8Path) -> Result<(), RunnerError> {
     use crate::init;
+    use std::os::unix::fs::PermissionsExt as _;
 
     let dest_path = rootfs.join("init");
 
@@ -407,7 +409,6 @@ fn install_init_binary(rootfs: &camino::Utf8Path) -> Result<(), RunnerError> {
         })?;
 
         // Make it executable
-        use std::os::unix::fs::PermissionsExt as _;
         let mut perms = std::fs::metadata(&dest_path)?.permissions();
         perms.set_mode(0o755);
         std::fs::set_permissions(&dest_path, perms)?;
@@ -488,14 +489,14 @@ fn find_kernel() -> Result<Utf8PathBuf, RunnerError> {
     }
 
     // Try next to the current executable
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(parent) = exe.parent() {
-            let kernel = parent.join("vmlinux");
-            if kernel.exists() {
-                if let Some(path) = kernel.to_str() {
-                    return Ok(Utf8PathBuf::from(path));
-                }
-            }
+    if let Ok(exe) = std::env::current_exe()
+        && let Some(parent) = exe.parent()
+    {
+        let kernel = parent.join("vmlinux");
+        if kernel.exists()
+            && let Some(path) = kernel.to_str()
+        {
+            return Ok(Utf8PathBuf::from(path));
         }
     }
 
@@ -509,7 +510,7 @@ fn find_kernel() -> Result<Utf8PathBuf, RunnerError> {
 /// Sanitize environment variables by removing dangerous ones.
 ///
 /// This filters out environment variables that could be used to inject
-/// malicious code into the guest process, such as LD_PRELOAD.
+/// malicious code into the guest process, such as `LD_PRELOAD`.
 #[cfg(target_os = "linux")]
 fn sanitize_env(env: &[(String, String)]) -> Vec<(String, String)> {
     let mut sanitized = Vec::with_capacity(env.len());
@@ -551,13 +552,14 @@ pub fn execute(
 
 #[cfg(test)]
 #[cfg(target_os = "linux")]
+#[expect(clippy::indexing_slicing, clippy::str_to_string)]
 mod tests {
     use super::*;
 
     fn env(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
         pairs
             .iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
             .collect()
     }
 

@@ -425,6 +425,7 @@ fn generate_binary_module(name: &str, bin_path: &Path, is_release: bool, out_dir
             r#"// Generated {name} module - release build with embedded binary.
 
 /// The embedded {name} binary.
+#[expect(clippy::large_include_file)]
 static {name_upper}_BYTES: &[u8] = include_bytes!("{bin_path_str}");
 
 /// Get the {name} binary bytes.
@@ -454,10 +455,11 @@ static {name_upper}_BYTES: OnceLock<Vec<u8>> = OnceLock::new();
 /// Get the {name} binary bytes.
 ///
 /// In debug builds, the binary is loaded from disk on first access.
+#[expect(clippy::panic)]
 pub fn {name}_bytes() -> &'static [u8] {{
     {name_upper}_BYTES.get_or_init(|| {{
         std::fs::read({name_upper}_PATH)
-            .unwrap_or_else(|e| panic!("Failed to load {name} from {{}}: {{}}", {name_upper}_PATH, e))
+            .unwrap_or_else(|e| panic!("Failed to load {name} from {{{name_upper}_PATH}}: {{e}}"))
     }})
 }}
 

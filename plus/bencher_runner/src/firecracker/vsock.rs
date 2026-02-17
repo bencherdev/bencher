@@ -5,8 +5,8 @@
 //! `{uds_path}_{N}` on the host. The host must have Unix listeners at those
 //! paths before VM boot.
 
-use std::io::Read;
-use std::os::fd::AsFd;
+use std::io::Read as _;
+use std::os::fd::AsFd as _;
 use std::os::unix::net::UnixListener;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -19,6 +19,7 @@ use crate::firecracker::error::FirecrackerError;
 /// Poll timeout for vsock listeners (50ms).
 ///
 /// Using `LazyLock` because `PollTimeout::try_from` is not const.
+#[expect(clippy::expect_used)]
 static POLL_TIMEOUT: std::sync::LazyLock<PollTimeout> =
     std::sync::LazyLock::new(|| PollTimeout::try_from(50).expect("50ms fits in PollTimeout"));
 
@@ -72,7 +73,7 @@ impl VsockListener {
             &exit_code_path,
             &output_files_path,
         ] {
-            let _ = std::fs::remove_file(path);
+            drop(std::fs::remove_file(path));
         }
 
         let stdout_listener = UnixListener::bind(&stdout_path)
@@ -85,10 +86,10 @@ impl VsockListener {
             .map_err(|e| FirecrackerError::VsockCollection(format!("bind output_files: {e}")))?;
 
         // Set non-blocking so we can poll
-        stdout_listener.set_nonblocking(true).ok();
-        stderr_listener.set_nonblocking(true).ok();
-        exit_code_listener.set_nonblocking(true).ok();
-        output_files_listener.set_nonblocking(true).ok();
+        drop(stdout_listener.set_nonblocking(true));
+        drop(stderr_listener.set_nonblocking(true));
+        drop(exit_code_listener.set_nonblocking(true));
+        drop(output_files_listener.set_nonblocking(true));
 
         Ok(Self {
             vsock_uds_path: vsock_uds_path.to_owned(),
@@ -109,6 +110,7 @@ impl VsockListener {
     ///
     /// If `cancel_flag` is provided and set to `true`, collection stops early
     /// and returns a cancellation error.
+    #[expect(clippy::too_many_lines)]
     pub fn collect_results(
         &self,
         timeout: Duration,
@@ -127,10 +129,10 @@ impl VsockListener {
         // Poll until we have the exit code (required) or timeout
         while start.elapsed() < timeout {
             // Check for cancellation
-            if let Some(flag) = cancel_flag {
-                if flag.load(Ordering::SeqCst) {
-                    return Err(FirecrackerError::Cancelled);
-                }
+            if let Some(flag) = cancel_flag
+                && flag.load(Ordering::SeqCst)
+            {
+                return Err(FirecrackerError::Cancelled);
             }
 
             // Build poll fds for listeners we still need data from.
@@ -256,7 +258,7 @@ impl VsockListener {
             ports::OUTPUT_FILES,
         ] {
             let path = format!("{}_{port}", self.vsock_uds_path);
-            let _ = std::fs::remove_file(path);
+            drop(std::fs::remove_file(path));
         }
     }
 }
@@ -270,12 +272,13 @@ impl Drop for VsockListener {
 /// Try to accept a connection on a non-blocking listener and read all data.
 ///
 /// Reading stops once `max_data_size` bytes have been accumulated.
+#[expect(clippy::indexing_slicing)]
 fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<Vec<u8>> {
     let (mut stream, _) = listener.accept().ok()?;
 
     // Set blocking with a read timeout for the data stream
-    stream.set_nonblocking(false).ok();
-    stream.set_read_timeout(Some(Duration::from_secs(5))).ok();
+    drop(stream.set_nonblocking(false));
+    drop(stream.set_read_timeout(Some(Duration::from_secs(5))));
 
     let mut data = Vec::new();
     let mut buf = [0u8; 8192];
@@ -298,10 +301,11 @@ fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<
 }
 
 #[cfg(test)]
+#[expect(clippy::little_endian_bytes, clippy::cast_possible_truncation)]
 mod tests {
     use super::*;
 
-    use std::io::Write;
+    use std::io::Write as _;
     use std::os::unix::net::UnixStream;
 
     /// 10 MiB — matches the default `max_output_size`.
@@ -309,7 +313,7 @@ mod tests {
     /// Short grace period for tests to avoid slowing down the test suite.
     const TEST_GRACE_PERIOD: Duration = Duration::from_millis(50);
 
-    /// Helper: create a VsockListener in a temp directory.
+    /// Helper: create a `VsockListener` in a temp directory.
     fn listener_in_tmpdir() -> (tempfile::TempDir, VsockListener) {
         let dir = tempfile::tempdir().unwrap();
         let base = dir.path().join("vsock").to_str().unwrap().to_owned();

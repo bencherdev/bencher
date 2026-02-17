@@ -34,7 +34,7 @@ include!(concat!(env!("OUT_DIR"), "/firecracker_generated.rs"));
 ///
 /// Returns an error if the file cannot be written.
 pub fn write_firecracker_to_file(path: &Utf8Path) -> io::Result<()> {
-    use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::fs::PermissionsExt as _;
 
     std::fs::write(path, firecracker_bytes())?;
 

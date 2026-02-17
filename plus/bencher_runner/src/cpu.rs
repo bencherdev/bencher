@@ -77,12 +77,13 @@ impl CpuLayout {
 
     /// Get the number of available CPU cores.
     #[cfg(target_os = "linux")]
+    #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn available_cores() -> usize {
         // Try reading from /sys/devices/system/cpu/online first
-        if let Ok(online) = fs::read_to_string("/sys/devices/system/cpu/online") {
-            if let Some(count) = parse_cpu_list(&online) {
-                return count;
-            }
+        if let Ok(online) = fs::read_to_string("/sys/devices/system/cpu/online")
+            && let Some(count) = parse_cpu_list(&online)
+        {
+            return count;
         }
 
         // Fallback to nix sysconf
@@ -215,7 +216,7 @@ pub fn pin_current_thread(cpus: &[usize]) -> io::Result<()> {
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
     }
 
-    sched_setaffinity(Pid::from_raw(0), &set).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+    sched_setaffinity(Pid::from_raw(0), &set).map_err(io::Error::other)
 }
 
 /// Pin the current thread to the specified CPU cores.
@@ -236,6 +237,7 @@ pub fn pin_thread(thread_id: libc::pthread_t, cpus: &[usize]) -> io::Result<()> 
     }
 
     // SAFETY: Same as pin_current_thread, plus we're passing a valid pthread_t.
+    #[expect(unsafe_code)]
     unsafe {
         let mut set: libc::cpu_set_t = std::mem::zeroed();
         libc::CPU_ZERO(&mut set);
@@ -247,7 +249,7 @@ pub fn pin_thread(thread_id: libc::pthread_t, cpus: &[usize]) -> io::Result<()> 
         }
 
         let result =
-            libc::pthread_setaffinity_np(thread_id, std::mem::size_of::<libc::cpu_set_t>(), &set);
+            libc::pthread_setaffinity_np(thread_id, size_of::<libc::cpu_set_t>(), &raw const set);
 
         if result == 0 {
             Ok(())

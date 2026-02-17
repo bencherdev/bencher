@@ -1,5 +1,7 @@
 //! Cgroup v2 management for resource limits.
 
+#![expect(clippy::print_stderr)]
+
 use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -106,12 +108,12 @@ impl CgroupManager {
 
             // Disable swap to ensure benchmark memory measurements are accurate
             // and to prevent swap thrashing from affecting benchmark results.
-            let _ = self.write_file("memory.swap.max", "0");
+            drop(self.write_file("memory.swap.max", "0"));
         }
 
         // OOM group kill: when the cgroup hits its memory limit, kill ALL processes
         // in the group together. This prevents partial kills that leave orphan processes.
-        let _ = self.write_file("memory.oom.group", "1");
+        drop(self.write_file("memory.oom.group", "1"));
 
         // PIDs limit
         self.write_file("pids.max", &limits.max_procs.to_string())?;
@@ -120,7 +122,7 @@ impl CgroupManager {
         // Note: This requires knowing the device major:minor. We attempt to
         // discover common devices, but this may not work in all configuration.
         if limits.io_read_bps.is_some() || limits.io_write_bps.is_some() {
-            self.apply_io_limits(limits)?;
+            self.apply_io_limits(limits);
         }
 
         Ok(())
@@ -174,13 +176,15 @@ impl CgroupManager {
     ///
     /// Attempts to apply io.max limits to discovered block devices.
     /// The io.max format is: "MAJ:MIN rbps=BYTES wbps=BYTES"
-    fn apply_io_limits(&self, limits: &ResourceLimits) -> Result<(), RunnerError> {
+    fn apply_io_limits(&self, limits: &ResourceLimits) {
+        use std::fmt::Write as _;
+
         // Try to find block devices to apply limits to
         let devices = Self::discover_block_devices();
 
         if devices.is_empty() {
             // No devices found, skip I/O limits silently
-            return Ok(());
+            return;
         }
 
         let read_limit = limits
@@ -193,9 +197,10 @@ impl CgroupManager {
         let mut io_max_content = String::new();
         for (major, minor) in devices {
             // Format: "MAJ:MIN rbps=BYTES wbps=BYTES"
-            io_max_content.push_str(&format!(
-                "{major}:{minor} rbps={read_limit} wbps={write_limit}\n"
-            ));
+            let _unused = writeln!(
+                io_max_content,
+                "{major}:{minor} rbps={read_limit} wbps={write_limit}"
+            );
         }
 
         // Try to write io.max - may fail if io controller is not available
@@ -204,8 +209,6 @@ impl CgroupManager {
             // Log warning but don't fail - io controller may not be available
             eprintln!("Warning: failed to set io.max (io controller may not be available): {e}");
         }
-
-        Ok(())
     }
 
     /// Discover block devices on the system.
@@ -218,15 +221,12 @@ impl CgroupManager {
         if let Ok(entries) = fs::read_dir("/sys/block") {
             for entry in entries.flatten() {
                 let dev_path = entry.path().join("dev");
-                if let Ok(content) = fs::read_to_string(&dev_path) {
-                    // Format is "MAJ:MIN"
-                    if let Some((major_str, minor_str)) = content.trim().split_once(':') {
-                        if let (Ok(major), Ok(minor)) =
-                            (major_str.parse::<u32>(), minor_str.parse::<u32>())
-                        {
-                            devices.push((major, minor));
-                        }
-                    }
+                if let Ok(content) = fs::read_to_string(&dev_path)
+                    && let Some((major_str, minor_str)) = content.trim().split_once(':')
+                    && let (Ok(major), Ok(minor)) =
+                        (major_str.parse::<u32>(), minor_str.parse::<u32>())
+                {
+                    devices.push((major, minor));
                 }
             }
         }
@@ -274,11 +274,12 @@ impl CgroupManager {
 
 impl Drop for CgroupManager {
     fn drop(&mut self) {
-        let _ = self.cleanup();
+        drop(self.cleanup());
     }
 }
 
 /// Check if cgroup v2 is available.
+#[expect(dead_code)]
 #[must_use]
 pub fn is_cgroup_v2_available() -> bool {
     Utf8Path::new(CGROUP_ROOT)

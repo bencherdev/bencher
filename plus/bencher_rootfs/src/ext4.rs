@@ -163,7 +163,7 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn allocate_file_not_sparse() {
-        use std::os::unix::fs::MetadataExt;
+        use std::os::unix::fs::MetadataExt as _;
 
         let temp_dir = tempfile::tempdir().unwrap();
         let image_path = Utf8Path::from_path(temp_dir.path())
@@ -180,24 +180,24 @@ mod tests {
             metadata.blocks() > 0,
             "Expected physical blocks to be allocated, got 0"
         );
-        // Verify substantial allocation (64 MiB = 131072 512-byte blocks)
+        // Verify substantial allocation (64 MiB = 0x0002_0000 512-byte blocks)
         assert!(
-            metadata.blocks() >= 131072,
-            "Expected at least 131072 blocks for 64 MiB, got {}",
+            metadata.blocks() >= 0x0002_0000,
+            "Expected at least 0x0002_0000 blocks for 64 MiB, got {}",
             metadata.blocks()
         );
     }
 
     /// Verify the full ext4 creation pipeline produces a non-sparse image.
     ///
-    /// This is the key security test: after create_file + mkfs.ext4 + fallocate,
+    /// This is the key security test: after `create_file` + mkfs.ext4 + fallocate,
     /// the resulting image must have all physical blocks allocated. If the image
     /// were sparse, guest writes of non-zero data would grow the host file's
     /// physical allocation, allowing concurrent VMs to over-commit host disk space.
     #[cfg(target_os = "linux")]
     #[test]
     fn create_ext4_not_sparse() {
-        use std::os::unix::fs::MetadataExt;
+        use std::os::unix::fs::MetadataExt as _;
 
         let temp_dir = tempfile::tempdir().unwrap();
         let work_dir = Utf8Path::from_path(temp_dir.path()).unwrap();
@@ -217,10 +217,10 @@ mod tests {
             64 * 1024 * 1024,
             "Logical size should be 64 MiB"
         );
-        // 64 MiB = 131072 512-byte blocks
+        // 64 MiB = 0x0002_0000 512-byte blocks
         assert!(
-            metadata.blocks() >= 131072,
-            "ext4 image is sparse: expected at least 131072 blocks (64 MiB), got {}. \
+            metadata.blocks() >= 0x0002_0000,
+            "ext4 image is sparse: expected at least 0x0002_0000 blocks (64 MiB), got {}. \
              Sparse images allow guest writes to over-commit host disk space.",
             metadata.blocks()
         );

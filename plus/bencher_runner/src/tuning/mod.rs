@@ -6,6 +6,8 @@
 //! informational message — this handles ARM and other platforms
 //! where certain controls do not exist.
 
+#![cfg_attr(target_os = "linux", expect(clippy::print_stdout))]
+
 mod perf_event_paranoid;
 mod swappiness;
 
@@ -139,7 +141,7 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
         );
     }
 
-    if let Some(ref gov) = config.governor {
+    if let Some(gov) = &config.governor {
         set_cpu_governor(&mut guard, gov);
     }
 
@@ -205,9 +207,9 @@ fn set_cpu_governor(guard: &mut TuningGuard, target: &str) {
             continue;
         };
         if !name_str.starts_with("cpu")
-            || !name_str[3..]
-                .chars()
-                .next()
+            || !name_str
+                .get(3..)
+                .and_then(|s| s.chars().next())
                 .is_some_and(|c| c.is_ascii_digit())
         {
             continue;
@@ -315,6 +317,7 @@ pub fn apply(_config: &TuningConfig) -> TuningGuard {
 }
 
 #[cfg(test)]
+#[cfg_attr(target_os = "linux", expect(clippy::indexing_slicing))]
 mod tests {
     use super::*;
 

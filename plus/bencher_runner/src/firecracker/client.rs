@@ -1,6 +1,7 @@
 //! Minimal HTTP/1.1 client for Firecracker's REST API over Unix socket.
+#![expect(clippy::print_stderr, clippy::indexing_slicing)]
 
-use std::io::{Read, Write};
+use std::io::{Read as _, Write as _};
 use std::os::unix::net::UnixStream;
 use std::time::Duration;
 
@@ -31,16 +32,16 @@ impl FirecrackerClient {
             if Utf8Path::new(&self.socket_path).exists() {
                 // Try to connect
                 if let Ok(mut stream) = UnixStream::connect(&self.socket_path) {
-                    stream.set_read_timeout(Some(Duration::from_secs(1))).ok();
-                    stream.set_write_timeout(Some(Duration::from_secs(1))).ok();
+                    drop(stream.set_read_timeout(Some(Duration::from_secs(1))));
+                    drop(stream.set_write_timeout(Some(Duration::from_secs(1))));
 
                     let request = "GET / HTTP/1.1\r\nHost: localhost\r\nAccept: */*\r\n\r\n";
                     if stream.write_all(request.as_bytes()).is_ok() {
                         let mut buf = [0u8; 256];
-                        if let Ok(n) = stream.read(&mut buf) {
-                            if n > 0 {
-                                return Ok(());
-                            }
+                        if let Ok(n) = stream.read(&mut buf)
+                            && n > 0
+                        {
+                            return Ok(());
                         }
                     }
                 }
@@ -207,11 +208,11 @@ fn response_complete(data: &[u8]) -> bool {
     // Check for Content-Length (case-insensitive)
     for line in headers.lines() {
         let lower = line.to_ascii_lowercase();
-        if let Some(value) = lower.strip_prefix("content-length:") {
-            if let Ok(len) = value.trim().parse::<usize>() {
-                let body_start = header_end + 4; // Skip \r\n\r\n
-                return data.len() >= body_start + len;
-            }
+        if let Some(value) = lower.strip_prefix("content-length:")
+            && let Ok(len) = value.trim().parse::<usize>()
+        {
+            let body_start = header_end + 4; // Skip \r\n\r\n
+            return data.len() >= body_start + len;
         }
     }
 

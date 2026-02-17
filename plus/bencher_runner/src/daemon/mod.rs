@@ -168,6 +168,7 @@ fn install_signal_handlers() {
 
     // SAFETY: `signal_handler` only performs `AtomicBool::store` with
     // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
+    #[expect(unsafe_code)]
     unsafe {
         let _ = sigaction(Signal::SIGINT, &action);
         let _ = sigaction(Signal::SIGTERM, &action);

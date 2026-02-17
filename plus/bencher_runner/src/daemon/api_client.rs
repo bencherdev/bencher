@@ -97,6 +97,7 @@ impl RunnerApiClient {
             .map_err(|e| ApiClientError::Http(format!("Failed to build WebSocket URL: {e}")))
     }
 
+    #[cfg(test)]
     pub fn token(&self) -> &str {
         &self.token
     }

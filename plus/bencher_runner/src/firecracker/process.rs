@@ -1,4 +1,5 @@
 //! Firecracker process management.
+#![expect(clippy::print_stderr)]
 
 use std::process::{Child, Command};
 use std::time::Duration;
@@ -28,7 +29,7 @@ impl FirecrackerProcess {
         housekeeping_cores: Vec<usize>,
     ) -> Result<Self, FirecrackerError> {
         // Remove stale socket if it exists
-        let _ = std::fs::remove_file(api_socket_path);
+        drop(std::fs::remove_file(api_socket_path));
 
         let mut child = Command::new(firecracker_bin)
             .arg("--api-sock")
@@ -50,11 +51,12 @@ impl FirecrackerProcess {
             FirecrackerError::ProcessStart("stderr was piped but not available".into())
         })?;
         let stderr_thread = std::thread::spawn(move || {
+            use std::io::BufRead as _;
+
             // Pin to housekeeping cores to avoid benchmark interference
             if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
                 eprintln!("Warning: failed to pin stderr reader thread: {e}");
             }
-            use std::io::BufRead;
             let reader = std::io::BufReader::new(stderr);
             for line in reader.lines() {
                 match line {
@@ -92,7 +94,7 @@ impl FirecrackerProcess {
         let action = Action {
             action_type: ActionType::SendCtrlAltDel,
         };
-        let _ = self.client().put_action(&action);
+        drop(self.client().put_action(&action));
 
         // Wait for the process to exit gracefully
         let start = std::time::Instant::now();
@@ -111,20 +113,20 @@ impl FirecrackerProcess {
 
     /// Force-kill the Firecracker process.
     pub fn kill(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        drop(self.child.kill());
+        drop(self.child.wait());
         self.join_stderr_thread();
     }
 
     /// Clean up socket files.
     pub fn cleanup(&self) {
-        let _ = std::fs::remove_file(&self.api_socket_path);
+        drop(std::fs::remove_file(&self.api_socket_path));
     }
 
     /// Join the stderr reader thread if it exists.
     fn join_stderr_thread(&mut self) {
         if let Some(handle) = self.stderr_thread.take() {
-            let _ = handle.join();
+            drop(handle.join());
         }
     }
 }
