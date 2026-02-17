@@ -227,7 +227,7 @@ mod tests {
         assert_eq!(metrics.cpu_usage_us, Some(5000));
         assert_eq!(metrics.cpu_user_us, Some(3000));
         assert_eq!(metrics.cpu_system_us, Some(2000));
-        assert_eq!(metrics.memory_peak_bytes, Some(1_048_576));
+        assert_eq!(metrics.memory_peak_bytes, Some(0x0010_0000));
     }
 
     #[test]

@@ -1,5 +1,6 @@
 mod daemon;
 
+use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 
 pub use daemon::TaskDaemon;
@@ -53,7 +54,7 @@ pub struct TaskRun {
 
     /// Output file paths inside guest (may be repeated).
     #[arg(long)]
-    pub output: Vec<String>,
+    pub output: Vec<Utf8PathBuf>,
 
     /// Maximum size in bytes for collected stdout/stderr (default: 25 MiB).
     #[arg(long)]

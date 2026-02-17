@@ -124,7 +124,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_default_block_size() {
+    fn default_block_size() {
         assert_eq!(DEFAULT_BLOCK_SIZE, 0x2_0000);
     }
 }

@@ -329,6 +329,7 @@ impl Config {
 }
 
 #[cfg(test)]
+#[expect(clippy::indexing_slicing)]
 mod tests {
     use super::*;
 
@@ -430,7 +431,7 @@ mod tests {
 
         assert_eq!(config.entrypoint.unwrap(), vec!["/bin/bash"]);
         assert_eq!(config.cmd.unwrap(), vec!["test"]);
-        assert_eq!(config.env.unwrap().get("KEY").unwrap(), "value");
+        assert_eq!(&config.env.unwrap()["KEY"], "value");
 
         // Test *_opt builders with None values
         let config = Config::new("img")

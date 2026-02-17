@@ -1,5 +1,4 @@
 use bencher_runner::{FirecrackerLogLevel, PerfEventParanoid, RunArgs, Swappiness, TuningConfig};
-use camino::Utf8PathBuf;
 
 use crate::parser::TaskRun;
 
@@ -54,7 +53,7 @@ impl TryFrom<TaskRun> for Run {
                 file_paths: if task.output.is_empty() {
                     None
                 } else {
-                    Some(task.output.into_iter().map(Utf8PathBuf::from).collect())
+                    Some(task.output)
                 },
                 max_output_size: task.max_output_size,
                 max_file_count: task.max_file_count,

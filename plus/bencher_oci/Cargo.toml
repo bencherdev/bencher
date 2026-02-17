@@ -22,12 +22,14 @@ plus = [
 registry = [
     "plus",
     "dep:base64",
+    "dep:bencher_json",
     "dep:bencher_valid",
     "dep:ureq",
 ]
 
 [dependencies]
 base64 = { workspace = true, optional = true }
+bencher_json = { workspace = true, optional = true, features = ["plus", "server"] }
 bencher_valid = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }

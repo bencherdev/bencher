@@ -43,12 +43,20 @@ pub enum DecodeError {
     PathTooLong(u32),
 }
 
+/// Encode error.
+#[derive(Debug, thiserror::Error)]
+pub enum EncodeError {
+    /// Path length exceeds the maximum allowed length.
+    #[error("path length {0} exceeds maximum {MAX_PATH_LENGTH}")]
+    PathTooLong(u32),
+}
+
 /// Encode file path+content pairs into the length-prefixed binary protocol.
 #[expect(
     clippy::little_endian_bytes,
     reason = "wire protocol is defined as little-endian"
 )]
-pub fn encode(files: &[(&Utf8Path, &[u8])]) -> Vec<u8> {
+pub fn encode(files: &[(&Utf8Path, &[u8])]) -> Result<Vec<u8>, EncodeError> {
     #[expect(
         clippy::cast_possible_truncation,
         reason = "file count will not exceed u32"
@@ -64,6 +72,9 @@ pub fn encode(files: &[(&Utf8Path, &[u8])]) -> Vec<u8> {
             reason = "path length will not exceed u32"
         )]
         let path_len = path_bytes.len() as u32;
+        if path_len > MAX_PATH_LENGTH {
+            return Err(EncodeError::PathTooLong(path_len));
+        }
         buf.extend_from_slice(&path_len.to_le_bytes());
         buf.extend_from_slice(path_bytes);
 
@@ -72,7 +83,7 @@ pub fn encode(files: &[(&Utf8Path, &[u8])]) -> Vec<u8> {
         buf.extend_from_slice(content);
     }
 
-    buf
+    Ok(buf)
 }
 
 /// Decode the binary protocol back into (path, content) pairs.
@@ -178,7 +189,7 @@ mod tests {
 
     #[test]
     fn roundtrip_empty() {
-        let encoded = encode(&[]);
+        let encoded = encode(&[]).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert!(decoded.is_empty(), "expected empty vec, got {decoded:?}");
     }
@@ -187,7 +198,7 @@ mod tests {
     fn roundtrip_single_file() {
         let path = Utf8Path::new("/tmp/results.json");
         let content = b"benchmark data";
-        let encoded = encode(&[(path, content.as_slice())]);
+        let encoded = encode(&[(path, content.as_slice())]).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, path);
@@ -200,7 +211,7 @@ mod tests {
             (Utf8Path::new("/output/a.json"), b"file a content"),
             (Utf8Path::new("/output/b.txt"), b"file b content"),
         ];
-        let encoded = encode(&files);
+        let encoded = encode(&files).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 2);
         assert_eq!(decoded[0].0, "/output/a.json");
@@ -213,7 +224,7 @@ mod tests {
     fn roundtrip_empty_content() {
         let path = Utf8Path::new("empty.txt");
         let content: &[u8] = b"";
-        let encoded = encode(&[(path, content)]);
+        let encoded = encode(&[(path, content)]).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, "empty.txt");
@@ -224,7 +235,7 @@ mod tests {
     fn roundtrip_binary_content() {
         let path = Utf8Path::new("binary.bin");
         let content: &[u8] = &[0xFF, 0xFE, 0x00, 0x01, 0x80];
-        let encoded = encode(&[(path, content)]);
+        let encoded = encode(&[(path, content)]).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, "binary.bin");
@@ -233,7 +244,7 @@ mod tests {
 
     #[test]
     fn encode_empty_slice_produces_zero_header() {
-        let encoded = encode(&[]);
+        let encoded = encode(&[]).unwrap();
         assert_eq!(encoded, 0u32.to_le_bytes());
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert!(decoded.is_empty());
@@ -364,7 +375,7 @@ mod tests {
             (Utf8Path::new("b"), b"2"),
             (Utf8Path::new("c"), b"3"),
         ];
-        let encoded = encode(&files);
+        let encoded = encode(&files).unwrap();
         let decoded = decode(&encoded, max).unwrap();
         assert_eq!(decoded.len(), 3);
     }
@@ -379,7 +390,7 @@ mod tests {
                 (Utf8Path::new(s), &b"x"[..])
             })
             .collect();
-        let encoded = encode(&files);
+        let encoded = encode(&files).unwrap();
         let decoded = decode(&encoded, 255).unwrap();
         assert_eq!(decoded.len(), 255);
     }
@@ -394,7 +405,7 @@ mod tests {
                 (Utf8Path::new(s), &b"data"[..])
             })
             .collect();
-        let encoded = encode(&files);
+        let encoded = encode(&files).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 100);
         for (i, (path, content)) in decoded.iter().enumerate() {
@@ -407,7 +418,7 @@ mod tests {
     fn roundtrip_empty_path() {
         let path = Utf8Path::new("");
         let content = b"content";
-        let encoded = encode(&[(path, content.as_slice())]);
+        let encoded = encode(&[(path, content.as_slice())]).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, "");
@@ -418,7 +429,7 @@ mod tests {
     fn roundtrip_unicode_path() {
         let path = Utf8Path::new("/tmp/résults_日本語.json");
         let content = b"unicode path test";
-        let encoded = encode(&[(path, content.as_slice())]);
+        let encoded = encode(&[(path, content.as_slice())]).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, "/tmp/résults_日本語.json");
@@ -433,7 +444,7 @@ mod tests {
             .join("/");
         let path = Utf8Path::new(&path_str);
         let content = b"deep";
-        let encoded = encode(&[(path, content.as_slice())]);
+        let encoded = encode(&[(path, content.as_slice())]).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0.as_str(), path_str);
@@ -444,7 +455,7 @@ mod tests {
     fn roundtrip_large_content() {
         let path = Utf8Path::new("large.bin");
         let content = vec![0xABu8; 1024 * 1024]; // 1 MiB
-        let encoded = encode(&[(path, content.as_slice())]);
+        let encoded = encode(&[(path, content.as_slice())]).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].1.len(), 1024 * 1024);
@@ -455,7 +466,7 @@ mod tests {
     fn roundtrip_single_byte_content() {
         let path = Utf8Path::new("tiny.bin");
         let content: &[u8] = &[0x42];
-        let encoded = encode(&[(path, content)]);
+        let encoded = encode(&[(path, content)]).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].1, &[0x42]);
@@ -467,7 +478,7 @@ mod tests {
             (Utf8Path::new("dup.txt"), b"first"),
             (Utf8Path::new("dup.txt"), b"second"),
         ];
-        let encoded = encode(&files);
+        let encoded = encode(&files).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 2);
         assert_eq!(decoded[0].0, "dup.txt");
@@ -482,7 +493,7 @@ mod tests {
             (Utf8Path::new("./foo/bar.txt"), b"relative"),
             (Utf8Path::new("/tmp/foo/bar.txt"), b"absolute"),
         ];
-        let encoded = encode(&files);
+        let encoded = encode(&files).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 2);
         assert_eq!(decoded[0].0, "./foo/bar.txt");
@@ -495,7 +506,7 @@ mod tests {
     fn encode_wire_format_single_file() {
         let path = Utf8Path::new("a.txt");
         let content = b"hi";
-        let encoded = encode(&[(path, content.as_slice())]);
+        let encoded = encode(&[(path, content.as_slice())]).unwrap();
 
         let mut expected = Vec::new();
         expected.extend_from_slice(&1u32.to_le_bytes()); // file_count = 1
@@ -545,7 +556,7 @@ mod tests {
 
     #[test]
     fn decode_trailing_bytes_after_valid_data() {
-        let encoded = encode(&[(Utf8Path::new("f"), &b"d"[..])]);
+        let encoded = encode(&[(Utf8Path::new("f"), &b"d"[..])]).unwrap();
         let mut with_trailing = encoded.clone();
         with_trailing.extend_from_slice(b"garbage");
         // Trailing bytes are silently ignored
@@ -568,17 +579,28 @@ mod tests {
     fn roundtrip_all_zero_content() {
         let path = Utf8Path::new("zeros.bin");
         let content = vec![0u8; 256];
-        let encoded = encode(&[(path, content.as_slice())]);
+        let encoded = encode(&[(path, content.as_slice())]).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].1, content);
     }
 
     #[test]
+    fn encode_error_path_too_long() {
+        let long_path = "a".repeat((MAX_PATH_LENGTH + 1) as usize);
+        let path = Utf8Path::new(&long_path);
+        let err = encode(&[(path, b"data")]).unwrap_err();
+        assert!(
+            matches!(err, EncodeError::PathTooLong(len) if len == MAX_PATH_LENGTH + 1),
+            "expected PathTooLong, got: {err}"
+        );
+    }
+
+    #[test]
     fn roundtrip_content_with_embedded_nulls() {
         let path = Utf8Path::new("mixed.bin");
         let content: &[u8] = b"hello\x00world\x00\x00end";
-        let encoded = encode(&[(path, content)]);
+        let encoded = encode(&[(path, content)]).unwrap();
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].1, content);

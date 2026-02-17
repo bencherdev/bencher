@@ -69,6 +69,7 @@ COPY plus/bencher_otel_provider bencher_otel_provider
 COPY plus/bencher_recaptcha bencher_recaptcha
 COPY plus/bencher_rootfs bencher_rootfs
 COPY plus/bencher_runner bencher_runner
+COPY plus/bencher_init bencher_init
 
 WORKDIR /usr/src/bencher/tasks
 RUN cargo init --bin bin_version

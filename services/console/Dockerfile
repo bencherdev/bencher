@@ -43,6 +43,7 @@ RUN cargo init --lib bencher_otel_provider
 RUN cargo init --lib bencher_recaptcha
 RUN cargo init --lib bencher_rootfs
 RUN cargo init --lib bencher_runner
+RUN cargo init --lib bencher_init
 
 WORKDIR /usr/src/bencher/tasks
 RUN cargo init --bin bin_version

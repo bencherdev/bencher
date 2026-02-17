@@ -13,9 +13,6 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
     type Error = anyhow::Error;
 
     fn try_from(task: TaskDaemon) -> Result<Self, Self::Error> {
-        let host =
-            url::Url::parse(&task.host).map_err(|e| anyhow::anyhow!("Invalid host URL: {e}"))?;
-
         let tuning = if task.no_tuning {
             TuningConfig::disabled()
         } else {
@@ -48,7 +45,7 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
 
         Ok(Self {
             config: DaemonConfig {
-                host,
+                host: task.host,
                 token: task.token,
                 runner: task.runner,
                 poll_timeout_secs: task.poll_timeout,

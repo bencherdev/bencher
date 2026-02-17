@@ -42,7 +42,7 @@ struct Config {
     command: Vec<String>,
     /// Working directory.
     #[serde(default = "default_workdir")]
-    workdir: String,
+    workdir: Utf8PathBuf,
     /// Environment variables.
     #[serde(default)]
     env: Vec<(String, String)>,
@@ -53,8 +53,8 @@ struct Config {
     max_output_size: usize,
 }
 
-fn default_workdir() -> String {
-    "/".to_owned()
+fn default_workdir() -> Utf8PathBuf {
+    Utf8PathBuf::from("/")
 }
 
 /// Write a message to the console for debugging.
@@ -647,7 +647,13 @@ fn encode_output_files(paths: &[Utf8PathBuf]) -> Vec<u8> {
     // Second pass: encode using shared protocol
     let encode_input: Vec<(&Utf8Path, &[u8])> =
         files.iter().map(|(p, c)| (*p, c.as_slice())).collect();
-    bencher_output_protocol::encode(&encode_input)
+    match bencher_output_protocol::encode(&encode_input) {
+        Ok(encoded) => encoded,
+        Err(e) => {
+            eprintln!("failed to encode output files: {e}");
+            Vec::new()
+        },
+    }
 }
 
 /// Close a file descriptor, logging any error.
@@ -821,25 +827,18 @@ fn poweroff() {
 }
 
 /// Init errors.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 enum InitError {
+    #[error("mount: {0}")]
     Mount(String),
+    #[error("signal: {0}")]
     Signal(String),
+    #[error("config: {0}")]
     Config(String),
+    #[error("fork: {0}")]
     Fork(String),
+    #[error("io: {0}")]
     Io(String),
+    #[error("vsock: {0}")]
     Vsock(String),
-}
-
-impl std::fmt::Display for InitError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Mount(s) => write!(f, "mount: {s}"),
-            Self::Signal(s) => write!(f, "signal: {s}"),
-            Self::Config(s) => write!(f, "config: {s}"),
-            Self::Fork(s) => write!(f, "fork: {s}"),
-            Self::Io(s) => write!(f, "io: {s}"),
-            Self::Vsock(s) => write!(f, "vsock: {s}"),
-        }
-    }
 }

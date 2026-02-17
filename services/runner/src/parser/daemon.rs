@@ -14,7 +14,7 @@ const DEFAULT_HOST: &str = "https://api.bencher.dev";
 pub struct TaskDaemon {
     /// API server host URL.
     #[arg(long, env = "BENCHER_HOST", default_value = DEFAULT_HOST)]
-    pub host: String,
+    pub host: url::Url,
 
     /// Runner authentication token.
     #[arg(long, env = "BENCHER_RUNNER_TOKEN")]

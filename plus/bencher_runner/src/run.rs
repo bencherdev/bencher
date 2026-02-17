@@ -398,9 +398,7 @@ fn install_init_binary(rootfs: &camino::Utf8Path) -> Result<(), RunnerError> {
 
         std::fs::copy(&init_binary, &dest_path).map_err(|e| {
             RunnerError::Config(format!(
-                "failed to copy init binary from {} to {}: {e}",
-                init_binary.display(),
-                dest_path
+                "failed to copy init binary from {init_binary} to {dest_path}: {e}",
             ))
         })?;
 
@@ -416,20 +414,21 @@ fn install_init_binary(rootfs: &camino::Utf8Path) -> Result<(), RunnerError> {
 
 /// Find the bencher-init binary on disk (fallback when not bundled).
 #[cfg(target_os = "linux")]
-fn find_init_binary() -> Result<std::path::PathBuf, RunnerError> {
+fn find_init_binary() -> Result<Utf8PathBuf, RunnerError> {
     // Look in these locations in order
     let candidates = [
         // Next to the current executable
         std::env::current_exe()
             .ok()
-            .and_then(|p| p.parent().map(|d| d.join("bencher-init"))),
+            .and_then(|p| p.parent().map(|d| d.join("bencher-init")))
+            .and_then(|p| Utf8PathBuf::try_from(p).ok()),
         // Common installation paths
-        Some(std::path::PathBuf::from("/usr/local/bin/bencher-init")),
-        Some(std::path::PathBuf::from("/usr/bin/bencher-init")),
+        Some(Utf8PathBuf::from("/usr/local/bin/bencher-init")),
+        Some(Utf8PathBuf::from("/usr/bin/bencher-init")),
     ];
 
     for candidate in candidates.into_iter().flatten() {
-        if candidate.exists() {
+        if candidate.as_std_path().exists() {
             return Ok(candidate);
         }
     }

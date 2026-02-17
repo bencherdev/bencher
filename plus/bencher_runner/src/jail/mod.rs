@@ -139,7 +139,7 @@ mod tests {
     #[test]
     fn with_memory_limit() {
         let limits = ResourceLimits::default().with_memory_limit(1024 * 1024 * 512);
-        assert_eq!(limits.memory_bytes, Some(536_870_912));
+        assert_eq!(limits.memory_bytes, Some(0x2000_0000));
     }
 
     #[test]

@@ -1377,6 +1377,7 @@ dependencies = [
  "libc",
  "serde",
  "serde_json",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -1428,6 +1429,7 @@ name = "bencher_oci"
 version = "0.5.10"
 dependencies = [
  "base64 0.22.1",
+ "bencher_json",
  "bencher_valid",
  "camino",
  "flate2",

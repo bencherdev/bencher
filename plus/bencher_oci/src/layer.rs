@@ -29,7 +29,9 @@ fn normalize_path(path: &std::path::Path) -> PathBuf {
                 }
             },
             std::path::Component::CurDir => {},
-            _ => components.push(component),
+            std::path::Component::Prefix(_)
+            | std::path::Component::RootDir
+            | std::path::Component::Normal(_) => components.push(component),
         }
     }
     components.iter().collect()
@@ -174,6 +176,18 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
         // Create parent directories if needed
         if let Some(parent) = target_path.parent() {
             std::fs::create_dir_all(parent)?;
+
+            // Defense-in-depth: after creating directories, verify the resolved
+            // parent hasn't been redirected outside target_dir via a symlink
+            // placed by an earlier entry in this or a previous layer.
+            let real_parent = std::fs::canonicalize(parent)?;
+            let real_target = std::fs::canonicalize(target_dir)?;
+            if !real_parent.starts_with(&real_target) {
+                return Err(OciError::PathTraversal(format!(
+                    "Resolved parent escapes target directory: {}",
+                    path.display()
+                )));
+            }
         }
 
         // Check if this is a hard link - defer it for later
@@ -308,7 +322,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_layer_compression_enum() {
+    fn layer_compression_enum() {
         assert_ne!(LayerCompression::None, LayerCompression::Gzip);
         assert_ne!(LayerCompression::Gzip, LayerCompression::Zstd);
     }
@@ -360,8 +374,8 @@ mod tests {
     }
 
     #[test]
-    fn test_directory_permissions_preserved() {
-        use std::os::unix::fs::PermissionsExt;
+    fn directory_permissions_preserved() {
+        use std::os::unix::fs::PermissionsExt as _;
         use tar::{Builder, Header};
 
         let temp_dir = tempfile::tempdir().unwrap();
@@ -398,8 +412,8 @@ mod tests {
     }
 
     #[test]
-    fn test_file_permissions_preserved() {
-        use std::os::unix::fs::PermissionsExt;
+    fn file_permissions_preserved() {
+        use std::os::unix::fs::PermissionsExt as _;
         use tar::{Builder, Header};
 
         let temp_dir = tempfile::tempdir().unwrap();
@@ -437,8 +451,8 @@ mod tests {
     }
 
     #[test]
-    fn test_nested_directory_permissions() {
-        use std::os::unix::fs::PermissionsExt;
+    fn nested_directory_permissions() {
+        use std::os::unix::fs::PermissionsExt as _;
         use tar::{Builder, Header};
 
         let temp_dir = tempfile::tempdir().unwrap();
@@ -498,6 +512,465 @@ mod tests {
         assert_eq!(
             child_mode, 0o700,
             "Child mode should be 0o700, got {child_mode:#o}"
+        );
+    }
+
+    // --- Symlink TOCTOU tests (Fix 2) ---
+
+    #[test]
+    fn symlink_toctou_blocked() {
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+
+        // Layer 1: create a symlink "evil" -> /tmp (absolute, outside target_dir)
+        let tar1_path = temp_dir.path().join("layer1.tar");
+        {
+            let tar_file = File::create(&tar1_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Symlink);
+            header.set_size(0);
+            header.set_mode(0o777);
+            header.set_cksum();
+            builder.append_link(&mut header, "evil", "/tmp").unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        // Extract layer 1
+        let reader1 = File::open(&tar1_path).unwrap();
+        extract_tar(reader1, target).unwrap();
+
+        // Verify the symlink was created
+        assert!(
+            extract_dir
+                .join("evil")
+                .symlink_metadata()
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+
+        // Layer 2: try to create a file "evil/escape.txt"
+        let tar2_path = temp_dir.path().join("layer2.tar");
+        {
+            let tar_file = File::create(&tar2_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            let content = b"escaped!";
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_size(content.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "evil/escape.txt", &content[..])
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        // Extract layer 2 — should fail with PathTraversal
+        let reader2 = File::open(&tar2_path).unwrap();
+        let result = extract_tar(reader2, target);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, OciError::PathTraversal(_)),
+            "expected PathTraversal error, got: {err}"
+        );
+    }
+
+    #[test]
+    fn symlink_within_rootfs_allowed() {
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let tar_path = temp_dir.path().join("test.tar");
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+
+        {
+            let tar_file = File::create(&tar_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            // Create usr/lib/ directory
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Directory);
+            header.set_mode(0o755);
+            header.set_size(0);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "usr/lib/", std::io::empty())
+                .unwrap();
+
+            // Create symlink lib -> usr/lib (relative, stays inside)
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Symlink);
+            header.set_size(0);
+            header.set_mode(0o777);
+            header.set_cksum();
+            builder.append_link(&mut header, "lib", "usr/lib").unwrap();
+
+            // Create a file lib/foo.so
+            let content = b"shared object";
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_size(content.len() as u64);
+            header.set_mode(0o755);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "lib/foo.so", &content[..])
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let reader = File::open(&tar_path).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+        extract_tar(reader, target).unwrap();
+
+        // Verify the symlink resolves correctly
+        assert!(
+            extract_dir
+                .join("lib")
+                .symlink_metadata()
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert!(extract_dir.join("usr/lib/foo.so").exists());
+    }
+
+    #[test]
+    fn absolute_symlink_within_rootfs() {
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let tar_path = temp_dir.path().join("test.tar");
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+
+        {
+            let tar_file = File::create(&tar_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            // Create usr/bin/ directory
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Directory);
+            header.set_mode(0o755);
+            header.set_size(0);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "usr/bin/", std::io::empty())
+                .unwrap();
+
+            // Create symlink bin -> /usr/bin (absolute target, standard in containers)
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Symlink);
+            header.set_size(0);
+            header.set_mode(0o777);
+            header.set_cksum();
+            builder.append_link(&mut header, "bin", "/usr/bin").unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let reader = File::open(&tar_path).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+        extract_tar(reader, target).unwrap();
+
+        // Verify the symlink was created
+        assert!(
+            extract_dir
+                .join("bin")
+                .symlink_metadata()
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+    }
+
+    // --- Whiteout tests (Fix 15) ---
+
+    #[test]
+    fn opaque_whiteout() {
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+
+        // Layer 1: create some files in a directory
+        let tar1_path = temp_dir.path().join("layer1.tar");
+        {
+            let tar_file = File::create(&tar1_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            // Create mydir/
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Directory);
+            header.set_mode(0o755);
+            header.set_size(0);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "mydir/", std::io::empty())
+                .unwrap();
+
+            // Create mydir/file1.txt
+            let content = b"file1";
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_size(content.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "mydir/file1.txt", &content[..])
+                .unwrap();
+
+            // Create mydir/file2.txt
+            let content = b"file2";
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_size(content.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "mydir/file2.txt", &content[..])
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let reader1 = File::open(&tar1_path).unwrap();
+        extract_tar(reader1, target).unwrap();
+        assert!(extract_dir.join("mydir/file1.txt").exists());
+        assert!(extract_dir.join("mydir/file2.txt").exists());
+
+        // Layer 2: opaque whiteout clears the directory
+        let tar2_path = temp_dir.path().join("layer2.tar");
+        {
+            let tar_file = File::create(&tar2_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            // Opaque whiteout marker
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_size(0);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "mydir/.wh..wh..opq", std::io::empty())
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let reader2 = File::open(&tar2_path).unwrap();
+        extract_tar(reader2, target).unwrap();
+
+        // Directory should still exist but be empty
+        assert!(extract_dir.join("mydir").exists());
+        assert!(!extract_dir.join("mydir/file1.txt").exists());
+        assert!(!extract_dir.join("mydir/file2.txt").exists());
+    }
+
+    #[test]
+    fn regular_whiteout() {
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+
+        // Layer 1: create a file
+        let tar1_path = temp_dir.path().join("layer1.tar");
+        {
+            let tar_file = File::create(&tar1_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            let content = b"to be deleted";
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_size(content.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "removeme.txt", &content[..])
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let reader1 = File::open(&tar1_path).unwrap();
+        extract_tar(reader1, target).unwrap();
+        assert!(extract_dir.join("removeme.txt").exists());
+
+        // Layer 2: whiteout to delete the file
+        let tar2_path = temp_dir.path().join("layer2.tar");
+        {
+            let tar_file = File::create(&tar2_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_size(0);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, ".wh.removeme.txt", std::io::empty())
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let reader2 = File::open(&tar2_path).unwrap();
+        extract_tar(reader2, target).unwrap();
+        assert!(!extract_dir.join("removeme.txt").exists());
+    }
+
+    #[test]
+    fn whiteout_nonexistent_file() {
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let tar_path = temp_dir.path().join("test.tar");
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+
+        {
+            let tar_file = File::create(&tar_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            // Whiteout for a file that doesn't exist — should not error
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_size(0);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, ".wh.nonexistent.txt", std::io::empty())
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let reader = File::open(&tar_path).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+        extract_tar(reader, target).unwrap();
+        // Should complete without error
+    }
+
+    // --- Hardlink tests (Fix 16) ---
+
+    #[test]
+    fn hardlink_target_after_link() {
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let tar_path = temp_dir.path().join("test.tar");
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+
+        let content = b"hardlink target content";
+
+        {
+            let tar_file = File::create(&tar_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            // Add hardlink entry BEFORE its target (reversed order)
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Link);
+            header.set_size(0);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_link(&mut header, "link.txt", "target.txt")
+                .unwrap();
+
+            // Add the actual target file
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_size(content.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "target.txt", &content[..])
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let reader = File::open(&tar_path).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+        extract_tar(reader, target).unwrap();
+
+        // Both files should exist with the same content
+        assert!(extract_dir.join("target.txt").exists());
+        assert!(extract_dir.join("link.txt").exists());
+        assert_eq!(
+            std::fs::read(extract_dir.join("link.txt")).unwrap(),
+            content
+        );
+    }
+
+    #[test]
+    fn hardlink_same_inode() {
+        use std::os::unix::fs::MetadataExt as _;
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let tar_path = temp_dir.path().join("test.tar");
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+
+        let content = b"shared content";
+
+        {
+            let tar_file = File::create(&tar_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            // Add the target file first
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_size(content.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "original.txt", &content[..])
+                .unwrap();
+
+            // Add hardlink
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Link);
+            header.set_size(0);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_link(&mut header, "hardlink.txt", "original.txt")
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let reader = File::open(&tar_path).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+        extract_tar(reader, target).unwrap();
+
+        // Verify they share the same inode
+        let original_meta = std::fs::metadata(extract_dir.join("original.txt")).unwrap();
+        let link_meta = std::fs::metadata(extract_dir.join("hardlink.txt")).unwrap();
+        assert_eq!(
+            original_meta.ino(),
+            link_meta.ino(),
+            "Hardlinked files should share the same inode"
         );
     }
 }

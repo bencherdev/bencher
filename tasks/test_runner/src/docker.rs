@@ -84,7 +84,7 @@ pub fn run_in_docker(workspace_root: &Utf8Path) -> anyhow::Result<String> {
             &format!("{workspace_root}:/workspace:ro"),
             "-w",
             "/workspace",
-            "rust:1.86-bookworm",
+            "rust:1.91.1-bookworm",
             "bash",
             "-c",
             "apt-get update && apt-get install -y qemu-kvm >/dev/null 2>&1 && \

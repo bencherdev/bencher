@@ -127,6 +127,39 @@ impl TokenResponse {
     }
 }
 
+/// Map the Rust `std::env::consts::ARCH` value to the OCI architecture name.
+fn oci_arch() -> &'static str {
+    use std::env::consts::ARCH;
+    match ARCH {
+        "x86_64" => "amd64",
+        "aarch64" => "arm64",
+        arch => arch,
+    }
+}
+
+/// Select the best platform manifest from an index/manifest list.
+///
+/// Prefers `linux` + current architecture. Falls back to first manifest.
+fn select_platform_manifest(
+    manifests: &[bencher_json::oci::OciManifestDescriptor],
+) -> Result<&bencher_json::oci::OciManifestDescriptor, OciError> {
+    let first = manifests
+        .first()
+        .ok_or_else(|| OciError::Registry("Empty manifests array".to_owned()))?;
+
+    let target_arch = oci_arch();
+
+    // Find a manifest matching linux + current architecture
+    let platform_match = manifests.iter().find(|m| {
+        m.platform
+            .as_ref()
+            .is_some_and(|p| p.os == "linux" && p.architecture == target_arch)
+    });
+
+    // Fall back to first manifest if no platform match
+    Ok(platform_match.unwrap_or(first))
+}
+
 /// OCI registry client for pulling images.
 pub struct RegistryClient {
     /// HTTP agent.
@@ -190,50 +223,56 @@ impl RegistryClient {
         let manifest_path = blobs_dir.join(manifest_hash);
         fs::write(&manifest_path, &manifest_bytes)?;
 
-        // Parse manifest to get layers and config
-        let manifest: serde_json::Value = serde_json::from_slice(&manifest_bytes)?;
+        // Parse manifest to determine type and extract layers/config
+        let parsed = bencher_json::oci::Manifest::from_bytes(&manifest_bytes)
+            .map_err(|e| OciError::Registry(format!("Failed to parse manifest: {e}")))?;
 
-        // Check if this is an index (multi-platform) or a manifest
-        let manifest = if manifest.get("manifests").is_some() {
-            // It's an index, get the first manifest
-            let manifests = manifest
-                .get("manifests")
-                .and_then(|m| m.as_array())
-                .ok_or_else(|| {
-                    OciError::Registry("Invalid index: no manifests array".to_owned())
-                })?;
+        // If this is an index/manifest list, select the best platform manifest and pull it
+        let (image_manifest, _nested_bytes) = match &parsed {
+            bencher_json::oci::Manifest::OciImageIndex(index) => {
+                let desc = select_platform_manifest(&index.manifests)?;
+                let (_, nested_bytes) = self.pull_blob(image_ref, &desc.digest)?;
 
-            let first = manifests
-                .first()
-                .ok_or_else(|| OciError::Registry("Empty manifests array".to_owned()))?;
+                // Save nested manifest blob
+                let nested_hash = desc.digest.strip_prefix("sha256:").unwrap_or(&desc.digest);
+                let nested_path = blobs_dir.join(nested_hash);
+                fs::write(&nested_path, &nested_bytes)?;
 
-            let nested_digest = first
-                .get("digest")
-                .and_then(|d| d.as_str())
-                .ok_or_else(|| OciError::Registry("Manifest missing digest".to_owned()))?;
+                let nested: bencher_json::oci::OciImageManifest =
+                    serde_json::from_slice(&nested_bytes)?;
+                (nested, Some(nested_bytes))
+            },
+            bencher_json::oci::Manifest::DockerManifestList(list) => {
+                let desc = select_platform_manifest(&list.manifests)?;
+                let (_, nested_bytes) = self.pull_blob(image_ref, &desc.digest)?;
 
-            // Pull the actual manifest
-            let (_, nested_bytes) = self.pull_blob(image_ref, nested_digest)?;
+                // Save nested manifest blob
+                let nested_hash = desc.digest.strip_prefix("sha256:").unwrap_or(&desc.digest);
+                let nested_path = blobs_dir.join(nested_hash);
+                fs::write(&nested_path, &nested_bytes)?;
 
-            // Save nested manifest blob
-            let nested_hash = nested_digest
-                .strip_prefix("sha256:")
-                .unwrap_or(nested_digest);
-            let nested_path = blobs_dir.join(nested_hash);
-            fs::write(&nested_path, &nested_bytes)?;
-
-            serde_json::from_slice(&nested_bytes)?
-        } else {
-            manifest
+                let nested: bencher_json::oci::OciImageManifest =
+                    serde_json::from_slice(&nested_bytes)?;
+                (nested, Some(nested_bytes))
+            },
+            bencher_json::oci::Manifest::OciImageManifest(m) => (m.clone(), None),
+            bencher_json::oci::Manifest::DockerManifestV2(m) => {
+                // Convert Docker V2 fields to OCI manifest fields
+                let oci = bencher_json::oci::OciImageManifest {
+                    schema_version: m.schema_version,
+                    media_type: Some(m.media_type.clone()),
+                    config: m.config.clone(),
+                    layers: m.layers.clone(),
+                    subject: None,
+                    annotations: None,
+                    artifact_type: None,
+                };
+                (oci, None)
+            },
         };
 
         // Pull config blob
-        let config_digest = manifest
-            .get("config")
-            .and_then(|c| c.get("digest"))
-            .and_then(|d| d.as_str())
-            .ok_or_else(|| OciError::Registry("Manifest missing config digest".to_owned()))?;
-
+        let config_digest = &image_manifest.config.digest;
         let (_, config_bytes) = self.pull_blob(image_ref, config_digest)?;
         let config_hash = config_digest
             .strip_prefix("sha256:")
@@ -242,23 +281,17 @@ impl RegistryClient {
         fs::write(&config_path, &config_bytes)?;
 
         // Pull layer blobs
-        if let Some(layers) = manifest.get("layers").and_then(|l| l.as_array()) {
-            for layer in layers {
-                let layer_digest = layer
-                    .get("digest")
-                    .and_then(|d| d.as_str())
-                    .ok_or_else(|| OciError::Registry("Layer missing digest".to_owned()))?;
+        for layer in &image_manifest.layers {
+            let layer_digest = &layer.digest;
+            let layer_hash = layer_digest.strip_prefix("sha256:").unwrap_or(layer_digest);
+            let layer_path = blobs_dir.join(layer_hash);
 
-                let layer_hash = layer_digest.strip_prefix("sha256:").unwrap_or(layer_digest);
-                let layer_path = blobs_dir.join(layer_hash);
-
-                // Skip if already downloaded
-                if layer_path.exists() {
-                    continue;
-                }
-
-                self.pull_blob_to_file(image_ref, layer_digest, &layer_path)?;
+            // Skip if already downloaded
+            if layer_path.exists() {
+                continue;
             }
+
+            self.pull_blob_to_file(image_ref, layer_digest, &layer_path)?;
         }
 
         // Write index.json
@@ -310,6 +343,14 @@ impl RegistryClient {
         // Compute digest
         let hash = Sha256::digest(&bytes);
         let computed_digest = format!("sha256:{hash:x}");
+
+        // Validate digest matches when pulling by digest
+        if image_ref.is_digest && computed_digest != image_ref.reference {
+            return Err(OciError::DigestMismatch {
+                expected: image_ref.reference.clone(),
+                actual: computed_digest,
+            });
+        }
 
         Ok((computed_digest, bytes))
     }
@@ -559,7 +600,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_simple_image() {
+    fn parse_simple_image() {
         let ref_ = ImageReference::parse("alpine").unwrap();
         assert_eq!(ref_.registry, "docker.io");
         assert_eq!(ref_.repository, "library/alpine");
@@ -568,7 +609,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_image_with_tag() {
+    fn parse_image_with_tag() {
         let ref_ = ImageReference::parse("alpine:3.18").unwrap();
         assert_eq!(ref_.registry, "docker.io");
         assert_eq!(ref_.repository, "library/alpine");
@@ -577,7 +618,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_user_image() {
+    fn parse_user_image() {
         let ref_ = ImageReference::parse("myuser/myimage:v1").unwrap();
         assert_eq!(ref_.registry, "docker.io");
         assert_eq!(ref_.repository, "myuser/myimage");
@@ -585,7 +626,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_custom_registry() {
+    fn parse_custom_registry() {
         let ref_ = ImageReference::parse("ghcr.io/owner/repo:latest").unwrap();
         assert_eq!(ref_.registry, "ghcr.io");
         assert_eq!(ref_.repository, "owner/repo");
@@ -593,7 +634,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_registry_with_port() {
+    fn parse_registry_with_port() {
         let ref_ = ImageReference::parse("localhost:5000/myimage:v1").unwrap();
         assert_eq!(ref_.registry, "localhost:5000");
         assert_eq!(ref_.repository, "myimage");
@@ -601,7 +642,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_digest() {
+    fn parse_digest() {
         let ref_ = ImageReference::parse("alpine@sha256:abc123").unwrap();
         assert_eq!(ref_.registry, "docker.io");
         assert_eq!(ref_.repository, "library/alpine");
@@ -610,7 +651,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_www_authenticate() {
+    fn parse_www_authenticate_header() {
         let header = r#"Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:library/alpine:pull""#;
         let params = RegistryClient::parse_www_authenticate(header);
 

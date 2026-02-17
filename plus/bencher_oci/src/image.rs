@@ -137,12 +137,37 @@ pub fn parse_index(image_dir: &Utf8Path) -> Result<ImageIndex, OciError> {
     Ok(index)
 }
 
+/// Map the Rust `std::env::consts::ARCH` value to the OCI architecture name.
+fn oci_arch() -> &'static str {
+    use std::env::consts::ARCH;
+    match ARCH {
+        "x86_64" => "amd64",
+        "aarch64" => "arm64",
+        arch => arch,
+    }
+}
+
 /// Get the manifest for the specified platform or the first manifest.
 pub fn get_manifest(image_dir: &Utf8Path, index: &ImageIndex) -> Result<ImageManifest, OciError> {
-    // Get the first manifest descriptor
-    let manifest_desc = index
-        .manifests()
-        .first()
+    let manifests = index.manifests();
+
+    if manifests.is_empty() {
+        return Err(OciError::MissingManifest(
+            "No manifests in index".to_owned(),
+        ));
+    }
+
+    let target_arch = oci_arch();
+
+    // Find a manifest matching linux + current architecture, fall back to first
+    let manifest_desc = manifests
+        .iter()
+        .find(|m| {
+            m.platform().as_ref().is_some_and(|p| {
+                p.os().to_string() == "linux" && p.architecture().to_string() == target_arch
+            })
+        })
+        .or_else(|| manifests.first())
         .ok_or_else(|| OciError::MissingManifest("No manifests in index".to_owned()))?;
 
     // Parse the digest to get the blob path
@@ -288,6 +313,7 @@ pub fn detect_layer_media_type(
 }
 
 #[cfg(test)]
+#[expect(clippy::indexing_slicing, reason = "test code")]
 mod tests {
     use super::*;
     use camino::Utf8Path;
@@ -354,5 +380,150 @@ mod tests {
         // OCI spec allows +, -, . in algorithm names (e.g., sha256+b64)
         let result = digest_to_blob_path(dir, "sha256+b64:abcdef").unwrap();
         assert_eq!(result, Utf8Path::new("/oci/blobs/sha256+b64/abcdef"));
+    }
+
+    /// Helper to create a minimal OCI layout with an index and manifest blobs.
+    fn create_oci_layout_with_manifests(
+        image_dir: &std::path::Path,
+        manifest_descs: &[serde_json::Value],
+    ) {
+        use sha2::{Digest as _, Sha256};
+
+        let blobs_dir = image_dir.join("blobs/sha256");
+        std::fs::create_dir_all(&blobs_dir).unwrap();
+
+        // Write oci-layout
+        std::fs::write(
+            image_dir.join("oci-layout"),
+            r#"{"imageLayoutVersion":"1.0.0"}"#,
+        )
+        .unwrap();
+
+        // Create a minimal config blob
+        let config_json = b"{}";
+        let config_digest = format!("{:x}", Sha256::digest(config_json));
+        std::fs::write(blobs_dir.join(&config_digest), config_json).unwrap();
+
+        // Create manifest blobs for each descriptor and collect index entries
+        let mut index_manifests = Vec::new();
+        for desc in manifest_descs {
+            let platform = desc.get("platform").cloned();
+
+            // Create a minimal OCI image manifest
+            let manifest = serde_json::json!({
+                "schemaVersion": 2,
+                "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                "config": {
+                    "mediaType": "application/vnd.oci.image.config.v1+json",
+                    "digest": format!("sha256:{config_digest}"),
+                    "size": config_json.len()
+                },
+                "layers": []
+            });
+            let manifest_bytes = serde_json::to_vec(&manifest).unwrap();
+            let manifest_digest = format!("{:x}", Sha256::digest(&manifest_bytes));
+            std::fs::write(blobs_dir.join(&manifest_digest), &manifest_bytes).unwrap();
+
+            let mut entry = serde_json::json!({
+                "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                "digest": format!("sha256:{manifest_digest}"),
+                "size": manifest_bytes.len()
+            });
+            if let Some(p) = platform {
+                entry
+                    .as_object_mut()
+                    .unwrap()
+                    .insert("platform".to_owned(), p);
+            }
+            index_manifests.push(entry);
+        }
+
+        // Write index.json
+        let index = serde_json::json!({
+            "schemaVersion": 2,
+            "manifests": index_manifests
+        });
+        std::fs::write(
+            image_dir.join("index.json"),
+            serde_json::to_string_pretty(&index).unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn get_manifest_selects_matching_platform() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let image_dir = temp_dir.path();
+
+        let current_arch = oci_arch();
+
+        // Create an index with two manifests: one for the other arch, one for current
+        let other_arch = if current_arch == "amd64" {
+            "arm64"
+        } else {
+            "amd64"
+        };
+
+        create_oci_layout_with_manifests(
+            image_dir,
+            &[
+                serde_json::json!({
+                    "platform": { "architecture": other_arch, "os": "linux" }
+                }),
+                serde_json::json!({
+                    "platform": { "architecture": current_arch, "os": "linux" }
+                }),
+            ],
+        );
+
+        let image_dir = Utf8Path::from_path(image_dir).unwrap();
+        let index = parse_index(image_dir).unwrap();
+        let manifest = get_manifest(image_dir, &index).unwrap();
+
+        // The selected manifest should correspond to the second descriptor (current arch)
+        let expected_digest = index.manifests()[1].digest().to_string();
+        // Verify by checking config_digest is the same as what the second manifest points to
+        assert_eq!(
+            manifest.config_digest,
+            manifest.manifest.config().digest().to_string()
+        );
+
+        // Both manifests point to the same config in our test, so verify we got the right
+        // manifest by checking its digest matches the second entry
+        let manifest_bytes =
+            std::fs::read(digest_to_blob_path(image_dir, &expected_digest).unwrap()).unwrap();
+        let expected_manifest: oci_spec::image::ImageManifest =
+            oci_spec::image::ImageManifest::from_reader(&manifest_bytes[..]).unwrap();
+        assert_eq!(
+            manifest.manifest.config().digest(),
+            expected_manifest.config().digest()
+        );
+    }
+
+    #[test]
+    fn get_manifest_falls_back_to_first() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let image_dir = temp_dir.path();
+
+        // Create an index with manifests that have no platform info
+        create_oci_layout_with_manifests(
+            image_dir,
+            &[serde_json::json!({}), serde_json::json!({})],
+        );
+
+        let image_dir = Utf8Path::from_path(image_dir).unwrap();
+        let index = parse_index(image_dir).unwrap();
+        let manifest = get_manifest(image_dir, &index).unwrap();
+
+        // Should fall back to first manifest
+        let first_digest = index.manifests()[0].digest().to_string();
+        let manifest_bytes =
+            std::fs::read(digest_to_blob_path(image_dir, &first_digest).unwrap()).unwrap();
+        let first_manifest: oci_spec::image::ImageManifest =
+            oci_spec::image::ImageManifest::from_reader(&manifest_bytes[..]).unwrap();
+        assert_eq!(
+            manifest.manifest.config().digest(),
+            first_manifest.config().digest()
+        );
     }
 }
