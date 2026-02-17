@@ -173,8 +173,13 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
 
         let target_path = safe_join(target_dir, &path)?;
 
-        // Create parent directories if needed
-        if let Some(parent) = target_path.parent() {
+        // Create parent directories if needed.
+        // Skip the canonicalization check when the target path IS the target
+        // directory itself (i.e., the tar entry is the root `.` or `./`),
+        // because its parent is legitimately outside target_dir.
+        if let Some(parent) = target_path.parent()
+            && target_path != target_dir
+        {
             std::fs::create_dir_all(parent)?;
 
             // Defense-in-depth: after creating directories, verify the resolved
@@ -371,6 +376,49 @@ mod tests {
         let dir = Utf8Path::new("/rootfs");
         let result = safe_join(dir, std::path::Path::new("./usr/bin")).unwrap();
         assert_eq!(result, Utf8Path::new("/rootfs/./usr/bin"));
+    }
+
+    #[test]
+    fn root_dot_entry_allowed() {
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let tar_path = temp_dir.path().join("test.tar");
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+
+        // Docker `docker save` produces tars whose first entry is `./`
+        {
+            let tar_file = File::create(&tar_path).unwrap();
+            let mut builder = Builder::new(tar_file);
+
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Directory);
+            header.set_mode(0o755);
+            header.set_size(0);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "./", std::io::empty())
+                .unwrap();
+
+            let content = b"hello";
+            let mut header = Header::new_gnu();
+            header.set_entry_type(EntryType::Regular);
+            header.set_size(content.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "./hello.txt", &content[..])
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let reader = File::open(&tar_path).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+        // Should not fail with "Resolved parent escapes target directory: ./"
+        extract_tar(reader, target).unwrap();
+        assert!(extract_dir.join("hello.txt").exists());
     }
 
     #[test]

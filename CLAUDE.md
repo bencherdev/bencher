@@ -142,6 +142,7 @@ Defined in `.cargo/config.toml`:
 - `cargo xtask` - Administrative tasks
 - `cargo gen-types` / `cargo gen-spec` / `cargo gen-ts` - Type generation
 - `cargo test-api` - API testing and DB seeding
+- `cargo test-runner` - Runner integration tests (requires Linux + KVM; see [`services/runner/CLAUDE.md`](services/runner/CLAUDE.md))
 - `cargo bin-version` - Version management
 
 ### Feature Flags
@@ -246,6 +247,8 @@ Bare metal benchmark runners that claim and execute jobs from the API. Server-sc
 - `lib/bencher_schema/migrations/2026-02-02-120000_runner/` - Migration for `runner` and `job` tables
 
 **Runner authentication** is separate from user auth — runner tokens use `Authorization: Bearer bencher_runner_<token>` and are validated by hashing and looking up `token_hash` in the `runner` table.
+
+**Runner integration tests** require Linux + KVM and run on a remote GCP VM. See [`services/runner/CLAUDE.md`](services/runner/CLAUDE.md) for the full guide on connecting, transferring code, and running `cargo test-runner scenarios`.
 
 ## Key Coordination Points
 

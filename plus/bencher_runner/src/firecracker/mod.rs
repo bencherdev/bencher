@@ -14,7 +14,7 @@ mod vsock;
 
 use std::collections::HashMap;
 
-use crate::log_level::FirecrackerLogLevel;
+pub use crate::log_level::FirecrackerLogLevel;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::time::{Duration, Instant};
