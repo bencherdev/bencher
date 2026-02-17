@@ -19,7 +19,7 @@ env:
 
 jobs:
   test_runner:
-    name: Test VMM Integration (${{ matrix.arch }})
+    name: Test Runner (${{ matrix.arch }})
     strategy:
       fail-fast: false
       matrix:
@@ -36,35 +36,33 @@ jobs:
         with:
           mold-version: ${{ inputs.mold-version }}
           cache-key: test-runner-${{ matrix.arch }}
+      - name: Install musl target
+        run: rustup target add ${{ matrix.arch }}-unknown-linux-musl
       - name: Enable KVM
+        if: matrix.arch == 'x86_64'
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Verify KVM
+        if: matrix.arch == 'x86_64'
         run: |
           ls -la /dev/kvm
       - name: Run test-runner
         run: cargo test-runner test
 
   test_runner_scenarios:
-    name: Test Runner Scenarios (${{ matrix.arch }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-22.04
-          - arch: aarch64
-            runner: ubuntu-22.04-arm
-    runs-on: ${{ matrix.runner }}
+    name: Test Runner Scenarios
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
           mold-version: ${{ inputs.mold-version }}
-          cache-key: test-runner-scenarios-${{ matrix.arch }}
+          cache-key: test-runner-scenarios
+      - name: Install musl target
+        run: rustup target add x86_64-unknown-linux-musl
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
