@@ -69,6 +69,10 @@
           default = pkgs.mkShell {
             buildInputs = buildInputs ++ rust_tools ++ nix_tools;
           };
+          # A more lightweight dev shell with only packages relevant for CI in it.
+          ci = pkgs.mkShell {
+            buildInputs = nix_tools;
+          };
         };
 
         # Run an app with `nix run` or more specifically e.g.: `nix run .#bencher`
