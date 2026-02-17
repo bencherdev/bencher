@@ -191,6 +191,11 @@ fn build_config_from_job(daemon_config: &DaemonConfig, job: &JsonClaimedJob) -> 
         runner_config = runner_config.with_max_output_size(max_output_size);
     }
 
+    // Pass through max file count if configured
+    if let Some(max_file_count) = daemon_config.max_file_count {
+        runner_config = runner_config.with_max_file_count(max_file_count);
+    }
+
     // Pass through Firecracker log level
     runner_config.firecracker_log_level = daemon_config.firecracker_log_level;
 
@@ -309,6 +314,7 @@ mod tests {
             tuning: crate::TuningConfig::disabled(),
             cpu_layout: crate::cpu::CpuLayout::with_core_count(4),
             max_output_size: None,
+            max_file_count: None,
             firecracker_log_level: crate::firecracker::FirecrackerLogLevel::default(),
         }
     }

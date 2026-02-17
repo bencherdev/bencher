@@ -57,6 +57,7 @@ impl TryFrom<TaskRun> for Run {
                     Some(task.output.into_iter().map(Utf8PathBuf::from).collect())
                 },
                 max_output_size: task.max_output_size,
+                max_file_count: task.max_file_count,
                 network: task.network,
                 tuning,
                 firecracker_log_level,

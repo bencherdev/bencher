@@ -65,6 +65,10 @@ pub struct TaskDaemon {
     #[arg(long)]
     pub max_output_size: Option<usize>,
 
+    /// Maximum number of output files to decode (default: 255).
+    #[arg(long)]
+    pub max_file_count: Option<u32>,
+
     /// Firecracker process log level (default: warning).
     #[arg(long, default_value = "warning")]
     pub firecracker_log_level: String,

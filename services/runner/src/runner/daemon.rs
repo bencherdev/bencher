@@ -55,6 +55,7 @@ impl TryFrom<TaskDaemon> for DaemonRunner {
                 tuning,
                 cpu_layout,
                 max_output_size: task.max_output_size,
+                max_file_count: task.max_file_count,
                 firecracker_log_level,
             },
         })

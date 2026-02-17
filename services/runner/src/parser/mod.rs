@@ -59,6 +59,10 @@ pub struct TaskRun {
     #[arg(long)]
     pub max_output_size: Option<usize>,
 
+    /// Maximum number of output files to decode (default: 255).
+    #[arg(long)]
+    pub max_file_count: Option<u32>,
+
     /// Enable network access in the VM.
     #[arg(long)]
     pub network: bool,

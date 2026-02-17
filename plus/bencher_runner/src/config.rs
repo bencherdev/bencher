@@ -86,6 +86,13 @@ pub struct Config {
     #[serde(default = "default_max_output_size")]
     pub max_output_size: usize,
 
+    /// Maximum number of output files to decode from the guest VM.
+    ///
+    /// If the guest sends more files than this limit, decoding will fail.
+    /// Defaults to 255.
+    #[serde(default = "default_max_file_count")]
+    pub max_file_count: u32,
+
     /// CPU layout for isolating benchmark cores from housekeeping tasks.
     ///
     /// When set, the Firecracker process will be pinned to benchmark cores
@@ -123,6 +130,10 @@ const fn default_max_output_size() -> usize {
     10 * 1024 * 1024 // 10 MiB
 }
 
+const fn default_max_file_count() -> u32 {
+    255
+}
+
 impl Config {
     /// Create a new configuration with the bundled kernel.
     ///
@@ -146,6 +157,7 @@ impl Config {
             cmd: None,
             env: None,
             max_output_size: default_max_output_size(),
+            max_file_count: default_max_file_count(),
             cpu_layout: None,
             #[cfg(target_os = "linux")]
             firecracker_log_level: FirecrackerLogLevel::default(),
@@ -175,6 +187,7 @@ impl Config {
             cmd: None,
             env: None,
             max_output_size: default_max_output_size(),
+            max_file_count: default_max_file_count(),
             cpu_layout: None,
             #[cfg(target_os = "linux")]
             firecracker_log_level: FirecrackerLogLevel::default(),
@@ -294,6 +307,13 @@ impl Config {
     #[must_use]
     pub fn with_max_output_size(mut self, max_output_size: usize) -> Self {
         self.max_output_size = max_output_size;
+        self
+    }
+
+    /// Set the maximum number of output files to decode.
+    #[must_use]
+    pub fn with_max_file_count(mut self, max_file_count: u32) -> Self {
+        self.max_file_count = max_file_count;
         self
     }
 

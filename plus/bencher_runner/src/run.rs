@@ -74,6 +74,8 @@ pub struct RunArgs {
     pub file_paths: Option<Vec<Utf8PathBuf>>,
     /// Maximum size in bytes for collected stdout/stderr.
     pub max_output_size: Option<usize>,
+    /// Maximum number of output files to decode.
+    pub max_file_count: Option<u32>,
     /// Whether to enable network access in the VM.
     pub network: bool,
     /// Host tuning configuration.
@@ -114,8 +116,13 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     } else {
         config
     };
-    let mut config = if let Some(max_output_size) = args.max_output_size {
+    let config = if let Some(max_output_size) = args.max_output_size {
         config.with_max_output_size(max_output_size)
+    } else {
+        config
+    };
+    let mut config = if let Some(max_file_count) = args.max_file_count {
+        config.with_max_file_count(max_file_count)
     } else {
         config
     };
@@ -330,6 +337,7 @@ pub fn execute(
         work_dir: work_dir.to_owned(),
         cpu_layout: config.cpu_layout.clone(),
         log_level: config.firecracker_log_level,
+        max_file_count: config.max_file_count,
     };
 
     let run_output = run_firecracker(&fc_config, cancel_flag)?;

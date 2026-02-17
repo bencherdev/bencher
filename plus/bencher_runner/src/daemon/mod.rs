@@ -47,6 +47,8 @@ pub struct DaemonConfig {
     pub cpu_layout: CpuLayout,
     /// Maximum size in bytes for collected stdout/stderr.
     pub max_output_size: Option<usize>,
+    /// Maximum number of output files to decode.
+    pub max_file_count: Option<u32>,
     /// Firecracker process log level.
     #[cfg(target_os = "linux")]
     pub firecracker_log_level: FirecrackerLogLevel,

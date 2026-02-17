@@ -113,6 +113,8 @@ pub struct FirecrackerJobConfig {
     pub cpu_layout: Option<CpuLayout>,
     /// Firecracker process log level.
     pub log_level: FirecrackerLogLevel,
+    /// Maximum number of output files to decode.
+    pub max_file_count: u32,
 }
 
 /// Run a benchmark inside a Firecracker microVM.
@@ -276,7 +278,9 @@ pub fn run_firecracker(
 
     // Decode output files from the length-prefixed binary protocol
     let output_files = match results.output_files {
-        Some(ref data) if !data.is_empty() => Some(decode_output_files(data)?),
+        Some(ref data) if !data.is_empty() => {
+            Some(decode_output_files(data, config.max_file_count)?)
+        },
         _ => None,
     };
 
@@ -289,8 +293,11 @@ pub fn run_firecracker(
 }
 
 /// Decode the length-prefixed binary protocol for multiple output files.
-fn decode_output_files(data: &[u8]) -> Result<HashMap<Utf8PathBuf, Vec<u8>>, FirecrackerError> {
-    let files = bencher_output_protocol::decode(data)
+fn decode_output_files(
+    data: &[u8],
+    max_file_count: u32,
+) -> Result<HashMap<Utf8PathBuf, Vec<u8>>, FirecrackerError> {
+    let files = bencher_output_protocol::decode(data, max_file_count)
         .map_err(|e| FirecrackerError::VsockCollection(format!("output files: {e}")))?;
     Ok(files.into_iter().collect())
 }
