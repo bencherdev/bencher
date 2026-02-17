@@ -119,7 +119,7 @@ fn create_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
 /// On other platforms, this is a no-op (ext4 creation only works on Linux anyway).
 #[cfg(target_os = "linux")]
 fn allocate_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
-    use std::os::fd::AsRawFd;
+    use std::os::fd::AsRawFd as _;
 
     use nix::fcntl::{FallocateFlags, fallocate};
 
