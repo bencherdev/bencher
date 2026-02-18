@@ -1,12 +1,12 @@
 #[cfg(feature = "plus")]
-mod daemon;
+mod up;
 
 #[cfg(feature = "plus")]
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 
 #[cfg(feature = "plus")]
-pub use daemon::TaskDaemon;
+pub use up::TaskUp;
 
 #[derive(Parser, Debug)]
 #[command(name = "runner")]
@@ -19,8 +19,8 @@ pub struct TaskRunner {
 #[derive(Subcommand, Debug)]
 pub enum TaskSub {
     #[cfg(feature = "plus")]
-    /// Run as a daemon, polling for and executing benchmark jobs.
-    Daemon(TaskDaemon),
+    /// Start the runner, polling for and executing benchmark jobs.
+    Up(TaskUp),
     #[cfg(feature = "plus")]
     /// Pull image, create rootfs, and execute in isolated Firecracker microVM.
     Run(TaskRun),

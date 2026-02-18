@@ -4,14 +4,14 @@ use crate::error::RunnerCliError;
 use crate::parser::{TaskRunner, TaskSub};
 
 #[cfg(all(feature = "plus", target_os = "linux"))]
-mod daemon;
-#[cfg(all(feature = "plus", target_os = "linux"))]
 mod run;
+#[cfg(all(feature = "plus", target_os = "linux"))]
+mod up;
 
 #[cfg(all(feature = "plus", target_os = "linux"))]
-use daemon::DaemonRunner;
-#[cfg(all(feature = "plus", target_os = "linux"))]
 use run::Run;
+#[cfg(all(feature = "plus", target_os = "linux"))]
+use up::UpRunner;
 
 #[derive(Debug)]
 pub struct Runner {
@@ -21,7 +21,7 @@ pub struct Runner {
 #[derive(Debug)]
 pub enum Sub {
     #[cfg(all(feature = "plus", target_os = "linux"))]
-    Daemon(DaemonRunner),
+    Up(UpRunner),
     #[cfg(all(feature = "plus", target_os = "linux"))]
     Run(Run),
     #[cfg(not(all(feature = "plus", target_os = "linux")))]
@@ -44,7 +44,7 @@ impl TryFrom<TaskSub> for Sub {
     #[cfg(all(feature = "plus", target_os = "linux"))]
     fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
         Ok(match sub {
-            TaskSub::Daemon(daemon) => Self::Daemon(daemon.try_into()?),
+            TaskSub::Up(up) => Self::Up(up.try_into()?),
             TaskSub::Run(run) => Self::Run(run.try_into()?),
         })
     }
@@ -69,7 +69,7 @@ impl Sub {
     pub fn exec(self) -> Result<(), RunnerCliError> {
         match self {
             #[cfg(all(feature = "plus", target_os = "linux"))]
-            Self::Daemon(daemon) => daemon.exec(),
+            Self::Up(up) => up.exec(),
             #[cfg(all(feature = "plus", target_os = "linux"))]
             Self::Run(run) => run.exec(),
             #[cfg(not(all(feature = "plus", target_os = "linux")))]

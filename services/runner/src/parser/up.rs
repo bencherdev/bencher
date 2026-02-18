@@ -1,19 +1,14 @@
 use clap::Parser;
 
-#[cfg(debug_assertions)]
-const DEFAULT_HOST: &str = "http://localhost:61016";
-#[cfg(not(debug_assertions))]
-const DEFAULT_HOST: &str = "https://api.bencher.dev";
-
-/// Run as a daemon, polling for and executing benchmark jobs.
+/// Start the runner, polling for and executing benchmark jobs.
 #[expect(
     clippy::struct_excessive_bools,
     reason = "CLI flags map to independent tuning knobs"
 )]
 #[derive(Parser, Debug)]
-pub struct TaskDaemon {
+pub struct TaskUp {
     /// API server host URL.
-    #[arg(long, env = "BENCHER_HOST", default_value = DEFAULT_HOST)]
+    #[arg(long, env = "BENCHER_HOST", default_value = bencher_json::BENCHER_API_URL_STR)]
     pub host: url::Url,
 
     /// Runner authentication token.
