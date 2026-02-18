@@ -63,7 +63,27 @@ jobs:
           }
         continue-on-error: true
 
+      - name: Write review to job summary
+        run: |
+          {
+            echo "## Claude Code Review"
+            echo ""
+            echo "**PR**: #${{ github.event.pull_request.number }}"
+            echo "**Base**: \`${{ github.event.pull_request.base.ref }}\`"
+            echo "**Head**: \`${{ github.event.pull_request.head.ref }}\`"
+            echo "**Commit**: \`${{ github.event.pull_request.head.sha }}\`"
+            echo ""
+            echo "---"
+            echo ""
+            cat /tmp/review_output.md
+            echo ""
+            echo "---"
+            echo ""
+            echo "<sub>Model: ${{ env.CLAUDE_MODEL }}</sub>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Post review as PR comment
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
