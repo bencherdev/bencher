@@ -7,7 +7,7 @@ license-file.workspace = true
 publish = false
 
 [dependencies]
-bencher_valid.workspace = true
+bencher_valid = { workspace = true, features = ["server"] }
 oauth2.workspace = true
 octocrab.workspace = true
 serde.workspace = true

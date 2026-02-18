@@ -29,6 +29,7 @@ jobs:
       api: ${{ steps.filter.outputs.api }}
       cli: ${{ steps.filter.outputs.cli }}
       docker: ${{ steps.filter.outputs.docker }}
+      runner: ${{ steps.filter.outputs.runner }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v3
@@ -62,6 +63,14 @@ jobs:
               - 'services/api/Dockerfile'
               - 'services/console/Dockerfile'
               - 'docker/**'
+            runner:
+              - 'plus/bencher_runner/**'
+              - 'plus/bencher_oci/**'
+              - 'plus/bencher_output_protocol/**'
+              - 'plus/bencher_rootfs/**'
+              - 'plus/bencher_init/**'
+              - 'services/runner/**'
+              - 'tasks/test_runner/**'
 
   lint:
     name: Lint
@@ -86,6 +95,16 @@ jobs:
       build-cli: ${{ needs.changes.outputs.cli == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+
+  runner:
+    name: Runner
+    needs: changes
+    if: ${{ needs.changes.outputs.runner == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
+    uses: ./.github/workflows/runner.yml
+    with:
+      mold-version: "2.34.1"
+      zig-version: "0.13.0"
+      zig-build-version: "0.19.3"
 
   test:
     name: Test
@@ -136,7 +155,7 @@ jobs:
   release:
     name: Release
     if: ${{ needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
-    needs: [changes, lint, cli, test, build]
+    needs: [changes, lint, cli, runner, test, build]
     uses: ./.github/workflows/release.yml
     with:
       mold-version: "2.34.1"
@@ -145,7 +164,7 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [lint, cli, test, build, deploy, release]
+    needs: [lint, cli, runner, test, build, deploy, release]
     runs-on: ubuntu-22.04
     steps:
       - name: Check all jobs passed
@@ -156,6 +175,10 @@ jobs:
           fi
           if [[ "${{ needs.cli.result }}" != "success" && "${{ needs.cli.result }}" != "skipped" ]]; then
             echo "CLI failed"
+            exit 1
+          fi
+          if [[ "${{ needs.runner.result }}" != "success" && "${{ needs.runner.result }}" != "skipped" ]]; then
+            echo "Runner failed"
             exit 1
           fi
           if [[ "${{ needs.test.result }}" != "success" && "${{ needs.test.result }}" != "skipped" ]]; then

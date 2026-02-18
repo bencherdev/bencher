@@ -85,7 +85,7 @@ Represents a hardware specification that runners can be associated with and jobs
 | uuid             | `SpecUuid`          | Unique identifier                                    |
 | name             | `ResourceName`      | Human-readable name                                  |
 | slug             | `SpecSlug`          | URL-friendly slug (unique)                           |
-| architecture     | `Architecture`      | CPU architecture (`x86_64`, `aarch64`, `riscv64`)    |
+| architecture     | `Architecture`      | CPU architecture (`x86_64`, `aarch64`)               |
 | cpu              | `Cpu`               | Number of CPUs (u32, 1 to i32::MAX)                  |
 | memory           | `Memory`            | Memory size in bytes (u64, 1 to i64::MAX)            |
 | disk             | `Disk`              | Disk size in bytes (u64, 1 to i64::MAX)              |

@@ -1,0 +1,117 @@
+#[cfg(feature = "plus")]
+mod daemon;
+
+#[cfg(feature = "plus")]
+use camino::Utf8PathBuf;
+use clap::{Parser, Subcommand};
+
+#[cfg(feature = "plus")]
+pub use daemon::TaskDaemon;
+
+#[derive(Parser, Debug)]
+#[command(name = "runner")]
+#[command(about = "Execute benchmarks in isolated Firecracker microVMs", long_about = None)]
+pub struct TaskRunner {
+    #[command(subcommand)]
+    pub sub: TaskSub,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum TaskSub {
+    #[cfg(feature = "plus")]
+    /// Run as a daemon, polling for and executing benchmark jobs.
+    Daemon(TaskDaemon),
+    #[cfg(feature = "plus")]
+    /// Pull image, create rootfs, and execute in isolated Firecracker microVM.
+    Run(TaskRun),
+}
+
+/// Arguments for the `run` subcommand.
+#[cfg(feature = "plus")]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "CLI flags map to independent tuning knobs"
+)]
+#[derive(Parser, Debug)]
+pub struct TaskRun {
+    /// OCI image (local path or registry reference).
+    #[arg(long)]
+    pub image: String,
+
+    /// JWT token for registry authentication.
+    #[arg(long)]
+    pub token: Option<String>,
+
+    /// Number of vCPUs (overrides default for testing).
+    #[arg(long)]
+    pub vcpus: Option<u32>,
+
+    /// Memory in MiB (overrides default for testing).
+    #[arg(long)]
+    pub memory: Option<u64>,
+
+    /// Disk size in MiB (overrides default for testing).
+    #[arg(long)]
+    pub disk: Option<u64>,
+
+    /// Execution timeout in seconds.
+    #[arg(long, default_value = "300")]
+    pub timeout: u64,
+
+    /// Output file paths inside guest (may be repeated).
+    #[arg(long)]
+    pub output: Vec<Utf8PathBuf>,
+
+    /// Maximum size in bytes for collected stdout/stderr (default: 25 MiB).
+    #[arg(long)]
+    pub max_output_size: Option<usize>,
+
+    /// Maximum number of output files to decode (default: 255).
+    #[arg(long)]
+    pub max_file_count: Option<u32>,
+
+    /// Enable network access in the VM.
+    #[arg(long)]
+    pub network: bool,
+
+    // --- Host tuning flags ---
+    /// Disable all host tuning optimizations.
+    #[arg(long)]
+    pub no_tuning: bool,
+
+    /// Keep ASLR enabled (default: disabled for benchmarks).
+    #[arg(long)]
+    pub aslr: bool,
+
+    /// Keep NMI watchdog enabled (default: disabled for benchmarks).
+    #[arg(long)]
+    pub nmi_watchdog: bool,
+
+    /// Keep SMT / hyper-threading enabled (default: disabled for benchmarks).
+    #[arg(long)]
+    pub smt: bool,
+
+    /// Keep turboboost enabled (default: disabled for benchmarks).
+    #[arg(long)]
+    pub turbo: bool,
+
+    /// Set swappiness value (default: 10).
+    #[arg(long)]
+    pub swappiness: Option<u32>,
+
+    /// Set CPU scaling governor (default: performance).
+    #[arg(long)]
+    pub governor: Option<String>,
+
+    /// Set `perf_event_paranoid` value (default: -1).
+    #[arg(long, allow_hyphen_values = true)]
+    pub perf_event_paranoid: Option<i32>,
+
+    /// Grace period in seconds after exit code before final collection (default: 1).
+    #[arg(long, default_value = "1")]
+    pub grace_period: bencher_runner::GracePeriod,
+
+    /// Firecracker process log level (default: warning).
+    #[arg(long, default_value = "warning")]
+    pub firecracker_log_level: bencher_runner::FirecrackerLogLevel,
+}

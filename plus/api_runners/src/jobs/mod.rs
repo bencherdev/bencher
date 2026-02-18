@@ -4,7 +4,8 @@ use std::time::Duration;
 
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseOk};
 use bencher_json::{
-    DateTime, JobPriority, JobStatus, JsonClaimJob, JsonClaimedJob, JsonSpec, RunnerResourceId,
+    DEFAULT_POLL_TIMEOUT, JobPriority, JobStatus, JsonClaimJob, JsonClaimedJob, JsonSpec,
+    RunnerResourceId,
 };
 use bencher_schema::{
     context::ApiContext,
@@ -39,8 +40,6 @@ const PRIORITY_FREE: JobPriority = JobPriority::Free;
 
 /// Poll interval for long-polling (1 second)
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
-/// Default poll timeout (30 seconds)
-const DEFAULT_POLL_TIMEOUT: u32 = 30;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct RunnerJobsParams {
@@ -195,7 +194,7 @@ async fn try_claim_job(
     };
 
     // Claim the job under the same lock
-    let now = DateTime::now();
+    let now = context.clock.now();
     let update_job = UpdateJob {
         status: Some(JobStatus::Claimed),
         runner_id: Some(Some(runner_token.runner_id)),
@@ -248,7 +247,7 @@ fn build_claimed_job(
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobClaim);
 
         // Record queue duration (time from creation to claim)
-        let now = DateTime::now();
+        let now = context.clock.now();
         #[expect(
             clippy::cast_precision_loss,
             reason = "queue duration in seconds fits in f64 mantissa"

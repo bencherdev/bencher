@@ -35,10 +35,15 @@ RUN cargo init --lib bencher_github_client
 RUN cargo init --lib bencher_google_client
 RUN cargo init --lib bencher_google_index
 RUN cargo init --lib bencher_license
+RUN cargo init --lib bencher_oci
 RUN cargo init --lib bencher_oci_storage
+RUN cargo init --lib bencher_output_protocol
 RUN cargo init --lib bencher_otel
 RUN cargo init --lib bencher_otel_provider
 RUN cargo init --lib bencher_recaptcha
+RUN cargo init --lib bencher_rootfs
+RUN cargo init --lib bencher_runner
+RUN cargo init --lib bencher_init
 
 WORKDIR /usr/src/bencher/tasks
 RUN cargo init --bin bin_version
@@ -48,6 +53,7 @@ RUN cargo init --bin gen_notes
 RUN cargo init --bin gen_types
 RUN cargo init --bin test_api
 RUN cargo init --bin test_netlify
+RUN cargo init --bin test_runner
 
 WORKDIR /usr/src/bencher
 COPY Cargo.toml Cargo.toml
@@ -57,6 +63,7 @@ RUN cargo init xtask
 WORKDIR /usr/src/bencher/services
 RUN cargo init api
 RUN cargo init cli
+RUN cargo init runner
 
 WORKDIR /usr/src/bencher/services/console
 COPY services/console/build_wasm.sh build_wasm.sh

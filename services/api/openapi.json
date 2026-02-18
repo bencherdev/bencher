@@ -10928,8 +10928,7 @@
         "type": "string",
         "enum": [
           "x86_64",
-          "aarch64",
-          "riscv64"
+          "aarch64"
         ]
       },
       "BenchmarkName": {
@@ -11086,7 +11085,7 @@
         ]
       },
       "ImageDigest": {
-        "description": "An OCI image digest (e.g., \"sha256:abc123...\")",
+        "description": "An OCI image digest in the format `algorithm:hex`.\n\nSupports: - `sha256:` followed by 64 hex characters - `sha512:` followed by 128 hex characters",
         "type": "string"
       },
       "Index": {
@@ -11473,7 +11472,7 @@
         "properties": {
           "poll_timeout": {
             "nullable": true,
-            "description": "Maximum time to wait for a job (long-poll), in seconds (1-600)",
+            "description": "Maximum time to wait for a job (long-poll), in seconds (1-900)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/PollTimeout"

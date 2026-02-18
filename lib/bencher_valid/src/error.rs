@@ -37,7 +37,7 @@ pub enum ValidError {
     #[error("Failed to validate git hash: {0}")]
     GitHash(String),
     #[cfg(feature = "plus")]
-    #[error("Failed to validate image digest: {0}")]
+    #[error("Failed to validate OCI image digest: {0}")]
     ImageDigest(String),
     #[error("Failed to validate secret: {0}")]
     Secret(String),
@@ -79,6 +79,9 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Invalid grace period: {0}")]
     GracePeriod(u32),
+    #[cfg(feature = "plus")]
+    #[error("Failed to parse grace period: {0}")]
+    GracePeriodStr(std::num::ParseIntError),
 
     #[cfg(feature = "plus")]
     #[error("Failed to validate architecture: {0}")]

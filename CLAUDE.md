@@ -69,6 +69,15 @@ npx biome format --write .     # Format frontend code
 npx biome lint .               # Lint frontend code
 ```
 
+When modifying `target_os = "linux"` crates (`bencher_init`, `bencher_rootfs`, `bencher_runner`, `bencher_runner_cli`), also run the cross-compilation checks locally:
+
+```bash
+./scripts/clippy.sh            # Runs clippy natively + cross-compiles to x86_64-unknown-linux-gnu
+./scripts/test.sh --linux-only # Cross-compiles tests for the Linux-only crates
+```
+
+These scripts require a cross-compiler (`zig`, `x86_64-linux-gnu-gcc`, or `x86_64-unknown-linux-gnu-gcc`) and the `x86_64-unknown-linux-gnu` Rust target. The clippy script will install the target automatically and warn if no cross-compiler is found.
+
 ### Type Generation (run after API changes)
 
 ```bash
@@ -142,6 +151,7 @@ Defined in `.cargo/config.toml`:
 - `cargo xtask` - Administrative tasks
 - `cargo gen-types` / `cargo gen-spec` / `cargo gen-ts` - Type generation
 - `cargo test-api` - API testing and DB seeding
+- `cargo test-runner` - Runner integration tests (requires Linux + KVM; see [`services/runner/CLAUDE.md`](services/runner/CLAUDE.md))
 - `cargo bin-version` - Version management
 
 ### Feature Flags
@@ -180,7 +190,15 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - Use `bencher_json::Clock::Custom` (behind the `test-clock` feature) to inject a fake clock in tests instead of calling `DateTime::now()` directly. `Clock` is available on `ApiContext`.
 - Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
 - Always pass strong types (`MyTypeId`, `MyTypeUuid`, etc) into a function instead of its stringly typed equivalent, even in tests
+- Do **NOT** use shared, global mutable state
+- Always use `thiserror` for error types in libraries and production binaries (`services/`). Do not use `anyhow` in those crates. `anyhow` is acceptable in `tasks/` crates (build tasks, test harnesses) where convenience outweighs structured errors.
 - Do not use `Box<dyn Error>` (or `Box<dyn std::error::Error + Send + Sync>`) as a return type. Use `HttpError` for API endpoint errors or define specific `thiserror` error enums. The only acceptable uses of `Box<dyn Error>` are when wrapping third-party APIs that return boxed errors (e.g., diesel migrations, dropshot server creation).
+- Do **NOT** use `dyn std::any::Any` without explicit justification and approval
+- When adding workspace dependencies without extra options (no `optional`, no `features`), use the shorthand `dep.workspace = true` form instead of `dep = { workspace = true }`
+- Use `camino` (`Utf8Path`/`Utf8PathBuf`) for file paths whenever practical instead of `std::path::Path`/`PathBuf`. Exception: `tempfile::tempdir()` in tests may use `std::path` since it returns `TempDir` with `&Path`; convert via `Utf8Path::from_path()` at the boundary when needed.
+- Use `clap` for CLI argument parsing
+  - The `clap` struct definitions should live in a separate `parser` module
+  - The subcommand handler logic should live in a separate module named after the binary for production code (ie `bencher`) or a module named `task` for `tasks/*` crates
 
 ### Frontend (TypeScript)
 
@@ -238,6 +256,8 @@ Bare metal benchmark runners that claim and execute jobs from the API. Server-sc
 - `lib/bencher_schema/migrations/2026-02-02-120000_runner/` - Migration for `runner` and `job` tables
 
 **Runner authentication** is separate from user auth — runner tokens use `Authorization: Bearer bencher_runner_<token>` and are validated by hashing and looking up `token_hash` in the `runner` table.
+
+**Runner integration tests** require Linux + KVM and run on a remote GCP VM. See [`services/runner/CLAUDE.md`](services/runner/CLAUDE.md) for the full guide on connecting, transferring code, and running `cargo test-runner scenarios`.
 
 ## Key Coordination Points
 

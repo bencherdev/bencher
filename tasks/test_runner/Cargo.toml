@@ -1,0 +1,36 @@
+[package]
+name = "test_runner"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = ["plus"]
+plus = [
+    "bencher_runner/plus",
+    "bencher_oci/plus",
+    "bencher_rootfs/plus",
+    "bencher_valid/plus",
+]
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+bencher_valid.workspace = true
+bencher_runner.workspace = true
+bencher_oci.workspace = true
+bencher_rootfs.workspace = true
+camino.workspace = true
+clap.workspace = true
+flate2.workspace = true
+reqwest = { workspace = true, features = ["blocking", "rustls-tls"] }
+serde_json.workspace = true
+sha2.workspace = true
+tar.workspace = true
+
+[lints]
+workspace = true

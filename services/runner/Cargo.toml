@@ -1,0 +1,26 @@
+[package]
+name = "bencher_runner_cli"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = ["plus"]
+plus = ["bencher_runner/plus", "dep:bencher_json"]
+
+[dependencies]
+bencher_json = { workspace = true, optional = true }
+bencher_runner.workspace = true
+camino = { workspace = true }
+clap = { workspace = true, features = ["env"] }
+thiserror.workspace = true
+url = { workspace = true }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "runner"
+path = "src/main.rs"

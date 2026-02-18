@@ -10,8 +10,8 @@ pub use bencher_valid::{
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
-    LastFour, LicensedPlanId, Memory, MeteredPlanId, PlanLevel, PlanStatus, RecaptchaAction,
-    RecaptchaScore, Timeout,
+    GracePeriod, ImageDigest, LastFour, LicensedPlanId, Memory, MeteredPlanId, PlanLevel,
+    PlanStatus, RecaptchaAction, RecaptchaScore, Timeout,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -88,9 +88,9 @@ pub use project::{
 pub use run::JsonNewRun;
 #[cfg(feature = "plus")]
 pub use runner::{
-    JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob, JsonJobConfig,
-    JsonJobs, JsonNewRunner, JsonRunner, JsonRunnerToken, JsonRunners, JsonUpdateRunner,
-    RunnerResourceId, RunnerSlug, RunnerUuid,
+    DEFAULT_POLL_TIMEOUT, JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob,
+    JsonJobConfig, JsonJobs, JsonNewRunner, JsonRunner, JsonRunnerToken, JsonRunners,
+    JsonUpdateRunner, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, RunnerResourceId, RunnerSlug, RunnerUuid,
 };
 #[cfg(feature = "plus")]
 pub use spec::{

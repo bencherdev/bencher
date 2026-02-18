@@ -44,7 +44,13 @@ export type GracePeriod = number;
 
 export type HeartbeatTimeout = number;
 
-/** An OCI image digest (e.g., "sha256:abc123...") */
+/**
+ * An OCI image digest in the format `algorithm:hex`.
+ * 
+ * Supports:
+ * - `sha256:` followed by 64 hex characters
+ * - `sha512:` followed by 128 hex characters
+ */
 export type ImageDigest = string;
 
 export type Index = number;
@@ -66,7 +72,6 @@ export type ResourceName = string;
 export enum Architecture {
 	X86_64 = "x86_64",
 	Aarch64 = "aarch64",
-	Riscv64 = "riscv64",
 }
 
 /** A hardware spec */
@@ -441,7 +446,7 @@ export interface JsonCheckout {
 
 /** Request to claim a job (runner agent endpoint) */
 export interface JsonClaimJob {
-	/** Maximum time to wait for a job (long-poll), in seconds (1-600) */
+	/** Maximum time to wait for a job (long-poll), in seconds (1-900) */
 	poll_timeout?: PollTimeout;
 }
 

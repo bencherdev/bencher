@@ -22,6 +22,31 @@ pub struct Memory(u64);
 impl Memory {
     pub const MIN: Self = Self(MIN_MEMORY);
     pub const MAX: Self = Self(MAX_MEMORY);
+
+    /// Convert bytes to mebibytes (MiB), rounding up.
+    ///
+    /// Returns `u64` since consumers like `create_ext4_with_size` expect `u64`.
+    /// For Firecracker's `u32` fields, callers cast at the boundary.
+    #[must_use]
+    pub const fn to_mib(self) -> u64 {
+        let bytes = self.0;
+        if bytes == 0 {
+            return 0;
+        }
+        bytes.div_ceil(1024 * 1024)
+    }
+
+    /// Create from a value in mebibytes (MiB).
+    ///
+    /// Returns `None` if the resulting byte value is outside the valid range.
+    pub const fn from_mib(mib: u64) -> Option<Self> {
+        let bytes = mib.saturating_mul(1024 * 1024);
+        if is_valid_memory(bytes) {
+            Some(Self(bytes))
+        } else {
+            None
+        }
+    }
 }
 
 impl TryFrom<u64> for Memory {
@@ -113,8 +138,8 @@ mod db {
     }
 }
 
-pub fn is_valid_memory(memory: u64) -> bool {
-    (MIN_MEMORY..=MAX_MEMORY).contains(&memory)
+pub const fn is_valid_memory(memory: u64) -> bool {
+    memory >= MIN_MEMORY && memory <= MAX_MEMORY
 }
 
 #[cfg(test)]
@@ -132,5 +157,40 @@ mod tests {
 
         assert_eq!(false, is_valid_memory(0));
         assert_eq!(false, is_valid_memory(u64::MAX));
+    }
+
+    #[test]
+    fn to_mib_exact() {
+        let m = Memory::try_from(512 * 1024 * 1024u64).unwrap();
+        assert_eq!(m.to_mib(), 512);
+    }
+
+    #[test]
+    fn to_mib_rounds_up() {
+        let m = Memory::try_from(512 * 1024 * 1024u64 + 1).unwrap();
+        assert_eq!(m.to_mib(), 513);
+    }
+
+    #[test]
+    fn to_mib_one_byte() {
+        let m = Memory::try_from(1u64).unwrap();
+        assert_eq!(m.to_mib(), 1); // rounds up
+    }
+
+    #[test]
+    fn from_mib_round_trip() {
+        let m = Memory::from_mib(2048).unwrap();
+        assert_eq!(m.to_mib(), 2048);
+        assert_eq!(u64::from(m), 2048 * 1024 * 1024);
+    }
+
+    #[test]
+    fn from_mib_overflow_returns_none() {
+        assert_eq!(Memory::from_mib(u64::MAX), None);
+    }
+
+    #[test]
+    fn from_mib_zero_returns_none() {
+        assert_eq!(Memory::from_mib(0), None);
     }
 }

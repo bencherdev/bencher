@@ -18,7 +18,6 @@ export const getOperatingSystem = async () => {
 		case "Linux ppc64":
 		case "Linux mips":
 		case "Linux mips64":
-		case "Linux riscv64":
 			return OperatingSystem.Linux;
 		case "Mac":
 			return OperatingSystem.MacOS;
