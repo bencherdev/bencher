@@ -528,6 +528,41 @@ fn pipe() -> Result<(RawFd, RawFd), InitError> {
     Ok((fds[0], fds[1]))
 }
 
+/// Set `O_NONBLOCK` on a file descriptor.
+///
+/// # Safety
+/// `fd` must be a valid, open file descriptor.
+unsafe fn set_nonblocking(fd: RawFd, label: &str) {
+    // SAFETY: Caller guarantees `fd` is a valid, open file descriptor.
+    let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
+    if flags == -1 {
+        console_log(&format!(
+            "fcntl({label}, F_GETFL) failed: {}",
+            io::Error::last_os_error()
+        ));
+    // SAFETY: Same valid `fd`; setting O_NONBLOCK is always safe on a valid descriptor.
+    } else if unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) } == -1 {
+        console_log(&format!(
+            "fcntl({label}, F_SETFL) failed: {}",
+            io::Error::last_os_error()
+        ));
+    }
+}
+
+/// Drain all remaining bytes from a non-blocking file into `buf`, up to `max_output_size`.
+fn drain_pipe(file: &mut File, buf: &mut Vec<u8>, max_output_size: usize) {
+    let mut tmp = [0u8; 4096];
+    loop {
+        match file.read(&mut tmp) {
+            Ok(0) | Err(_) => break,
+            Ok(n) => {
+                let remaining = max_output_size.saturating_sub(buf.len());
+                buf.extend_from_slice(tmp.get(..n.min(remaining)).unwrap_or_default());
+            },
+        }
+    }
+}
+
 /// Wait for child process, collecting output and reaping zombies.
 fn wait_for_child(
     child_pid: libc::pid_t,
@@ -539,30 +574,8 @@ fn wait_for_child(
 
     // SAFETY: Setting O_NONBLOCK on valid pipe file descriptors.
     unsafe {
-        let flags = libc::fcntl(stdout_fd, libc::F_GETFL);
-        if flags == -1 {
-            console_log(&format!(
-                "fcntl(stdout, F_GETFL) failed: {}",
-                io::Error::last_os_error()
-            ));
-        } else if libc::fcntl(stdout_fd, libc::F_SETFL, flags | libc::O_NONBLOCK) == -1 {
-            console_log(&format!(
-                "fcntl(stdout, F_SETFL) failed: {}",
-                io::Error::last_os_error()
-            ));
-        }
-        let flags = libc::fcntl(stderr_fd, libc::F_GETFL);
-        if flags == -1 {
-            console_log(&format!(
-                "fcntl(stderr, F_GETFL) failed: {}",
-                io::Error::last_os_error()
-            ));
-        } else if libc::fcntl(stderr_fd, libc::F_SETFL, flags | libc::O_NONBLOCK) == -1 {
-            console_log(&format!(
-                "fcntl(stderr, F_SETFL) failed: {}",
-                io::Error::last_os_error()
-            ));
-        }
+        set_nonblocking(stdout_fd, "stdout");
+        set_nonblocking(stderr_fd, "stderr");
     }
 
     // SAFETY: stdout_fd is a valid file descriptor from pipe(); we take ownership.
@@ -637,27 +650,8 @@ fn wait_for_child(
 
         // If we have exit code, do one more read to drain pipes
         if exit_code.is_some() {
-            // Drain remaining output
-            loop {
-                match stdout_file.read(&mut buf) {
-                    Ok(0) | Err(_) => break,
-                    Ok(n) => {
-                        let remaining = max_output_size.saturating_sub(stdout_buf.len());
-                        stdout_buf
-                            .extend_from_slice(buf.get(..n.min(remaining)).unwrap_or_default());
-                    },
-                }
-            }
-            loop {
-                match stderr_file.read(&mut buf) {
-                    Ok(0) | Err(_) => break,
-                    Ok(n) => {
-                        let remaining = max_output_size.saturating_sub(stderr_buf.len());
-                        stderr_buf
-                            .extend_from_slice(buf.get(..n.min(remaining)).unwrap_or_default());
-                    },
-                }
-            }
+            drain_pipe(&mut stdout_file, &mut stdout_buf, max_output_size);
+            drain_pipe(&mut stderr_file, &mut stderr_buf, max_output_size);
             break;
         }
     }

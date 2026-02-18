@@ -21,7 +21,6 @@ pub enum JobOutcome {
         output: Option<String>,
     },
     Failed {
-        exit_code: Option<i32>,
         error: String,
     },
     Canceled,
@@ -144,7 +143,6 @@ pub fn execute_job(
             drop(ws_guard.read_message_timeout(Duration::from_secs(5)));
             ws_guard.close();
             JobOutcome::Failed {
-                exit_code: None,
                 error: error_msg,
             }
         },

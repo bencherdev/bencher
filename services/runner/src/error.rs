@@ -20,6 +20,7 @@ pub enum RunnerCliError {
     #[error("Invalid disk size: {0} MiB")]
     InvalidDisk(u64),
 
+    #[cfg(not(all(feature = "plus", target_os = "linux")))]
     #[error("bencher-runner requires Linux with the `plus` feature")]
     Unsupported,
 }

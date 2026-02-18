@@ -224,7 +224,7 @@ pub fn execute(
     config: &crate::Config,
     cancel_flag: Option<&Arc<AtomicBool>>,
 ) -> Result<RunOutput, RunnerError> {
-    use crate::firecracker::{FirecrackerJobConfig, run_firecracker};
+    use crate::firecracker::run_firecracker;
 
     println!("Executing benchmark run:");
     println!("  OCI image: {}", config.oci_image);
@@ -310,7 +310,23 @@ pub fn execute(
     );
     bencher_rootfs::create_ext4_with_size(&unpack_dir, &rootfs_path, config.disk.to_mib())?;
 
-    // Step 7: Find Firecracker binary - use bundled or find on system
+    // Step 7–8: Build Firecracker config and run the microVM
+    let fc_config =
+        build_firecracker_config(config, work_dir, kernel_path, rootfs_path)?;
+
+    let run_output = run_firecracker(&fc_config, cancel_flag)?;
+
+    Ok(run_output)
+}
+
+/// Build the Firecracker job config: resolve the binary and convert types.
+#[cfg(target_os = "linux")]
+fn build_firecracker_config(
+    config: &crate::Config,
+    work_dir: &Utf8Path,
+    kernel_path: Utf8PathBuf,
+    rootfs_path: Utf8PathBuf,
+) -> Result<crate::firecracker::FirecrackerJobConfig, RunnerError> {
     let firecracker_bin = if crate::firecracker_bin::FIRECRACKER_BUNDLED {
         let fc_dest = work_dir.join("firecracker");
         crate::firecracker_bin::write_firecracker_to_file(&fc_dest)?;
@@ -320,7 +336,6 @@ pub fn execute(
         find_firecracker_binary()?
     };
 
-    // Step 8: Run benchmark in Firecracker microVM
     println!("Launching Firecracker microVM...");
     let vcpus = u8::try_from(u32::from(config.vcpus)).map_err(|_err| {
         crate::error::ConfigError::OutOfRange {
@@ -334,7 +349,8 @@ pub fn execute(
         reason = "Practical memory fits in u32 MiB for Firecracker"
     )]
     let memory_mib = config.memory.to_mib() as u32;
-    let fc_config = FirecrackerJobConfig {
+
+    Ok(crate::firecracker::FirecrackerJobConfig {
         firecracker_bin,
         kernel_path,
         rootfs_path,
@@ -349,11 +365,7 @@ pub fn execute(
         max_content_size: config.max_content_size,
         max_output_size: config.max_output_size,
         grace_period: config.grace_period,
-    };
-
-    let run_output = run_firecracker(&fc_config, cancel_flag)?;
-
-    Ok(run_output)
+    })
 }
 
 /// Write the init config for the VM.
