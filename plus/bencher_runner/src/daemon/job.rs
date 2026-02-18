@@ -142,9 +142,7 @@ pub fn execute_job(
             // Wait for Ack with 5s timeout
             drop(ws_guard.read_message_timeout(Duration::from_secs(5)));
             ws_guard.close();
-            JobOutcome::Failed {
-                error: error_msg,
-            }
+            JobOutcome::Failed { error: error_msg }
         },
     };
 

@@ -311,8 +311,7 @@ pub fn execute(
     bencher_rootfs::create_ext4_with_size(&unpack_dir, &rootfs_path, config.disk.to_mib())?;
 
     // Step 7–8: Build Firecracker config and run the microVM
-    let fc_config =
-        build_firecracker_config(config, work_dir, kernel_path, rootfs_path)?;
+    let fc_config = build_firecracker_config(config, work_dir, kernel_path, rootfs_path)?;
 
     let run_output = run_firecracker(&fc_config, cancel_flag)?;
 
