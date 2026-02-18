@@ -24,10 +24,6 @@ pub const MAX_PATH_LENGTH: u32 = 4_096;
 
 /// Decode error.
 #[derive(Debug, thiserror::Error)]
-#[expect(
-    variant_size_differences,
-    reason = "UnexpectedEof carries a &'static str (16 bytes) while other variants carry u32 (4 bytes); boxing would add indirection for a rarely-constructed error type"
-)]
 pub enum DecodeError {
     /// Unexpected end of data while reading a field.
     #[error("unexpected end of data while reading {0}")]
@@ -41,6 +37,9 @@ pub enum DecodeError {
     /// Path length exceeds the maximum allowed length.
     #[error("path length {0} exceeds maximum {MAX_PATH_LENGTH}")]
     PathTooLong(u32),
+    /// Content length exceeds the configured maximum.
+    #[error("content length {0} exceeds maximum {1}")]
+    ContentTooLarge(u64, u64),
 }
 
 /// Encode error.
@@ -91,9 +90,14 @@ pub fn encode(files: &[(&Utf8Path, &[u8])]) -> Result<Vec<u8>, EncodeError> {
 /// `max_file_count` limits how many files may be decoded. If the wire
 /// `file_count` exceeds this limit, [`DecodeError::TooManyFiles`] is
 /// returned **before** any allocation occurs.
+///
+/// `max_content_size` limits how large a single file's content may be.
+/// If a file's `content_len` exceeds this, [`DecodeError::ContentTooLarge`]
+/// is returned before reading the content.
 pub fn decode(
     data: &[u8],
     max_file_count: u32,
+    max_content_size: u64,
 ) -> Result<Vec<(Utf8PathBuf, Vec<u8>)>, DecodeError> {
     let mut cursor = 0;
 
@@ -119,17 +123,24 @@ pub fn decode(
         let path = Utf8PathBuf::from(path_str);
         cursor += path_len_usize;
 
-        #[expect(
-            clippy::cast_possible_truncation,
-            reason = "content size is bounded by the data slice length"
-        )]
-        let content_len = read_u64(data, &mut cursor, "content length")? as usize;
-        if cursor + content_len > data.len() {
+        let content_len_u64 = read_u64(data, &mut cursor, "content length")?;
+        if content_len_u64 > max_content_size {
+            return Err(DecodeError::ContentTooLarge(
+                content_len_u64,
+                max_content_size,
+            ));
+        }
+        let content_len = usize::try_from(content_len_u64)
+            .map_err(|_err| DecodeError::UnexpectedEof("content"))?;
+        let end = cursor
+            .checked_add(content_len)
+            .ok_or(DecodeError::UnexpectedEof("content"))?;
+        if end > data.len() {
             return Err(DecodeError::UnexpectedEof("content"));
         }
         #[expect(clippy::indexing_slicing, reason = "bounds checked above")]
-        let content = data[cursor..cursor + content_len].to_vec();
-        cursor += content_len;
+        let content = data[cursor..end].to_vec();
+        cursor = end;
 
         files.push((path, content));
     }
@@ -184,13 +195,14 @@ mod tests {
     use super::*;
 
     const TEST_MAX_FILE_COUNT: u32 = 255;
+    const TEST_MAX_CONTENT_SIZE: u64 = 25 * 1024 * 1024;
 
     // --- Existing roundtrip tests ---
 
     #[test]
     fn roundtrip_empty() {
         let encoded = encode(&[]).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert!(decoded.is_empty(), "expected empty vec, got {decoded:?}");
     }
 
@@ -199,7 +211,7 @@ mod tests {
         let path = Utf8Path::new("/tmp/results.json");
         let content = b"benchmark data";
         let encoded = encode(&[(path, content.as_slice())]).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, path);
         assert_eq!(decoded[0].1, content);
@@ -212,7 +224,7 @@ mod tests {
             (Utf8Path::new("/output/b.txt"), b"file b content"),
         ];
         let encoded = encode(&files).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 2);
         assert_eq!(decoded[0].0, "/output/a.json");
         assert_eq!(decoded[0].1, b"file a content");
@@ -225,7 +237,7 @@ mod tests {
         let path = Utf8Path::new("empty.txt");
         let content: &[u8] = b"";
         let encoded = encode(&[(path, content)]).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, "empty.txt");
         assert!(decoded[0].1.is_empty());
@@ -236,7 +248,7 @@ mod tests {
         let path = Utf8Path::new("binary.bin");
         let content: &[u8] = &[0xFF, 0xFE, 0x00, 0x01, 0x80];
         let encoded = encode(&[(path, content)]).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, "binary.bin");
         assert_eq!(decoded[0].1, content);
@@ -246,7 +258,7 @@ mod tests {
     fn encode_empty_slice_produces_zero_header() {
         let encoded = encode(&[]).unwrap();
         assert_eq!(encoded, 0u32.to_le_bytes());
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert!(decoded.is_empty());
     }
 
@@ -256,7 +268,7 @@ mod tests {
     fn decode_error_truncated_file_count() {
         // Only 2 bytes instead of 4 for file_count
         let data = &[0x01, 0x00];
-        let err = decode(data, TEST_MAX_FILE_COUNT).unwrap_err();
+        let err = decode(data, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap_err();
         assert!(
             err.to_string().contains("file count"),
             "expected 'file count' in error, got: {err}"
@@ -269,7 +281,7 @@ mod tests {
         let mut data = Vec::new();
         data.extend_from_slice(&1u32.to_le_bytes());
         data.extend_from_slice(&[0x05, 0x00]); // incomplete u32
-        let err = decode(&data, TEST_MAX_FILE_COUNT).unwrap_err();
+        let err = decode(&data, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap_err();
         assert!(
             err.to_string().contains("path length"),
             "expected 'path length' in error, got: {err}"
@@ -283,7 +295,7 @@ mod tests {
         data.extend_from_slice(&1u32.to_le_bytes());
         data.extend_from_slice(&10u32.to_le_bytes());
         data.extend_from_slice(b"abc");
-        let err = decode(&data, TEST_MAX_FILE_COUNT).unwrap_err();
+        let err = decode(&data, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap_err();
         assert!(
             err.to_string().contains("path"),
             "expected 'path' in error, got: {err}"
@@ -299,7 +311,7 @@ mod tests {
         data.extend_from_slice(&(path.len() as u32).to_le_bytes());
         data.extend_from_slice(path);
         data.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // incomplete u64
-        let err = decode(&data, TEST_MAX_FILE_COUNT).unwrap_err();
+        let err = decode(&data, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap_err();
         assert!(
             err.to_string().contains("content length"),
             "expected 'content length' in error, got: {err}"
@@ -315,7 +327,7 @@ mod tests {
         data.extend_from_slice(&[0xFF, 0xFE, 0xFD]); // invalid UTF-8
         // Add content_len and content so the only error is the path
         data.extend_from_slice(&0u64.to_le_bytes());
-        let err = decode(&data, TEST_MAX_FILE_COUNT).unwrap_err();
+        let err = decode(&data, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap_err();
         assert!(
             err.to_string().contains("invalid UTF-8"),
             "expected 'invalid UTF-8' in error, got: {err}"
@@ -332,7 +344,7 @@ mod tests {
         data.extend_from_slice(path);
         data.extend_from_slice(&100u64.to_le_bytes());
         data.extend_from_slice(b"hello");
-        let err = decode(&data, TEST_MAX_FILE_COUNT).unwrap_err();
+        let err = decode(&data, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap_err();
         assert!(
             err.to_string().contains("content"),
             "expected 'content' in error, got: {err}"
@@ -346,7 +358,7 @@ mod tests {
         // file_count = 256 with max_file_count = 255
         let mut data = Vec::new();
         data.extend_from_slice(&256u32.to_le_bytes());
-        let err = decode(&data, 255).unwrap_err();
+        let err = decode(&data, 255, TEST_MAX_CONTENT_SIZE).unwrap_err();
         assert!(
             matches!(err, DecodeError::TooManyFiles(256)),
             "expected TooManyFiles(256), got: {err}"
@@ -359,7 +371,7 @@ mod tests {
         let mut data = Vec::new();
         data.extend_from_slice(&1u32.to_le_bytes());
         data.extend_from_slice(&(MAX_PATH_LENGTH + 1).to_le_bytes());
-        let err = decode(&data, TEST_MAX_FILE_COUNT).unwrap_err();
+        let err = decode(&data, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap_err();
         assert!(
             matches!(err, DecodeError::PathTooLong(len) if len == MAX_PATH_LENGTH + 1),
             "expected PathTooLong, got: {err}"
@@ -376,7 +388,7 @@ mod tests {
             (Utf8Path::new("c"), b"3"),
         ];
         let encoded = encode(&files).unwrap();
-        let decoded = decode(&encoded, max).unwrap();
+        let decoded = decode(&encoded, max, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 3);
     }
 
@@ -391,7 +403,7 @@ mod tests {
             })
             .collect();
         let encoded = encode(&files).unwrap();
-        let decoded = decode(&encoded, 255).unwrap();
+        let decoded = decode(&encoded, 255, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 255);
     }
 
@@ -406,7 +418,7 @@ mod tests {
             })
             .collect();
         let encoded = encode(&files).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 100);
         for (i, (path, content)) in decoded.iter().enumerate() {
             assert_eq!(path.as_str(), format!("file_{i}.txt"));
@@ -419,7 +431,7 @@ mod tests {
         let path = Utf8Path::new("");
         let content = b"content";
         let encoded = encode(&[(path, content.as_slice())]).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, "");
         assert_eq!(decoded[0].1, b"content");
@@ -430,7 +442,7 @@ mod tests {
         let path = Utf8Path::new("/tmp/résults_日本語.json");
         let content = b"unicode path test";
         let encoded = encode(&[(path, content.as_slice())]).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, "/tmp/résults_日本語.json");
         assert_eq!(decoded[0].1, b"unicode path test");
@@ -445,7 +457,7 @@ mod tests {
         let path = Utf8Path::new(&path_str);
         let content = b"deep";
         let encoded = encode(&[(path, content.as_slice())]).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0.as_str(), path_str);
         assert_eq!(decoded[0].1, b"deep");
@@ -456,7 +468,7 @@ mod tests {
         let path = Utf8Path::new("large.bin");
         let content = vec![0xABu8; 1024 * 1024]; // 1 MiB
         let encoded = encode(&[(path, content.as_slice())]).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].1.len(), 1024 * 1024);
         assert!(decoded[0].1.iter().all(|&b| b == 0xAB));
@@ -467,7 +479,7 @@ mod tests {
         let path = Utf8Path::new("tiny.bin");
         let content: &[u8] = &[0x42];
         let encoded = encode(&[(path, content)]).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].1, &[0x42]);
     }
@@ -479,7 +491,7 @@ mod tests {
             (Utf8Path::new("dup.txt"), b"second"),
         ];
         let encoded = encode(&files).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 2);
         assert_eq!(decoded[0].0, "dup.txt");
         assert_eq!(decoded[0].1, b"first");
@@ -494,7 +506,7 @@ mod tests {
             (Utf8Path::new("/tmp/foo/bar.txt"), b"absolute"),
         ];
         let encoded = encode(&files).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 2);
         assert_eq!(decoded[0].0, "./foo/bar.txt");
         assert_eq!(decoded[1].0, "/tmp/foo/bar.txt");
@@ -535,7 +547,7 @@ mod tests {
         data.extend_from_slice(&1u64.to_le_bytes());
         data.extend_from_slice(b"C");
 
-        let decoded = decode(&data, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&data, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 2);
         assert_eq!(decoded[0].0, "x");
         assert_eq!(decoded[0].1, b"AB");
@@ -547,7 +559,7 @@ mod tests {
 
     #[test]
     fn decode_completely_empty_buffer() {
-        let err = decode(&[], TEST_MAX_FILE_COUNT).unwrap_err();
+        let err = decode(&[], TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap_err();
         assert!(
             err.to_string().contains("file count"),
             "expected 'file count' in error, got: {err}"
@@ -560,7 +572,7 @@ mod tests {
         let mut with_trailing = encoded.clone();
         with_trailing.extend_from_slice(b"garbage");
         // Trailing bytes are silently ignored
-        let decoded = decode(&with_trailing, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&with_trailing, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, "f");
         assert_eq!(decoded[0].1, b"d");
@@ -571,7 +583,7 @@ mod tests {
         let mut data = Vec::new();
         data.extend_from_slice(&0u32.to_le_bytes());
         data.extend_from_slice(b"extra bytes");
-        let decoded = decode(&data, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&data, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert!(decoded.is_empty());
     }
 
@@ -580,7 +592,7 @@ mod tests {
         let path = Utf8Path::new("zeros.bin");
         let content = vec![0u8; 256];
         let encoded = encode(&[(path, content.as_slice())]).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].1, content);
     }
@@ -601,8 +613,55 @@ mod tests {
         let path = Utf8Path::new("mixed.bin");
         let content: &[u8] = b"hello\x00world\x00\x00end";
         let encoded = encode(&[(path, content)]).unwrap();
-        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].1, content);
+    }
+
+    // --- Content size limit tests (Fix 2 + 13) ---
+
+    #[test]
+    fn decode_content_len_overflow() {
+        // content_len = u64::MAX should trigger overflow protection, not panic
+        let mut data = Vec::new();
+        data.extend_from_slice(&1u32.to_le_bytes()); // file_count = 1
+        let path = b"a.txt";
+        data.extend_from_slice(&(path.len() as u32).to_le_bytes());
+        data.extend_from_slice(path);
+        data.extend_from_slice(&u64::MAX.to_le_bytes()); // enormous content_len
+        let err = decode(&data, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap_err();
+        assert!(
+            matches!(err, DecodeError::ContentTooLarge(..)),
+            "expected ContentTooLarge, got: {err}"
+        );
+    }
+
+    #[test]
+    fn decode_error_content_too_large() {
+        let mut data = Vec::new();
+        data.extend_from_slice(&1u32.to_le_bytes());
+        let path = b"big.bin";
+        data.extend_from_slice(&(path.len() as u32).to_le_bytes());
+        data.extend_from_slice(path);
+        // Content claims to be 1 byte over the limit
+        let max: u64 = 1024;
+        data.extend_from_slice(&(max + 1).to_le_bytes());
+        let err = decode(&data, TEST_MAX_FILE_COUNT, max).unwrap_err();
+        assert!(
+            matches!(err, DecodeError::ContentTooLarge(len, limit) if len == max + 1 && limit == max),
+            "expected ContentTooLarge, got: {err}"
+        );
+    }
+
+    #[test]
+    fn decode_content_at_max_boundary() {
+        // Content exactly at the max_content_size limit should succeed
+        let max: u64 = 16;
+        let path = Utf8Path::new("exact.bin");
+        let content = vec![0xABu8; max as usize];
+        let encoded = encode(&[(path, content.as_slice())]).unwrap();
+        let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, max).unwrap();
+        assert_eq!(decoded.len(), 1);
+        assert_eq!(decoded[0].1.len(), max as usize);
     }
 }

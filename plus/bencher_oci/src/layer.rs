@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::PathBuf;
 
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use flate2::read::GzDecoder;
 use tar::{Archive, EntryType};
 
@@ -41,10 +41,7 @@ fn normalize_path(path: &std::path::Path) -> PathBuf {
 ///
 /// Strips leading `/` and rejects any path that would escape `target_dir`
 /// via `..` components.
-fn safe_join(
-    target_dir: &Utf8Path,
-    entry_path: &std::path::Path,
-) -> Result<camino::Utf8PathBuf, OciError> {
+fn safe_join(target_dir: &Utf8Path, entry_path: &std::path::Path) -> Result<Utf8PathBuf, OciError> {
     // Convert to string, strip leading /
     let entry_str = entry_path.to_string_lossy();
     let stripped = entry_str.strip_prefix('/').unwrap_or(&entry_str);
@@ -120,9 +117,9 @@ pub fn extract_layer(
 /// A deferred hard link to create after all regular files are extracted.
 struct DeferredHardLink {
     /// Path to create the link at.
-    link_path: PathBuf,
+    link_path: Utf8PathBuf,
     /// Path the link should point to.
-    link_target: PathBuf,
+    link_target: Utf8PathBuf,
 }
 
 /// A deferred directory permission to apply after all entries are extracted.
@@ -133,7 +130,7 @@ struct DeferredHardLink {
 /// already-existing directories across all entry orderings.
 struct DeferredDirPermission {
     /// Path to the directory.
-    path: PathBuf,
+    path: Utf8PathBuf,
     /// Permission mode from the tar header.
     mode: u32,
 }
@@ -200,8 +197,8 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
             if let Ok(Some(link_name)) = entry.link_name() {
                 let link_target = safe_join(target_dir, &link_name)?;
                 deferred_hardlinks.push(DeferredHardLink {
-                    link_path: target_path.into_std_path_buf(),
-                    link_target: link_target.into_std_path_buf(),
+                    link_path: target_path.clone(),
+                    link_target,
                 });
             }
             continue;
@@ -232,7 +229,7 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
             && let Ok(mode) = entry.header().mode()
         {
             deferred_dir_perms.push(DeferredDirPermission {
-                path: target_path.clone().into_std_path_buf(),
+                path: target_path.clone(),
                 mode,
             });
         }
@@ -245,11 +242,14 @@ fn extract_tar<R: Read>(reader: R, target_dir: &Utf8Path) -> Result<(), OciError
 
     // Now create all deferred hard links
     for hardlink in deferred_hardlinks {
-        std::fs::hard_link(&hardlink.link_target, &hardlink.link_path).map_err(|e| {
+        std::fs::hard_link(
+            hardlink.link_target.as_std_path(),
+            hardlink.link_path.as_std_path(),
+        )
+        .map_err(|e| {
             OciError::LayerExtraction(format!(
                 "Failed to create hard link from {} to {}: {e}",
-                hardlink.link_target.display(),
-                hardlink.link_path.display()
+                hardlink.link_target, hardlink.link_path
             ))
         })?;
     }

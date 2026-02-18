@@ -75,7 +75,7 @@ fn add_directory_recursive(
             relative_path.join(file_name_str.as_ref())
         };
 
-        let metadata = entry.metadata()?;
+        let metadata = entry.path().symlink_metadata()?;
         let file_type = metadata.file_type();
 
         let header = create_node_header(&metadata);
@@ -123,8 +123,109 @@ fn create_node_header(metadata: &fs::Metadata) -> NodeHeader {
 mod tests {
     use super::*;
 
+    use std::io::BufReader;
+    use std::os::unix::fs as unix_fs;
+
+    use backhand::{FilesystemReader, InnerNode};
+
     #[test]
     fn default_block_size() {
         assert_eq!(DEFAULT_BLOCK_SIZE, 0x2_0000);
+    }
+
+    #[test]
+    fn create_squashfs_preserves_symlinks() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("source");
+        fs::create_dir_all(&source).unwrap();
+
+        // Create a regular file and a symlink pointing to it
+        fs::write(source.join("target.txt"), b"hello").unwrap();
+        unix_fs::symlink("target.txt", source.join("link.txt")).unwrap();
+
+        let output = dir.path().join("out.squashfs");
+        let source_utf8 = Utf8Path::from_path(&source).unwrap();
+        let output_utf8 = Utf8Path::from_path(&output).unwrap();
+        create_squashfs(source_utf8, output_utf8).unwrap();
+
+        // Read back and verify the symlink is stored correctly
+        let file = BufReader::new(File::open(&output).unwrap());
+        let reader = FilesystemReader::from_reader(file).unwrap();
+
+        let mut found_symlink = false;
+        for node in reader.files() {
+            if node.fullpath.ends_with("link.txt")
+                && let InnerNode::Symlink(symlink) = &node.inner
+            {
+                assert_eq!(symlink.link.to_string_lossy(), "target.txt");
+                found_symlink = true;
+            }
+        }
+        assert!(found_symlink, "symlink entry not found in squashfs");
+    }
+
+    #[test]
+    fn create_squashfs_with_directory_and_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("source");
+        fs::create_dir_all(source.join("subdir")).unwrap();
+
+        fs::write(source.join("file.txt"), b"content").unwrap();
+        unix_fs::symlink("subdir", source.join("link_to_dir")).unwrap();
+
+        let output = dir.path().join("out.squashfs");
+        let source_utf8 = Utf8Path::from_path(&source).unwrap();
+        let output_utf8 = Utf8Path::from_path(&output).unwrap();
+        create_squashfs(source_utf8, output_utf8).unwrap();
+
+        let file = BufReader::new(File::open(&output).unwrap());
+        let reader = FilesystemReader::from_reader(file).unwrap();
+
+        let mut has_dir = false;
+        let mut has_file = false;
+        let mut has_symlink = false;
+        for node in reader.files() {
+            if node.fullpath.ends_with("subdir") {
+                has_dir = matches!(&node.inner, InnerNode::Dir(_));
+            }
+            if node.fullpath.ends_with("file.txt") {
+                has_file = matches!(&node.inner, InnerNode::File(_));
+            }
+            if node.fullpath.ends_with("link_to_dir") {
+                has_symlink = matches!(&node.inner, InnerNode::Symlink(_));
+            }
+        }
+        assert!(has_dir, "directory not found");
+        assert!(has_file, "regular file not found");
+        assert!(has_symlink, "symlink not found");
+    }
+
+    #[test]
+    fn create_squashfs_dangling_symlink() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("source");
+        fs::create_dir_all(&source).unwrap();
+
+        // Dangling symlink — target does not exist
+        unix_fs::symlink("nonexistent", source.join("dangling")).unwrap();
+
+        let output = dir.path().join("out.squashfs");
+        let source_utf8 = Utf8Path::from_path(&source).unwrap();
+        let output_utf8 = Utf8Path::from_path(&output).unwrap();
+        create_squashfs(source_utf8, output_utf8).unwrap();
+
+        let file = BufReader::new(File::open(&output).unwrap());
+        let reader = FilesystemReader::from_reader(file).unwrap();
+
+        let mut found = false;
+        for node in reader.files() {
+            if node.fullpath.ends_with("dangling")
+                && let InnerNode::Symlink(symlink) = &node.inner
+            {
+                assert_eq!(symlink.link.to_string_lossy(), "nonexistent");
+                found = true;
+            }
+        }
+        assert!(found, "dangling symlink not stored in squashfs");
     }
 }

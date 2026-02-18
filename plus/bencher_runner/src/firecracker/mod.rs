@@ -68,6 +68,8 @@ pub struct FirecrackerJobConfig {
     pub log_level: FirecrackerLogLevel,
     /// Maximum number of output files to decode.
     pub max_file_count: u32,
+    /// Maximum content size in bytes for a single output file.
+    pub max_content_size: u64,
     /// Maximum data size in bytes per vsock port.
     pub max_output_size: usize,
     /// Grace period after exit code before final collection.
@@ -242,7 +244,11 @@ pub fn run_firecracker(
 
     // Decode output files from the length-prefixed binary protocol
     let output_files = match results.output_files {
-        Some(data) if !data.is_empty() => Some(decode_output_files(&data, config.max_file_count)?),
+        Some(data) if !data.is_empty() => Some(decode_output_files(
+            &data,
+            config.max_file_count,
+            config.max_content_size,
+        )?),
         _ => None,
     };
 
@@ -258,8 +264,9 @@ pub fn run_firecracker(
 fn decode_output_files(
     data: &[u8],
     max_file_count: u32,
+    max_content_size: u64,
 ) -> Result<HashMap<Utf8PathBuf, Vec<u8>>, FirecrackerError> {
-    let files = bencher_output_protocol::decode(data, max_file_count)
+    let files = bencher_output_protocol::decode(data, max_file_count, max_content_size)
         .map_err(|e| FirecrackerError::VsockCollection(format!("output files: {e}")))?;
     Ok(files.into_iter().collect())
 }

@@ -15,7 +15,6 @@ use super::error::{DaemonError, WebSocketError};
 #[cfg(target_os = "linux")]
 use super::websocket::{JobChannel, RunnerMessage, ServerMessage};
 
-#[expect(dead_code)]
 pub enum JobOutcome {
     Completed {
         exit_code: i32,
@@ -98,6 +97,11 @@ pub fn execute_job(
                     .map(|(path, bytes)| (path, String::from_utf8_lossy(&bytes).into_owned()))
                     .collect::<std::collections::HashMap<_, _>>()
             });
+            let stdout_preview = if output.stdout.is_empty() {
+                None
+            } else {
+                Some(output.stdout.clone())
+            };
             let msg = RunnerMessage::Completed {
                 exit_code: output.exit_code,
                 stdout: if output.stdout.is_empty() {
@@ -121,7 +125,7 @@ pub fn execute_job(
             ws_guard.close();
             JobOutcome::Completed {
                 exit_code: output.exit_code,
-                output: None,
+                output: stdout_preview,
             }
         },
         Err(e) => {

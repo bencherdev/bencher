@@ -226,8 +226,12 @@ impl RegistryClient {
         let parsed = bencher_json::oci::Manifest::from_bytes(&manifest_bytes)
             .map_err(|e| OciError::Registry(format!("Failed to parse manifest: {e}")))?;
 
-        // If this is an index/manifest list, select the best platform manifest and pull it
-        let (image_manifest, _nested_bytes) = match &parsed {
+        // If this is an index/manifest list, select the best platform manifest and pull it.
+        // Update manifest_digest/manifest_bytes so index.json references the resolved
+        // platform manifest, not the manifest list.
+        let mut manifest_digest = manifest_digest;
+        let mut manifest_bytes = manifest_bytes;
+        let image_manifest = match &parsed {
             bencher_json::oci::Manifest::OciImageIndex(index) => {
                 let desc = select_platform_manifest(&index.manifests)?;
                 let (_, nested_bytes) = self.pull_blob(image_ref, &desc.digest)?;
@@ -238,7 +242,9 @@ impl RegistryClient {
 
                 let nested: bencher_json::oci::OciImageManifest =
                     serde_json::from_slice(&nested_bytes)?;
-                (nested, Some(nested_bytes))
+                manifest_digest.clone_from(&desc.digest);
+                manifest_bytes = nested_bytes;
+                nested
             },
             bencher_json::oci::Manifest::DockerManifestList(list) => {
                 let desc = select_platform_manifest(&list.manifests)?;
@@ -250,12 +256,14 @@ impl RegistryClient {
 
                 let nested: bencher_json::oci::OciImageManifest =
                     serde_json::from_slice(&nested_bytes)?;
-                (nested, Some(nested_bytes))
+                manifest_digest.clone_from(&desc.digest);
+                manifest_bytes = nested_bytes;
+                nested
             },
-            bencher_json::oci::Manifest::OciImageManifest(m) => (m.clone(), None),
+            bencher_json::oci::Manifest::OciImageManifest(m) => m.clone(),
             bencher_json::oci::Manifest::DockerManifestV2(m) => {
                 // Convert Docker V2 fields to OCI manifest fields
-                let oci = bencher_json::oci::OciImageManifest {
+                bencher_json::oci::OciImageManifest {
                     schema_version: m.schema_version,
                     media_type: Some(m.media_type.clone()),
                     config: m.config.clone(),
@@ -263,8 +271,7 @@ impl RegistryClient {
                     subject: None,
                     annotations: None,
                     artifact_type: None,
-                };
-                (oci, None)
+                }
             },
         };
 

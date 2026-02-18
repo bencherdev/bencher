@@ -540,9 +540,29 @@ fn wait_for_child(
     // SAFETY: Setting O_NONBLOCK on valid pipe file descriptors.
     unsafe {
         let flags = libc::fcntl(stdout_fd, libc::F_GETFL);
-        libc::fcntl(stdout_fd, libc::F_SETFL, flags | libc::O_NONBLOCK);
+        if flags == -1 {
+            console_log(&format!(
+                "fcntl(stdout, F_GETFL) failed: {}",
+                io::Error::last_os_error()
+            ));
+        } else if libc::fcntl(stdout_fd, libc::F_SETFL, flags | libc::O_NONBLOCK) == -1 {
+            console_log(&format!(
+                "fcntl(stdout, F_SETFL) failed: {}",
+                io::Error::last_os_error()
+            ));
+        }
         let flags = libc::fcntl(stderr_fd, libc::F_GETFL);
-        libc::fcntl(stderr_fd, libc::F_SETFL, flags | libc::O_NONBLOCK);
+        if flags == -1 {
+            console_log(&format!(
+                "fcntl(stderr, F_GETFL) failed: {}",
+                io::Error::last_os_error()
+            ));
+        } else if libc::fcntl(stderr_fd, libc::F_SETFL, flags | libc::O_NONBLOCK) == -1 {
+            console_log(&format!(
+                "fcntl(stderr, F_SETFL) failed: {}",
+                io::Error::last_os_error()
+            ));
+        }
     }
 
     // SAFETY: stdout_fd is a valid file descriptor from pipe(); we take ownership.
@@ -553,14 +573,16 @@ fn wait_for_child(
     let mut stdout_buf = Vec::new();
     let mut stderr_buf = Vec::new();
     let mut exit_code: Option<i32> = None;
+    let mut sent_sigterm = false;
 
     loop {
-        // Check for shutdown signal
-        if SHUTDOWN_REQUESTED.load(Ordering::SeqCst) {
+        // Check for shutdown signal — send SIGTERM only once
+        if !sent_sigterm && SHUTDOWN_REQUESTED.load(Ordering::SeqCst) {
             // SAFETY: child_pid is a valid process ID from fork().
             unsafe {
                 libc::kill(child_pid, libc::SIGTERM);
             }
+            sent_sigterm = true;
         }
 
         // Try to read from pipes
@@ -683,11 +705,10 @@ fn encode_output_files(paths: &[Utf8PathBuf]) -> Vec<u8> {
     // First pass: collect successfully read files
     let mut files: Vec<(&Utf8Path, Vec<u8>)> = Vec::new();
     for path in paths {
-        if Path::new(path.as_str()).exists() {
-            match fs::read(path.as_str()) {
-                Ok(content) => files.push((path, content)),
-                Err(e) => eprintln!("failed to read output file {path}: {e}"),
-            }
+        match fs::read(path.as_str()) {
+            Ok(content) => files.push((path, content)),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {},
+            Err(e) => eprintln!("failed to read output file {path}: {e}"),
         }
     }
 
@@ -749,14 +770,21 @@ fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
         tv_usec: 0,
     };
     // SAFETY: timeout is a valid timeval struct; size matches the type.
-    unsafe {
+    let ret = unsafe {
         libc::setsockopt(
             fd,
             libc::SOL_SOCKET,
             libc::SO_SNDTIMEO,
             std::ptr::from_ref(&timeout).cast(),
             size_of::<libc::timeval>() as u32,
-        );
+        )
+    };
+    if ret != 0 {
+        close_fd(fd);
+        return Err(InitError::Vsock(format!(
+            "setsockopt SO_SNDTIMEO: {}",
+            io::Error::last_os_error()
+        )));
     }
 
     // Connect to host

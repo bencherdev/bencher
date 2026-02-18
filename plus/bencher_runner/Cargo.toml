@@ -15,6 +15,8 @@ plus = [
     "dep:bencher_oci",
     "dep:bencher_output_protocol",
     "dep:bencher_rootfs",
+    "dep:bencher_valid",
+    "bencher_valid/server",
     "dep:camino",
     "dep:serde",
     "dep:serde_json",
@@ -34,6 +36,7 @@ bencher_json = { workspace = true, optional = true }
 bencher_output_protocol = { workspace = true, optional = true }
 bencher_oci = { workspace = true, optional = true }
 bencher_rootfs = { workspace = true, optional = true }
+bencher_valid = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }

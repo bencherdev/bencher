@@ -257,7 +257,11 @@ pub fn execute(
     };
 
     // Step 1: Resolve OCI image (local path or pull from registry)
-    let oci_image_path = resolve_oci_image(&config.oci_image, config.token.as_deref(), work_dir)?;
+    let oci_image_path = resolve_oci_image(
+        &config.oci_image,
+        config.token.as_ref().map(AsRef::as_ref),
+        work_dir,
+    )?;
 
     // Step 2: Parse OCI image config to get the command
     println!("Parsing OCI image config...");
@@ -318,11 +322,12 @@ pub fn execute(
 
     // Step 8: Run benchmark in Firecracker microVM
     println!("Launching Firecracker microVM...");
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "CPU count fits in u8 for Firecracker"
-    )]
-    let vcpus = u32::from(config.vcpus) as u8;
+    let vcpus = u8::try_from(u32::from(config.vcpus)).map_err(|_err| {
+        crate::error::ConfigError::OutOfRange(format!(
+            "vCPU count {} exceeds u8 maximum",
+            config.vcpus
+        ))
+    })?;
     #[expect(
         clippy::cast_possible_truncation,
         reason = "Practical memory fits in u32 MiB for Firecracker"
@@ -340,6 +345,7 @@ pub fn execute(
         cpu_layout: config.cpu_layout.clone(),
         log_level: config.firecracker_log_level,
         max_file_count: config.max_file_count,
+        max_content_size: config.max_content_size,
         max_output_size: config.max_output_size,
         grace_period: config.grace_period,
     };

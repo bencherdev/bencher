@@ -86,10 +86,18 @@ impl VsockListener {
             .map_err(|e| FirecrackerError::VsockCollection(format!("bind output_files: {e}")))?;
 
         // Set non-blocking so we can poll
-        drop(stdout_listener.set_nonblocking(true));
-        drop(stderr_listener.set_nonblocking(true));
-        drop(exit_code_listener.set_nonblocking(true));
-        drop(output_files_listener.set_nonblocking(true));
+        stdout_listener.set_nonblocking(true).map_err(|e| {
+            FirecrackerError::VsockCollection(format!("set_nonblocking stdout: {e}"))
+        })?;
+        stderr_listener.set_nonblocking(true).map_err(|e| {
+            FirecrackerError::VsockCollection(format!("set_nonblocking stderr: {e}"))
+        })?;
+        exit_code_listener.set_nonblocking(true).map_err(|e| {
+            FirecrackerError::VsockCollection(format!("set_nonblocking exit_code: {e}"))
+        })?;
+        output_files_listener.set_nonblocking(true).map_err(|e| {
+            FirecrackerError::VsockCollection(format!("set_nonblocking output_files: {e}"))
+        })?;
 
         Ok(Self {
             vsock_uds_path: vsock_uds_path.to_owned(),

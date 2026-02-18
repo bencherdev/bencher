@@ -117,8 +117,12 @@ impl Daemon {
 
                     let ws_url = client.websocket_url(job_uuid.as_ref())?;
                     match execute_job(&self.config, &job, &ws_url) {
-                        Ok(JobOutcome::Completed { .. }) => {
-                            println!("Job {job_uuid} completed successfully");
+                        Ok(JobOutcome::Completed { exit_code, output }) => {
+                            println!("Job {job_uuid} completed (exit_code={exit_code})");
+                            if let Some(out) = &output {
+                                let preview: String = out.chars().take(200).collect();
+                                println!("  Output: {preview}");
+                            }
                         },
                         Ok(JobOutcome::Failed { error, .. }) => {
                             println!("Job {job_uuid} failed: {error}");

@@ -29,7 +29,7 @@ pub struct Config {
     /// Required when pulling from authenticated registries.
     /// This token is exchanged for a short-lived bearer token.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub token: Option<String>,
+    pub token: Option<bencher_valid::Secret>,
 
     /// Number of vCPUs to allocate to the VM.
     #[serde(default = "default_vcpus")]
@@ -92,6 +92,13 @@ pub struct Config {
     #[serde(default = "default_max_file_count")]
     pub max_file_count: u32,
 
+    /// Maximum content size in bytes for a single output file.
+    ///
+    /// If a file in the guest VM exceeds this size, decoding will fail.
+    /// Defaults to 25 MiB.
+    #[serde(default = "default_max_content_size")]
+    pub max_content_size: u64,
+
     /// Grace period in seconds after exit code arrives before final
     /// collection of remaining stdout/stderr/output files.
     ///
@@ -149,6 +156,10 @@ const fn default_max_file_count() -> u32 {
     255
 }
 
+const fn default_max_content_size() -> u64 {
+    25 * 1024 * 1024 // 25 MiB
+}
+
 fn default_grace_period() -> GracePeriod {
     GracePeriod::MIN
 }
@@ -177,6 +188,7 @@ impl Config {
             env: None,
             max_output_size: default_max_output_size(),
             max_file_count: default_max_file_count(),
+            max_content_size: default_max_content_size(),
             grace_period: default_grace_period(),
             cpu_layout: None,
             firecracker_log_level: FirecrackerLogLevel::default(),
@@ -207,6 +219,7 @@ impl Config {
             env: None,
             max_output_size: default_max_output_size(),
             max_file_count: default_max_file_count(),
+            max_content_size: default_max_content_size(),
             grace_period: default_grace_period(),
             cpu_layout: None,
             firecracker_log_level: FirecrackerLogLevel::default(),
@@ -216,7 +229,7 @@ impl Config {
     /// Set the JWT token for registry authentication.
     #[must_use]
     pub fn with_token<S: Into<String>>(mut self, token: S) -> Self {
-        self.token = Some(token.into());
+        self.token = bencher_valid::Secret::try_from(token.into()).ok();
         self
     }
 
@@ -336,6 +349,13 @@ impl Config {
         self
     }
 
+    /// Set the maximum content size in bytes for a single output file.
+    #[must_use]
+    pub fn with_max_content_size(mut self, max_content_size: u64) -> Self {
+        self.max_content_size = max_content_size;
+        self
+    }
+
     /// Set the grace period after exit code before final collection.
     #[must_use]
     pub fn with_grace_period(mut self, grace_period: GracePeriod) -> Self {
@@ -398,7 +418,7 @@ mod tests {
             .with_cmd(vec!["-c".to_owned(), "echo hello".to_owned()])
             .with_env(env.clone());
 
-        assert_eq!(config.token.unwrap(), "jwt-token");
+        assert_eq!(config.token.unwrap().as_ref(), "jwt-token");
         assert_eq!(config.vcpus, Cpu::try_from(4).unwrap());
         assert_eq!(config.memory, Memory::from_mib(2048).unwrap());
         assert_eq!(config.disk, Disk::from_mib(4096).unwrap());

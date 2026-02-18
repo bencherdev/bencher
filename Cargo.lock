@@ -1566,6 +1566,7 @@ dependencies = [
  "bencher_oci",
  "bencher_output_protocol",
  "bencher_rootfs",
+ "bencher_valid",
  "camino",
  "flate2",
  "libc",
