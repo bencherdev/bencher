@@ -13,6 +13,7 @@
 //! inside a minimal VM guest.
 
 #![expect(clippy::print_stderr)]
+#![cfg_attr(target_os = "linux", expect(unsafe_code))]
 #![cfg_attr(not(target_os = "linux"), allow(unused_crate_dependencies))]
 
 #[cfg(target_os = "linux")]
@@ -24,6 +25,7 @@ fn main() -> std::process::ExitCode {
 
     // Method 1: Direct write to stdout (fd 1)
     let msg = b"[bencher-init] main() entered\n";
+    // SAFETY: Writing to stdout (fd 1) with a valid buffer and correct length.
     unsafe {
         libc::write(libc::STDOUT_FILENO, msg.as_ptr().cast(), msg.len());
     }
@@ -38,7 +40,14 @@ fn main() -> std::process::ExitCode {
     //
     // Loop: poll LSR until THRE is set, then write one byte to the data register.
     // This requires iopl(3) or ioperm to be called first on Linux.
+    //
+    // SAFETY: Called as PID 1 (root) to enable I/O port access for serial output.
+    // Accessing COM1 serial port registers is safe with iopl(3) privilege.
     #[cfg(target_arch = "x86_64")]
+    #[expect(
+        clippy::inline_asm_x86_intel_syntax,
+        reason = "Intel syntax is clearer for x86 I/O port access"
+    )]
     unsafe {
         // Try to get I/O port access (may fail without root, but we're init)
         let _ = libc::iopl(3);
@@ -51,7 +60,7 @@ fn main() -> std::process::ExitCode {
                 let status: u8;
                 std::arch::asm!(
                     "in al, dx",
-                    in("dx") 0x3FD_u16,  // Line status register
+                    in("dx") 0x3FDu16,  // Line status register
                     out("al") status,
                     options(nostack, nomem, preserves_flags)
                 );
@@ -62,7 +71,7 @@ fn main() -> std::process::ExitCode {
             // Write byte to data register
             std::arch::asm!(
                 "out dx, al",
-                in("dx") 0x3F8_u16,  // Data register
+                in("dx") 0x3F8u16,  // Data register
                 in("al") byte,
                 options(nostack, nomem, preserves_flags)
             );

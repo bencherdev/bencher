@@ -4,7 +4,7 @@
 
 use std::ffi::CString;
 use std::fs::{self, File};
-use std::io::{self, Read};
+use std::io::{self, Read as _};
 use std::os::unix::io::RawFd;
 use std::path::Path;
 use std::process::ExitCode;
@@ -58,7 +58,7 @@ fn default_workdir() -> Utf8PathBuf {
 }
 
 /// Write a message to the console for debugging.
-/// Uses direct serial port I/O on x86_64 for reliable early boot output.
+/// Uses direct serial port I/O on `x86_64` for reliable early boot output.
 fn console_log(msg: &str) {
     let formatted = format!("[bencher-init] {msg}\n");
     let bytes = formatted.as_bytes();
@@ -67,7 +67,6 @@ fn console_log(msg: &str) {
     #[cfg(target_arch = "x86_64")]
     {
         serial_write(bytes);
-        return;
     }
 
     // Fallback for non-x86_64 architectures
@@ -75,6 +74,7 @@ fn console_log(msg: &str) {
     {
         use std::io::Write;
         // Try stdout first
+        // SAFETY: Writing to stdout with a valid buffer and correct length.
         let written =
             unsafe { libc::write(libc::STDOUT_FILENO, bytes.as_ptr().cast(), bytes.len()) };
         if written > 0 {
@@ -96,18 +96,24 @@ fn console_log(msg: &str) {
 /// Write bytes directly to the serial port (COM1 at 0x3F8).
 /// This works even before /dev is mounted.
 #[cfg(target_arch = "x86_64")]
+#[expect(
+    clippy::inline_asm_x86_intel_syntax,
+    reason = "Intel syntax is clearer for x86 I/O port access"
+)]
 fn serial_write(data: &[u8]) {
     const COM1_DATA: u16 = 0x3F8;
     const COM1_LSR: u16 = 0x3FD;
     const LSR_THRE: u8 = 0x20; // Transmit Holding Register Empty
 
-    // Try to get I/O port access (requires root, which init has)
+    // SAFETY: Called as PID 1 (root) to enable direct I/O port access for serial output.
     unsafe {
         let _ = libc::iopl(3);
     }
 
     for &byte in data {
         // Wait for transmit holding register to be empty
+        // SAFETY: We have iopl(3) access. Reading COM1 LSR and writing COM1 data
+        // register are standard x86 serial port operations.
         unsafe {
             loop {
                 let status: u8;
@@ -145,8 +151,8 @@ pub fn run() -> ExitCode {
         console_log(&format!("fatal error: {e}"));
         // Try to send error via vsock before dying
         let error_msg = format!("init error: {e}");
-        let _ = send_vsock(ports::STDERR, error_msg.as_bytes());
-        let _ = send_vsock(ports::EXIT_CODE, b"1");
+        drop(send_vsock(ports::STDERR, error_msg.as_bytes()));
+        drop(send_vsock(ports::EXIT_CODE, b"1"));
         poweroff();
         return ExitCode::FAILURE;
     }
@@ -177,8 +183,10 @@ fn run_init() -> Result<(), InitError> {
 
     // Step 5: Set environment variables
     for (key, value) in &config.env {
-        // SAFETY: We're the init process, no other threads exist yet
-        unsafe { std::env::set_var(key, value) };
+        // SAFETY: We're the init process, no other threads exist yet.
+        unsafe {
+            std::env::set_var(key, value);
+        }
     }
 
     // Step 6: Run the benchmark
@@ -209,8 +217,10 @@ fn run_init() -> Result<(), InitError> {
     // With panic=1 in cmdline, the kernel reboots after 1 second.
     // With reboot=t, the reboot triggers a triple-fault → VcpuExit::Shutdown.
     console_log("exiting (will trigger kernel panic → reboot → VM shutdown)...");
-    // Sync filesystems before exit
-    unsafe { libc::sync() };
+    // SAFETY: sync() has no unsafe preconditions; it flushes filesystem buffers.
+    unsafe {
+        libc::sync();
+    }
     // Return Ok to let main() exit with ExitCode::SUCCESS
     Ok(())
 }
@@ -223,6 +233,8 @@ fn remount_root_rw() -> Result<(), InitError> {
     let source = c"none";
     let target = c"/";
 
+    // SAFETY: All pointers are valid CStr literals. MS_REMOUNT with null fstype
+    // is a valid remount operation.
     let ret = unsafe {
         libc::mount(
             source.as_ptr(),
@@ -252,31 +264,31 @@ fn mount_filesystems() -> Result<(), InitError> {
     remount_root_rw()?;
 
     // Create mount points if they don't exist
-    let _ = fs::create_dir_all("/proc");
-    let _ = fs::create_dir_all("/sys");
-    let _ = fs::create_dir_all("/dev");
-    let _ = fs::create_dir_all("/tmp");
-    let _ = fs::create_dir_all("/run");
+    drop(fs::create_dir_all("/proc"));
+    drop(fs::create_dir_all("/sys"));
+    drop(fs::create_dir_all("/dev"));
+    drop(fs::create_dir_all("/tmp"));
+    drop(fs::create_dir_all("/run"));
 
     // Mount proc (if not already mounted)
-    if !is_mounted("/proc") {
-        mount("proc", "/proc", "proc", 0, None)?;
-    } else {
+    if is_mounted("/proc") {
         console_log("proc already mounted");
+    } else {
+        mount("proc", "/proc", "proc", 0, None)?;
     }
 
     // Mount sysfs (if not already mounted)
-    if !is_mounted("/sys") {
-        mount("sysfs", "/sys", "sysfs", 0, None)?;
-    } else {
+    if is_mounted("/sys") {
         console_log("sysfs already mounted");
+    } else {
+        mount("sysfs", "/sys", "sysfs", 0, None)?;
     }
 
     // Mount devtmpfs (if not already mounted)
-    if !is_mounted("/dev") {
-        mount("devtmpfs", "/dev", "devtmpfs", 0, None)?;
-    } else {
+    if is_mounted("/dev") {
         console_log("devtmpfs already mounted");
+    } else {
+        mount("devtmpfs", "/dev", "devtmpfs", 0, None)?;
     }
 
     // Mount tmpfs on /tmp and /run
@@ -296,7 +308,9 @@ fn is_mounted(path: &str) -> bool {
     if let Ok(contents) = fs::read_to_string("/proc/self/mounts") {
         for line in contents.lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 2 && parts[1] == path {
+            if let Some(&mountpoint) = parts.get(1)
+                && mountpoint == path
+            {
                 return true;
             }
         }
@@ -305,10 +319,10 @@ fn is_mounted(path: &str) -> bool {
     // check if the path looks like it has a filesystem mounted
     // by comparing device IDs of the path and its parent
     if let (Ok(path_stat), Ok(parent_stat)) = (
-        std::fs::metadata(path),
-        std::fs::metadata(Path::new(path).parent().unwrap_or(Path::new("/"))),
+        fs::metadata(path),
+        fs::metadata(Path::new(path).parent().unwrap_or(Path::new("/"))),
     ) {
-        use std::os::unix::fs::MetadataExt;
+        use std::os::unix::fs::MetadataExt as _;
         // Different device ID means different filesystem = mounted
         return path_stat.dev() != parent_stat.dev();
     }
@@ -334,6 +348,7 @@ fn mount(
         .transpose()
         .map_err(|e| InitError::Mount(format!("invalid data: {e}")))?;
 
+    // SAFETY: All pointers come from valid CStrings. Flags and data are correct.
     let ret = unsafe {
         libc::mount(
             source.as_ptr(),
@@ -341,8 +356,7 @@ fn mount(
             fstype.as_ptr(),
             flags,
             data.as_ref()
-                .map(|d| d.as_ptr().cast())
-                .unwrap_or(std::ptr::null()),
+                .map_or(std::ptr::null(), |d| d.as_ptr().cast()),
         )
     };
 
@@ -359,7 +373,13 @@ fn mount(
 }
 
 /// Set up signal handlers for graceful shutdown.
+#[expect(
+    clippy::fn_to_numeric_cast_any,
+    reason = "required for libc signal handler registration"
+)]
 fn setup_signal_handlers() -> Result<(), InitError> {
+    // SAFETY: `handle_signal` has the correct `extern "C" fn(c_int)` signature
+    // required by `libc::signal`. We register handlers before spawning any threads.
     unsafe {
         // SIGTERM - graceful shutdown request
         if libc::signal(libc::SIGTERM, handle_signal as libc::sighandler_t) == libc::SIG_ERR {
@@ -409,20 +429,20 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
     let (stdout_read, stdout_write) = pipe()?;
     let (stderr_read, stderr_write) = pipe()?;
 
-    // Fork
+    // SAFETY: Called in single-threaded init process before spawning threads.
     let pid = unsafe { libc::fork() };
 
     match pid {
         -1 => Err(InitError::Fork(io::Error::last_os_error().to_string())),
         0 => {
             // Child process
-            // Close read ends
+            // SAFETY: Closing read ends of pipes in child process.
             unsafe {
                 libc::close(stdout_read);
                 libc::close(stderr_read);
             }
 
-            // Redirect stdout/stderr
+            // SAFETY: Redirecting child stdout/stderr to pipe write ends.
             unsafe {
                 libc::dup2(stdout_write, libc::STDOUT_FILENO);
                 libc::dup2(stderr_write, libc::STDERR_FILENO);
@@ -431,9 +451,19 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
             }
 
             // Exec the command
-            let Ok(program) = CString::new(config.command[0].as_str()) else {
+            let Some(cmd_str) = config.command.first() else {
+                eprintln!("empty command");
+                // SAFETY: Immediate termination of forked child process.
+                unsafe {
+                    libc::_exit(127);
+                }
+            };
+            let Ok(program) = CString::new(cmd_str.as_str()) else {
                 eprintln!("invalid command: contains NUL byte");
-                unsafe { libc::_exit(127) };
+                // SAFETY: Immediate termination of forked child process.
+                unsafe {
+                    libc::_exit(127);
+                }
             };
             let Ok(args): Result<Vec<CString>, _> = config
                 .command
@@ -442,32 +472,45 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
                 .collect()
             else {
                 eprintln!("invalid argument: contains NUL byte");
-                unsafe { libc::_exit(127) };
+                // SAFETY: Immediate termination of forked child process.
+                unsafe {
+                    libc::_exit(127);
+                }
             };
-            let argv: Vec<*const libc::c_char> = args
+            let arg_ptrs: Vec<*const libc::c_char> = args
                 .iter()
                 .map(|s| s.as_ptr())
                 .chain(std::iter::once(std::ptr::null()))
                 .collect();
 
+            // SAFETY: program is a valid CString, arg_ptrs is a null-terminated
+            // array of valid C string pointers.
             unsafe {
-                libc::execvp(program.as_ptr(), argv.as_ptr());
+                libc::execvp(program.as_ptr(), arg_ptrs.as_ptr());
             }
 
             // If we get here, exec failed
             eprintln!("exec failed: {}", io::Error::last_os_error());
-            unsafe { libc::_exit(127) };
+            // SAFETY: Immediate termination of forked child after exec failure.
+            unsafe {
+                libc::_exit(127);
+            }
         },
         child_pid => {
             // Parent process
-            // Close write ends
+            // SAFETY: Closing write ends of pipes in parent process after fork.
             unsafe {
                 libc::close(stdout_write);
                 libc::close(stderr_write);
             }
 
             // Wait for child while collecting output and reaping zombies
-            wait_for_child(child_pid, stdout_read, stderr_read, config.max_output_size)
+            Ok(wait_for_child(
+                child_pid,
+                stdout_read,
+                stderr_read,
+                config.max_output_size,
+            ))
         },
     }
 }
@@ -475,6 +518,7 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
 /// Create a pipe.
 fn pipe() -> Result<(RawFd, RawFd), InitError> {
     let mut fds = [0i32; 2];
+    // SAFETY: fds is a valid array of two i32s as required by pipe(2).
     if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
         return Err(InitError::Io(format!(
             "pipe: {}",
@@ -490,10 +534,10 @@ fn wait_for_child(
     stdout_fd: RawFd,
     stderr_fd: RawFd,
     max_output_size: usize,
-) -> Result<BenchmarkResult, InitError> {
-    use std::os::unix::io::FromRawFd;
+) -> BenchmarkResult {
+    use std::os::unix::io::FromRawFd as _;
 
-    // Set non-blocking on the pipes
+    // SAFETY: Setting O_NONBLOCK on valid pipe file descriptors.
     unsafe {
         let flags = libc::fcntl(stdout_fd, libc::F_GETFL);
         libc::fcntl(stdout_fd, libc::F_SETFL, flags | libc::O_NONBLOCK);
@@ -501,7 +545,9 @@ fn wait_for_child(
         libc::fcntl(stderr_fd, libc::F_SETFL, flags | libc::O_NONBLOCK);
     }
 
+    // SAFETY: stdout_fd is a valid file descriptor from pipe(); we take ownership.
     let mut stdout_file = unsafe { File::from_raw_fd(stdout_fd) };
+    // SAFETY: stderr_fd is a valid file descriptor from pipe(); we take ownership.
     let mut stderr_file = unsafe { File::from_raw_fd(stderr_fd) };
 
     let mut stdout_buf = Vec::new();
@@ -511,8 +557,10 @@ fn wait_for_child(
     loop {
         // Check for shutdown signal
         if SHUTDOWN_REQUESTED.load(Ordering::SeqCst) {
-            // Send SIGTERM to child
-            unsafe { libc::kill(child_pid, libc::SIGTERM) };
+            // SAFETY: child_pid is a valid process ID from fork().
+            unsafe {
+                libc::kill(child_pid, libc::SIGTERM);
+            }
         }
 
         // Try to read from pipes
@@ -521,7 +569,7 @@ fn wait_for_child(
             Ok(0) => {},
             Ok(n) => {
                 let remaining = max_output_size.saturating_sub(stdout_buf.len());
-                stdout_buf.extend_from_slice(&buf[..n.min(remaining)]);
+                stdout_buf.extend_from_slice(buf.get(..n.min(remaining)).unwrap_or_default());
             },
             Err(e) if e.kind() == io::ErrorKind::WouldBlock => {},
             Err(e) => eprintln!("stdout read error: {e}"),
@@ -530,7 +578,7 @@ fn wait_for_child(
             Ok(0) => {},
             Ok(n) => {
                 let remaining = max_output_size.saturating_sub(stderr_buf.len());
-                stderr_buf.extend_from_slice(&buf[..n.min(remaining)]);
+                stderr_buf.extend_from_slice(buf.get(..n.min(remaining)).unwrap_or_default());
             },
             Err(e) if e.kind() == io::ErrorKind::WouldBlock => {},
             Err(e) => eprintln!("stderr read error: {e}"),
@@ -538,7 +586,8 @@ fn wait_for_child(
 
         // Reap zombies and check for our child
         let mut status: libc::c_int = 0;
-        let waited = unsafe { libc::waitpid(-1, &mut status, libc::WNOHANG) };
+        // SAFETY: Standard zombie reaping; status is a valid mutable i32.
+        let waited = unsafe { libc::waitpid(-1, &raw mut status, libc::WNOHANG) };
 
         if waited == child_pid {
             // Our child exited
@@ -572,7 +621,8 @@ fn wait_for_child(
                     Ok(0) | Err(_) => break,
                     Ok(n) => {
                         let remaining = max_output_size.saturating_sub(stdout_buf.len());
-                        stdout_buf.extend_from_slice(&buf[..n.min(remaining)]);
+                        stdout_buf
+                            .extend_from_slice(buf.get(..n.min(remaining)).unwrap_or_default());
                     },
                 }
             }
@@ -581,7 +631,8 @@ fn wait_for_child(
                     Ok(0) | Err(_) => break,
                     Ok(n) => {
                         let remaining = max_output_size.saturating_sub(stderr_buf.len());
-                        stderr_buf.extend_from_slice(&buf[..n.min(remaining)]);
+                        stderr_buf
+                            .extend_from_slice(buf.get(..n.min(remaining)).unwrap_or_default());
                     },
                 }
             }
@@ -589,11 +640,11 @@ fn wait_for_child(
         }
     }
 
-    Ok(BenchmarkResult {
+    BenchmarkResult {
         stdout: stdout_buf,
         stderr: stderr_buf,
         exit_code: exit_code.unwrap_or(1),
-    })
+    }
 }
 
 /// Send benchmark results via vsock.
@@ -612,12 +663,12 @@ fn send_results(
     send_vsock(ports::EXIT_CODE, exit_code_str.as_bytes())?;
 
     // Send output files if specified, using the length-prefixed binary protocol
-    if let Some(paths) = file_paths {
-        if !paths.is_empty() {
-            let encoded = encode_output_files(paths);
-            if !encoded.is_empty() {
-                send_vsock(ports::OUTPUT_FILES, &encoded)?;
-            }
+    if let Some(paths) = file_paths
+        && !paths.is_empty()
+    {
+        let encoded = encode_output_files(paths);
+        if !encoded.is_empty() {
+            send_vsock(ports::OUTPUT_FILES, &encoded)?;
         }
     }
 
@@ -658,6 +709,7 @@ fn encode_output_files(paths: &[Utf8PathBuf]) -> Vec<u8> {
 
 /// Close a file descriptor, logging any error.
 fn close_fd(fd: RawFd) {
+    // SAFETY: fd is a valid file descriptor passed by the caller.
     let ret = unsafe { libc::close(fd) };
     if ret != 0 {
         console_log(&format!(
@@ -671,8 +723,17 @@ fn close_fd(fd: RawFd) {
 const VSOCK_TIMEOUT_SECS: i64 = 2;
 
 /// Send data via vsock to the host.
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "size_of values and AF_VSOCK constant are known to fit in target types"
+)]
+#[expect(
+    clippy::cast_sign_loss,
+    reason = "write return value is checked > 0 before casting to usize"
+)]
 fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
     // Create vsock socket
+    // SAFETY: Creating a vsock socket with standard parameters.
     let fd = unsafe { libc::socket(libc::AF_VSOCK, libc::SOCK_STREAM, 0) };
     if fd < 0 {
         return Err(InitError::Vsock(format!(
@@ -687,6 +748,7 @@ fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
         tv_sec: VSOCK_TIMEOUT_SECS,
         tv_usec: 0,
     };
+    // SAFETY: timeout is a valid timeval struct; size matches the type.
     unsafe {
         libc::setsockopt(
             fd,
@@ -706,6 +768,7 @@ fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
         svm_zero: [0; 4],
     };
 
+    // SAFETY: addr is a valid sockaddr_vm struct; size matches the type.
     let ret = unsafe {
         libc::connect(
             fd,
@@ -725,7 +788,9 @@ fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
     // Send data with retry for EINTR
     let mut sent = 0;
     while sent < data.len() {
-        let n = unsafe { libc::write(fd, data[sent..].as_ptr().cast(), data.len() - sent) };
+        let remaining_data = data.get(sent..).unwrap_or_default();
+        // SAFETY: remaining_data is a valid byte slice; fd is a connected vsock socket.
+        let n = unsafe { libc::write(fd, remaining_data.as_ptr().cast(), remaining_data.len()) };
         if n < 0 {
             let err = io::Error::last_os_error();
             // Retry on EINTR (signal interrupted)
@@ -802,12 +867,24 @@ fn output_results_serial(result: &BenchmarkResult) {
 /// that the guest is done. This triggers `VcpuExit::IoOut` which the VMM
 /// handles as a shutdown. Falls back to `reboot(RB_POWER_OFF)` if the
 /// port write doesn't cause an exit.
+#[cfg_attr(
+    target_arch = "x86_64",
+    expect(
+        clippy::inline_asm_x86_intel_syntax,
+        reason = "Intel syntax is clearer for x86 I/O port access"
+    )
+)]
 fn poweroff() {
-    // Sync filesystems
-    unsafe { libc::sync() };
+    // SAFETY: sync() has no unsafe preconditions; it flushes filesystem buffers.
+    unsafe {
+        libc::sync();
+    }
 
     // Write to I/O port 0x604 to signal shutdown to the VMM.
     // This is the standard exit port used by Firecracker and QEMU.
+    //
+    // SAFETY: iopl(3) enables I/O port access. Writing to port 0x604 signals
+    // the VMM (Firecracker/QEMU) to shut down the guest.
     #[cfg(target_arch = "x86_64")]
     unsafe {
         // Get I/O port access (requires iopl >= 1)
@@ -821,6 +898,7 @@ fn poweroff() {
     }
 
     // Fallback: use reboot syscall
+    // SAFETY: Valid reboot command to power off the system.
     unsafe {
         libc::reboot(libc::RB_POWER_OFF);
     }
