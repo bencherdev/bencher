@@ -126,28 +126,15 @@ fn create_rootfs(rootfs: &Utf8Path) -> anyhow::Result<()> {
 
 /// Download and install busybox.
 fn install_busybox(rootfs: &Utf8Path) -> anyhow::Result<()> {
-    let busybox_url = busybox_url()?;
     let busybox_path = rootfs.join("bin/busybox");
 
-    println!("Downloading busybox...");
-    let response = reqwest::blocking::get(busybox_url).context("Failed to download busybox")?;
-
-    if !response.status().is_success() {
-        anyhow::bail!("Failed to download busybox: HTTP {}", response.status());
+    // Try direct URL download first, fall back to extracting from Docker image
+    if let Err(e) = download_busybox(&busybox_path) {
+        println!("Direct download failed: {e}");
+        println!("Extracting busybox from Docker image...");
+        extract_busybox_from_docker(&busybox_path)
+            .context("Failed to extract busybox from Docker (fallback after download failure)")?;
     }
-
-    let bytes = response.bytes()?;
-
-    // Verify SHA256 checksum
-    let hash = sha256_hex(&bytes);
-    let expected = busybox_sha256()?;
-    anyhow::ensure!(
-        hash == expected,
-        "Busybox checksum mismatch: expected {expected}, got {hash}"
-    );
-
-    let mut file = File::create(&busybox_path)?;
-    file.write_all(&bytes)?;
 
     // Make executable
     fs::set_permissions(&busybox_path, fs::Permissions::from_mode(0o755))?;
@@ -176,6 +163,54 @@ fn install_busybox(rootfs: &Utf8Path) -> anyhow::Result<()> {
     }
 
     println!("Busybox installed");
+    Ok(())
+}
+
+/// Download busybox from the direct URL with SHA256 verification.
+fn download_busybox(busybox_path: &Utf8Path) -> anyhow::Result<()> {
+    let url = busybox_url()?;
+    println!("Downloading busybox from {url}...");
+    let response = reqwest::blocking::get(url).context("Failed to download busybox")?;
+
+    if !response.status().is_success() {
+        anyhow::bail!("HTTP {}", response.status());
+    }
+
+    let bytes = response.bytes()?;
+
+    // Verify SHA256 checksum
+    let hash = sha256_hex(&bytes);
+    let expected = busybox_sha256()?;
+    anyhow::ensure!(
+        hash == expected,
+        "Busybox checksum mismatch: expected {expected}, got {hash}"
+    );
+
+    let mut file = File::create(busybox_path)?;
+    file.write_all(&bytes)?;
+    Ok(())
+}
+
+/// Extract busybox from the Docker Hub `busybox` image (multi-arch).
+fn extract_busybox_from_docker(busybox_path: &Utf8Path) -> anyhow::Result<()> {
+    let output = Command::new("docker")
+        .args(["run", "--rm", "busybox:latest", "cat", "/bin/busybox"])
+        .output()
+        .context("Failed to run docker")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("docker run failed: {stderr}");
+    }
+
+    anyhow::ensure!(
+        !output.stdout.is_empty(),
+        "docker extracted empty busybox binary"
+    );
+
+    let mut file = File::create(busybox_path)?;
+    file.write_all(&output.stdout)?;
+    println!("Busybox extracted from Docker image");
     Ok(())
 }
 

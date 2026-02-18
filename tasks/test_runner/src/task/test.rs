@@ -101,11 +101,11 @@ fn run_test_mock() -> anyhow::Result<()> {
     println!("Running mock test...");
     println!();
 
-    // Step 1: Create OCI image
+    // Create OCI image to validate the build pipeline
     oci::create_test_image()?;
     println!();
 
-    // Step 2: Mock benchmark output (matches `bencher mock` format)
+    // Mock benchmark output (matches `bencher mock` format)
     println!("=== Mock Benchmark Output ===");
     println!(
         r#"{{

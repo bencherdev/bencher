@@ -323,10 +323,11 @@ pub fn execute(
     // Step 8: Run benchmark in Firecracker microVM
     println!("Launching Firecracker microVM...");
     let vcpus = u8::try_from(u32::from(config.vcpus)).map_err(|_err| {
-        crate::error::ConfigError::OutOfRange(format!(
-            "vCPU count {} exceeds u8 maximum",
-            config.vcpus
-        ))
+        crate::error::ConfigError::OutOfRange {
+            name: "vCPU count",
+            value: config.vcpus.to_string(),
+            range: "0-255",
+        }
     })?;
     #[expect(
         clippy::cast_possible_truncation,
