@@ -69,6 +69,15 @@ npx biome format --write .     # Format frontend code
 npx biome lint .               # Lint frontend code
 ```
 
+When modifying `target_os = "linux"` crates (`bencher_init`, `bencher_rootfs`, `bencher_runner`, `bencher_runner_cli`), also run the cross-compilation checks locally:
+
+```bash
+./scripts/clippy.sh            # Runs clippy natively + cross-compiles to x86_64-unknown-linux-gnu
+./scripts/test.sh --linux-only # Cross-compiles tests for the Linux-only crates
+```
+
+These scripts require a cross-compiler (`zig`, `x86_64-linux-gnu-gcc`, or `x86_64-unknown-linux-gnu-gcc`) and the `x86_64-unknown-linux-gnu` Rust target. The clippy script will install the target automatically and warn if no cross-compiler is found.
+
 ### Type Generation (run after API changes)
 
 ```bash
