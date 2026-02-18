@@ -108,3 +108,19 @@ jobs:
         run: |
           npm install --include=dev
           npx biome ci --formatter-enabled false --organize-imports-enabled false .
+
+  nix_lints:
+    name: Check nix code
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-25.11
+      - name: Check nix formatting
+        run: nix develop .#ci --command alejandra --check .
+      - name: Check nix lints
+        run: nix develop .#ci --command statix check
+      - name: Check for dead nix code
+        run: nix develop .#ci --command deadnix
