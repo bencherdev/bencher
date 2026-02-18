@@ -1,17 +1,19 @@
+use std::collections::HashMap;
+
 use bencher_runner::{PerfEventParanoid, RunArgs, Swappiness, TuningConfig};
 
 use crate::error::RunnerCliError;
-use crate::parser::TaskRun;
+use crate::parser::CliRun;
 
 #[derive(Debug)]
 pub struct Run {
     args: RunArgs,
 }
 
-impl TryFrom<TaskRun> for Run {
+impl TryFrom<CliRun> for Run {
     type Error = RunnerCliError;
 
-    fn try_from(task: TaskRun) -> Result<Self, Self::Error> {
+    fn try_from(task: CliRun) -> Result<Self, Self::Error> {
         let tuning = if task.no_tuning {
             TuningConfig::disabled()
         } else {
@@ -46,6 +48,14 @@ impl TryFrom<TaskRun> for Run {
             .map(|mib| bencher_runner::Disk::from_mib(mib).ok_or(RunnerCliError::InvalidDisk(mib)))
             .transpose()?;
 
+        // Convert --env KEY=VALUE strings into a HashMap
+        let env = task.env.map(|env_args| {
+            env_args
+                .into_iter()
+                .filter_map(|s| s.split_once('=').map(|(k, v)| (k.to_owned(), v.to_owned())))
+                .collect::<HashMap<String, String>>()
+        });
+
         Ok(Self {
             args: RunArgs {
                 image: task.image,
@@ -61,6 +71,9 @@ impl TryFrom<TaskRun> for Run {
                 },
                 max_output_size: task.max_output_size,
                 max_file_count: task.max_file_count,
+                entrypoint: task.entrypoint,
+                cmd: task.cmd,
+                env,
                 network: task.network,
                 tuning,
                 grace_period: task.grace_period,

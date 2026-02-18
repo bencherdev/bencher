@@ -1,7 +1,7 @@
 use clap::Parser as _;
 
 use crate::error::RunnerCliError;
-use crate::parser::{TaskRunner, TaskSub};
+use crate::parser::{CliRunner, CliSub};
 
 #[cfg(all(feature = "plus", target_os = "linux"))]
 mod run;
@@ -11,7 +11,7 @@ mod up;
 #[cfg(all(feature = "plus", target_os = "linux"))]
 use run::Run;
 #[cfg(all(feature = "plus", target_os = "linux"))]
-use up::UpRunner;
+use up::Up;
 
 #[derive(Debug)]
 pub struct Runner {
@@ -21,43 +21,43 @@ pub struct Runner {
 #[derive(Debug)]
 pub enum Sub {
     #[cfg(all(feature = "plus", target_os = "linux"))]
-    Up(UpRunner),
+    Up(Up),
     #[cfg(all(feature = "plus", target_os = "linux"))]
     Run(Run),
     #[cfg(not(all(feature = "plus", target_os = "linux")))]
     Unsupported,
 }
 
-impl TryFrom<TaskRunner> for Runner {
+impl TryFrom<CliRunner> for Runner {
     type Error = RunnerCliError;
 
-    fn try_from(task: TaskRunner) -> Result<Self, Self::Error> {
+    fn try_from(cli: CliRunner) -> Result<Self, Self::Error> {
         Ok(Self {
-            sub: task.sub.try_into()?,
+            sub: cli.sub.try_into()?,
         })
     }
 }
 
-impl TryFrom<TaskSub> for Sub {
+impl TryFrom<CliSub> for Sub {
     type Error = RunnerCliError;
 
     #[cfg(all(feature = "plus", target_os = "linux"))]
-    fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
+    fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
-            TaskSub::Up(up) => Self::Up(up.try_into()?),
-            TaskSub::Run(run) => Self::Run(run.try_into()?),
+            CliSub::Up(up) => Self::Up(up.try_into()?),
+            CliSub::Run(run) => Self::Run(run.try_into()?),
         })
     }
 
     #[cfg(not(all(feature = "plus", target_os = "linux")))]
-    fn try_from(_sub: TaskSub) -> Result<Self, Self::Error> {
+    fn try_from(_sub: CliSub) -> Result<Self, Self::Error> {
         Ok(Self::Unsupported)
     }
 }
 
 impl Runner {
     pub fn new() -> Result<Self, RunnerCliError> {
-        TaskRunner::parse().try_into()
+        CliRunner::parse().try_into()
     }
 
     pub fn exec(self) -> Result<(), RunnerCliError> {

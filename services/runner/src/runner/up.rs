@@ -3,17 +3,17 @@ use bencher_runner::daemon::{Daemon, DaemonConfig, DaemonError};
 use bencher_runner::{PerfEventParanoid, Swappiness, TuningConfig};
 
 use crate::error::RunnerCliError;
-use crate::parser::TaskUp;
+use crate::parser::CliUp;
 
 #[derive(Debug)]
-pub struct UpRunner {
+pub struct Up {
     config: DaemonConfig,
 }
 
-impl TryFrom<TaskUp> for UpRunner {
+impl TryFrom<CliUp> for Up {
     type Error = RunnerCliError;
 
-    fn try_from(task: TaskUp) -> Result<Self, Self::Error> {
+    fn try_from(task: CliUp) -> Result<Self, Self::Error> {
         let tuning = if task.no_tuning {
             TuningConfig::disabled()
         } else {
@@ -56,7 +56,7 @@ impl TryFrom<TaskUp> for UpRunner {
     }
 }
 
-impl UpRunner {
+impl Up {
     pub fn exec(self) -> Result<(), RunnerCliError> {
         let daemon = Daemon::new(self.config);
         match daemon.run() {

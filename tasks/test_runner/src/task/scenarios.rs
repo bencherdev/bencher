@@ -1643,6 +1643,196 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
                 Ok(())
             },
         },
+        // =======================================================================
+        // CLI override scenarios (--entrypoint, --cmd, --env)
+        // =======================================================================
+        Scenario {
+            name: "cli_entrypoint_override",
+            description: "Override ENTRYPOINT from CLI",
+            dockerfile: r#"FROM busybox
+ENTRYPOINT ["echo", "image_ep"]
+CMD ["image_cmd"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--entrypoint", "echo", "cli_ep"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                // CLI entrypoint ["echo", "cli_ep"] + OCI cmd ["image_cmd"]
+                if output.stdout.contains("cli_ep") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'cli_ep' in output (CLI entrypoint override).\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+            },
+        },
+        Scenario {
+            name: "cli_cmd_override",
+            description: "Override CMD from CLI",
+            dockerfile: r#"FROM busybox
+ENTRYPOINT ["echo"]
+CMD ["image_cmd"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--cmd", "cli_cmd"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                if !output.stdout.contains("cli_cmd") {
+                    bail!(
+                        "Expected 'cli_cmd' in output.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                if output.stdout.contains("image_cmd") {
+                    bail!(
+                        "OCI image_cmd should have been overridden.\nstdout: {}",
+                        output.stdout
+                    )
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "cli_entrypoint_and_cmd_override",
+            description: "Override both ENTRYPOINT and CMD from CLI",
+            dockerfile: r#"FROM busybox
+ENTRYPOINT ["echo", "image_ep"]
+CMD ["image_cmd"]"#,
+            cancel_after_secs: None,
+            extra_args: &[
+                "--timeout",
+                "60",
+                "--entrypoint",
+                "echo",
+                "--cmd",
+                "cli_both",
+            ],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                if !output.stdout.contains("cli_both") {
+                    bail!(
+                        "Expected 'cli_both' in output.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                if output.stdout.contains("image_ep") || output.stdout.contains("image_cmd") {
+                    bail!(
+                        "OCI image entrypoint/cmd should have been overridden.\nstdout: {}",
+                        output.stdout
+                    )
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "cli_env_override",
+            description: "Override an existing ENV from CLI",
+            dockerfile: r#"FROM busybox
+ENV MY_VAR=image_value
+CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--env", "MY_VAR=cli_value"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                if output.stdout.contains("MY_VAR=cli_value") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'MY_VAR=cli_value' in output.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+            },
+        },
+        Scenario {
+            name: "cli_env_add",
+            description: "Add a new ENV from CLI alongside image ENV",
+            dockerfile: r#"FROM busybox
+ENV EXISTING=from_image
+CMD ["sh", "-c", "echo EXISTING=$EXISTING NEW=$NEW_VAR"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--env", "NEW_VAR=from_cli"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                if !output.stdout.contains("EXISTING=from_image") {
+                    bail!(
+                        "Expected 'EXISTING=from_image' in output.\nstdout: {}",
+                        output.stdout
+                    )
+                }
+                if !output.stdout.contains("NEW=from_cli") {
+                    bail!(
+                        "Expected 'NEW=from_cli' in output.\nstdout: {}",
+                        output.stdout
+                    )
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "cli_env_multiple",
+            description: "Multiple --env flags",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo A=$A B=$B"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--env", "A=one", "--env", "B=two"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                if !output.stdout.contains("A=one") {
+                    bail!("Expected 'A=one' in output.\nstdout: {}", output.stdout)
+                }
+                if !output.stdout.contains("B=two") {
+                    bail!("Expected 'B=two' in output.\nstdout: {}", output.stdout)
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "cli_entrypoint_no_image_entrypoint",
+            description: "Add entrypoint when image only has CMD",
+            dockerfile: r#"FROM busybox
+CMD ["hello", "world"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--entrypoint", "echo"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                // CLI entrypoint ["echo"] + OCI cmd ["hello", "world"]
+                if output.stdout.contains("hello world") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'hello world' in output (CLI entrypoint + OCI cmd).\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+            },
+        },
     ]
 }
 

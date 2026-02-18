@@ -6,7 +6,7 @@ use clap::Parser;
     reason = "CLI flags map to independent tuning knobs"
 )]
 #[derive(Parser, Debug)]
-pub struct TaskUp {
+pub struct CliUp {
     /// API server host URL.
     #[arg(long, env = "BENCHER_HOST", default_value = bencher_json::BENCHER_API_URL_STR)]
     pub host: url::Url,
