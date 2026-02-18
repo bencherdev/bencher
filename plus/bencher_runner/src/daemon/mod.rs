@@ -39,7 +39,7 @@ static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 #[derive(Debug)]
 pub struct DaemonConfig {
     pub host: Url,
-    pub token: String,
+    pub token: bencher_valid::Secret,
     pub runner: String,
     pub poll_timeout_secs: u32,
     pub tuning: TuningConfig,
@@ -92,7 +92,7 @@ impl Daemon {
 
         let client = RunnerApiClient::new(
             self.config.host.clone(),
-            self.config.token.clone(),
+            String::from(self.config.token.clone()),
             self.config.runner.clone(),
         )?;
 

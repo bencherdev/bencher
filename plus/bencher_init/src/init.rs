@@ -450,6 +450,15 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
                 libc::close(stderr_write);
             }
 
+            // Drop I/O port privilege so the benchmark cannot access hardware ports.
+            // iopl(3) is inherited across fork() and preserved across execvp(),
+            // so we must explicitly revoke it before running untrusted code.
+            // SAFETY: Revoking iopl privilege in forked child before exec.
+            #[cfg(target_arch = "x86_64")]
+            unsafe {
+                libc::iopl(0);
+            }
+
             // Exec the command
             let Some(cmd_str) = config.command.first() else {
                 eprintln!("empty command");

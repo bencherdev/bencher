@@ -18,7 +18,7 @@ pub struct TaskDaemon {
 
     /// Runner authentication token.
     #[arg(long, env = "BENCHER_RUNNER_TOKEN")]
-    pub token: String,
+    pub token: bencher_json::Secret,
 
     /// Runner UUID or slug.
     #[arg(long, env = "BENCHER_RUNNER")]

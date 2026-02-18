@@ -294,7 +294,9 @@ fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<
         match stream.read(&mut buf) {
             Ok(0) => break,
             Ok(n) => {
-                data.extend_from_slice(&buf[..n]);
+                let remaining = max_data_size.saturating_sub(data.len());
+                let to_copy = n.min(remaining);
+                data.extend_from_slice(&buf[..to_copy]);
                 if data.len() >= max_data_size {
                     break;
                 }
@@ -563,6 +565,33 @@ mod tests {
 
         let data = try_accept_and_read(&listener, TEST_MAX_DATA_SIZE).unwrap();
         assert!(data.is_empty());
+    }
+
+    #[test]
+    fn try_accept_and_read_truncates_at_max_data_size() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        listener.set_nonblocking(true).unwrap();
+
+        let max_size = 100;
+        // Send 5x more than max_size
+        let mut stream = UnixStream::connect(&path).unwrap();
+        stream.write_all(&vec![0xAB; 500]).unwrap();
+        drop(stream);
+
+        std::thread::sleep(Duration::from_millis(10));
+
+        let data = try_accept_and_read(&listener, max_size).unwrap();
+        assert_eq!(
+            data.len(),
+            max_size,
+            "data should be truncated to exactly max_data_size"
+        );
+        assert!(
+            data.iter().all(|&b| b == 0xAB),
+            "truncated data should contain the correct bytes"
+        );
     }
 
     #[test]

@@ -34,7 +34,7 @@ pub fn execute_job(
     ws_url: &url::Url,
 ) -> Result<JobOutcome, DaemonError> {
     println!("Connecting WebSocket for job {}...", job.uuid);
-    let ws = JobChannel::connect(ws_url, &config.token)?;
+    let ws = JobChannel::connect(ws_url, config.token.as_ref())?;
     let ws = Arc::new(Mutex::new(ws));
 
     // Build runner Config from claimed job spec (all values from job spec, no defaults)
@@ -315,7 +315,7 @@ mod tests {
     fn test_daemon_config() -> DaemonConfig {
         DaemonConfig {
             host: url::Url::parse("https://api.bencher.dev").unwrap(),
-            token: "bencher_runner_test".to_owned(),
+            token: "bencher_runner_test".parse().unwrap(),
             runner: "test-runner".to_owned(),
             poll_timeout_secs: 30,
             tuning: crate::TuningConfig::disabled(),

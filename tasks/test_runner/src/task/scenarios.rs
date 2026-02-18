@@ -597,6 +597,39 @@ CMD ["sleep", "3600"]"#,
             },
         },
         Scenario {
+            name: "iopl_dropped_before_exec",
+            description: "iopl(3) privilege not inherited by benchmark process",
+            // Multi-stage: compile a static C binary that tries direct port I/O.
+            // If iopl is inherited from init, `inb` succeeds → prints IOPL_INHERITED.
+            // If iopl was dropped, `inb` faults (SIGSEGV) → handler prints IOPL_DROPPED.
+            // NOTE: printf `%%%%` → `%%` in file (needed for GCC inline asm register syntax).
+            dockerfile: r#"FROM alpine:latest AS build
+RUN apk add --no-cache gcc musl-dev
+RUN printf '#include <stdio.h>\n#include <signal.h>\n#include <setjmp.h>\nstatic jmp_buf buf;\nvoid handler(int s){(void)s;longjmp(buf,1);}\nint main(void){signal(SIGSEGV,handler);if(setjmp(buf)){puts("IOPL_DROPPED");return 0;}unsigned char v;__asm__ volatile("inb %%%%dx,%%%%al":"=a"(v):"d"((unsigned short)0x80));puts("IOPL_INHERITED");return 1;}\n' > /test.c && gcc -static -o /test_iopl /test.c
+FROM busybox
+COPY --from=build /test_iopl /test_iopl
+CMD ["/test_iopl"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if output.stdout.contains("IOPL_DROPPED") {
+                    Ok(())
+                } else if output.stdout.contains("IOPL_INHERITED") {
+                    bail!(
+                        "iopl(3) was inherited by benchmark process - \
+                         init should drop iopl before exec"
+                    )
+                } else {
+                    bail!(
+                        "Expected IOPL_DROPPED in output.\nstdout: {}\nstderr: {}\nexit_code: {}",
+                        output.stdout,
+                        output.stderr,
+                        output.exit_code
+                    )
+                }
+            },
+        },
+        Scenario {
             name: "unique_output_validation",
             description: "Output comes from VM, not runner preparation logs",
             // Verifies that the output validation is not a false positive from
