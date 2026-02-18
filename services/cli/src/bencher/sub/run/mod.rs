@@ -66,7 +66,7 @@ pub struct Run {
     format: Format,
     log: bool,
     ci: Option<Ci>,
-    runner: Runner,
+    runner: Option<Runner>,
     #[expect(clippy::struct_field_names)]
     dry_run: bool,
     #[cfg(feature = "plus")]
@@ -117,12 +117,25 @@ impl TryFrom<CliRun> for Run {
                 timeout: run_image.timeout,
             }
         });
+        let sub_adapter: SubAdapter = (&cmd).into();
+        #[cfg(feature = "plus")]
+        let runner = if remote_image.is_some() {
+            match cmd.try_into() {
+                Ok(runner) => Some(runner),
+                Err(RunError::NoCommand) => None,
+                Err(e) => return Err(e.into()),
+            }
+        } else {
+            Some(cmd.try_into()?)
+        };
+        #[cfg(not(feature = "plus"))]
+        let runner = Some(cmd.try_into()?);
         Ok(Self {
             project: map_project(project)?,
             branch: branch.try_into().map_err(RunError::Branch)?,
             testbed,
             adapter: adapter.into(),
-            sub_adapter: (&cmd).into(),
+            sub_adapter,
             average: average.map(Into::into),
             iter,
             fold: fold.map(Into::into),
@@ -133,7 +146,7 @@ impl TryFrom<CliRun> for Run {
             format: format.into(),
             log: !quiet,
             ci: ci.try_into().map_err(RunError::Ci)?,
-            runner: cmd.try_into()?,
+            runner,
             dry_run,
             #[cfg(feature = "plus")]
             remote_image,
@@ -206,10 +219,11 @@ impl Run {
     }
 
     async fn generate_local_report(&self) -> Result<Option<JsonNewRun>, RunError> {
+        let runner = self.runner.as_ref().ok_or(RunError::NoRunner)?;
         let start_time = DateTime::now();
         let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
-            let outputs = self.runner.run(self.log).await?;
+            let outputs = runner.run(self.log).await?;
             for output in outputs {
                 if output.is_success() {
                     results.push(output.result());
@@ -217,7 +231,7 @@ impl Run {
                     cli_eprintln_quietable!(self.log, "Skipping failure:\n{output}");
                 } else {
                     return Err(RunError::ExitStatus {
-                        runner: Box::new(self.runner.clone()),
+                        runner: Box::new(runner.clone()),
                         output,
                     });
                 }
@@ -261,9 +275,9 @@ impl Run {
 
     #[cfg(feature = "plus")]
     fn generate_remote_report(&self, remote_image: &RemoteImage) -> JsonNewRun {
-        let cmd = self.runner.cmd_args();
-        let file_paths = self.runner.file_paths();
-        let build_time = self.runner.build_time();
+        let cmd = self.runner.as_ref().and_then(Runner::cmd_args);
+        let file_paths = self.runner.as_ref().and_then(Runner::file_paths);
+        let build_time = self.runner.as_ref().is_some_and(Runner::build_time);
 
         let now = DateTime::now();
         let (branch, hash, start_point) = self.branch.clone().into();

@@ -25,8 +25,14 @@ pub enum RunError {
         "No default shell command flag for target family. Try setting a custom shell command flag with the `--flag` option."
     )]
     Flag,
-    #[error("The subcommand `run` requires either a command argument or results via stdin.")]
+    #[error(
+        "The subcommand `run` requires either a command argument, results file, or results via stdin."
+    )]
     NoCommand,
+    #[error(
+        "The subcommand `run` requires either a command argument, results file, or results via stdin."
+    )]
+    NoRunner,
 
     #[error("Set shell ({0}) when running command in exec mode")]
     ShellWithExec(String),
