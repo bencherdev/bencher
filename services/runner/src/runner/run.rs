@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use bencher_runner::{PerfEventParanoid, RunArgs, Swappiness, TuningConfig};
+use bencher_runner::RunArgs;
 
 use crate::error::RunnerCliError;
 use crate::parser::CliRun;
@@ -14,27 +12,7 @@ impl TryFrom<CliRun> for Run {
     type Error = RunnerCliError;
 
     fn try_from(task: CliRun) -> Result<Self, Self::Error> {
-        let tuning = if task.no_tuning {
-            TuningConfig::disabled()
-        } else {
-            TuningConfig {
-                disable_aslr: !task.aslr,
-                disable_nmi_watchdog: !task.nmi_watchdog,
-                swappiness: task
-                    .swappiness
-                    .map(Swappiness::try_from)
-                    .transpose()?
-                    .or(Some(Swappiness::DEFAULT)),
-                perf_event_paranoid: task
-                    .perf_event_paranoid
-                    .map(PerfEventParanoid::try_from)
-                    .transpose()?
-                    .or(Some(PerfEventParanoid::DEFAULT)),
-                governor: task.governor.or_else(|| Some("performance".to_owned())),
-                disable_smt: !task.smt,
-                disable_turbo: !task.turbo,
-            }
-        };
+        let tuning = task.tuning.try_into()?;
 
         let vcpus = task.vcpus.map(bencher_runner::Cpu::try_from).transpose()?;
         let memory = task
@@ -48,13 +26,7 @@ impl TryFrom<CliRun> for Run {
             .map(|mib| bencher_runner::Disk::from_mib(mib).ok_or(RunnerCliError::InvalidDisk(mib)))
             .transpose()?;
 
-        // Convert --env KEY=VALUE strings into a HashMap
-        let env = task.env.map(|env_args| {
-            env_args
-                .into_iter()
-                .filter_map(|s| s.split_once('=').map(|(k, v)| (k.to_owned(), v.to_owned())))
-                .collect::<HashMap<String, String>>()
-        });
+        let env = task.env.map(bencher_parser::parse_env);
 
         Ok(Self {
             args: RunArgs {

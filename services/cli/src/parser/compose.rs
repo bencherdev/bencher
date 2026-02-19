@@ -94,8 +94,4 @@ pub struct CliDown {
     pub service: CliService,
 }
 
-use super::{check_env, check_key_value};
-
-fn check_volume(arg: &str) -> Result<String, String> {
-    check_key_value::<':'>("HOST", "CONTAINER", arg, true)
-}
+use bencher_parser::{check_env, check_volume};

@@ -12,6 +12,7 @@ plus = ["bencher_runner/plus", "dep:bencher_json"]
 
 [dependencies]
 bencher_json = { workspace = true, optional = true }
+bencher_parser.workspace = true
 bencher_runner.workspace = true
 camino = { workspace = true }
 clap = { workspace = true, features = ["env"] }

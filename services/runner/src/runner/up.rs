@@ -1,6 +1,5 @@
 use bencher_runner::cpu::CpuLayout;
 use bencher_runner::daemon::{Daemon, DaemonConfig, DaemonError};
-use bencher_runner::{PerfEventParanoid, Swappiness, TuningConfig};
 
 use crate::error::RunnerCliError;
 use crate::parser::CliUp;
@@ -14,27 +13,7 @@ impl TryFrom<CliUp> for Up {
     type Error = RunnerCliError;
 
     fn try_from(task: CliUp) -> Result<Self, Self::Error> {
-        let tuning = if task.no_tuning {
-            TuningConfig::disabled()
-        } else {
-            TuningConfig {
-                disable_aslr: !task.aslr,
-                disable_nmi_watchdog: !task.nmi_watchdog,
-                swappiness: task
-                    .swappiness
-                    .map(Swappiness::try_from)
-                    .transpose()?
-                    .or(Some(Swappiness::DEFAULT)),
-                perf_event_paranoid: task
-                    .perf_event_paranoid
-                    .map(PerfEventParanoid::try_from)
-                    .transpose()?
-                    .or(Some(PerfEventParanoid::DEFAULT)),
-                governor: task.governor.or_else(|| Some("performance".to_owned())),
-                disable_smt: !task.smt,
-                disable_turbo: !task.turbo,
-            }
-        };
+        let tuning = task.tuning.try_into()?;
 
         // Detect CPU layout for core isolation
         let cpu_layout = CpuLayout::detect();

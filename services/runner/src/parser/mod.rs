@@ -1,10 +1,14 @@
 #[cfg(feature = "plus")]
+mod tuning;
+#[cfg(feature = "plus")]
 mod up;
 
 #[cfg(feature = "plus")]
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 
+#[cfg(feature = "plus")]
+pub use tuning::CliTuning;
 #[cfg(feature = "plus")]
 pub use up::CliUp;
 
@@ -28,10 +32,6 @@ pub enum CliSub {
 
 /// Arguments for the `run` subcommand.
 #[cfg(feature = "plus")]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "CLI flags map to independent tuning knobs"
-)]
 #[derive(Parser, Debug)]
 pub struct CliRun {
     /// OCI image (local path or registry reference).
@@ -86,38 +86,8 @@ pub struct CliRun {
     #[arg(long)]
     pub network: bool,
 
-    // --- Host tuning flags ---
-    /// Disable all host tuning optimizations.
-    #[arg(long)]
-    pub no_tuning: bool,
-
-    /// Keep ASLR enabled (default: disabled for benchmarks).
-    #[arg(long)]
-    pub aslr: bool,
-
-    /// Keep NMI watchdog enabled (default: disabled for benchmarks).
-    #[arg(long)]
-    pub nmi_watchdog: bool,
-
-    /// Keep SMT / hyper-threading enabled (default: disabled for benchmarks).
-    #[arg(long)]
-    pub smt: bool,
-
-    /// Keep turboboost enabled (default: disabled for benchmarks).
-    #[arg(long)]
-    pub turbo: bool,
-
-    /// Set swappiness value (default: 10).
-    #[arg(long)]
-    pub swappiness: Option<u32>,
-
-    /// Set CPU scaling governor (default: performance).
-    #[arg(long)]
-    pub governor: Option<String>,
-
-    /// Set `perf_event_paranoid` value (default: -1).
-    #[arg(long, allow_hyphen_values = true)]
-    pub perf_event_paranoid: Option<i32>,
+    #[command(flatten)]
+    pub tuning: CliTuning,
 
     /// Grace period in seconds after exit code before final collection (default: 1).
     #[arg(long, default_value = "1")]
@@ -128,16 +98,5 @@ pub struct CliRun {
     pub firecracker_log_level: bencher_runner::FirecrackerLogLevel,
 }
 
-/// Validate that an environment variable argument is in `KEY=VALUE` format.
 #[cfg(feature = "plus")]
-fn check_env(arg: &str) -> Result<String, String> {
-    let index = arg
-        .find('=')
-        .ok_or_else(|| format!("expected format `KEY=VALUE` but no `=` was found in: `{arg}`"))?;
-    if index == 0 {
-        return Err(format!(
-            "expected format `KEY=VALUE` but no `KEY` was found in: `{arg}`"
-        ));
-    }
-    Ok(arg.into())
-}
+use bencher_parser::check_env;

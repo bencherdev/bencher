@@ -1,0 +1,10 @@
+[package]
+name = "bencher_parser"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[lints]
+workspace = true

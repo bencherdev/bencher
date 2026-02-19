@@ -20,6 +20,7 @@ bencher_adapter.workspace = true
 bencher_client = { workspace = true, features = ["client", "rustls-tls"] }
 bencher_comment.workspace = true
 bencher_json = { workspace = true, features = ["client", "table"] }
+bencher_parser.workspace = true
 bollard.workspace = true
 camino.workspace = true
 chrono = { workspace = true, features = ["clock"] }

@@ -8,7 +8,7 @@ use clap::{ArgGroup, Args, Parser, ValueEnum};
 
 use crate::parser::CliBackend;
 #[cfg(feature = "plus")]
-use crate::parser::check_env;
+use bencher_parser::check_env;
 
 use super::project::report::{
     CliReportAdapter, CliReportAverage, CliReportFold, CliReportThresholds,

@@ -99,23 +99,12 @@ impl TryFrom<CliRun> for Run {
             backend,
         } = run;
         #[cfg(feature = "plus")]
-        let job = job.image.map(|image| {
-            let env = job.env.map(|env_vec| {
-                env_vec
-                    .into_iter()
-                    .filter_map(|s| {
-                        let (key, value) = s.split_once('=')?;
-                        Some((key.to_owned(), value.to_owned()))
-                    })
-                    .collect::<HashMap<String, String>>()
-            });
-            Job {
-                image,
-                spec: job.spec,
-                entrypoint: job.entrypoint,
-                env,
-                timeout: job.timeout,
-            }
+        let job = job.image.map(|image| Job {
+            image,
+            spec: job.spec,
+            entrypoint: job.entrypoint,
+            env: job.env.map(bencher_parser::parse_env),
+            timeout: job.timeout,
         });
         let sub_adapter: SubAdapter = (&cmd).into();
         #[cfg(feature = "plus")]

@@ -32,6 +32,7 @@ bencher_context = { path = "lib/bencher_context" }
 bencher_endpoint = { path = "lib/bencher_endpoint" }
 bencher_json = { path = "lib/bencher_json" }
 bencher_logger = { path = "lib/bencher_logger" }
+bencher_parser = { path = "lib/bencher_parser" }
 bencher_plot = { path = "lib/bencher_plot" }
 bencher_rank = { path = "lib/bencher_rank" }
 bencher_rbac = { path = "lib/bencher_rbac" }

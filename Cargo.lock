@@ -1229,6 +1229,7 @@ dependencies = [
  "bencher_client",
  "bencher_comment",
  "bencher_json",
+ "bencher_parser",
  "bollard",
  "camino",
  "chrono",
@@ -1502,6 +1503,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_parser"
+version = "0.5.10"
+
+[[package]]
 name = "bencher_plot"
 version = "0.5.10"
 dependencies = [
@@ -1588,6 +1593,7 @@ name = "bencher_runner_cli"
 version = "0.5.10"
 dependencies = [
  "bencher_json",
+ "bencher_parser",
  "bencher_runner",
  "camino",
  "clap",
