@@ -14,7 +14,6 @@ use crate::ValidError;
 /// - `registry.com/image` -> registry.com/image:latest
 /// - `registry.com/user/image:tag` -> registry.com/user/image:tag
 /// - `registry.com/image@sha256:...` -> registry.com/image@sha256:...
-#[typeshare::typeshare]
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ImageReference {
     raw: String,
@@ -39,11 +38,19 @@ impl ImageReference {
             if let Some((name, digest)) = reference.split_once('@') {
                 (name, digest.to_owned(), true)
             } else if let Some((name, tag)) = reference.rsplit_once(':') {
-                // Check if the colon is part of a port number
-                if name.contains('/') || !tag.chars().all(|c| c.is_ascii_digit()) {
+                // A valid tag never contains `/`. If the suffix after the last
+                // colon has a `/`, the colon must be part of a port
+                // (e.g. `myregistry:5000/myimage`).
+                if tag.contains('/') {
+                    (reference, "latest".to_owned(), false)
+                // Only treat an all-digit suffix as a port when a `/` is present
+                // (e.g. `localhost:5000/image`). Without a `/`, the first component
+                // can't be a registry domain, so the digit suffix is a tag
+                // (e.g. `myimage:5000` → tag "5000"), matching Docker behavior.
+                } else if !name.contains('/') || !tag.chars().all(|c| c.is_ascii_digit()) {
                     (name, tag.to_owned(), false)
                 } else {
-                    // It's a port, not a tag
+                    // Has a slash and all-digit suffix: it's a port (e.g. localhost:5000/image)
                     (reference, "latest".to_owned(), false)
                 }
             } else {
@@ -251,5 +258,52 @@ mod tests {
         // Display uses the raw input form, not the expanded full_name()
         assert_eq!(ref_.to_string(), "alpine:3.18");
         assert_eq!(ref_.full_name(), "docker.io/library/alpine:3.18");
+    }
+
+    #[test]
+    fn parse_bare_name_with_numeric_tag() {
+        let ref_ = ImageReference::parse("myregistry:5000").unwrap();
+        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.repository(), "library/myregistry");
+        assert_eq!(ref_.reference(), "5000");
+        assert!(!ref_.is_digest());
+    }
+
+    #[test]
+    fn parse_bare_name_with_numeric_tag_full_name() {
+        let ref_ = ImageReference::parse("myregistry:5000").unwrap();
+        assert_eq!(ref_.full_name(), "docker.io/library/myregistry:5000");
+    }
+
+    #[test]
+    fn parse_registry_port_with_path() {
+        let ref_ = ImageReference::parse("myregistry:5000/myimage").unwrap();
+        assert_eq!(ref_.registry(), "myregistry:5000");
+        assert_eq!(ref_.repository(), "myimage");
+        assert_eq!(ref_.reference(), "latest");
+    }
+
+    #[test]
+    fn parse_registry_port_with_path_and_tag() {
+        let ref_ = ImageReference::parse("myregistry:5000/myimage:v2").unwrap();
+        assert_eq!(ref_.registry(), "myregistry:5000");
+        assert_eq!(ref_.repository(), "myimage");
+        assert_eq!(ref_.reference(), "v2");
+    }
+
+    #[test]
+    fn parse_localhost_with_port_no_path() {
+        let ref_ = ImageReference::parse("localhost:5000").unwrap();
+        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.repository(), "library/localhost");
+        assert_eq!(ref_.reference(), "5000");
+    }
+
+    #[test]
+    fn parse_dotted_registry_with_port_no_path() {
+        let ref_ = ImageReference::parse("registry.io:5000").unwrap();
+        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.repository(), "library/registry.io");
+        assert_eq!(ref_.reference(), "5000");
     }
 }

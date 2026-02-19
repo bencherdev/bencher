@@ -99,6 +99,11 @@ impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
         {
             return Err(JobConfigError::FilePathsTooLong(file_paths.len()));
         }
+        if let Some(env) = &unchecked.env
+            && env.len() > MAX_ENV_LEN
+        {
+            return Err(JobConfigError::EnvTooLong(env.len()));
+        }
         Ok(JsonNewRunJob {
             image: unchecked.image,
             spec: unchecked.spec,
@@ -163,7 +168,7 @@ pub const MIN_POLL_TIMEOUT: u32 = 1;
 /// Maximum poll timeout in seconds.
 pub const MAX_POLL_TIMEOUT: u32 = 900;
 
-pub use crate::{MAX_CMD_LEN, MAX_ENTRYPOINT_LEN, MAX_FILE_PATHS_LEN};
+pub use crate::{MAX_CMD_LEN, MAX_ENTRYPOINT_LEN, MAX_ENV_LEN, MAX_FILE_PATHS_LEN};
 
 /// Request to claim a job (runner agent endpoint)
 #[typeshare::typeshare]
@@ -205,6 +210,8 @@ pub enum JobConfigError {
     CmdTooLong(usize),
     #[error("file_paths length {0} exceeds maximum {MAX_FILE_PATHS_LEN}")]
     FilePathsTooLong(usize),
+    #[error("env length {0} exceeds maximum {MAX_ENV_LEN}")]
+    EnvTooLong(usize),
 }
 
 #[derive(Deserialize)]
@@ -237,6 +244,11 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
             && file_paths.len() > MAX_FILE_PATHS_LEN
         {
             return Err(JobConfigError::FilePathsTooLong(file_paths.len()));
+        }
+        if let Some(env) = &unchecked.env
+            && env.len() > MAX_ENV_LEN
+        {
+            return Err(JobConfigError::EnvTooLong(env.len()));
         }
         Ok(JsonJobConfig {
             registry: unchecked.registry,
@@ -426,22 +438,31 @@ mod tests {
         assert!(deserialized.output.is_none());
     }
 
-    fn job_config_json(entrypoint_len: usize, cmd_len: usize, file_paths_len: usize) -> String {
+    fn job_config_json(
+        entrypoint_len: usize,
+        cmd_len: usize,
+        file_paths_len: usize,
+        env_len: usize,
+    ) -> String {
         let entrypoint: Vec<String> = (0..entrypoint_len).map(|i| format!("arg{i}")).collect();
         let cmd: Vec<String> = (0..cmd_len).map(|i| format!("cmd{i}")).collect();
         let file_paths: Vec<String> = (0..file_paths_len).map(|i| format!("/f/{i}")).collect();
+        let env: HashMap<String, String> = (0..env_len)
+            .map(|i| (format!("KEY{i}"), format!("val{i}")))
+            .collect();
         format!(
-            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","digest":"sha256:{digest}","entrypoint":{entrypoint},"cmd":{cmd},"timeout":300,"file_paths":{file_paths}}}"#,
+            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","digest":"sha256:{digest}","entrypoint":{entrypoint},"cmd":{cmd},"env":{env},"timeout":300,"file_paths":{file_paths}}}"#,
             digest = "a".repeat(64),
             entrypoint = serde_json::to_string(&entrypoint).unwrap(),
             cmd = serde_json::to_string(&cmd).unwrap(),
             file_paths = serde_json::to_string(&file_paths).unwrap(),
+            env = serde_json::to_string(&env).unwrap(),
         )
     }
 
     #[test]
     fn deserialize_entrypoint_too_long() {
-        let json = job_config_json(MAX_ENTRYPOINT_LEN + 1, 0, 0);
+        let json = job_config_json(MAX_ENTRYPOINT_LEN + 1, 0, 0, 0);
         let result = serde_json::from_str::<JsonJobConfig>(&json);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -450,7 +471,7 @@ mod tests {
 
     #[test]
     fn deserialize_cmd_too_long() {
-        let json = job_config_json(0, MAX_CMD_LEN + 1, 0);
+        let json = job_config_json(0, MAX_CMD_LEN + 1, 0, 0);
         let result = serde_json::from_str::<JsonJobConfig>(&json);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -459,7 +480,7 @@ mod tests {
 
     #[test]
     fn deserialize_file_paths_too_long() {
-        let json = job_config_json(0, 0, MAX_FILE_PATHS_LEN + 1);
+        let json = job_config_json(0, 0, MAX_FILE_PATHS_LEN + 1, 0);
         let result = serde_json::from_str::<JsonJobConfig>(&json);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -467,8 +488,22 @@ mod tests {
     }
 
     #[test]
+    fn deserialize_env_too_long() {
+        let json = job_config_json(0, 0, 0, MAX_ENV_LEN + 1);
+        let result = serde_json::from_str::<JsonJobConfig>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("env length"), "{err}");
+    }
+
+    #[test]
     fn deserialize_at_max_boundary() {
-        let json = job_config_json(MAX_ENTRYPOINT_LEN, MAX_CMD_LEN, MAX_FILE_PATHS_LEN);
+        let json = job_config_json(
+            MAX_ENTRYPOINT_LEN,
+            MAX_CMD_LEN,
+            MAX_FILE_PATHS_LEN,
+            MAX_ENV_LEN,
+        );
         let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(
             config.entrypoint.as_ref().unwrap().len(),
@@ -479,25 +514,42 @@ mod tests {
             config.file_paths.as_ref().unwrap().len(),
             MAX_FILE_PATHS_LEN
         );
+        assert_eq!(config.env.as_ref().unwrap().len(), MAX_ENV_LEN);
+    }
+
+    #[test]
+    fn deserialize_env_at_max_boundary() {
+        let json = job_config_json(0, 0, 0, MAX_ENV_LEN);
+        let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.env.as_ref().unwrap().len(), MAX_ENV_LEN);
     }
 
     // --- JsonNewRunJob validation tests ---
 
-    fn new_run_job_json(entrypoint_len: usize, cmd_len: usize, file_paths_len: usize) -> String {
+    fn new_run_job_json(
+        entrypoint_len: usize,
+        cmd_len: usize,
+        file_paths_len: usize,
+        env_len: usize,
+    ) -> String {
         let entrypoint: Vec<String> = (0..entrypoint_len).map(|i| format!("arg{i}")).collect();
         let cmd: Vec<String> = (0..cmd_len).map(|i| format!("cmd{i}")).collect();
         let file_paths: Vec<String> = (0..file_paths_len).map(|i| format!("/f/{i}")).collect();
+        let env: HashMap<String, String> = (0..env_len)
+            .map(|i| (format!("KEY{i}"), format!("val{i}")))
+            .collect();
         format!(
-            r#"{{"image":"ghcr.io/owner/my-image:latest","entrypoint":{entrypoint},"cmd":{cmd},"file_paths":{file_paths}}}"#,
+            r#"{{"image":"ghcr.io/owner/my-image:latest","entrypoint":{entrypoint},"cmd":{cmd},"env":{env},"file_paths":{file_paths}}}"#,
             entrypoint = serde_json::to_string(&entrypoint).unwrap(),
             cmd = serde_json::to_string(&cmd).unwrap(),
             file_paths = serde_json::to_string(&file_paths).unwrap(),
+            env = serde_json::to_string(&env).unwrap(),
         )
     }
 
     #[test]
     fn new_run_job_entrypoint_too_long() {
-        let json = new_run_job_json(MAX_ENTRYPOINT_LEN + 1, 0, 0);
+        let json = new_run_job_json(MAX_ENTRYPOINT_LEN + 1, 0, 0, 0);
         let result = serde_json::from_str::<JsonNewRunJob>(&json);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -506,7 +558,7 @@ mod tests {
 
     #[test]
     fn new_run_job_cmd_too_long() {
-        let json = new_run_job_json(0, MAX_CMD_LEN + 1, 0);
+        let json = new_run_job_json(0, MAX_CMD_LEN + 1, 0, 0);
         let result = serde_json::from_str::<JsonNewRunJob>(&json);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -515,7 +567,7 @@ mod tests {
 
     #[test]
     fn new_run_job_file_paths_too_long() {
-        let json = new_run_job_json(0, 0, MAX_FILE_PATHS_LEN + 1);
+        let json = new_run_job_json(0, 0, MAX_FILE_PATHS_LEN + 1, 0);
         let result = serde_json::from_str::<JsonNewRunJob>(&json);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -523,12 +575,34 @@ mod tests {
     }
 
     #[test]
+    fn new_run_job_env_too_long() {
+        let json = new_run_job_json(0, 0, 0, MAX_ENV_LEN + 1);
+        let result = serde_json::from_str::<JsonNewRunJob>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("env length"), "{err}");
+    }
+
+    #[test]
     fn new_run_job_at_max_boundary() {
-        let json = new_run_job_json(MAX_ENTRYPOINT_LEN, MAX_CMD_LEN, MAX_FILE_PATHS_LEN);
+        let json = new_run_job_json(
+            MAX_ENTRYPOINT_LEN,
+            MAX_CMD_LEN,
+            MAX_FILE_PATHS_LEN,
+            MAX_ENV_LEN,
+        );
         let job: JsonNewRunJob = serde_json::from_str(&json).unwrap();
         assert_eq!(job.entrypoint.as_ref().unwrap().len(), MAX_ENTRYPOINT_LEN);
         assert_eq!(job.cmd.as_ref().unwrap().len(), MAX_CMD_LEN);
         assert_eq!(job.file_paths.as_ref().unwrap().len(), MAX_FILE_PATHS_LEN);
+        assert_eq!(job.env.as_ref().unwrap().len(), MAX_ENV_LEN);
+    }
+
+    #[test]
+    fn new_run_job_env_at_max_boundary() {
+        let json = new_run_job_json(0, 0, 0, MAX_ENV_LEN);
+        let job: JsonNewRunJob = serde_json::from_str(&json).unwrap();
+        assert_eq!(job.env.as_ref().unwrap().len(), MAX_ENV_LEN);
     }
 }
 

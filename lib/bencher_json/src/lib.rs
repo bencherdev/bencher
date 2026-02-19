@@ -208,6 +208,8 @@ pub const MAX_ENTRYPOINT_LEN: usize = 64;
 pub const MAX_CMD_LEN: usize = 64;
 /// Maximum number of file paths in a job config.
 pub const MAX_FILE_PATHS_LEN: usize = 255;
+/// Maximum number of environment variables in a job config.
+pub const MAX_ENV_LEN: usize = 255;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

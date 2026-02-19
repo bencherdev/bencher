@@ -41,6 +41,7 @@ bencher run --image ghcr.io/org/bench:v1 --adapter json
 **What needs to happen:**
 - [ ] When `JsonNewRun.job` is `Some(...)`, create a job record in the database
 - [ ] Resolve the image reference to an OCI digest (via the registry or pass-through)
+- [ ] If the image reference has the default `docker.io` registry (i.e., an unqualified name like `my-image:tag`), treat it as referring to the server's own registry from `JsonRegistry` config. This lets users write `--image my-image:tag` instead of `--image registry.bencher.dev/my-image:tag`, and works automatically for self-hosted instances.
 - [ ] Resolve the hardware spec (from `job.spec` or a default)
 - [ ] Call `InsertJob::new()` to insert a job linked to the report
 - [ ] Determine priority from the organization's plan tier

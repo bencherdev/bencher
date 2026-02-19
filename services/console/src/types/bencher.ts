@@ -397,29 +397,6 @@ export type UserResourceId = Uuid | Slug;
 
 export type Uuid = string;
 
-/**
- * A parsed OCI image reference.
- * 
- * Supports formats like:
- * - `image` -> docker.io/library/image:latest
- * - `image:tag` -> docker.io/library/image:tag
- * - `user/image` -> docker.io/user/image:latest
- * - `registry.com/image` -> registry.com/image:latest
- * - `registry.com/user/image:tag` -> registry.com/user/image:tag
- * - `registry.com/image@sha256:...` -> registry.com/image@sha256:...
- */
-export interface ImageReference {
-	raw: string;
-	/** Registry host (e.g., "registry.example.com", "docker.io"). */
-	registry: string;
-	/** Repository name (e.g., "library/alpine", "myuser/myimage"). */
-	repository: string;
-	/** Tag or digest (e.g., "latest", "sha256:abc123..."). */
-	reference: string;
-	/** Whether the reference is a digest. */
-	is_digest: boolean;
-}
-
 export interface JsonAccept {
 	invite: Jwt;
 }
@@ -656,7 +633,7 @@ export interface JsonNewProject {
  */
 export interface JsonNewRunJob {
 	/** OCI image reference (e.g. "alpine:3.18", "ghcr.io/owner/repo:v1", "image@sha256:abc...") */
-	image: ImageReference;
+	image: string;
 	/** Hardware spec slug or UUID to run on */
 	spec?: SpecResourceId;
 	/** Container entrypoint override (like Docker ENTRYPOINT) */

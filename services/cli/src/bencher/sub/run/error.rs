@@ -18,6 +18,11 @@ pub enum RunError {
     Thresholds(#[from] crate::bencher::sub::ThresholdsError),
 
     #[error(
+        "The `--build-time` flag requires either a benchmark command or `--image` for remote execution."
+    )]
+    BuildTimeNoCommandOrImage,
+
+    #[error(
         "No default shell command path for target family. Try setting a custom shell with the `--shell` option."
     )]
     Shell,

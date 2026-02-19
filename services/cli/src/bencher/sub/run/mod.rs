@@ -114,6 +114,10 @@ impl TryFrom<CliRun> for Run {
         } else {
             None
         };
+        #[cfg(feature = "plus")]
+        if build_time && job.is_none() && cmd.command.is_none() {
+            return Err(RunError::BuildTimeNoCommandOrImage.into());
+        }
         let sub_adapter: SubAdapter = (&cmd).into();
         #[cfg(feature = "plus")]
         let runner = if job.is_some() {
