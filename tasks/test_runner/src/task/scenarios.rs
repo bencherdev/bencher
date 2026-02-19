@@ -1659,10 +1659,10 @@ CMD ["image_cmd"]"#,
                     let combined = format!("{}{}", output.stdout, output.stderr);
                     bail!("Runner failed (exit {}): {}", output.exit_code, combined)
                 }
-                // CLI entrypoint ["echo", "cli_ep"] + OCI cmd ["image_cmd"]
-                if !output.stdout.contains("cli_ep image_cmd") {
+                // Docker semantics: CLI entrypoint ["echo", "cli_ep"] clears OCI CMD
+                if !output.stdout.contains("cli_ep") {
                     bail!(
-                        "Expected 'cli_ep image_cmd' in output (CLI entrypoint override).\nstdout: {}\nstderr: {}",
+                        "Expected 'cli_ep' in output (CLI entrypoint override).\nstdout: {}\nstderr: {}",
                         output.stdout,
                         output.stderr
                     )
@@ -1670,6 +1670,12 @@ CMD ["image_cmd"]"#,
                 if output.stdout.contains("image_ep") {
                     bail!(
                         "OCI image_ep should have been overridden.\nstdout: {}",
+                        output.stdout
+                    )
+                }
+                if output.stdout.contains("image_cmd") {
+                    bail!(
+                        "OCI image_cmd should have been cleared (Docker semantics: overriding entrypoint clears CMD).\nstdout: {}",
                         output.stdout
                     )
                 }
@@ -1826,16 +1832,16 @@ CMD ["hello", "world"]"#,
                     let combined = format!("{}{}", output.stdout, output.stderr);
                     bail!("Runner failed (exit {}): {}", output.exit_code, combined)
                 }
-                // CLI entrypoint ["echo"] + OCI cmd ["hello", "world"]
+                // Docker semantics: CLI entrypoint ["echo"] clears OCI CMD ["hello", "world"]
+                // So we expect just the output of `echo` (empty line)
                 if output.stdout.contains("hello world") {
-                    Ok(())
-                } else {
                     bail!(
-                        "Expected 'hello world' in output (CLI entrypoint + OCI cmd).\nstdout: {}\nstderr: {}",
+                        "OCI CMD should have been cleared (Docker semantics: overriding entrypoint clears CMD).\nstdout: {}\nstderr: {}",
                         output.stdout,
                         output.stderr
                     )
                 }
+                Ok(())
             },
         },
     ]

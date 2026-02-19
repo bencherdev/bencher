@@ -1,5 +1,5 @@
-// All daemon code is used on Linux; suppress dead-code warnings on other platforms
-// where `Daemon::run()` is a stub.
+// All `up` code is used on Linux; suppress dead-code warnings on other platforms
+// where `Up::run()` is a stub.
 #![cfg_attr(not(target_os = "linux"), allow(dead_code))]
 
 use std::sync::atomic::AtomicBool;
@@ -18,7 +18,7 @@ mod error;
 mod job;
 mod websocket;
 
-pub use error::DaemonError;
+pub use error::UpError;
 
 #[cfg(target_os = "linux")]
 use api_client::{ClaimRequest, RunnerApiClient};
@@ -37,7 +37,7 @@ const TRANSIENT_RETRY_DELAY: Duration = Duration::from_secs(5);
 static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug)]
-pub struct DaemonConfig {
+pub struct UpConfig {
     pub host: Url,
     pub token: bencher_valid::Secret,
     pub runner: String,
@@ -56,21 +56,21 @@ pub struct DaemonConfig {
     pub firecracker_log_level: FirecrackerLogLevel,
 }
 
-pub struct Daemon {
-    config: DaemonConfig,
+pub struct Up {
+    config: UpConfig,
 }
 
-impl Daemon {
-    pub fn new(config: DaemonConfig) -> Self {
+impl Up {
+    pub fn new(config: UpConfig) -> Self {
         Self { config }
     }
 
     #[cfg(target_os = "linux")]
     #[expect(clippy::print_stdout)]
-    pub fn run(self) -> Result<(), DaemonError> {
+    pub fn run(self) -> Result<(), UpError> {
         install_signal_handlers();
 
-        println!("Bencher Runner Daemon starting...");
+        println!("Bencher Runner starting...");
         println!("  Host: {}", self.config.host);
         println!("  Runner: {}", self.config.runner);
         println!("  Poll timeout: {}s", self.config.poll_timeout_secs);
@@ -106,7 +106,7 @@ impl Daemon {
             // Check shutdown flag
             if SHUTDOWN.load(Ordering::SeqCst) {
                 println!("Shutdown signal received, exiting...");
-                return Err(DaemonError::Shutdown);
+                return Err(UpError::Shutdown);
             }
 
             // Claim a job (long-poll, blocks up to poll_timeout_secs)
@@ -154,8 +154,8 @@ impl Daemon {
     }
 
     #[cfg(not(target_os = "linux"))]
-    pub fn run(self) -> Result<(), DaemonError> {
-        Err(DaemonError::Config("Daemon requires Linux".to_owned()))
+    pub fn run(self) -> Result<(), UpError> {
+        Err(UpError::Config("Runner requires Linux".to_owned()))
     }
 }
 

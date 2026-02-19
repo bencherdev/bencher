@@ -1,5 +1,7 @@
 use std::fmt;
 
+use camino::Utf8PathBuf;
+
 use crate::parser::run::CliRunCommand;
 
 mod build_time;
@@ -114,15 +116,15 @@ impl Runner {
         }
     }
 
-    /// Extract file paths as strings (for remote job `file_paths` field).
+    /// Extract file paths (for remote job `file_paths` field).
     /// Returns `None` if no file paths are configured.
-    pub fn file_paths(&self) -> Option<Vec<String>> {
+    pub fn file_paths(&self) -> Option<Vec<Utf8PathBuf>> {
         match self {
             Self::CommandToFile(_, file_path) | Self::File(file_path) => {
-                Some(file_path.paths().iter().map(ToString::to_string).collect())
+                Some(file_path.paths().to_vec())
             },
             Self::CommandToFileSize(_, _, file_size) | Self::FileSize(file_size) => {
-                Some(file_size.paths().iter().map(ToString::to_string).collect())
+                Some(file_size.paths().to_vec())
             },
             Self::Pipe(_) | Self::Command(..) => None,
         }

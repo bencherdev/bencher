@@ -24,91 +24,7 @@ const MANIFEST_MEDIA_TYPES: &[&str] = &[
     "application/vnd.docker.distribution.manifest.list.v2+json",
 ];
 
-/// A parsed OCI image reference.
-#[derive(Debug, Clone)]
-pub struct ImageReference {
-    /// Registry host (e.g., "registry.example.com", "docker.io").
-    pub registry: String,
-
-    /// Repository name (e.g., "library/alpine", "myuser/myimage").
-    pub repository: String,
-
-    /// Tag or digest (e.g., "latest", "sha256:abc123...").
-    pub reference: String,
-
-    /// Whether the reference is a digest.
-    pub is_digest: bool,
-}
-
-impl ImageReference {
-    /// Parse an image reference string.
-    ///
-    /// Formats supported:
-    /// - `image` -> docker.io/library/image:latest
-    /// - `image:tag` -> docker.io/library/image:tag
-    /// - `user/image` -> docker.io/user/image:latest
-    /// - `registry.com/image` -> registry.com/image:latest
-    /// - `registry.com/user/image:tag` -> registry.com/user/image:tag
-    /// - `registry.com/image@sha256:...` -> registry.com/image@sha256:...
-    pub fn parse(reference: &str) -> Result<Self, OciError> {
-        let (name, tag_or_digest, is_digest) =
-            if let Some((name, digest)) = reference.split_once('@') {
-                (name, digest.to_owned(), true)
-            } else if let Some((name, tag)) = reference.rsplit_once(':') {
-                // Check if the colon is part of a port number
-                if name.contains('/') || !tag.chars().all(|c| c.is_ascii_digit()) {
-                    (name, tag.to_owned(), false)
-                } else {
-                    // It's a port, not a tag
-                    (reference, "latest".to_owned(), false)
-                }
-            } else {
-                (reference, "latest".to_owned(), false)
-            };
-
-        // Parse registry and repository
-        let (registry, repository) = Self::parse_name(name);
-
-        Ok(Self {
-            registry,
-            repository,
-            reference: tag_or_digest,
-            is_digest,
-        })
-    }
-
-    /// Parse the name portion into registry and repository.
-    fn parse_name(name: &str) -> (String, String) {
-        let parts: Vec<&str> = name.splitn(2, '/').collect();
-
-        match parts.as_slice() {
-            [image] => {
-                // Just image name: docker.io/library/image
-                ("docker.io".to_owned(), format!("library/{image}"))
-            },
-            [first, rest]
-                if first.contains('.') || first.contains(':') || *first == "localhost" =>
-            {
-                // Has a registry prefix
-                ((*first).to_owned(), (*rest).to_owned())
-            },
-            _ => {
-                // user/image format: docker.io/user/image
-                ("docker.io".to_owned(), name.to_owned())
-            },
-        }
-    }
-
-    /// Get the full image name for display.
-    #[must_use]
-    pub fn full_name(&self) -> String {
-        let sep = if self.is_digest { "@" } else { ":" };
-        format!(
-            "{}/{}{}{}",
-            self.registry, self.repository, sep, self.reference
-        )
-    }
-}
+pub use bencher_valid::ImageReference;
 
 /// Token response from the registry authentication service.
 #[derive(Debug, Deserialize)]
@@ -313,7 +229,9 @@ impl RegistryClient {
     fn pull_manifest(&mut self, image_ref: &ImageReference) -> Result<(String, Vec<u8>), OciError> {
         let url = format!(
             "https://{}/v2/{}/manifests/{}",
-            image_ref.registry, image_ref.repository, image_ref.reference
+            image_ref.registry(),
+            image_ref.repository(),
+            image_ref.reference()
         );
 
         let accept = MANIFEST_MEDIA_TYPES.join(", ");
@@ -342,11 +260,11 @@ impl RegistryClient {
 
         // Compute digest — use the algorithm from the reference when pulling by digest,
         // otherwise default to SHA-256.
-        let algorithm = if image_ref.is_digest {
+        let algorithm = if image_ref.is_digest() {
             let parsed: bencher_valid::ImageDigest = image_ref
-                .reference
+                .reference()
                 .parse()
-                .map_err(|_err| OciError::InvalidReference(image_ref.reference.clone()))?;
+                .map_err(|_err| OciError::InvalidReference(image_ref.reference().to_owned()))?;
             parsed.algorithm().to_owned()
         } else {
             "sha256".to_owned()
@@ -354,9 +272,9 @@ impl RegistryClient {
         let computed_digest = DigestHasher::digest(&algorithm, &bytes)?;
 
         // Validate digest matches when pulling by digest
-        if image_ref.is_digest && computed_digest != image_ref.reference {
+        if image_ref.is_digest() && computed_digest != image_ref.reference() {
             return Err(OciError::DigestMismatch {
-                expected: image_ref.reference.clone(),
+                expected: image_ref.reference().to_owned(),
                 actual: computed_digest,
             });
         }
@@ -372,7 +290,8 @@ impl RegistryClient {
     ) -> Result<(String, Vec<u8>), OciError> {
         let url = format!(
             "https://{}/v2/{}/blobs/{digest}",
-            image_ref.registry, image_ref.repository
+            image_ref.registry(),
+            image_ref.repository()
         );
 
         let mut response = self.authenticated_request(&url, image_ref, "*/*")?;
@@ -426,7 +345,8 @@ impl RegistryClient {
 
         let url = format!(
             "https://{}/v2/{}/blobs/{digest}",
-            image_ref.registry, image_ref.repository
+            image_ref.registry(),
+            image_ref.repository()
         );
 
         let mut response = self.authenticated_request(&url, image_ref, "*/*")?;
@@ -489,7 +409,7 @@ impl RegistryClient {
         accept: &str,
     ) -> Result<ureq::http::Response<ureq::Body>, OciError> {
         // Build the scope for this request
-        let scope = format!("repository:{}:pull", image_ref.repository);
+        let scope = format!("repository:{}:pull", image_ref.repository());
 
         // Build request with cached token if available
         let mut request = self.agent.get(url).header("Accept", accept);
@@ -616,52 +536,52 @@ mod tests {
     #[test]
     fn parse_simple_image() {
         let ref_ = ImageReference::parse("alpine").unwrap();
-        assert_eq!(ref_.registry, "docker.io");
-        assert_eq!(ref_.repository, "library/alpine");
-        assert_eq!(ref_.reference, "latest");
-        assert!(!ref_.is_digest);
+        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.repository(), "library/alpine");
+        assert_eq!(ref_.reference(), "latest");
+        assert!(!ref_.is_digest());
     }
 
     #[test]
     fn parse_image_with_tag() {
         let ref_ = ImageReference::parse("alpine:3.18").unwrap();
-        assert_eq!(ref_.registry, "docker.io");
-        assert_eq!(ref_.repository, "library/alpine");
-        assert_eq!(ref_.reference, "3.18");
-        assert!(!ref_.is_digest);
+        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.repository(), "library/alpine");
+        assert_eq!(ref_.reference(), "3.18");
+        assert!(!ref_.is_digest());
     }
 
     #[test]
     fn parse_user_image() {
         let ref_ = ImageReference::parse("myuser/myimage:v1").unwrap();
-        assert_eq!(ref_.registry, "docker.io");
-        assert_eq!(ref_.repository, "myuser/myimage");
-        assert_eq!(ref_.reference, "v1");
+        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.repository(), "myuser/myimage");
+        assert_eq!(ref_.reference(), "v1");
     }
 
     #[test]
     fn parse_custom_registry() {
         let ref_ = ImageReference::parse("ghcr.io/owner/repo:latest").unwrap();
-        assert_eq!(ref_.registry, "ghcr.io");
-        assert_eq!(ref_.repository, "owner/repo");
-        assert_eq!(ref_.reference, "latest");
+        assert_eq!(ref_.registry(), "ghcr.io");
+        assert_eq!(ref_.repository(), "owner/repo");
+        assert_eq!(ref_.reference(), "latest");
     }
 
     #[test]
     fn parse_registry_with_port() {
         let ref_ = ImageReference::parse("localhost:5000/myimage:v1").unwrap();
-        assert_eq!(ref_.registry, "localhost:5000");
-        assert_eq!(ref_.repository, "myimage");
-        assert_eq!(ref_.reference, "v1");
+        assert_eq!(ref_.registry(), "localhost:5000");
+        assert_eq!(ref_.repository(), "myimage");
+        assert_eq!(ref_.reference(), "v1");
     }
 
     #[test]
     fn parse_digest() {
         let ref_ = ImageReference::parse("alpine@sha256:abc123").unwrap();
-        assert_eq!(ref_.registry, "docker.io");
-        assert_eq!(ref_.repository, "library/alpine");
-        assert_eq!(ref_.reference, "sha256:abc123");
-        assert!(ref_.is_digest);
+        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.repository(), "library/alpine");
+        assert_eq!(ref_.reference(), "sha256:abc123");
+        assert!(ref_.is_digest());
     }
 
     #[test]

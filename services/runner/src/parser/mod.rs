@@ -4,6 +4,8 @@ mod tuning;
 mod up;
 
 #[cfg(feature = "plus")]
+use bencher_parser::check_env;
+#[cfg(feature = "plus")]
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 
@@ -97,6 +99,3 @@ pub struct CliRun {
     #[arg(long, default_value = "warning")]
     pub firecracker_log_level: bencher_runner::FirecrackerLogLevel,
 }
-
-#[cfg(feature = "plus")]
-use bencher_parser::check_env;

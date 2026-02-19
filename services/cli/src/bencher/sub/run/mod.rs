@@ -67,11 +67,11 @@ pub struct Run {
 #[cfg(feature = "plus")]
 #[derive(Debug)]
 struct Job {
-    image: String,
+    image: bencher_json::ImageReference,
     spec: Option<SpecResourceId>,
     entrypoint: Option<Vec<String>>,
     env: Option<HashMap<String, String>>,
-    timeout: Option<u32>,
+    timeout: Option<bencher_json::Timeout>,
     build_time: bool,
 }
 
@@ -107,7 +107,7 @@ impl TryFrom<CliRun> for Run {
             spec: job.spec,
             entrypoint: job.entrypoint,
             env: job.env.map(bencher_parser::parse_env),
-            timeout: job.timeout,
+            timeout: job.job_timeout,
             build_time,
         });
         let sub_adapter: SubAdapter = (&cmd).into();
@@ -269,7 +269,11 @@ impl Run {
     #[cfg(feature = "plus")]
     fn generate_remote_report(&self, job: &Job) -> JsonNewRun {
         let cmd = self.runner.as_ref().and_then(Runner::cmd_args);
-        let file_paths = self.runner.as_ref().and_then(Runner::file_paths);
+        let file_paths = self
+            .runner
+            .as_ref()
+            .and_then(Runner::file_paths)
+            .map(|paths| paths.into_iter().map(Into::into).collect());
         let file_size = self.runner.as_ref().is_some_and(Runner::file_size);
 
         let now = DateTime::now();
@@ -291,15 +295,16 @@ impl Run {
             }),
             context: Some(RunContext::current().into()),
             job: Some(JsonNewRunJob {
-                image: job.image.clone(),
+                image: job.image.clone().into(),
                 spec: job.spec.clone().map(Into::into),
                 entrypoint: job.entrypoint.clone(),
                 cmd,
                 env: job.env.clone(),
-                timeout: job.timeout.map(Into::into),
+                timeout: job.timeout.map(|t| u32::from(t).into()),
                 file_paths,
                 build_time: job.build_time.then_some(true),
                 file_size: file_size.then_some(true),
+                backdate: self.backdate.map(Into::into),
             }),
         }
     }

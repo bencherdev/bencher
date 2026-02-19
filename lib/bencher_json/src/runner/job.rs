@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_valid::{DateTime, ImageDigest, Jwt, PollTimeout, Timeout, Url};
+use bencher_valid::{DateTime, ImageDigest, ImageReference, Jwt, PollTimeout, Timeout, Url};
 use camino::Utf8PathBuf;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -65,6 +65,55 @@ pub struct JsonJobOutput {
     pub output: Option<HashMap<Utf8PathBuf, String>>,
 }
 
+/// Unchecked deserialization target for `JsonNewRunJob`.
+#[derive(Deserialize)]
+struct JsonUncheckedNewRunJob {
+    pub image: ImageReference,
+    pub spec: Option<SpecResourceId>,
+    pub entrypoint: Option<Vec<String>>,
+    pub cmd: Option<Vec<String>>,
+    pub env: Option<HashMap<String, String>>,
+    pub timeout: Option<Timeout>,
+    pub file_paths: Option<Vec<Utf8PathBuf>>,
+    pub build_time: Option<bool>,
+    pub file_size: Option<bool>,
+    pub backdate: Option<DateTime>,
+}
+
+impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
+    type Error = JobConfigError;
+
+    fn try_from(unchecked: JsonUncheckedNewRunJob) -> Result<Self, Self::Error> {
+        if let Some(entrypoint) = &unchecked.entrypoint
+            && entrypoint.len() > MAX_ENTRYPOINT_LEN
+        {
+            return Err(JobConfigError::EntrypointTooLong(entrypoint.len()));
+        }
+        if let Some(cmd) = &unchecked.cmd
+            && cmd.len() > MAX_CMD_LEN
+        {
+            return Err(JobConfigError::CmdTooLong(cmd.len()));
+        }
+        if let Some(file_paths) = &unchecked.file_paths
+            && file_paths.len() > MAX_FILE_PATHS_LEN
+        {
+            return Err(JobConfigError::FilePathsTooLong(file_paths.len()));
+        }
+        Ok(JsonNewRunJob {
+            image: unchecked.image,
+            spec: unchecked.spec,
+            entrypoint: unchecked.entrypoint,
+            cmd: unchecked.cmd,
+            env: unchecked.env,
+            timeout: unchecked.timeout,
+            file_paths: unchecked.file_paths,
+            build_time: unchecked.build_time,
+            file_size: unchecked.file_size,
+            backdate: unchecked.backdate,
+        })
+    }
+}
+
 /// Job configuration for a remote runner execution.
 ///
 /// Sent as part of `JsonNewRun` when the CLI `--image` flag is used.
@@ -72,10 +121,11 @@ pub struct JsonJobOutput {
 /// instead of expecting locally-executed benchmark results.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(try_from = "JsonUncheckedNewRunJob")]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewRunJob {
-    /// OCI image tag or digest (e.g. "my-tag" or "sha256:abc123...")
-    pub image: String,
+    /// OCI image reference (e.g. "alpine:3.18", "ghcr.io/owner/repo:v1", "image@sha256:abc...")
+    pub image: ImageReference,
     /// Hardware spec slug or UUID to run on
     #[serde(skip_serializing_if = "Option::is_none")]
     pub spec: Option<SpecResourceId>,
@@ -101,6 +151,9 @@ pub struct JsonNewRunJob {
     /// Track the file size of the output files instead of parsing their contents
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_size: Option<bool>,
+    /// Backdate the report start time
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backdate: Option<DateTime>,
 }
 
 /// Default poll timeout in seconds for job claiming long-poll.
@@ -426,6 +479,56 @@ mod tests {
             config.file_paths.as_ref().unwrap().len(),
             MAX_FILE_PATHS_LEN
         );
+    }
+
+    // --- JsonNewRunJob validation tests ---
+
+    fn new_run_job_json(entrypoint_len: usize, cmd_len: usize, file_paths_len: usize) -> String {
+        let entrypoint: Vec<String> = (0..entrypoint_len).map(|i| format!("arg{i}")).collect();
+        let cmd: Vec<String> = (0..cmd_len).map(|i| format!("cmd{i}")).collect();
+        let file_paths: Vec<String> = (0..file_paths_len).map(|i| format!("/f/{i}")).collect();
+        format!(
+            r#"{{"image":"ghcr.io/owner/my-image:latest","entrypoint":{entrypoint},"cmd":{cmd},"file_paths":{file_paths}}}"#,
+            entrypoint = serde_json::to_string(&entrypoint).unwrap(),
+            cmd = serde_json::to_string(&cmd).unwrap(),
+            file_paths = serde_json::to_string(&file_paths).unwrap(),
+        )
+    }
+
+    #[test]
+    fn new_run_job_entrypoint_too_long() {
+        let json = new_run_job_json(MAX_ENTRYPOINT_LEN + 1, 0, 0);
+        let result = serde_json::from_str::<JsonNewRunJob>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("entrypoint length"), "{err}");
+    }
+
+    #[test]
+    fn new_run_job_cmd_too_long() {
+        let json = new_run_job_json(0, MAX_CMD_LEN + 1, 0);
+        let result = serde_json::from_str::<JsonNewRunJob>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("cmd length"), "{err}");
+    }
+
+    #[test]
+    fn new_run_job_file_paths_too_long() {
+        let json = new_run_job_json(0, 0, MAX_FILE_PATHS_LEN + 1);
+        let result = serde_json::from_str::<JsonNewRunJob>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("file_paths length"), "{err}");
+    }
+
+    #[test]
+    fn new_run_job_at_max_boundary() {
+        let json = new_run_job_json(MAX_ENTRYPOINT_LEN, MAX_CMD_LEN, MAX_FILE_PATHS_LEN);
+        let job: JsonNewRunJob = serde_json::from_str(&json).unwrap();
+        assert_eq!(job.entrypoint.as_ref().unwrap().len(), MAX_ENTRYPOINT_LEN);
+        assert_eq!(job.cmd.as_ref().unwrap().len(), MAX_CMD_LEN);
+        assert_eq!(job.file_paths.as_ref().unwrap().len(), MAX_FILE_PATHS_LEN);
     }
 }
 

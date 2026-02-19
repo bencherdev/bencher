@@ -11088,6 +11088,9 @@
         "description": "An OCI image digest in the format `algorithm:hex`.\n\nSupports: - `sha256:` followed by 64 hex characters - `sha512:` followed by 128 hex characters",
         "type": "string"
       },
+      "ImageReference": {
+        "type": "string"
+      },
       "Index": {
         "type": "integer",
         "format": "uint8",
@@ -12954,6 +12957,15 @@
         "description": "Job configuration for a remote runner execution.\n\nSent as part of `JsonNewRun` when the CLI `--image` flag is used. The API server uses this to create a job for a bare metal runner instead of expecting locally-executed benchmark results.",
         "type": "object",
         "properties": {
+          "backdate": {
+            "nullable": true,
+            "description": "Backdate the report start time",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "build_time": {
             "nullable": true,
             "description": "Track the build time of the benchmark command",
@@ -12997,8 +13009,12 @@
             "type": "boolean"
           },
           "image": {
-            "description": "OCI image tag or digest (e.g. \"my-tag\" or \"sha256:abc123...\")",
-            "type": "string"
+            "description": "OCI image reference (e.g. \"alpine:3.18\", \"ghcr.io/owner/repo:v1\", \"image@sha256:abc...\")",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageReference"
+              }
+            ]
           },
           "spec": {
             "nullable": true,

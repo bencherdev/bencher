@@ -1,12 +1,12 @@
 use bencher_runner::cpu::CpuLayout;
-use bencher_runner::daemon::{Daemon, DaemonConfig, DaemonError};
+use bencher_runner::up::{Up as RunnerUp, UpConfig, UpError};
 
 use crate::error::RunnerCliError;
 use crate::parser::CliUp;
 
 #[derive(Debug)]
 pub struct Up {
-    config: DaemonConfig,
+    config: UpConfig,
 }
 
 impl TryFrom<CliUp> for Up {
@@ -19,7 +19,7 @@ impl TryFrom<CliUp> for Up {
         let cpu_layout = CpuLayout::detect();
 
         Ok(Self {
-            config: DaemonConfig {
+            config: UpConfig {
                 host: task.host,
                 token: task.token,
                 runner: task.runner,
@@ -37,9 +37,9 @@ impl TryFrom<CliUp> for Up {
 
 impl Up {
     pub fn exec(self) -> Result<(), RunnerCliError> {
-        let daemon = Daemon::new(self.config);
-        match daemon.run() {
-            Ok(()) | Err(DaemonError::Shutdown) => Ok(()),
+        let up = RunnerUp::new(self.config);
+        match up.run() {
+            Ok(()) | Err(UpError::Shutdown) => Ok(()),
             Err(e) => Err(e.into()),
         }
     }

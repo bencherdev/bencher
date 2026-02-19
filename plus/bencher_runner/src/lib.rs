@@ -21,8 +21,6 @@ mod config;
 #[cfg(feature = "plus")]
 pub mod cpu;
 #[cfg(feature = "plus")]
-pub mod daemon;
-#[cfg(feature = "plus")]
 mod error;
 #[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod firecracker;
@@ -44,6 +42,8 @@ mod run;
 pub mod tuning;
 #[cfg(feature = "plus")]
 pub mod units;
+#[cfg(feature = "plus")]
+pub mod up;
 
 #[cfg(feature = "plus")]
 pub use bencher_json::{Cpu, Disk, GracePeriod, Memory};

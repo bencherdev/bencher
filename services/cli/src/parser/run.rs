@@ -249,9 +249,9 @@ pub struct CliRunCi {
 #[cfg(feature = "plus")]
 #[derive(Args, Debug)]
 pub struct CliRunJob {
-    /// OCI image tag or digest for remote runner execution
+    /// OCI image reference for remote runner execution (e.g. "alpine:3.18", "ghcr.io/owner/repo:v1")
     #[clap(long)]
-    pub image: Option<String>,
+    pub image: Option<bencher_json::ImageReference>,
 
     /// Hardware spec slug or UUID (requires: --image)
     #[clap(long, requires = "image")]
@@ -265,7 +265,7 @@ pub struct CliRunJob {
     #[clap(long, requires = "image", value_parser = check_env)]
     pub env: Option<Vec<String>>,
 
-    /// Maximum execution time in seconds (requires: --image)
+    /// Maximum job execution time in seconds (requires: --image)
     #[clap(long, requires = "image")]
-    pub timeout: Option<u32>,
+    pub job_timeout: Option<bencher_json::Timeout>,
 }

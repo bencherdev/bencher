@@ -9,9 +9,9 @@ use std::time::Duration;
 use bencher_json::JsonClaimedJob;
 
 #[cfg(target_os = "linux")]
-use super::DaemonConfig;
+use super::UpConfig;
 #[cfg(target_os = "linux")]
-use super::error::{DaemonError, WebSocketError};
+use super::error::{UpError, WebSocketError};
 #[cfg(target_os = "linux")]
 use super::websocket::{JobChannel, RunnerMessage, ServerMessage};
 
@@ -29,10 +29,10 @@ pub enum JobOutcome {
 #[cfg(target_os = "linux")]
 #[expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
 pub fn execute_job(
-    config: &DaemonConfig,
+    config: &UpConfig,
     job: &JsonClaimedJob,
     ws_url: &url::Url,
-) -> Result<JobOutcome, DaemonError> {
+) -> Result<JobOutcome, UpError> {
     println!("Connecting WebSocket for job {}...", job.uuid);
     let ws = JobChannel::connect(ws_url, config.token.as_ref())?;
     let ws = Arc::new(Mutex::new(ws));
@@ -149,7 +149,7 @@ pub fn execute_job(
     Ok(outcome)
 }
 
-/// Build a runner Config from the claimed job and daemon config.
+/// Build a runner Config from the claimed job and up config.
 ///
 /// Resource requirements (cpu, memory, disk, network) come from the spec as
 /// strong types and are passed through directly.
@@ -157,9 +157,9 @@ pub fn execute_job(
 /// `file_paths`) come from the config. The OCI token is passed through for
 /// authenticated image pulls.
 ///
-/// CPU layout from the daemon config is passed through for core isolation.
+/// CPU layout from the up config is passed through for core isolation.
 #[cfg(target_os = "linux")]
-fn build_config_from_job(daemon_config: &DaemonConfig, job: &JsonClaimedJob) -> crate::Config {
+fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::Config {
     let spec = &job.spec;
     let config = &job.config;
 
@@ -182,27 +182,27 @@ fn build_config_from_job(daemon_config: &DaemonConfig, job: &JsonClaimedJob) -> 
     runner_config = runner_config.with_file_paths_opt(config.file_paths.clone());
 
     // Pass through CPU layout for core isolation
-    if daemon_config.cpu_layout.has_isolation() {
-        runner_config = runner_config.with_cpu_layout(daemon_config.cpu_layout.clone());
+    if up_config.cpu_layout.has_isolation() {
+        runner_config = runner_config.with_cpu_layout(up_config.cpu_layout.clone());
     }
 
     // Pass through max output size if configured
-    if let Some(max_output_size) = daemon_config.max_output_size {
+    if let Some(max_output_size) = up_config.max_output_size {
         runner_config = runner_config.with_max_output_size(max_output_size);
     }
 
     // Pass through max file count if configured
-    if let Some(max_file_count) = daemon_config.max_file_count {
+    if let Some(max_file_count) = up_config.max_file_count {
         runner_config = runner_config.with_max_file_count(max_file_count);
     }
 
     // Pass through grace period if configured
-    if let Some(grace_period) = daemon_config.grace_period {
+    if let Some(grace_period) = up_config.grace_period {
         runner_config = runner_config.with_grace_period(grace_period);
     }
 
     // Pass through Firecracker log level
-    runner_config.firecracker_log_level = daemon_config.firecracker_log_level;
+    runner_config.firecracker_log_level = up_config.firecracker_log_level;
 
     runner_config
 }
@@ -312,8 +312,8 @@ mod tests {
 
     // --- build_config_from_job ---
 
-    fn test_daemon_config() -> DaemonConfig {
-        DaemonConfig {
+    fn test_up_config() -> UpConfig {
+        UpConfig {
             host: url::Url::parse("https://api.bencher.dev").unwrap(),
             token: "bencher_runner_test".parse().unwrap(),
             runner: "test-runner".to_owned(),
@@ -329,50 +329,50 @@ mod tests {
 
     #[test]
     fn uses_job_spec_vcpus() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job(4, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert_eq!(result.vcpus, Cpu::try_from(4).unwrap());
     }
 
     #[test]
     fn converts_memory_from_job() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(2048), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert_eq!(result.memory, Memory::from_mib(2048).unwrap());
     }
 
     #[test]
     fn converts_disk_from_job() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(10240), 300, false);
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert_eq!(result.disk, Disk::from_mib(10240).unwrap());
     }
 
     #[test]
     fn memory_preserves_bytes() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         // 512 MiB + 1 byte - strong type preserves exact byte value
         let job = test_job(1, mib_to_bytes(512) + 1, mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert_eq!(result.memory.to_mib(), 513);
     }
 
     #[test]
     fn timeout_converts_u32_to_u64() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 600, false);
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert_eq!(result.timeout_secs, 600);
     }
 
     #[test]
     fn builds_oci_image_url() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert_eq!(
             result.oci_image,
             "https://registry.bencher.dev/11111111-2222-3333-4444-555555555555/images@sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
@@ -381,9 +381,9 @@ mod tests {
 
     #[test]
     fn oci_token_passed_through() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert!(
             result.token.is_some(),
             "OCI token should be passed to config"
@@ -392,23 +392,23 @@ mod tests {
 
     #[test]
     fn network_enabled() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, true);
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert!(result.network);
     }
 
     #[test]
     fn network_disabled() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert!(!result.network);
     }
 
     #[test]
     fn entrypoint_and_cmd() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job_with_options(
             1,
             mib_to_bytes(512),
@@ -420,14 +420,14 @@ mod tests {
             None,
             None,
         );
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert_eq!(result.entrypoint.unwrap(), vec!["/bin/sh"]);
         assert_eq!(result.cmd.unwrap(), vec!["-c", "cargo bench"]);
     }
 
     #[test]
     fn env_vars() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let mut env = std::collections::HashMap::new();
         env.insert("RUST_LOG".to_owned(), "debug".to_owned());
         env.insert("CI".to_owned(), "true".to_owned());
@@ -443,7 +443,7 @@ mod tests {
             Some(env.clone()),
             None,
         );
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         let result_env = result.env.unwrap();
         assert_eq!(result_env.get("RUST_LOG").unwrap(), "debug");
         assert_eq!(result_env.get("CI").unwrap(), "true");
@@ -451,7 +451,7 @@ mod tests {
 
     #[test]
     fn file_paths_passed_through() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job_with_options(
             1,
             mib_to_bytes(512),
@@ -463,7 +463,7 @@ mod tests {
             None,
             Some(vec!["/tmp/results.json".to_owned()]),
         );
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert_eq!(
             result.file_paths.as_deref(),
             Some([Utf8PathBuf::from("/tmp/results.json")].as_slice())
@@ -472,7 +472,7 @@ mod tests {
 
     #[test]
     fn multiple_file_paths_passed_through() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job_with_options(
             1,
             mib_to_bytes(512),
@@ -487,7 +487,7 @@ mod tests {
                 "/tmp/metrics.csv".to_owned(),
             ]),
         );
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         let paths = result.file_paths.unwrap();
         assert_eq!(paths.len(), 2);
         assert_eq!(paths[0], Utf8PathBuf::from("/tmp/results.json"));
@@ -496,7 +496,7 @@ mod tests {
 
     #[test]
     fn all_options() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let mut env = std::collections::HashMap::new();
         env.insert("KEY".to_owned(), "value".to_owned());
 
@@ -511,7 +511,7 @@ mod tests {
             Some(env),
             Some(vec!["/output/bench.txt".to_owned()]),
         );
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         assert_eq!(result.vcpus, Cpu::try_from(8).unwrap());
         assert_eq!(result.memory, Memory::from_mib(4096).unwrap());
         assert_eq!(result.disk, Disk::from_mib(20480).unwrap());
@@ -529,10 +529,10 @@ mod tests {
 
     #[test]
     fn cpu_layout_passed_through() {
-        let daemon_config = test_daemon_config();
+        let up_config = test_up_config();
         let job = test_job(4, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&daemon_config, &job);
-        // CPU layout should be passed through from daemon config
+        let result = build_config_from_job(&up_config, &job);
+        // CPU layout should be passed through from up config
         assert!(result.cpu_layout.is_some());
         let layout = result.cpu_layout.unwrap();
         assert_eq!(layout.housekeeping, vec![0]);
@@ -541,11 +541,11 @@ mod tests {
 
     #[test]
     fn cpu_layout_not_passed_when_no_isolation() {
-        let mut daemon_config = test_daemon_config();
+        let mut up_config = test_up_config();
         // Single core - no isolation possible
-        daemon_config.cpu_layout = crate::cpu::CpuLayout::with_core_count(1);
+        up_config.cpu_layout = crate::cpu::CpuLayout::with_core_count(1);
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&daemon_config, &job);
+        let result = build_config_from_job(&up_config, &job);
         // CPU layout should not be passed through when no isolation is possible
         assert!(result.cpu_layout.is_none());
     }

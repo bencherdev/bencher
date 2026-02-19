@@ -39,6 +39,9 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Failed to validate OCI image digest: {0}")]
     ImageDigest(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate OCI image reference: {0}")]
+    ImageReference(String),
     #[error("Failed to validate secret: {0}")]
     Secret(String),
     #[error("Invalid model boundary: {0}")]
@@ -70,6 +73,9 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Invalid timeout: {0}")]
     Timeout(u32),
+    #[cfg(feature = "plus")]
+    #[error("Failed to parse timeout: {0}")]
+    TimeoutStr(std::num::ParseIntError),
     #[cfg(feature = "plus")]
     #[error("Invalid heartbeat timeout: {0}")]
     HeartbeatTimeout(u32),

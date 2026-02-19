@@ -52,8 +52,9 @@ pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
 pub use plus::{
     Architecture, CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth,
-    ExpirationYear, GracePeriod, HeartbeatTimeout, LastFour, LicensedPlanId, Memory, MeteredPlanId,
-    PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, Timeout,
+    ExpirationYear, GracePeriod, HeartbeatTimeout, ImageReference, LastFour, LicensedPlanId,
+    Memory, MeteredPlanId, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore,
+    Timeout,
 };
 pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;

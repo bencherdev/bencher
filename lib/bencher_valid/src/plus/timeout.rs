@@ -2,6 +2,7 @@ use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::fmt;
+use std::str::FromStr;
 
 use serde::{
     Deserialize, Deserializer, Serialize,
@@ -33,6 +34,15 @@ impl TryFrom<u32> for Timeout {
 impl From<Timeout> for u32 {
     fn from(timeout: Timeout) -> Self {
         timeout.0
+    }
+}
+
+impl FromStr for Timeout {
+    type Err = ValidError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let timeout: u32 = s.parse().map_err(ValidError::TimeoutStr)?;
+        Self::try_from(timeout)
     }
 }
 

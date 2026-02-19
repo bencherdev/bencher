@@ -191,7 +191,8 @@ pub fn resolve_oci_image(
 
     // Otherwise, treat as a registry reference
     println!("Parsing registry reference: {oci_image}");
-    let image_ref = bencher_oci::ImageReference::parse(oci_image)?;
+    let image_ref = bencher_oci::ImageReference::parse(oci_image)
+        .map_err(|e| bencher_oci::OciError::InvalidReference(e.to_string()))?;
 
     // Pull into the provided directory
     let image_dir = pull_dir.join("oci-image");
@@ -282,7 +283,12 @@ pub fn execute(
         .entrypoint
         .clone()
         .unwrap_or_else(|| oci_image.entrypoint());
-    let cmd = config.cmd.clone().unwrap_or_else(|| oci_image.cmd());
+    // Docker semantics: overriding entrypoint clears image CMD
+    let cmd = if config.entrypoint.is_some() {
+        config.cmd.clone().unwrap_or_default()
+    } else {
+        config.cmd.clone().unwrap_or_else(|| oci_image.cmd())
+    };
     let command = if entrypoint.is_empty() {
         cmd
     } else {

@@ -29,6 +29,9 @@ pub enum RunError {
         "The subcommand `run` requires either a command argument, results file, or results via stdin."
     )]
     NoCommand,
+    /// Defensive guard: `generate_local_report` is only called when `job.is_none()`,
+    /// and in that path `runner` is always `Some`. This error exists to protect
+    /// against future code changes that might break that invariant.
     #[error(
         "No runner available to generate a local report. The subcommand `run` requires either a command argument, results file, or results via stdin."
     )]

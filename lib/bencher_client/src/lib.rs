@@ -75,6 +75,7 @@ from_client!(
     Entitlements,
     ExpirationMonth,
     ExpirationYear,
+    ImageReference,
     JobUuid
 );
 

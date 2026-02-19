@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum DaemonError {
+pub enum UpError {
     #[error("API client error: {0}")]
     ApiClient(#[from] ApiClientError),
 
@@ -11,7 +11,7 @@ pub enum DaemonError {
     #[error("Runner error: {0}")]
     Runner(#[from] crate::RunnerError),
 
-    #[error("Daemon received shutdown signal")]
+    #[error("Runner received shutdown signal")]
     Shutdown,
 
     #[error("Configuration error: {0}")]
