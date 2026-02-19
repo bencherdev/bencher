@@ -12991,6 +12991,11 @@
               "type": "string"
             }
           },
+          "file_size": {
+            "nullable": true,
+            "description": "Track the file size of the output files instead of parsing their contents",
+            "type": "boolean"
+          },
           "image": {
             "description": "OCI image tag or digest (e.g. \"my-tag\" or \"sha256:abc123...\")",
             "type": "string"

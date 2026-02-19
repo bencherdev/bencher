@@ -121,9 +121,10 @@ impl Runner {
             Self::CommandToFile(_, file_path) | Self::File(file_path) => {
                 Some(file_path.paths().iter().map(ToString::to_string).collect())
             },
-            Self::Pipe(_) | Self::Command(..) | Self::CommandToFileSize(..) | Self::FileSize(_) => {
-                None
+            Self::CommandToFileSize(_, _, file_size) | Self::FileSize(file_size) => {
+                Some(file_size.paths().iter().map(ToString::to_string).collect())
             },
+            Self::Pipe(_) | Self::Command(..) => None,
         }
     }
 
@@ -133,6 +134,11 @@ impl Runner {
             self,
             Self::Command(_, Some(_)) | Self::CommandToFileSize(_, Some(_), _)
         )
+    }
+
+    /// Whether file size tracking is enabled.
+    pub fn file_size(&self) -> bool {
+        matches!(self, Self::CommandToFileSize(..) | Self::FileSize(_))
     }
 
     pub async fn run(&self, log: bool) -> Result<Vec<Output>, RunError> {

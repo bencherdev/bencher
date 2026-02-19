@@ -648,6 +648,8 @@ export interface JsonNewRunJob {
 	file_paths?: string[];
 	/** Track the build time of the benchmark command */
 	build_time?: boolean;
+	/** Track the file size of the output files instead of parsing their contents */
+	file_size?: boolean;
 }
 
 /** Create a new runner */

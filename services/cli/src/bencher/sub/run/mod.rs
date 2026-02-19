@@ -267,6 +267,7 @@ impl Run {
         let cmd = self.runner.as_ref().and_then(Runner::cmd_args);
         let file_paths = self.runner.as_ref().and_then(Runner::file_paths);
         let build_time = self.runner.as_ref().is_some_and(Runner::build_time);
+        let file_size = self.runner.as_ref().is_some_and(Runner::file_size);
 
         let now = DateTime::now();
         let (branch, hash, start_point) = self.branch.clone().into();
@@ -295,6 +296,7 @@ impl Run {
                 timeout: job.timeout.map(Into::into),
                 file_paths,
                 build_time: build_time.then_some(true),
+                file_size: file_size.then_some(true),
             }),
         }
     }

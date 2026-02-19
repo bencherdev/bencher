@@ -98,6 +98,9 @@ pub struct JsonNewRunJob {
     /// Track the build time of the benchmark command
     #[serde(skip_serializing_if = "Option::is_none")]
     pub build_time: Option<bool>,
+    /// Track the file size of the output files instead of parsing their contents
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_size: Option<bool>,
 }
 
 /// Default poll timeout in seconds for job claiming long-poll.
