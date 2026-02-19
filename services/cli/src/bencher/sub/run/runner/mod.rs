@@ -128,14 +128,6 @@ impl Runner {
         }
     }
 
-    /// Whether build time tracking is enabled.
-    pub fn build_time(&self) -> bool {
-        matches!(
-            self,
-            Self::Command(_, Some(_)) | Self::CommandToFileSize(_, Some(_), _)
-        )
-    }
-
     /// Whether file size tracking is enabled.
     pub fn file_size(&self) -> bool {
         matches!(self, Self::CommandToFileSize(..) | Self::FileSize(_))

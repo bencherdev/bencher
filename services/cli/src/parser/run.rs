@@ -145,7 +145,7 @@ pub struct CliRunBranch {
 #[derive(Args, Debug)]
 pub struct CliRunCommand {
     /// Track the build time of the benchmark command
-    #[clap(long, requires = "command", conflicts_with = "file")]
+    #[clap(long, conflicts_with = "file")]
     pub build_time: bool,
 
     /// Benchmark command output file path

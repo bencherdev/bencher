@@ -72,6 +72,7 @@ struct Job {
     entrypoint: Option<Vec<String>>,
     env: Option<HashMap<String, String>>,
     timeout: Option<u32>,
+    build_time: bool,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -99,12 +100,15 @@ impl TryFrom<CliRun> for Run {
             backend,
         } = run;
         #[cfg(feature = "plus")]
+        let build_time = cmd.build_time;
+        #[cfg(feature = "plus")]
         let job = job.image.map(|image| Job {
             image,
             spec: job.spec,
             entrypoint: job.entrypoint,
             env: job.env.map(bencher_parser::parse_env),
             timeout: job.timeout,
+            build_time,
         });
         let sub_adapter: SubAdapter = (&cmd).into();
         #[cfg(feature = "plus")]
@@ -266,7 +270,6 @@ impl Run {
     fn generate_remote_report(&self, job: &Job) -> JsonNewRun {
         let cmd = self.runner.as_ref().and_then(Runner::cmd_args);
         let file_paths = self.runner.as_ref().and_then(Runner::file_paths);
-        let build_time = self.runner.as_ref().is_some_and(Runner::build_time);
         let file_size = self.runner.as_ref().is_some_and(Runner::file_size);
 
         let now = DateTime::now();
@@ -295,7 +298,7 @@ impl Run {
                 env: job.env.clone(),
                 timeout: job.timeout.map(Into::into),
                 file_paths,
-                build_time: build_time.then_some(true),
+                build_time: job.build_time.then_some(true),
                 file_size: file_size.then_some(true),
             }),
         }
