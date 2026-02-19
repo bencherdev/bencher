@@ -1660,15 +1660,20 @@ CMD ["image_cmd"]"#,
                     bail!("Runner failed (exit {}): {}", output.exit_code, combined)
                 }
                 // CLI entrypoint ["echo", "cli_ep"] + OCI cmd ["image_cmd"]
-                if output.stdout.contains("cli_ep") {
-                    Ok(())
-                } else {
+                if !output.stdout.contains("cli_ep image_cmd") {
                     bail!(
-                        "Expected 'cli_ep' in output (CLI entrypoint override).\nstdout: {}\nstderr: {}",
+                        "Expected 'cli_ep image_cmd' in output (CLI entrypoint override).\nstdout: {}\nstderr: {}",
                         output.stdout,
                         output.stderr
                     )
                 }
+                if output.stdout.contains("image_ep") {
+                    bail!(
+                        "OCI image_ep should have been overridden.\nstdout: {}",
+                        output.stdout
+                    )
+                }
+                Ok(())
             },
         },
         Scenario {
