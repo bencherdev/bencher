@@ -13,6 +13,7 @@ pub mod output;
 mod pipe;
 mod shell;
 
+use bencher_json::MAX_FILE_PATHS_LEN;
 use build_time::BuildTime;
 use command::{Command, CommandOutput};
 use file_path::FilePath;
@@ -53,21 +54,36 @@ impl TryFrom<CliRunCommand> for Runner {
             };
             let build_time = cmd.build_time.then_some(BuildTime);
             Ok(if let Some(file_paths) = cmd.file {
+                check_file_paths_len(file_paths.len())?;
                 Self::CommandToFile(command, FilePath::new(file_paths))
             } else if let Some(file_paths) = cmd.file_size {
+                check_file_paths_len(file_paths.len())?;
                 Self::CommandToFileSize(command, build_time, FileSize::new(file_paths))
             } else {
                 Self::Command(command, build_time)
             })
         } else if let Some(file_paths) = cmd.file {
+            check_file_paths_len(file_paths.len())?;
             Ok(Self::File(FilePath::new(file_paths)))
         } else if let Some(file_paths) = cmd.file_size {
+            check_file_paths_len(file_paths.len())?;
             Ok(Self::FileSize(FileSize::new(file_paths)))
         } else if let Some(pipe) = Pipe::new() {
             Ok(Self::Pipe(pipe))
         } else {
             Err(RunError::NoCommand)
         }
+    }
+}
+
+fn check_file_paths_len(len: usize) -> Result<(), RunError> {
+    if len > MAX_FILE_PATHS_LEN {
+        Err(RunError::TooManyFilePaths {
+            len,
+            max: MAX_FILE_PATHS_LEN,
+        })
+    } else {
+        Ok(())
     }
 }
 

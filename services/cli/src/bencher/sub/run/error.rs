@@ -74,6 +74,8 @@ pub enum RunError {
     CommandName(bencher_json::ValidError),
     #[error("Failed to serialize build time results: {0}")]
     SerializeBuildTime(serde_json::Error),
+    #[error("Too many file paths ({len}), maximum is {max}")]
+    TooManyFilePaths { len: usize, max: usize },
     #[error("Failed to read from output file: {0}")]
     OutputFileRead(std::io::Error),
     #[error("Failed to parse the output file name: {0}")]

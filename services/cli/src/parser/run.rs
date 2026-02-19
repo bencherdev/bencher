@@ -1,8 +1,6 @@
-use bencher_json::{
-    BranchNameId, DateTime, GitHash, MAX_FILE_PATHS_LEN, ProjectResourceId, TestbedNameId,
-};
 #[cfg(feature = "plus")]
-use bencher_json::{MAX_ENTRYPOINT_LEN, SpecResourceId};
+use bencher_json::SpecResourceId;
+use bencher_json::{BranchNameId, DateTime, GitHash, ProjectResourceId, TestbedNameId};
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
@@ -149,11 +147,11 @@ pub struct CliRunCommand {
     pub build_time: bool,
 
     /// Benchmark command output file path
-    #[clap(long, conflicts_with = "file_size", num_args = 1..=MAX_FILE_PATHS_LEN)]
+    #[clap(long, conflicts_with = "file_size")]
     pub file: Option<Vec<Utf8PathBuf>>,
 
     /// Track the size of a file at the given file path
-    #[clap(long, conflicts_with = "file", num_args = 1..=MAX_FILE_PATHS_LEN)]
+    #[clap(long, conflicts_with = "file")]
     pub file_size: Option<Vec<Utf8PathBuf>>,
 
     #[clap(flatten)]
@@ -258,8 +256,10 @@ pub struct CliRunJob {
     pub spec: Option<SpecResourceId>,
 
     /// Container entrypoint override (requires: --image)
-    #[clap(long, requires = "image", num_args = 1..=MAX_ENTRYPOINT_LEN)]
-    pub entrypoint: Option<Vec<String>>,
+    // Single string to match `docker run --entrypoint` semantics.
+    // Watch https://github.com/docker/cli/issues/4870 for multi-arg support.
+    #[clap(long, requires = "image")]
+    pub entrypoint: Option<String>,
 
     /// Environment variable in KEY=VALUE format (requires: --image)
     #[clap(long, requires = "image", value_parser = check_env)]

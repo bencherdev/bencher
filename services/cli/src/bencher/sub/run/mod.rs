@@ -69,7 +69,7 @@ pub struct Run {
 struct Job {
     image: bencher_json::ImageReference,
     spec: Option<SpecResourceId>,
-    entrypoint: Option<Vec<String>>,
+    entrypoint: Option<String>,
     env: Option<HashMap<String, String>>,
     timeout: Option<bencher_json::Timeout>,
     build_time: bool,
@@ -102,14 +102,18 @@ impl TryFrom<CliRun> for Run {
         #[cfg(feature = "plus")]
         let build_time = cmd.build_time;
         #[cfg(feature = "plus")]
-        let job = job.image.map(|image| Job {
-            image,
-            spec: job.spec,
-            entrypoint: job.entrypoint,
-            env: job.env.map(bencher_parser::parse_env),
-            timeout: job.job_timeout,
-            build_time,
-        });
+        let job = if let Some(image) = job.image {
+            Some(Job {
+                image,
+                spec: job.spec,
+                entrypoint: job.entrypoint,
+                env: job.env.map(bencher_parser::parse_env),
+                timeout: job.job_timeout,
+                build_time,
+            })
+        } else {
+            None
+        };
         let sub_adapter: SubAdapter = (&cmd).into();
         #[cfg(feature = "plus")]
         let runner = if job.is_some() {
@@ -297,7 +301,7 @@ impl Run {
             job: Some(JsonNewRunJob {
                 image: job.image.clone().into(),
                 spec: job.spec.clone().map(Into::into),
-                entrypoint: job.entrypoint.clone(),
+                entrypoint: job.entrypoint.clone().map(|ep| vec![ep]),
                 cmd,
                 env: job.env.clone(),
                 timeout: job.timeout.map(|t| u32::from(t).into()),
