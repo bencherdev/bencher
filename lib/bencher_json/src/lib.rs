@@ -86,12 +86,6 @@ pub use project::{
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
 };
 pub use run::JsonNewRun;
-/// Maximum number of entrypoint arguments in a job config.
-pub const MAX_ENTRYPOINT_LEN: usize = 64;
-/// Maximum number of cmd arguments in a job config.
-pub const MAX_CMD_LEN: usize = 64;
-/// Maximum number of file paths in a job config.
-pub const MAX_FILE_PATHS_LEN: usize = 255;
 #[cfg(feature = "plus")]
 pub use runner::{
     DEFAULT_POLL_TIMEOUT, JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob,
@@ -207,6 +201,13 @@ pub static PROD_BENCHER_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{PROD_BENCHER_API_URL_STR}\": {e}"))
 });
+
+/// Maximum number of entrypoint arguments in a job config.
+pub const MAX_ENTRYPOINT_LEN: usize = 64;
+/// Maximum number of cmd arguments in a job config.
+pub const MAX_CMD_LEN: usize = 64;
+/// Maximum number of file paths in a job config.
+pub const MAX_FILE_PATHS_LEN: usize = 255;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

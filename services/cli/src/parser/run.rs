@@ -75,7 +75,7 @@ pub struct CliRun {
 
     #[cfg(feature = "plus")]
     #[clap(flatten)]
-    pub run_image: CliRunImage,
+    pub job: CliRunJob,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -248,7 +248,7 @@ pub struct CliRunCi {
 /// OCI image and remote runner options (Bencher Plus).
 #[cfg(feature = "plus")]
 #[derive(Args, Debug)]
-pub struct CliRunImage {
+pub struct CliRunJob {
     /// OCI image tag or digest for remote runner execution
     #[clap(long)]
     pub image: Option<String>,

@@ -30,7 +30,7 @@ pub enum RunError {
     )]
     NoCommand,
     #[error(
-        "The subcommand `run` requires either a command argument, results file, or results via stdin."
+        "No runner available to generate a local report. The subcommand `run` requires either a command argument, results file, or results via stdin."
     )]
     NoRunner,
 

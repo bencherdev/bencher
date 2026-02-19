@@ -38,16 +38,6 @@ use crate::bencher::SubCmd;
 
 use super::project::report::Thresholds;
 
-#[cfg(feature = "plus")]
-#[derive(Debug)]
-struct RemoteImage {
-    image: String,
-    spec: Option<SpecResourceId>,
-    entrypoint: Option<Vec<String>>,
-    env: Option<HashMap<String, String>>,
-    timeout: Option<u32>,
-}
-
 #[derive(Debug)]
 #[expect(clippy::struct_excessive_bools)]
 pub struct Run {
@@ -70,8 +60,18 @@ pub struct Run {
     #[expect(clippy::struct_field_names)]
     dry_run: bool,
     #[cfg(feature = "plus")]
-    remote_image: Option<RemoteImage>,
+    job: Option<Job>,
     backend: PubBackend,
+}
+
+#[cfg(feature = "plus")]
+#[derive(Debug)]
+struct Job {
+    image: String,
+    spec: Option<SpecResourceId>,
+    entrypoint: Option<Vec<String>>,
+    env: Option<HashMap<String, String>>,
+    timeout: Option<u32>,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -95,12 +95,12 @@ impl TryFrom<CliRun> for Run {
             cmd,
             dry_run,
             #[cfg(feature = "plus")]
-            run_image,
+            job,
             backend,
         } = run;
         #[cfg(feature = "plus")]
-        let remote_image = run_image.image.map(|image| {
-            let env = run_image.env.map(|env_vec| {
+        let job = job.image.map(|image| {
+            let env = job.env.map(|env_vec| {
                 env_vec
                     .into_iter()
                     .filter_map(|s| {
@@ -109,17 +109,17 @@ impl TryFrom<CliRun> for Run {
                     })
                     .collect::<HashMap<String, String>>()
             });
-            RemoteImage {
+            Job {
                 image,
-                spec: run_image.spec,
-                entrypoint: run_image.entrypoint,
+                spec: job.spec,
+                entrypoint: job.entrypoint,
                 env,
-                timeout: run_image.timeout,
+                timeout: job.timeout,
             }
         });
         let sub_adapter: SubAdapter = (&cmd).into();
         #[cfg(feature = "plus")]
-        let runner = if remote_image.is_some() {
+        let runner = if job.is_some() {
             match cmd.try_into() {
                 Ok(runner) => Some(runner),
                 Err(RunError::NoCommand) => None,
@@ -149,7 +149,7 @@ impl TryFrom<CliRun> for Run {
             runner,
             dry_run,
             #[cfg(feature = "plus")]
-            remote_image,
+            job,
             backend: PubBackend::try_from(backend)?.log(false),
         })
     }
@@ -211,8 +211,8 @@ impl Run {
 
     async fn generate_report(&self) -> Result<Option<JsonNewRun>, RunError> {
         #[cfg(feature = "plus")]
-        if let Some(remote_image) = &self.remote_image {
-            return Ok(Some(self.generate_remote_report(remote_image)));
+        if let Some(job) = &self.job {
+            return Ok(Some(self.generate_remote_report(job)));
         }
 
         self.generate_local_report().await
@@ -274,7 +274,7 @@ impl Run {
     }
 
     #[cfg(feature = "plus")]
-    fn generate_remote_report(&self, remote_image: &RemoteImage) -> JsonNewRun {
+    fn generate_remote_report(&self, job: &Job) -> JsonNewRun {
         let cmd = self.runner.as_ref().and_then(Runner::cmd_args);
         let file_paths = self.runner.as_ref().and_then(Runner::file_paths);
         let build_time = self.runner.as_ref().is_some_and(Runner::build_time);
@@ -298,12 +298,12 @@ impl Run {
             }),
             context: Some(RunContext::current().into()),
             job: Some(JsonNewRunJob {
-                image: remote_image.image.clone(),
-                spec: remote_image.spec.clone().map(Into::into),
-                entrypoint: remote_image.entrypoint.clone(),
+                image: job.image.clone(),
+                spec: job.spec.clone().map(Into::into),
+                entrypoint: job.entrypoint.clone(),
                 cmd,
-                env: remote_image.env.clone(),
-                timeout: remote_image.timeout.map(Into::into),
+                env: job.env.clone(),
+                timeout: job.timeout.map(Into::into),
                 file_paths,
                 build_time: build_time.then_some(true),
             }),

@@ -152,7 +152,7 @@ pub enum JobConfigError {
 }
 
 #[derive(Deserialize)]
-struct UncheckedJsonJobConfig {
+struct JsonUncheckedJobConfig {
     pub registry: Url,
     pub project: ProjectUuid,
     pub digest: ImageDigest,
@@ -163,10 +163,10 @@ struct UncheckedJsonJobConfig {
     pub file_paths: Option<Vec<Utf8PathBuf>>,
 }
 
-impl TryFrom<UncheckedJsonJobConfig> for JsonJobConfig {
+impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
     type Error = JobConfigError;
 
-    fn try_from(unchecked: UncheckedJsonJobConfig) -> Result<Self, Self::Error> {
+    fn try_from(unchecked: JsonUncheckedJobConfig) -> Result<Self, Self::Error> {
         if let Some(entrypoint) = &unchecked.entrypoint
             && entrypoint.len() > MAX_ENTRYPOINT_LEN
         {
@@ -203,7 +203,7 @@ impl TryFrom<UncheckedJsonJobConfig> for JsonJobConfig {
 /// disk, network) are in the associated spec.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(try_from = "UncheckedJsonJobConfig")]
+#[serde(try_from = "JsonUncheckedJobConfig")]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
