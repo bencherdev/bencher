@@ -1,39 +1,41 @@
 #[cfg(feature = "plus")]
-mod daemon;
+mod tuning;
+#[cfg(feature = "plus")]
+mod up;
 
+#[cfg(feature = "plus")]
+use bencher_parser::check_env;
 #[cfg(feature = "plus")]
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 
 #[cfg(feature = "plus")]
-pub use daemon::TaskDaemon;
+pub use tuning::CliTuning;
+#[cfg(feature = "plus")]
+pub use up::CliUp;
 
 #[derive(Parser, Debug)]
 #[command(name = "runner")]
 #[command(about = "Execute benchmarks in isolated Firecracker microVMs", long_about = None)]
-pub struct TaskRunner {
+pub struct CliRunner {
     #[command(subcommand)]
-    pub sub: TaskSub,
+    pub sub: CliSub,
 }
 
 #[derive(Subcommand, Debug)]
-pub enum TaskSub {
+pub enum CliSub {
     #[cfg(feature = "plus")]
-    /// Run as a daemon, polling for and executing benchmark jobs.
-    Daemon(TaskDaemon),
+    /// Start the runner, polling for and executing benchmark jobs.
+    Up(CliUp),
     #[cfg(feature = "plus")]
     /// Pull image, create rootfs, and execute in isolated Firecracker microVM.
-    Run(TaskRun),
+    Run(CliRun),
 }
 
 /// Arguments for the `run` subcommand.
 #[cfg(feature = "plus")]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "CLI flags map to independent tuning knobs"
-)]
 #[derive(Parser, Debug)]
-pub struct TaskRun {
+pub struct CliRun {
     /// OCI image (local path or registry reference).
     #[arg(long)]
     pub image: String,
@@ -70,42 +72,24 @@ pub struct TaskRun {
     #[arg(long)]
     pub max_file_count: Option<u32>,
 
+    /// Container entrypoint override.
+    #[arg(long, num_args = 1..=bencher_json::MAX_ENTRYPOINT_LEN)]
+    pub entrypoint: Option<Vec<String>>,
+
+    /// Container command override.
+    #[arg(long, num_args = 1..=bencher_json::MAX_CMD_LEN)]
+    pub cmd: Option<Vec<String>>,
+
+    /// Environment variable in KEY=VALUE format (may be repeated).
+    #[arg(long, value_parser = check_env)]
+    pub env: Option<Vec<String>>,
+
     /// Enable network access in the VM.
     #[arg(long)]
     pub network: bool,
 
-    // --- Host tuning flags ---
-    /// Disable all host tuning optimizations.
-    #[arg(long)]
-    pub no_tuning: bool,
-
-    /// Keep ASLR enabled (default: disabled for benchmarks).
-    #[arg(long)]
-    pub aslr: bool,
-
-    /// Keep NMI watchdog enabled (default: disabled for benchmarks).
-    #[arg(long)]
-    pub nmi_watchdog: bool,
-
-    /// Keep SMT / hyper-threading enabled (default: disabled for benchmarks).
-    #[arg(long)]
-    pub smt: bool,
-
-    /// Keep turboboost enabled (default: disabled for benchmarks).
-    #[arg(long)]
-    pub turbo: bool,
-
-    /// Set swappiness value (default: 10).
-    #[arg(long)]
-    pub swappiness: Option<u32>,
-
-    /// Set CPU scaling governor (default: performance).
-    #[arg(long)]
-    pub governor: Option<String>,
-
-    /// Set `perf_event_paranoid` value (default: -1).
-    #[arg(long, allow_hyphen_values = true)]
-    pub perf_event_paranoid: Option<i32>,
+    #[command(flatten)]
+    pub tuning: CliTuning,
 
     /// Grace period in seconds after exit code before final collection (default: 1).
     #[arg(long, default_value = "1")]

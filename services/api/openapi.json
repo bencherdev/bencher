@@ -11088,6 +11088,9 @@
         "description": "An OCI image digest in the format `algorithm:hex`.\n\nSupports: - `sha256:` followed by 64 hex characters - `sha512:` followed by 128 hex characters",
         "type": "string"
       },
+      "ImageReference": {
+        "type": "string"
+      },
       "Index": {
         "type": "integer",
         "format": "uint8",
@@ -12874,6 +12877,15 @@
               }
             ]
           },
+          "job": {
+            "nullable": true,
+            "description": "Runner job configuration. When present, the run is executed on a remote bare metal runner instead of locally.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonNewRunJob"
+              }
+            ]
+          },
           "project": {
             "nullable": true,
             "description": "Project UUID or slug. If the project is not provided or does not exist, it will be created.",
@@ -12939,6 +12951,92 @@
           "end_time",
           "results",
           "start_time"
+        ]
+      },
+      "JsonNewRunJob": {
+        "description": "Job configuration for a remote runner execution.\n\nSent as part of `JsonNewRun` when the CLI `--image` flag is used. The API server uses this to create a job for a bare metal runner instead of expecting locally-executed benchmark results.",
+        "type": "object",
+        "properties": {
+          "backdate": {
+            "nullable": true,
+            "description": "Backdate the report start time",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "build_time": {
+            "nullable": true,
+            "description": "Track the build time of the benchmark command",
+            "type": "boolean"
+          },
+          "cmd": {
+            "nullable": true,
+            "description": "Command override (like Docker CMD)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "entrypoint": {
+            "nullable": true,
+            "description": "Container entrypoint override (like Docker ENTRYPOINT)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env": {
+            "nullable": true,
+            "description": "Environment variables passed to the container",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "file_paths": {
+            "nullable": true,
+            "description": "File paths to collect from the VM after job completion",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "file_size": {
+            "nullable": true,
+            "description": "Track the file size of the output files instead of parsing their contents",
+            "type": "boolean"
+          },
+          "image": {
+            "description": "OCI image reference (e.g. \"alpine:3.18\", \"ghcr.io/owner/repo:v1\", \"image@sha256:abc...\")",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageReference"
+              }
+            ]
+          },
+          "spec": {
+            "nullable": true,
+            "description": "Hardware spec slug or UUID to run on",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceId"
+              }
+            ]
+          },
+          "timeout": {
+            "nullable": true,
+            "description": "Maximum execution time in seconds",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Timeout"
+              }
+            ]
+          }
+        },
+        "required": [
+          "image"
         ]
       },
       "JsonNewRunner": {

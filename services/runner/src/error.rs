@@ -6,7 +6,7 @@ pub enum RunnerCliError {
 
     #[cfg(all(feature = "plus", target_os = "linux"))]
     #[error(transparent)]
-    Daemon(#[from] bencher_runner::daemon::DaemonError),
+    Up(#[from] bencher_runner::up::UpError),
 
     #[cfg(feature = "plus")]
     #[error(transparent)]

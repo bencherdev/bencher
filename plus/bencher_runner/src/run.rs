@@ -77,6 +77,12 @@ pub struct RunArgs {
     pub max_output_size: Option<usize>,
     /// Maximum number of output files to decode.
     pub max_file_count: Option<u32>,
+    /// Optional entrypoint override for the container.
+    pub entrypoint: Option<Vec<String>>,
+    /// Optional command override for the container.
+    pub cmd: Option<Vec<String>>,
+    /// Optional environment variables for the container.
+    pub env: Option<HashMap<String, String>>,
     /// Whether to enable network access in the VM.
     pub network: bool,
     /// Host tuning configuration.
@@ -129,6 +135,10 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     } else {
         config
     };
+    config = config
+        .with_entrypoint_opt(args.entrypoint.clone())
+        .with_cmd_opt(args.cmd.clone())
+        .with_env_opt(args.env.clone());
     config = config.with_grace_period(args.grace_period);
     config.firecracker_log_level = args.firecracker_log_level;
 
@@ -181,7 +191,8 @@ pub fn resolve_oci_image(
 
     // Otherwise, treat as a registry reference
     println!("Parsing registry reference: {oci_image}");
-    let image_ref = bencher_oci::ImageReference::parse(oci_image)?;
+    let image_ref = bencher_oci::ImageReference::parse(oci_image)
+        .map_err(|e| bencher_oci::OciError::InvalidReference(e.to_string()))?;
 
     // Pull into the provided directory
     let image_dir = pull_dir.join("oci-image");
@@ -266,13 +277,40 @@ pub fn execute(
     // Step 2: Parse OCI image config to get the command
     println!("Parsing OCI image config...");
     let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
-    let command = oci_image.command();
+
+    // Apply entrypoint/cmd overrides (Config takes precedence over OCI image)
+    let entrypoint = config
+        .entrypoint
+        .clone()
+        .unwrap_or_else(|| oci_image.entrypoint());
+    // Docker semantics: overriding entrypoint clears image CMD
+    let cmd = if config.entrypoint.is_some() {
+        config.cmd.clone().unwrap_or_default()
+    } else {
+        config.cmd.clone().unwrap_or_else(|| oci_image.cmd())
+    };
+    let command = if entrypoint.is_empty() {
+        cmd
+    } else {
+        let mut c = entrypoint;
+        c.extend(cmd);
+        c
+    };
+
     let working_dir = oci_image
         .working_dir()
         .filter(|w| !w.is_empty())
         .unwrap_or("/");
-    // Sanitize environment variables to remove dangerous ones like LD_PRELOAD
-    let env = sanitize_env(&oci_image.env());
+
+    // Apply env overrides (Config env merged on top of OCI env, then sanitize)
+    let mut env = oci_image.env();
+    if let Some(config_env) = &config.env {
+        for (key, value) in config_env {
+            env.retain(|(k, _)| k != key);
+            env.push((key.clone(), value.clone()));
+        }
+    }
+    let env = sanitize_env(&env);
 
     if command.is_empty() {
         return Err(crate::error::ConfigError::MissingCommand.into());

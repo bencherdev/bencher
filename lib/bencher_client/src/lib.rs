@@ -75,7 +75,9 @@ from_client!(
     Entitlements,
     ExpirationMonth,
     ExpirationYear,
-    JobUuid
+    ImageReference,
+    JobUuid,
+    Timeout
 );
 
 #[cfg(feature = "plus")]

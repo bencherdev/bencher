@@ -53,6 +53,29 @@ impl Command {
         Self::Exec { program, arguments }
     }
 
+    /// Return the command as a list of arguments without executing it.
+    /// For shell commands: `[shell, flag, command]`
+    /// For exec commands: `[program, arg1, arg2, ...]`
+    pub fn to_args(&self) -> Vec<String> {
+        match self {
+            Self::Shell {
+                shell,
+                flag,
+                command,
+            } => vec![
+                shell.as_ref().to_owned(),
+                flag.as_ref().to_owned(),
+                command.clone(),
+            ],
+            Self::Exec { program, arguments } => {
+                let mut args = Vec::with_capacity(1 + arguments.len());
+                args.push(program.clone());
+                args.extend(arguments.iter().cloned());
+                args
+            },
+        }
+    }
+
     pub async fn run(
         &self,
         log: bool,

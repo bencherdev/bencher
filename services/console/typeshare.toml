@@ -37,6 +37,7 @@
 "NameId" = "Uuid | Slug | string"
 # Other types
 "DateTime" = "string"
+"ImageReference" = "string"
 "Utf8PathBuf" = "string"
 "OrderedFloat" = "number"
 "BigInt" = "number"

@@ -1,7 +1,14 @@
 use std::{future::Future, pin::Pin};
 
+#[cfg(feature = "plus")]
+use std::collections::HashMap;
+
+#[cfg(feature = "plus")]
+use bencher_client::types::JsonNewRunJob;
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings};
 use bencher_comment::ReportComment;
+#[cfg(feature = "plus")]
+use bencher_json::SpecResourceId;
 use bencher_json::{DateTime, JsonReport, ProjectResourceId, RunContext, TestbedNameId};
 
 use crate::{
@@ -49,10 +56,23 @@ pub struct Run {
     format: Format,
     log: bool,
     ci: Option<Ci>,
-    runner: Runner,
+    runner: Option<Runner>,
     #[expect(clippy::struct_field_names)]
     dry_run: bool,
+    #[cfg(feature = "plus")]
+    job: Option<Job>,
     backend: PubBackend,
+}
+
+#[cfg(feature = "plus")]
+#[derive(Debug)]
+struct Job {
+    image: bencher_json::ImageReference,
+    spec: Option<SpecResourceId>,
+    entrypoint: Option<String>,
+    env: Option<HashMap<String, String>>,
+    timeout: Option<bencher_json::Timeout>,
+    build_time: bool,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -75,14 +95,52 @@ impl TryFrom<CliRun> for Run {
             ci,
             cmd,
             dry_run,
+            #[cfg(feature = "plus")]
+            job,
             backend,
         } = run;
+        #[cfg(feature = "plus")]
+        let build_time = cmd.build_time;
+        #[cfg(feature = "plus")]
+        let job = if let Some(image) = job.image {
+            Some(Job {
+                image,
+                spec: job.spec,
+                entrypoint: job.entrypoint,
+                env: job.env.map(bencher_parser::parse_env),
+                timeout: job.job_timeout,
+                build_time,
+            })
+        } else {
+            None
+        };
+        #[cfg(feature = "plus")]
+        if build_time && job.is_none() && cmd.command.is_none() {
+            return Err(RunError::BuildTimeNoCommandOrImage.into());
+        }
+        #[cfg(not(feature = "plus"))]
+        if cmd.build_time && cmd.command.is_none() {
+            return Err(RunError::BuildTimeNoCommandOrImage.into());
+        }
+        let sub_adapter: SubAdapter = (&cmd).into();
+        #[cfg(feature = "plus")]
+        let runner = if job.is_some() {
+            match cmd.try_into() {
+                Ok(runner) => Some(runner),
+                Err(RunError::NoCommand) => None,
+                Err(e) => return Err(e.into()),
+            }
+        } else {
+            Some(cmd.try_into()?)
+        };
+        #[cfg(not(feature = "plus"))]
+        let runner = Some(cmd.try_into()?);
         Ok(Self {
             project: map_project(project)?,
             branch: branch.try_into().map_err(RunError::Branch)?,
             testbed,
             adapter: adapter.into(),
-            sub_adapter: (&cmd).into(),
+            sub_adapter,
             average: average.map(Into::into),
             iter,
             fold: fold.map(Into::into),
@@ -93,8 +151,10 @@ impl TryFrom<CliRun> for Run {
             format: format.into(),
             log: !quiet,
             ci: ci.try_into().map_err(RunError::Ci)?,
-            runner: cmd.try_into()?,
+            runner,
             dry_run,
+            #[cfg(feature = "plus")]
+            job,
             backend: PubBackend::try_from(backend)?.log(false),
         })
     }
@@ -155,10 +215,20 @@ impl Run {
     }
 
     async fn generate_report(&self) -> Result<Option<JsonNewRun>, RunError> {
+        #[cfg(feature = "plus")]
+        if let Some(job) = &self.job {
+            return Ok(Some(self.generate_remote_report(job)));
+        }
+
+        self.generate_local_report().await
+    }
+
+    async fn generate_local_report(&self) -> Result<Option<JsonNewRun>, RunError> {
+        let runner = self.runner.as_ref().ok_or(RunError::NoRunner)?;
         let start_time = DateTime::now();
         let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
-            let outputs = self.runner.run(self.log).await?;
+            let outputs = runner.run(self.log).await?;
             for output in outputs {
                 if output.is_success() {
                     results.push(output.result());
@@ -166,7 +236,7 @@ impl Run {
                     cli_eprintln_quietable!(self.log, "Skipping failure:\n{output}");
                 } else {
                     return Err(RunError::ExitStatus {
-                        runner: Box::new(self.runner.clone()),
+                        runner: Box::new(runner.clone()),
                         output,
                     });
                 }
@@ -204,7 +274,51 @@ impl Run {
                 fold: self.fold,
             }),
             context: Some(RunContext::current().into()),
+            job: None,
         }))
+    }
+
+    #[cfg(feature = "plus")]
+    fn generate_remote_report(&self, job: &Job) -> JsonNewRun {
+        let cmd = self.runner.as_ref().and_then(Runner::cmd_args);
+        let file_paths = self
+            .runner
+            .as_ref()
+            .and_then(Runner::file_paths)
+            .map(|paths| paths.into_iter().map(Into::into).collect());
+        let file_size = self.runner.as_ref().is_some_and(Runner::file_size);
+
+        let now = DateTime::now();
+        let (branch, hash, start_point) = self.branch.clone().into();
+        JsonNewRun {
+            project: self.project.clone().map(Into::into),
+            branch,
+            hash,
+            start_point,
+            testbed: self.testbed.clone().map(Into::into),
+            thresholds: self.thresholds.clone().into(),
+            start_time: now.into(),
+            end_time: now.into(),
+            results: Vec::new(),
+            settings: Some(JsonReportSettings {
+                adapter: Some(self.adapter),
+                average: self.average,
+                fold: self.fold,
+            }),
+            context: Some(RunContext::current().into()),
+            job: Some(JsonNewRunJob {
+                image: job.image.clone().into(),
+                spec: job.spec.clone().map(Into::into),
+                entrypoint: job.entrypoint.clone().map(|ep| vec![ep]),
+                cmd,
+                env: job.env.clone(),
+                timeout: job.timeout.map(Into::into),
+                file_paths,
+                build_time: job.build_time.then_some(true),
+                file_size: file_size.then_some(true),
+                backdate: self.backdate.map(Into::into),
+            }),
+        }
     }
 
     async fn display_results(&self, json_report: JsonReport) -> Result<(), RunError> {

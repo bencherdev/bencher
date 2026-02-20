@@ -10,8 +10,8 @@ pub use bencher_valid::{
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
-    GracePeriod, ImageDigest, LastFour, LicensedPlanId, Memory, MeteredPlanId, PlanLevel,
-    PlanStatus, RecaptchaAction, RecaptchaScore, Timeout,
+    GracePeriod, ImageDigest, ImageReference, LastFour, LicensedPlanId, Memory, MeteredPlanId,
+    PlanLevel, PlanStatus, RecaptchaAction, RecaptchaScore, Timeout,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -89,8 +89,9 @@ pub use run::JsonNewRun;
 #[cfg(feature = "plus")]
 pub use runner::{
     DEFAULT_POLL_TIMEOUT, JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob,
-    JsonJobConfig, JsonJobs, JsonNewRunner, JsonRunner, JsonRunnerToken, JsonRunners,
-    JsonUpdateRunner, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, RunnerResourceId, RunnerSlug, RunnerUuid,
+    JsonJobConfig, JsonJobs, JsonNewRunJob, JsonNewRunner, JsonRunner, JsonRunnerToken,
+    JsonRunners, JsonUpdateRunner, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, RunnerResourceId,
+    RunnerSlug, RunnerUuid,
 };
 #[cfg(feature = "plus")]
 pub use spec::{
@@ -200,6 +201,15 @@ pub static PROD_BENCHER_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{PROD_BENCHER_API_URL_STR}\": {e}"))
 });
+
+/// Maximum number of entrypoint arguments in a job config.
+pub const MAX_ENTRYPOINT_LEN: usize = 64;
+/// Maximum number of cmd arguments in a job config.
+pub const MAX_CMD_LEN: usize = 64;
+/// Maximum number of file paths in a job config.
+pub const MAX_FILE_PATHS_LEN: usize = 255;
+/// Maximum number of environment variables in a job config.
+pub const MAX_ENV_LEN: usize = 255;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

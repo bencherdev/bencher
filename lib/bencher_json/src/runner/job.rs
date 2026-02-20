@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_valid::{DateTime, ImageDigest, Jwt, PollTimeout, Timeout, Url};
+use bencher_valid::{DateTime, ImageDigest, ImageReference, Jwt, PollTimeout, Timeout, Url};
 use camino::Utf8PathBuf;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::RunnerUuid;
 use super::job_status::JobStatus;
 use crate::ProjectUuid;
-use crate::spec::JsonSpec;
+use crate::spec::{JsonSpec, SpecResourceId};
 
 crate::typed_uuid::typed_uuid!(JobUuid);
 
@@ -65,12 +65,96 @@ pub struct JsonJobOutput {
     pub output: Option<HashMap<Utf8PathBuf, String>>,
 }
 
+/// Unchecked deserialization target for `JsonNewRunJob`.
+#[derive(Deserialize)]
+struct JsonUncheckedNewRunJob {
+    pub image: ImageReference,
+    pub spec: Option<SpecResourceId>,
+    pub entrypoint: Option<Vec<String>>,
+    pub cmd: Option<Vec<String>>,
+    pub env: Option<HashMap<String, String>>,
+    pub timeout: Option<Timeout>,
+    pub file_paths: Option<Vec<Utf8PathBuf>>,
+    pub build_time: Option<bool>,
+    pub file_size: Option<bool>,
+    pub backdate: Option<DateTime>,
+}
+
+impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
+    type Error = JobConfigError;
+
+    fn try_from(unchecked: JsonUncheckedNewRunJob) -> Result<Self, Self::Error> {
+        validate_collection_sizes(
+            unchecked.entrypoint.as_ref(),
+            unchecked.cmd.as_ref(),
+            unchecked.file_paths.as_ref(),
+            unchecked.env.as_ref(),
+        )?;
+        Ok(JsonNewRunJob {
+            image: unchecked.image,
+            spec: unchecked.spec,
+            entrypoint: unchecked.entrypoint,
+            cmd: unchecked.cmd,
+            env: unchecked.env,
+            timeout: unchecked.timeout,
+            file_paths: unchecked.file_paths,
+            build_time: unchecked.build_time,
+            file_size: unchecked.file_size,
+            backdate: unchecked.backdate,
+        })
+    }
+}
+
+/// Job configuration for a remote runner execution.
+///
+/// Sent as part of `JsonNewRun` when the CLI `--image` flag is used.
+/// The API server uses this to create a job for a bare metal runner
+/// instead of expecting locally-executed benchmark results.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(try_from = "JsonUncheckedNewRunJob")]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonNewRunJob {
+    /// OCI image reference (e.g. "alpine:3.18", "ghcr.io/owner/repo:v1", "image@sha256:abc...")
+    pub image: ImageReference,
+    /// Hardware spec slug or UUID to run on
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spec: Option<SpecResourceId>,
+    /// Container entrypoint override (like Docker ENTRYPOINT)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entrypoint: Option<Vec<String>>,
+    /// Command override (like Docker CMD)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cmd: Option<Vec<String>>,
+    /// Environment variables passed to the container
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub env: Option<HashMap<String, String>>,
+    /// Maximum execution time in seconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<Timeout>,
+    /// File paths to collect from the VM after job completion
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<Vec<String>>"))]
+    pub file_paths: Option<Vec<Utf8PathBuf>>,
+    /// Track the build time of the benchmark command
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub build_time: Option<bool>,
+    /// Track the file size of the output files instead of parsing their contents
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_size: Option<bool>,
+    /// Backdate the report start time
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backdate: Option<DateTime>,
+}
+
 /// Default poll timeout in seconds for job claiming long-poll.
 pub const DEFAULT_POLL_TIMEOUT: u32 = 30;
 /// Minimum poll timeout in seconds.
 pub const MIN_POLL_TIMEOUT: u32 = 1;
 /// Maximum poll timeout in seconds.
 pub const MAX_POLL_TIMEOUT: u32 = 900;
+
+pub use crate::{MAX_CMD_LEN, MAX_ENTRYPOINT_LEN, MAX_ENV_LEN, MAX_FILE_PATHS_LEN};
 
 /// Request to claim a job (runner agent endpoint)
 #[typeshare::typeshare]
@@ -103,6 +187,83 @@ pub struct JsonClaimedJob {
     pub created: DateTime,
 }
 
+/// Job configuration validation errors.
+#[derive(Debug, thiserror::Error)]
+pub enum JobConfigError {
+    #[error("entrypoint length {0} exceeds maximum {MAX_ENTRYPOINT_LEN}")]
+    EntrypointTooLong(usize),
+    #[error("cmd length {0} exceeds maximum {MAX_CMD_LEN}")]
+    CmdTooLong(usize),
+    #[error("file_paths length {0} exceeds maximum {MAX_FILE_PATHS_LEN}")]
+    FilePathsTooLong(usize),
+    #[error("env length {0} exceeds maximum {MAX_ENV_LEN}")]
+    EnvTooLong(usize),
+}
+
+fn validate_collection_sizes(
+    entrypoint: Option<&Vec<String>>,
+    cmd: Option<&Vec<String>>,
+    file_paths: Option<&Vec<Utf8PathBuf>>,
+    env: Option<&HashMap<String, String>>,
+) -> Result<(), JobConfigError> {
+    if let Some(entrypoint) = entrypoint
+        && entrypoint.len() > MAX_ENTRYPOINT_LEN
+    {
+        return Err(JobConfigError::EntrypointTooLong(entrypoint.len()));
+    }
+    if let Some(cmd) = cmd
+        && cmd.len() > MAX_CMD_LEN
+    {
+        return Err(JobConfigError::CmdTooLong(cmd.len()));
+    }
+    if let Some(file_paths) = file_paths
+        && file_paths.len() > MAX_FILE_PATHS_LEN
+    {
+        return Err(JobConfigError::FilePathsTooLong(file_paths.len()));
+    }
+    if let Some(env) = env
+        && env.len() > MAX_ENV_LEN
+    {
+        return Err(JobConfigError::EnvTooLong(env.len()));
+    }
+    Ok(())
+}
+
+#[derive(Deserialize)]
+struct JsonUncheckedJobConfig {
+    pub registry: Url,
+    pub project: ProjectUuid,
+    pub digest: ImageDigest,
+    pub entrypoint: Option<Vec<String>>,
+    pub cmd: Option<Vec<String>>,
+    pub env: Option<HashMap<String, String>>,
+    pub timeout: Timeout,
+    pub file_paths: Option<Vec<Utf8PathBuf>>,
+}
+
+impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
+    type Error = JobConfigError;
+
+    fn try_from(unchecked: JsonUncheckedJobConfig) -> Result<Self, Self::Error> {
+        validate_collection_sizes(
+            unchecked.entrypoint.as_ref(),
+            unchecked.cmd.as_ref(),
+            unchecked.file_paths.as_ref(),
+            unchecked.env.as_ref(),
+        )?;
+        Ok(JsonJobConfig {
+            registry: unchecked.registry,
+            project: unchecked.project,
+            digest: unchecked.digest,
+            entrypoint: unchecked.entrypoint,
+            cmd: unchecked.cmd,
+            env: unchecked.env,
+            timeout: unchecked.timeout,
+            file_paths: unchecked.file_paths,
+        })
+    }
+}
+
 /// Job configuration sent to runners.
 ///
 /// Contains the execution details needed for a runner to execute a job.
@@ -111,6 +272,7 @@ pub struct JsonClaimedJob {
 /// disk, network) are in the associated spec.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(try_from = "JsonUncheckedJobConfig")]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
@@ -275,6 +437,173 @@ mod tests {
         assert_eq!(deserialized.stdout.as_deref(), Some("out"));
         assert_eq!(deserialized.stderr.as_deref(), Some("err"));
         assert!(deserialized.output.is_none());
+    }
+
+    fn job_config_json(
+        entrypoint_len: usize,
+        cmd_len: usize,
+        file_paths_len: usize,
+        env_len: usize,
+    ) -> String {
+        let entrypoint: Vec<String> = (0..entrypoint_len).map(|i| format!("arg{i}")).collect();
+        let cmd: Vec<String> = (0..cmd_len).map(|i| format!("cmd{i}")).collect();
+        let file_paths: Vec<String> = (0..file_paths_len).map(|i| format!("/f/{i}")).collect();
+        let env: HashMap<String, String> = (0..env_len)
+            .map(|i| (format!("KEY{i}"), format!("val{i}")))
+            .collect();
+        format!(
+            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","digest":"sha256:{digest}","entrypoint":{entrypoint},"cmd":{cmd},"env":{env},"timeout":300,"file_paths":{file_paths}}}"#,
+            digest = "a".repeat(64),
+            entrypoint = serde_json::to_string(&entrypoint).unwrap(),
+            cmd = serde_json::to_string(&cmd).unwrap(),
+            file_paths = serde_json::to_string(&file_paths).unwrap(),
+            env = serde_json::to_string(&env).unwrap(),
+        )
+    }
+
+    #[test]
+    fn deserialize_entrypoint_too_long() {
+        let json = job_config_json(MAX_ENTRYPOINT_LEN + 1, 0, 0, 0);
+        let result = serde_json::from_str::<JsonJobConfig>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("entrypoint length"), "{err}");
+    }
+
+    #[test]
+    fn deserialize_cmd_too_long() {
+        let json = job_config_json(0, MAX_CMD_LEN + 1, 0, 0);
+        let result = serde_json::from_str::<JsonJobConfig>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("cmd length"), "{err}");
+    }
+
+    #[test]
+    fn deserialize_file_paths_too_long() {
+        let json = job_config_json(0, 0, MAX_FILE_PATHS_LEN + 1, 0);
+        let result = serde_json::from_str::<JsonJobConfig>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("file_paths length"), "{err}");
+    }
+
+    #[test]
+    fn deserialize_env_too_long() {
+        let json = job_config_json(0, 0, 0, MAX_ENV_LEN + 1);
+        let result = serde_json::from_str::<JsonJobConfig>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("env length"), "{err}");
+    }
+
+    #[test]
+    fn deserialize_at_max_boundary() {
+        let json = job_config_json(
+            MAX_ENTRYPOINT_LEN,
+            MAX_CMD_LEN,
+            MAX_FILE_PATHS_LEN,
+            MAX_ENV_LEN,
+        );
+        let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            config.entrypoint.as_ref().unwrap().len(),
+            MAX_ENTRYPOINT_LEN
+        );
+        assert_eq!(config.cmd.as_ref().unwrap().len(), MAX_CMD_LEN);
+        assert_eq!(
+            config.file_paths.as_ref().unwrap().len(),
+            MAX_FILE_PATHS_LEN
+        );
+        assert_eq!(config.env.as_ref().unwrap().len(), MAX_ENV_LEN);
+    }
+
+    #[test]
+    fn deserialize_env_at_max_boundary() {
+        let json = job_config_json(0, 0, 0, MAX_ENV_LEN);
+        let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.env.as_ref().unwrap().len(), MAX_ENV_LEN);
+    }
+
+    // --- JsonNewRunJob validation tests ---
+
+    fn new_run_job_json(
+        entrypoint_len: usize,
+        cmd_len: usize,
+        file_paths_len: usize,
+        env_len: usize,
+    ) -> String {
+        let entrypoint: Vec<String> = (0..entrypoint_len).map(|i| format!("arg{i}")).collect();
+        let cmd: Vec<String> = (0..cmd_len).map(|i| format!("cmd{i}")).collect();
+        let file_paths: Vec<String> = (0..file_paths_len).map(|i| format!("/f/{i}")).collect();
+        let env: HashMap<String, String> = (0..env_len)
+            .map(|i| (format!("KEY{i}"), format!("val{i}")))
+            .collect();
+        format!(
+            r#"{{"image":"ghcr.io/owner/my-image:latest","entrypoint":{entrypoint},"cmd":{cmd},"env":{env},"file_paths":{file_paths}}}"#,
+            entrypoint = serde_json::to_string(&entrypoint).unwrap(),
+            cmd = serde_json::to_string(&cmd).unwrap(),
+            file_paths = serde_json::to_string(&file_paths).unwrap(),
+            env = serde_json::to_string(&env).unwrap(),
+        )
+    }
+
+    #[test]
+    fn new_run_job_entrypoint_too_long() {
+        let json = new_run_job_json(MAX_ENTRYPOINT_LEN + 1, 0, 0, 0);
+        let result = serde_json::from_str::<JsonNewRunJob>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("entrypoint length"), "{err}");
+    }
+
+    #[test]
+    fn new_run_job_cmd_too_long() {
+        let json = new_run_job_json(0, MAX_CMD_LEN + 1, 0, 0);
+        let result = serde_json::from_str::<JsonNewRunJob>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("cmd length"), "{err}");
+    }
+
+    #[test]
+    fn new_run_job_file_paths_too_long() {
+        let json = new_run_job_json(0, 0, MAX_FILE_PATHS_LEN + 1, 0);
+        let result = serde_json::from_str::<JsonNewRunJob>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("file_paths length"), "{err}");
+    }
+
+    #[test]
+    fn new_run_job_env_too_long() {
+        let json = new_run_job_json(0, 0, 0, MAX_ENV_LEN + 1);
+        let result = serde_json::from_str::<JsonNewRunJob>(&json);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("env length"), "{err}");
+    }
+
+    #[test]
+    fn new_run_job_at_max_boundary() {
+        let json = new_run_job_json(
+            MAX_ENTRYPOINT_LEN,
+            MAX_CMD_LEN,
+            MAX_FILE_PATHS_LEN,
+            MAX_ENV_LEN,
+        );
+        let job: JsonNewRunJob = serde_json::from_str(&json).unwrap();
+        assert_eq!(job.entrypoint.as_ref().unwrap().len(), MAX_ENTRYPOINT_LEN);
+        assert_eq!(job.cmd.as_ref().unwrap().len(), MAX_CMD_LEN);
+        assert_eq!(job.file_paths.as_ref().unwrap().len(), MAX_FILE_PATHS_LEN);
+        assert_eq!(job.env.as_ref().unwrap().len(), MAX_ENV_LEN);
+    }
+
+    #[test]
+    fn new_run_job_env_at_max_boundary() {
+        let json = new_run_job_json(0, 0, 0, MAX_ENV_LEN);
+        let job: JsonNewRunJob = serde_json::from_str(&json).unwrap();
+        assert_eq!(job.env.as_ref().unwrap().len(), MAX_ENV_LEN);
     }
 }
 

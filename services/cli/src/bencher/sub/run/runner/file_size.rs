@@ -35,6 +35,10 @@ impl FileSize {
         Self(file_paths)
     }
 
+    pub fn paths(&self) -> &[Utf8PathBuf] {
+        &self.0
+    }
+
     pub fn get_results(&self, build_command: Option<&BuildCommand>) -> Result<String, RunError> {
         let mut metric_results = self.to_metric_results()?;
         if let Some(build_command) = build_command {

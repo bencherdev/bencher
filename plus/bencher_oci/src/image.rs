@@ -92,6 +92,28 @@ impl ImageConfig {
             .unwrap_or_default()
     }
 
+    /// Get the entrypoint (without CMD).
+    #[must_use]
+    pub fn entrypoint(&self) -> Vec<String> {
+        self.config
+            .config()
+            .as_ref()
+            .and_then(|c| c.entrypoint().as_ref())
+            .map(|e| e.iter().map(String::clone).collect())
+            .unwrap_or_default()
+    }
+
+    /// Get the cmd (without ENTRYPOINT).
+    #[must_use]
+    pub fn cmd(&self) -> Vec<String> {
+        self.config
+            .config()
+            .as_ref()
+            .and_then(|c| c.cmd().as_ref())
+            .map(|c| c.iter().map(String::clone).collect())
+            .unwrap_or_default()
+    }
+
     /// Get the user to run as.
     #[must_use]
     pub fn user(&self) -> Option<&str> {
@@ -269,6 +291,18 @@ impl OciImage {
     #[must_use]
     pub fn command(&self) -> Vec<String> {
         self.config.command()
+    }
+
+    /// Get the entrypoint (without CMD).
+    #[must_use]
+    pub fn entrypoint(&self) -> Vec<String> {
+        self.config.entrypoint()
+    }
+
+    /// Get the cmd (without ENTRYPOINT).
+    #[must_use]
+    pub fn cmd(&self) -> Vec<String> {
+        self.config.cmd()
     }
 
     /// Get the working directory.

@@ -18,6 +18,11 @@ pub enum RunError {
     Thresholds(#[from] crate::bencher::sub::ThresholdsError),
 
     #[error(
+        "The `--build-time` flag requires either a benchmark command or `--image` for remote execution."
+    )]
+    BuildTimeNoCommandOrImage,
+
+    #[error(
         "No default shell command path for target family. Try setting a custom shell with the `--shell` option."
     )]
     Shell,
@@ -25,8 +30,17 @@ pub enum RunError {
         "No default shell command flag for target family. Try setting a custom shell command flag with the `--flag` option."
     )]
     Flag,
-    #[error("The subcommand `run` requires either a command argument or results via stdin.")]
+    #[error(
+        "The subcommand `run` requires either a command argument, results file, or results via stdin."
+    )]
     NoCommand,
+    /// Defensive guard: `generate_local_report` is only called when `job.is_none()`,
+    /// and in that path `runner` is always `Some`. This error exists to protect
+    /// against future code changes that might break that invariant.
+    #[error(
+        "No runner available to generate a local report. The subcommand `run` requires either a command argument, results file, or results via stdin."
+    )]
+    NoRunner,
 
     #[error("Set shell ({0}) when running command in exec mode")]
     ShellWithExec(String),
@@ -65,6 +79,8 @@ pub enum RunError {
     CommandName(bencher_json::ValidError),
     #[error("Failed to serialize build time results: {0}")]
     SerializeBuildTime(serde_json::Error),
+    #[error("Too many file paths ({len}), maximum is {max}")]
+    TooManyFilePaths { len: usize, max: usize },
     #[error("Failed to read from output file: {0}")]
     OutputFileRead(std::io::Error),
     #[error("Failed to parse the output file name: {0}")]

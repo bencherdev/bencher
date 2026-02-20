@@ -1,4 +1,8 @@
+#[cfg(feature = "plus")]
+use bencher_json::SpecResourceId;
 use bencher_json::{BranchNameId, DateTime, GitHash, ProjectResourceId, TestbedNameId};
+#[cfg(feature = "plus")]
+use bencher_parser::check_env;
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
@@ -66,6 +70,10 @@ pub struct CliRun {
     /// Do a dry run (no data is saved)
     #[clap(long)]
     pub dry_run: bool,
+
+    #[cfg(feature = "plus")]
+    #[clap(flatten)]
+    pub job: CliRunJob,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -135,7 +143,7 @@ pub struct CliRunBranch {
 #[derive(Args, Debug)]
 pub struct CliRunCommand {
     /// Track the build time of the benchmark command
-    #[clap(long, requires = "command", conflicts_with = "file")]
+    #[clap(long, conflicts_with = "file")]
     pub build_time: bool,
 
     /// Benchmark command output file path
@@ -233,4 +241,31 @@ pub struct CliRunCi {
     // TODO remove in due time
     #[clap(long, alias = "ci-no-metrics", hide = true)]
     pub ci_deprecated: bool,
+}
+
+/// OCI image and remote runner options (Bencher Plus).
+#[cfg(feature = "plus")]
+#[derive(Args, Debug)]
+pub struct CliRunJob {
+    /// OCI image reference for remote runner execution (e.g. "alpine:3.18", "ghcr.io/owner/repo:v1")
+    #[clap(long)]
+    pub image: Option<bencher_json::ImageReference>,
+
+    /// Hardware spec slug or UUID (requires: --image)
+    #[clap(long, requires = "image")]
+    pub spec: Option<SpecResourceId>,
+
+    /// Container entrypoint override (requires: --image)
+    // Single string to match `docker run --entrypoint` semantics.
+    // Watch https://github.com/docker/cli/issues/4870 for multi-arg support.
+    #[clap(long, requires = "image")]
+    pub entrypoint: Option<String>,
+
+    /// Environment variable in KEY=VALUE format (requires: --image)
+    #[clap(long, requires = "image", value_parser = check_env)]
+    pub env: Option<Vec<String>>,
+
+    /// Maximum job execution time in seconds (requires: --image)
+    #[clap(long, requires = "image")]
+    pub job_timeout: Option<bencher_json::Timeout>,
 }

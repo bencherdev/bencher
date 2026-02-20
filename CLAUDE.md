@@ -199,6 +199,7 @@ The API server includes an OCI Distribution Spec compliant container registry, r
 - Use `clap` for CLI argument parsing
   - The `clap` struct definitions should live in a separate `parser` module
   - The subcommand handler logic should live in a separate module named after the binary for production code (ie `bencher`) or a module named `task` for `tasks/*` crates
+  - Do **NOT** use `num_args` on flags in `bencher run` — it uses `trailing_var_arg = true` to match `docker run` semantics, and `num_args` conflicts with trailing vararg parsing. Validate collection sizes at the type/deserialization layer instead (e.g., `TryFrom` impls in `bencher_json`).
 
 ### Frontend (TypeScript)
 

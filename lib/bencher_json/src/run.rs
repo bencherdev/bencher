@@ -12,6 +12,9 @@ use crate::{
     },
 };
 
+#[cfg(feature = "plus")]
+use crate::runner::job::JsonNewRunJob;
+
 #[cfg(feature = "server")]
 use crate::{
     JsonNewReport,
@@ -59,6 +62,11 @@ pub struct JsonNewRun {
     pub settings: Option<JsonReportSettings>,
     /// Context for the report.
     pub context: Option<RunContext>,
+    /// Runner job configuration. When present, the run is executed
+    /// on a remote bare metal runner instead of locally.
+    #[cfg(feature = "plus")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job: Option<JsonNewRunJob>,
 }
 
 #[cfg(feature = "server")]
@@ -76,6 +84,8 @@ impl From<JsonNewRun> for JsonNewReport {
             results,
             settings,
             context,
+            #[cfg(feature = "plus")]
+                job: _,
         } = run;
         let branch = branch
             .or_else(|| {

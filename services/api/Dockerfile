@@ -43,6 +43,7 @@ COPY lib/bencher_context bencher_context
 COPY lib/bencher_endpoint bencher_endpoint
 COPY lib/bencher_json bencher_json
 COPY lib/bencher_logger bencher_logger
+COPY lib/bencher_parser bencher_parser
 COPY lib/bencher_plot bencher_plot
 COPY lib/bencher_rank bencher_rank
 COPY lib/bencher_rbac bencher_rbac

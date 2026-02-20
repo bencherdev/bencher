@@ -1,5 +1,7 @@
 use std::fmt;
 
+use camino::Utf8PathBuf;
+
 use crate::parser::run::CliRunCommand;
 
 mod build_time;
@@ -11,6 +13,7 @@ pub mod output;
 mod pipe;
 mod shell;
 
+use bencher_json::MAX_FILE_PATHS_LEN;
 use build_time::BuildTime;
 use command::{Command, CommandOutput};
 use file_path::FilePath;
@@ -51,21 +54,36 @@ impl TryFrom<CliRunCommand> for Runner {
             };
             let build_time = cmd.build_time.then_some(BuildTime);
             Ok(if let Some(file_paths) = cmd.file {
+                check_file_paths_len(file_paths.len())?;
                 Self::CommandToFile(command, FilePath::new(file_paths))
             } else if let Some(file_paths) = cmd.file_size {
+                check_file_paths_len(file_paths.len())?;
                 Self::CommandToFileSize(command, build_time, FileSize::new(file_paths))
             } else {
                 Self::Command(command, build_time)
             })
         } else if let Some(file_paths) = cmd.file {
+            check_file_paths_len(file_paths.len())?;
             Ok(Self::File(FilePath::new(file_paths)))
         } else if let Some(file_paths) = cmd.file_size {
+            check_file_paths_len(file_paths.len())?;
             Ok(Self::FileSize(FileSize::new(file_paths)))
         } else if let Some(pipe) = Pipe::new() {
             Ok(Self::Pipe(pipe))
         } else {
             Err(RunError::NoCommand)
         }
+    }
+}
+
+fn check_file_paths_len(len: usize) -> Result<(), RunError> {
+    if len > MAX_FILE_PATHS_LEN {
+        Err(RunError::TooManyFilePaths {
+            len,
+            max: MAX_FILE_PATHS_LEN,
+        })
+    } else {
+        Ok(())
     }
 }
 
@@ -103,6 +121,36 @@ impl fmt::Display for Runner {
 }
 
 impl Runner {
+    /// Extract the command as a list of arguments without executing it.
+    /// Returns `None` if there is no command (pipe, file-only modes).
+    pub fn cmd_args(&self) -> Option<Vec<String>> {
+        match self {
+            Self::Pipe(_) | Self::File(_) | Self::FileSize(_) => None,
+            Self::Command(command, _)
+            | Self::CommandToFile(command, _)
+            | Self::CommandToFileSize(command, _, _) => Some(command.to_args()),
+        }
+    }
+
+    /// Extract file paths (for remote job `file_paths` field).
+    /// Returns `None` if no file paths are configured.
+    pub fn file_paths(&self) -> Option<Vec<Utf8PathBuf>> {
+        match self {
+            Self::CommandToFile(_, file_path) | Self::File(file_path) => {
+                Some(file_path.paths().to_vec())
+            },
+            Self::CommandToFileSize(_, _, file_size) | Self::FileSize(file_size) => {
+                Some(file_size.paths().to_vec())
+            },
+            Self::Pipe(_) | Self::Command(..) => None,
+        }
+    }
+
+    /// Whether file size tracking is enabled.
+    pub fn file_size(&self) -> bool {
+        matches!(self, Self::CommandToFileSize(..) | Self::FileSize(_))
+    }
+
     pub async fn run(&self, log: bool) -> Result<Vec<Output>, RunError> {
         match self {
             Self::Pipe(pipe) => Ok(pipe.output().into()),

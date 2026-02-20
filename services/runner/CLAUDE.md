@@ -121,7 +121,7 @@ This is the default subcommand (`cargo test-runner test`). It downloads a kernel
 | Crate | Path | Role |
 |---|---|---|
 | `bencher_runner` | `plus/bencher_runner/` | Core runner library (Firecracker VM management, vsock, jail, metrics) |
-| `bencher_runner_cli` | `services/runner/` | Runner CLI binary (`runner run`, `runner daemon`) |
+| `bencher_runner_cli` | `services/runner/` | Runner CLI binary (`runner run`, `runner up`) |
 | `bencher_init` | `plus/bencher_init/` | Statically linked init binary that runs inside the VM guest |
 | `bencher_oci` | `plus/bencher_oci/` | OCI image parsing and layer extraction |
 | `bencher_rootfs` | `plus/bencher_rootfs/` | Rootfs creation (ext4 image from OCI layers) |
