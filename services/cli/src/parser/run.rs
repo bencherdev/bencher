@@ -1,12 +1,12 @@
 #[cfg(feature = "plus")]
 use bencher_json::SpecResourceId;
 use bencher_json::{BranchNameId, DateTime, GitHash, ProjectResourceId, TestbedNameId};
+#[cfg(feature = "plus")]
+use bencher_parser::check_env;
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
 use crate::parser::CliBackend;
-#[cfg(feature = "plus")]
-use bencher_parser::check_env;
 
 use super::project::report::{
     CliReportAdapter, CliReportAverage, CliReportFold, CliReportThresholds,

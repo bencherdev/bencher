@@ -84,26 +84,12 @@ impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
     type Error = JobConfigError;
 
     fn try_from(unchecked: JsonUncheckedNewRunJob) -> Result<Self, Self::Error> {
-        if let Some(entrypoint) = &unchecked.entrypoint
-            && entrypoint.len() > MAX_ENTRYPOINT_LEN
-        {
-            return Err(JobConfigError::EntrypointTooLong(entrypoint.len()));
-        }
-        if let Some(cmd) = &unchecked.cmd
-            && cmd.len() > MAX_CMD_LEN
-        {
-            return Err(JobConfigError::CmdTooLong(cmd.len()));
-        }
-        if let Some(file_paths) = &unchecked.file_paths
-            && file_paths.len() > MAX_FILE_PATHS_LEN
-        {
-            return Err(JobConfigError::FilePathsTooLong(file_paths.len()));
-        }
-        if let Some(env) = &unchecked.env
-            && env.len() > MAX_ENV_LEN
-        {
-            return Err(JobConfigError::EnvTooLong(env.len()));
-        }
+        validate_collection_sizes(
+            unchecked.entrypoint.as_ref(),
+            unchecked.cmd.as_ref(),
+            unchecked.file_paths.as_ref(),
+            unchecked.env.as_ref(),
+        )?;
         Ok(JsonNewRunJob {
             image: unchecked.image,
             spec: unchecked.spec,
@@ -214,6 +200,35 @@ pub enum JobConfigError {
     EnvTooLong(usize),
 }
 
+fn validate_collection_sizes(
+    entrypoint: Option<&Vec<String>>,
+    cmd: Option<&Vec<String>>,
+    file_paths: Option<&Vec<Utf8PathBuf>>,
+    env: Option<&HashMap<String, String>>,
+) -> Result<(), JobConfigError> {
+    if let Some(entrypoint) = entrypoint
+        && entrypoint.len() > MAX_ENTRYPOINT_LEN
+    {
+        return Err(JobConfigError::EntrypointTooLong(entrypoint.len()));
+    }
+    if let Some(cmd) = cmd
+        && cmd.len() > MAX_CMD_LEN
+    {
+        return Err(JobConfigError::CmdTooLong(cmd.len()));
+    }
+    if let Some(file_paths) = file_paths
+        && file_paths.len() > MAX_FILE_PATHS_LEN
+    {
+        return Err(JobConfigError::FilePathsTooLong(file_paths.len()));
+    }
+    if let Some(env) = env
+        && env.len() > MAX_ENV_LEN
+    {
+        return Err(JobConfigError::EnvTooLong(env.len()));
+    }
+    Ok(())
+}
+
 #[derive(Deserialize)]
 struct JsonUncheckedJobConfig {
     pub registry: Url,
@@ -230,26 +245,12 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
     type Error = JobConfigError;
 
     fn try_from(unchecked: JsonUncheckedJobConfig) -> Result<Self, Self::Error> {
-        if let Some(entrypoint) = &unchecked.entrypoint
-            && entrypoint.len() > MAX_ENTRYPOINT_LEN
-        {
-            return Err(JobConfigError::EntrypointTooLong(entrypoint.len()));
-        }
-        if let Some(cmd) = &unchecked.cmd
-            && cmd.len() > MAX_CMD_LEN
-        {
-            return Err(JobConfigError::CmdTooLong(cmd.len()));
-        }
-        if let Some(file_paths) = &unchecked.file_paths
-            && file_paths.len() > MAX_FILE_PATHS_LEN
-        {
-            return Err(JobConfigError::FilePathsTooLong(file_paths.len()));
-        }
-        if let Some(env) = &unchecked.env
-            && env.len() > MAX_ENV_LEN
-        {
-            return Err(JobConfigError::EnvTooLong(env.len()));
-        }
+        validate_collection_sizes(
+            unchecked.entrypoint.as_ref(),
+            unchecked.cmd.as_ref(),
+            unchecked.file_paths.as_ref(),
+            unchecked.env.as_ref(),
+        )?;
         Ok(JsonJobConfig {
             registry: unchecked.registry,
             project: unchecked.project,

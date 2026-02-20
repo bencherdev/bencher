@@ -118,6 +118,10 @@ impl TryFrom<CliRun> for Run {
         if build_time && job.is_none() && cmd.command.is_none() {
             return Err(RunError::BuildTimeNoCommandOrImage.into());
         }
+        #[cfg(not(feature = "plus"))]
+        if cmd.build_time && cmd.command.is_none() {
+            return Err(RunError::BuildTimeNoCommandOrImage.into());
+        }
         let sub_adapter: SubAdapter = (&cmd).into();
         #[cfg(feature = "plus")]
         let runner = if job.is_some() {
@@ -308,7 +312,7 @@ impl Run {
                 entrypoint: job.entrypoint.clone().map(|ep| vec![ep]),
                 cmd,
                 env: job.env.clone(),
-                timeout: job.timeout.map(|t| u32::from(t).into()),
+                timeout: job.timeout.map(Into::into),
                 file_paths,
                 build_time: job.build_time.then_some(true),
                 file_size: file_size.then_some(true),
