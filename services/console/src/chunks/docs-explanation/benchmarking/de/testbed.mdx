@@ -2,3 +2,9 @@
 Eine Testumgebung ist der Name der Testumgebung, die beim Ausführen eines Berichts verwendet wird.
 Beim Einsatz des <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehls wird `Linux`, `macOS` oder `Windows` basierend auf dem Host-Betriebssystem als Standard-Testumgebung verwendet.
 Falls das `bencher` CLI für ein anderes Betriebssystem kompiliert wurde, wird `localhost` verwendet.
+
+Einer Testumgebung kann optional eine Spec zugewiesen werden.
+Eine Spec beschreibt die Hardware, auf der die Testumgebung ausgeführt wird.
+Wenn ein Bericht erstellt wird, wird die aktuelle Spec der Testumgebung zu diesem Zeitpunkt mit dem Bericht aufgezeichnet.
+So können Sie nachverfolgen, wie Benchmark-Ergebnisse mit der zugrunde liegenden Hardware zusammenhängen,
+auch wenn sich die Spec der Testumgebung im Laufe der Zeit ändert.

@@ -4,3 +4,9 @@ When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></c
 `Linux`, `macOS`, or `Windows` is used as the default Testbed based on the host operating system.
 If the `bencher` CLI has been compiled for a different operating system,
 then `localhost` is used.
+
+A Testbed can optionally have a Spec assigned to it.
+A Spec describes the hardware that the Testbed runs on.
+When a Report is created, the Testbed's current Spec at that point in time is recorded with the Report.
+This allows you to track how benchmark results relate to the underlying hardware,
+even if the Testbed's Spec changes over time.

@@ -3,3 +3,9 @@ Testbed 是运行报告时使用的测试环境的名称。
 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令时，
 根据主机操作系统默认为 `Linux`、`macOS` 或 `Windows` 作为 Testbed。
 如果 `bencher` CLI 已经为不同的操作系统编译，则使用 `localhost`。
+
+Testbed 可以选择性地分配一个 Spec。
+Spec 描述了 Testbed 运行所在的硬件。
+创建报告时，Testbed 当时的当前 Spec 会被记录到报告中。
+这使您可以追踪基准测试结果与底层硬件之间的关系，
+即使 Testbed 的 Spec 随时间发生变化。
