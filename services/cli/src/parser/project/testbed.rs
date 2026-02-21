@@ -1,7 +1,9 @@
-use bencher_json::{ProjectResourceId, ResourceName, TestbedResourceId, TestbedSlug};
+use bencher_json::{
+    ProjectResourceId, ResourceName, SpecResourceId, TestbedResourceId, TestbedSlug,
+};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliArchived, CliBackend, CliPagination};
+use crate::parser::{CliArchived, CliBackend, CliPagination, ElidedOption};
 
 #[derive(Subcommand, Debug)]
 pub enum CliTestbed {
@@ -66,6 +68,10 @@ pub struct CliTestbedCreate {
     #[clap(long)]
     pub slug: Option<TestbedSlug>,
 
+    /// Hardware spec slug or UUID
+    #[clap(long)]
+    pub spec: Option<SpecResourceId>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }
@@ -97,6 +103,11 @@ pub struct CliTestbedUpdate {
     /// Testbed slug
     #[clap(long)]
     pub slug: Option<TestbedSlug>,
+
+    /// Hardware spec slug or UUID
+    /// To remove the current spec without replacing it, use an underscore (`_`).
+    #[clap(long)]
+    pub spec: Option<ElidedOption<SpecResourceId>>,
 
     #[clap(flatten)]
     pub archived: CliArchived,

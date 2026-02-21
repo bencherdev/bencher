@@ -1,5 +1,7 @@
-use bencher_client::types::{JsonTestbedPatch, JsonUpdateTestbed};
-use bencher_json::{ProjectResourceId, ResourceName, TestbedResourceId, TestbedSlug};
+use bencher_client::types::{JsonTestbedPatch, JsonTestbedPatchNull, JsonUpdateTestbed};
+use bencher_json::{
+    ProjectResourceId, ResourceName, SpecResourceId, TestbedResourceId, TestbedSlug,
+};
 
 use crate::{
     CliError,
@@ -8,11 +10,13 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
+#[expect(clippy::option_option)]
 pub struct Update {
     pub project: ProjectResourceId,
     pub testbed: TestbedResourceId,
     pub name: Option<ResourceName>,
     pub slug: Option<TestbedSlug>,
+    pub spec: Option<Option<SpecResourceId>>,
     pub archived: Option<bool>,
     pub backend: AuthBackend,
 }
@@ -26,6 +30,7 @@ impl TryFrom<CliTestbedUpdate> for Update {
             testbed,
             name,
             slug,
+            spec,
             archived,
             backend,
         } = create;
@@ -34,6 +39,7 @@ impl TryFrom<CliTestbedUpdate> for Update {
             testbed,
             name,
             slug,
+            spec: spec.map(Into::into),
             archived: archived.into(),
             backend: backend.try_into()?,
         })
@@ -45,17 +51,38 @@ impl From<Update> for JsonUpdateTestbed {
         let Update {
             name,
             slug,
+            spec,
             archived,
             ..
         } = update;
-        Self {
-            subtype_0: Some(JsonTestbedPatch {
-                name: name.map(Into::into),
-                slug: slug.map(Into::into),
-                spec: None,
-                archived,
-            }),
-            subtype_1: None,
+        match spec {
+            Some(Some(spec)) => Self {
+                subtype_0: Some(JsonTestbedPatch {
+                    name: name.map(Into::into),
+                    slug: slug.map(Into::into),
+                    spec: Some(spec.into()),
+                    archived,
+                }),
+                subtype_1: None,
+            },
+            Some(None) => Self {
+                subtype_0: None,
+                subtype_1: Some(JsonTestbedPatchNull {
+                    name: name.map(Into::into),
+                    slug: slug.map(Into::into),
+                    spec: (),
+                    archived,
+                }),
+            },
+            None => Self {
+                subtype_0: Some(JsonTestbedPatch {
+                    name: name.map(Into::into),
+                    slug: slug.map(Into::into),
+                    spec: None,
+                    archived,
+                }),
+                subtype_1: None,
+            },
         }
     }
 }

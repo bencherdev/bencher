@@ -1,5 +1,5 @@
 use bencher_client::types::JsonNewTestbed;
-use bencher_json::{ProjectResourceId, ResourceName, TestbedSlug};
+use bencher_json::{ProjectResourceId, ResourceName, SpecResourceId, TestbedSlug};
 
 use crate::{
     CliError,
@@ -12,6 +12,7 @@ pub struct Create {
     pub project: ProjectResourceId,
     pub name: ResourceName,
     pub slug: Option<TestbedSlug>,
+    pub spec: Option<SpecResourceId>,
     pub backend: AuthBackend,
 }
 
@@ -23,12 +24,14 @@ impl TryFrom<CliTestbedCreate> for Create {
             project,
             name,
             slug,
+            spec,
             backend,
         } = create;
         Ok(Self {
             project,
             name,
             slug,
+            spec,
             backend: backend.try_into()?,
         })
     }
@@ -36,11 +39,13 @@ impl TryFrom<CliTestbedCreate> for Create {
 
 impl From<Create> for JsonNewTestbed {
     fn from(create: Create) -> Self {
-        let Create { name, slug, .. } = create;
+        let Create {
+            name, slug, spec, ..
+        } = create;
         Self {
             name: name.into(),
             slug: slug.map(Into::into),
-            spec: None,
+            spec: spec.map(Into::into),
         }
     }
 }
