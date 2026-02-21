@@ -148,6 +148,7 @@ export enum Display {
 	REPORT = "report",
 	BRANCH = "branch",
 	TESTBED = "testbed",
+	SPEC = "spec",
 	BENCHMARK = "benchmark",
 	MEASURE = "measure",
 	SWITCH = "switch",

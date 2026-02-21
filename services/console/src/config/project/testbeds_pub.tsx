@@ -45,6 +45,12 @@ const testbedsPubConfig = {
 				display: Display.RAW,
 			},
 			{
+				kind: Card.NESTED_FIELD,
+				label: "Testbed Spec",
+				keys: ["spec"],
+				display: Display.SPEC,
+			},
+			{
 				kind: Card.REPORT_TABLE,
 				dimension: ReportDimension.TESTBED,
 			},
