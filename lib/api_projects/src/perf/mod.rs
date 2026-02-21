@@ -505,7 +505,7 @@ fn new_perf_metrics(
     } = query_dimensions;
     Ok(JsonPerfMetrics {
         branch: branch.into_json_for_head(conn, project, &head, None)?,
-        testbed: testbed.into_json_for_project(project),
+        testbed: testbed.into_json_for_project(conn, project)?,
         benchmark: benchmark.into_json_for_project(project),
         measure: measure.into_json_for_project(project),
         metrics: vec![metric],

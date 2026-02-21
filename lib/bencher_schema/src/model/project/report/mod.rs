@@ -213,7 +213,13 @@ impl QueryReport {
             None
         };
         let branch = QueryBranch::get_json_for_report(conn, &query_project, head_id, version_id)?;
-        let testbed = QueryTestbed::get(conn, testbed_id)?.into_json_for_project(&query_project);
+        let testbed = QueryTestbed::get_json_for_report(
+            conn,
+            &query_project,
+            testbed_id,
+            #[cfg(feature = "plus")]
+            None,
+        )?;
         let results = get_report_results(log, conn, &query_project, id)?;
         let alerts = get_report_alerts(conn, &query_project, id, head_id, version_id)?;
 

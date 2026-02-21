@@ -40,6 +40,7 @@ impl From<Create> for JsonNewTestbed {
         Self {
             name: name.into(),
             slug: slug.map(Into::into),
+            spec: None,
         }
     }
 }

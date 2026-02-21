@@ -218,6 +218,7 @@ export interface JsonTestbed {
 	project: Uuid;
 	name: ResourceName;
 	slug: Slug;
+	spec?: JsonSpec;
 	created: string;
 	modified: string;
 	archived?: string;

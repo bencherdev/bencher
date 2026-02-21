@@ -335,6 +335,7 @@ diesel::table! {
         project_id -> Integer,
         name -> Text,
         slug -> Text,
+        spec_id -> Nullable<Integer>,
         created -> BigInt,
         modified -> BigInt,
         archived -> Nullable<BigInt>,
@@ -430,6 +431,7 @@ diesel::joinable!(runner_spec -> runner (runner_id));
 diesel::joinable!(runner_spec -> spec (spec_id));
 diesel::joinable!(sso -> organization (organization_id));
 diesel::joinable!(testbed -> project (project_id));
+diesel::joinable!(testbed -> spec (spec_id));
 diesel::joinable!(threshold -> branch (branch_id));
 diesel::joinable!(threshold -> measure (measure_id));
 diesel::joinable!(threshold -> project (project_id));

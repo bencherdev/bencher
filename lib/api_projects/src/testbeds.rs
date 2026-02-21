@@ -120,31 +120,33 @@ async fn get_ls_inner(
         public_user,
     )?;
 
-    let testbeds = get_ls_query(&query_project, &pagination_params, &query_params)
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryTestbed>(public_conn!(context, public_user))
-        .map_err(resource_not_found_err!(
-            Testbed,
-            (&query_project, &pagination_params, &query_params)
-        ))?;
+    public_conn!(context, public_user, |conn| {
+        let testbeds = get_ls_query(&query_project, &pagination_params, &query_params)
+            .offset(pagination_params.offset())
+            .limit(pagination_params.limit())
+            .load::<QueryTestbed>(conn)
+            .map_err(resource_not_found_err!(
+                Testbed,
+                (&query_project, &pagination_params, &query_params)
+            ))?;
 
-    // Drop connection lock before iterating
-    let json_testbeds = testbeds
-        .into_iter()
-        .map(|testbed| testbed.into_json_for_project(&query_project))
-        .collect();
+        let mut json_testbeds = Vec::with_capacity(testbeds.len());
+        for testbed in testbeds {
+            json_testbeds.push(testbed.into_json_for_project(conn, &query_project)?);
+        }
+        let json_testbeds: JsonTestbeds = json_testbeds.into();
 
-    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
-        .count()
-        .get_result::<i64>(public_conn!(context, public_user))
-        .map_err(resource_not_found_err!(
-            Testbed,
-            (&query_project, &pagination_params, &query_params)
-        ))?
-        .try_into()?;
+        let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
+            .count()
+            .get_result::<i64>(conn)
+            .map_err(resource_not_found_err!(
+                Testbed,
+                (&query_project, &pagination_params, &query_params)
+            ))?
+            .try_into()?;
 
-    Ok((json_testbeds, total_count))
+        Ok((json_testbeds, total_count))
+    })
 }
 
 fn get_ls_query<'q>(
@@ -221,9 +223,8 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    QueryTestbed::create(context, query_project.id, json_testbed)
-        .await
-        .map(|testbed| testbed.into_json_for_project(&query_project))
+    let testbed = QueryTestbed::create(context, query_project.id, json_testbed).await?;
+    testbed.into_json_for_project(auth_conn!(context), &query_project)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -285,14 +286,16 @@ async fn get_one_inner(
         public_user,
     )?;
 
-    QueryTestbed::belonging_to(&query_project)
-        .filter(QueryTestbed::eq_resource_id(&path_params.testbed))
-        .first::<QueryTestbed>(public_conn!(context, public_user))
-        .map(|testbed| testbed.into_json_for_project(&query_project))
-        .map_err(resource_not_found_err!(
-            Testbed,
-            (&query_project, path_params.testbed)
-        ))
+    public_conn!(context, public_user, |conn| {
+        let testbed = QueryTestbed::belonging_to(&query_project)
+            .filter(QueryTestbed::eq_resource_id(&path_params.testbed))
+            .first::<QueryTestbed>(conn)
+            .map_err(resource_not_found_err!(
+                Testbed,
+                (&query_project, path_params.testbed)
+            ))?;
+        testbed.into_json_for_project(conn, &query_project)
+    })
 }
 
 /// Update a testbed
@@ -337,12 +340,14 @@ async fn patch_inner(
         Permission::Edit,
     )?;
 
-    let query_testbed = QueryTestbed::from_resource_id(
-        auth_conn!(context),
-        query_project.id,
-        &path_params.testbed,
-    )?;
-    let update_testbed = UpdateTestbed::from(json_testbed.clone());
+    let (query_testbed, update_testbed) = auth_conn!(context, |conn| {
+        let query_testbed =
+            QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
+        let mut update_testbed = UpdateTestbed::from(json_testbed.clone());
+        #[cfg(feature = "plus")]
+        update_testbed.resolve_spec(conn, &json_testbed)?;
+        Ok::<_, HttpError>((query_testbed, update_testbed))
+    })?;
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
         .set(&update_testbed)
         .execute(write_conn!(context))
@@ -351,9 +356,11 @@ async fn patch_inner(
             (&query_testbed, &json_testbed)
         ))?;
 
-    QueryTestbed::get(auth_conn!(context), query_testbed.id)
-        .map(|testbed| testbed.into_json_for_project(&query_project))
-        .map_err(resource_not_found_err!(Testbed, query_testbed))
+    auth_conn!(context, |conn| {
+        let testbed = QueryTestbed::get(conn, query_testbed.id)
+            .map_err(resource_not_found_err!(Testbed, query_testbed))?;
+        testbed.into_json_for_project(conn, &query_project)
+    })
 }
 
 /// Delete a testbed

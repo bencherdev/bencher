@@ -1,7 +1,7 @@
 use std::fmt;
 
 use bencher_client::types::{
-    JsonUpdateBenchmark, JsonUpdateBranch, JsonUpdateMeasure, JsonUpdateTestbed,
+    JsonTestbedPatch, JsonUpdateBenchmark, JsonUpdateBranch, JsonUpdateMeasure, JsonUpdateTestbed,
 };
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BenchmarkResourceId, BranchName, BranchNameId,
@@ -156,9 +156,13 @@ impl Dimension {
             },
         };
         let update = &JsonUpdateTestbed {
-            name: None,
-            slug: None,
-            archived: Some(action.into()),
+            subtype_0: Some(JsonTestbedPatch {
+                name: None,
+                slug: None,
+                spec: None,
+                archived: Some(action.into()),
+            }),
+            subtype_1: None,
         };
         backend
             .send(|client| async move {

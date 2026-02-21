@@ -205,7 +205,7 @@ fn metric_query_json(
     ): MetricQuery,
 ) -> Result<JsonOneMetric, HttpError> {
     let branch = branch.into_json_for_head(conn, project, &head, Some(version))?;
-    let testbed = testbed.into_json_for_project(project);
+    let testbed = testbed.into_json_for_project(conn, project)?;
     let benchmark = benchmark.into_json_for_project(project);
     let measure = measure.into_json_for_project(project);
 

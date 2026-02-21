@@ -228,7 +228,8 @@ impl QueryThreshold {
             let query_branch = QueryBranch::get(conn, branch_id)?;
             query_branch.into_json_for_project(conn, &query_project)?
         };
-        let testbed = QueryTestbed::get(conn, testbed_id)?.into_json_for_project(&query_project);
+        let testbed =
+            QueryTestbed::get(conn, testbed_id)?.into_json_for_project(conn, &query_project)?;
         let measure = QueryMeasure::get(conn, measure_id)?.into_json_for_project(&query_project);
         Ok(JsonThreshold {
             uuid,

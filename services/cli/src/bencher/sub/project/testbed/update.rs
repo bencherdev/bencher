@@ -1,4 +1,4 @@
-use bencher_client::types::JsonUpdateTestbed;
+use bencher_client::types::{JsonTestbedPatch, JsonUpdateTestbed};
 use bencher_json::{ProjectResourceId, ResourceName, TestbedResourceId, TestbedSlug};
 
 use crate::{
@@ -49,9 +49,13 @@ impl From<Update> for JsonUpdateTestbed {
             ..
         } = update;
         Self {
-            name: name.map(Into::into),
-            slug: slug.map(Into::into),
-            archived,
+            subtype_0: Some(JsonTestbedPatch {
+                name: name.map(Into::into),
+                slug: slug.map(Into::into),
+                spec: None,
+                archived,
+            }),
+            subtype_1: None,
         }
     }
 }

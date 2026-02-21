@@ -324,3 +324,83 @@ pub fn get_threshold_model_id(conn: &mut SqliteConnection, threshold_id: i32) ->
         .first::<Option<i32>>(conn)
         .expect("Failed to get threshold model_id")
 }
+
+/// Arguments for creating a spec.
+#[derive(Debug, Clone, Copy)]
+pub struct CreateSpecArgs<'a> {
+    pub uuid: &'a str,
+    pub name: &'a str,
+    pub slug: &'a str,
+    pub architecture: &'a str,
+    pub cpu: i32,
+    pub memory: i64,
+    pub disk: i64,
+    pub network: bool,
+}
+
+/// Create a spec for testing.
+pub fn create_spec(conn: &mut SqliteConnection, args: CreateSpecArgs<'_>) -> i32 {
+    let CreateSpecArgs {
+        uuid,
+        name,
+        slug,
+        architecture,
+        cpu,
+        memory,
+        disk,
+        network,
+    } = args;
+    diesel::insert_into(schema::spec::table)
+        .values((
+            schema::spec::uuid.eq(uuid),
+            schema::spec::name.eq(name),
+            schema::spec::slug.eq(slug),
+            schema::spec::architecture.eq(architecture),
+            schema::spec::cpu.eq(cpu),
+            schema::spec::memory.eq(memory),
+            schema::spec::disk.eq(disk),
+            schema::spec::network.eq(network),
+            schema::spec::created.eq(0i64),
+            schema::spec::modified.eq(0i64),
+        ))
+        .execute(conn)
+        .expect("Failed to insert spec");
+
+    schema::spec::table
+        .filter(schema::spec::uuid.eq(uuid))
+        .select(schema::spec::id)
+        .first(conn)
+        .expect("Failed to get spec id")
+}
+
+/// Get testbed `spec_id`.
+pub fn get_testbed_spec_id(conn: &mut SqliteConnection, testbed_id: i32) -> Option<i32> {
+    schema::testbed::table
+        .filter(schema::testbed::id.eq(testbed_id))
+        .select(schema::testbed::spec_id)
+        .first::<Option<i32>>(conn)
+        .expect("Failed to get testbed spec_id")
+}
+
+/// Set testbed `spec_id`.
+pub fn set_testbed_spec(conn: &mut SqliteConnection, testbed_id: i32, spec_id: i32) {
+    diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
+        .set(schema::testbed::spec_id.eq(Some(spec_id)))
+        .execute(conn)
+        .expect("Failed to set testbed spec_id");
+}
+
+/// Clear testbed `spec_id`.
+pub fn clear_testbed_spec(conn: &mut SqliteConnection, testbed_id: i32) {
+    diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
+        .set(schema::testbed::spec_id.eq(None::<i32>))
+        .execute(conn)
+        .expect("Failed to clear testbed spec_id");
+}
+
+/// Delete a spec by id.
+pub fn delete_spec(conn: &mut SqliteConnection, spec_id: i32) {
+    diesel::delete(schema::spec::table.filter(schema::spec::id.eq(spec_id)))
+        .execute(conn)
+        .expect("Failed to delete spec");
+}
