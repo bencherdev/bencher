@@ -1,7 +1,9 @@
-use bencher_client::types::{JsonTestbedPatch, JsonTestbedPatchNull, JsonUpdateTestbed};
-use bencher_json::{
-    ProjectResourceId, ResourceName, SpecResourceId, TestbedResourceId, TestbedSlug,
-};
+#[cfg(feature = "plus")]
+use bencher_client::types::JsonTestbedPatchNull;
+use bencher_client::types::{JsonTestbedPatch, JsonUpdateTestbed};
+#[cfg(feature = "plus")]
+use bencher_json::SpecResourceId;
+use bencher_json::{ProjectResourceId, ResourceName, TestbedResourceId, TestbedSlug};
 
 use crate::{
     CliError,
@@ -10,12 +12,13 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-#[expect(clippy::option_option)]
+#[cfg_attr(feature = "plus", expect(clippy::option_option))]
 pub struct Update {
     pub project: ProjectResourceId,
     pub testbed: TestbedResourceId,
     pub name: Option<ResourceName>,
     pub slug: Option<TestbedSlug>,
+    #[cfg(feature = "plus")]
     pub spec: Option<Option<SpecResourceId>>,
     pub archived: Option<bool>,
     pub backend: AuthBackend,
@@ -30,6 +33,7 @@ impl TryFrom<CliTestbedUpdate> for Update {
             testbed,
             name,
             slug,
+            #[cfg(feature = "plus")]
             spec,
             archived,
             backend,
@@ -39,6 +43,7 @@ impl TryFrom<CliTestbedUpdate> for Update {
             testbed,
             name,
             slug,
+            #[cfg(feature = "plus")]
             spec: spec.map(Into::into),
             archived: archived.into(),
             backend: backend.try_into()?,
@@ -51,10 +56,12 @@ impl From<Update> for JsonUpdateTestbed {
         let Update {
             name,
             slug,
+            #[cfg(feature = "plus")]
             spec,
             archived,
             ..
         } = update;
+        #[cfg(feature = "plus")]
         match spec {
             Some(Some(spec)) => Self {
                 subtype_0: Some(JsonTestbedPatch {
@@ -83,6 +90,16 @@ impl From<Update> for JsonUpdateTestbed {
                 }),
                 subtype_1: None,
             },
+        }
+        #[cfg(not(feature = "plus"))]
+        Self {
+            subtype_0: Some(JsonTestbedPatch {
+                name: name.map(Into::into),
+                slug: slug.map(Into::into),
+                spec: None,
+                archived,
+            }),
+            subtype_1: None,
         }
     }
 }

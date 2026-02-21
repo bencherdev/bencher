@@ -173,7 +173,7 @@ impl<'de> Deserialize<'de> for JsonUpdateTestbed {
                 #[cfg(feature = "plus")]
                 let mut spec: Option<Option<SpecResourceId>> = None;
                 #[cfg(not(feature = "plus"))]
-                let mut spec: Option<Option<serde::de::IgnoredAny>> = None;
+                let mut spec: Option<Option<de::IgnoredAny>> = None;
                 let mut archived = None;
 
                 while let Some(key) = map.next_key()? {

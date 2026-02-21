@@ -343,6 +343,9 @@ async fn patch_inner(
     let (query_testbed, update_testbed) = auth_conn!(context, |conn| {
         let query_testbed =
             QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
+        #[cfg(not(feature = "plus"))]
+        let update_testbed = UpdateTestbed::from(json_testbed.clone());
+        #[cfg(feature = "plus")]
         let mut update_testbed = UpdateTestbed::from(json_testbed.clone());
         #[cfg(feature = "plus")]
         update_testbed.resolve_spec(conn, &json_testbed)?;
