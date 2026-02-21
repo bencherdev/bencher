@@ -103,9 +103,21 @@ const ViewCard = (props: Props) => {
 											{props.value?.name}
 										</a>
 									</Match>
+									<Match when={props.card?.display === Display.TESTBED}>
+										<a
+											href={`${resourcePath(props.isConsole)}/${
+												props.params?.project
+											}/testbeds/${props.value?.slug}${
+												props.value?.spec?.uuid
+													? `?spec=${props.value?.spec?.uuid}&`
+													: "?"
+											}${BACK_PARAM}=${encodePath()}`}
+										>
+											{props.value?.name}
+										</a>
+									</Match>
 									<Match
 										when={
-											props.card?.display === Display.TESTBED ||
 											props.card?.display === Display.BENCHMARK ||
 											props.card?.display === Display.MEASURE
 										}
@@ -115,8 +127,6 @@ const ViewCard = (props: Props) => {
 												props.params?.project
 											}/${(() => {
 												switch (props.card?.display) {
-													case Display.TESTBED:
-														return "testbeds";
 													case Display.BENCHMARK:
 														return "benchmarks";
 													case Display.MEASURE:

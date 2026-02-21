@@ -21,8 +21,10 @@ const testbedsPubConfig = {
 		],
 	},
 	deck: {
-		url: (params: Params) =>
-			`/v0/projects/${params?.project}/testbeds/${params?.testbed}`,
+		url: (params: Params, search: Params) =>
+			`/v0/projects/${params?.project}/testbeds/${params?.testbed}${
+				search?.spec ? `?spec=${search?.spec}` : ""
+			}`,
 		cards: [
 			{
 				kind: Card.FIELD,
