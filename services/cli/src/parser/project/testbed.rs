@@ -1,6 +1,6 @@
+use bencher_json::{ProjectResourceId, ResourceName, TestbedResourceId, TestbedSlug};
 #[cfg(feature = "plus")]
 use bencher_json::{SpecResourceId, SpecUuid};
-use bencher_json::{ProjectResourceId, ResourceName, TestbedResourceId, TestbedSlug};
 use clap::{Parser, Subcommand, ValueEnum};
 
 #[cfg(feature = "plus")]

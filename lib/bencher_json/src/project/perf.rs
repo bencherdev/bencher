@@ -189,13 +189,9 @@ fn size_heads_to_branches(
     branches: &[BranchUuid],
     heads: &[Option<HeadUuid>],
 ) -> Vec<Option<HeadUuid>> {
-    branches
-        .iter()
-        .enumerate()
-        .fold(Vec::with_capacity(branches.len()), |mut h, (i, _branch)| {
-            h.push(heads.get(i).copied().flatten());
-            h
-        })
+    (0..branches.len())
+        .map(|i| heads.get(i).copied().flatten())
+        .collect()
 }
 
 // Guarantee that the `specs` array is the same length as the `testbeds` array.
@@ -208,13 +204,9 @@ fn size_specs_to_testbeds(
     testbeds: &[TestbedUuid],
     specs: &[Option<SpecUuid>],
 ) -> Vec<Option<SpecUuid>> {
-    testbeds
-        .iter()
-        .enumerate()
-        .fold(Vec::with_capacity(testbeds.len()), |mut s, (i, _)| {
-            s.push(specs.get(i).copied().flatten());
-            s
-        })
+    (0..testbeds.len())
+        .map(|i| specs.get(i).copied().flatten())
+        .collect()
 }
 
 impl Serialize for JsonPerfQuery {

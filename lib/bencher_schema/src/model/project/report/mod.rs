@@ -5,8 +5,6 @@ use bencher_json::{
         JsonReportResults,
     },
 };
-#[cfg(feature = "plus")]
-use diesel::OptionalExtension as _;
 use diesel::{
     ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
     SelectableHelper as _,
@@ -18,7 +16,7 @@ use slog::Logger;
 #[cfg(feature = "plus")]
 use crate::model::organization::plan::PlanKind;
 #[cfg(feature = "plus")]
-use crate::model::spec::SpecId;
+use crate::model::runner::job::QueryJob;
 use crate::{
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
@@ -167,12 +165,8 @@ impl QueryReport {
 
         // Process and record the report results
         #[cfg(feature = "plus")]
-        let spec_id: Option<SpecId> = schema::job::table
-            .filter(schema::job::report_id.eq(query_report.id))
-            .select(schema::job::spec_id)
-            .first::<SpecId>(public_conn!(context, public_user))
-            .optional()
-            .map_err(resource_not_found_err!(Job, query_report.id))?;
+        let spec_id =
+            QueryJob::spec_id_for_report_id(public_conn!(context, public_user), query_report.id)?;
         let mut report_results = ReportResults::new(
             project_id,
             branch_id,
@@ -232,12 +226,7 @@ impl QueryReport {
         };
         let branch = QueryBranch::get_json_for_report(conn, &query_project, head_id, version_id)?;
         #[cfg(feature = "plus")]
-        let spec_id: Option<SpecId> = schema::job::table
-            .filter(schema::job::report_id.eq(id))
-            .select(schema::job::spec_id)
-            .first::<SpecId>(conn)
-            .optional()
-            .map_err(resource_not_found_err!(Job, id))?;
+        let spec_id = QueryJob::spec_id_for_report_id(conn, id)?;
         let testbed = QueryTestbed::get_json_for_report(
             conn,
             &query_project,
