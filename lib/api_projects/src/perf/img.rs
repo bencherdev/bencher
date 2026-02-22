@@ -63,6 +63,7 @@ pub async fn proj_perf_img_get(
     )
     .await?;
     let jpeg = get_inner(
+        &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         title.as_deref(),
@@ -80,13 +81,15 @@ pub async fn proj_perf_img_get(
 }
 
 async fn get_inner(
+    log: &slog::Logger,
     context: &ApiContext,
     path_params: ProjPerfParams,
     title: Option<&str>,
     json_perf_query: JsonPerfQuery,
     public_user: &PublicUser,
 ) -> Result<Vec<u8>, HttpError> {
-    let json_perf = super::get_inner(context, path_params, json_perf_query, public_user).await?;
+    let json_perf =
+        super::get_inner(log, context, path_params, json_perf_query, public_user).await?;
     LinePlot::new().draw(title, &json_perf).map_err(|e| {
         issue_error(
             "Failed to draw perf plot",

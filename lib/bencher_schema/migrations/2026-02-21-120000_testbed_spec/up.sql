@@ -88,13 +88,12 @@ SELECT r.id,
     r.head_id,
     r.version_id,
     r.testbed_id,
-    j.spec_id,
+    (SELECT j.spec_id FROM job j WHERE j.report_id = r.id LIMIT 1) AS spec_id,
     r.adapter,
     r.start_time,
     r.end_time,
     r.created
-FROM report r
-LEFT JOIN job j ON j.report_id = r.id;
+FROM report r;
 
 DROP TABLE report;
 
@@ -106,5 +105,7 @@ CREATE INDEX index_report_version ON report(version_id, end_time);
 CREATE INDEX index_report_project_end_time ON report(project_id, end_time);
 CREATE INDEX index_report_project_created ON report(project_id, created);
 CREATE INDEX index_report_version_testbed ON report(version_id, testbed_id);
+CREATE INDEX index_report_spec ON report(spec_id);
+CREATE INDEX index_testbed_spec ON testbed(spec_id);
 
 PRAGMA foreign_keys = on;

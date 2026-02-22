@@ -356,3 +356,146 @@ async fn testbeds_get_with_nonexistent_spec() {
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
+
+// POST /v0/projects/{project}/testbeds - create testbed with spec in body
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn testbeds_create_with_spec() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "testbedcreatespec@example.com")
+        .await;
+    let org = server.create_org(&user, "Testbed CreateSpec Org").await;
+    let project = server
+        .create_project(&user, &org, "Testbed CreateSpec Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+
+    // Create a spec
+    let spec_body = serde_json::json!({
+        "name": "Create Spec",
+        "architecture": "x86_64",
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64,
+        "network": false
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&spec_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let spec: JsonSpec = resp.json().await.expect("Failed to parse spec");
+
+    // Create a testbed with spec in the body
+    let testbed_body = serde_json::json!({
+        "name": "testbed-with-spec",
+        "slug": "testbed-with-spec",
+        "spec": spec.uuid.to_string()
+    });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&testbed_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let testbed: JsonTestbed = resp.json().await.expect("Failed to parse testbed");
+    assert_eq!(
+        testbed.spec.as_ref().expect("spec should be set").uuid,
+        spec.uuid
+    );
+}
+
+// PATCH /v0/projects/{project}/testbeds/{testbed} - patch with null spec removes it
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn testbeds_patch_spec_null() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "testbedpatchnull@example.com")
+        .await;
+    let org = server.create_org(&user, "Testbed PatchNull Org").await;
+    let project = server
+        .create_project(&user, &org, "Testbed PatchNull Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+
+    // Create a spec
+    let spec_body = serde_json::json!({
+        "name": "Null Spec",
+        "architecture": "aarch64",
+        "cpu": 4,
+        "memory": 8_589_934_592i64,
+        "disk": 21_474_836_480i64,
+        "network": true
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&spec_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let spec: JsonSpec = resp.json().await.expect("Failed to parse spec");
+
+    // Create a testbed
+    let testbed_body = serde_json::json!({
+        "name": "null-spec-testbed",
+        "slug": "null-spec-testbed"
+    });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&testbed_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Set spec on testbed
+    let patch_body = serde_json::json!({"spec": spec.uuid.to_string()});
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{}/testbeds/null-spec-testbed",
+            project_slug
+        )))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&patch_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let testbed: JsonTestbed = resp.json().await.expect("Failed to parse testbed");
+    assert_eq!(
+        testbed.spec.as_ref().expect("spec should be set").uuid,
+        spec.uuid
+    );
+
+    // Patch with null to remove spec
+    let patch_body = serde_json::json!({"spec": null});
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{}/testbeds/null-spec-testbed",
+            project_slug
+        )))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&patch_body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let testbed: JsonTestbed = resp.json().await.expect("Failed to parse testbed");
+    assert!(testbed.spec.is_none());
+}

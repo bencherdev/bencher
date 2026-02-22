@@ -99,6 +99,7 @@ pub async fn proj_perf_get(
     )
     .await?;
     let json = get_inner(
+        &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         json_perf_query,
@@ -109,6 +110,7 @@ pub async fn proj_perf_get(
 }
 
 async fn get_inner(
+    log: &slog::Logger,
     context: &ApiContext,
     path_params: ProjPerfParams,
     json_perf_query: JsonPerfQuery,
@@ -139,6 +141,7 @@ async fn get_inner(
     };
 
     let results = perf_results(
+        log,
         context,
         public_user,
         &project,
@@ -169,6 +172,7 @@ struct Times {
 
 #[expect(clippy::too_many_arguments)]
 async fn perf_results(
+    log: &slog::Logger,
     context: &ApiContext,
     public_user: &PublicUser,
     project: &QueryProject,
@@ -180,6 +184,8 @@ async fn perf_results(
     measures: &[MeasureUuid],
     times: Times,
 ) -> Result<Vec<JsonPerfMetrics>, HttpError> {
+    #[cfg(not(feature = "plus"))]
+    let _ = log;
     let permutations = branches.len() * testbeds.len() * benchmarks.len() * measures.len();
     let gt_max_permutations = permutations > MAX_PERMUTATIONS;
     let mut results = Vec::with_capacity(permutations.min(MAX_PERMUTATIONS));
@@ -187,15 +193,19 @@ async fn perf_results(
     for (branch_index, (branch_uuid, head_uuid)) in branches.iter().zip(heads.iter()).enumerate() {
         for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
             #[cfg(feature = "plus")]
-            let spec_id: Option<SpecId> =
-                if let Some(spec_uuid) = specs.get(testbed_index).copied().flatten() {
-                    Some(QuerySpec::get_id(
-                        public_conn!(context, public_user),
-                        spec_uuid,
-                    )?)
-                } else {
-                    None
-                };
+            let spec_id: Option<SpecId> = if let Some(spec_uuid) =
+                specs.get(testbed_index).copied().flatten()
+            {
+                match QuerySpec::get_id(public_conn!(context, public_user), spec_uuid) {
+                    Ok(id) => Some(id),
+                    Err(e) => {
+                        slog::info!(log, "Skipping perf query for nonexistent spec UUID: {spec_uuid}"; "error" => %e);
+                        continue;
+                    },
+                }
+            } else {
+                None
+            };
             #[cfg(not(feature = "plus"))]
             let spec_id: Option<SpecId> = None;
 

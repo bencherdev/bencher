@@ -271,8 +271,9 @@ impl From<JsonUpdateTestbed> for UpdateTestbed {
                 let JsonTestbedPatch {
                     name,
                     slug,
+                    #[cfg(feature = "plus")]
+                        spec: _,
                     archived,
-                    ..
                 } = patch;
                 let modified = DateTime::now();
                 let archived = archived.map(|archived| archived.then_some(modified));

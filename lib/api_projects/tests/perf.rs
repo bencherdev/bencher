@@ -1977,7 +1977,7 @@ async fn perf_version_hash_returned() {
         version
             .hash
             .as_ref()
-            .unwrap()
+            .expect("hash should be present")
             .as_ref()
             .starts_with("abc1234")
     );
@@ -2437,8 +2437,18 @@ async fn perf_time_echo() {
     // The times passed as query params should be echoed back
     assert!(perf.start_time.is_some());
     assert!(perf.end_time.is_some());
-    assert_eq!(perf.start_time.unwrap().timestamp(), ts.timestamp());
-    assert_eq!(perf.end_time.unwrap().timestamp(), ts_end.timestamp());
+    assert_eq!(
+        perf.start_time
+            .expect("start_time should be echoed back")
+            .timestamp(),
+        ts.timestamp()
+    );
+    assert_eq!(
+        perf.end_time
+            .expect("end_time should be echoed back")
+            .timestamp(),
+        ts_end.timestamp()
+    );
 }
 
 // =============================================================================
@@ -2735,6 +2745,44 @@ async fn perf_spec_filters_results() {
     let perf: JsonPerf = resp.json().await.expect("parse response");
     assert_eq!(perf.results.len(), 1);
     assert_eq!(perf.results[0].metrics.len(), 2);
+}
+
+#[tokio::test]
+async fn perf_spec_nonexistent_uuid() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "perfspecnonexist@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf SpecNonExist Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf SpecNonExist Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+
+    // Query with a random UUID that doesn't exist as a spec
+    let bogus_uuid = SpecUuid::new();
+    let url = build_perf_url(
+        project.slug.as_ref(),
+        &[data.branch_uuid],
+        &[data.testbed_uuid],
+        &[data.benchmark_uuid],
+        &[data.measure_uuid],
+        &format!("&specs={bogus_uuid}"),
+    );
+    let resp = server
+        .client
+        .get(server.api_url(&url))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let perf: JsonPerf = resp.json().await.expect("parse response");
+    // Nonexistent spec UUID skips the testbed entirely, producing no results
+    assert!(perf.results.is_empty());
 }
 
 // =============================================================================

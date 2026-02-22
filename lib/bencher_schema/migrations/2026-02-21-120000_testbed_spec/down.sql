@@ -1,5 +1,8 @@
 PRAGMA foreign_keys = off;
 
+DROP INDEX IF EXISTS index_report_spec;
+DROP INDEX IF EXISTS index_testbed_spec;
+
 CREATE TABLE down_testbed (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
