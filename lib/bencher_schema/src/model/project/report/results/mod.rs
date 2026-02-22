@@ -12,7 +12,6 @@ use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
 
-#[cfg(feature = "plus")]
 use crate::model::spec::SpecId;
 use crate::{
     auth_conn,
@@ -42,7 +41,6 @@ pub struct ReportResults {
     pub branch_id: BranchId,
     pub head_id: HeadId,
     pub testbed_id: TestbedId,
-    #[cfg(feature = "plus")]
     pub spec_id: Option<SpecId>,
     pub report_id: ReportId,
     pub benchmark_cache: HashMap<BenchmarkNameId, BenchmarkId>,
@@ -56,7 +54,7 @@ impl ReportResults {
         branch_id: BranchId,
         head_id: HeadId,
         testbed_id: TestbedId,
-        #[cfg(feature = "plus")] spec_id: Option<SpecId>,
+        spec_id: Option<SpecId>,
         report_id: ReportId,
     ) -> Self {
         Self {
@@ -64,7 +62,6 @@ impl ReportResults {
             branch_id,
             head_id,
             testbed_id,
-            #[cfg(feature = "plus")]
             spec_id,
             report_id,
             benchmark_cache: HashMap::new(),
@@ -243,7 +240,6 @@ impl ReportResults {
                     self.branch_id,
                     self.head_id,
                     self.testbed_id,
-                    #[cfg(feature = "plus")]
                     self.spec_id,
                     measure_id,
                 );

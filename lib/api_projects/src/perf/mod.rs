@@ -13,7 +13,8 @@ use bencher_json::{
     },
 };
 #[cfg(feature = "plus")]
-use bencher_schema::model::spec::{QuerySpec, SpecId};
+use bencher_schema::model::spec::QuerySpec;
+use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
     context::{ApiContext, DbConnection},
     error::{bad_request_error, resource_not_found_err},
@@ -186,14 +187,17 @@ async fn perf_results(
     for (branch_index, (branch_uuid, head_uuid)) in branches.iter().zip(heads.iter()).enumerate() {
         for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
             #[cfg(feature = "plus")]
-            let spec_id = if let Some(spec_uuid) = specs.get(testbed_index).copied().flatten() {
-                Some(QuerySpec::get_id(
-                    public_conn!(context, public_user),
-                    spec_uuid,
-                )?)
-            } else {
-                None
-            };
+            let spec_id: Option<SpecId> =
+                if let Some(spec_uuid) = specs.get(testbed_index).copied().flatten() {
+                    Some(QuerySpec::get_id(
+                        public_conn!(context, public_user),
+                        spec_uuid,
+                    )?)
+                } else {
+                    None
+                };
+            #[cfg(not(feature = "plus"))]
+            let spec_id: Option<SpecId> = None;
 
             for (benchmark_index, benchmark_uuid) in benchmarks.iter().enumerate() {
                 for (measure_index, measure_uuid) in measures.iter().enumerate() {
@@ -214,7 +218,6 @@ async fn perf_results(
                         *branch_uuid,
                         *head_uuid,
                         *testbed_uuid,
-                        #[cfg(feature = "plus")]
                         spec_id,
                         *benchmark_uuid,
                         *measure_uuid,
@@ -234,7 +237,6 @@ async fn perf_results(
                                 project,
                                 query_dimensions,
                                 perf_metric,
-                                #[cfg(feature = "plus")]
                                 spec_id,
                             )
                             .ok();
@@ -258,7 +260,7 @@ async fn perf_query(
     branch_uuid: BranchUuid,
     head_uuid: Option<HeadUuid>,
     testbed_uuid: TestbedUuid,
-    #[cfg(feature = "plus")] spec_id: Option<SpecId>,
+    spec_id: Option<SpecId>,
     benchmark_uuid: BenchmarkUuid,
     measure_uuid: MeasureUuid,
     times: Times,
@@ -311,18 +313,8 @@ async fn perf_query(
     }
 
     // Filter for the hardware spec if it is provided.
-    // This filters reports that have a job linked to the given spec.
-    // The subquery is executed separately to avoid Diesel trait solver limitations
-    // with deeply nested join trees.
-    #[cfg(feature = "plus")]
     if let Some(spec_id) = spec_id {
-        let report_ids: Vec<bencher_schema::model::project::report::ReportId> =
-            schema::job::table
-                .filter(schema::job::spec_id.eq(spec_id))
-                .select(schema::job::report_id)
-                .load(public_conn!(context, public_user))
-                .map_err(resource_not_found_err!(Metric, spec_id))?;
-        query = query.filter(schema::report::id.eq_any(report_ids));
+        query = query.filter(schema::report::spec_id.eq(spec_id));
     }
 
     let Times {
@@ -534,7 +526,7 @@ fn new_perf_metrics(
     project: &QueryProject,
     query_dimensions: QueryDimensions,
     metric: JsonPerfMetric,
-    #[cfg(feature = "plus")] spec_id: Option<SpecId>,
+    spec_id: Option<SpecId>,
 ) -> Result<JsonPerfMetrics, HttpError> {
     let QueryDimensions {
         branch,
@@ -545,12 +537,7 @@ fn new_perf_metrics(
     } = query_dimensions;
     Ok(JsonPerfMetrics {
         branch: branch.into_json_for_head(conn, project, &head, None)?,
-        testbed: testbed.into_json_for_spec(
-            conn,
-            project,
-            #[cfg(feature = "plus")]
-            spec_id,
-        )?,
+        testbed: testbed.into_json_for_spec(conn, project, spec_id)?,
         benchmark: benchmark.into_json_for_project(project),
         measure: measure.into_json_for_project(project),
         metrics: vec![metric],

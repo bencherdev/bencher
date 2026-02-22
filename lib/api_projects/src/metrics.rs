@@ -2,8 +2,7 @@ use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
     DateTime, JsonOneMetric, MetricUuid, ProjectResourceId, ReportUuid, project::report::Iteration,
 };
-#[cfg(feature = "plus")]
-use bencher_schema::model::runner::job::QueryJob;
+use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
     context::{ApiContext, DbConnection},
     error::resource_not_found_err,
@@ -131,6 +130,7 @@ async fn get_one_inner(
             schema::report_benchmark::iteration,
             schema::report::start_time,
             schema::report::end_time,
+            schema::report::spec_id,
             (
                 (
                     schema::threshold::id,
@@ -184,6 +184,7 @@ pub(super) type MetricQuery = (
     Iteration,
     DateTime,
     DateTime,
+    Option<SpecId>,
     Option<(QueryThreshold, QueryModel, Option<QueryAlert>)>,
     QueryMetricBoundary,
 );
@@ -202,20 +203,13 @@ fn metric_query_json(
         iteration,
         start_time,
         end_time,
+        spec_id,
         tma,
         query_metric_boundary,
     ): MetricQuery,
 ) -> Result<JsonOneMetric, HttpError> {
-    #[cfg(feature = "plus")]
-    let spec_id = QueryJob::spec_id_for_report_uuid(conn, &report)?;
-
     let branch = branch.into_json_for_head(conn, project, &head, Some(version))?;
-    let testbed = testbed.into_json_for_spec(
-        conn,
-        project,
-        #[cfg(feature = "plus")]
-        spec_id,
-    )?;
+    let testbed = testbed.into_json_for_spec(conn, project, spec_id)?;
     let benchmark = benchmark.into_json_for_project(project);
     let measure = measure.into_json_for_project(project);
 

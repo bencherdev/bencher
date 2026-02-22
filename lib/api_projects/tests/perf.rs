@@ -418,6 +418,12 @@ fn create_job(server: &TestServer, report_id: i32, spec_id: i32, project_id: i32
         ))
         .execute(&mut conn)
         .expect("insert job");
+
+    // Set spec_id on the report to match the job's spec
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::spec_id.eq(Some(spec_id)))
+        .execute(&mut conn)
+        .expect("set report spec_id");
 }
 
 // =============================================================================

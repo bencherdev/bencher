@@ -10,7 +10,8 @@ use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
 #[cfg(feature = "plus")]
-use crate::model::spec::{QuerySpec, SpecId};
+use crate::model::spec::QuerySpec;
+use crate::model::spec::SpecId;
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
@@ -38,10 +39,7 @@ pub struct QueryTestbed {
     pub project_id: ProjectId,
     pub name: ResourceName,
     pub slug: TestbedSlug,
-    #[cfg(feature = "plus")]
     pub spec_id: Option<SpecId>,
-    #[cfg(not(feature = "plus"))]
-    pub spec_id: Option<i32>,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -141,39 +139,28 @@ impl QueryTestbed {
         conn: &mut DbConnection,
         project: &QueryProject,
     ) -> Result<JsonTestbed, HttpError> {
-        #[cfg(feature = "plus")]
         let spec_id = self.spec_id;
-        self.into_json_for_spec(
-            conn,
-            project,
-            #[cfg(feature = "plus")]
-            spec_id,
-        )
+        self.into_json_for_spec(conn, project, spec_id)
     }
 
     pub fn get_json_for_report(
         conn: &mut DbConnection,
         project: &QueryProject,
         testbed_id: TestbedId,
-        #[cfg(feature = "plus")] spec_id: Option<SpecId>,
+        spec_id: Option<SpecId>,
     ) -> Result<JsonTestbed, HttpError> {
         let testbed = Self::get(conn, testbed_id)?;
-        testbed.into_json_for_spec(
-            conn,
-            project,
-            #[cfg(feature = "plus")]
-            spec_id,
-        )
+        testbed.into_json_for_spec(conn, project, spec_id)
     }
 
     pub fn into_json_for_spec(
         self,
         conn: &mut DbConnection,
         project: &QueryProject,
-        #[cfg(feature = "plus")] spec_id: Option<SpecId>,
+        spec_id: Option<SpecId>,
     ) -> Result<JsonTestbed, HttpError> {
         #[cfg(not(feature = "plus"))]
-        let _ = conn;
+        let _ = (conn, spec_id);
         #[cfg(feature = "plus")]
         let spec = Self::resolve_spec(conn, spec_id)?;
         let Self {
@@ -213,7 +200,6 @@ pub struct InsertTestbed {
     pub project_id: ProjectId,
     pub name: ResourceName,
     pub slug: TestbedSlug,
-    #[cfg(feature = "plus")]
     pub spec_id: Option<SpecId>,
     pub created: DateTime,
     pub modified: DateTime,
@@ -243,13 +229,14 @@ impl InsertTestbed {
                 QuerySpec::from_resource_id(conn, resource_id).map(|query_spec| query_spec.id)
             })
             .transpose()?;
+        #[cfg(not(feature = "plus"))]
+        let spec_id = None;
         let timestamp = DateTime::now();
         Ok(Self {
             uuid: TestbedUuid::new(),
             project_id,
             name,
             slug,
-            #[cfg(feature = "plus")]
             spec_id,
             created: timestamp,
             modified: timestamp,
@@ -272,7 +259,6 @@ impl InsertTestbed {
 pub struct UpdateTestbed {
     pub name: Option<ResourceName>,
     pub slug: Option<TestbedSlug>,
-    #[cfg(feature = "plus")]
     pub spec_id: Option<Option<SpecId>>,
     pub modified: DateTime,
     pub archived: Option<Option<DateTime>>,
@@ -293,7 +279,6 @@ impl From<JsonUpdateTestbed> for UpdateTestbed {
                 Self {
                     name,
                     slug,
-                    #[cfg(feature = "plus")]
                     spec_id: None,
                     modified,
                     archived,

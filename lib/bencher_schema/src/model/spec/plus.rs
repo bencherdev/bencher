@@ -7,6 +7,7 @@ use bencher_json::{
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
+use super::SpecId;
 use crate::{
     context::DbConnection,
     macros::{
@@ -16,8 +17,6 @@ use crate::{
     },
     schema::{self, spec as spec_table},
 };
-
-crate::macros::typed_id::typed_id!(SpecId);
 
 #[derive(Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Selectable)]
 #[diesel(table_name = spec_table)]

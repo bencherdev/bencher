@@ -1,18 +1,12 @@
 use std::sync::Arc;
 
-use bencher_json::{
-    DateTime, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig, ReportUuid, Timeout,
-};
-use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
-    RunQueryDsl as _,
-};
+use bencher_json::{DateTime, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig, Timeout};
+use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
 
 use crate::{
     context::DbConnection,
-    error::resource_not_found_err,
     macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
     model::{
         organization::OrganizationId,
@@ -80,31 +74,6 @@ impl QueryJob {
             modified: self.modified,
             output: None,
         })
-    }
-
-    pub fn spec_id_for_report_id(
-        conn: &mut DbConnection,
-        report_id: ReportId,
-    ) -> Result<Option<SpecId>, HttpError> {
-        schema::job::table
-            .filter(schema::job::report_id.eq(report_id))
-            .select(schema::job::spec_id)
-            .first::<SpecId>(conn)
-            .optional()
-            .map_err(resource_not_found_err!(Job, report_id))
-    }
-
-    pub fn spec_id_for_report_uuid(
-        conn: &mut DbConnection,
-        report_uuid: &ReportUuid,
-    ) -> Result<Option<SpecId>, HttpError> {
-        schema::job::table
-            .inner_join(schema::report::table)
-            .filter(schema::report::uuid.eq(report_uuid))
-            .select(schema::job::spec_id)
-            .first::<SpecId>(conn)
-            .optional()
-            .map_err(resource_not_found_err!(Job, report_uuid))
     }
 }
 

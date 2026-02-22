@@ -166,6 +166,12 @@ fn attach_job_with_spec(
         .execute(&mut conn)
         .expect("Failed to insert job");
 
+    // Set spec_id on the report to match the job's spec
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::spec_id.eq(Some(spec_id)))
+        .execute(&mut conn)
+        .expect("Failed to set report spec_id");
+
     spec_name
 }
 

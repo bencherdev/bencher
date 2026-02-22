@@ -37,15 +37,8 @@ pub fn metrics_data(
         .filter(schema::metric::measure_id.eq(detector.measure_id))
         .into_boxed();
 
-    #[cfg(feature = "plus")]
     if let Some(spec_id) = detector.spec_id {
-        query = query.filter(
-            schema::report::id.eq_any(
-                schema::job::table
-                    .filter(schema::job::spec_id.eq(spec_id))
-                    .select(schema::job::report_id),
-            ),
-        );
+        query = query.filter(schema::report::spec_id.eq(spec_id));
     }
 
     let model = &detector.threshold.model;
