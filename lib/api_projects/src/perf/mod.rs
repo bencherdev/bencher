@@ -312,15 +312,17 @@ async fn perf_query(
 
     // Filter for the hardware spec if it is provided.
     // This filters reports that have a job linked to the given spec.
+    // The subquery is executed separately to avoid Diesel trait solver limitations
+    // with deeply nested join trees.
     #[cfg(feature = "plus")]
     if let Some(spec_id) = spec_id {
-        query = query.filter(
-            schema::report::id.eq_any(
-                schema::job::table
-                    .filter(schema::job::spec_id.eq(spec_id))
-                    .select(schema::job::report_id),
-            ),
-        );
+        let report_ids: Vec<bencher_schema::model::project::report::ReportId> =
+            schema::job::table
+                .filter(schema::job::spec_id.eq(spec_id))
+                .select(schema::job::report_id)
+                .load(public_conn!(context, public_user))
+                .map_err(resource_not_found_err!(Metric, spec_id))?;
+        query = query.filter(schema::report::id.eq_any(report_ids));
     }
 
     let Times {
