@@ -214,6 +214,8 @@ async fn perf_results(
                         *branch_uuid,
                         *head_uuid,
                         *testbed_uuid,
+                        #[cfg(feature = "plus")]
+                        spec_id,
                         *benchmark_uuid,
                         *measure_uuid,
                         times,
@@ -256,6 +258,7 @@ async fn perf_query(
     branch_uuid: BranchUuid,
     head_uuid: Option<HeadUuid>,
     testbed_uuid: TestbedUuid,
+    #[cfg(feature = "plus")] spec_id: Option<SpecId>,
     benchmark_uuid: BenchmarkUuid,
     measure_uuid: MeasureUuid,
     times: Times,
@@ -305,6 +308,19 @@ async fn perf_query(
         query = query.filter(schema::head::uuid.eq(head_uuid));
     } else {
         query = query.filter(schema::branch::head_id.eq(schema::head::id.nullable()));
+    }
+
+    // Filter for the hardware spec if it is provided.
+    // This filters reports that have a job linked to the given spec.
+    #[cfg(feature = "plus")]
+    if let Some(spec_id) = spec_id {
+        query = query.filter(
+            schema::report::id.eq_any(
+                schema::job::table
+                    .filter(schema::job::spec_id.eq(spec_id))
+                    .select(schema::job::report_id),
+            ),
+        );
     }
 
     let Times {

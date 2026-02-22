@@ -14,8 +14,9 @@ use bencher_api_tests::{
     helpers::{base_timestamp, get_project_id},
 };
 use bencher_json::{
-    AlertUuid, BenchmarkUuid, BoundaryUuid, BranchUuid, HeadUuid, JsonPerf, MeasureUuid,
-    MetricUuid, ReportBenchmarkUuid, ReportUuid, SpecUuid, TestbedUuid, VersionUuid,
+    AlertUuid, BenchmarkUuid, BoundaryUuid, BranchUuid, HeadUuid, JobPriority, JobStatus, JobUuid,
+    JsonPerf, MeasureUuid, MetricUuid, ReportBenchmarkUuid, ReportUuid, SpecUuid, TestbedUuid,
+    VersionUuid,
     project::{alert::AlertStatus, boundary::BoundaryLimit},
 };
 use bencher_schema::schema;
@@ -380,6 +381,43 @@ fn create_spec(server: &TestServer) -> (SpecUuid, i32) {
         .first(&mut conn)
         .expect("get spec id");
     (spec_uuid, spec_id)
+}
+
+// =============================================================================
+// Helper: create_job
+// =============================================================================
+
+fn create_job(server: &TestServer, report_id: i32, spec_id: i32, project_id: i32) {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    let job_uuid = JobUuid::new();
+    let organization_id: i32 = schema::project::table
+        .filter(schema::project::id.eq(project_id))
+        .select(schema::project::organization_id)
+        .first(&mut conn)
+        .expect("get organization id");
+    let config = serde_json::json!({
+        "registry": "https://registry.bencher.dev",
+        "project": bencher_json::ProjectUuid::new(),
+        "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "timeout": 300
+    });
+    diesel::insert_into(schema::job::table)
+        .values((
+            schema::job::uuid.eq(&job_uuid),
+            schema::job::report_id.eq(report_id),
+            schema::job::organization_id.eq(organization_id),
+            schema::job::source_ip.eq("127.0.0.1"),
+            schema::job::status.eq(JobStatus::Completed),
+            schema::job::spec_id.eq(spec_id),
+            schema::job::config.eq(config.to_string()),
+            schema::job::timeout.eq(300),
+            schema::job::priority.eq(JobPriority::default()),
+            schema::job::created.eq(&now),
+            schema::job::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert job");
 }
 
 // =============================================================================
@@ -2414,7 +2452,8 @@ async fn perf_spec_from_query_param() {
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let data = create_perf_data(&server, project_id);
-    let (spec_uuid, _spec_id) = create_spec(&server);
+    let (spec_uuid, spec_id) = create_spec(&server);
+    create_job(&server, data.report_id, spec_id, project_id);
 
     let url = build_perf_url(
         project.slug.as_ref(),
@@ -2522,6 +2561,174 @@ async fn perf_spec_empty_entry() {
     let perf: JsonPerf = resp.json().await.expect("parse response");
     assert_eq!(perf.results.len(), 1);
     assert!(perf.results[0].testbed.spec.is_none());
+}
+
+#[tokio::test]
+async fn perf_spec_filters_results() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "perfspecfilter@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf SpecFilter Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf SpecFilter Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+
+    // Create first report (version_number=1)
+    let data1 = create_perf_data(&server, project_id);
+
+    // Create second report (version_number=2) sharing the same branch/testbed/benchmark/measure
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    let ts2 = bencher_json::DateTime::try_from(now.timestamp() + 1).expect("valid ts");
+
+    let version2_uuid = VersionUuid::new();
+    diesel::insert_into(schema::version::table)
+        .values((
+            schema::version::uuid.eq(&version2_uuid),
+            schema::version::project_id.eq(project_id),
+            schema::version::number.eq(2),
+        ))
+        .execute(&mut conn)
+        .expect("insert version2");
+    let version2_id: i32 = schema::version::table
+        .filter(schema::version::uuid.eq(&version2_uuid))
+        .select(schema::version::id)
+        .first(&mut conn)
+        .expect("get version2 id");
+
+    // Link version2 to the same head
+    diesel::insert_into(schema::head_version::table)
+        .values((
+            schema::head_version::head_id.eq(data1.head_id),
+            schema::head_version::version_id.eq(version2_id),
+        ))
+        .execute(&mut conn)
+        .expect("insert head_version2");
+
+    let report2_uuid = ReportUuid::new();
+    diesel::insert_into(schema::report::table)
+        .values((
+            schema::report::uuid.eq(&report2_uuid),
+            schema::report::project_id.eq(project_id),
+            schema::report::head_id.eq(data1.head_id),
+            schema::report::version_id.eq(version2_id),
+            schema::report::testbed_id.eq(data1.testbed_id),
+            schema::report::adapter.eq(0),
+            schema::report::start_time.eq(&ts2),
+            schema::report::end_time.eq(&ts2),
+            schema::report::created.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert report2");
+    let report2_id: i32 = schema::report::table
+        .filter(schema::report::uuid.eq(&report2_uuid))
+        .select(schema::report::id)
+        .first(&mut conn)
+        .expect("get report2 id");
+
+    let rb2_uuid = ReportBenchmarkUuid::new();
+    diesel::insert_into(schema::report_benchmark::table)
+        .values((
+            schema::report_benchmark::uuid.eq(&rb2_uuid),
+            schema::report_benchmark::report_id.eq(report2_id),
+            schema::report_benchmark::iteration.eq(0),
+            schema::report_benchmark::benchmark_id.eq(data1.benchmark_id),
+        ))
+        .execute(&mut conn)
+        .expect("insert rb2");
+    let rb2_id: i32 = schema::report_benchmark::table
+        .filter(schema::report_benchmark::uuid.eq(&rb2_uuid))
+        .select(schema::report_benchmark::id)
+        .first(&mut conn)
+        .expect("get rb2 id");
+
+    let metric2_uuid = MetricUuid::new();
+    diesel::insert_into(schema::metric::table)
+        .values((
+            schema::metric::uuid.eq(&metric2_uuid),
+            schema::metric::report_benchmark_id.eq(rb2_id),
+            schema::metric::measure_id.eq(data1.measure_id),
+            schema::metric::value.eq(99.0),
+        ))
+        .execute(&mut conn)
+        .expect("insert metric2");
+    drop(conn);
+
+    // Create two specs
+    let (spec_a_uuid, spec_a_id) = create_spec(&server);
+    let (spec_b_uuid, spec_b_id) = create_spec(&server);
+
+    // Link report_1 → spec_a, report_2 → spec_b via jobs
+    create_job(&server, data1.report_id, spec_a_id, project_id);
+    create_job(&server, report2_id, spec_b_id, project_id);
+
+    // Query with spec_a → only 1 metric (from report_1)
+    let url = build_perf_url(
+        project.slug.as_ref(),
+        &[data1.branch_uuid],
+        &[data1.testbed_uuid],
+        &[data1.benchmark_uuid],
+        &[data1.measure_uuid],
+        &format!("&specs={spec_a_uuid}"),
+    );
+    let resp = server
+        .client
+        .get(server.api_url(&url))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let perf: JsonPerf = resp.json().await.expect("parse response");
+    assert_eq!(perf.results.len(), 1);
+    assert_eq!(perf.results[0].metrics.len(), 1);
+    assert_eq!(perf.results[0].metrics[0].report, data1.report_uuid);
+
+    // Query with spec_b → only 1 metric (from report_2)
+    let url = build_perf_url(
+        project.slug.as_ref(),
+        &[data1.branch_uuid],
+        &[data1.testbed_uuid],
+        &[data1.benchmark_uuid],
+        &[data1.measure_uuid],
+        &format!("&specs={spec_b_uuid}"),
+    );
+    let resp = server
+        .client
+        .get(server.api_url(&url))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let perf: JsonPerf = resp.json().await.expect("parse response");
+    assert_eq!(perf.results.len(), 1);
+    assert_eq!(perf.results[0].metrics.len(), 1);
+    assert_eq!(perf.results[0].metrics[0].report, report2_uuid);
+
+    // Query without specs → both metrics returned
+    let url = build_perf_url(
+        project.slug.as_ref(),
+        &[data1.branch_uuid],
+        &[data1.testbed_uuid],
+        &[data1.benchmark_uuid],
+        &[data1.measure_uuid],
+        "",
+    );
+    let resp = server
+        .client
+        .get(server.api_url(&url))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let perf: JsonPerf = resp.json().await.expect("parse response");
+    assert_eq!(perf.results.len(), 1);
+    assert_eq!(perf.results[0].metrics.len(), 2);
 }
 
 // =============================================================================

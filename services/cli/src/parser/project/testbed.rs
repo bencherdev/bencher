@@ -1,5 +1,5 @@
 #[cfg(feature = "plus")]
-use bencher_json::SpecResourceId;
+use bencher_json::{SpecResourceId, SpecUuid};
 use bencher_json::{ProjectResourceId, ResourceName, TestbedResourceId, TestbedSlug};
 use clap::{Parser, Subcommand, ValueEnum};
 
@@ -86,6 +86,11 @@ pub struct CliTestbedView {
 
     /// Testbed slug or UUID
     pub testbed: TestbedResourceId,
+
+    /// Hardware spec UUID
+    #[cfg(feature = "plus")]
+    #[clap(long)]
+    pub spec: Option<SpecUuid>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
