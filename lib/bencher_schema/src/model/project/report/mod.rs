@@ -5,6 +5,8 @@ use bencher_json::{
         JsonReportResults,
     },
 };
+#[cfg(feature = "plus")]
+use diesel::OptionalExtension as _;
 use diesel::{
     ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
     SelectableHelper as _,
@@ -15,6 +17,8 @@ use slog::Logger;
 
 #[cfg(feature = "plus")]
 use crate::model::organization::plan::PlanKind;
+#[cfg(feature = "plus")]
+use crate::model::spec::SpecId;
 use crate::{
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
@@ -213,14 +217,19 @@ impl QueryReport {
             None
         };
         let branch = QueryBranch::get_json_for_report(conn, &query_project, head_id, version_id)?;
-        // TODO: When job creation is implemented (Gap 1), pass the job's spec_id here
-        // instead of None, so that reports show the spec that was active at report creation time.
+        #[cfg(feature = "plus")]
+        let spec_id: Option<SpecId> = schema::job::table
+            .filter(schema::job::report_id.eq(id))
+            .select(schema::job::spec_id)
+            .first::<SpecId>(conn)
+            .optional()
+            .unwrap_or(None);
         let testbed = QueryTestbed::get_json_for_report(
             conn,
             &query_project,
             testbed_id,
             #[cfg(feature = "plus")]
-            None,
+            spec_id,
         )?;
         let results = get_report_results(log, conn, &query_project, id)?;
         let alerts = get_report_alerts(conn, &query_project, id, head_id, version_id)?;

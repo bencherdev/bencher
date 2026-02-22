@@ -30,7 +30,7 @@ slog.workspace = true
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
-bencher_json = { workspace = true, features = ["server", "schema"] }
+bencher_json = { workspace = true, features = ["server", "schema", "plus"] }
 bencher_schema.workspace = true
 diesel.workspace = true
 serde_json.workspace = true

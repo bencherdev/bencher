@@ -2,6 +2,8 @@ use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
     DateTime, JsonOneMetric, MetricUuid, ProjectResourceId, ReportUuid, project::report::Iteration,
 };
+#[cfg(feature = "plus")]
+use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
     context::{ApiContext, DbConnection},
     error::resource_not_found_err,
@@ -21,6 +23,8 @@ use bencher_schema::{
     },
     public_conn, schema, view,
 };
+#[cfg(feature = "plus")]
+use diesel::OptionalExtension as _;
 use diesel::{
     ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
     RunQueryDsl as _, SelectableHelper as _,
@@ -204,8 +208,22 @@ fn metric_query_json(
         query_metric_boundary,
     ): MetricQuery,
 ) -> Result<JsonOneMetric, HttpError> {
+    #[cfg(feature = "plus")]
+    let spec_id: Option<SpecId> = schema::job::table
+        .inner_join(schema::report::table)
+        .filter(schema::report::uuid.eq(&report))
+        .select(schema::job::spec_id)
+        .first::<SpecId>(conn)
+        .optional()
+        .unwrap_or(None);
+
     let branch = branch.into_json_for_head(conn, project, &head, Some(version))?;
-    let testbed = testbed.into_json_for_project(conn, project)?;
+    let testbed = testbed.into_json_for_spec(
+        conn,
+        project,
+        #[cfg(feature = "plus")]
+        spec_id,
+    )?;
     let benchmark = benchmark.into_json_for_project(project);
     let measure = measure.into_json_for_project(project);
 
