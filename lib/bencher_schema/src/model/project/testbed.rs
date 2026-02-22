@@ -318,6 +318,10 @@ impl From<JsonUpdateTestbed> for UpdateTestbed {
                 }
             },
             #[cfg(not(feature = "plus"))]
+            #[expect(
+                clippy::unreachable,
+                reason = "Null variant is only constructed with the plus feature"
+            )]
             JsonUpdateTestbed::Null(_) => unreachable!(),
         }
     }

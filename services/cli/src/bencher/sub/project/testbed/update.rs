@@ -27,7 +27,7 @@ pub struct Update {
 impl TryFrom<CliTestbedUpdate> for Update {
     type Error = CliError;
 
-    fn try_from(create: CliTestbedUpdate) -> Result<Self, Self::Error> {
+    fn try_from(update: CliTestbedUpdate) -> Result<Self, Self::Error> {
         let CliTestbedUpdate {
             project,
             testbed,
@@ -37,7 +37,7 @@ impl TryFrom<CliTestbedUpdate> for Update {
             spec,
             archived,
             backend,
-        } = create;
+        } = update;
         Ok(Self {
             project,
             testbed,

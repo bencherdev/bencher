@@ -72,6 +72,10 @@ impl QueryReport {
     fn_get_id!(report, ReportId, ReportUuid);
     fn_get_uuid!(report, ReportId, ReportUuid);
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "spec_id binding extraction pushes over limit"
+    )]
     pub async fn create(
         log: &Logger,
         context: &ApiContext,
@@ -162,18 +166,20 @@ impl QueryReport {
         let mut usage = 0;
 
         // Process and record the report results
+        #[cfg(feature = "plus")]
+        let spec_id: Option<SpecId> = schema::job::table
+            .filter(schema::job::report_id.eq(query_report.id))
+            .select(schema::job::spec_id)
+            .first::<SpecId>(public_conn!(context, public_user))
+            .optional()
+            .map_err(resource_not_found_err!(Job, query_report.id))?;
         let mut report_results = ReportResults::new(
             project_id,
             branch_id,
             head_id,
             testbed_id,
             #[cfg(feature = "plus")]
-            schema::job::table
-                .filter(schema::job::report_id.eq(query_report.id))
-                .select(schema::job::spec_id)
-                .first::<SpecId>(public_conn!(context, public_user))
-                .optional()
-                .unwrap_or_default(),
+            spec_id,
             query_report.id,
         );
         let results_array: Vec<&str> = json_report.results.iter().map(AsRef::as_ref).collect();
@@ -231,7 +237,7 @@ impl QueryReport {
             .select(schema::job::spec_id)
             .first::<SpecId>(conn)
             .optional()
-            .unwrap_or_default();
+            .map_err(resource_not_found_err!(Job, id))?;
         let testbed = QueryTestbed::get_json_for_report(
             conn,
             &query_project,

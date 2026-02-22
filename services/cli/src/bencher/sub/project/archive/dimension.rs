@@ -180,6 +180,7 @@ impl Dimension {
                 err,
             })?;
 
+        self.log_success(action);
         Ok(())
     }
 
@@ -236,6 +237,7 @@ impl Dimension {
                 err,
             })?;
 
+        self.log_success(action);
         Ok(())
     }
 
@@ -293,6 +295,7 @@ impl Dimension {
                 err,
             })?;
 
+        self.log_success(action);
         Ok(())
     }
 

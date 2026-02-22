@@ -306,7 +306,10 @@ const StartPointCard = (props: Props) => {
 	);
 };
 
-const fmtBytes = (bytes: number): string => {
+const fmtBytes = (bytes: number | undefined): string => {
+	if (bytes == null) {
+		return "—";
+	}
 	if (bytes >= 1024 * 1024 * 1024) {
 		return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GiB`;
 	}
