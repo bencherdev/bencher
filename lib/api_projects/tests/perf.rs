@@ -1062,6 +1062,90 @@ async fn perf_multi_measure_query() {
     assert_eq!(perf.results.len(), 2);
 }
 
+#[tokio::test]
+async fn perf_multi_benchmark_query() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "perfmultibenchmark@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf MultiBenchmark Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf MultiBenchmark Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+
+    // Add a second benchmark and report_benchmark+metric on the same report
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    let benchmark2_uuid = BenchmarkUuid::new();
+    diesel::insert_into(schema::benchmark::table)
+        .values((
+            schema::benchmark::uuid.eq(&benchmark2_uuid),
+            schema::benchmark::project_id.eq(project_id),
+            schema::benchmark::name.eq("test-benchmark-2"),
+            schema::benchmark::slug.eq(&format!("test-benchmark-2-{benchmark2_uuid}")),
+            schema::benchmark::created.eq(&now),
+            schema::benchmark::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert benchmark2");
+    let benchmark2_id: i32 = schema::benchmark::table
+        .filter(schema::benchmark::uuid.eq(&benchmark2_uuid))
+        .select(schema::benchmark::id)
+        .first(&mut conn)
+        .expect("get benchmark2 id");
+
+    let report_benchmark2_uuid = ReportBenchmarkUuid::new();
+    diesel::insert_into(schema::report_benchmark::table)
+        .values((
+            schema::report_benchmark::uuid.eq(&report_benchmark2_uuid),
+            schema::report_benchmark::report_id.eq(data.report_id),
+            schema::report_benchmark::iteration.eq(0),
+            schema::report_benchmark::benchmark_id.eq(benchmark2_id),
+        ))
+        .execute(&mut conn)
+        .expect("insert report_benchmark2");
+    let report_benchmark2_id: i32 = schema::report_benchmark::table
+        .filter(schema::report_benchmark::uuid.eq(&report_benchmark2_uuid))
+        .select(schema::report_benchmark::id)
+        .first(&mut conn)
+        .expect("get report_benchmark2 id");
+
+    let metric2_uuid = MetricUuid::new();
+    diesel::insert_into(schema::metric::table)
+        .values((
+            schema::metric::uuid.eq(&metric2_uuid),
+            schema::metric::report_benchmark_id.eq(report_benchmark2_id),
+            schema::metric::measure_id.eq(data.measure_id),
+            schema::metric::value.eq(99.0),
+        ))
+        .execute(&mut conn)
+        .expect("insert metric2");
+
+    // Query with both benchmarks
+    let url = build_perf_url(
+        project.slug.as_ref(),
+        &[data.branch_uuid],
+        &[data.testbed_uuid],
+        &[data.benchmark_uuid, benchmark2_uuid],
+        &[data.measure_uuid],
+        "",
+    );
+    let resp = server
+        .client
+        .get(server.api_url(&url))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let perf: JsonPerf = resp.json().await.expect("parse response");
+    assert_eq!(perf.results.len(), 2);
+}
+
 // =============================================================================
 // Section 3: Input validation
 // =============================================================================
