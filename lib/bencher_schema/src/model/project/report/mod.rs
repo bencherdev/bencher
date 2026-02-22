@@ -70,10 +70,6 @@ impl QueryReport {
     fn_get_id!(report, ReportId, ReportUuid);
     fn_get_uuid!(report, ReportId, ReportUuid);
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "spec_id binding extraction pushes over limit"
-    )]
     pub async fn create(
         log: &Logger,
         context: &ApiContext,
