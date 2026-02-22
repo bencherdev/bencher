@@ -2,11 +2,15 @@ use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
     TotalCount,
 };
+#[cfg(feature = "plus")]
+use bencher_json::SpecUuid;
 use bencher_json::{
     JsonDirection, JsonNewTestbed, JsonPagination, JsonTestbed, JsonTestbeds, ProjectResourceId,
     ResourceName, Search, TestbedResourceId, project::testbed::JsonUpdateTestbed,
 };
 use bencher_rbac::project::Permission;
+#[cfg(feature = "plus")]
+use bencher_schema::model::spec::QuerySpec;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -235,6 +239,16 @@ pub struct ProjTestbedParams {
     pub testbed: TestbedResourceId,
 }
 
+#[derive(Deserialize, JsonSchema)]
+pub struct ProjTestbedQuery {
+    /// View the testbed with the specified spec UUID.
+    /// This can be used to view a testbed with a historical spec
+    /// that has since been replaced by a new spec.
+    /// If not specified, then the current spec is used.
+    #[cfg(feature = "plus")]
+    pub spec: Option<SpecUuid>,
+}
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/testbeds/{testbed}",
@@ -243,6 +257,7 @@ pub struct ProjTestbedParams {
 pub async fn proj_testbed_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjTestbedParams>,
+    _query_params: Query<ProjTestbedQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
@@ -261,6 +276,7 @@ pub async fn proj_testbed_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubBearerToken,
     path_params: Path<ProjTestbedParams>,
+    query_params: Query<ProjTestbedQuery>,
 ) -> Result<ResponseOk<JsonTestbed>, HttpError> {
     let public_user = PublicUser::from_token(
         &rqctx.log,
@@ -270,13 +286,20 @@ pub async fn proj_testbed_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &public_user).await?;
+    let json = get_one_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        query_params.into_inner(),
+        &public_user,
+    )
+    .await?;
     Ok(Get::response_ok(json, public_user.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjTestbedParams,
+    query_params: ProjTestbedQuery,
     public_user: &PublicUser,
 ) -> Result<JsonTestbed, HttpError> {
     let query_project = QueryProject::is_allowed_public(
@@ -294,6 +317,20 @@ async fn get_one_inner(
                 Testbed,
                 (&query_project, path_params.testbed)
             ))?;
+
+        #[cfg(feature = "plus")]
+        if let Some(spec_uuid) = query_params.spec {
+            let query_spec = QuerySpec::from_uuid(conn, spec_uuid)?;
+            return QueryTestbed::get_json_for_report(
+                conn,
+                &query_project,
+                testbed.id,
+                Some(query_spec.id),
+            );
+        }
+        #[cfg(not(feature = "plus"))]
+        let _ = query_params;
+
         testbed.into_json_for_project(conn, &query_project)
     })
 }

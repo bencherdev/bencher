@@ -32,212 +32,11 @@ bencher run --image ghcr.io/org/bench:v1 --adapter json
   └─12. CLI fetches updated report, displays results
 ```
 
-## Step 0: Add `spec_id` to Testbed (Current Child Pattern)
-
-**Standalone prerequisite** — can be implemented and merged independently before Gap 1.
-
-### Pattern: "Current Child" FK
-
-This follows the same "current child" pattern used by two other entity pairs in the codebase:
-
-| Parent | Child | FK on Parent | `replaced` on Child |
-|--------|-------|-------------|---------------------|
-| `Branch` | `Head` | `head_id: Option<HeadId>` | `replaced: Option<DateTime>` |
-| `Threshold` | `Model` | `model_id: Option<ModelId>` | `replaced: Option<DateTime>` |
-| **`Testbed`** | **`Spec`** | **`spec_id: Option<SpecId>`** | **N/A (specs are server-scoped)** |
-
-Key difference: Specs are **server-scoped** (not owned by a testbed), so there is no `replaced` timestamp. Multiple testbeds can share the same spec. When a testbed's spec changes, the old spec remains valid.
-
-### 0.1 Migration — Recreate testbed table with `spec_id` between `slug` and `created`
-
-SQLite doesn't support `ALTER TABLE ADD COLUMN` in arbitrary positions. Use the standard table-recreation pattern (see `2024-07-07-133201_archived/up.sql` for the most recent example that touched testbed).
-
-**`lib/bencher_schema/migrations/<timestamp>_testbed_spec/up.sql`:**
-```sql
-PRAGMA foreign_keys = off;
-CREATE TABLE up_testbed (
-    id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
-    project_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL,
-    spec_id INTEGER,
-    created BIGINT NOT NULL,
-    modified BIGINT NOT NULL,
-    archived BIGINT,
-    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
-    FOREIGN KEY (spec_id) REFERENCES spec (id) ON DELETE SET NULL,
-    UNIQUE(project_id, name),
-    UNIQUE(project_id, slug)
-);
-INSERT INTO up_testbed(
-        id, uuid, project_id, name, slug, spec_id,
-        created, modified, archived
-    )
-SELECT id, uuid, project_id, name, slug, null,
-    created, modified, archived
-FROM testbed;
-DROP TABLE testbed;
-ALTER TABLE up_testbed RENAME TO testbed;
-CREATE INDEX index_testbed_project_created ON testbed(project_id, created);
-PRAGMA foreign_keys = on;
-```
-
-**`lib/bencher_schema/migrations/<timestamp>_testbed_spec/down.sql`:**
-```sql
-PRAGMA foreign_keys = off;
-CREATE TABLE down_testbed (
-    id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
-    project_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL,
-    created BIGINT NOT NULL,
-    modified BIGINT NOT NULL,
-    archived BIGINT,
-    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
-    UNIQUE(project_id, name),
-    UNIQUE(project_id, slug)
-);
-INSERT INTO down_testbed(
-        id, uuid, project_id, name, slug,
-        created, modified, archived
-    )
-SELECT id, uuid, project_id, name, slug,
-    created, modified, archived
-FROM testbed;
-DROP TABLE testbed;
-ALTER TABLE down_testbed RENAME TO testbed;
-CREATE INDEX index_testbed_project_created ON testbed(project_id, created);
-PRAGMA foreign_keys = on;
-```
-
-- [ ] Create migration up/down SQL
-- [ ] Regenerate `lib/bencher_schema/src/schema.rs` (diesel print-schema)
-
-### 0.2 JSON Types
-
-**`lib/bencher_json/src/project/testbed.rs`:**
-- [ ] `JsonTestbed` — add `pub spec: Option<JsonSpec>` (the current or report-specific spec)
-- [ ] `JsonUpdateTestbed` — add `pub spec: Option<SpecResourceId>` (set/change/clear the assigned spec)
-
-Note: `JsonNewTestbed` does NOT get a spec field — testbeds are created without a spec, and the spec is set later via update or `bencher run --spec`.
-
-### 0.3 DB Model
-
-**`lib/bencher_schema/src/model/project/testbed.rs`:**
-- [ ] `QueryTestbed` — add `pub spec_id: Option<SpecId>` (between `slug` and `created` to match column order)
-- [ ] `InsertTestbed` — add `pub spec_id: Option<SpecId>` (always `None` on creation)
-- [ ] `UpdateTestbed` — add `pub spec_id: Option<Option<SpecId>>` (`Some(Some(id))` = set, `Some(None)` = clear)
-
-#### JSON serialization — two methods (following the Branch/Head pattern)
-
-1. **`into_json_for_project(self, conn, project)`** — current spec (for list/get/create/update endpoints)
-   - [ ] Signature changes: currently takes only `&QueryProject`, needs `&mut DbConnection` added
-   - [ ] If `self.spec_id` is `Some`, fetch `QuerySpec::get(conn, spec_id)?.into_json()` → include in `JsonTestbed { spec: Some(...) }`
-   - [ ] If `None`, set `spec: None`
-   - Analogous to `QueryBranch::into_json_for_project()` which fetches the current head
-   - Reference: `lib/bencher_schema/src/model/project/branch/mod.rs:278-285`
-
-2. **`get_json_for_report(conn, project, testbed_id, spec_id)`** — report-specific spec
-   - [ ] Static method that takes an explicit `Option<SpecId>` (from the job record)
-   - [ ] If `spec_id` is `Some`, fetch that specific spec (may differ from testbed's current spec)
-   - [ ] If `None`, fall back to testbed's current spec
-   - Analogous to `QueryBranch::get_json_for_report(conn, project, head_id, version_id)`
-   - Reference: `lib/bencher_schema/src/model/project/branch/mod.rs:287-297`
-
-#### `From<JsonUpdateTestbed> for UpdateTestbed`
-
-Currently at `lib/bencher_schema/src/model/project/testbed.rs:187-203`. The `spec` field requires `conn` to resolve `SpecResourceId` → `SpecId`. Resolve in the endpoint handler (`patch_inner`) before building `UpdateTestbed`, rather than changing the `From` impl. This matches how Branch and Threshold handle child updates outside their `From` impls.
-
-### 0.4 Testbed Endpoint Updates
-
-**`lib/api_projects/src/testbeds.rs`:**
-
-All 4 call sites of `into_json_for_project` need `conn`:
-1. `get_ls_inner` (line 135): `testbed.into_json_for_project(conn, &query_project)` — used in list
-2. `get_one_inner` (line 291): `.map(|testbed| testbed.into_json_for_project(conn, &query_project))`
-3. `post_inner` (line 226): `.map(|testbed| testbed.into_json_for_project(conn, &query_project))`
-4. `patch_inner` (line 355): `.map(|testbed| testbed.into_json_for_project(conn, &query_project))`
-
-For `patch_inner`, also need to:
-- [ ] If `json_testbed.spec` is `Some(spec_resource_id)`, resolve to `SpecId` via `QuerySpec::from_resource_id(conn, &spec_resource_id)`
-- [ ] Set on `UpdateTestbed { spec_id: Some(Some(resolved_id)) }`
-- The spec is server-scoped (not project-scoped), so `from_resource_id` uses the non-project variant
-
-### 0.5 Update Other Callers of `into_json_for_project`
-
-The signature change propagates to all callers. Besides testbeds.rs:
-
-- [ ] **`lib/bencher_schema/src/model/project/threshold/mod.rs:231`**: already has `conn` in scope
-- [ ] **`lib/bencher_schema/src/model/project/report/mod.rs:216`**: already has `conn` in scope
-- [ ] **`lib/api_projects/src/perf/mod.rs:508`**: `testbed.into_json_for_project(project)` — needs `conn` added
-- [ ] **`lib/api_projects/src/metrics.rs:208`**: `testbed.into_json_for_project(project)` — needs `conn` added
-
-For the report case, this is where `get_json_for_report` will eventually be used (when job creation is implemented in Gap 1). For now, just pass `conn` to the existing method.
-
-### 0.6 Test Helpers
-
-**`lib/bencher_schema/src/test_util.rs`:**
-
-Add a `create_spec` helper (no existing one):
-
-```rust
-pub fn create_spec(conn, spec_uuid, spec_name, spec_slug) -> i32
-pub fn get_testbed_spec_id(conn, testbed_id) -> Option<i32>
-pub fn set_testbed_spec(conn, testbed_id, spec_id)
-pub fn clear_testbed_spec(conn, testbed_id)
-```
-
-### 0.7 Tests
-
-Add a `#[cfg(test)] mod tests` to `lib/bencher_schema/src/model/project/testbed.rs`:
-
-1. **`testbed_created_without_spec`** — create testbed, verify `spec_id` is `None`
-2. **`testbed_assign_spec`** — create testbed + spec, set spec on testbed, verify `spec_id` matches
-3. **`testbed_change_spec`** — assign spec A, then change to spec B, verify testbed points to B and spec A still exists
-4. **`testbed_clear_spec`** — assign spec, clear it, verify `spec_id` is `None` again
-5. **`multiple_testbeds_share_spec`** — two testbeds pointing to the same spec, verify both work
-6. **`testbed_spec_on_delete_set_null`** — assign spec to testbed, delete spec, verify testbed's `spec_id` is `None` (ON DELETE SET NULL behavior)
-7. **`testbed_update_preserves_spec`** — update testbed name/slug, verify spec_id unchanged
-8. **`testbed_with_spec_in_threshold`** — create testbed with spec, use in threshold, verify threshold's testbed JSON includes spec
-9. **`testbed_spec_query`** — verify can query testbeds filtered by spec_id (for future use)
-
-### 0.8 Generate Types
-
-- [ ] `cargo gen-types` (regenerate OpenAPI spec + TypeScript types)
-
-### Step 0 Files to Modify
-
-| File | Changes |
-|------|---------|
-| `lib/bencher_schema/migrations/<new>/up.sql` | Recreate testbed table with `spec_id` between `slug` and `created` |
-| `lib/bencher_schema/migrations/<new>/down.sql` | Reverse migration (recreate without `spec_id`) |
-| `lib/bencher_schema/src/schema.rs` | Regenerate diesel schema |
-| `lib/bencher_json/src/project/testbed.rs` | Add `spec` to `JsonTestbed`, `JsonUpdateTestbed` |
-| `lib/bencher_schema/src/model/project/testbed.rs` | Add `spec_id`, new `into_json_for_project(conn)` sig, `get_json_for_report()`, tests |
-| `lib/bencher_schema/src/test_util.rs` | Add `create_spec`, `get_testbed_spec_id`, `set_testbed_spec`, `clear_testbed_spec` |
-| `lib/api_projects/src/testbeds.rs` | Pass `conn` to `into_json_for_project`, resolve spec in `patch_inner` |
-| `lib/bencher_schema/src/model/project/threshold/mod.rs` | Pass `conn` to `into_json_for_project` |
-| `lib/bencher_schema/src/model/project/report/mod.rs` | Pass `conn` to `into_json_for_project` |
-| `lib/api_projects/src/perf/mod.rs` | Pass `conn` to `into_json_for_project` |
-| `lib/api_projects/src/metrics.rs` | Pass `conn` to `into_json_for_project` |
-
-### Step 0 Verification
-
-1. `cargo build` and `cargo check --no-default-features`
-2. `cargo fmt && cargo clippy --no-deps --all-targets --all-features -- -Dwarnings`
-3. `cargo nextest run` (existing tests pass + new testbed/spec tests pass)
-4. `cargo gen-types` (API types changed)
-5. Seed test: verify testbeds still serialize correctly with `spec: null`
-
----
-
 ## Gap 1: Job Creation in `run_post`
 
 **Problem:** The `From<JsonNewRun> for JsonNewReport` conversion silently discards the `job` field (`lib/bencher_json/src/run.rs:88` — `job: _`). No job record is ever inserted into the database.
 
-**Prerequisite:** Step 0 (testbed `spec_id`) must be completed first.
+**Prerequisite:** Step 0 (testbed `spec_id`) — completed.
 
 ### Phase A: Schema & Model Foundation
 
@@ -286,7 +85,7 @@ Spec CRUD (`plus/api_specs/src/specs.rs`):
 
 #### A4. Wire report-specific spec in `QueryReport::into_json()`
 
-Testbed `spec_id` and the two serialization methods (`into_json_for_project`, `get_json_for_report`) are already implemented in Step 0.
+Testbed `spec_id` and the two serialization methods (`into_json_for_project`, `get_json_for_report`) are already implemented.
 
 Update `QueryReport::into_json()` (`lib/bencher_schema/src/model/project/report/mod.rs`):
 - [ ] Currently: `QueryTestbed::get(conn, testbed_id)?.into_json_for_project(conn, &query_project)`
@@ -436,8 +235,7 @@ After the report is inserted and queried back (~line 155), before results proces
 
 ## Implementation Order
 
-0. **Step 0 (testbed spec_id)** — Standalone prerequisite. Adds `spec_id` FK to testbed, JSON types, endpoint updates, and tests.
-1. **Gap 1 (job creation)** — Without this, no jobs enter the queue and the runner has nothing to claim. Depends on Step 0.
+1. **Gap 1 (job creation)** — Without this, no jobs enter the queue and the runner has nothing to claim.
 2. **Gap 2 (result processing)** — Without this, completed jobs produce no metrics/alerts even if the runner executes successfully.
 3. **Gap 3 (CLI polling)** — Without this, the user sees empty results even after gaps 1 and 2 are fixed.
 

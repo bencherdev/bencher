@@ -6693,6 +6693,14 @@
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
             }
+          },
+          {
+            "in": "query",
+            "name": "spec",
+            "description": "View the testbed with the specified spec UUID. This can be used to view a testbed with a historical spec that has since been replaced by a new spec. If not specified, then the current spec is used.",
+            "schema": {
+              "$ref": "#/components/schemas/SpecUuid"
+            }
           }
         ],
         "responses": {

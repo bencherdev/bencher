@@ -1,12 +1,15 @@
 #![expect(
     unused_crate_dependencies,
+    clippy::similar_names,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args
 )]
 //! Integration tests for project branch endpoints.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonBranch, JsonBranches};
+use bencher_json::{HeadUuid, JsonBranch, JsonBranches};
+use bencher_schema::schema;
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
 // GET /v0/projects/{project}/branches - list branches
@@ -175,4 +178,196 @@ async fn branches_delete() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+}
+
+// GET /v0/projects/{project}/branches/{branch}?head= - view branch with specific head
+#[tokio::test]
+async fn branches_get_with_head_query() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "branchhead@example.com").await;
+    let org = server.create_org(&user, "Branch Head Org").await;
+    let project = server
+        .create_project(&user, &org, "Branch Head Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+
+    // Create a branch — this auto-creates a head (head A)
+    let body = serde_json::json!({
+        "name": "head-branch",
+        "slug": "head-branch"
+    });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let branch: JsonBranch = resp.json().await.expect("Failed to parse branch");
+    let head_a_uuid = branch.head.uuid;
+
+    // Insert a second head (head B) for the same branch directly in the DB
+    let head_b_uuid = HeadUuid::new();
+    let mut conn = server.db_conn();
+    let branch_id: i32 = schema::branch::table
+        .filter(schema::branch::uuid.eq(branch.uuid.to_string()))
+        .select(schema::branch::id)
+        .first(&mut conn)
+        .expect("Failed to get branch ID");
+    diesel::insert_into(schema::head::table)
+        .values((
+            schema::head::uuid.eq(head_b_uuid.to_string()),
+            schema::head::branch_id.eq(branch_id),
+            schema::head::created.eq(0i64),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert second head");
+    drop(conn);
+
+    // GET without ?head= returns current head (head A)
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/branches/head-branch",
+            project_slug
+        )))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let branch: JsonBranch = resp.json().await.expect("Failed to parse branch");
+    assert_eq!(branch.head.uuid, head_a_uuid);
+
+    // GET with ?head=<head_a_uuid> returns head A explicitly
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/branches/head-branch?head={}",
+            project_slug, head_a_uuid
+        )))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let branch: JsonBranch = resp.json().await.expect("Failed to parse branch");
+    assert_eq!(branch.head.uuid, head_a_uuid);
+
+    // GET with ?head=<head_b_uuid> returns head B (historical)
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/branches/head-branch?head={}",
+            project_slug, head_b_uuid
+        )))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let branch: JsonBranch = resp.json().await.expect("Failed to parse branch");
+    assert_eq!(branch.head.uuid, head_b_uuid);
+}
+
+// GET /v0/projects/{project}/branches/{branch}?head=<nonexistent> - returns 404
+#[tokio::test]
+async fn branches_get_with_nonexistent_head() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "branchheadnf@example.com").await;
+    let org = server.create_org(&user, "Branch HeadNF Org").await;
+    let project = server
+        .create_project(&user, &org, "Branch HeadNF Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+
+    // Create a branch
+    let body = serde_json::json!({
+        "name": "headnf-branch",
+        "slug": "headnf-branch"
+    });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // GET with a nonexistent head UUID should return 404
+    let bogus_uuid = HeadUuid::new();
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/branches/headnf-branch?head={}",
+            project_slug, bogus_uuid
+        )))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// GET /v0/projects/{project}/branches/{branch}?head=<other_branch_head> - returns 404
+#[tokio::test]
+async fn branches_get_with_wrong_branch_head() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "branchheadwrong@example.com")
+        .await;
+    let org = server.create_org(&user, "Branch HeadWrong Org").await;
+    let project = server
+        .create_project(&user, &org, "Branch HeadWrong Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+
+    // Create branch A
+    let body = serde_json::json!({
+        "name": "branch-a",
+        "slug": "branch-a"
+    });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Create branch B
+    let body = serde_json::json!({
+        "name": "branch-b",
+        "slug": "branch-b"
+    });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let branch_b: JsonBranch = resp.json().await.expect("Failed to parse branch B");
+    let branch_b_head_uuid = branch_b.head.uuid;
+
+    // GET branch A with branch B's head UUID should return 404
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/branches/branch-a?head={}",
+            project_slug, branch_b_head_uuid
+        )))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }

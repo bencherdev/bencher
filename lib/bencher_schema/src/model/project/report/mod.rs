@@ -213,6 +213,8 @@ impl QueryReport {
             None
         };
         let branch = QueryBranch::get_json_for_report(conn, &query_project, head_id, version_id)?;
+        // TODO: When job creation is implemented (Gap 1), pass the job's spec_id here
+        // instead of None, so that reports show the spec that was active at report creation time.
         let testbed = QueryTestbed::get_json_for_report(
             conn,
             &query_project,
