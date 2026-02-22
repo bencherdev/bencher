@@ -15,6 +15,9 @@ plus = [
     "bencher_schema/plus",
     "dep:bencher_license",
     "dep:bencher_oci_storage",
+    "dep:hex",
+    "dep:http",
+    "dep:sha2",
 ]
 
 [dependencies]
@@ -29,11 +32,11 @@ bencher_schema.workspace = true
 bencher_token.workspace = true
 diesel = { workspace = true, features = ["sqlite"] }
 dropshot.workspace = true
-hex.workspace = true
-http.workspace = true
+hex = { workspace = true, optional = true }
+http = { workspace = true, optional = true }
 libsqlite3-sys.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
-sha2.workspace = true
+sha2 = { workspace = true, optional = true }
 slog.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
