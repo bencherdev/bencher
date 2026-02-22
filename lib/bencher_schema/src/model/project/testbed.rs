@@ -141,37 +141,14 @@ impl QueryTestbed {
         conn: &mut DbConnection,
         project: &QueryProject,
     ) -> Result<JsonTestbed, HttpError> {
-        #[cfg(not(feature = "plus"))]
-        let _ = conn;
         #[cfg(feature = "plus")]
-        let spec = Self::resolve_spec(conn, self.spec_id)?;
-        let Self {
-            uuid,
-            project_id,
-            name,
-            slug,
-            created,
-            modified,
-            archived,
-            ..
-        } = self;
-        assert_parentage(
-            BencherResource::Project,
-            project.id,
-            BencherResource::Testbed,
-            project_id,
-        );
-        Ok(JsonTestbed {
-            uuid,
-            project: project.uuid,
-            name,
-            slug,
+        let spec_id = self.spec_id;
+        self.into_json_for_spec(
+            conn,
+            project,
             #[cfg(feature = "plus")]
-            spec,
-            created,
-            modified,
-            archived,
-        })
+            spec_id,
+        )
     }
 
     pub fn get_json_for_report(
@@ -180,9 +157,23 @@ impl QueryTestbed {
         testbed_id: TestbedId,
         #[cfg(feature = "plus")] spec_id: Option<SpecId>,
     ) -> Result<JsonTestbed, HttpError> {
+        let testbed = Self::get(conn, testbed_id)?;
+        testbed.into_json_for_spec(
+            conn,
+            project,
+            #[cfg(feature = "plus")]
+            spec_id,
+        )
+    }
+
+    pub fn into_json_for_spec(
+        self,
+        conn: &mut DbConnection,
+        project: &QueryProject,
+        #[cfg(feature = "plus")] spec_id: Option<SpecId>,
+    ) -> Result<JsonTestbed, HttpError> {
         #[cfg(not(feature = "plus"))]
         let _ = conn;
-        let testbed = Self::get(conn, testbed_id)?;
         #[cfg(feature = "plus")]
         let spec = Self::resolve_spec(conn, spec_id)?;
         let Self {
@@ -194,7 +185,7 @@ impl QueryTestbed {
             modified,
             archived,
             ..
-        } = testbed;
+        } = self;
         assert_parentage(
             BencherResource::Project,
             project.id,

@@ -1,4 +1,6 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
+#[cfg(feature = "plus")]
+use bencher_json::SpecUuid;
 use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, GitHash, HeadUuid, JsonPerf, JsonPerfQuery, MeasureUuid,
     ProjectResourceId, ReportUuid, TestbedUuid,
@@ -10,6 +12,8 @@ use bencher_json::{
         threshold::JsonThresholdModel,
     },
 };
+#[cfg(feature = "plus")]
+use bencher_schema::model::spec::{QuerySpec, SpecId};
 use bencher_schema::{
     context::{ApiContext, DbConnection},
     error::{bad_request_error, resource_not_found_err},
@@ -120,6 +124,8 @@ async fn get_inner(
         branches,
         heads,
         testbeds,
+        #[cfg(feature = "plus")]
+        specs,
         benchmarks,
         measures,
         start_time,
@@ -138,6 +144,8 @@ async fn get_inner(
         &branches,
         &heads,
         &testbeds,
+        #[cfg(feature = "plus")]
+        &specs,
         &benchmarks,
         &measures,
         times,
@@ -166,6 +174,7 @@ async fn perf_results(
     branches: &[BranchUuid],
     heads: &[Option<HeadUuid>],
     testbeds: &[TestbedUuid],
+    #[cfg(feature = "plus")] specs: &[Option<SpecUuid>],
     benchmarks: &[BenchmarkUuid],
     measures: &[MeasureUuid],
     times: Times,
@@ -176,6 +185,16 @@ async fn perf_results(
     // It is okay to use `zip` because `JsonPerfQuery` guarantees that the lengths are the same.
     for (branch_index, (branch_uuid, head_uuid)) in branches.iter().zip(heads.iter()).enumerate() {
         for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
+            #[cfg(feature = "plus")]
+            let spec_id = if let Some(spec_uuid) = specs.get(testbed_index).copied().flatten() {
+                Some(QuerySpec::get_id(
+                    public_conn!(context, public_user),
+                    spec_uuid,
+                )?)
+            } else {
+                None
+            };
+
             for (benchmark_index, benchmark_uuid) in benchmarks.iter().enumerate() {
                 for (measure_index, measure_uuid) in measures.iter().enumerate() {
                     if gt_max_permutations
@@ -213,6 +232,8 @@ async fn perf_results(
                                 project,
                                 query_dimensions,
                                 perf_metric,
+                                #[cfg(feature = "plus")]
+                                spec_id,
                             )
                             .ok();
                         }
@@ -495,6 +516,7 @@ fn new_perf_metrics(
     project: &QueryProject,
     query_dimensions: QueryDimensions,
     metric: JsonPerfMetric,
+    #[cfg(feature = "plus")] spec_id: Option<SpecId>,
 ) -> Result<JsonPerfMetrics, HttpError> {
     let QueryDimensions {
         branch,
@@ -505,7 +527,12 @@ fn new_perf_metrics(
     } = query_dimensions;
     Ok(JsonPerfMetrics {
         branch: branch.into_json_for_head(conn, project, &head, None)?,
-        testbed: testbed.into_json_for_project(conn, project)?,
+        testbed: testbed.into_json_for_spec(
+            conn,
+            project,
+            #[cfg(feature = "plus")]
+            spec_id,
+        )?,
         benchmark: benchmark.into_json_for_project(project),
         measure: measure.into_json_for_project(project),
         metrics: vec![metric],

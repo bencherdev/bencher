@@ -815,6 +815,7 @@ export interface JsonPerfQuery {
 	branches: Uuid[];
 	heads: Uuid[];
 	testbeds: Uuid[];
+	specs: Uuid[];
 	benchmarks: Uuid[];
 	measures: Uuid[];
 	start_time?: string;
@@ -1061,6 +1062,7 @@ export enum PerfQueryKey {
 	Branches = "branches",
 	Heads = "heads",
 	Testbeds = "testbeds",
+	Specs = "specs",
 	Benchmarks = "benchmarks",
 	Measures = "measures",
 	StartTime = "start_time",

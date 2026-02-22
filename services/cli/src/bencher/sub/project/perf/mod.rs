@@ -1,6 +1,8 @@
 use std::future::Future;
 use std::pin::Pin;
 
+#[cfg(feature = "plus")]
+use bencher_json::SpecUuid;
 use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, HeadUuid, JsonPerf, JsonPerfQuery, MeasureUuid,
     ProjectResourceId, TestbedUuid,
@@ -23,6 +25,8 @@ pub struct Perf {
     branches: Vec<BranchUuid>,
     heads: Vec<Option<HeadUuid>>,
     testbeds: Vec<TestbedUuid>,
+    #[cfg(feature = "plus")]
+    specs: Vec<Option<SpecUuid>>,
     benchmarks: Vec<BenchmarkUuid>,
     measures: Vec<MeasureUuid>,
     start_time: Option<DateTime>,
@@ -40,6 +44,8 @@ impl TryFrom<CliPerf> for Perf {
             branches,
             heads,
             testbeds,
+            #[cfg(feature = "plus")]
+            specs,
             benchmarks,
             measures,
             start_time,
@@ -53,6 +59,8 @@ impl TryFrom<CliPerf> for Perf {
             branches,
             heads: heads.into_iter().map(ElidedOption::into).collect(),
             testbeds,
+            #[cfg(feature = "plus")]
+            specs: specs.into_iter().map(ElidedOption::into).collect(),
             benchmarks,
             measures,
             start_time,
@@ -69,6 +77,8 @@ impl From<Perf> for JsonPerfQuery {
             branches,
             heads,
             testbeds,
+            #[cfg(feature = "plus")]
+            specs,
             benchmarks,
             measures,
             start_time,
@@ -79,6 +89,8 @@ impl From<Perf> for JsonPerfQuery {
             branches,
             heads,
             testbeds,
+            #[cfg(feature = "plus")]
+            specs,
             benchmarks,
             measures,
             start_time,
@@ -133,6 +145,9 @@ fn perf_sender(
 
             if let Some(heads) = json_perf_query.heads() {
                 client = client.heads(heads);
+            }
+            if let Some(specs) = json_perf_query.specs() {
+                client = client.specs(specs);
             }
 
             if let Some(start_time) = json_perf_query.start_time() {

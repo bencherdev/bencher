@@ -55,6 +55,7 @@ import PlotTab from "./plot/tab/PlotTab";
 const BRANCHES_PARAM = PerfQueryKey.Branches;
 const HEADS_PARAM = PerfQueryKey.Heads;
 const TESTBEDS_PARAM = PerfQueryKey.Testbeds;
+const SPECS_PARAM = PerfQueryKey.Specs;
 const BENCHMARKS_PARAM = PerfQueryKey.Benchmarks;
 const MEASURES_PARAM = PerfQueryKey.Measures;
 const START_TIME_PARAM = PerfQueryKey.StartTime;
@@ -107,6 +108,7 @@ export const PERF_QUERY_PARAMS = [
 	BRANCHES_PARAM,
 	HEADS_PARAM,
 	TESTBEDS_PARAM,
+	SPECS_PARAM,
 	BENCHMARKS_PARAM,
 	MEASURES_PARAM,
 	START_TIME_PARAM,
@@ -226,6 +228,9 @@ const PerfPanel = (props: Props) => {
 		}
 		if (!Array.isArray(arrayFromString(searchParams[TESTBEDS_PARAM]))) {
 			initParams[TESTBEDS_PARAM] = null;
+		}
+		if (!Array.isArray(arrayFromString(searchParams[SPECS_PARAM]))) {
+			initParams[SPECS_PARAM] = null;
 		}
 		if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
 			initParams[BENCHMARKS_PARAM] = null;
@@ -360,6 +365,9 @@ const PerfPanel = (props: Props) => {
 	);
 	const testbeds = createMemo(() =>
 		arrayFromString(searchParams[TESTBEDS_PARAM]),
+	);
+	const specs = createMemo(() =>
+		sizeArray(testbeds(), arrayFromString(searchParams[SPECS_PARAM])),
 	);
 	const benchmarks = createMemo(() =>
 		arrayFromString(searchParams[BENCHMARKS_PARAM]),
@@ -505,6 +513,7 @@ const PerfPanel = (props: Props) => {
 			branches: branches(),
 			heads: heads(),
 			testbeds: testbeds(),
+			specs: specs(),
 			benchmarks: benchmarks(),
 			measures: measures(),
 			start_time: start_time(),
@@ -678,9 +687,14 @@ const PerfPanel = (props: Props) => {
 		}
 	});
 	const handleTestbedSelected = (uuid: string) => {
-		const [testbed_uuids, _i] = removeFromArray(testbeds(), uuid);
+		const [testbed_uuids, i] = removeFromArray(testbeds(), uuid);
+		const spec_uuids = specs();
+		if (i !== null) {
+			spec_uuids.splice(i, 1);
+		}
 		setSearchParams({
 			[TESTBEDS_PARAM]: arrayToString(testbed_uuids),
+			[SPECS_PARAM]: arrayToString(spec_uuids),
 		});
 	};
 
@@ -816,6 +830,7 @@ const PerfPanel = (props: Props) => {
 					[BRANCHES_PARAM]: first_report?.branch?.uuid,
 					[HEADS_PARAM]: first_report?.branch?.head?.uuid,
 					[TESTBEDS_PARAM]: first_report?.testbed?.uuid,
+					[SPECS_PARAM]: first_report?.testbed?.spec?.uuid,
 					[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
 					[MEASURES_PARAM]: first_measure,
 					[PLOT_PARAM]: null,
@@ -998,7 +1013,27 @@ const PerfPanel = (props: Props) => {
 		);
 	};
 	const handleTestbedChecked = (index: undefined | number) => {
-		handleChecked(testbeds_tab, index, TESTBEDS_PARAM, testbeds());
+		handleChecked(
+			testbeds_tab,
+			index,
+			TESTBEDS_PARAM,
+			testbeds(),
+			(checked, i) => {
+				if (i === null) {
+					return {};
+				}
+				const array = specs();
+				if (checked) {
+					array.splice(i, 1);
+				} else {
+					const spec_uuid = testbeds_tab?.[index]?.resource?.spec?.uuid;
+					array.splice(i, 0, spec_uuid);
+				}
+				return {
+					[SPECS_PARAM]: arrayToString(array),
+				};
+			},
+		);
 	};
 	const handleBenchmarkChecked = (index: undefined | number) => {
 		handleChecked(benchmarks_tab, index, BENCHMARKS_PARAM, benchmarks());
@@ -1059,6 +1094,7 @@ const PerfPanel = (props: Props) => {
 			[BRANCHES_PARAM]: plot?.branches?.join(","),
 			[HEADS_PARAM]: null,
 			[TESTBEDS_PARAM]: plot?.testbeds?.join(","),
+			[SPECS_PARAM]: null,
 			[BENCHMARKS_PARAM]: plot?.benchmarks?.join(","),
 			[MEASURES_PARAM]: plot?.measures?.join(","),
 			[PLOT_PARAM]: plot?.uuid,
@@ -1109,6 +1145,7 @@ const PerfPanel = (props: Props) => {
 					[BRANCHES_PARAM]: null,
 					[HEADS_PARAM]: null,
 					[TESTBEDS_PARAM]: null,
+					[SPECS_PARAM]: null,
 					[BENCHMARKS_PARAM]: null,
 					[MEASURES_PARAM]: null,
 					[PLOT_PARAM]: null,

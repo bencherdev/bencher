@@ -5387,6 +5387,15 @@
           },
           {
             "in": "query",
+            "name": "specs",
+            "description": "An optional comma separated list of testbed spec UUIDs. To not specify a particular testbed spec leave an empty entry in the list.",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "start_time",
             "description": "Search for metrics after the given date time in milliseconds.",
             "schema": {
@@ -5520,6 +5529,15 @@
             "description": "A comma separated list of measure UUIDs to query.",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "specs",
+            "description": "An optional comma separated list of testbed spec UUIDs. To not specify a particular testbed spec leave an empty entry in the list.",
+            "schema": {
+              "nullable": true,
               "type": "string"
             }
           },

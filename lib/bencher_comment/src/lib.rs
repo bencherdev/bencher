@@ -737,6 +737,8 @@ impl ReportComment {
             branches: vec![self.json_report.branch.uuid],
             heads: vec![Some(self.json_report.branch.head.uuid)],
             testbeds: vec![self.json_report.testbed.uuid],
+            #[cfg(feature = "plus")]
+            specs: vec![self.json_report.testbed.spec.as_ref().map(|s| s.uuid)],
             benchmarks: vec![benchmark.uuid],
             measures: vec![measure.uuid],
             start_time: Some(
