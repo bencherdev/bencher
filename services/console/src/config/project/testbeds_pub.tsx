@@ -21,8 +21,10 @@ const testbedsPubConfig = {
 		],
 	},
 	deck: {
-		url: (params: Params) =>
-			`/v0/projects/${params?.project}/testbeds/${params?.testbed}`,
+		url: (params: Params, search: Params) =>
+			`/v0/projects/${params?.project}/testbeds/${params?.testbed}${
+				search?.spec ? `?spec=${search?.spec}` : ""
+			}`,
 		cards: [
 			{
 				kind: Card.FIELD,
@@ -41,6 +43,12 @@ const testbedsPubConfig = {
 				label: "Testbed UUID",
 				key: "uuid",
 				display: Display.RAW,
+			},
+			{
+				kind: Card.NESTED_FIELD,
+				label: "Testbed Spec",
+				keys: ["spec"],
+				display: Display.SPEC,
 			},
 			{
 				kind: Card.REPORT_TABLE,

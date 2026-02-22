@@ -1,4 +1,6 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
+#[cfg(feature = "plus")]
+use bencher_json::SpecUuid;
 use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, GitHash, HeadUuid, JsonPerf, JsonPerfQuery, MeasureUuid,
     ProjectResourceId, ReportUuid, TestbedUuid,
@@ -10,6 +12,9 @@ use bencher_json::{
         threshold::JsonThresholdModel,
     },
 };
+#[cfg(feature = "plus")]
+use bencher_schema::model::spec::QuerySpec;
+use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
     context::{ApiContext, DbConnection},
     error::{bad_request_error, resource_not_found_err},
@@ -94,6 +99,7 @@ pub async fn proj_perf_get(
     )
     .await?;
     let json = get_inner(
+        &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         json_perf_query,
@@ -104,6 +110,7 @@ pub async fn proj_perf_get(
 }
 
 async fn get_inner(
+    log: &slog::Logger,
     context: &ApiContext,
     path_params: ProjPerfParams,
     json_perf_query: JsonPerfQuery,
@@ -120,6 +127,8 @@ async fn get_inner(
         branches,
         heads,
         testbeds,
+        #[cfg(feature = "plus")]
+        specs,
         benchmarks,
         measures,
         start_time,
@@ -132,12 +141,15 @@ async fn get_inner(
     };
 
     let results = perf_results(
+        log,
         context,
         public_user,
         &project,
         &branches,
         &heads,
         &testbeds,
+        #[cfg(feature = "plus")]
+        &specs,
         &benchmarks,
         &measures,
         times,
@@ -160,22 +172,43 @@ struct Times {
 
 #[expect(clippy::too_many_arguments)]
 async fn perf_results(
+    log: &slog::Logger,
     context: &ApiContext,
     public_user: &PublicUser,
     project: &QueryProject,
     branches: &[BranchUuid],
     heads: &[Option<HeadUuid>],
     testbeds: &[TestbedUuid],
+    #[cfg(feature = "plus")] specs: &[Option<SpecUuid>],
     benchmarks: &[BenchmarkUuid],
     measures: &[MeasureUuid],
     times: Times,
 ) -> Result<Vec<JsonPerfMetrics>, HttpError> {
+    #[cfg(not(feature = "plus"))]
+    let _ = log;
     let permutations = branches.len() * testbeds.len() * benchmarks.len() * measures.len();
     let gt_max_permutations = permutations > MAX_PERMUTATIONS;
     let mut results = Vec::with_capacity(permutations.min(MAX_PERMUTATIONS));
     // It is okay to use `zip` because `JsonPerfQuery` guarantees that the lengths are the same.
     for (branch_index, (branch_uuid, head_uuid)) in branches.iter().zip(heads.iter()).enumerate() {
         for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
+            #[cfg(feature = "plus")]
+            let spec_id: Option<SpecId> = if let Some(spec_uuid) =
+                specs.get(testbed_index).copied().flatten()
+            {
+                match QuerySpec::get_id(public_conn!(context, public_user), spec_uuid) {
+                    Ok(id) => Some(id),
+                    Err(e) => {
+                        slog::info!(log, "Skipping perf query for nonexistent spec UUID: {spec_uuid}"; "error" => %e);
+                        continue;
+                    },
+                }
+            } else {
+                None
+            };
+            #[cfg(not(feature = "plus"))]
+            let spec_id: Option<SpecId> = None;
+
             for (benchmark_index, benchmark_uuid) in benchmarks.iter().enumerate() {
                 for (measure_index, measure_uuid) in measures.iter().enumerate() {
                     if gt_max_permutations
@@ -195,6 +228,7 @@ async fn perf_results(
                         *branch_uuid,
                         *head_uuid,
                         *testbed_uuid,
+                        spec_id,
                         *benchmark_uuid,
                         *measure_uuid,
                         times,
@@ -213,6 +247,7 @@ async fn perf_results(
                                 project,
                                 query_dimensions,
                                 perf_metric,
+                                spec_id,
                             )
                             .ok();
                         }
@@ -235,6 +270,7 @@ async fn perf_query(
     branch_uuid: BranchUuid,
     head_uuid: Option<HeadUuid>,
     testbed_uuid: TestbedUuid,
+    spec_id: Option<SpecId>,
     benchmark_uuid: BenchmarkUuid,
     measure_uuid: MeasureUuid,
     times: Times,
@@ -284,6 +320,11 @@ async fn perf_query(
         query = query.filter(schema::head::uuid.eq(head_uuid));
     } else {
         query = query.filter(schema::branch::head_id.eq(schema::head::id.nullable()));
+    }
+
+    // Filter for the hardware spec if it is provided.
+    if let Some(spec_id) = spec_id {
+        query = query.filter(schema::report::spec_id.eq(spec_id));
     }
 
     let Times {
@@ -495,6 +536,7 @@ fn new_perf_metrics(
     project: &QueryProject,
     query_dimensions: QueryDimensions,
     metric: JsonPerfMetric,
+    spec_id: Option<SpecId>,
 ) -> Result<JsonPerfMetrics, HttpError> {
     let QueryDimensions {
         branch,
@@ -505,7 +547,7 @@ fn new_perf_metrics(
     } = query_dimensions;
     Ok(JsonPerfMetrics {
         branch: branch.into_json_for_head(conn, project, &head, None)?,
-        testbed: testbed.into_json_for_project(project),
+        testbed: testbed.into_json_for_spec(conn, project, spec_id)?,
         benchmark: benchmark.into_json_for_project(project),
         measure: measure.into_json_for_project(project),
         metrics: vec![metric],

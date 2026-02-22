@@ -172,6 +172,12 @@ pub fn insert_test_job_with_timeout(
         .execute(&mut conn)
         .expect("Failed to insert test job");
 
+    // Set spec_id on the report to match the job's spec
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::spec_id.eq(Some(spec_id)))
+        .execute(&mut conn)
+        .expect("Failed to set report spec_id");
+
     job_uuid
 }
 
@@ -214,6 +220,12 @@ pub fn insert_test_job_full(
         ))
         .execute(&mut conn)
         .expect("Failed to insert test job");
+
+    // Set spec_id on the report to match the job's spec
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::spec_id.eq(Some(spec_id)))
+        .execute(&mut conn)
+        .expect("Failed to set report spec_id");
 
     job_uuid
 }
@@ -264,6 +276,12 @@ pub fn insert_test_job_with_optional_fields(
         .execute(&mut conn)
         .expect("Failed to insert test job");
 
+    // Set spec_id on the report to match the job's spec
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::spec_id.eq(Some(spec_id)))
+        .execute(&mut conn)
+        .expect("Failed to set report spec_id");
+
     job_uuid
 }
 
@@ -301,6 +319,12 @@ pub fn insert_test_job_with_invalid_config(
         ))
         .execute(&mut conn)
         .expect("Failed to insert test job");
+
+    // Set spec_id on the report to match the job's spec
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::spec_id.eq(Some(spec_id)))
+        .execute(&mut conn)
+        .expect("Failed to set report spec_id");
 
     job_uuid
 }
@@ -380,6 +404,12 @@ pub fn insert_test_job_with_timestamp(
         ))
         .execute(&mut conn)
         .expect("Failed to insert test job");
+
+    // Set spec_id on the report to match the job's spec
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::spec_id.eq(Some(spec_id)))
+        .execute(&mut conn)
+        .expect("Failed to set report spec_id");
 
     job_uuid
 }

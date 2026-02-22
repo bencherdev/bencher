@@ -5,24 +5,14 @@ use dropshot::HttpError;
 use slog::{Logger, warn};
 
 use crate::{
-    context::DbConnection,
-    error::not_found_error,
-    model::project::{
-        benchmark::BenchmarkId, branch::head::HeadId, measure::MeasureId, testbed::TestbedId,
-    },
-    schema,
+    context::DbConnection, error::not_found_error, model::project::benchmark::BenchmarkId, schema,
 };
-
-use super::threshold::ThresholdModel;
 
 pub fn metrics_data(
     log: &Logger,
     conn: &mut DbConnection,
-    head_id: HeadId,
-    testbed_id: TestbedId,
+    detector: &super::Detector,
     benchmark_id: BenchmarkId,
-    measure_id: MeasureId,
-    model: &ThresholdModel,
 ) -> Result<MetricsData, HttpError> {
     let mut query = schema::metric::table
         .inner_join(
@@ -41,12 +31,17 @@ pub fn metrics_data(
                 )
                 .inner_join(schema::benchmark::table),
         )
-        .filter(schema::head::id.eq(head_id))
-        .filter(schema::testbed::id.eq(testbed_id))
+        .filter(schema::head::id.eq(detector.head_id))
+        .filter(schema::testbed::id.eq(detector.testbed_id))
         .filter(schema::benchmark::id.eq(benchmark_id))
-        .filter(schema::metric::measure_id.eq(measure_id))
+        .filter(schema::metric::measure_id.eq(detector.measure_id))
         .into_boxed();
 
+    if let Some(spec_id) = detector.spec_id {
+        query = query.filter(schema::report::spec_id.eq(spec_id));
+    }
+
+    let model = &detector.threshold.model;
     if let Some(window) = model.window {
         let now = Utc::now().timestamp();
         if let Some(start_time) = now.checked_sub(window.into()) {

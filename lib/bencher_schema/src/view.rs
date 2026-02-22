@@ -1,5 +1,5 @@
 use crate::schema::{
-    alert, benchmark, boundary, branch, head, head_version, measure, metric, model, project,
+    alert, benchmark, boundary, branch, head, head_version, job, measure, metric, model, project,
     project_role, report, report_benchmark, testbed, threshold, version,
 };
 
@@ -33,6 +33,7 @@ diesel::allow_tables_to_appear_in_same_query!(metric_boundary, boundary);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, branch);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, head);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, head_version);
+diesel::allow_tables_to_appear_in_same_query!(metric_boundary, job);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, measure);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, metric);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, model);

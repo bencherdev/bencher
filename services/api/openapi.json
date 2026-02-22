@@ -5387,6 +5387,15 @@
           },
           {
             "in": "query",
+            "name": "specs",
+            "description": "An optional comma separated list of testbed spec UUIDs. To not specify a particular testbed spec leave an empty entry in the list.",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "start_time",
             "description": "Search for metrics after the given date time in milliseconds.",
             "schema": {
@@ -5520,6 +5529,15 @@
             "description": "A comma separated list of measure UUIDs to query.",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "specs",
+            "description": "An optional comma separated list of testbed spec UUIDs. To not specify a particular testbed spec leave an empty entry in the list.",
+            "schema": {
+              "nullable": true,
               "type": "string"
             }
           },
@@ -6692,6 +6710,14 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "spec",
+            "description": "View the testbed with the specified spec UUID. This can be used to view a testbed with a historical spec that has since been replaced by a new spec. If not specified, then the current spec is used.",
+            "schema": {
+              "$ref": "#/components/schemas/SpecUuid"
             }
           }
         ],
@@ -13221,6 +13247,15 @@
                 "$ref": "#/components/schemas/TestbedSlug"
               }
             ]
+          },
+          "spec": {
+            "nullable": true,
+            "description": "The UUID or slug of the hardware spec for this testbed.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceId"
+              }
+            ]
           }
         },
         "required": [
@@ -15505,6 +15540,14 @@
           "slug": {
             "$ref": "#/components/schemas/TestbedSlug"
           },
+          "spec": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonSpec"
+              }
+            ]
+          },
           "uuid": {
             "$ref": "#/components/schemas/TestbedUuid"
           }
@@ -15516,6 +15559,77 @@
           "project",
           "slug",
           "uuid"
+        ]
+      },
+      "JsonTestbedPatch": {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "nullable": true,
+            "description": "Set whether the testbed is archived.",
+            "type": "boolean"
+          },
+          "name": {
+            "nullable": true,
+            "description": "The new name of the testbed. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "description": "The preferred new slug for the testbed. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TestbedSlug"
+              }
+            ]
+          },
+          "spec": {
+            "nullable": true,
+            "description": "The UUID or slug of the hardware spec for this testbed. Set to `null` to remove the current spec.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceId"
+              }
+            ]
+          }
+        }
+      },
+      "JsonTestbedPatchNull": {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "name": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TestbedSlug"
+              }
+            ]
+          },
+          "spec": {
+            "type": "string",
+            "enum": [
+              null
+            ]
+          }
+        },
+        "required": [
+          "spec"
         ]
       },
       "JsonTestbeds": {
@@ -16082,32 +16196,14 @@
         }
       },
       "JsonUpdateTestbed": {
-        "type": "object",
-        "properties": {
-          "archived": {
-            "nullable": true,
-            "description": "Set whether the testbed is archived.",
-            "type": "boolean"
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JsonTestbedPatch"
           },
-          "name": {
-            "nullable": true,
-            "description": "The new name of the testbed. Maximum length is 64 characters.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ResourceName"
-              }
-            ]
-          },
-          "slug": {
-            "nullable": true,
-            "description": "The preferred new slug for the testbed. Maximum length is 64 characters.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/TestbedSlug"
-              }
-            ]
+          {
+            "$ref": "#/components/schemas/JsonTestbedPatchNull"
           }
-        }
+        ]
       },
       "JsonUpdateThreshold": {
         "anyOf": [

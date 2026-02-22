@@ -1,6 +1,10 @@
 use bencher_json::{ProjectResourceId, ResourceName, TestbedResourceId, TestbedSlug};
+#[cfg(feature = "plus")]
+use bencher_json::{SpecResourceId, SpecUuid};
 use clap::{Parser, Subcommand, ValueEnum};
 
+#[cfg(feature = "plus")]
+use crate::parser::ElidedOption;
 use crate::parser::{CliArchived, CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
@@ -66,6 +70,11 @@ pub struct CliTestbedCreate {
     #[clap(long)]
     pub slug: Option<TestbedSlug>,
 
+    /// Hardware spec slug or UUID
+    #[cfg(feature = "plus")]
+    #[clap(long)]
+    pub spec: Option<SpecResourceId>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }
@@ -77,6 +86,11 @@ pub struct CliTestbedView {
 
     /// Testbed slug or UUID
     pub testbed: TestbedResourceId,
+
+    /// Hardware spec UUID
+    #[cfg(feature = "plus")]
+    #[clap(long)]
+    pub spec: Option<SpecUuid>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -97,6 +111,12 @@ pub struct CliTestbedUpdate {
     /// Testbed slug
     #[clap(long)]
     pub slug: Option<TestbedSlug>,
+
+    /// Hardware spec slug or UUID
+    /// To remove the current spec without replacing it, use an underscore (`_`).
+    #[cfg(feature = "plus")]
+    #[clap(long)]
+    pub spec: Option<ElidedOption<SpecResourceId>>,
 
     #[clap(flatten)]
     pub archived: CliArchived,

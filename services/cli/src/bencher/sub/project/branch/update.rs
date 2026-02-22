@@ -23,7 +23,7 @@ pub struct Update {
 impl TryFrom<CliBranchUpdate> for Update {
     type Error = CliError;
 
-    fn try_from(create: CliBranchUpdate) -> Result<Self, Self::Error> {
+    fn try_from(update: CliBranchUpdate) -> Result<Self, Self::Error> {
         let CliBranchUpdate {
             project,
             branch,
@@ -32,7 +32,7 @@ impl TryFrom<CliBranchUpdate> for Update {
             start_point,
             archived,
             backend,
-        } = create;
+        } = update;
         Ok(Self {
             project,
             branch,

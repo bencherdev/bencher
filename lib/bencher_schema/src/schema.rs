@@ -254,6 +254,7 @@ diesel::table! {
         head_id -> Integer,
         version_id -> Integer,
         testbed_id -> Integer,
+        spec_id -> Nullable<Integer>,
         adapter -> Integer,
         start_time -> BigInt,
         end_time -> BigInt,
@@ -335,6 +336,7 @@ diesel::table! {
         project_id -> Integer,
         name -> Text,
         slug -> Text,
+        spec_id -> Nullable<Integer>,
         created -> BigInt,
         modified -> BigInt,
         archived -> Nullable<BigInt>,
@@ -421,6 +423,7 @@ diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
 diesel::joinable!(report -> head (head_id));
 diesel::joinable!(report -> project (project_id));
+diesel::joinable!(report -> spec (spec_id));
 diesel::joinable!(report -> testbed (testbed_id));
 diesel::joinable!(report -> user (user_id));
 diesel::joinable!(report -> version (version_id));
@@ -430,6 +433,7 @@ diesel::joinable!(runner_spec -> runner (runner_id));
 diesel::joinable!(runner_spec -> spec (spec_id));
 diesel::joinable!(sso -> organization (organization_id));
 diesel::joinable!(testbed -> project (project_id));
+diesel::joinable!(testbed -> spec (spec_id));
 diesel::joinable!(threshold -> branch (branch_id));
 diesel::joinable!(threshold -> measure (measure_id));
 diesel::joinable!(threshold -> project (project_id));

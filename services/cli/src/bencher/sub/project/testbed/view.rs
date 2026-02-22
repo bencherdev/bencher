@@ -1,3 +1,5 @@
+#[cfg(feature = "plus")]
+use bencher_json::SpecUuid;
 use bencher_json::{ProjectResourceId, TestbedResourceId};
 
 use crate::{
@@ -10,6 +12,8 @@ use crate::{
 pub struct View {
     pub project: ProjectResourceId,
     pub testbed: TestbedResourceId,
+    #[cfg(feature = "plus")]
+    pub spec: Option<SpecUuid>,
     pub backend: PubBackend,
 }
 
@@ -20,11 +24,15 @@ impl TryFrom<CliTestbedView> for View {
         let CliTestbedView {
             project,
             testbed,
+            #[cfg(feature = "plus")]
+            spec,
             backend,
         } = view;
         Ok(Self {
             project,
             testbed,
+            #[cfg(feature = "plus")]
+            spec,
             backend: backend.try_into()?,
         })
     }
@@ -35,12 +43,18 @@ impl SubCmd for View {
         let _json = self
             .backend
             .send(|client| async move {
-                client
+                #[cfg_attr(not(feature = "plus"), expect(unused_mut))]
+                let mut client = client
                     .proj_testbed_get()
                     .project(self.project.clone())
-                    .testbed(self.testbed.clone())
-                    .send()
-                    .await
+                    .testbed(self.testbed.clone());
+
+                #[cfg(feature = "plus")]
+                if let Some(spec) = self.spec {
+                    client = client.spec(spec);
+                }
+
+                client.send().await
             })
             .await?;
         Ok(())

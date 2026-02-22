@@ -786,6 +786,7 @@ export const perfUrl = (
 		branches: branch?.uuid,
 		heads: branch?.head?.uuid,
 		testbeds: testbed?.uuid,
+		specs: testbed?.spec?.uuid,
 		benchmarks: benchmark?.uuid,
 		measures: measure?.uuid,
 		lower_boundary: lowerBoundary,

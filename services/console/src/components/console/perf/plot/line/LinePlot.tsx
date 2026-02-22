@@ -965,7 +965,9 @@ const to_title = (prefix, result, datum, suffix) =>
 		result.branch?.name
 	}\nVersion Number: ${datum.number}${
 		datum.hash ? `\nVersion Hash: ${datum.hash}` : ""
-	}\nTestbed: ${result.testbed?.name}\nBenchmark: ${
+	}\nTestbed: ${result.testbed?.name}${
+		result.testbed?.spec?.name ? `\nSpec: ${result.testbed.spec.name}` : ""
+	}\nBenchmark: ${
 		result.benchmark?.name
 	}\nMeasure: ${result.measure?.name}${suffix}`;
 

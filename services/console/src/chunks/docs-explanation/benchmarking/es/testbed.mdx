@@ -1,2 +1,8 @@
 ### Banco de pruebas
 Un banco de pruebas es el nombre del entorno de pruebas utilizado al ejecutar un informe. Al usar el subcomando de CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>, se utiliza `Linux`, `macOS` o `Windows` como banco de pruebas predeterminado según el sistema operativo del host. Si el CLI `bencher` ha sido compilado para un sistema operativo diferente, se utiliza `localhost`.
+
+Un banco de pruebas puede tener opcionalmente una Spec asignada.
+Una Spec describe el hardware en el que se ejecuta el banco de pruebas.
+Cuando se crea un informe, la Spec actual del banco de pruebas en ese momento se registra con el informe.
+Esto permite rastrear cómo los resultados de los benchmarks se relacionan con el hardware subyacente,
+incluso si la Spec del banco de pruebas cambia con el tiempo.

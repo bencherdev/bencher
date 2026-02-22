@@ -7,6 +7,7 @@ import {
 	Adapter,
 	type JsonBranch,
 	type JsonProject,
+	type JsonSpec,
 	type ModelTest,
 } from "../../../../../types/bencher";
 import { authUser } from "../../../../../util/auth";
@@ -103,9 +104,21 @@ const ViewCard = (props: Props) => {
 											{props.value?.name}
 										</a>
 									</Match>
+									<Match when={props.card?.display === Display.TESTBED}>
+										<a
+											href={`${resourcePath(props.isConsole)}/${
+												props.params?.project
+											}/testbeds/${props.value?.slug}${
+												props.value?.spec?.uuid
+													? `?spec=${props.value?.spec?.uuid}&`
+													: "?"
+											}${BACK_PARAM}=${encodePath()}`}
+										>
+											{props.value?.name}
+										</a>
+									</Match>
 									<Match
 										when={
-											props.card?.display === Display.TESTBED ||
 											props.card?.display === Display.BENCHMARK ||
 											props.card?.display === Display.MEASURE
 										}
@@ -115,8 +128,6 @@ const ViewCard = (props: Props) => {
 												props.params?.project
 											}/${(() => {
 												switch (props.card?.display) {
-													case Display.TESTBED:
-														return "testbeds";
 													case Display.BENCHMARK:
 														return "benchmarks";
 													case Display.MEASURE:
@@ -201,6 +212,9 @@ const ViewCard = (props: Props) => {
 									</Match>
 									<Match when={props.card?.display === Display.START_POINT}>
 										<StartPointCard {...props} />
+									</Match>
+									<Match when={props.card?.display === Display.SPEC}>
+										<SpecCard {...props} />
 									</Match>
 									<Match when={props.card?.display === Display.GIT_HASH}>
 										<GitHashCard {...props} />
@@ -289,6 +303,41 @@ const StartPointCard = (props: Props) => {
 				<>Version Hash: {props.value?.version?.hash}</>
 			)}
 		</a>
+	);
+};
+
+const fmtBytes = (bytes: number | undefined): string => {
+	if (bytes == null) {
+		return "—";
+	}
+	if (bytes >= 1024 * 1024 * 1024) {
+		return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GiB`;
+	}
+	if (bytes >= 1024 * 1024) {
+		return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+	}
+	if (bytes >= 1024) {
+		return `${(bytes / 1024).toFixed(1)} KiB`;
+	}
+	return `${bytes} B`;
+};
+
+const SpecCard = (props: Props) => {
+	const spec = () => props.value as JsonSpec;
+	return (
+		<div>
+			Name: {spec()?.name}
+			<br />
+			Architecture: {spec()?.architecture}
+			<br />
+			CPU: {spec()?.cpu}
+			<br />
+			Memory: {fmtBytes(spec()?.memory)}
+			<br />
+			Disk: {fmtBytes(spec()?.disk)}
+			<br />
+			Network: {spec()?.network ? "Yes" : "No"}
+		</div>
 	);
 };
 

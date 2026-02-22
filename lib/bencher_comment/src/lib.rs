@@ -6,10 +6,12 @@ use std::{
     time::Duration,
 };
 
+#[cfg(feature = "plus")]
+use bencher_json::SpecUuid;
 use bencher_json::{
-    AlertUuid, BenchmarkSlug, BranchSlug, JsonAlert, JsonBenchmark, JsonBoundary, JsonMeasure,
-    JsonPerfQuery, JsonReport, MeasureSlug, ProjectSlug, ReportUuid, ResourceName, TestbedSlug,
-    ThresholdUuid, Units,
+    AlertUuid, BenchmarkSlug, BranchSlug, HeadUuid, JsonAlert, JsonBenchmark, JsonBoundary,
+    JsonMeasure, JsonPerfQuery, JsonReport, MeasureSlug, ModelUuid, ProjectSlug, ReportUuid,
+    ResourceName, TestbedSlug, ThresholdUuid, Units,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
@@ -178,12 +180,19 @@ impl ReportComment {
             (
                 "Branch",
                 self.json_report.branch.name.to_string(),
-                self.resource_url(Resource::Branch(self.json_report.branch.slug.clone())),
+                self.resource_url(Resource::Branch {
+                    slug: self.json_report.branch.slug.clone(),
+                    head: self.json_report.branch.head.uuid,
+                }),
             ),
             (
                 "Testbed",
                 self.json_report.testbed.name.to_string(),
-                self.resource_url(Resource::Testbed(self.json_report.testbed.slug.clone())),
+                self.resource_url(Resource::Testbed {
+                    slug: self.json_report.testbed.slug.clone(),
+                    #[cfg(feature = "plus")]
+                    spec: self.json_report.testbed.spec.as_ref().map(|s| s.uuid),
+                }),
             ),
         ] {
             html.push_str(&format!(
@@ -352,7 +361,10 @@ impl ReportComment {
         html.push_str("<br />");
         html.push_str(&format!(
             "🚷 <a href=\"{url}\">threshold</a>",
-            url = self.resource_url(Resource::Threshold(alert.threshold.uuid)),
+            url = self.resource_url(Resource::Threshold {
+                uuid: alert.threshold.uuid,
+                model: alert.threshold.model.as_ref().map(|m| m.uuid),
+            }),
         ));
         html.push_str("<br />");
         html.push_str(&format!(
@@ -552,7 +564,10 @@ impl ReportComment {
             html.push_str("<br />");
             html.push_str(&format!(
                 "🚷 <a href=\"{url}\">view threshold</a>",
-                url = self.resource_url(Resource::Threshold(threshold.uuid)),
+                url = self.resource_url(Resource::Threshold {
+                    uuid: threshold.uuid,
+                    model: Some(threshold.model.uuid),
+                }),
             ));
         } else {
             html.push_str("<br />");
@@ -645,6 +660,7 @@ impl ReportComment {
 
     fn resource_url(&self, resource: Resource) -> Url {
         let url = self.console_url.clone();
+        let query_param = resource.query_param();
         let path = if self.public_links {
             format!(
                 "/perf/{project}/{resource_name}/{id}",
@@ -661,6 +677,10 @@ impl ReportComment {
             )
         };
         let mut url = url.join(&path).unwrap_or(url);
+
+        if let Some((key, value)) = query_param {
+            url.query_pairs_mut().append_pair(key, &value);
+        }
 
         if self.is_bencher_cloud() {
             url.query_pairs_mut()
@@ -717,6 +737,8 @@ impl ReportComment {
             branches: vec![self.json_report.branch.uuid],
             heads: vec![Some(self.json_report.branch.head.uuid)],
             testbeds: vec![self.json_report.testbed.uuid],
+            #[cfg(feature = "plus")]
+            specs: vec![self.json_report.testbed.spec.as_ref().map(|s| s.uuid)],
             benchmarks: vec![benchmark.uuid],
             measures: vec![measure.uuid],
             start_time: Some(
@@ -743,11 +765,21 @@ impl ReportComment {
 
 enum Resource {
     Report(ReportUuid),
-    Branch(BranchSlug),
-    Testbed(TestbedSlug),
+    Branch {
+        slug: BranchSlug,
+        head: HeadUuid,
+    },
+    Testbed {
+        slug: TestbedSlug,
+        #[cfg(feature = "plus")]
+        spec: Option<SpecUuid>,
+    },
     Benchmark(BenchmarkSlug),
     Measure(MeasureSlug),
-    Threshold(ThresholdUuid),
+    Threshold {
+        uuid: ThresholdUuid,
+        model: Option<ModelUuid>,
+    },
     Alert(AlertUuid),
 }
 
@@ -755,11 +787,11 @@ impl Resource {
     fn name(&self) -> &'static str {
         match self {
             Resource::Report(_) => "reports",
-            Resource::Branch(_) => "branches",
-            Resource::Testbed(_) => "testbeds",
+            Resource::Branch { .. } => "branches",
+            Resource::Testbed { .. } => "testbeds",
             Resource::Benchmark(_) => "benchmarks",
             Resource::Measure(_) => "measures",
-            Resource::Threshold(_) => "thresholds",
+            Resource::Threshold { .. } => "thresholds",
             Resource::Alert(_) => "alerts",
         }
     }
@@ -767,12 +799,31 @@ impl Resource {
     fn into_id(self) -> String {
         match self {
             Resource::Report(uuid) => uuid.to_string(),
-            Resource::Branch(slug) => slug.to_string(),
-            Resource::Testbed(slug) => slug.to_string(),
+            Resource::Branch { slug, .. } => slug.to_string(),
+            Resource::Testbed { slug, .. } => slug.to_string(),
             Resource::Benchmark(slug) => slug.to_string(),
             Resource::Measure(slug) => slug.to_string(),
-            Resource::Threshold(uuid) => uuid.to_string(),
+            Resource::Threshold { uuid, .. } => uuid.to_string(),
             Resource::Alert(uuid) => uuid.to_string(),
+        }
+    }
+
+    fn query_param(&self) -> Option<(&'static str, String)> {
+        match self {
+            Resource::Branch { head, .. } => Some(("head", head.to_string())),
+            #[cfg(feature = "plus")]
+            Resource::Testbed {
+                spec: Some(spec), ..
+            } => Some(("spec", spec.to_string())),
+            Resource::Threshold {
+                model: Some(model), ..
+            } => Some(("model", model.to_string())),
+            Resource::Report(_)
+            | Resource::Testbed { .. }
+            | Resource::Benchmark(_)
+            | Resource::Measure(_)
+            | Resource::Threshold { model: None, .. }
+            | Resource::Alert(_) => None,
         }
     }
 }

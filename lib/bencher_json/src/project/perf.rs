@@ -4,6 +4,8 @@ use serde::ser::{self, SerializeStruct as _};
 use serde::{Deserialize, Serialize, Serializer};
 use url::Url;
 
+#[cfg(feature = "plus")]
+use crate::SpecUuid;
 use crate::urlencoded::{
     UrlEncodedError, from_urlencoded_list, from_urlencoded_nullable_list, to_urlencoded,
     to_urlencoded_list, to_urlencoded_optional_list,
@@ -37,6 +39,9 @@ pub struct JsonPerfQueryParams {
     pub heads: Option<String>,
     /// A comma separated list of testbed UUIDs to query.
     pub testbeds: String,
+    /// An optional comma separated list of testbed spec UUIDs.
+    /// To not specify a particular testbed spec leave an empty entry in the list.
+    pub specs: Option<String>,
     /// A comma separated list of benchmark UUIDs to query.
     pub benchmarks: String,
     /// A comma separated list of measure UUIDs to query.
@@ -60,6 +65,9 @@ pub struct JsonPerfImgQueryParams {
     pub heads: Option<String>,
     /// A comma separated list of testbed UUIDs to query.
     pub testbeds: String,
+    /// An optional comma separated list of testbed spec UUIDs.
+    /// To not specify a particular testbed spec leave an empty entry in the list.
+    pub specs: Option<String>,
     /// A comma separated list of benchmark UUIDs to query.
     pub benchmarks: String,
     /// A comma separated list of measure UUIDs to query.
@@ -77,6 +85,7 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
             branches,
             heads,
             testbeds,
+            specs,
             benchmarks,
             measures,
             start_time,
@@ -86,6 +95,7 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
             branches,
             heads,
             testbeds,
+            specs,
             benchmarks,
             measures,
             start_time,
@@ -102,6 +112,8 @@ pub struct JsonPerfQuery {
     pub branches: Vec<BranchUuid>,
     pub heads: Vec<Option<HeadUuid>>,
     pub testbeds: Vec<TestbedUuid>,
+    #[cfg(feature = "plus")]
+    pub specs: Vec<Option<SpecUuid>>,
     pub benchmarks: Vec<BenchmarkUuid>,
     pub measures: Vec<MeasureUuid>,
     pub start_time: Option<DateTime>,
@@ -116,6 +128,7 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
             branches,
             heads,
             testbeds,
+            specs,
             benchmarks,
             measures,
             start_time,
@@ -144,10 +157,21 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
         // Guarantee that the `heads` array is the same length as the `branches` array.
         let heads = size_heads_to_branches(&branches, &heads);
 
+        // Guarantee that the `specs` array is the same length as the `testbeds` array.
+        #[cfg(feature = "plus")]
+        let specs = {
+            let specs = from_urlencoded_nullable_list(specs.as_deref())?;
+            size_specs_to_testbeds(&testbeds, &specs)
+        };
+        #[cfg(not(feature = "plus"))]
+        drop(specs);
+
         Ok(Self {
             branches,
             heads,
             testbeds,
+            #[cfg(feature = "plus")]
+            specs,
             benchmarks,
             measures,
             start_time: start_time.map(Into::into),
@@ -165,13 +189,24 @@ fn size_heads_to_branches(
     branches: &[BranchUuid],
     heads: &[Option<HeadUuid>],
 ) -> Vec<Option<HeadUuid>> {
-    branches
-        .iter()
-        .enumerate()
-        .fold(Vec::with_capacity(branches.len()), |mut h, (i, _branch)| {
-            h.push(heads.get(i).copied().flatten());
-            h
-        })
+    (0..branches.len())
+        .map(|i| heads.get(i).copied().flatten())
+        .collect()
+}
+
+// Guarantee that the `specs` array is the same length as the `testbeds` array.
+// It is okay for there to be less specs than testbeds.
+// They will just be set to `None`.
+// But there should never be more specs than testbeds.
+// Those extra specs will just be ignored.
+#[cfg(feature = "plus")]
+fn size_specs_to_testbeds(
+    testbeds: &[TestbedUuid],
+    specs: &[Option<SpecUuid>],
+) -> Vec<Option<SpecUuid>> {
+    (0..testbeds.len())
+        .map(|i| specs.get(i).copied().flatten())
+        .collect()
 }
 
 impl Serialize for JsonPerfQuery {
@@ -210,13 +245,14 @@ impl JsonPerfQuery {
         serde_urlencoded::to_string(query).map_err(Into::into)
     }
 
-    fn urlencoded(&self) -> Result<[(&'static str, Option<String>); 7], UrlEncodedError> {
+    fn urlencoded(&self) -> Result<[(&'static str, Option<String>); 8], UrlEncodedError> {
         QUERY_KEYS
             .into_iter()
             .zip([
                 Some(self.branches()),
                 self.heads(),
                 Some(self.testbeds()),
+                self.specs(),
                 Some(self.benchmarks()),
                 Some(self.measures()),
                 self.start_time_str(),
@@ -236,6 +272,21 @@ impl JsonPerfQuery {
             None
         } else {
             Some(to_urlencoded_optional_list(&self.heads))
+        }
+    }
+
+    pub fn specs(&self) -> Option<String> {
+        #[cfg(feature = "plus")]
+        {
+            if self.specs.is_empty() {
+                None
+            } else {
+                Some(to_urlencoded_optional_list(&self.specs))
+            }
+        }
+        #[cfg(not(feature = "plus"))]
+        {
+            None
         }
     }
 
@@ -276,6 +327,7 @@ pub enum PerfQueryKey {
     Branches,
     Heads,
     Testbeds,
+    Specs,
     Benchmarks,
     Measures,
     StartTime,
@@ -285,12 +337,13 @@ pub enum PerfQueryKey {
 pub const BRANCHES: &str = "branches";
 pub const HEADS: &str = "heads";
 pub const TESTBEDS: &str = "testbeds";
+pub const SPECS: &str = "specs";
 pub const BENCHMARKS: &str = "benchmarks";
 pub const MEASURES: &str = "measures";
 pub const START_TIME: &str = "start_time";
 pub const END_TIME: &str = "end_time";
-const QUERY_KEYS: [&str; 7] = [
-    BRANCHES, HEADS, TESTBEDS, BENCHMARKS, MEASURES, START_TIME, END_TIME,
+const QUERY_KEYS: [&str; 8] = [
+    BRANCHES, HEADS, TESTBEDS, SPECS, BENCHMARKS, MEASURES, START_TIME, END_TIME,
 ];
 
 #[typeshare::typeshare]

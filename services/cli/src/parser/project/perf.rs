@@ -1,3 +1,5 @@
+#[cfg(feature = "plus")]
+use bencher_json::SpecUuid;
 use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, HeadUuid, MeasureUuid, ProjectResourceId, TestbedUuid,
 };
@@ -23,6 +25,12 @@ pub struct CliPerf {
     /// Testbed UUIDs
     #[clap(long, required = true, value_name = "TESTBED")]
     pub testbeds: Vec<TestbedUuid>,
+
+    /// Optional testbed spec UUIDs in the same order as `testbeds`.
+    /// Use an underscore (`_`) to specify the current testbed spec.
+    #[cfg(feature = "plus")]
+    #[clap(long, required = false, value_name = "SPEC")]
+    pub specs: Vec<ElidedOption<SpecUuid>>,
 
     /// Benchmark UUIDs
     #[clap(long, required = true, value_name = "BENCHMARK")]

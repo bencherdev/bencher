@@ -1,4 +1,6 @@
 use bencher_client::types::JsonNewTestbed;
+#[cfg(feature = "plus")]
+use bencher_json::SpecResourceId;
 use bencher_json::{ProjectResourceId, ResourceName, TestbedSlug};
 
 use crate::{
@@ -12,6 +14,8 @@ pub struct Create {
     pub project: ProjectResourceId,
     pub name: ResourceName,
     pub slug: Option<TestbedSlug>,
+    #[cfg(feature = "plus")]
+    pub spec: Option<SpecResourceId>,
     pub backend: AuthBackend,
 }
 
@@ -23,12 +27,16 @@ impl TryFrom<CliTestbedCreate> for Create {
             project,
             name,
             slug,
+            #[cfg(feature = "plus")]
+            spec,
             backend,
         } = create;
         Ok(Self {
             project,
             name,
             slug,
+            #[cfg(feature = "plus")]
+            spec,
             backend: backend.try_into()?,
         })
     }
@@ -36,10 +44,20 @@ impl TryFrom<CliTestbedCreate> for Create {
 
 impl From<Create> for JsonNewTestbed {
     fn from(create: Create) -> Self {
-        let Create { name, slug, .. } = create;
+        let Create {
+            name,
+            slug,
+            #[cfg(feature = "plus")]
+            spec,
+            ..
+        } = create;
         Self {
             name: name.into(),
             slug: slug.map(Into::into),
+            #[cfg(feature = "plus")]
+            spec: spec.map(Into::into),
+            #[cfg(not(feature = "plus"))]
+            spec: None,
         }
     }
 }

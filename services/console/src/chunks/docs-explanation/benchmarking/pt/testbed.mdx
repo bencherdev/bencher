@@ -4,3 +4,9 @@ Ao usar o subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bench
 `Linux`, `macOS` ou `Windows` é usado como Testbed padrão com base no sistema operacional host.
 Se o CLI `bencher` foi compilado para um sistema operacional diferente,
 então `localhost` é usado.
+
+Um Testbed pode opcionalmente ter uma Spec atribuída.
+Uma Spec descreve o hardware no qual o Testbed é executado.
+Quando um Relatório é criado, a Spec atual do Testbed naquele momento é registrada com o Relatório.
+Isso permite rastrear como os resultados de benchmark se relacionam com o hardware subjacente,
+mesmo que a Spec do Testbed mude ao longo do tempo.

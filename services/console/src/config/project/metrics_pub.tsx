@@ -54,6 +54,12 @@ const metricsPubConfig = {
 				display: Display.TESTBED,
 			},
 			{
+				kind: Card.NESTED_FIELD,
+				label: "Testbed Spec",
+				keys: ["testbed", "spec"],
+				display: Display.SPEC,
+			},
+			{
 				kind: Card.FIELD,
 				label: "Benchmark",
 				key: "benchmark",

@@ -15,6 +15,7 @@ use slog::Logger;
 
 #[cfg(feature = "plus")]
 use crate::model::organization::plan::PlanKind;
+use crate::model::spec::SpecId;
 use crate::{
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
@@ -58,6 +59,7 @@ pub struct QueryReport {
     pub head_id: HeadId,
     pub version_id: VersionId,
     pub testbed_id: TestbedId,
+    pub spec_id: Option<SpecId>,
     pub adapter: Adapter,
     pub start_time: DateTime,
     pub end_time: DateTime,
@@ -128,12 +130,14 @@ impl QueryReport {
         let adapter = json_settings.adapter.unwrap_or_default();
 
         // Create a new report and add it to the database
+        // TODO: Set spec_id from the job's spec at report creation time
         let insert_report = InsertReport::from_json(
             public_user.user_id(),
             project_id,
             head_id,
             version_id,
             testbed_id,
+            None,
             &json_report,
             adapter,
         );
@@ -158,13 +162,15 @@ impl QueryReport {
         let mut usage = 0;
 
         // Process and record the report results
-        let mut report_results =
-            ReportResults::new(project_id, branch_id, head_id, testbed_id, query_report.id);
-        let results_array = json_report
-            .results
-            .iter()
-            .map(AsRef::as_ref)
-            .collect::<Vec<&str>>();
+        let mut report_results = ReportResults::new(
+            project_id,
+            branch_id,
+            head_id,
+            testbed_id,
+            query_report.spec_id,
+            query_report.id,
+        );
+        let results_array: Vec<&str> = json_report.results.iter().map(AsRef::as_ref).collect();
         let processed_report = report_results
             .process(
                 log,
@@ -200,6 +206,7 @@ impl QueryReport {
             head_id,
             version_id,
             testbed_id,
+            spec_id,
             adapter,
             start_time,
             end_time,
@@ -213,7 +220,7 @@ impl QueryReport {
             None
         };
         let branch = QueryBranch::get_json_for_report(conn, &query_project, head_id, version_id)?;
-        let testbed = QueryTestbed::get(conn, testbed_id)?.into_json_for_project(&query_project);
+        let testbed = QueryTestbed::get_json_for_report(conn, &query_project, testbed_id, spec_id)?;
         let results = get_report_results(log, conn, &query_project, id)?;
         let alerts = get_report_alerts(conn, &query_project, id, head_id, version_id)?;
 
@@ -452,6 +459,7 @@ pub struct InsertReport {
     pub head_id: HeadId,
     pub version_id: VersionId,
     pub testbed_id: TestbedId,
+    pub spec_id: Option<SpecId>,
     pub adapter: Adapter,
     pub start_time: DateTime,
     pub end_time: DateTime,
@@ -462,12 +470,14 @@ impl InsertReport {
     #[cfg(feature = "plus")]
     crate::macros::rate_limit::fn_rate_limit!(report, Report);
 
+    #[expect(clippy::too_many_arguments, reason = "report has many dimensions")]
     pub fn from_json(
         user_id: Option<UserId>,
         project_id: ProjectId,
         head_id: HeadId,
         version_id: VersionId,
         testbed_id: TestbedId,
+        spec_id: Option<SpecId>,
         report: &JsonNewReport,
         adapter: Adapter,
     ) -> Self {
@@ -478,6 +488,7 @@ impl InsertReport {
             head_id,
             version_id,
             testbed_id,
+            spec_id,
             adapter,
             start_time: report.start_time,
             end_time: report.end_time,
