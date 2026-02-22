@@ -162,13 +162,21 @@ impl QueryReport {
         let mut usage = 0;
 
         // Process and record the report results
-        let mut report_results =
-            ReportResults::new(project_id, branch_id, head_id, testbed_id, query_report.id);
-        let results_array = json_report
-            .results
-            .iter()
-            .map(AsRef::as_ref)
-            .collect::<Vec<&str>>();
+        let mut report_results = ReportResults::new(
+            project_id,
+            branch_id,
+            head_id,
+            testbed_id,
+            #[cfg(feature = "plus")]
+            schema::job::table
+                .filter(schema::job::report_id.eq(query_report.id))
+                .select(schema::job::spec_id)
+                .first::<SpecId>(public_conn!(context, public_user))
+                .optional()
+                .unwrap_or_default(),
+            query_report.id,
+        );
+        let results_array: Vec<&str> = json_report.results.iter().map(AsRef::as_ref).collect();
         let processed_report = report_results
             .process(
                 log,
@@ -223,7 +231,7 @@ impl QueryReport {
             .select(schema::job::spec_id)
             .first::<SpecId>(conn)
             .optional()
-            .unwrap_or(None);
+            .unwrap_or_default();
         let testbed = QueryTestbed::get_json_for_report(
             conn,
             &query_project,

@@ -4,6 +4,8 @@ use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
 
+#[cfg(feature = "plus")]
+use crate::model::spec::SpecId;
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
@@ -29,6 +31,8 @@ use threshold::Threshold;
 pub struct Detector {
     pub head_id: HeadId,
     pub testbed_id: TestbedId,
+    #[cfg(feature = "plus")]
+    pub spec_id: Option<SpecId>,
     pub measure_id: MeasureId,
     pub threshold: Threshold,
 }
@@ -39,6 +43,7 @@ impl Detector {
         branch_id: BranchId,
         head_id: HeadId,
         testbed_id: TestbedId,
+        #[cfg(feature = "plus")] spec_id: Option<SpecId>,
         measure_id: MeasureId,
     ) -> Option<Self> {
         // Check to see if there is a threshold for the branch/testbed/measure grouping.
@@ -46,6 +51,8 @@ impl Detector {
         Threshold::new(conn, branch_id, testbed_id, measure_id).map(|threshold| Self {
             head_id,
             testbed_id,
+            #[cfg(feature = "plus")]
+            spec_id,
             measure_id,
             threshold,
         })
@@ -60,15 +67,7 @@ impl Detector {
         ignore_benchmark: bool,
     ) -> Result<(), HttpError> {
         // Query the historical population/sample data for the benchmark
-        let metrics_data = metrics_data(
-            log,
-            auth_conn!(context),
-            self.head_id,
-            self.testbed_id,
-            benchmark_id,
-            self.measure_id,
-            &self.threshold.model,
-        )?;
+        let metrics_data = metrics_data(log, auth_conn!(context), self, benchmark_id)?;
 
         // Check to see if the metric has a boundary check for the given threshold model.
         let boundary = MetricsBoundary::new(

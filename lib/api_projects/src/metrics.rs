@@ -215,7 +215,7 @@ fn metric_query_json(
         .select(schema::job::spec_id)
         .first::<SpecId>(conn)
         .optional()
-        .unwrap_or(None);
+        .unwrap_or_default();
 
     let branch = branch.into_json_for_head(conn, project, &head, Some(version))?;
     let testbed = testbed.into_json_for_spec(
