@@ -321,12 +321,7 @@ async fn get_one_inner(
         #[cfg(feature = "plus")]
         if let Some(spec_uuid) = query_params.spec {
             let query_spec = QuerySpec::from_uuid(conn, spec_uuid)?;
-            return QueryTestbed::get_json_for_report(
-                conn,
-                &query_project,
-                testbed.id,
-                Some(query_spec.id),
-            );
+            return testbed.into_json_for_spec(conn, &query_project, Some(query_spec.id));
         }
         #[cfg(not(feature = "plus"))]
         let _ = query_params;
@@ -380,12 +375,7 @@ async fn patch_inner(
     let (query_testbed, update_testbed) = auth_conn!(context, |conn| {
         let query_testbed =
             QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
-        #[cfg(not(feature = "plus"))]
-        let update_testbed = UpdateTestbed::from(json_testbed.clone());
-        #[cfg(feature = "plus")]
-        let mut update_testbed = UpdateTestbed::from(json_testbed.clone());
-        #[cfg(feature = "plus")]
-        update_testbed.resolve_spec(conn, &json_testbed)?;
+        let update_testbed = UpdateTestbed::from_json(conn, json_testbed.clone())?;
         Ok::<_, HttpError>((query_testbed, update_testbed))
     })?;
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))

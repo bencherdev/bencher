@@ -264,26 +264,38 @@ pub struct UpdateTestbed {
     pub archived: Option<Option<DateTime>>,
 }
 
-impl From<JsonUpdateTestbed> for UpdateTestbed {
-    fn from(update: JsonUpdateTestbed) -> Self {
-        match update {
+impl UpdateTestbed {
+    pub fn from_json(conn: &mut DbConnection, json: JsonUpdateTestbed) -> Result<Self, HttpError> {
+        match json {
             JsonUpdateTestbed::Patch(patch) => {
                 let JsonTestbedPatch {
                     name,
                     slug,
                     #[cfg(feature = "plus")]
-                        spec: _,
+                    spec,
                     archived,
                 } = patch;
+                #[cfg(feature = "plus")]
+                let spec_id = spec
+                    .map(|resource_id| {
+                        QuerySpec::from_resource_id(conn, &resource_id)
+                            .map(|query_spec| Some(query_spec.id))
+                    })
+                    .transpose()?;
+                #[cfg(not(feature = "plus"))]
+                let spec_id = {
+                    let _ = conn;
+                    None
+                };
                 let modified = DateTime::now();
                 let archived = archived.map(|archived| archived.then_some(modified));
-                Self {
+                Ok(Self {
                     name,
                     slug,
-                    spec_id: None,
+                    spec_id,
                     modified,
                     archived,
-                }
+                })
             },
             #[cfg(feature = "plus")]
             JsonUpdateTestbed::Null(patch_null) => {
@@ -295,13 +307,13 @@ impl From<JsonUpdateTestbed> for UpdateTestbed {
                 } = patch_null;
                 let modified = DateTime::now();
                 let archived = archived.map(|archived| archived.then_some(modified));
-                Self {
+                Ok(Self {
                     name,
                     slug,
                     spec_id: Some(None),
                     modified,
                     archived,
-                }
+                })
             },
             #[cfg(not(feature = "plus"))]
             #[expect(
@@ -311,35 +323,16 @@ impl From<JsonUpdateTestbed> for UpdateTestbed {
             JsonUpdateTestbed::Null(_) => unreachable!(),
         }
     }
-}
 
-impl UpdateTestbed {
     fn unarchive() -> Self {
-        JsonUpdateTestbed::Patch(JsonTestbedPatch {
+        let modified = DateTime::now();
+        Self {
             name: None,
             slug: None,
-            #[cfg(feature = "plus")]
-            spec: None,
-            archived: Some(false),
-        })
-        .into()
-    }
-
-    #[cfg(feature = "plus")]
-    pub fn resolve_spec(
-        &mut self,
-        conn: &mut DbConnection,
-        json_testbed: &JsonUpdateTestbed,
-    ) -> Result<(), HttpError> {
-        if let JsonUpdateTestbed::Patch(JsonTestbedPatch {
-            spec: Some(resource_id),
-            ..
-        }) = json_testbed
-        {
-            let query_spec = QuerySpec::from_resource_id(conn, resource_id)?;
-            self.spec_id = Some(Some(query_spec.id));
+            spec_id: None,
+            modified,
+            archived: Some(None),
         }
-        Ok(())
     }
 }
 

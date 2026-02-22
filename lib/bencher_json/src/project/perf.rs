@@ -164,7 +164,7 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
             size_specs_to_testbeds(&testbeds, &specs)
         };
         #[cfg(not(feature = "plus"))]
-        drop(specs);
+        let _specs = specs;
 
         Ok(Self {
             branches,
