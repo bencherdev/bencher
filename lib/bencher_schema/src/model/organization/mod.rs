@@ -380,19 +380,26 @@ impl QueryOrganization {
     /// Sets the `deleted` timestamp and replaces name/slug with valid
     /// `Deleted {uuid}` / `deleted-{uuid}` sentinels to free UNIQUE constraints.
     ///
-    /// Child projects are soft-deleted first so the org rename can be retried
-    /// if any project rename fails.
-    pub fn soft_delete(&self, conn: &mut DbConnection, now: DateTime) -> Result<(), HttpError> {
+    /// Child projects are soft-deleted first (including search index cleanup)
+    /// so the org rename can be retried if any project rename fails.
+    pub async fn soft_delete(
+        &self,
+        context: &ApiContext,
+        log: &slog::Logger,
+        now: DateTime,
+    ) -> Result<(), HttpError> {
         use super::project::QueryProject;
+
+        slog::info!(log, "Soft-deleting organization: {}", self.uuid);
 
         // Soft-delete all non-deleted projects under this org first
         let projects: Vec<QueryProject> = schema::project::table
             .filter(schema::project::organization_id.eq(self.id))
             .filter(schema::project::deleted.is_null())
-            .load(conn)
-            .map_err(resource_conflict_err!(Organization, self))?;
+            .load(auth_conn!(context))
+            .map_err(resource_not_found_err!(Organization, self))?;
         for project in &projects {
-            project.soft_delete(conn, now)?;
+            project.soft_delete(context, log, now).await?;
         }
 
         // Soft-delete the org (after all projects are successfully soft-deleted)
@@ -414,10 +421,11 @@ impl QueryOrganization {
         diesel::update(schema::organization::table.filter(schema::organization::id.eq(self.id)))
             .set((
                 schema::organization::deleted.eq(now),
+                schema::organization::modified.eq(now),
                 schema::organization::name.eq(deleted_name),
                 schema::organization::slug.eq(deleted_slug),
             ))
-            .execute(conn)
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Organization, self))?;
 
         Ok(())

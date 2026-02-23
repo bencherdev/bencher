@@ -239,6 +239,7 @@ impl QueryProject {
 
         let Ok(highest_name) = schema::project::table
             .filter(schema::project::organization_id.eq(query_organization.id))
+            .filter(schema::project::deleted.is_null())
             .filter(
                 schema::project::name
                     .eq(&project_name)
@@ -462,7 +463,14 @@ impl QueryProject {
     /// Soft-delete this project: set the `deleted` timestamp and replace
     /// the name/slug with valid `Deleted {uuid}` / `deleted-{uuid}` sentinels
     /// to free the UNIQUE constraints for reuse.
-    pub fn soft_delete(&self, conn: &mut DbConnection, now: DateTime) -> Result<(), HttpError> {
+    /// Also cleans up the search index (Plus feature).
+    pub async fn soft_delete(
+        &self,
+        context: &ApiContext,
+        log: &Logger,
+        now: DateTime,
+    ) -> Result<(), HttpError> {
+        slog::info!(log, "Soft-deleting project: {}", self.uuid);
         let deleted_name: ResourceName = format!("Deleted {}", self.uuid).parse().map_err(|e| {
             issue_error(
                 "Failed to create deleted project name",
@@ -480,11 +488,16 @@ impl QueryProject {
         diesel::update(schema::project::table.filter(schema::project::id.eq(self.id)))
             .set((
                 schema::project::deleted.eq(now),
+                schema::project::modified.eq(now),
                 schema::project::name.eq(deleted_name),
                 schema::project::slug.eq(deleted_slug),
             ))
-            .execute(conn)
+            .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Project, self))?;
+
+        #[cfg(feature = "plus")]
+        context.delete_index(log, self).await;
+
         Ok(())
     }
 
@@ -557,6 +570,7 @@ impl InsertProject {
         let (start_time, end_time) = context.rate_limiting.window();
         let window_usage: u32 = schema::project::table
                 .filter(schema::project::organization_id.eq(query_organization.id))
+                .filter(schema::project::deleted.is_null())
                 .filter(schema::project::created.ge(start_time))
                 .filter(schema::project::created.le(end_time))
                 .count()

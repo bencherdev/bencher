@@ -6,7 +6,7 @@
 //! Integration tests for project CRUD endpoints.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonNewProject, JsonProject, JsonProjects};
+use bencher_json::{JsonNewProject, JsonProject, JsonProjects, ProjectUuid};
 use http::StatusCode;
 
 // GET /v0/projects - list all public projects
@@ -419,6 +419,57 @@ async fn projects_hard_delete_soft_deleted_project() {
         .expect("Request failed");
     // Hard delete can find soft-deleted entities
     assert_eq!(resp2.status(), StatusCode::NO_CONTENT);
+}
+
+// PATCH by UUID returns 404 after soft-delete
+#[tokio::test]
+async fn projects_patch_after_soft_delete() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "projpatchsd@example.com").await;
+    let org = server.create_org(&user, "Patch After SD Org").await;
+    let project = server
+        .create_project(&user, &org, "Patch After SD Project")
+        .await;
+
+    // Soft-delete
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // PATCH by UUID should return 404
+    let body = serde_json::json!({ "name": "Should Fail" });
+    let patch_resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{}", project.uuid)))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(patch_resp.status(), StatusCode::NOT_FOUND);
+}
+
+// Admin hard-delete of nonexistent UUID returns 404
+#[tokio::test]
+async fn projects_hard_delete_nonexistent() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin User", "projhardne@example.com").await;
+
+    let fake_uuid = ProjectUuid::new();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/projects/{fake_uuid}?hard=true")))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
 // Soft-delete project, verify child resource endpoints return 404

@@ -347,6 +347,7 @@ pub async fn organization_delete(
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     delete_inner(
+        &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         query_params.into_inner(),
@@ -363,6 +364,7 @@ pub struct OrganizationDeleteQuery {
 }
 
 async fn delete_inner(
+    log: &slog::Logger,
     context: &ApiContext,
     path_params: OrganizationParams,
     query_params: OrganizationDeleteQuery,
@@ -371,11 +373,10 @@ async fn delete_inner(
     if query_params.hard.unwrap_or_default() {
         // Hard delete requires server admin
         if !auth_user.is_admin(&context.rbac) {
-            return Err(forbidden_error(format!(
-                "Hard delete requires server admin: {auth_user:?}"
-            )));
+            return Err(forbidden_error("Hard delete requires server admin"));
         }
-        // Unfiltered lookup — includes soft-deleted entities
+        // Server admin check above is stricter than per-resource RBAC.
+        // Unfiltered lookup is needed to find soft-deleted entities.
         let query_organization = schema::organization::table
             .filter(QueryOrganization::eq_resource_id(&path_params.organization))
             .first::<QueryOrganization>(auth_conn!(context))
@@ -400,7 +401,7 @@ async fn delete_inner(
 
         // Soft delete the organization and all its child projects
         let now = context.clock.now();
-        query_organization.soft_delete(write_conn!(context), now)?;
+        query_organization.soft_delete(context, log, now).await?;
     }
 
     #[cfg(feature = "otel")]

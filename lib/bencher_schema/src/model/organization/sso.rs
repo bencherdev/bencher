@@ -49,6 +49,7 @@ impl QuerySso {
         let organization_uuids = schema::sso::table
             .filter(schema::sso::domain.eq(&email_domain))
             .inner_join(schema::organization::table)
+            .filter(schema::organization::deleted.is_null())
             .left_join(
                 schema::organization_role::table.on(schema::organization::id
                     .eq(schema::organization_role::organization_id)

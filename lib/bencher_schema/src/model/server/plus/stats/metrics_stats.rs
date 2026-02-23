@@ -68,6 +68,7 @@ impl MetricsStats {
     }
 }
 
+// Intentionally includes soft-deleted projects for server admin stats
 fn get_metrics_by_report(
     conn: &mut DbConnection,
     since: Option<i64>,
@@ -121,6 +122,7 @@ fn get_metrics_by_report(
     }
 }
 
+// Intentionally includes soft-deleted projects for server admin stats
 fn get_top_projects(
     conn: &mut DbConnection,
     since: Option<i64>,

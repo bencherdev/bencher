@@ -22,6 +22,7 @@ pub fn get_project_id(server: &TestServer, project_slug: &str) -> i32 {
     let mut conn = server.db_conn();
     schema::project::table
         .filter(schema::project::slug.eq(project_slug))
+        .filter(schema::project::deleted.is_null())
         .select(schema::project::id)
         .first(&mut conn)
         .expect("Failed to get project ID")

@@ -35,12 +35,11 @@ impl SubCmd for Delete {
         let _json = self
             .backend
             .send(|client| async move {
-                client
-                    .project_delete()
-                    .project(self.project.clone())
-                    .hard(self.hard)
-                    .send()
-                    .await
+                let mut builder = client.project_delete().project(self.project.clone());
+                if self.hard {
+                    builder = builder.hard(self.hard);
+                }
+                builder.send().await
             })
             .await?;
         Ok(())

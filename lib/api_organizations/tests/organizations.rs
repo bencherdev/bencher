@@ -6,7 +6,7 @@
 //! Integration tests for organization CRUD endpoints.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonNewOrganization, JsonOrganization, JsonOrganizations};
+use bencher_json::{JsonNewOrganization, JsonOrganization, JsonOrganizations, OrganizationUuid};
 use http::StatusCode;
 
 // GET /v0/organizations - requires auth
@@ -431,6 +431,54 @@ async fn organizations_hard_delete_soft_deleted_org() {
         .expect("Request failed");
     // Hard delete can find soft-deleted entities
     assert_eq!(resp2.status(), StatusCode::NO_CONTENT);
+}
+
+// PATCH by UUID returns 404 after soft-delete
+#[tokio::test]
+async fn organizations_patch_after_soft_delete() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "orgpatchsd@example.com").await;
+    let org = server.create_org(&user, "Patch After SD Org").await;
+
+    // Soft-delete
+    let org_slug: &str = org.slug.as_ref();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // PATCH by UUID should return 404
+    let body = serde_json::json!({ "name": "Should Fail" });
+    let patch_resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/organizations/{}", org.uuid)))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(patch_resp.status(), StatusCode::NOT_FOUND);
+}
+
+// Admin hard-delete of nonexistent UUID returns 404
+#[tokio::test]
+async fn organizations_hard_delete_nonexistent() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin User", "orghardne@example.com").await;
+
+    let fake_uuid = OrganizationUuid::new();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/organizations/{fake_uuid}?hard=true")))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
 // Soft-delete org, verify child resource list endpoints return 404

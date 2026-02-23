@@ -30,8 +30,6 @@ use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use futures::{StreamExt as _, stream::FuturesOrdered};
 use schemars::JsonSchema;
 use serde::Deserialize;
-#[cfg(feature = "plus")]
-use slog::Logger;
 
 pub type ProjectsPagination = JsonPagination<ProjectsSort>;
 
@@ -282,7 +280,7 @@ pub async fn project_patch(
 }
 
 async fn patch_inner(
-    #[cfg(feature = "plus")] log: &Logger,
+    #[cfg(feature = "plus")] log: &slog::Logger,
     context: &ApiContext,
     path_params: ProjectParams,
     json_project: JsonUpdateProject,
@@ -355,7 +353,6 @@ pub async fn project_delete(
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     delete_inner(
-        #[cfg(feature = "plus")]
         &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
@@ -373,7 +370,7 @@ pub struct ProjectDeleteQuery {
 }
 
 async fn delete_inner(
-    #[cfg(feature = "plus")] log: &Logger,
+    log: &slog::Logger,
     context: &ApiContext,
     path_params: ProjectParams,
     query_params: ProjectDeleteQuery,
@@ -382,11 +379,10 @@ async fn delete_inner(
     if query_params.hard.unwrap_or_default() {
         // Hard delete requires server admin
         if !auth_user.is_admin(&context.rbac) {
-            return Err(forbidden_error(format!(
-                "Hard delete requires server admin: {auth_user:?}"
-            )));
+            return Err(forbidden_error("Hard delete requires server admin"));
         }
-        // Unfiltered lookup — includes soft-deleted entities
+        // Server admin check above is stricter than per-resource RBAC.
+        // Unfiltered lookup is needed to find soft-deleted entities.
         let query_project = schema::project::table
             .filter(QueryProject::eq_resource_id(&path_params.project))
             .first::<QueryProject>(auth_conn!(context))
@@ -409,10 +405,7 @@ async fn delete_inner(
 
         // Soft delete: replace slug/name with valid deleted sentinels to free UNIQUE constraints
         let now = context.clock.now();
-        query_project.soft_delete(write_conn!(context), now)?;
-
-        #[cfg(feature = "plus")]
-        context.delete_index(log, &query_project).await;
+        query_project.soft_delete(context, log, now).await?;
     }
 
     #[cfg(feature = "otel")]
