@@ -1,0 +1,2 @@
+ALTER TABLE project ADD COLUMN deleted BIGINT;
+ALTER TABLE organization ADD COLUMN deleted BIGINT;

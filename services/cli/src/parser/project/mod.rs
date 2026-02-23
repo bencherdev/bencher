@@ -139,6 +139,10 @@ pub struct CliProjectDelete {
     /// Project slug or UUID
     pub project: ProjectResourceId,
 
+    /// Hard delete the project (requires server admin)
+    #[clap(long)]
+    pub hard: bool,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

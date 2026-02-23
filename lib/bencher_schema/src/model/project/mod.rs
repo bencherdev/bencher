@@ -24,7 +24,7 @@ use crate::{
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
-        resource_id::{fn_eq_resource_id, fn_from_resource_id},
+        resource_id::fn_eq_resource_id,
         slug::ok_slug,
     },
     model::{
@@ -70,11 +70,22 @@ pub struct QueryProject {
     pub visibility: Visibility,
     pub created: DateTime,
     pub modified: DateTime,
+    pub deleted: Option<DateTime>,
 }
 
 impl QueryProject {
     fn_eq_resource_id!(project, ProjectResourceId);
-    fn_from_resource_id!(project, Project, ProjectResourceId);
+
+    pub fn from_resource_id(
+        conn: &mut DbConnection,
+        resource_id: &ProjectResourceId,
+    ) -> Result<Self, HttpError> {
+        schema::project::table
+            .filter(Self::eq_resource_id(resource_id))
+            .filter(schema::project::deleted.is_null())
+            .first::<Self>(conn)
+            .map_err(resource_not_found_err!(Project, resource_id))
+    }
 
     fn_get!(project, ProjectId);
     fn_get_uuid!(project, ProjectId, ProjectUuid);
@@ -89,6 +100,7 @@ impl QueryProject {
     fn from_slug(conn: &mut DbConnection, slug: &ProjectSlug) -> Result<Self, HttpError> {
         schema::project::table
             .filter(schema::project::slug.eq(slug))
+            .filter(schema::project::deleted.is_null())
             .first(conn)
             .map_err(resource_not_found_err!(Project, slug.clone()))
     }

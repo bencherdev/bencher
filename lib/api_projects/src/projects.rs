@@ -2,8 +2,8 @@ use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, ResponseDeleted, ResponseOk, TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonPagination, JsonProject, JsonProjects, ProjectResourceId, ResourceName,
-    Search,
+    DateTime, JsonDirection, JsonPagination, JsonProject, JsonProjects, ProjectResourceId,
+    ResourceName, Search,
     project::{JsonUpdateProject, Visibility},
 };
 use bencher_rbac::project::Permission;
@@ -12,7 +12,7 @@ use bencher_schema::model::organization::plan::PlanKind;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{resource_conflict_err, resource_not_found_err},
+    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::{
         project::{QueryProject, UpdateProject},
         user::{
@@ -158,6 +158,8 @@ fn get_ls_query<'q>(
     public_user: &PublicUser,
 ) -> schema::project::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = schema::project::table.into_boxed();
+
+    query = query.filter(schema::project::deleted.is_null());
 
     // All users should just see the public projects if the query is for public projects
     if let PublicUser::Auth(auth_user) = public_user {
@@ -338,6 +340,8 @@ async fn patch_inner(
 ///
 /// Delete a project.
 /// The user must have `delete` permissions for the project.
+/// By default, projects are soft-deleted.
+/// Use `?hard=true` to permanently delete the project (requires server admin).
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}",
@@ -347,6 +351,7 @@ pub async fn project_delete(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
     path_params: Path<ProjectParams>,
+    query_params: Query<ProjectDeleteQuery>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     delete_inner(
@@ -354,16 +359,24 @@ pub async fn project_delete(
         &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
+        query_params.into_inner(),
         &auth_user,
     )
     .await?;
     Ok(Delete::auth_response_deleted())
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ProjectDeleteQuery {
+    /// Hard delete the project (requires server admin).
+    pub hard: Option<bool>,
+}
+
 async fn delete_inner(
     #[cfg(feature = "plus")] log: &Logger,
     context: &ApiContext,
     path_params: ProjectParams,
+    query_params: ProjectDeleteQuery,
     auth_user: &AuthUser,
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
@@ -375,9 +388,30 @@ async fn delete_inner(
         Permission::Delete,
     )?;
 
-    diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Project, query_project))?;
+    if query_params.hard.unwrap_or_default() {
+        // Hard delete requires server admin
+        if !auth_user.is_admin(&context.rbac) {
+            return Err(forbidden_error(format!(
+                "Hard delete requires server admin: {auth_user:?}"
+            )));
+        }
+        diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
+            .execute(write_conn!(context))
+            .map_err(resource_conflict_err!(Project, query_project))?;
+    } else {
+        // Soft delete: timestamp + mangle slug/name to free UNIQUE constraints
+        let now = DateTime::now();
+        let deleted_name = format!("{}--deleted-{}", query_project.name, query_project.uuid);
+        let deleted_slug = format!("{}--deleted-{}", query_project.slug, query_project.uuid);
+        diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))
+            .set((
+                schema::project::deleted.eq(now),
+                schema::project::name.eq(deleted_name),
+                schema::project::slug.eq(deleted_slug),
+            ))
+            .execute(write_conn!(context))
+            .map_err(resource_conflict_err!(Project, query_project))?;
+    }
 
     #[cfg(feature = "plus")]
     context.delete_index(log, &query_project).await;

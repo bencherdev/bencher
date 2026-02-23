@@ -6,7 +6,7 @@
 //! Integration tests for project CRUD endpoints.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonProject, JsonProjects};
+use bencher_json::{JsonNewProject, JsonProject, JsonProjects};
 use http::StatusCode;
 
 // GET /v0/projects - list all public projects
@@ -182,5 +182,142 @@ async fn projects_delete() {
         .await
         .expect("Request failed");
 
+    assert_eq!(get_resp.status(), StatusCode::NOT_FOUND);
+}
+
+// Soft-delete removes project from list
+#[tokio::test]
+async fn projects_soft_delete_not_in_list() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "projsoftdel@example.com").await;
+    let org = server.create_org(&user, "Soft Delete Org").await;
+    let project = server
+        .create_project(&user, &org, "Soft Delete Project")
+        .await;
+
+    // Soft-delete (default)
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // Verify absent from list
+    let list_resp = server
+        .client
+        .get(server.api_url("/v0/projects"))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(list_resp.status(), StatusCode::OK);
+    let projects: JsonProjects = list_resp.json().await.expect("Failed to parse response");
+    assert!(
+        !projects.0.iter().any(|p| p.uuid == project.uuid),
+        "Soft-deleted project should not appear in list"
+    );
+}
+
+// Soft-delete frees slug for reuse
+#[tokio::test]
+async fn projects_soft_delete_slug_reuse() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "projslugresue@example.com")
+        .await;
+    let org = server.create_org(&user, "Slug Reuse Org").await;
+    let project = server
+        .create_project(&user, &org, "Slug Reuse Project")
+        .await;
+
+    // Soft-delete
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // Create new project with the same slug
+    let body = JsonNewProject {
+        name: "Slug Reuse Project".parse().unwrap(),
+        slug: Some(project.slug.clone()),
+        url: None,
+        visibility: None,
+    };
+    let org_slug: &str = org.slug.as_ref();
+    let create_resp = server
+        .client
+        .post(server.api_url(&format!("/v0/organizations/{org_slug}/projects")))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(create_resp.status(), StatusCode::CREATED);
+}
+
+// Hard delete requires server admin
+#[tokio::test]
+async fn projects_hard_delete_requires_admin() {
+    let server = TestServer::new().await;
+    // First signup is admin
+    let _admin = server.signup("Admin", "projhardadm@example.com").await;
+    // Second signup is NOT admin
+    let user = server
+        .signup("Regular User", "projharduser@example.com")
+        .await;
+    let org = server.create_org(&user, "Hard Delete Org").await;
+    let project = server
+        .create_project(&user, &org, "Hard Delete Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/projects/{project_slug}?hard=true")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+// Admin can hard-delete
+#[tokio::test]
+async fn projects_hard_delete_as_admin() {
+    let server = TestServer::new().await;
+    // First signup is admin
+    let admin = server.signup("Admin User", "projhardok@example.com").await;
+    let org = server.create_org(&admin, "Admin Hard Del Org").await;
+    let project = server
+        .create_project(&admin, &org, "Admin Hard Del Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/projects/{project_slug}?hard=true")))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // Verify truly gone
+    let get_resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
     assert_eq!(get_resp.status(), StatusCode::NOT_FOUND);
 }

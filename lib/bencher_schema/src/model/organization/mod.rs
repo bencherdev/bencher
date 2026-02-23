@@ -29,7 +29,7 @@ use crate::{
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
-        resource_id::{fn_eq_resource_id, fn_from_resource_id},
+        resource_id::fn_eq_resource_id,
         slug::ok_slug,
     },
     model::user::auth::AuthUser,
@@ -57,11 +57,22 @@ pub struct QueryOrganization {
     pub license: Option<Jwt>,
     pub created: DateTime,
     pub modified: DateTime,
+    pub deleted: Option<DateTime>,
 }
 
 impl QueryOrganization {
     fn_eq_resource_id!(organization, OrganizationResourceId);
-    fn_from_resource_id!(organization, Organization, OrganizationResourceId);
+
+    pub fn from_resource_id(
+        conn: &mut DbConnection,
+        resource_id: &OrganizationResourceId,
+    ) -> Result<Self, HttpError> {
+        schema::organization::table
+            .filter(Self::eq_resource_id(resource_id))
+            .filter(schema::organization::deleted.is_null())
+            .first::<Self>(conn)
+            .map_err(resource_not_found_err!(Organization, resource_id))
+    }
 
     fn_get!(organization, OrganizationId);
     fn_get_id!(organization, OrganizationId, OrganizationUuid);
