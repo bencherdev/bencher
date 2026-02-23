@@ -1,3 +1,6 @@
+DROP INDEX IF EXISTS index_project_not_deleted;
+DROP INDEX IF EXISTS index_organization_not_deleted;
+
 PRAGMA foreign_keys = off;
 
 -- project: remove deleted column

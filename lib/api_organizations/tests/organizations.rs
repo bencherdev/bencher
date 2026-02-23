@@ -259,7 +259,7 @@ async fn organizations_soft_delete_cascades_to_projects() {
 #[tokio::test]
 async fn organizations_soft_delete_slug_reuse() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "orgslugresue@example.com").await;
+    let user = server.signup("Test User", "orgslugreuse@example.com").await;
     let org = server.create_org(&user, "Slug Reuse Org").await;
 
     // Soft-delete

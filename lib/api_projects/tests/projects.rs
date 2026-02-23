@@ -227,7 +227,7 @@ async fn projects_soft_delete_not_in_list() {
 async fn projects_soft_delete_slug_reuse() {
     let server = TestServer::new().await;
     let user = server
-        .signup("Test User", "projslugresue@example.com")
+        .signup("Test User", "projslugreuse@example.com")
         .await;
     let org = server.create_org(&user, "Slug Reuse Org").await;
     let project = server
