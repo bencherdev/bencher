@@ -429,8 +429,8 @@ async fn organizations_hard_delete_soft_deleted_org() {
         .send()
         .await
         .expect("Request failed");
-    // Org is soft-deleted so it's not found via normal lookup
-    assert_eq!(resp2.status(), StatusCode::NOT_FOUND);
+    // Hard delete can find soft-deleted entities
+    assert_eq!(resp2.status(), StatusCode::NO_CONTENT);
 }
 
 // Soft-delete org, verify child resource list endpoints return 404

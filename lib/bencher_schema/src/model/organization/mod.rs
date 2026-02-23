@@ -28,11 +28,8 @@ use crate::{
         BencherResource, forbidden_error, issue_error, resource_not_found_error, unauthorized_error,
     },
     macros::{
-        fn_get::{
-            fn_from_uuid_not_deleted, fn_get_id_not_deleted, fn_get_not_deleted,
-            fn_get_uuid_not_deleted,
-        },
-        resource_id::{fn_eq_resource_id, fn_from_resource_id_not_deleted},
+        fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
+        resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
     model::user::auth::AuthUser,
@@ -65,12 +62,17 @@ pub struct QueryOrganization {
 
 impl QueryOrganization {
     fn_eq_resource_id!(organization, OrganizationResourceId);
-    fn_from_resource_id_not_deleted!(organization, Organization, OrganizationResourceId);
+    fn_from_resource_id!(
+        organization,
+        Organization,
+        OrganizationResourceId,
+        not_deleted
+    );
 
-    fn_get_not_deleted!(organization, OrganizationId);
-    fn_get_id_not_deleted!(organization, OrganizationId, OrganizationUuid);
-    fn_get_uuid_not_deleted!(organization, OrganizationId, OrganizationUuid);
-    fn_from_uuid_not_deleted!(organization, OrganizationUuid, Organization);
+    fn_get!(organization, OrganizationId, not_deleted);
+    fn_get_id!(organization, OrganizationId, OrganizationUuid, not_deleted);
+    fn_get_uuid!(organization, OrganizationId, OrganizationUuid, not_deleted);
+    fn_from_uuid!(organization, OrganizationUuid, Organization, not_deleted);
 
     pub async fn get_or_create_from_user(
         context: &ApiContext,
@@ -372,6 +374,53 @@ impl QueryOrganization {
         } else {
             Some(query_sso.into_iter().map(QuerySso::into_json).collect())
         })
+    }
+
+    /// Soft-delete this organization and all its non-deleted child projects.
+    /// Sets the `deleted` timestamp and replaces name/slug with valid
+    /// `Deleted {uuid}` / `deleted-{uuid}` sentinels to free UNIQUE constraints.
+    ///
+    /// Child projects are soft-deleted first so the org rename can be retried
+    /// if any project rename fails.
+    pub fn soft_delete(&self, conn: &mut DbConnection, now: DateTime) -> Result<(), HttpError> {
+        use super::project::QueryProject;
+
+        // Soft-delete all non-deleted projects under this org first
+        let projects: Vec<QueryProject> = schema::project::table
+            .filter(schema::project::organization_id.eq(self.id))
+            .filter(schema::project::deleted.is_null())
+            .load(conn)
+            .map_err(resource_conflict_err!(Organization, self))?;
+        for project in &projects {
+            project.soft_delete(conn, now)?;
+        }
+
+        // Soft-delete the org (after all projects are successfully soft-deleted)
+        let deleted_name: ResourceName = format!("Deleted {}", self.uuid).parse().map_err(|e| {
+            issue_error(
+                "Failed to create deleted organization name",
+                &format!("Organization: {}", self.uuid),
+                e,
+            )
+        })?;
+        let deleted_slug: OrganizationSlug =
+            format!("deleted-{}", self.uuid).parse().map_err(|e| {
+                issue_error(
+                    "Failed to create deleted organization slug",
+                    &format!("Organization: {}", self.uuid),
+                    e,
+                )
+            })?;
+        diesel::update(schema::organization::table.filter(schema::organization::id.eq(self.id)))
+            .set((
+                schema::organization::deleted.eq(now),
+                schema::organization::name.eq(deleted_name),
+                schema::organization::slug.eq(deleted_slug),
+            ))
+            .execute(conn)
+            .map_err(resource_conflict_err!(Organization, self))?;
+
+        Ok(())
     }
 
     pub fn into_json_full(self, conn: &mut DbConnection) -> Result<JsonOrganization, HttpError> {

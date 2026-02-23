@@ -379,15 +379,6 @@ async fn delete_inner(
     query_params: ProjectDeleteQuery,
     auth_user: &AuthUser,
 ) -> Result<(), HttpError> {
-    // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
-        auth_conn!(context),
-        &context.rbac,
-        &path_params.project,
-        auth_user,
-        Permission::Delete,
-    )?;
-
     if query_params.hard.unwrap_or_default() {
         // Hard delete requires server admin
         if !auth_user.is_admin(&context.rbac) {
@@ -395,26 +386,34 @@ async fn delete_inner(
                 "Hard delete requires server admin: {auth_user:?}"
             )));
         }
+        // Unfiltered lookup — includes soft-deleted entities
+        let query_project = schema::project::table
+            .filter(QueryProject::eq_resource_id(&path_params.project))
+            .first::<QueryProject>(auth_conn!(context))
+            .map_err(resource_not_found_err!(Project, &path_params.project))?;
         diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
             .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Project, query_project))?;
-    } else {
-        // Soft delete: timestamp + mangle slug/name to free UNIQUE constraints
-        let now = context.clock.now();
-        let deleted_name = format!("{}--deleted-{}", query_project.name, query_project.uuid);
-        let deleted_slug = format!("{}--deleted-{}", query_project.slug, query_project.uuid);
-        diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))
-            .set((
-                schema::project::deleted.eq(now),
-                schema::project::name.eq(deleted_name),
-                schema::project::slug.eq(deleted_slug),
-            ))
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Project, query_project))?;
-    }
 
-    #[cfg(feature = "plus")]
-    context.delete_index(log, &query_project).await;
+        #[cfg(feature = "plus")]
+        context.delete_index(log, &query_project).await;
+    } else {
+        // Verify that the user is allowed (filtered — excludes soft-deleted)
+        let query_project = QueryProject::is_allowed(
+            auth_conn!(context),
+            &context.rbac,
+            &path_params.project,
+            auth_user,
+            Permission::Delete,
+        )?;
+
+        // Soft delete: replace slug/name with valid deleted sentinels to free UNIQUE constraints
+        let now = context.clock.now();
+        query_project.soft_delete(write_conn!(context), now)?;
+
+        #[cfg(feature = "plus")]
+        context.delete_index(log, &query_project).await;
+    }
 
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectDelete);

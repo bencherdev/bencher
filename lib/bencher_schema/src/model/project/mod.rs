@@ -23,8 +23,8 @@ use crate::{
         resource_not_found_err, resource_not_found_error, unauthorized_error,
     },
     macros::{
-        fn_get::{fn_from_uuid_not_deleted, fn_get_not_deleted, fn_get_uuid_not_deleted},
-        resource_id::{fn_eq_resource_id, fn_from_resource_id_not_deleted},
+        fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
+        resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
     model::{
@@ -75,16 +75,17 @@ pub struct QueryProject {
 
 impl QueryProject {
     fn_eq_resource_id!(project, ProjectResourceId);
-    fn_from_resource_id_not_deleted!(project, Project, ProjectResourceId);
+    fn_from_resource_id!(project, Project, ProjectResourceId, not_deleted);
 
-    fn_get_not_deleted!(project, ProjectId);
-    fn_get_uuid_not_deleted!(project, ProjectId, ProjectUuid);
-    fn_from_uuid_not_deleted!(
+    fn_get!(project, ProjectId, not_deleted);
+    fn_get_uuid!(project, ProjectId, ProjectUuid, not_deleted);
+    fn_from_uuid!(
         organization_id,
         OrganizationId,
         project,
         ProjectUuid,
-        Project
+        Project,
+        not_deleted
     );
 
     fn from_slug(conn: &mut DbConnection, slug: &ProjectSlug) -> Result<Self, HttpError> {
@@ -456,6 +457,35 @@ impl QueryProject {
                 )
             })
             .map(Some)
+    }
+
+    /// Soft-delete this project: set the `deleted` timestamp and replace
+    /// the name/slug with valid `Deleted {uuid}` / `deleted-{uuid}` sentinels
+    /// to free the UNIQUE constraints for reuse.
+    pub fn soft_delete(&self, conn: &mut DbConnection, now: DateTime) -> Result<(), HttpError> {
+        let deleted_name: ResourceName = format!("Deleted {}", self.uuid).parse().map_err(|e| {
+            issue_error(
+                "Failed to create deleted project name",
+                &format!("Project: {}", self.uuid),
+                e,
+            )
+        })?;
+        let deleted_slug: ProjectSlug = format!("deleted-{}", self.uuid).parse().map_err(|e| {
+            issue_error(
+                "Failed to create deleted project slug",
+                &format!("Project: {}", self.uuid),
+                e,
+            )
+        })?;
+        diesel::update(schema::project::table.filter(schema::project::id.eq(self.id)))
+            .set((
+                schema::project::deleted.eq(now),
+                schema::project::name.eq(deleted_name),
+                schema::project::slug.eq(deleted_slug),
+            ))
+            .execute(conn)
+            .map_err(resource_conflict_err!(Project, self))?;
+        Ok(())
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, HttpError> {

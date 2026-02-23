@@ -417,108 +417,33 @@ async fn projects_hard_delete_soft_deleted_project() {
         .send()
         .await
         .expect("Request failed");
-    // Project is soft-deleted so it's not found via normal lookup
-    assert_eq!(resp2.status(), StatusCode::NOT_FOUND);
+    // Hard delete can find soft-deleted entities
+    assert_eq!(resp2.status(), StatusCode::NO_CONTENT);
 }
 
 // Soft-delete project, verify child resource endpoints return 404
 #[tokio::test]
-async fn projects_soft_delete_branches_inaccessible() {
+async fn projects_soft_delete_endpoints_inaccessible() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "projsdbranch@example.com").await;
-    let org = server.create_org(&user, "Branch Org").await;
-    let project = server.create_project(&user, &org, "Branch Project").await;
-
-    let project_slug: &str = project.slug.as_ref();
-    let resp = server
-        .client
-        .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-
-    let child_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/projects/{project_slug}/branches")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(child_resp.status(), StatusCode::NOT_FOUND);
-}
-
-#[tokio::test]
-async fn projects_soft_delete_testbeds_inaccessible() {
-    let server = TestServer::new().await;
-    let user = server
-        .signup("Test User", "projsdtestbed@example.com")
-        .await;
-    let org = server.create_org(&user, "Testbed Org").await;
-    let project = server.create_project(&user, &org, "Testbed Project").await;
-
-    let project_slug: &str = project.slug.as_ref();
-    let resp = server
-        .client
-        .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-
-    let child_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/projects/{project_slug}/testbeds")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(child_resp.status(), StatusCode::NOT_FOUND);
-}
-
-#[tokio::test]
-async fn projects_soft_delete_measures_inaccessible() {
-    let server = TestServer::new().await;
-    let user = server
-        .signup("Test User", "projsdmeasure@example.com")
-        .await;
-    let org = server.create_org(&user, "Measure Org").await;
-    let project = server.create_project(&user, &org, "Measure Project").await;
-
-    let project_slug: &str = project.slug.as_ref();
-    let resp = server
-        .client
-        .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-
-    let child_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/projects/{project_slug}/measures")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(child_resp.status(), StatusCode::NOT_FOUND);
-}
-
-#[tokio::test]
-async fn projects_soft_delete_benchmarks_inaccessible() {
-    let server = TestServer::new().await;
-    let user = server
-        .signup("Test User", "projsdbenchmark@example.com")
-        .await;
-    let org = server.create_org(&user, "Benchmark Org").await;
+    let user = server.signup("Test User", "projsdchild@example.com").await;
+    let org = server.create_org(&user, "Child Res Org").await;
     let project = server
-        .create_project(&user, &org, "Benchmark Project")
+        .create_project(&user, &org, "Child Res Project")
         .await;
 
     let project_slug: &str = project.slug.as_ref();
+
+    // Verify project is accessible before delete
+    let pre_resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(pre_resp.status(), StatusCode::OK);
+
+    // Soft-delete the project
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
@@ -528,124 +453,28 @@ async fn projects_soft_delete_benchmarks_inaccessible() {
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
-    let child_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/projects/{project_slug}/benchmarks")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(child_resp.status(), StatusCode::NOT_FOUND);
-}
-
-#[tokio::test]
-async fn projects_soft_delete_reports_inaccessible() {
-    let server = TestServer::new().await;
-    let user = server.signup("Test User", "projsdreport@example.com").await;
-    let org = server.create_org(&user, "Report Org").await;
-    let project = server.create_project(&user, &org, "Report Project").await;
-
-    let project_slug: &str = project.slug.as_ref();
-    let resp = server
-        .client
-        .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-
-    let child_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/projects/{project_slug}/reports")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(child_resp.status(), StatusCode::NOT_FOUND);
-}
-
-#[tokio::test]
-async fn projects_soft_delete_thresholds_inaccessible() {
-    let server = TestServer::new().await;
-    let user = server
-        .signup("Test User", "projsdthreshold@example.com")
-        .await;
-    let org = server.create_org(&user, "Threshold Org").await;
-    let project = server
-        .create_project(&user, &org, "Threshold Project")
-        .await;
-
-    let project_slug: &str = project.slug.as_ref();
-    let resp = server
-        .client
-        .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-
-    let child_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/projects/{project_slug}/thresholds")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(child_resp.status(), StatusCode::NOT_FOUND);
-}
-
-#[tokio::test]
-async fn projects_soft_delete_alerts_inaccessible() {
-    let server = TestServer::new().await;
-    let user = server.signup("Test User", "projsdalert@example.com").await;
-    let org = server.create_org(&user, "Alert Org").await;
-    let project = server.create_project(&user, &org, "Alert Project").await;
-
-    let project_slug: &str = project.slug.as_ref();
-    let resp = server
-        .client
-        .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-
-    let child_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/projects/{project_slug}/alerts")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(child_resp.status(), StatusCode::NOT_FOUND);
-}
-
-#[tokio::test]
-async fn projects_soft_delete_plots_inaccessible() {
-    let server = TestServer::new().await;
-    let user = server.signup("Test User", "projsdplot@example.com").await;
-    let org = server.create_org(&user, "Plot Org").await;
-    let project = server.create_project(&user, &org, "Plot Project").await;
-
-    let project_slug: &str = project.slug.as_ref();
-    let resp = server
-        .client
-        .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-
-    let child_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/projects/{project_slug}/plots")))
-        .header("Authorization", server.bearer(&user.token))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(child_resp.status(), StatusCode::NOT_FOUND);
+    let child_endpoints = [
+        "branches",
+        "testbeds",
+        "measures",
+        "benchmarks",
+        "reports",
+        "thresholds",
+        "alerts",
+        "plots",
+    ];
+    for endpoint in &child_endpoints {
+        let child_resp = server
+            .client
+            .get(server.api_url(&format!("/v0/projects/{project_slug}/{endpoint}")))
+            .header("Authorization", server.bearer(&user.token))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(
+            child_resp.status(),
+            StatusCode::NOT_FOUND,
+            "{endpoint} should return 404 after project soft-delete"
+        );
+    }
 }

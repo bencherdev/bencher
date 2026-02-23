@@ -368,15 +368,6 @@ async fn delete_inner(
     query_params: OrganizationDeleteQuery,
     auth_user: &AuthUser,
 ) -> Result<(), HttpError> {
-    // Verify that the user is allowed
-    let query_organization = QueryOrganization::is_allowed_resource_id(
-        auth_conn!(context),
-        &context.rbac,
-        &path_params.organization,
-        auth_user,
-        Permission::Delete,
-    )?;
-
     if query_params.hard.unwrap_or_default() {
         // Hard delete requires server admin
         if !auth_user.is_admin(&context.rbac) {
@@ -384,54 +375,32 @@ async fn delete_inner(
                 "Hard delete requires server admin: {auth_user:?}"
             )));
         }
+        // Unfiltered lookup — includes soft-deleted entities
+        let query_organization = schema::organization::table
+            .filter(QueryOrganization::eq_resource_id(&path_params.organization))
+            .first::<QueryOrganization>(auth_conn!(context))
+            .map_err(resource_not_found_err!(
+                Organization,
+                &path_params.organization
+            ))?;
         diesel::delete(
             schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
         )
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Organization, query_organization))?;
     } else {
-        // Soft delete: timestamp + mangle slug/name to free UNIQUE constraints
+        // Verify that the user is allowed (filtered — excludes soft-deleted)
+        let query_organization = QueryOrganization::is_allowed_resource_id(
+            auth_conn!(context),
+            &context.rbac,
+            &path_params.organization,
+            auth_user,
+            Permission::Delete,
+        )?;
+
+        // Soft delete the organization and all its child projects
         let now = context.clock.now();
-        let deleted_name = format!(
-            "{}--deleted-{}",
-            query_organization.name, query_organization.uuid
-        );
-        let deleted_slug = format!(
-            "{}--deleted-{}",
-            query_organization.slug, query_organization.uuid
-        );
-
-        let conn = write_conn!(context);
-
-        // Bulk soft-delete all non-deleted projects under this org
-        diesel::update(
-            schema::project::table
-                .filter(schema::project::organization_id.eq(query_organization.id))
-                .filter(schema::project::deleted.is_null()),
-        )
-        .set((
-            schema::project::deleted.eq(now),
-            schema::project::name.eq(diesel::dsl::sql::<diesel::sql_types::Text>(
-                "name || '--deleted-' || uuid",
-            )),
-            schema::project::slug.eq(diesel::dsl::sql::<diesel::sql_types::Text>(
-                "slug || '--deleted-' || uuid",
-            )),
-        ))
-        .execute(conn)
-        .map_err(resource_conflict_err!(Organization, query_organization))?;
-
-        // Soft-delete the org
-        diesel::update(
-            schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
-        )
-        .set((
-            schema::organization::deleted.eq(now),
-            schema::organization::name.eq(deleted_name),
-            schema::organization::slug.eq(deleted_slug),
-        ))
-        .execute(conn)
-        .map_err(resource_conflict_err!(Organization, query_organization))?;
+        query_organization.soft_delete(write_conn!(context), now)?;
     }
 
     #[cfg(feature = "otel")]
