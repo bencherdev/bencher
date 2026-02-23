@@ -87,7 +87,9 @@ impl AuthUser {
         query_user: &QueryUser,
     ) -> Result<(Vec<OrganizationId>, OrganizationRoles), HttpError> {
         let roles = schema::organization_role::table
+            .inner_join(schema::organization::table)
             .filter(schema::organization_role::user_id.eq(query_user.id))
+            .filter(schema::organization::deleted.is_null())
             .order(schema::organization_role::organization_id)
             .select((
                 schema::organization_role::organization_id,
@@ -129,8 +131,9 @@ impl AuthUser {
         query_user: &QueryUser,
     ) -> Result<(Vec<OrgProjectId>, ProjectRoles), HttpError> {
         let roles = schema::project_role::table
-            .filter(schema::project_role::user_id.eq(query_user.id))
             .inner_join(schema::project::table)
+            .filter(schema::project_role::user_id.eq(query_user.id))
+            .filter(schema::project::deleted.is_null())
             .order(schema::project_role::project_id)
             .select((
                 schema::project::organization_id,
