@@ -35,7 +35,8 @@ SELECT id,
     visibility,
     created,
     modified
-FROM project;
+FROM project
+WHERE deleted IS NULL;
 
 DROP TABLE project;
 
@@ -71,7 +72,8 @@ SELECT id,
     license,
     created,
     modified
-FROM organization;
+FROM organization
+WHERE deleted IS NULL;
 
 DROP TABLE organization;
 

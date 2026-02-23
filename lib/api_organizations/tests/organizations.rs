@@ -340,3 +340,154 @@ async fn organizations_hard_delete_as_admin() {
         .expect("Request failed");
     assert_eq!(get_resp.status(), StatusCode::NOT_FOUND);
 }
+
+// GET by UUID returns 404 after soft-delete
+#[tokio::test]
+async fn organizations_soft_delete_get_by_uuid() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "orgsduuid@example.com").await;
+    let org = server.create_org(&user, "UUID Delete Org").await;
+
+    // Soft-delete
+    let org_slug: &str = org.slug.as_ref();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // GET by UUID should return 404
+    let get_resp = server
+        .client
+        .get(server.api_url(&format!("/v0/organizations/{}", org.uuid)))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(get_resp.status(), StatusCode::NOT_FOUND);
+}
+
+// Second soft-delete returns 404 (idempotent)
+#[tokio::test]
+async fn organizations_soft_delete_idempotent() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "orgsdidempotent@example.com")
+        .await;
+    let org = server.create_org(&user, "Idempotent Del Org").await;
+
+    let org_slug: &str = org.slug.as_ref();
+    // First delete succeeds
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // Second delete returns 404 (org no longer visible)
+    let resp2 = server
+        .client
+        .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp2.status(), StatusCode::NOT_FOUND);
+}
+
+// Admin can hard-delete an already soft-deleted org
+#[tokio::test]
+async fn organizations_hard_delete_soft_deleted_org() {
+    let server = TestServer::new().await;
+    let admin = server
+        .signup("Admin User", "orghardsoftdel@example.com")
+        .await;
+    let org = server.create_org(&admin, "Hard Soft Del Org").await;
+
+    // Soft-delete first
+    let org_slug: &str = org.slug.as_ref();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // Hard-delete by UUID (slug is mangled)
+    let resp2 = server
+        .client
+        .delete(server.api_url(&format!("/v0/organizations/{}?hard=true", org.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+    // Org is soft-deleted so it's not found via normal lookup
+    assert_eq!(resp2.status(), StatusCode::NOT_FOUND);
+}
+
+// Soft-delete org, verify child resource list endpoints return 404
+#[tokio::test]
+async fn organizations_soft_delete_cascades_child_resources() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "orgsdchild@example.com").await;
+    let org = server.create_org(&user, "Child Res Org").await;
+    let project = server
+        .create_project(&user, &org, "Child Res Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+
+    // Verify project is accessible before delete
+    let pre_resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(pre_resp.status(), StatusCode::OK);
+
+    // Soft-delete the org
+    let org_slug: &str = org.slug.as_ref();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // All child resource endpoints under the project should return 404
+    let child_endpoints = [
+        "branches",
+        "testbeds",
+        "measures",
+        "benchmarks",
+        "reports",
+        "thresholds",
+        "alerts",
+        "plots",
+    ];
+    for endpoint in &child_endpoints {
+        let child_resp = server
+            .client
+            .get(server.api_url(&format!("/v0/projects/{project_slug}/{endpoint}")))
+            .header("Authorization", server.bearer(&user.token))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(
+            child_resp.status(),
+            StatusCode::NOT_FOUND,
+            "{endpoint} should return 404 after org soft-delete"
+        );
+    }
+}

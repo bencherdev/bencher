@@ -2,8 +2,8 @@ use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, ResponseDeleted, ResponseOk, TotalCount,
 };
 use bencher_json::{
-    DateTime, JsonDirection, JsonPagination, JsonProject, JsonProjects, ProjectResourceId,
-    ResourceName, Search,
+    JsonDirection, JsonPagination, JsonProject, JsonProjects, ProjectResourceId, ResourceName,
+    Search,
     project::{JsonUpdateProject, Visibility},
 };
 use bencher_rbac::project::Permission;
@@ -400,7 +400,7 @@ async fn delete_inner(
             .map_err(resource_conflict_err!(Project, query_project))?;
     } else {
         // Soft delete: timestamp + mangle slug/name to free UNIQUE constraints
-        let now = DateTime::now();
+        let now = context.clock.now();
         let deleted_name = format!("{}--deleted-{}", query_project.name, query_project.uuid);
         let deleted_slug = format!("{}--deleted-{}", query_project.slug, query_project.uuid);
         diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))

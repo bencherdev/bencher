@@ -73,7 +73,6 @@ pub struct ApiContext {
     pub is_bencher_cloud: bool,
     #[cfg(feature = "plus")]
     pub oci_storage: OciStorage,
-    #[cfg(feature = "plus")]
     pub clock: bencher_json::Clock,
     #[cfg(feature = "plus")]
     pub heartbeat_timeout: std::time::Duration,

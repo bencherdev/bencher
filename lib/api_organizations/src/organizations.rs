@@ -3,9 +3,8 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    DateTime, JsonDirection, JsonNewOrganization, JsonOrganization, JsonOrganizations,
-    JsonPagination, OrganizationResourceId, ResourceName, Search,
-    organization::JsonUpdateOrganization,
+    JsonDirection, JsonNewOrganization, JsonOrganization, JsonOrganizations, JsonPagination,
+    OrganizationResourceId, ResourceName, Search, organization::JsonUpdateOrganization,
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
@@ -14,7 +13,6 @@ use bencher_schema::{
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::{
         organization::{InsertOrganization, QueryOrganization, UpdateOrganization},
-        project::QueryProject,
         user::auth::{AuthUser, BearerToken},
     },
     schema, write_conn,
@@ -393,7 +391,7 @@ async fn delete_inner(
         .map_err(resource_conflict_err!(Organization, query_organization))?;
     } else {
         // Soft delete: timestamp + mangle slug/name to free UNIQUE constraints
-        let now = DateTime::now();
+        let now = context.clock.now();
         let deleted_name = format!(
             "{}--deleted-{}",
             query_organization.name, query_organization.uuid
@@ -403,27 +401,25 @@ async fn delete_inner(
             query_organization.slug, query_organization.uuid
         );
 
-        // Hold write lock for atomic soft-delete of org + child projects
-        let mut guard = context.database.connection.lock().await;
-        let conn = &mut *guard;
+        let conn = write_conn!(context);
 
-        // Soft-delete all non-deleted projects under this org
-        let projects: Vec<QueryProject> = schema::project::table
-            .filter(schema::project::organization_id.eq(query_organization.id))
-            .filter(schema::project::deleted.is_null())
-            .load(conn)
-            .map_err(resource_conflict_err!(Organization, query_organization))?;
-
-        for project in &projects {
-            diesel::update(schema::project::table.filter(schema::project::id.eq(project.id)))
-                .set((
-                    schema::project::deleted.eq(now),
-                    schema::project::name.eq(format!("{}--deleted-{}", project.name, project.uuid)),
-                    schema::project::slug.eq(format!("{}--deleted-{}", project.slug, project.uuid)),
-                ))
-                .execute(conn)
-                .map_err(resource_conflict_err!(Organization, query_organization))?;
-        }
+        // Bulk soft-delete all non-deleted projects under this org
+        diesel::update(
+            schema::project::table
+                .filter(schema::project::organization_id.eq(query_organization.id))
+                .filter(schema::project::deleted.is_null()),
+        )
+        .set((
+            schema::project::deleted.eq(now),
+            schema::project::name.eq(diesel::dsl::sql::<diesel::sql_types::Text>(
+                "name || '--deleted-' || uuid",
+            )),
+            schema::project::slug.eq(diesel::dsl::sql::<diesel::sql_types::Text>(
+                "slug || '--deleted-' || uuid",
+            )),
+        ))
+        .execute(conn)
+        .map_err(resource_conflict_err!(Organization, query_organization))?;
 
         // Soft-delete the org
         diesel::update(
@@ -436,7 +432,6 @@ async fn delete_inner(
         ))
         .execute(conn)
         .map_err(resource_conflict_err!(Organization, query_organization))?;
-        // Lock released when guard drops
     }
 
     #[cfg(feature = "otel")]

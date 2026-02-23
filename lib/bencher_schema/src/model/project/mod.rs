@@ -23,8 +23,8 @@ use crate::{
         resource_not_found_err, resource_not_found_error, unauthorized_error,
     },
     macros::{
-        fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
-        resource_id::fn_eq_resource_id,
+        fn_get::{fn_from_uuid_not_deleted, fn_get_not_deleted, fn_get_uuid_not_deleted},
+        resource_id::{fn_eq_resource_id, fn_from_resource_id_not_deleted},
         slug::ok_slug,
     },
     model::{
@@ -75,21 +75,11 @@ pub struct QueryProject {
 
 impl QueryProject {
     fn_eq_resource_id!(project, ProjectResourceId);
+    fn_from_resource_id_not_deleted!(project, Project, ProjectResourceId);
 
-    pub fn from_resource_id(
-        conn: &mut DbConnection,
-        resource_id: &ProjectResourceId,
-    ) -> Result<Self, HttpError> {
-        schema::project::table
-            .filter(Self::eq_resource_id(resource_id))
-            .filter(schema::project::deleted.is_null())
-            .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Project, resource_id))
-    }
-
-    fn_get!(project, ProjectId);
-    fn_get_uuid!(project, ProjectId, ProjectUuid);
-    fn_from_uuid!(
+    fn_get_not_deleted!(project, ProjectId);
+    fn_get_uuid_not_deleted!(project, ProjectId, ProjectUuid);
+    fn_from_uuid_not_deleted!(
         organization_id,
         OrganizationId,
         project,
