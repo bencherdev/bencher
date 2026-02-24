@@ -275,6 +275,10 @@ Available locally at `services/console/src/content/` or online at https://benche
 
 See [`services/console/CLAUDE.md`](services/console/CLAUDE.md) for console-specific guides, including how to add API documentation pages.
 
+### Changelog
+
+The changelog lives at `services/console/src/chunks/docs-reference/changelog/en/changelog.mdx`. It is imported by the content pages in `services/console/src/content/docs-reference/{lang}/changelog.mdx`.
+
 ### Server Configuration Documentation
 
 Server config types live in `lib/bencher_json/src/system/config/`. The corresponding documentation chunks live in `services/console/src/chunks/docs-reference/server-config/`.
