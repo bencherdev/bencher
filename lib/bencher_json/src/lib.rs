@@ -202,6 +202,35 @@ pub static PROD_BENCHER_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{PROD_BENCHER_API_URL_STR}\": {e}"))
 });
 
+pub const LOCALHOST_BENCHER_REGISTRY_URL_STR: &str = "http://localhost:61016";
+pub const PROD_BENCHER_REGISTRY_URL_STR: &str = "https://registry.bencher.dev";
+
+#[cfg(debug_assertions)]
+pub const BENCHER_REGISTRY_URL_STR: &str = LOCALHOST_BENCHER_REGISTRY_URL_STR;
+#[cfg(not(debug_assertions))]
+pub const BENCHER_REGISTRY_URL_STR: &str = PROD_BENCHER_REGISTRY_URL_STR;
+
+#[expect(clippy::panic)]
+pub static BENCHER_REGISTRY_URL: LazyLock<url::Url> = LazyLock::new(|| {
+    BENCHER_REGISTRY_URL_STR
+        .parse()
+        .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{BENCHER_REGISTRY_URL_STR}\": {e}"))
+});
+#[expect(clippy::panic)]
+pub static LOCALHOST_BENCHER_REGISTRY_URL: LazyLock<url::Url> = LazyLock::new(|| {
+    LOCALHOST_BENCHER_REGISTRY_URL_STR
+        .parse()
+        .unwrap_or_else(|e| {
+            panic!("Failed to parse endpoint \"{LOCALHOST_BENCHER_REGISTRY_URL_STR}\": {e}")
+        })
+});
+#[expect(clippy::panic)]
+pub static PROD_BENCHER_REGISTRY_URL: LazyLock<url::Url> = LazyLock::new(|| {
+    PROD_BENCHER_REGISTRY_URL_STR.parse().unwrap_or_else(|e| {
+        panic!("Failed to parse endpoint \"{PROD_BENCHER_REGISTRY_URL_STR}\": {e}")
+    })
+});
+
 /// Maximum number of entrypoint arguments in a job config.
 pub const MAX_ENTRYPOINT_LEN: usize = 64;
 /// Maximum number of cmd arguments in a job config.

@@ -19,6 +19,7 @@ Hay un `service` de almacenamiento:
 
 |            Nombre            |                               Ejemplo                               | Predeterminado | Requerido |                                              Descripción                                               |
 | :--------------------------: | :-----------------------------------------------------------------: | :------------: | :-------: | :----------------------------------------------------------------------------------------------------: |
+|             url              |              "https://registry.bencher.example.com"                 | "http://localhost:61016" |    No     | La URL externamente accesible del servidor API para acceso al registro OCI. |
 |          data_store          |                              \{ ... \}                              |      ---       |    No     |                    Especifica el backend de almacenamiento OCI. Local si se omite.                     |
 |      data_store.service      |                              "aws_s3"                               |      ---       |    Sí     |                           Especifica el tipo de servicio de almacenamiento.                            |
 |   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |      ---       |    Sí     |                                     ID de clave de acceso de AWS.                                      |

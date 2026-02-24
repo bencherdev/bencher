@@ -54,17 +54,7 @@ Only one spec should be the default at a time (enforced in application logic, no
 - [ ] Create migration up/down SQL
 - [ ] Regenerate `lib/bencher_schema/src/schema.rs` (diesel print-schema)
 
-#### A2. Add `url` field to `JsonRegistry`
-
-Add `url: Url` as the **first** field in `JsonRegistry` (`lib/bencher_json/src/system/config/plus/registry.rs`). This is the API server's externally-reachable URL for OCI registry access (e.g., `https://api.bencher.dev`).
-
-- [ ] Add `pub url: Url` to `JsonRegistry` (first field)
-- [ ] Store `registry_url` on `ApiContext` (`lib/bencher_schema/src/context/mod.rs`) — `#[cfg(feature = "plus")] pub registry_url: Url`
-- [ ] Wire it through `lib/bencher_config/src/config_tx.rs` / `plus.rs`
-- [ ] Update documentation chunks in `services/console/src/chunks/docs-reference/server-config/` (all 9 languages)
-- [ ] Update example config in `services/console/src/chunks/docs-reference/server-config/example.mdx`
-
-#### A3. Spec model/types: add `default`
+#### A2. Spec model/types: add `default`
 
 JSON types (`lib/bencher_json/src/spec/mod.rs`):
 - [ ] `JsonSpec` — add `pub default: Option<DateTime>`
@@ -83,7 +73,7 @@ Spec CRUD (`plus/api_specs/src/specs.rs`):
 - [ ] Create: if `default == Some(true)`, clear existing default, set `default = Some(now)`
 - [ ] Update: if `default == Some(true)`, clear + set; if `Some(false)`, clear this spec's default
 
-#### A4. Wire report-specific spec in `QueryReport::into_json()`
+#### A3. Wire report-specific spec in `QueryReport::into_json()`
 
 Testbed `spec_id` and the two serialization methods (`into_json_for_project`, `get_json_for_report`) are already implemented.
 
@@ -174,15 +164,11 @@ After the report is inserted and queried back (~line 155), before results proces
 | `lib/bencher_schema/migrations/<new>/up.sql` | Migration: spec.default |
 | `lib/bencher_schema/migrations/<new>/down.sql` | Reverse migration |
 | `lib/bencher_schema/src/schema.rs` | Regenerate diesel schema |
-| `lib/bencher_json/src/system/config/plus/registry.rs` | Add `url: Url` first field |
 | `lib/bencher_json/src/spec/mod.rs` | Add `default` to all 3 spec types |
 | `lib/bencher_schema/src/model/spec.rs` | Add `default`, get_default(), clear_default() |
 | `plus/api_specs/src/specs.rs` | Handle default in create/update |
 | `lib/api_run/src/run.rs` | Extract job + source_ip, pass headers |
 | `lib/bencher_schema/src/model/project/report/mod.rs` | Job creation, conditional results processing, report-specific spec via `get_json_for_report()` |
-| `lib/bencher_schema/src/context/mod.rs` | Add `registry_url: Url` to ApiContext |
-| `lib/bencher_config/src/config_tx.rs` or `plus.rs` | Wire registry_url to ApiContext |
-| `services/console/src/chunks/docs-reference/server-config/` | Registry URL docs (9 languages) |
 
 ## Gap 2: Benchmark Result Processing After Job Completion
 

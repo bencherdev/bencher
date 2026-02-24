@@ -19,6 +19,7 @@ There is one storage `service`:
 
 |             Name             |                                  Example                                  | Default | Required |                                       Description                                        |
 | :--------------------------: | :-----------------------------------------------------------------------: | :-----: | :------: | :--------------------------------------------------------------------------------------: |
+|             url              |                  "https://registry.bencher.example.com"                    | "http://localhost:61016" |    No    | The externally-reachable URL of the API server for OCI registry access. |
 |          data_store          |                                \{ ... \}                                  |   ---   |    No    |             Specifies the registry storage backend. Local if omitted.                    |
 |      data_store.service      |                                 "aws_s3"                                  |   ---   |   Yes    |                       Specifies the storage service type.                                |
 |   data_store.access_key_id   |                          "AKIAIOSFODNN7EXAMPLE"                           |   ---   |   Yes    |                                AWS access key ID.                                        |

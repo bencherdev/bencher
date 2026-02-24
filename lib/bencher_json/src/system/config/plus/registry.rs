@@ -1,4 +1,4 @@
-use bencher_valid::{Sanitize, Secret};
+use bencher_valid::{Sanitize, Secret, Url};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,9 @@ pub const DEFAULT_MAX_BODY_SIZE: u64 = 0x4000_0000;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonRegistry {
+    /// The externally-reachable URL of the API server for OCI registry access.
+    /// Defaults to `http://localhost:61016`.
+    pub url: Option<Url>,
     /// S3 storage configuration for the container registry
     pub data_store: RegistryDataStore,
     /// Upload session timeout in seconds.

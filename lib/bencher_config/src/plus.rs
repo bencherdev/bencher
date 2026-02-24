@@ -25,6 +25,7 @@ pub struct Plus {
     pub biller: Option<Biller>,
     pub licensor: Licensor,
     pub recaptcha_client: Option<RecaptchaClient>,
+    pub registry_url: Url,
     pub oci_storage: OciStorage,
 }
 
@@ -42,6 +43,8 @@ pub enum PlusError {
     Billing(bencher_billing::BillingError),
     #[error("{0}")]
     Index(#[from] bencher_schema::context::IndexError),
+    #[error("Invalid registry URL: {0}")]
+    RegistryUrl(bencher_json::ValidError),
     #[error("Failed to initialize OCI storage: {0}")]
     OciStorage(bencher_oci_storage::OciStorageError),
 }
@@ -68,6 +71,7 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
+                registry_url: default_registry_url(console_url),
                 oci_storage: OciStorage::try_from_config(
                     log.clone(),
                     None,
@@ -81,14 +85,19 @@ impl Plus {
         };
 
         // Initialize registry storage - uses S3 if configured, otherwise local filesystem
-        let (registry_data_store, upload_timeout, max_body_size) =
-            plus.registry.map_or((None, None, None), |registry| {
+        let (registry_url, registry_data_store, upload_timeout, max_body_size) =
+            plus.registry.map_or((None, None, None, None), |registry| {
                 (
+                    registry.url,
                     Some(registry.data_store),
                     Some(registry.upload_timeout),
                     Some(registry.max_body_size),
                 )
             });
+        let registry_url = registry_url
+            .map(|url| url.try_into().map_err(PlusError::RegistryUrl))
+            .transpose()?
+            .unwrap_or_else(|| default_registry_url(console_url));
         if registry_data_store.is_none() {
             info!(
                 log,
@@ -149,6 +158,7 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
+                registry_url,
                 oci_storage,
             });
         };
@@ -179,7 +189,16 @@ impl Plus {
             biller,
             licensor,
             recaptcha_client,
+            registry_url,
             oci_storage,
         })
+    }
+}
+
+fn default_registry_url(console_url: &Url) -> Url {
+    if cfg!(debug_assertions) || !is_bencher_cloud(console_url) {
+        bencher_json::LOCALHOST_BENCHER_REGISTRY_URL.clone()
+    } else {
+        bencher_json::PROD_BENCHER_REGISTRY_URL.clone()
     }
 }
