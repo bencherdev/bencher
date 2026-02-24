@@ -49,6 +49,7 @@ fn get_project_count(
     state: ProjectState,
 ) -> Result<i64, HttpError> {
     match state {
+        // Intentionally includes soft-deleted projects for server admin stats
         ProjectState::All => {
             let mut query = schema::project::table
                 .select(diesel::dsl::count(schema::project::id).aggregate_distinct())
@@ -62,6 +63,7 @@ fn get_project_count(
                 .get_result::<i64>(conn)
                 .map_err(resource_not_found_err!(Project))
         },
+        // Intentionally includes soft-deleted projects for server admin stats
         ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::project::table
                 .inner_join(schema::organization::table.left_join(schema::organization_role::table))

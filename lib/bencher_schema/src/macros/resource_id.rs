@@ -24,6 +24,21 @@ macro_rules! fn_eq_resource_id {
 pub(crate) use fn_eq_resource_id;
 
 macro_rules! fn_from_resource_id {
+    ($table:ident, $resource:ident, $resource_id:ident, not_deleted) => {
+        pub fn from_resource_id(
+            conn: &mut $crate::context::DbConnection,
+            resource_id: &bencher_json::$resource_id,
+        ) -> Result<Self, HttpError> {
+            schema::$table::table
+                .filter(Self::eq_resource_id(resource_id))
+                .filter(schema::$table::deleted.is_null())
+                .first::<Self>(conn)
+                .map_err($crate::error::resource_not_found_err!(
+                    $resource,
+                    resource_id
+                ))
+        }
+    };
     ($parent:ident, $parent_type:ty, $table:ident, $resource:ident, $resource_id:ident) => {
         pub fn from_resource_id(
             conn: &mut $crate::context::DbConnection,

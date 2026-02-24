@@ -9,6 +9,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Delete {
     pub organization: OrganizationResourceId,
+    pub hard: bool,
     pub backend: AuthBackend,
 }
 
@@ -18,10 +19,12 @@ impl TryFrom<CliOrganizationDelete> for Delete {
     fn try_from(delete: CliOrganizationDelete) -> Result<Self, Self::Error> {
         let CliOrganizationDelete {
             organization,
+            hard,
             backend,
         } = delete;
         Ok(Self {
             organization,
+            hard,
             backend: backend.try_into()?,
         })
     }
@@ -32,11 +35,13 @@ impl SubCmd for Delete {
         let _json = self
             .backend
             .send(|client| async move {
-                client
+                let mut builder = client
                     .organization_delete()
-                    .organization(self.organization.clone())
-                    .send()
-                    .await
+                    .organization(self.organization.clone());
+                if self.hard {
+                    builder = builder.hard(self.hard);
+                }
+                builder.send().await
             })
             .await?;
         Ok(())

@@ -195,6 +195,7 @@ impl TestServer {
             messenger: Messenger::default(),
             database,
             restart_tx,
+            clock: bencher_json::Clock::System,
         };
 
         Self::start_server(context, &log, token_key, db_path, db_file)

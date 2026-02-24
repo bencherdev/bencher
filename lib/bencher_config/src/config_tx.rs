@@ -329,7 +329,6 @@ async fn into_context(
         is_bencher_cloud,
         #[cfg(feature = "plus")]
         oci_storage,
-        #[cfg(feature = "plus")]
         clock: bencher_json::Clock::System,
         #[cfg(feature = "plus")]
         heartbeat_timeout,

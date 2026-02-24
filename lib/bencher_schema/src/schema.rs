@@ -144,6 +144,7 @@ diesel::table! {
         license -> Nullable<Text>,
         created -> BigInt,
         modified -> BigInt,
+        deleted -> Nullable<BigInt>,
     }
 }
 
@@ -231,6 +232,7 @@ diesel::table! {
         visibility -> Integer,
         created -> BigInt,
         modified -> BigInt,
+        deleted -> Nullable<BigInt>,
     }
 }
 

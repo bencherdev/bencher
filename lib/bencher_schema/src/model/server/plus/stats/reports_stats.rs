@@ -63,6 +63,7 @@ impl ReportsStats {
     }
 }
 
+// Intentionally includes soft-deleted projects for server admin stats
 fn get_reports_by_project(
     conn: &mut DbConnection,
     since: Option<i64>,

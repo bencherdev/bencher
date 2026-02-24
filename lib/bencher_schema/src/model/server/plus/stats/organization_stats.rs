@@ -22,6 +22,7 @@ impl OrganizationStats {
     }
 }
 
+// Intentionally includes soft-deleted organizations for server admin stats
 fn get_organizations(conn: &mut DbConnection) -> Result<JsonOrganizations, HttpError> {
     Ok(schema::organization::table
         .load::<QueryOrganization>(conn)

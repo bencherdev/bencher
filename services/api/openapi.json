@@ -1151,7 +1151,7 @@
           "organizations"
         ],
         "summary": "Delete an organization",
-        "description": "Delete an organization where the user is a member. The user must have `delete` permissions for the organization.",
+        "description": "Delete an organization where the user is a member. The user must have `delete` permissions for the organization. By default, organizations are soft-deleted (along with their child projects). Set the `hard` query parameter to `true` to permanently delete the organization (requires server admin).",
         "operationId": "organization_delete",
         "parameters": [
           {
@@ -1161,6 +1161,15 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hard",
+            "description": "Hard delete the organization (requires server admin).",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
             }
           }
         ],
@@ -3030,7 +3039,7 @@
           "projects"
         ],
         "summary": "Delete a project",
-        "description": "Delete a project. The user must have `delete` permissions for the project.",
+        "description": "Delete a project. The user must have `delete` permissions for the project. By default, projects are soft-deleted. Set the `hard` query parameter to `true` to permanently delete the project (requires server admin).",
         "operationId": "project_delete",
         "parameters": [
           {
@@ -3040,6 +3049,15 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hard",
+            "description": "Hard delete the project (requires server admin).",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
             }
           }
         ],

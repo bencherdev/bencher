@@ -57,16 +57,22 @@ pub struct QueryOrganization {
     pub license: Option<Jwt>,
     pub created: DateTime,
     pub modified: DateTime,
+    pub deleted: Option<DateTime>,
 }
 
 impl QueryOrganization {
     fn_eq_resource_id!(organization, OrganizationResourceId);
-    fn_from_resource_id!(organization, Organization, OrganizationResourceId);
+    fn_from_resource_id!(
+        organization,
+        Organization,
+        OrganizationResourceId,
+        not_deleted
+    );
 
-    fn_get!(organization, OrganizationId);
-    fn_get_id!(organization, OrganizationId, OrganizationUuid);
-    fn_get_uuid!(organization, OrganizationId, OrganizationUuid);
-    fn_from_uuid!(organization, OrganizationUuid, Organization);
+    fn_get!(organization, OrganizationId, not_deleted);
+    fn_get_id!(organization, OrganizationId, OrganizationUuid, not_deleted);
+    fn_get_uuid!(organization, OrganizationId, OrganizationUuid, not_deleted);
+    fn_from_uuid!(organization, OrganizationUuid, Organization, not_deleted);
 
     pub async fn get_or_create_from_user(
         context: &ApiContext,
@@ -368,6 +374,61 @@ impl QueryOrganization {
         } else {
             Some(query_sso.into_iter().map(QuerySso::into_json).collect())
         })
+    }
+
+    /// Soft-delete this organization and all its non-deleted child projects.
+    /// Sets the `deleted` timestamp and replaces name/slug with valid
+    /// `Deleted {uuid}` / `deleted-{uuid}` sentinels to free UNIQUE constraints.
+    ///
+    /// Child projects are soft-deleted first (including search index cleanup)
+    /// so the org rename can be retried if any project rename fails.
+    pub async fn soft_delete(
+        &self,
+        context: &ApiContext,
+        log: &slog::Logger,
+        now: DateTime,
+    ) -> Result<(), HttpError> {
+        use super::project::QueryProject;
+
+        slog::info!(log, "Soft-deleting organization: {}", self.uuid);
+
+        // Soft-delete all non-deleted projects under this org first
+        let projects: Vec<QueryProject> = schema::project::table
+            .filter(schema::project::organization_id.eq(self.id))
+            .filter(schema::project::deleted.is_null())
+            .load(auth_conn!(context))
+            .map_err(resource_not_found_err!(Organization, self))?;
+        for project in &projects {
+            project.soft_delete(context, log, now).await?;
+        }
+
+        // Soft-delete the org (after all projects are successfully soft-deleted)
+        let deleted_name: ResourceName = format!("Deleted {}", self.uuid).parse().map_err(|e| {
+            issue_error(
+                "Failed to create deleted organization name",
+                &format!("Organization: {}", self.uuid),
+                e,
+            )
+        })?;
+        let deleted_slug: OrganizationSlug =
+            format!("deleted-{}", self.uuid).parse().map_err(|e| {
+                issue_error(
+                    "Failed to create deleted organization slug",
+                    &format!("Organization: {}", self.uuid),
+                    e,
+                )
+            })?;
+        diesel::update(schema::organization::table.filter(schema::organization::id.eq(self.id)))
+            .set((
+                schema::organization::deleted.eq(now),
+                schema::organization::modified.eq(now),
+                schema::organization::name.eq(deleted_name),
+                schema::organization::slug.eq(deleted_slug),
+            ))
+            .execute(write_conn!(context))
+            .map_err(resource_conflict_err!(Organization, self))?;
+
+        Ok(())
     }
 
     pub fn into_json_full(self, conn: &mut DbConnection) -> Result<JsonOrganization, HttpError> {

@@ -70,25 +70,28 @@ pub struct QueryProject {
     pub visibility: Visibility,
     pub created: DateTime,
     pub modified: DateTime,
+    pub deleted: Option<DateTime>,
 }
 
 impl QueryProject {
     fn_eq_resource_id!(project, ProjectResourceId);
-    fn_from_resource_id!(project, Project, ProjectResourceId);
+    fn_from_resource_id!(project, Project, ProjectResourceId, not_deleted);
 
-    fn_get!(project, ProjectId);
-    fn_get_uuid!(project, ProjectId, ProjectUuid);
+    fn_get!(project, ProjectId, not_deleted);
+    fn_get_uuid!(project, ProjectId, ProjectUuid, not_deleted);
     fn_from_uuid!(
         organization_id,
         OrganizationId,
         project,
         ProjectUuid,
-        Project
+        Project,
+        not_deleted
     );
 
     fn from_slug(conn: &mut DbConnection, slug: &ProjectSlug) -> Result<Self, HttpError> {
         schema::project::table
             .filter(schema::project::slug.eq(slug))
+            .filter(schema::project::deleted.is_null())
             .first(conn)
             .map_err(resource_not_found_err!(Project, slug.clone()))
     }
@@ -234,6 +237,7 @@ impl QueryProject {
         let pattern = format!("{escaped_name} (%)");
         slog::debug!(log, "LIKE pattern: {pattern}");
 
+        // Include soft-deleted projects to avoid name collisions if they are restored.
         let Ok(highest_name) = schema::project::table
             .filter(schema::project::organization_id.eq(query_organization.id))
             .filter(
@@ -456,6 +460,47 @@ impl QueryProject {
             .map(Some)
     }
 
+    /// Soft-delete this project: set the `deleted` timestamp and replace
+    /// the name/slug with valid `Deleted {uuid}` / `deleted-{uuid}` sentinels
+    /// to free the UNIQUE constraints for reuse.
+    /// Also cleans up the search index (Plus feature).
+    pub async fn soft_delete(
+        &self,
+        context: &ApiContext,
+        log: &Logger,
+        now: DateTime,
+    ) -> Result<(), HttpError> {
+        slog::info!(log, "Soft-deleting project: {}", self.uuid);
+        let deleted_name: ResourceName = format!("Deleted {}", self.uuid).parse().map_err(|e| {
+            issue_error(
+                "Failed to create deleted project name",
+                &format!("Project: {}", self.uuid),
+                e,
+            )
+        })?;
+        let deleted_slug: ProjectSlug = format!("deleted-{}", self.uuid).parse().map_err(|e| {
+            issue_error(
+                "Failed to create deleted project slug",
+                &format!("Project: {}", self.uuid),
+                e,
+            )
+        })?;
+        diesel::update(schema::project::table.filter(schema::project::id.eq(self.id)))
+            .set((
+                schema::project::deleted.eq(now),
+                schema::project::modified.eq(now),
+                schema::project::name.eq(deleted_name),
+                schema::project::slug.eq(deleted_slug),
+            ))
+            .execute(write_conn!(context))
+            .map_err(resource_conflict_err!(Project, self))?;
+
+        #[cfg(feature = "plus")]
+        context.delete_index(log, self).await;
+
+        Ok(())
+    }
+
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, HttpError> {
         let query_organization = self.organization(conn)?;
         Ok(self.into_json_for_organization(conn, &query_organization))
@@ -523,6 +568,7 @@ impl InsertProject {
 
         let resource = BencherResource::Project;
         let (start_time, end_time) = context.rate_limiting.window();
+        // Include soft-deleted projects to prevent gaming rate limits via delete and recreate.
         let window_usage: u32 = schema::project::table
                 .filter(schema::project::organization_id.eq(query_organization.id))
                 .filter(schema::project::created.ge(start_time))

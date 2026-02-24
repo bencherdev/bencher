@@ -32,6 +32,8 @@ macro_rules! ok_slug {
             None,
             $name,
             $slug,
+            // Intentionally includes soft-deleted records to prevent slug collisions
+            // with sentinel slugs (deleted-{uuid})
             Box::new(|conn, _project_id, slug| {
                 schema::$table::table
                     .filter(schema::$table::slug.eq(slug))

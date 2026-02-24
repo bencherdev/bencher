@@ -148,6 +148,10 @@ pub struct CliOrganizationDelete {
     /// Organization slug or UUID
     pub organization: OrganizationResourceId,
 
+    /// Hard delete the organization (requires server admin)
+    #[clap(long)]
+    pub hard: bool,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

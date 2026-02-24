@@ -20,18 +20,18 @@ pub mod threshold;
 
 #[derive(Subcommand, Debug)]
 pub enum CliProject {
-    // List projects
+    /// List projects
     #[clap(alias = "ls")]
     List(CliProjectList),
-    // Create a project
+    /// Create a project
     #[clap(alias = "add")]
     Create(CliProjectCreate),
-    // View a project
+    /// View a project
     View(CliProjectView),
-    // Update a project
+    /// Update a project
     #[clap(alias = "edit")]
     Update(CliProjectUpdate),
-    // Delete a project
+    /// Delete a project
     #[clap(alias = "rm")]
     Delete(CliProjectDelete),
     /// Check project permission
@@ -138,6 +138,10 @@ pub struct CliProjectUpdate {
 pub struct CliProjectDelete {
     /// Project slug or UUID
     pub project: ProjectResourceId,
+
+    /// Hard delete the project (requires server admin)
+    #[clap(long)]
+    pub hard: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,

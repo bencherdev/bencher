@@ -10,7 +10,7 @@ use bencher_rbac::organization::Permission;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{resource_conflict_err, resource_not_found_err},
+    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::{
         organization::{InsertOrganization, QueryOrganization, UpdateOrganization},
         user::auth::{AuthUser, BearerToken},
@@ -125,7 +125,9 @@ fn get_ls_query<'q>(
     pagination_params: &OrganizationsPagination,
     query_params: &'q OrganizationsQuery,
 ) -> schema::organization::BoxedQuery<'q, diesel::sqlite::Sqlite> {
-    let mut query = schema::organization::table.into_boxed();
+    let mut query = schema::organization::table
+        .into_boxed()
+        .filter(schema::organization::deleted.is_null());
 
     if !auth_user.is_admin(&context.rbac) {
         let organizations = auth_user.organizations(&context.rbac, Permission::View);
@@ -330,6 +332,8 @@ async fn patch_inner(
 ///
 /// Delete an organization where the user is a member.
 /// The user must have `delete` permissions for the organization.
+/// By default, organizations are soft-deleted (along with their child projects).
+/// Set the `hard` query parameter to `true` to permanently delete the organization (requires server admin).
 #[endpoint {
     method = DELETE,
     path =  "/v0/organizations/{organization}",
@@ -339,31 +343,66 @@ pub async fn organization_delete(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
     path_params: Path<OrganizationParams>,
+    query_params: Query<OrganizationDeleteQuery>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    delete_inner(
+        &rqctx.log,
+        rqctx.context(),
+        path_params.into_inner(),
+        query_params.into_inner(),
+        &auth_user,
+    )
+    .await?;
     Ok(Delete::auth_response_deleted())
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct OrganizationDeleteQuery {
+    /// Hard delete the organization (requires server admin).
+    pub hard: Option<bool>,
+}
+
 async fn delete_inner(
+    log: &slog::Logger,
     context: &ApiContext,
     path_params: OrganizationParams,
+    query_params: OrganizationDeleteQuery,
     auth_user: &AuthUser,
 ) -> Result<(), HttpError> {
-    // Verify that the user is allowed
-    let query_organization = QueryOrganization::is_allowed_resource_id(
-        auth_conn!(context),
-        &context.rbac,
-        &path_params.organization,
-        auth_user,
-        Permission::Delete,
-    )?;
+    if query_params.hard.unwrap_or_default() {
+        // Hard delete requires server admin
+        if !auth_user.is_admin(&context.rbac) {
+            return Err(forbidden_error("Hard delete requires server admin"));
+        }
+        // Server admin check above is stricter than per-resource RBAC.
+        // Unfiltered lookup is needed to find soft-deleted entities.
+        let query_organization = schema::organization::table
+            .filter(QueryOrganization::eq_resource_id(&path_params.organization))
+            .first::<QueryOrganization>(auth_conn!(context))
+            .map_err(resource_not_found_err!(
+                Organization,
+                &path_params.organization
+            ))?;
+        diesel::delete(
+            schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
+        )
+        .execute(write_conn!(context))
+        .map_err(resource_conflict_err!(Organization, query_organization))?;
+    } else {
+        // Verify that the user is allowed (filtered — excludes soft-deleted)
+        let query_organization = QueryOrganization::is_allowed_resource_id(
+            auth_conn!(context),
+            &context.rbac,
+            &path_params.organization,
+            auth_user,
+            Permission::Delete,
+        )?;
 
-    diesel::delete(
-        schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
-    )
-    .execute(write_conn!(context))
-    .map_err(resource_conflict_err!(Organization, query_organization))?;
+        // Soft delete the organization and all its child projects
+        let now = context.clock.now();
+        query_organization.soft_delete(context, log, now).await?;
+    }
 
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationDelete);

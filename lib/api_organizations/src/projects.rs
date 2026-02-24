@@ -144,7 +144,9 @@ fn get_ls_query<'q>(
     pagination_params: &OrgProjectsPagination,
     query_params: &'q OrgProjectsQuery,
 ) -> schema::project::BoxedQuery<'q, diesel::sqlite::Sqlite> {
-    let mut query = QueryProject::belonging_to(query_organization).into_boxed();
+    let mut query = QueryProject::belonging_to(query_organization)
+        .into_boxed()
+        .filter(schema::project::deleted.is_null());
 
     if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::project::name.eq(name));

@@ -461,6 +461,7 @@ impl LicenseUsage {
     ) -> Result<Vec<Self>, HttpError> {
         let min_level = min_level.unwrap_or_default();
 
+        // Intentionally includes soft-deleted organizations for server admin license usage
         Ok(schema::organization::table
             .load::<QueryOrganization>(conn)
             .map_err(resource_not_found_err!(Organization))?
