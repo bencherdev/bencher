@@ -98,7 +98,7 @@ macro_rules! fn_get_uuid {
                 .first(conn)
                 .map_err(|e| {
                     let message = format!(
-                        "Failed to query {table} table for for UUID with ID ({id})",
+                        "Failed to query {table} table for UUID with ID ({id})",
                         table = stringify!($table)
                     );
                     $crate::error::issue_error(&message, &message, e)
@@ -117,7 +117,7 @@ macro_rules! fn_get_uuid {
                 .first(conn)
                 .map_err(|e| {
                     let message = format!(
-                        "Failed to query {table} table for for UUID with ID ({id})",
+                        "Failed to query {table} table for UUID with ID ({id})",
                         table = stringify!($table)
                     );
                     $crate::error::issue_error(&message, &message, e)

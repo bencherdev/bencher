@@ -125,9 +125,9 @@ fn get_ls_query<'q>(
     pagination_params: &OrganizationsPagination,
     query_params: &'q OrganizationsQuery,
 ) -> schema::organization::BoxedQuery<'q, diesel::sqlite::Sqlite> {
-    let mut query = schema::organization::table.into_boxed();
-
-    query = query.filter(schema::organization::deleted.is_null());
+    let mut query = schema::organization::table
+        .into_boxed()
+        .filter(schema::organization::deleted.is_null());
 
     if !auth_user.is_admin(&context.rbac) {
         let organizations = auth_user.organizations(&context.rbac, Permission::View);
@@ -333,7 +333,7 @@ async fn patch_inner(
 /// Delete an organization where the user is a member.
 /// The user must have `delete` permissions for the organization.
 /// By default, organizations are soft-deleted (along with their child projects).
-/// Use `?hard=true` to permanently delete the organization (requires server admin).
+/// Set the `hard` query parameter to `true` to permanently delete the organization (requires server admin).
 #[endpoint {
     method = DELETE,
     path =  "/v0/organizations/{organization}",

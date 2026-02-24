@@ -30,6 +30,7 @@ use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use futures::{StreamExt as _, stream::FuturesOrdered};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
 
 pub type ProjectsPagination = JsonPagination<ProjectsSort>;
 
@@ -155,9 +156,9 @@ fn get_ls_query<'q>(
     query_params: &'q ProjectsQuery,
     public_user: &PublicUser,
 ) -> schema::project::BoxedQuery<'q, diesel::sqlite::Sqlite> {
-    let mut query = schema::project::table.into_boxed();
-
-    query = query.filter(schema::project::deleted.is_null());
+    let mut query = schema::project::table
+        .into_boxed()
+        .filter(schema::project::deleted.is_null());
 
     // All users should just see the public projects if the query is for public projects
     if let PublicUser::Auth(auth_user) = public_user {
@@ -280,7 +281,7 @@ pub async fn project_patch(
 }
 
 async fn patch_inner(
-    #[cfg(feature = "plus")] log: &slog::Logger,
+    #[cfg(feature = "plus")] log: &Logger,
     context: &ApiContext,
     path_params: ProjectParams,
     json_project: JsonUpdateProject,
@@ -339,7 +340,7 @@ async fn patch_inner(
 /// Delete a project.
 /// The user must have `delete` permissions for the project.
 /// By default, projects are soft-deleted.
-/// Use `?hard=true` to permanently delete the project (requires server admin).
+/// Set the `hard` query parameter to `true` to permanently delete the project (requires server admin).
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}",
@@ -370,7 +371,7 @@ pub struct ProjectDeleteQuery {
 }
 
 async fn delete_inner(
-    log: &slog::Logger,
+    log: &Logger,
     context: &ApiContext,
     path_params: ProjectParams,
     query_params: ProjectDeleteQuery,

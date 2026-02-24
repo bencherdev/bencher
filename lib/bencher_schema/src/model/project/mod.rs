@@ -237,9 +237,9 @@ impl QueryProject {
         let pattern = format!("{escaped_name} (%)");
         slog::debug!(log, "LIKE pattern: {pattern}");
 
+        // Include soft-deleted projects to avoid name collisions if they are restored.
         let Ok(highest_name) = schema::project::table
             .filter(schema::project::organization_id.eq(query_organization.id))
-            .filter(schema::project::deleted.is_null())
             .filter(
                 schema::project::name
                     .eq(&project_name)
@@ -568,9 +568,9 @@ impl InsertProject {
 
         let resource = BencherResource::Project;
         let (start_time, end_time) = context.rate_limiting.window();
+        // Include soft-deleted projects to prevent gaming rate limits via delete and recreate.
         let window_usage: u32 = schema::project::table
                 .filter(schema::project::organization_id.eq(query_organization.id))
-                .filter(schema::project::deleted.is_null())
                 .filter(schema::project::created.ge(start_time))
                 .filter(schema::project::created.le(end_time))
                 .count()
