@@ -315,6 +315,7 @@ diesel::table! {
         memory -> BigInt,
         disk -> BigInt,
         network -> Bool,
+        fallback -> Nullable<BigInt>,
         created -> BigInt,
         modified -> BigInt,
         archived -> Nullable<BigInt>,

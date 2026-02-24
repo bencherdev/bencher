@@ -164,13 +164,23 @@ pub async fn specs_post(
 }
 
 async fn post_inner(context: &ApiContext, json_spec: JsonNewSpec) -> Result<JsonSpec, HttpError> {
-    let insert_spec = InsertSpec::new(write_conn!(context), &json_spec);
-    let uuid = insert_spec.uuid;
+    let is_fallback = json_spec.fallback;
+    let now = context.clock.now();
 
-    diesel::insert_into(schema::spec::table)
-        .values(&insert_spec)
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Spec, insert_spec))?;
+    // Hold write lock across slug check + clear + insert
+    let uuid = {
+        let conn = write_conn!(context);
+        if is_fallback {
+            QuerySpec::clear_fallback(conn)?;
+        }
+        let insert_spec = InsertSpec::new(conn, &json_spec, now);
+        let uuid = insert_spec.uuid;
+        diesel::insert_into(schema::spec::table)
+            .values(&insert_spec)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Spec, insert_spec))?;
+        uuid
+    };
 
     let query_spec = QuerySpec::from_uuid(auth_conn!(context), uuid)?;
     Ok(query_spec.into_json())
@@ -247,12 +257,21 @@ async fn patch_inner(
     json_spec: JsonUpdateSpec,
 ) -> Result<JsonSpec, HttpError> {
     let query_spec = QuerySpec::from_resource_id(auth_conn!(context), &path_params.spec)?;
-    let update_spec = UpdateSpec::from(json_spec.clone());
+    let is_setting_fallback = json_spec.fallback == Some(true);
+    let now = context.clock.now();
+    let update_spec = UpdateSpec::new(json_spec.clone(), now);
 
-    diesel::update(schema::spec::table.filter(schema::spec::id.eq(query_spec.id)))
-        .set(&update_spec)
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Spec, (&query_spec, &json_spec)))?;
+    // Hold write lock across clear + update
+    {
+        let conn = write_conn!(context);
+        if is_setting_fallback {
+            QuerySpec::clear_fallback(conn)?;
+        }
+        diesel::update(schema::spec::table.filter(schema::spec::id.eq(query_spec.id)))
+            .set(&update_spec)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Spec, (&query_spec, &json_spec)))?;
+    }
 
     let spec = QuerySpec::get(auth_conn!(context), query_spec.id)?;
     Ok(spec.into_json())

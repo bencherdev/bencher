@@ -36,53 +36,7 @@ bencher run --image ghcr.io/org/bench:v1 --adapter json
 
 **Problem:** The `From<JsonNewRun> for JsonNewReport` conversion silently discards the `job` field (`lib/bencher_json/src/run.rs:88` — `job: _`). No job record is ever inserted into the database.
 
-**Prerequisite:** Step 0 (testbed `spec_id`) — completed.
-
-### Phase A: Schema & Model Foundation
-
-#### A1. Migration: Add `default` to `spec`
-
-New migration in `lib/bencher_schema/migrations/`:
-
-```sql
--- spec: nullable `default` timestamp (only one spec should be default at a time)
-ALTER TABLE spec ADD COLUMN "default" BIGINT;
-```
-
-Only one spec should be the default at a time (enforced in application logic, not DB constraint).
-
-- [ ] Create migration up/down SQL
-- [ ] Regenerate `lib/bencher_schema/src/schema.rs` (diesel print-schema)
-
-#### A2. Spec model/types: add `default`
-
-JSON types (`lib/bencher_json/src/spec/mod.rs`):
-- [ ] `JsonSpec` — add `pub default: Option<DateTime>`
-- [ ] `JsonNewSpec` — add `pub default: Option<bool>`
-- [ ] `JsonUpdateSpec` — add `pub default: Option<bool>`
-
-DB model (`lib/bencher_schema/src/model/spec.rs`):
-- [ ] `QuerySpec` — add `pub default: Option<DateTime>`
-- [ ] `InsertSpec` — add `pub default: Option<DateTime>`
-- [ ] `UpdateSpec` — add `pub default: Option<Option<DateTime>>`
-- [ ] `QuerySpec::into_json()` — include `default` field
-- [ ] New: `QuerySpec::get_default(conn)` — query for spec where `default IS NOT NULL`
-- [ ] New: `QuerySpec::clear_default(conn)` — set `default = NULL` on current default
-
-Spec CRUD (`plus/api_specs/src/specs.rs`):
-- [ ] Create: if `default == Some(true)`, clear existing default, set `default = Some(now)`
-- [ ] Update: if `default == Some(true)`, clear + set; if `Some(false)`, clear this spec's default
-
-#### A3. Wire report-specific spec in `QueryReport::into_json()`
-
-Testbed `spec_id` and the two serialization methods (`into_json_for_project`, `get_json_for_report`) are already implemented.
-
-Update `QueryReport::into_json()` (`lib/bencher_schema/src/model/project/report/mod.rs`):
-- [ ] Currently: `QueryTestbed::get(conn, testbed_id)?.into_json_for_project(conn, &query_project)`
-- [ ] Change to: look up the job for this report (if any) → get `job.spec_id` → call `QueryTestbed::get_json_for_report(conn, &query_project, testbed_id, job_spec_id)`
-- This ensures the report JSON includes the spec that was actually used, enabling the UI to navigate to the testbed page with the correct `?spec=` query param
-
-### Phase B: Job Creation in `run_post`
+### Job Creation in `run_post`
 
 #### B1. Extract job and source IP in `post_inner`
 
@@ -153,6 +107,7 @@ After the report is inserted and queried back (~line 155), before results proces
 - `ImageDigest` in `lib/bencher_valid/src/image_digest.rs`
 - `OciStorage::resolve_tag()` in `plus/bencher_oci_storage/src/storage.rs`
 - `QuerySpec::from_resource_id()` in `lib/bencher_schema/src/model/spec.rs`
+- `QuerySpec::get_fallback()` in `lib/bencher_schema/src/model/spec.rs`
 - `PlanKind` in `lib/bencher_schema/src/model/organization/plan.rs`
 - `SourceIp` in `lib/bencher_schema/src/model/runner/source_ip.rs`
 - `RateLimiting::remote_ip()` in `lib/bencher_schema/src/context/rate_limiting.rs`
@@ -161,12 +116,6 @@ After the report is inserted and queried back (~line 155), before results proces
 
 | File | Changes |
 |------|---------|
-| `lib/bencher_schema/migrations/<new>/up.sql` | Migration: spec.default |
-| `lib/bencher_schema/migrations/<new>/down.sql` | Reverse migration |
-| `lib/bencher_schema/src/schema.rs` | Regenerate diesel schema |
-| `lib/bencher_json/src/spec/mod.rs` | Add `default` to all 3 spec types |
-| `lib/bencher_schema/src/model/spec.rs` | Add `default`, get_default(), clear_default() |
-| `plus/api_specs/src/specs.rs` | Handle default in create/update |
 | `lib/api_run/src/run.rs` | Extract job + source_ip, pass headers |
 | `lib/bencher_schema/src/model/project/report/mod.rs` | Job creation, conditional results processing, report-specific spec via `get_json_for_report()` |
 
@@ -225,15 +174,4 @@ After the report is inserted and queried back (~line 155), before results proces
 2. **Gap 2 (result processing)** — Without this, completed jobs produce no metrics/alerts even if the runner executes successfully.
 3. **Gap 3 (CLI polling)** — Without this, the user sees empty results even after gaps 1 and 2 are fixed.
 
-## What Already Works
 
-- [x] CLI parsing of `--image`, `--entrypoint`, `--cmd`, `--env`, `--timeout`, `--spec`
-- [x] `JsonNewRun` and `JsonNewRunJob` types
-- [x] Runner daemon polling, job claiming, WebSocket lifecycle
-- [x] Runner job execution in Firecracker microVM (with entrypoint/cmd/env overrides)
-- [x] WebSocket protocol: Running, Heartbeat, Completed, Failed, Canceled
-- [x] Server-side WebSocket handler: status updates, blob storage, heartbeat timeout
-- [x] Job viewing endpoints (`GET /v0/projects/{project}/jobs[/{job}]`)
-- [x] CLI `bencher job list` and `bencher job view` commands
-- [x] `InsertJob::new()` constructor (used in tests)
-- [x] Tier-based concurrency limits for job claiming
