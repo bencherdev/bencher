@@ -8,8 +8,8 @@ use bencher_json::{
     },
 };
 use diesel::{
-    ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
+    Connection as _, ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::HttpError;
 use results::ReportResults;
@@ -174,16 +174,6 @@ impl QueryReport {
         )
         .await?;
 
-        // If there is a hash then try to see if there is already a code version for
-        // this branch with that particular hash.
-        // Otherwise, create a new code version for this branch with/without the hash.
-        let version_id = QueryVersion::get_or_increment(
-            write_conn!(context),
-            project_id,
-            head_id,
-            json_report.hash.as_ref(),
-        )?;
-
         let json_settings = json_report.settings.take().unwrap_or_default();
         let adapter = json_settings.adapter.unwrap_or_default();
 
@@ -207,39 +197,67 @@ impl QueryReport {
             None
         };
 
-        // Create a new report and add it to the database
-        let insert_report = InsertReport::from_json(
-            public_user.user_id(),
-            project_id,
-            head_id,
-            version_id,
-            testbed_id,
-            spec_id,
-            &json_report,
-            adapter,
-        );
-
-        diesel::insert_into(schema::report::table)
-            .values(&insert_report)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Report, insert_report))?;
-
-        let query_report = schema::report::table
-        .filter(schema::report::uuid.eq(&insert_report.uuid))
-        .first::<QueryReport>(public_conn!(context, public_user))
-        .map_err(|e| {
-            issue_error(
-                "Failed to find new report that was just created",
-                &format!("Failed to find new report ({insert_report:?}) in project ({project_id}) on Bencher even though it was just created."),
-                e,
-            )
-        })?;
-
-        // Finalize and insert the pre-validated job with the report ID
+        // Capture the current time before acquiring the write lock.
+        // This is used for the job insert timestamp inside the transaction.
         #[cfg(feature = "plus")]
-        if let Some(pending_job) = pending_job {
-            pending_job.insert(context, query_report.id).await?;
-        }
+        let now = context.clock.now();
+
+        // Single transaction wraps version + report + job for true atomicity.
+        // If any insert fails, all are rolled back.
+        let insert_report_uuid = {
+            let conn = write_conn!(context);
+            conn.transaction(|conn| {
+                // If there is a hash then try to see if there is already a code version for
+                // this branch with that particular hash.
+                // Otherwise, create a new code version for this branch with/without the hash.
+                let version_id = QueryVersion::get_or_increment(
+                    conn,
+                    project_id,
+                    head_id,
+                    json_report.hash.as_ref(),
+                )?;
+
+                // Create a new report and add it to the database
+                let insert_report = InsertReport::from_json(
+                    public_user.user_id(),
+                    project_id,
+                    head_id,
+                    version_id,
+                    testbed_id,
+                    spec_id,
+                    &json_report,
+                    adapter,
+                );
+
+                diesel::insert_into(schema::report::table)
+                    .values(&insert_report)
+                    .execute(conn)?;
+
+                #[cfg(feature = "plus")]
+                if let Some(pending_job) = pending_job {
+                    let report_id: ReportId = schema::report::table
+                        .filter(schema::report::uuid.eq(&insert_report.uuid))
+                        .select(schema::report::id)
+                        .first(conn)?;
+                    pending_job.insert(conn, report_id, now)?;
+                }
+
+                Ok::<_, diesel::result::Error>(insert_report.uuid)
+            })
+            .map_err(resource_conflict_err!(Report, &json_report))?
+        };
+
+        // Read full report via public_conn (outside write lock)
+        let query_report = schema::report::table
+            .filter(schema::report::uuid.eq(&insert_report_uuid))
+            .first::<QueryReport>(public_conn!(context, public_user))
+            .map_err(|e| {
+                issue_error(
+                    "Failed to find new report that was just created",
+                    &format!("Failed to find new report ({insert_report_uuid}) in project ({project_id}) on Bencher even though it was just created."),
+                    e,
+                )
+            })?;
 
         #[cfg(feature = "plus")]
         let mut usage = 0;

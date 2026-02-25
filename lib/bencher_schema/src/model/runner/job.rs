@@ -4,13 +4,16 @@ use bencher_json::{
     DateTime, ImageDigest, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig, PlanLevel,
     Timeout, runner::job::JsonNewRunJob,
 };
-use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    result::QueryResult,
+};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
 
 use crate::{
     context::{ApiContext, DbConnection},
-    error::{bad_request_error, resource_conflict_err},
+    error::bad_request_error,
     macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
     model::{
         organization::{OrganizationId, plan::PlanKind},
@@ -19,7 +22,6 @@ use crate::{
         spec::{QuerySpec, SpecId},
     },
     schema::{self, job as job_table},
-    write_conn,
 };
 
 crate::macros::typed_id::typed_id!(JobId);
@@ -199,8 +201,15 @@ impl PendingInsertJob {
     }
 
     /// Finalize the pending job with a report ID and insert it into the database.
-    pub async fn insert(self, context: &ApiContext, report_id: ReportId) -> Result<(), HttpError> {
-        let now = context.clock.now();
+    ///
+    /// Accepts a `&mut DbConnection` and `DateTime` directly so it can be called
+    /// inside a diesel `transaction()` closure for atomicity with the report insert.
+    pub fn insert(
+        self,
+        conn: &mut DbConnection,
+        report_id: ReportId,
+        now: DateTime,
+    ) -> QueryResult<()> {
         let insert_job = InsertJob::new(
             report_id,
             self.organization_id,
@@ -213,8 +222,7 @@ impl PendingInsertJob {
         );
         diesel::insert_into(schema::job::table)
             .values(&insert_job)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Job, insert_job))?;
+            .execute(conn)?;
         Ok(())
     }
 }

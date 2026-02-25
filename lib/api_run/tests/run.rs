@@ -12,7 +12,7 @@ use bencher_api_tests::TestServer;
 use bencher_api_tests::oci::compute_digest;
 use bencher_json::JsonReport;
 #[cfg(feature = "plus")]
-use bencher_json::{JsonJob, JsonSpec, runner::JsonJobs};
+use bencher_json::{JsonJob, JsonRunners, JsonSpec, runner::JsonJobs};
 use http::StatusCode;
 
 // POST /v0/run - create a run with authentication
@@ -1054,5 +1054,109 @@ async fn run_post_with_job_derived_no_spec_fails() {
         .expect("Request failed");
 
     // Should fail because no spec is available
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+// POST /v0/run with job when no runners exist — job stays Pending
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_no_runners_stays_pending() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_norunners@example.com")
+        .await;
+    let org = server.create_org(&user, "No Runners Org").await;
+    let project = server
+        .create_project(&user, &org, "No Runners Project")
+        .await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    // Submit run with job
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Verify no runners exist
+    let resp = server
+        .client
+        .get(server.api_url("/v0/runners"))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Failed to list runners");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let runners: JsonRunners = resp.json().await.expect("Failed to parse runners response");
+    assert!(runners.0.is_empty(), "Expected no runners");
+
+    // Verify job is still Pending (not claimed, not failed)
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert_eq!(jobs.len(), 1, "Expected exactly one job");
+    assert_eq!(
+        jobs[0].status,
+        bencher_json::JobStatus::Pending,
+        "Job should remain Pending with no runners"
+    );
+}
+
+// POST /v0/run with invalid image reference fails
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_invalid_image_fails() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_invalid_img@example.com")
+        .await;
+    let org = server.create_org(&user, "Invalid Img Org").await;
+    let project = server
+        .create_project(&user, &org, "Invalid Img Project")
+        .await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    // Submit run with an invalid image reference (empty string)
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": ""
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }
