@@ -82,6 +82,10 @@ pub struct CliSpecCreate {
     #[clap(long)]
     pub network: bool,
 
+    /// Set as the fallback spec
+    #[clap(long)]
+    pub fallback: bool,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }
@@ -107,6 +111,10 @@ pub struct CliSpecUpdate {
     /// Spec slug
     #[clap(long)]
     pub slug: Option<SpecSlug>,
+
+    /// Set or unset as the fallback spec
+    #[clap(long)]
+    pub fallback: Option<bool>,
 
     #[clap(flatten)]
     pub archived: CliArchived,

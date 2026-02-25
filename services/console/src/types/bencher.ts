@@ -85,9 +85,10 @@ export interface JsonSpec {
 	memory: number;
 	disk: number;
 	network: boolean;
-	archived?: string;
+	fallback?: string;
 	created: string;
 	modified: string;
+	archived?: string;
 }
 
 export type Url = string;
@@ -691,6 +692,8 @@ export interface JsonNewSpec {
 	disk: number;
 	/** Whether the VM has network access */
 	network?: boolean;
+	/** Whether this spec is the fallback spec */
+	fallback?: boolean;
 }
 
 export interface JsonNewSso {
@@ -968,6 +971,8 @@ export interface JsonUpdateSpec {
 	name?: ResourceName;
 	/** The new slug for the spec. */
 	slug?: Slug;
+	/** Set whether the spec is the fallback spec. */
+	fallback?: boolean;
 	/** Set whether the spec is archived. */
 	archived?: boolean;
 }

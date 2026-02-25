@@ -16,6 +16,7 @@ pub struct Create {
     pub memory: u64,
     pub disk: u64,
     pub network: bool,
+    pub fallback: bool,
     pub backend: AuthBackend,
 }
 
@@ -31,6 +32,7 @@ impl TryFrom<CliSpecCreate> for Create {
             memory,
             disk,
             network,
+            fallback,
             backend,
         } = create;
         Ok(Self {
@@ -41,6 +43,7 @@ impl TryFrom<CliSpecCreate> for Create {
             memory,
             disk,
             network,
+            fallback,
             backend: backend.try_into()?,
         })
     }
@@ -56,6 +59,7 @@ impl From<Create> for JsonNewSpec {
             memory,
             disk,
             network,
+            fallback,
             ..
         } = create;
         Self {
@@ -66,6 +70,7 @@ impl From<Create> for JsonNewSpec {
             memory: memory.into(),
             disk: disk.into(),
             network,
+            fallback,
         }
     }
 }
