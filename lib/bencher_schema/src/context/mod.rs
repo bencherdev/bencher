@@ -72,6 +72,8 @@ pub struct ApiContext {
     #[cfg(feature = "plus")]
     pub is_bencher_cloud: bool,
     #[cfg(feature = "plus")]
+    pub registry_url: Url,
+    #[cfg(feature = "plus")]
     pub oci_storage: OciStorage,
     pub clock: bencher_json::Clock,
     #[cfg(feature = "plus")]
@@ -127,6 +129,11 @@ impl ApiContext {
         self.biller.as_ref().ok_or_else(|| {
             crate::error::locked_error("Tried to use a Bencher Cloud route when Self-Hosted")
         })
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn registry_url(&self) -> &Url {
+        &self.registry_url
     }
 
     #[cfg(feature = "plus")]

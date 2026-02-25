@@ -122,6 +122,7 @@ impl TestServer {
             recaptcha_client: None,
             is_bencher_cloud: false,
             clock: clock.clone().unwrap_or(bencher_json::Clock::System),
+            registry_url: bencher_json::LOCALHOST_BENCHER_REGISTRY_URL.clone(),
             oci_storage: bencher_oci_storage::OciStorage::try_from_config(
                 log.clone(),
                 None,

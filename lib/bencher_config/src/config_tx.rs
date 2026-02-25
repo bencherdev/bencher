@@ -285,6 +285,7 @@ async fn into_context(
         licensor,
         indexer,
         recaptcha_client,
+        registry_url,
         oci_storage,
     } = Plus::new(log, &console_url, plus, &database.path).map_err(ConfigTxError::Plus)?;
 
@@ -327,6 +328,8 @@ async fn into_context(
         recaptcha_client,
         #[cfg(feature = "plus")]
         is_bencher_cloud,
+        #[cfg(feature = "plus")]
+        registry_url,
         #[cfg(feature = "plus")]
         oci_storage,
         clock: bencher_json::Clock::System,

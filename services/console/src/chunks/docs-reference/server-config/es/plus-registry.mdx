@@ -10,7 +10,8 @@ Esto es adecuado para desarrollo y despliegues de instancia única.
 Para despliegues de producción con múltiples instancias o para durabilidad,
 configure almacenamiento basado en S3.
 
-Hay un `service` de almacenamiento:
+Hay dos opciones de `service` de almacenamiento:
+- `local`: Almacenar artefactos OCI en el sistema de archivos local (predeterminado)
 - `aws_s3`: Almacenar artefactos OCI en AWS S3
     - `access_key_id`: ID de clave de acceso de AWS
     - `secret_access_key`: Clave de acceso secreta de AWS
@@ -19,10 +20,11 @@ Hay un `service` de almacenamiento:
 
 |            Nombre            |                               Ejemplo                               | Predeterminado | Requerido |                                              Descripción                                               |
 | :--------------------------: | :-----------------------------------------------------------------: | :------------: | :-------: | :----------------------------------------------------------------------------------------------------: |
+|             url              |              "https://registry.bencher.example.com"                 | "http://localhost:61016" |    No     | La URL externamente accesible del servidor API para acceso al registro OCI. |
 |          data_store          |                              \{ ... \}                              |      ---       |    No     |                    Especifica el backend de almacenamiento OCI. Local si se omite.                     |
-|      data_store.service      |                              "aws_s3"                               |      ---       |    Sí     |                           Especifica el tipo de servicio de almacenamiento.                            |
-|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |      ---       |    Sí     |                                     ID de clave de acceso de AWS.                                      |
-| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |      ---       |    Sí     |                                    Clave de acceso secreta de AWS.                                     |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |      ---       |    Sí     |      ARN del punto de acceso S3. Prefijo de ruta opcional después del nombre del punto de acceso.      |
+|      data_store.service      |                        "local" o "aws_s3"                           |      ---       |    Sí     |                           Especifica el tipo de servicio de almacenamiento.                            |
+|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |      ---       | solo aws_s3 |                                     ID de clave de acceso de AWS.                                      |
+| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |      ---       | solo aws_s3 |                                    Clave de acceso secreta de AWS.                                     |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |      ---       | solo aws_s3 |      ARN del punto de acceso S3. Prefijo de ruta opcional después del nombre del punto de acceso.      |
 |       upload_timeout         |                                3600                                 |      3600      |    No     | Tiempo de espera de sesión de carga en segundos. Las cargas obsoletas se limpian al iniciar nuevas cargas. |
 |       max_body_size          |                            1073741824                               |  1073741824    |    No     | Tamaño máximo del cuerpo en bytes para cargas de blobs y manifiestos. Las solicitudes que excedan este límite son rechazadas con 413 Payload Too Large. Predeterminado: 1 GiB. |
