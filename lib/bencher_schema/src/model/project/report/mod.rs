@@ -17,12 +17,9 @@ use slog::Logger;
 
 #[cfg(feature = "plus")]
 use crate::model::organization::plan::PlanKind;
-use crate::model::spec::SpecId;
 #[cfg(feature = "plus")]
-use crate::model::{
-    runner::{InsertJob, SourceIp},
-    spec::QuerySpec,
-};
+use crate::model::runner::{InsertJob, SourceIp};
+use crate::model::spec::SpecId;
 use crate::{
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
@@ -33,7 +30,7 @@ use crate::{
             benchmark::QueryBenchmark,
             branch::version::QueryVersion,
             measure::QueryMeasure,
-            testbed::{QueryTestbed, TestbedId},
+            testbed::{QueryTestbed, ResolvedTestbed, RunTestbed, TestbedId},
             threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
         },
         user::{QueryUser, UserId, public::PublicUser},
@@ -42,6 +39,22 @@ use crate::{
     schema::{self, report as report_table},
     view, write_conn,
 };
+
+/// Encapsulates all context from a run request for report creation.
+pub struct NewRunReport {
+    pub report: JsonNewReport,
+    pub testbed: RunTestbed,
+    #[cfg(feature = "plus")]
+    pub job: Option<NewRunJob>,
+}
+
+/// Job-related context for a run.
+#[cfg(feature = "plus")]
+pub struct NewRunJob {
+    pub is_claimed: bool,
+    pub run_job: JsonNewRunJob,
+    pub source_ip: SourceIp,
+}
 
 use super::{
     branch::{QueryBranch, head::HeadId, version::VersionId},
@@ -78,7 +91,6 @@ impl QueryReport {
     fn_get_uuid!(report, ReportId, ReportUuid);
 
     #[expect(
-        clippy::too_many_arguments,
         clippy::too_many_lines,
         reason = "report creation has many dimensions and steps"
     )]
@@ -86,11 +98,8 @@ impl QueryReport {
         log: &Logger,
         context: &ApiContext,
         query_project: &QueryProject,
-        mut json_report: JsonNewReport,
+        new_run_report: NewRunReport,
         public_user: &PublicUser,
-        #[cfg(feature = "plus")] is_claimed: bool,
-        #[cfg(feature = "plus")] new_run_job: Option<JsonNewRunJob>,
-        #[cfg(feature = "plus")] source_ip: SourceIp,
     ) -> Result<JsonReport, HttpError> {
         #[cfg(feature = "plus")]
         InsertReport::rate_limit(context, query_project.id).await?;
@@ -108,6 +117,13 @@ impl QueryReport {
         .await?;
         let project_id = query_project.id;
 
+        let NewRunReport {
+            report: mut json_report,
+            testbed: run_testbed,
+            #[cfg(feature = "plus")]
+                job: new_run_job,
+        } = new_run_report;
+
         // Get or create the branch and testbed
         let (branch_id, head_id) = QueryBranch::get_or_create(
             log,
@@ -117,8 +133,18 @@ impl QueryReport {
             json_report.start_point.as_ref(),
         )
         .await?;
-        let testbed_id =
-            QueryTestbed::get_or_create(context, project_id, &json_report.testbed).await?;
+        let ResolvedTestbed {
+            testbed_id,
+            spec_id,
+        } = QueryTestbed::get_or_create(
+            context,
+            project_id,
+            &json_report.testbed,
+            &run_testbed,
+            #[cfg(feature = "plus")]
+            new_run_job.as_ref().and_then(|j| j.run_job.spec.as_ref()),
+        )
+        .await?;
 
         // Insert the thresholds for the report
         InsertThreshold::from_report_json(
@@ -143,20 +169,6 @@ impl QueryReport {
 
         let json_settings = json_report.settings.take().unwrap_or_default();
         let adapter = json_settings.adapter.unwrap_or_default();
-
-        // Resolve the spec for the job, if a job was requested
-        #[cfg(feature = "plus")]
-        let spec_id = if let Some(job) = new_run_job.as_ref() {
-            Some(QuerySpec::resolve_for_job(
-                write_conn!(context),
-                job.spec.as_ref(),
-                testbed_id,
-            )?)
-        } else {
-            None
-        };
-        #[cfg(not(feature = "plus"))]
-        let spec_id: Option<SpecId> = None;
 
         // Create a new report and add it to the database
         let insert_report = InsertReport::from_json(
@@ -193,11 +205,11 @@ impl QueryReport {
                 context,
                 query_report.id,
                 query_project,
-                source_ip,
+                new_run_job.source_ip,
                 spec_id,
                 &plan_kind,
-                is_claimed,
-                new_run_job,
+                new_run_job.is_claimed,
+                new_run_job.run_job,
             )
             .await?;
 

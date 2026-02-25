@@ -5,13 +5,20 @@ use bencher_schema::{
     context::ApiContext,
     error::{bad_request_error, unauthorized_error},
     model::{
-        project::{QueryProject, report::QueryReport},
+        project::{
+            QueryProject,
+            report::{NewRunReport, QueryReport},
+            testbed::RunTestbed,
+        },
         user::public::{PubBearerToken, PublicUser},
     },
     public_conn,
 };
 #[cfg(feature = "plus")]
-use bencher_schema::{context::RateLimiting, model::runner::SourceIp};
+use bencher_schema::{
+    context::RateLimiting,
+    model::{project::report::NewRunJob, runner::SourceIp},
+};
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
@@ -132,29 +139,32 @@ async fn post_inner(
             .await?;
     }
 
+    let testbed = if json_run.testbed.is_some() {
+        RunTestbed::Explicit
+    } else {
+        RunTestbed::Derived
+    };
+
     #[cfg(feature = "plus")]
-    let new_run_job = json_run.job.take();
-    #[cfg(feature = "plus")]
-    let source_ip = SourceIp::new(
-        RateLimiting::remote_ip(log, headers)
-            .unwrap_or(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST)),
-    );
+    let job = json_run.job.take().map(|run_job| NewRunJob {
+        is_claimed,
+        run_job,
+        source_ip: SourceIp::new(
+            RateLimiting::remote_ip(log, headers)
+                .unwrap_or(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST)),
+        ),
+    });
 
     slog::info!(log, "New run requested"; "project" => ?query_project, "run" => ?json_run);
-    QueryReport::create(
-        log,
-        context,
-        &query_project,
-        json_run.into(),
-        public_user,
+
+    let new_run_report = NewRunReport {
+        report: json_run.into(),
+        testbed,
         #[cfg(feature = "plus")]
-        is_claimed,
-        #[cfg(feature = "plus")]
-        new_run_job,
-        #[cfg(feature = "plus")]
-        source_ip,
-    )
-    .await
+        job,
+    };
+
+    QueryReport::create(log, context, &query_project, new_run_report, public_user).await
 }
 
 fn project_name(json_run: &JsonNewRun) -> Result<ResourceName, HttpError> {

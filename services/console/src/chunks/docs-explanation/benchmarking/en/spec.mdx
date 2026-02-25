@@ -2,3 +2,13 @@
 A Spec is a hardware specification that describes the resources available to a Testbed.
 It includes the CPU architecture, number of CPUs, memory size, disk size, and whether the environment has network access.
 Specs are server-scoped, so the same Spec can be shared across multiple Testbeds.
+
+When a run creates a Bare Metal Job, the Spec determines
+both the hardware resources and the default Testbed name:
+
+| `--testbed` provided | Job requested | Testbed name source      |
+|---------------------|---------------|--------------------------|
+| No                  | No            | Context OS               |
+| Yes                 | No            | User's explicit value    |
+| No                  | Yes           | Resolved Spec's name (Spec assigned to Testbed) |
+| Yes                 | Yes           | User's explicit value (Spec assigned to Testbed) |

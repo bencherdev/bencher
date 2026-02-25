@@ -4,11 +4,13 @@ use bencher_json::{
     project::testbed::{JsonTestbedPatch, JsonUpdateTestbed},
 };
 #[cfg(feature = "plus")]
-use bencher_json::{JsonSpec, project::testbed::JsonTestbedPatchNull};
+use bencher_json::{JsonSpec, SpecResourceId, project::testbed::JsonTestbedPatchNull};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
+#[cfg(feature = "plus")]
+use crate::error::bad_request_error;
 #[cfg(feature = "plus")]
 use crate::model::spec::QuerySpec;
 use crate::model::spec::SpecId;
@@ -27,6 +29,20 @@ use crate::{
 };
 
 crate::macros::typed_id::typed_id!(TestbedId);
+
+/// Resolved testbed and optional spec for report creation.
+pub struct ResolvedTestbed {
+    pub testbed_id: TestbedId,
+    pub spec_id: Option<SpecId>,
+}
+
+/// Whether the testbed was explicitly specified by the user or derived from context.
+pub enum RunTestbed {
+    /// User explicitly provided `--testbed`.
+    Explicit,
+    /// Testbed was derived from context (OS name) or defaulted.
+    Derived,
+}
 
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
@@ -57,11 +73,50 @@ impl QueryTestbed {
     fn_get_uuid!(testbed, TestbedId, TestbedUuid);
     fn_from_uuid!(project_id, ProjectId, testbed, TestbedUuid, Testbed);
 
+    /// Get or create a testbed for a report.
+    ///
+    /// When no job is requested, this is a simple get-or-create.
+    /// When a job is requested, spec resolution follows this order:
+    /// 1. Explicit `--spec` → use it; derive testbed name from spec for `Derived`
+    /// 2. Explicit testbed exists with `spec_id` → use that spec
+    /// 3. Fallback spec → use it; derive testbed name from spec for `Derived`
+    /// 4. Error if no spec resolvable
     pub async fn get_or_create(
         context: &ApiContext,
         project_id: ProjectId,
         testbed: &TestbedNameId,
-    ) -> Result<TestbedId, HttpError> {
+        run_testbed: &RunTestbed,
+        #[cfg(feature = "plus")] job_spec: Option<&SpecResourceId>,
+    ) -> Result<ResolvedTestbed, HttpError> {
+        #[cfg(feature = "plus")]
+        {
+            // When a job is involved (job_spec present, or testbed was derived
+            // meaning a job is requested), resolve the spec and potentially
+            // derive the testbed name from it.
+            if job_spec.is_some() || matches!(run_testbed, RunTestbed::Derived) {
+                return Self::get_or_create_for_job(
+                    context,
+                    project_id,
+                    testbed,
+                    run_testbed,
+                    job_spec,
+                )
+                .await;
+            }
+        }
+
+        let query_testbed = Self::get_or_create_for_report(context, project_id, testbed).await?;
+        Ok(ResolvedTestbed {
+            testbed_id: query_testbed.id,
+            spec_id: None,
+        })
+    }
+
+    async fn get_or_create_for_report(
+        context: &ApiContext,
+        project_id: ProjectId,
+        testbed: &TestbedNameId,
+    ) -> Result<Self, HttpError> {
         let query_testbed = Self::get_or_create_inner(context, project_id, testbed).await?;
 
         if query_testbed.archived.is_some() {
@@ -72,7 +127,87 @@ impl QueryTestbed {
                 .map_err(resource_conflict_err!(Testbed, &query_testbed))?;
         }
 
-        Ok(query_testbed.id)
+        Ok(query_testbed)
+    }
+
+    /// Get or create a testbed for a job run, resolving the spec and
+    /// potentially deriving the testbed name from the spec.
+    #[cfg(feature = "plus")]
+    async fn get_or_create_for_job(
+        context: &ApiContext,
+        project_id: ProjectId,
+        testbed: &TestbedNameId,
+        run_testbed: &RunTestbed,
+        job_spec: Option<&SpecResourceId>,
+    ) -> Result<ResolvedTestbed, HttpError> {
+        // 1. Explicit --spec
+        if let Some(spec) = job_spec {
+            let query_spec = QuerySpec::from_active_resource_id(auth_conn!(context), spec)?;
+            let testbed = match run_testbed {
+                RunTestbed::Explicit => testbed.clone(),
+                RunTestbed::Derived => TestbedNameId::new_name(query_spec.name.clone()),
+            };
+            let query_testbed =
+                Self::get_or_create_for_report(context, project_id, &testbed).await?;
+            Self::maybe_assign_spec(context, &query_testbed, query_spec.id).await?;
+            return Ok(ResolvedTestbed {
+                testbed_id: query_testbed.id,
+                spec_id: Some(query_spec.id),
+            });
+        }
+
+        // 2. Explicit testbed that already exists with a spec
+        if matches!(run_testbed, RunTestbed::Explicit)
+            && let Ok(query_testbed) = Self::from_name_id(auth_conn!(context), project_id, testbed)
+            && let Some(spec_id) = query_testbed.spec_id
+        {
+            let query_testbed =
+                Self::get_or_create_for_report(context, project_id, testbed).await?;
+            return Ok(ResolvedTestbed {
+                testbed_id: query_testbed.id,
+                spec_id: Some(spec_id),
+            });
+        }
+
+        // 3. Fallback spec
+        if let Some(query_spec) = QuerySpec::get_fallback(auth_conn!(context))? {
+            let testbed = match run_testbed {
+                RunTestbed::Explicit => testbed.clone(),
+                RunTestbed::Derived => TestbedNameId::new_name(query_spec.name.clone()),
+            };
+            let query_testbed =
+                Self::get_or_create_for_report(context, project_id, &testbed).await?;
+            Self::maybe_assign_spec(context, &query_testbed, query_spec.id).await?;
+            return Ok(ResolvedTestbed {
+                testbed_id: query_testbed.id,
+                spec_id: Some(query_spec.id),
+            });
+        }
+
+        // 4. Error
+        Err(bad_request_error(
+            "No spec provided, no spec on testbed, and no fallback spec configured",
+        ))
+    }
+
+    /// Assign a spec to a testbed only if it differs from the current spec.
+    #[cfg(feature = "plus")]
+    async fn maybe_assign_spec(
+        context: &ApiContext,
+        testbed: &Self,
+        spec_id: SpecId,
+    ) -> Result<(), HttpError> {
+        if testbed.spec_id == Some(spec_id) {
+            return Ok(());
+        }
+        diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed.id)))
+            .set((
+                schema::testbed::spec_id.eq(Some(spec_id)),
+                schema::testbed::modified.eq(DateTime::now()),
+            ))
+            .execute(write_conn!(context))
+            .map_err(resource_conflict_err!(Testbed, testbed.id))?;
+        Ok(())
     }
 
     async fn get_or_create_inner(

@@ -584,6 +584,263 @@ async fn run_post_with_job_digest_reference() {
     assert_eq!(jobs[0].status, bencher_json::JobStatus::Pending);
 }
 
+/// Create a non-fallback spec with the given name and return it.
+#[cfg(feature = "plus")]
+async fn create_spec(
+    server: &TestServer,
+    admin: &bencher_api_tests::TestUser,
+    name: &str,
+) -> JsonSpec {
+    let body = serde_json::json!({
+        "name": name,
+        "architecture": "x86_64",
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64,
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Failed to create spec");
+    assert_eq!(resp.status(), StatusCode::CREATED, "Failed to create spec");
+    resp.json().await.expect("Failed to parse spec response")
+}
+
+// POST /v0/run with job + no testbed + fallback spec → testbed named after spec
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_derived_testbed_uses_spec_name() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_derived1@example.com")
+        .await;
+    let org = server.create_org(&user, "Derived TB Org").await;
+    let project = server
+        .create_project(&user, &org, "Derived TB Project")
+        .await;
+
+    let spec = create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    // Submit run WITHOUT "testbed" field, WITH "job"
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+
+    // Testbed name should be derived from the spec's name
+    assert_eq!(
+        AsRef::<str>::as_ref(&report.testbed.name),
+        AsRef::<str>::as_ref(&spec.name),
+        "Testbed name should match the fallback spec's name"
+    );
+}
+
+// POST /v0/run with job + explicit testbed + fallback spec → testbed keeps user's name
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_explicit_testbed_keeps_name() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_explicit1@example.com")
+        .await;
+    let org = server.create_org(&user, "Explicit TB Org").await;
+    let project = server
+        .create_project(&user, &org, "Explicit TB Project")
+        .await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    // Submit run WITH "testbed" field, WITH "job"
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "my-custom-testbed",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+
+    assert_eq!(
+        AsRef::<str>::as_ref(&report.testbed.name),
+        "my-custom-testbed",
+        "Testbed name should be the user's explicit value"
+    );
+}
+
+// POST /v0/run with job + no testbed + explicit spec → testbed named after explicit spec
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_derived_testbed_explicit_spec() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_derived2@example.com")
+        .await;
+    let org = server.create_org(&user, "Derived Explicit Org").await;
+    let project = server
+        .create_project(&user, &org, "Derived Explicit Project")
+        .await;
+
+    create_fallback_spec(&server, &user).await;
+    let explicit_spec = create_spec(&server, &user, "Explicit Spec").await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    let explicit_slug: &str = explicit_spec.slug.as_ref();
+    // Submit run WITHOUT "testbed" field, WITH "job" referencing explicit spec
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1"),
+            "spec": explicit_slug
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+
+    assert_eq!(
+        AsRef::<str>::as_ref(&report.testbed.name),
+        AsRef::<str>::as_ref(&explicit_spec.name),
+        "Testbed name should match the explicit spec's name"
+    );
+}
+
+// POST /v0/run with job + explicit testbed with existing spec → uses testbed's spec
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_explicit_testbed_existing_spec() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_existing1@example.com")
+        .await;
+    let org = server.create_org(&user, "Existing Spec Org").await;
+    let project = server
+        .create_project(&user, &org, "Existing Spec Project")
+        .await;
+
+    let spec_a = create_spec(&server, &user, "Spec A").await;
+    let _spec_b = create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    let spec_a_slug: &str = spec_a.slug.as_ref();
+    // First run: create testbed "my-tb" with spec A assigned via explicit --spec
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "my-tb",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1"),
+            "spec": spec_a_slug
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Verify first job uses spec A
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(AsRef::<str>::as_ref(&jobs[0].spec.slug), spec_a_slug,);
+
+    // Second run: same testbed "my-tb", no --spec
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "my-tb",
+        "start_time": "2024-01-01T00:02:00Z",
+        "end_time": "2024-01-01T00:03:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Second run should use spec A (from testbed), not spec B (fallback)
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert_eq!(jobs.len(), 2);
+    assert_eq!(
+        AsRef::<str>::as_ref(&jobs[1].spec.slug),
+        spec_a_slug,
+        "Second run should use testbed's existing spec A, not fallback"
+    );
+}
+
 // POST /v0/run with job and custom timeout
 #[cfg(feature = "plus")]
 #[tokio::test]

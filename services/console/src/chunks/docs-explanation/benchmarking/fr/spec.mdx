@@ -2,3 +2,13 @@
 Une Spec est une spécification matérielle qui décrit les ressources disponibles pour un banc d'essai.
 Elle comprend l'architecture CPU, le nombre de CPUs, la taille de la mémoire, la taille du disque et si l'environnement a accès au réseau.
 Les Specs ont une portée serveur, de sorte que la même Spec peut être partagée entre plusieurs bancs d'essai.
+
+Lorsqu'une exécution crée un Bare Metal Job, la Spec détermine
+à la fois les ressources matérielles et le nom par défaut du Testbed :
+
+| `--testbed` fourni | Job demandé | Source du nom du Testbed       |
+|--------------------|-------------|--------------------------------|
+| Non                | Non         | SO du contexte                 |
+| Oui                | Non         | Valeur explicite de l'utilisateur |
+| Non                | Oui         | Nom de la Spec résolue (Spec assignée au Testbed) |
+| Oui                | Oui         | Valeur explicite de l'utilisateur (Spec assignée au Testbed) |
