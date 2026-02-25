@@ -58,6 +58,16 @@ pub struct NewRunJob {
     pub source_ip: SourceIp,
 }
 
+#[cfg(feature = "plus")]
+impl NewRunJob {
+    pub fn run_job(&self) -> RunJob<'_> {
+        match self.run_job.spec.as_ref() {
+            Some(spec) => RunJob::WithSpec(spec),
+            None => RunJob::WithoutSpec,
+        }
+    }
+}
+
 use super::{
     branch::{QueryBranch, head::HeadId, version::VersionId},
     metric::QueryMetric,
@@ -126,6 +136,11 @@ impl QueryReport {
                 job: new_run_job,
         } = new_run_report;
 
+        #[cfg(feature = "plus")]
+        let run_job = new_run_job
+            .as_ref()
+            .map_or(RunJob::None, NewRunJob::run_job);
+
         // Get or create the branch and testbed
         let (branch_id, head_id) = QueryBranch::get_or_create(
             log,
@@ -135,15 +150,6 @@ impl QueryReport {
             json_report.start_point.as_ref(),
         )
         .await?;
-        #[cfg(feature = "plus")]
-        let run_job = match &new_run_job {
-            Some(job) => match job.run_job.spec.as_ref() {
-                Some(spec) => RunJob::WithSpec(spec),
-                None => RunJob::WithoutSpec,
-            },
-            None => RunJob::None,
-        };
-
         let ResolvedTestbed {
             testbed_id,
             spec_id,
