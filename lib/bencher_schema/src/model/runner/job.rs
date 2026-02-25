@@ -10,7 +10,7 @@ use tokio::sync::Mutex;
 
 use crate::{
     context::{ApiContext, DbConnection},
-    error::bad_request_error,
+    error::{bad_request_error, resource_conflict_err},
     macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
     model::{
         organization::{OrganizationId, plan::PlanKind},
@@ -19,6 +19,7 @@ use crate::{
         spec::{QuerySpec, SpecId},
     },
     schema::{self, job as job_table},
+    write_conn,
 };
 
 crate::macros::typed_id::typed_id!(JobId);
@@ -98,7 +99,11 @@ pub struct InsertJob {
 }
 
 impl InsertJob {
-    pub fn new(
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "job creation has many dimensions"
+    )]
+    fn new(
         report_id: ReportId,
         organization_id: OrganizationId,
         source_ip: SourceIp,
@@ -106,8 +111,8 @@ impl InsertJob {
         config: JsonJobConfig,
         timeout: Timeout,
         priority: JobPriority,
+        now: DateTime,
     ) -> Self {
-        let now = DateTime::now();
         Self {
             uuid: JobUuid::new(),
             report_id,
@@ -122,14 +127,25 @@ impl InsertJob {
             modified: now,
         }
     }
+}
 
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "job creation has many dimensions"
-    )]
+/// Pre-validated job that is ready to be inserted once a report ID is available.
+///
+/// This separates async validation (registry checks, OCI digest resolution) from
+/// the actual database insert, allowing callers to validate the job *before*
+/// inserting the report — making report + job creation atomic.
+pub struct PendingInsertJob {
+    organization_id: OrganizationId,
+    source_ip: SourceIp,
+    spec_id: SpecId,
+    config: JsonJobConfig,
+    timeout: Timeout,
+    priority: JobPriority,
+}
+
+impl PendingInsertJob {
     pub async fn from_run(
         context: &ApiContext,
-        report_id: ReportId,
         query_project: &QueryProject,
         source_ip: SourceIp,
         spec_id: SpecId,
@@ -172,15 +188,34 @@ impl InsertJob {
             file_paths: new_run_job.file_paths,
         };
 
-        Ok(Self::new(
-            report_id,
-            query_project.organization_id,
+        Ok(Self {
+            organization_id: query_project.organization_id,
             source_ip,
             spec_id,
             config,
             timeout,
             priority,
-        ))
+        })
+    }
+
+    /// Finalize the pending job with a report ID and insert it into the database.
+    pub async fn insert(self, context: &ApiContext, report_id: ReportId) -> Result<(), HttpError> {
+        let now = context.clock.now();
+        let insert_job = InsertJob::new(
+            report_id,
+            self.organization_id,
+            self.source_ip,
+            self.spec_id,
+            self.config,
+            self.timeout,
+            self.priority,
+            now,
+        );
+        diesel::insert_into(schema::job::table)
+            .values(&insert_job)
+            .execute(write_conn!(context))
+            .map_err(resource_conflict_err!(Job, insert_job))?;
+        Ok(())
     }
 }
 
@@ -251,13 +286,14 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
+    use crate::model::organization::plan::LicenseUsage;
 
     fn metered_plan() -> PlanKind {
         PlanKind::Metered("test_plan".parse::<MeteredPlanId>().unwrap())
     }
 
     fn licensed_plan(level: PlanLevel) -> PlanKind {
-        PlanKind::Licensed(crate::model::organization::plan::LicenseUsage {
+        PlanKind::Licensed(LicenseUsage {
             entitlements: Entitlements::try_from(1000).unwrap(),
             usage: 0,
             level,

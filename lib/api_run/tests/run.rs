@@ -887,7 +887,7 @@ async fn run_post_with_job_custom_timeout() {
     // Verify timeout stored correctly (120s < unclaimed max 300s, so unchanged)
     {
         use bencher_schema::schema;
-        use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+        use diesel::{QueryDsl as _, RunQueryDsl as _};
         let mut conn = server.db_conn();
         let stored_timeout: i32 = schema::job::table
             .select(schema::job::timeout)

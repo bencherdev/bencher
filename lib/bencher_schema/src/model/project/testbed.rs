@@ -120,7 +120,7 @@ impl QueryTestbed {
         let query_testbed = Self::get_or_create_inner(context, project_id, testbed).await?;
 
         if query_testbed.archived.is_some() {
-            let update_testbed = UpdateTestbed::unarchive();
+            let update_testbed = UpdateTestbed::unarchive(context.clock.now());
             diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
                 .set(&update_testbed)
                 .execute(write_conn!(context))
@@ -162,7 +162,7 @@ impl QueryTestbed {
             && let Some(spec_id) = query_testbed.spec_id
         {
             if query_testbed.archived.is_some() {
-                let update_testbed = UpdateTestbed::unarchive();
+                let update_testbed = UpdateTestbed::unarchive(context.clock.now());
                 diesel::update(
                     schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)),
                 )
@@ -210,7 +210,7 @@ impl QueryTestbed {
         diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed.id)))
             .set((
                 schema::testbed::spec_id.eq(Some(spec_id)),
-                schema::testbed::modified.eq(DateTime::now()),
+                schema::testbed::modified.eq(context.clock.now()),
             ))
             .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Testbed, testbed.id))?;
@@ -256,8 +256,12 @@ impl QueryTestbed {
         #[cfg(feature = "plus")]
         InsertTestbed::rate_limit(context, project_id).await?;
 
-        let insert_testbed =
-            InsertTestbed::from_json(auth_conn!(context), project_id, json_testbed)?;
+        let insert_testbed = InsertTestbed::from_json(
+            auth_conn!(context),
+            project_id,
+            json_testbed,
+            context.clock.now(),
+        )?;
         diesel::insert_into(schema::testbed::table)
             .values(&insert_testbed)
             .execute(write_conn!(context))
@@ -356,6 +360,7 @@ impl InsertTestbed {
         conn: &mut DbConnection,
         project_id: ProjectId,
         testbed: JsonNewTestbed,
+        now: DateTime,
     ) -> Result<Self, HttpError> {
         let JsonNewTestbed {
             name,
@@ -373,15 +378,14 @@ impl InsertTestbed {
             .transpose()?;
         #[cfg(not(feature = "plus"))]
         let spec_id = None;
-        let timestamp = DateTime::now();
         Ok(Self {
             uuid: TestbedUuid::new(),
             project_id,
             name,
             slug,
             spec_id,
-            created: timestamp,
-            modified: timestamp,
+            created: now,
+            modified: now,
             archived: None,
         })
     }
@@ -391,8 +395,13 @@ impl InsertTestbed {
         reason = "localhost has no spec, so from_json cannot fail"
     )]
     pub fn localhost(conn: &mut DbConnection, project_id: ProjectId) -> Self {
-        Self::from_json(conn, project_id, JsonNewTestbed::localhost())
-            .expect("Failed to create localhost testbed")
+        Self::from_json(
+            conn,
+            project_id,
+            JsonNewTestbed::localhost(),
+            DateTime::now(),
+        )
+        .expect("Failed to create localhost testbed")
     }
 }
 
@@ -407,7 +416,11 @@ pub struct UpdateTestbed {
 }
 
 impl UpdateTestbed {
-    pub fn from_json(conn: &mut DbConnection, json: JsonUpdateTestbed) -> Result<Self, HttpError> {
+    pub fn from_json(
+        conn: &mut DbConnection,
+        json: JsonUpdateTestbed,
+        now: DateTime,
+    ) -> Result<Self, HttpError> {
         match json {
             JsonUpdateTestbed::Patch(patch) => {
                 let JsonTestbedPatch {
@@ -429,13 +442,12 @@ impl UpdateTestbed {
                     let _ = conn;
                     None
                 };
-                let modified = DateTime::now();
-                let archived = archived.map(|archived| archived.then_some(modified));
+                let archived = archived.map(|archived| archived.then_some(now));
                 Ok(Self {
                     name,
                     slug,
                     spec_id,
-                    modified,
+                    modified: now,
                     archived,
                 })
             },
@@ -447,13 +459,12 @@ impl UpdateTestbed {
                     spec: (),
                     archived,
                 } = patch_null;
-                let modified = DateTime::now();
-                let archived = archived.map(|archived| archived.then_some(modified));
+                let archived = archived.map(|archived| archived.then_some(now));
                 Ok(Self {
                     name,
                     slug,
                     spec_id: Some(None),
-                    modified,
+                    modified: now,
                     archived,
                 })
             },
@@ -466,13 +477,12 @@ impl UpdateTestbed {
         }
     }
 
-    fn unarchive() -> Self {
-        let modified = DateTime::now();
+    fn unarchive(now: DateTime) -> Self {
         Self {
             name: None,
             slug: None,
             spec_id: None,
-            modified,
+            modified: now,
             archived: Some(None),
         }
     }

@@ -146,13 +146,21 @@ async fn post_inner(
     };
 
     #[cfg(feature = "plus")]
-    let job = json_run.job.take().map(|run_job| NewRunJob {
-        is_claimed,
-        run_job,
-        source_ip: SourceIp::new(
-            RateLimiting::remote_ip(log, headers)
-                .unwrap_or(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST)),
-        ),
+    let job = json_run.job.take().map(|run_job| {
+        let source_ip = if let Some(ip) = RateLimiting::remote_ip(log, headers) {
+            SourceIp::new(ip)
+        } else {
+            slog::warn!(
+                log,
+                "Failed to extract remote IP for job; falling back to LOCALHOST"
+            );
+            SourceIp::new(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST))
+        };
+        NewRunJob {
+            is_claimed,
+            run_job,
+            source_ip,
+        }
     });
 
     slog::info!(log, "New run requested"; "project" => ?query_project, "run" => ?json_run);

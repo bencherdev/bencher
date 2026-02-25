@@ -1638,6 +1638,7 @@ dependencies = [
  "http 1.4.0",
  "mail-send",
  "oso",
+ "pretty_assertions",
  "regex",
  "reqwest",
  "rusqlite",

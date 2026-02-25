@@ -372,10 +372,11 @@ async fn patch_inner(
         Permission::Edit,
     )?;
 
+    let now = context.clock.now();
     let (query_testbed, update_testbed) = auth_conn!(context, |conn| {
         let query_testbed =
             QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
-        let update_testbed = UpdateTestbed::from_json(conn, json_testbed.clone())?;
+        let update_testbed = UpdateTestbed::from_json(conn, json_testbed.clone(), now)?;
         Ok::<_, HttpError>((query_testbed, update_testbed))
     })?;
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))

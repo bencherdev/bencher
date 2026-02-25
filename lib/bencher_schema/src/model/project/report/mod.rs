@@ -20,7 +20,7 @@ use crate::model::organization::plan::PlanKind;
 #[cfg(feature = "plus")]
 use crate::model::project::testbed::RunJob;
 #[cfg(feature = "plus")]
-use crate::model::runner::{InsertJob, SourceIp};
+use crate::model::runner::{PendingInsertJob, SourceIp};
 use crate::model::spec::SpecId;
 use crate::{
     context::{ApiContext, DbConnection},
@@ -187,6 +187,26 @@ impl QueryReport {
         let json_settings = json_report.settings.take().unwrap_or_default();
         let adapter = json_settings.adapter.unwrap_or_default();
 
+        // Validate job before inserting report so that report + job creation is atomic:
+        // if OCI resolution fails, neither the report nor the job is created.
+        #[cfg(feature = "plus")]
+        let pending_job = if let (Some(spec_id), Some(new_run_job)) = (spec_id, new_run_job) {
+            Some(
+                PendingInsertJob::from_run(
+                    context,
+                    query_project,
+                    new_run_job.source_ip,
+                    spec_id,
+                    &plan_kind,
+                    new_run_job.is_claimed,
+                    new_run_job.run_job,
+                )
+                .await?,
+            )
+        } else {
+            None
+        };
+
         // Create a new report and add it to the database
         let insert_report = InsertReport::from_json(
             public_user.user_id(),
@@ -215,25 +235,10 @@ impl QueryReport {
             )
         })?;
 
-        // Create the job record if a job was requested
+        // Finalize and insert the pre-validated job with the report ID
         #[cfg(feature = "plus")]
-        if let (Some(spec_id), Some(new_run_job)) = (spec_id, new_run_job) {
-            let insert_job = InsertJob::from_run(
-                context,
-                query_report.id,
-                query_project,
-                new_run_job.source_ip,
-                spec_id,
-                &plan_kind,
-                new_run_job.is_claimed,
-                new_run_job.run_job,
-            )
-            .await?;
-
-            diesel::insert_into(schema::job::table)
-                .values(&insert_job)
-                .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(Job, insert_job))?;
+        if let Some(pending_job) = pending_job {
+            pending_job.insert(context, query_report.id).await?;
         }
 
         #[cfg(feature = "plus")]
