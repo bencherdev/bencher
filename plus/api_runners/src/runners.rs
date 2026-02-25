@@ -191,7 +191,8 @@ async fn post_inner(
     let token = generate_runner_token();
     let token_hash = hash_token(&token);
 
-    let insert_runner = InsertRunner::new(json_runner.name, slug, token_hash);
+    let now = context.clock.now();
+    let insert_runner = InsertRunner::new(json_runner.name, slug, token_hash, now);
     let uuid = insert_runner.uuid;
 
     diesel::insert_into(schema::runner::table)
@@ -288,7 +289,8 @@ async fn patch_inner(
 ) -> Result<JsonRunner, HttpError> {
     let query_runner = QueryRunner::from_resource_id(auth_conn!(context), &path_params.runner)?;
 
-    let update_runner = UpdateRunner::from(json_runner.clone());
+    let now = context.clock.now();
+    let update_runner = UpdateRunner::from_json(json_runner.clone(), now);
 
     diesel::update(schema::runner::table.filter(schema::runner::id.eq(query_runner.id)))
         .set(&update_runner)

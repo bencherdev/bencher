@@ -88,8 +88,7 @@ pub struct InsertRunner {
 }
 
 impl InsertRunner {
-    pub fn new(name: ResourceName, slug: RunnerSlug, token_hash: TokenHash) -> Self {
-        let now = DateTime::now();
+    pub fn new(name: ResourceName, slug: RunnerSlug, token_hash: TokenHash, now: DateTime) -> Self {
         Self {
             uuid: RunnerUuid::new(),
             name,
@@ -112,20 +111,19 @@ pub struct UpdateRunner {
     pub archived: Option<Option<DateTime>>,
 }
 
-impl From<JsonUpdateRunner> for UpdateRunner {
-    fn from(update: JsonUpdateRunner) -> Self {
+impl UpdateRunner {
+    pub fn from_json(update: JsonUpdateRunner, now: DateTime) -> Self {
         let JsonUpdateRunner {
             name,
             slug,
             archived,
         } = update;
-        let modified = DateTime::now();
-        let archived = archived.map(|archived| archived.then_some(modified));
+        let archived = archived.map(|archived| archived.then_some(now));
         Self {
             name,
             slug,
             archived,
-            modified: Some(modified),
+            modified: Some(now),
             ..Default::default()
         }
     }

@@ -473,8 +473,10 @@ async fn run_post_with_job_docker_io_image() {
     push_test_image(&server, &project, &user, "v1").await;
 
     // Use a bare docker.io image reference. Registry validation passes because
-    // docker.io is always allowed. Tag resolution uses the project UUID as
-    // the repository key, so the "v1" tag pushed above will resolve.
+    // docker.io is always allowed. Tag resolution ignores the repository path
+    // in the image reference and uses only the project UUID and tag name, so
+    // the "v1" tag pushed above (under this project) will resolve regardless
+    // of the "alpine" repository path.
     let body = serde_json::json!({
         "project": project_slug,
         "branch": "main",
@@ -496,7 +498,8 @@ async fn run_post_with_job_docker_io_image() {
         .await
         .expect("Request failed");
 
-    // docker.io is allowed, and the tag "v1" resolves via the project's OCI storage
+    // docker.io is allowed, and the tag "v1" resolves because tag lookup
+    // is scoped to the project UUID, not the image repository path
     assert_eq!(resp.status(), StatusCode::CREATED);
 
     let jobs = list_project_jobs(&server, &user, project_slug).await;
@@ -851,11 +854,14 @@ async fn run_post_with_job_custom_timeout() {
         use bencher_schema::schema;
         use diesel::{QueryDsl as _, RunQueryDsl as _};
         let mut conn = server.db_conn();
-        let stored_timeout: i32 = schema::job::table
+        let stored_timeout: bencher_json::Timeout = schema::job::table
             .select(schema::job::timeout)
             .first(&mut conn)
             .expect("Failed to query job timeout");
-        assert_eq!(stored_timeout, 120);
+        assert_eq!(
+            stored_timeout,
+            bencher_json::Timeout::try_from(120).unwrap()
+        );
     }
 }
 
@@ -1224,11 +1230,15 @@ async fn run_post_with_job_timeout_clamped() {
         use bencher_schema::schema;
         use diesel::{QueryDsl as _, RunQueryDsl as _};
         let mut conn = server.db_conn();
-        let stored_timeout: i32 = schema::job::table
+        let stored_timeout: bencher_json::Timeout = schema::job::table
             .select(schema::job::timeout)
             .first(&mut conn)
             .expect("Failed to query job timeout");
-        assert_eq!(stored_timeout, 900, "Timeout should be clamped to free max");
+        assert_eq!(
+            stored_timeout,
+            bencher_json::Timeout::try_from(900).unwrap(),
+            "Timeout should be clamped to free max"
+        );
     }
 }
 
@@ -1384,12 +1394,13 @@ async fn run_post_with_job_default_timeout() {
         use bencher_schema::schema;
         use diesel::{QueryDsl as _, RunQueryDsl as _};
         let mut conn = server.db_conn();
-        let stored_timeout: i32 = schema::job::table
+        let stored_timeout: bencher_json::Timeout = schema::job::table
             .select(schema::job::timeout)
             .first(&mut conn)
             .expect("Failed to query job timeout");
         assert_eq!(
-            stored_timeout, 900,
+            stored_timeout,
+            bencher_json::Timeout::try_from(900).unwrap(),
             "Default timeout should be FREE_MAX (900s)"
         );
     }
@@ -1438,13 +1449,13 @@ async fn run_post_with_job_priority_free() {
         use bencher_schema::schema;
         use diesel::{QueryDsl as _, RunQueryDsl as _};
         let mut conn = server.db_conn();
-        let stored_priority: i32 = schema::job::table
+        let stored_priority: bencher_json::JobPriority = schema::job::table
             .select(schema::job::priority)
             .first(&mut conn)
             .expect("Failed to query job priority");
         assert_eq!(
             stored_priority,
-            i32::from(bencher_json::JobPriority::Free),
+            bencher_json::JobPriority::Free,
             "Priority should be Free for a claimed org with no billing plan"
         );
     }

@@ -1341,7 +1341,6 @@ async fn specs_unarchive_former_fallback() {
 #[tokio::test]
 #[expect(clippy::too_many_lines, reason = "integration test with OCI setup")]
 async fn specs_archive_clears_testbed_spec_id() {
-    use bencher_api_tests::oci::compute_digest;
     use bencher_json::JsonReport;
 
     let server = TestServer::new().await;
@@ -1398,7 +1397,6 @@ async fn specs_archive_clears_testbed_spec_id() {
         }]
     })
     .to_string();
-    let _manifest_digest = compute_digest(manifest.as_bytes());
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{project_slug}/manifests/v1")))
@@ -1438,10 +1436,10 @@ async fn specs_archive_clears_testbed_spec_id() {
 
     // Verify the testbed has a spec_id set
     {
-        use bencher_schema::schema;
+        use bencher_schema::{model::spec::SpecId, schema};
         use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
         let mut conn = server.db_conn();
-        let spec_id: Option<i32> = schema::testbed::table
+        let spec_id: Option<SpecId> = schema::testbed::table
             .filter(schema::testbed::name.eq("spec-testbed"))
             .select(schema::testbed::spec_id)
             .first(&mut conn)
@@ -1466,10 +1464,10 @@ async fn specs_archive_clears_testbed_spec_id() {
 
     // Verify the testbed's spec_id has been cleared
     {
-        use bencher_schema::schema;
+        use bencher_schema::{model::spec::SpecId, schema};
         use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
         let mut conn = server.db_conn();
-        let spec_id: Option<i32> = schema::testbed::table
+        let spec_id: Option<SpecId> = schema::testbed::table
             .filter(schema::testbed::name.eq("spec-testbed"))
             .select(schema::testbed::spec_id)
             .first(&mut conn)
