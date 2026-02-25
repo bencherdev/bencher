@@ -306,7 +306,8 @@ async fn run_post_with_job_creates_job() {
         .await
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::CREATED);
-    let _report: JsonReport = resp.json().await.expect("Failed to parse response");
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+    assert_eq!(AsRef::<str>::as_ref(&report.testbed.name), "localhost");
 
     // Verify job was created
     let jobs = list_project_jobs(&server, &user, project_slug).await;
@@ -882,4 +883,176 @@ async fn run_post_with_job_custom_timeout() {
 
     let jobs = list_project_jobs(&server, &user, project_slug).await;
     assert_eq!(jobs.len(), 1);
+
+    // Verify timeout stored correctly (120s < unclaimed max 300s, so unchanged)
+    {
+        use bencher_schema::schema;
+        use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+        let mut conn = server.db_conn();
+        let stored_timeout: i32 = schema::job::table
+            .select(schema::job::timeout)
+            .first(&mut conn)
+            .expect("Failed to query job timeout");
+        assert_eq!(stored_timeout, 120);
+    }
+}
+
+// POST /v0/run with explicit testbed, no job, with fallback spec → OK, no job created
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_explicit_testbed_no_job_with_fallback_spec() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "run_explicit_nojob_fb@example.com")
+        .await;
+    let org = server.create_org(&user, "Explicit NoJob FB Org").await;
+    let project = server
+        .create_project(&user, &org, "Explicit NoJob FB Project")
+        .await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()]
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // No job should be created even though a fallback spec exists
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert!(jobs.is_empty(), "Expected no jobs, got {}", jobs.len());
+}
+
+// POST /v0/run with derived testbed (no --testbed), no job, no fallback → OK, no job
+// This is the regression test for the bug where RunTestbed::Derived incorrectly
+// entered the job resolution path even without a job being requested.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_no_testbed_no_job_succeeds() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "run_derived_nojob@example.com")
+        .await;
+    let org = server.create_org(&user, "Derived NoJob Org").await;
+    let project = server
+        .create_project(&user, &org, "Derived NoJob Project")
+        .await;
+
+    // No spec, no fallback — just a plain run without --testbed and without --job
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()]
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert!(jobs.is_empty(), "Expected no jobs, got {}", jobs.len());
+}
+
+// POST /v0/run with derived testbed (no --testbed), no job, with fallback → OK, no job
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_no_testbed_no_job_with_fallback_spec_succeeds() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "run_derived_nojob_fb@example.com")
+        .await;
+    let org = server.create_org(&user, "Derived NoJob FB Org").await;
+    let project = server
+        .create_project(&user, &org, "Derived NoJob FB Project")
+        .await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()]
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // No job should be created even though a fallback spec exists
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert!(jobs.is_empty(), "Expected no jobs, got {}", jobs.len());
+}
+
+// POST /v0/run with derived testbed (no --testbed), with job, no spec, no fallback → 400
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_derived_no_spec_fails() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "run_derived_job_nospec@example.com")
+        .await;
+    let org = server.create_org(&user, "Derived Job NoSpec Org").await;
+    let project = server
+        .create_project(&user, &org, "Derived Job NoSpec Project")
+        .await;
+
+    // Push OCI image (no spec created)
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    // Submit run WITHOUT testbed, WITH job, no spec and no fallback
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    // Should fail because no spec is available
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }

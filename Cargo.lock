@@ -265,6 +265,7 @@ dependencies = [
  "bencher_otel",
  "bencher_rbac",
  "bencher_schema",
+ "diesel",
  "dropshot",
  "http 1.4.0",
  "serde_json",

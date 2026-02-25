@@ -44,6 +44,17 @@ pub enum RunTestbed {
     Derived,
 }
 
+/// Whether a job was requested and how its spec should be resolved.
+#[cfg(feature = "plus")]
+pub enum RunJob<'a> {
+    /// No job requested — skip the job resolution path entirely.
+    None,
+    /// Job requested with an explicit `--spec`.
+    WithSpec(&'a SpecResourceId),
+    /// Job requested without an explicit spec — resolve from testbed or fallback.
+    WithoutSpec,
+}
+
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
 )]
@@ -86,23 +97,12 @@ impl QueryTestbed {
         project_id: ProjectId,
         testbed: &TestbedNameId,
         run_testbed: &RunTestbed,
-        #[cfg(feature = "plus")] job_spec: Option<&SpecResourceId>,
+        #[cfg(feature = "plus")] run_job: &RunJob<'_>,
     ) -> Result<ResolvedTestbed, HttpError> {
         #[cfg(feature = "plus")]
-        {
-            // When a job is involved (job_spec present, or testbed was derived
-            // meaning a job is requested), resolve the spec and potentially
-            // derive the testbed name from it.
-            if job_spec.is_some() || matches!(run_testbed, RunTestbed::Derived) {
-                return Self::get_or_create_for_job(
-                    context,
-                    project_id,
-                    testbed,
-                    run_testbed,
-                    job_spec,
-                )
+        if matches!(run_job, RunJob::WithSpec(_) | RunJob::WithoutSpec) {
+            return Self::get_or_create_for_job(context, project_id, testbed, run_testbed, run_job)
                 .await;
-            }
         }
 
         let query_testbed = Self::get_or_create_for_report(context, project_id, testbed).await?;
@@ -138,10 +138,10 @@ impl QueryTestbed {
         project_id: ProjectId,
         testbed: &TestbedNameId,
         run_testbed: &RunTestbed,
-        job_spec: Option<&SpecResourceId>,
+        run_job: &RunJob<'_>,
     ) -> Result<ResolvedTestbed, HttpError> {
         // 1. Explicit --spec
-        if let Some(spec) = job_spec {
+        if let RunJob::WithSpec(spec) = run_job {
             let query_spec = QuerySpec::from_active_resource_id(auth_conn!(context), spec)?;
             let testbed = match run_testbed {
                 RunTestbed::Explicit => testbed.clone(),
@@ -161,8 +161,15 @@ impl QueryTestbed {
             && let Ok(query_testbed) = Self::from_name_id(auth_conn!(context), project_id, testbed)
             && let Some(spec_id) = query_testbed.spec_id
         {
-            let query_testbed =
-                Self::get_or_create_for_report(context, project_id, testbed).await?;
+            if query_testbed.archived.is_some() {
+                let update_testbed = UpdateTestbed::unarchive();
+                diesel::update(
+                    schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)),
+                )
+                .set(&update_testbed)
+                .execute(write_conn!(context))
+                .map_err(resource_conflict_err!(Testbed, &query_testbed))?;
+            }
             return Ok(ResolvedTestbed {
                 testbed_id: query_testbed.id,
                 spec_id: Some(spec_id),

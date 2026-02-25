@@ -18,6 +18,8 @@ use slog::Logger;
 #[cfg(feature = "plus")]
 use crate::model::organization::plan::PlanKind;
 #[cfg(feature = "plus")]
+use crate::model::project::testbed::RunJob;
+#[cfg(feature = "plus")]
 use crate::model::runner::{InsertJob, SourceIp};
 use crate::model::spec::SpecId;
 use crate::{
@@ -133,6 +135,15 @@ impl QueryReport {
             json_report.start_point.as_ref(),
         )
         .await?;
+        #[cfg(feature = "plus")]
+        let run_job = match &new_run_job {
+            Some(job) => match job.run_job.spec.as_ref() {
+                Some(spec) => RunJob::WithSpec(spec),
+                None => RunJob::WithoutSpec,
+            },
+            None => RunJob::None,
+        };
+
         let ResolvedTestbed {
             testbed_id,
             spec_id,
@@ -142,7 +153,7 @@ impl QueryReport {
             &json_report.testbed,
             &run_testbed,
             #[cfg(feature = "plus")]
-            new_run_job.as_ref().and_then(|j| j.run_job.spec.as_ref()),
+            &run_job,
         )
         .await?;
 
