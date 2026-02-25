@@ -1,0 +1,12 @@
+### `--image <IMAGE>`
+
+<br />
+
+➕ Bencher Plus: Задайте ссылку на OCI-образ для удалённого выполнения на [Bare Metal Runner][spec]
+(например, `my-image:tag`, `registry.bencher.dev/my-image:tag`,
+или для экземпляров Bencher Self-Hosted `localhost:61016/my-image:tag`).
+Поддерживается только OCI-реестр API-сервера Bencher.
+Когда задан `--image`, команда бенчмарка выполняется на удалённом Bare Metal Runner,
+а не локально.
+
+[spec]: /ru/docs/explanation/benchmarking/#spec

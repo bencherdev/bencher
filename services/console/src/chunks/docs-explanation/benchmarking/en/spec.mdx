@@ -6,7 +6,7 @@ Specs are server-scoped, so the same Spec can be shared across multiple Testbeds
 When a run creates a Bare Metal Job, the Spec determines
 both the hardware resources and the default Testbed name:
 
-| `--testbed` provided | Job requested | Testbed name source      |
+| [`--testbed`](/docs/explanation/bencher-run/#--testbed-testbed) provided | [`--image`](/docs/explanation/bencher-run/#--image-image) provided | Testbed name source      |
 |---------------------|---------------|--------------------------|
 | No                  | No            | Context OS               |
 | Yes                 | No            | User's explicit value    |

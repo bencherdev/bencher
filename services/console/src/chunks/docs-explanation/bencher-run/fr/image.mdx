@@ -1,0 +1,12 @@
+### `--image <IMAGE>`
+
+<br />
+
+➕ Bencher Plus : Définissez la référence d'image OCI pour l'exécution à distance sur un [Bare Metal Runner][spec]
+(par ex. `my-image:tag`, `registry.bencher.dev/my-image:tag`,
+ou pour les instances Bencher Self-Hosted `localhost:61016/my-image:tag`).
+Seul le registre OCI du serveur API Bencher est pris en charge.
+Lorsque `--image` est défini, la commande de benchmark s'exécute sur un Bare Metal Runner distant
+au lieu de s'exécuter localement.
+
+[spec]: /fr/docs/explanation/benchmarking/#spec
