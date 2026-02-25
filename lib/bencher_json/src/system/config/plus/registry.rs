@@ -16,8 +16,9 @@ pub struct JsonRegistry {
     /// The externally-reachable URL of the API server for OCI registry access.
     /// Defaults to `http://localhost:61016`.
     pub url: Option<Url>,
-    /// S3 storage configuration for the container registry
-    pub data_store: RegistryDataStore,
+    /// Storage configuration for the container registry.
+    /// Defaults to local filesystem storage if not provided.
+    pub data_store: Option<RegistryDataStore>,
     /// Upload session timeout in seconds.
     /// Uploads older than this are cleaned up when new uploads start.
     /// Defaults to 3600 (1 hour).
@@ -49,8 +50,11 @@ impl Sanitize for JsonRegistry {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(tag = "service", rename_all = "snake_case")]
 pub enum RegistryDataStore {
+    Local,
     AwsS3 {
+        /// AWS Access Key ID with permissions to read/write the specified S3 bucket
         access_key_id: String,
+        /// AWS Secret Access Key with permissions to read/write the specified S3 bucket
         secret_access_key: Secret,
         /// S3 Access Point ARN with optional path prefix
         /// Format: arn:aws:s3:<region>:<account-id>:accesspoint/<bucket>[/path]
@@ -61,6 +65,7 @@ pub enum RegistryDataStore {
 impl Sanitize for RegistryDataStore {
     fn sanitize(&mut self) {
         match self {
+            Self::Local => {},
             Self::AwsS3 {
                 secret_access_key, ..
             } => secret_access_key.sanitize(),

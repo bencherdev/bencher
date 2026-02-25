@@ -14392,7 +14392,8 @@
         "type": "object",
         "properties": {
           "data_store": {
-            "description": "S3 storage configuration for the container registry",
+            "nullable": true,
+            "description": "Storage configuration for the container registry. Defaults to local filesystem storage if not provided.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/RegistryDataStore"
@@ -14422,10 +14423,7 @@
               }
             ]
           }
-        },
-        "required": [
-          "data_store"
-        ]
+        }
       },
       "JsonRemoveModel": {
         "type": "object",
@@ -16693,7 +16691,22 @@
           {
             "type": "object",
             "properties": {
+              "service": {
+                "type": "string",
+                "enum": [
+                  "local"
+                ]
+              }
+            },
+            "required": [
+              "service"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
               "access_key_id": {
+                "description": "AWS Access Key ID with permissions to read/write the specified S3 bucket",
                 "type": "string"
               },
               "access_point": {
@@ -16701,7 +16714,12 @@
                 "type": "string"
               },
               "secret_access_key": {
-                "$ref": "#/components/schemas/Secret"
+                "description": "AWS Secret Access Key with permissions to read/write the specified S3 bucket",
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Secret"
+                  }
+                ]
               },
               "service": {
                 "type": "string",

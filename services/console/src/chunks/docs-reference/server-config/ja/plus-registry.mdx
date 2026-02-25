@@ -10,7 +10,8 @@ BencherはOCI準拠のコンテナ/アーティファクトレジストリとし
 複数インスタンスの本番デプロイメントや耐久性のためには、
 S3ベースのストレージを設定してください。
 
-1つのストレージ`service`があります：
+2つのストレージ`service`オプションがあります：
+- `local`：ローカルファイルシステムにOCIアーティファクトを保存（デフォルト）
 - `aws_s3`：AWS S3にOCIアーティファクトを保存
     - `access_key_id`：AWSアクセスキーID
     - `secret_access_key`：AWSシークレットアクセスキー
@@ -21,9 +22,9 @@ S3ベースのストレージを設定してください。
 | :--------------------------: | :-----------------------------------------------------------------: | :--------: | :----: | :-------------------------------------------------------------------------------------------: |
 |             url              |              "https://registry.bencher.example.com"                 | "http://localhost:61016" | いいえ | OCIレジストリアクセス用のAPIサーバーの外部到達可能なURL。 |
 |          data_store          |                              \{ ... \}                              |    ---     | いいえ |                      OCIストレージバックエンドを指定します。省略時はローカル。                |
-|      data_store.service      |                              "aws_s3"                               |    ---     |  はい  |                               ストレージサービスタイプを指定します。                          |
-|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |    ---     |  はい  |                                         AWSアクセスキーID。                                   |
-| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |    ---     |  はい  |                                    AWSシークレットアクセスキー。                              |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |    ---     |  はい  |           S3アクセスポイントARN。アクセスポイント名の後にオプションのパスプレフィックス。     |
+|      data_store.service      |                      "local" または "aws_s3"                        |    ---     |  はい  |                               ストレージサービスタイプを指定します。                          |
+|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |    ---     | aws_s3のみ |                                         AWSアクセスキーID。                                   |
+| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |    ---     | aws_s3のみ |                                    AWSシークレットアクセスキー。                              |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |    ---     | aws_s3のみ |           S3アクセスポイントARN。アクセスポイント名の後にオプションのパスプレフィックス。     |
 |       upload_timeout         |                                3600                                 |    3600    | いいえ | アップロードセッションのタイムアウト（秒）。古いアップロードは新しいアップロード開始時にクリーンアップされます。 |
 |       max_body_size          |                            1073741824                               | 1073741824 | いいえ | Blobおよびマニフェストアップロードの最大ボディサイズ（バイト）。この制限を超えるリクエストは413 Payload Too Largeで拒否されます。デフォルト：1 GiB。 |

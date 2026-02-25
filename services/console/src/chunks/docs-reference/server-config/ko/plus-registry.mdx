@@ -10,7 +10,8 @@ Bencher는 OCI 호환 컨테이너/아티팩트 레지스트리로 작동할 수
 여러 인스턴스가 있는 프로덕션 배포 또는 내구성을 위해서는
 S3 기반 스토리지를 구성하세요.
 
-하나의 스토리지 `service`가 있습니다:
+두 가지 스토리지 `service` 옵션이 있습니다:
+- `local`: 로컬 파일시스템에 OCI 아티팩트 저장 (기본값)
 - `aws_s3`: AWS S3에 OCI 아티팩트 저장
     - `access_key_id`: AWS 액세스 키 ID
     - `secret_access_key`: AWS 시크릿 액세스 키
@@ -21,9 +22,9 @@ S3 기반 스토리지를 구성하세요.
 | :--------------------------: | :-----------------------------------------------------------------: | :----: | :----: | :-----------------------------------------------------------------------------------: |
 |             url              |              "https://registry.bencher.example.com"                 | "http://localhost:61016" | 아니오 | OCI 레지스트리 액세스를 위한 API 서버의 외부 접근 가능 URL. |
 |          data_store          |                              \{ ... \}                              |  ---   | 아니오 |                    OCI 스토리지 백엔드를 지정합니다. 생략 시 로컬.                    |
-|      data_store.service      |                              "aws_s3"                               |  ---   |   예   |                          스토리지 서비스 유형을 지정합니다.                           |
-|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |  ---   |   예   |                                   AWS 액세스 키 ID.                                   |
-| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |  ---   |   예   |                                 AWS 시크릿 액세스 키.                                 |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |  ---   |   예   |           S3 액세스 포인트 ARN. 액세스 포인트 이름 뒤에 선택적 경로 접두사.           |
+|      data_store.service      |                      "local" 또는 "aws_s3"                          |  ---   |   예   |                          스토리지 서비스 유형을 지정합니다.                           |
+|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |  ---   | aws_s3만 |                                   AWS 액세스 키 ID.                                   |
+| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |  ---   | aws_s3만 |                                 AWS 시크릿 액세스 키.                                 |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |  ---   | aws_s3만 |           S3 액세스 포인트 ARN. 액세스 포인트 이름 뒤에 선택적 경로 접두사.           |
 |       upload_timeout         |                                3600                                 |  3600  | 아니오 | 업로드 세션 타임아웃(초). 오래된 업로드는 새 업로드 시작 시 정리됩니다. |
 |       max_body_size          |                            1073741824                               | 1073741824 | 아니오 | Blob 및 매니페스트 업로드의 최대 본문 크기(바이트). 이 제한을 초과하는 요청은 413 Payload Too Large로 거부됩니다. 기본값: 1 GiB. |

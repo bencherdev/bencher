@@ -7,7 +7,9 @@ use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
 use bencher_json::{
     is_bencher_cloud,
-    system::config::{JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha},
+    system::config::{
+        JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha, RegistryDataStore,
+    },
 };
 use bencher_license::Licensor;
 use bencher_oci_storage::OciStorage;
@@ -62,7 +64,7 @@ impl Plus {
     ) -> Result<Self, PlusError> {
         let Some(plus) = plus else {
             // No Plus config, but still provide local OCI storage
-            info!(log, "Using local filesystem OCI storage (no S3 configured)");
+            info!(log, "Using local filesystem registry storage");
             return Ok(Self {
                 github_client: None,
                 google_client: None,
@@ -89,7 +91,7 @@ impl Plus {
             plus.registry.map_or((None, None, None, None), |registry| {
                 (
                     registry.url,
-                    Some(registry.data_store),
+                    registry.data_store,
                     Some(registry.upload_timeout),
                     Some(registry.max_body_size),
                 )
@@ -98,13 +100,11 @@ impl Plus {
             .map(|url| url.try_into().map_err(PlusError::RegistryUrl))
             .transpose()?
             .unwrap_or_else(|| default_registry_url(console_url));
-        if registry_data_store.is_none() {
-            info!(
-                log,
-                "Using local filesystem registry storage (no S3 configured)"
-            );
-        } else {
-            info!(log, "Using S3 registry storage");
+        match &registry_data_store {
+            Some(RegistryDataStore::Local) | None => {
+                info!(log, "Using local filesystem registry storage");
+            },
+            Some(RegistryDataStore::AwsS3 { .. }) => info!(log, "Using S3 registry storage"),
         }
         let oci_storage = OciStorage::try_from_config(
             log.clone(),
@@ -196,9 +196,9 @@ impl Plus {
 }
 
 fn default_registry_url(console_url: &Url) -> Url {
-    if cfg!(debug_assertions) || !is_bencher_cloud(console_url) {
-        bencher_json::LOCALHOST_BENCHER_REGISTRY_URL.clone()
+    if is_bencher_cloud(console_url) {
+        bencher_json::BENCHER_REGISTRY_URL.clone()
     } else {
-        bencher_json::PROD_BENCHER_REGISTRY_URL.clone()
+        bencher_json::LOCALHOST_BENCHER_REGISTRY_URL.clone()
     }
 }

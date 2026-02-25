@@ -10,7 +10,8 @@ Bencher 可以作为符合 OCI 标准的容器/工件注册表运行。
 对于多实例的生产部署或需要持久性时，
 请配置基于 S3 的存储。
 
-有一种存储 `service`：
+有两种存储 `service` 选项：
+- `local`：将 OCI 工件存储在本地文件系统中（默认）
 - `aws_s3`：将 OCI 工件存储在 AWS S3 中
     - `access_key_id`：AWS 访问密钥 ID
     - `secret_access_key`：AWS 秘密访问密钥
@@ -21,9 +22,9 @@ Bencher 可以作为符合 OCI 标准的容器/工件注册表运行。
 | :--------------------------: | :-----------------------------------------------------------------: | :----: | :---: | :-----------------------------------------------------------: |
 |             url              |              "https://registry.bencher.example.com"                 | "http://localhost:61016" |  否   | API 服务器的外部可达 URL，用于 OCI 注册表访问。 |
 |          data_store          |                              \{ ... \}                              |  ---   |  否   |            指定 OCI 存储后端。省略时使用本地存储。            |
-|      data_store.service      |                              "aws_s3"                               |  ---   |  是   |                      指定存储服务类型。                       |
-|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |  ---   |  是   |                       AWS 访问密钥 ID。                       |
-| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |  ---   |  是   |                      AWS 秘密访问密钥。                       |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |  ---   |  是   |           S3 访问点 ARN。访问点名称后可选路径前缀。           |
+|      data_store.service      |                       "local" 或 "aws_s3"                           |  ---   |  是   |                      指定存储服务类型。                       |
+|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |  ---   | 仅 aws_s3 |                       AWS 访问密钥 ID。                       |
+| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |  ---   | 仅 aws_s3 |                      AWS 秘密访问密钥。                       |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |  ---   | 仅 aws_s3 |           S3 访问点 ARN。访问点名称后可选路径前缀。           |
 |       upload_timeout         |                                3600                                 |  3600  |  否   | 上传会话超时时间（秒）。过期上传在启动新上传时被清理。 |
 |       max_body_size          |                            1073741824                               | 1073741824 |  否   | Blob 和清单上传的最大正文大小（字节）。超过此限制的请求将被拒绝并返回 413 Payload Too Large。默认值：1 GiB。 |

@@ -10,8 +10,9 @@ Dies ist geeignet für Entwicklung und Einzelinstanz-Deployments.
 Für Produktions-Deployments mit mehreren Instanzen oder für Dauerhaftigkeit
 konfigurieren Sie S3-basierten Speicher.
 
-Es gibt einen Speicher-`service`:
-- `aws_s3`: Speichern Sie OCI-Artefakte in AWS S3
+Es gibt zwei Speicher-`service`-Optionen:
+- `local`: OCI-Artefakte im lokalen Dateisystem speichern (Standard)
+- `aws_s3`: OCI-Artefakte in AWS S3 speichern
     - `access_key_id`: AWS-Zugangsschlüssel-ID
     - `secret_access_key`: AWS-Geheimzugangsschlüssel
     - `access_point`: S3 Access Point ARN mit optionalem Pfadpräfix.
@@ -21,9 +22,9 @@ Es gibt einen Speicher-`service`:
 | :--------------------------: | :-----------------------------------------------------------------: | :----------: | :----------: | :-------------------------------------------------------------------------------------------------: |
 |             url              |              "https://registry.bencher.example.com"                 | "http://localhost:61016" |     Nein     | Die extern erreichbare URL des API-Servers für OCI-Registry-Zugriff. |
 |          data_store          |                              \{ ... \}                              |     ---      |     Nein     |                      Gibt das OCI-Speicher-Backend an. Lokal wenn weggelassen.                      |
-|      data_store.service      |                              "aws_s3"                               |     ---      |      Ja      |                                   Gibt den Speicherdiensttyp an.                                    |
-|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |     ---      |      Ja      |                                      AWS-Zugangsschlüssel-ID.                                       |
-| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |     ---      |      Ja      |                                     AWS-Geheimzugangsschlüssel.                                     |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |     ---      |      Ja      |               S3 Access Point ARN. Optionales Pfadpräfix nach dem Access-Point-Namen.               |
+|      data_store.service      |                       "local" oder "aws_s3"                         |     ---      |      Ja      |                                   Gibt den Speicherdiensttyp an.                                    |
+|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |     ---      | nur aws_s3   |                                      AWS-Zugangsschlüssel-ID.                                       |
+| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |     ---      | nur aws_s3   |                                     AWS-Geheimzugangsschlüssel.                                     |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |     ---      | nur aws_s3   |               S3 Access Point ARN. Optionales Pfadpräfix nach dem Access-Point-Namen.               |
 |       upload_timeout         |                                3600                                 |     3600     |     Nein     | Upload-Sitzungs-Timeout in Sekunden. Veraltete Uploads werden bei neuen Uploads bereinigt. |
 |       max_body_size          |                            1073741824                               | 1073741824   |     Nein     | Maximale Body-Größe in Bytes für Blob- und Manifest-Uploads. Anfragen, die dieses Limit überschreiten, werden mit 413 Payload Too Large abgelehnt. Standard: 1 GiB. |
