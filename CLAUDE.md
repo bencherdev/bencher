@@ -1,39 +1,45 @@
-# CLAUDE.md
+# Bencher CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+The goal of this file is to describe the common mistakes and confusion points
+an agent might face as they work in this codebase.
+If you ever encounter something in the project that surprises you,
+please alert the developer working with you and indicate that this is the case by editing the `CLAUDE.md` file to help prevent future agents from having the same issue.
 
 ## Project Overview
 
-Bencher is a continuous benchmarking platform that detects and prevents performance regressions. It consists of:
+Bencher is a continuous benchmarking platform that detects and prevents performance regressions.
 
-- **Bencher API Server** (`services/api`) - REST API backend built with Rust/Dropshot
-- **Bencher Console** (`services/console`) - Web UI built with Astro + SolidJS + Bulma CSS
-- **`bencher` CLI** (`services/cli`) - Command-line tool for running benchmarks and interacting with the API
+- **Bencher API Server** (`services/api`) - see [`services/api/CLAUDE.md`](services/api/CLAUDE.md)
+- **`bencher` CLI** (`services/cli`) - CLI for the REST API
+- **Bencher Console** (`services/console`) - see [`services/console/CLAUDE.md`](services/console/CLAUDE.md)
+- **Bare Metal `runner`** (`services/runner`) - Bare Metal benchmark runner
 
-**Tech stack:** Rust (edition 2024, toolchain 1.91.1), TypeScript, SQLite (Diesel ORM), WASM for sharing Rust types with frontend. Version control uses Jujutsu (`jj`) with Git.
+## Version Control
 
-**Development Methodology:** Practice test-driven development (TDD) with a strong emphasis on code quality, maintainability, and clear documentation. Follow the established code style rules and project architecture to ensure consistency across the codebase.
+Version control uses Jujutsu (`jj`) with Git.
 
-## Common Commands
+## Development Methodology
 
-### Building & Running
+- Practice test-driven development (TDD)
+- All new code should be designed for testability and maintainability
+- All changes should include appropriate unit and integration tests
+
+## Building
 
 ```bash
-cargo build                    # Build all Rust crates
-# API server:
-cd services/api && cargo run   # Runs on http://localhost:61016
-# Console:
-cd services/console && npm run dev  # Runs on http://localhost:3000
+cargo build
 ```
 
-### Testing
+## Testing
 
 ```bash
-cargo nextest run              # Run all Rust tests
-cargo nextest run -p <crate_name>  # Run tests for a specific crate
-cargo test --doc               # Run doctests (nextest doesn't support doctests)
-cargo test-api seed            # Seed the database with sample data
-cd services/console && npm test # Run frontend tests (vitest)
+cargo nextest run
+```
+
+`nextest` does not support doctests, so also run:
+
+```bash
+cargo test --doc
 ```
 
 Crates that depend on `bencher_valid` will need to specify either:
@@ -47,133 +53,39 @@ Otherwise, you will see:
 use of undeclared type `Regex`
 ```
 
-Running the seed tests:
-
-1. Stop the API server if it's running.
-2. Delete the existing database at `services/api/data/bencher.db` if it exists.
-3. Run the API server from `services/api` in one terminal.
-4. In another terminal:
-  - Bencher Cloud: `cargo test-api seed --is-bencher-cloud`
-  - Bencher Self-Hosted: `cargo test-api seed`
-  - If running in a separate `jj` workspace (no `.git` directory), add `--no-git`. The anonymous report tests derive the project name from the git repo; without git they fall back to `"Project"` instead of `"bencher"`, and the `--no-git` flag adjusts assertions accordingly.
-
-### Linting & Formatting
+## Formatting
 
 ```bash
-cargo fmt                      # Format Rust code
-cargo clippy --no-deps --all-targets --all-features -- -Dwarnings  # Lint Rust code
-cargo check --no-default-features  # Verify build without Plus features
-
-cd services/console
-npx biome format --write .     # Format frontend code
-npx biome lint .               # Lint frontend code
+cargo fmt
 ```
 
-When modifying `target_os = "linux"` crates (`bencher_init`, `bencher_rootfs`, `bencher_runner`, `bencher_runner_cli`), also run the cross-compilation checks locally:
+## Linting
+
+```bash
+cargo clippy --no-deps --all-targets --all-features -- -Dwarnings
+```
+
+## Checking non-Plus
+
+```bash
+cargo check --no-default-features
+```
+
+## Linux Cross-Compilation Checks
+
+When modifying `target_os = "linux"` crates (`bencher_init`, `bencher_rootfs`, `bencher_runner`, `bencher_runner_cli`),
+also run the cross-compilation checks locally:
 
 ```bash
 ./scripts/clippy.sh            # Runs clippy natively + cross-compiles to x86_64-unknown-linux-gnu
 ./scripts/test.sh --linux-only # Cross-compiles tests for the Linux-only crates
 ```
 
-These scripts require a cross-compiler (`zig`, `x86_64-linux-gnu-gcc`, or `x86_64-unknown-linux-gnu-gcc`) and the `x86_64-unknown-linux-gnu` Rust target. The clippy script will install the target automatically and warn if no cross-compiler is found.
+These scripts require a cross-compiler (`zig`, `x86_64-linux-gnu-gcc`, or `x86_64-unknown-linux-gnu-gcc`)
+and the `x86_64-unknown-linux-gnu` Rust target.
+The clippy script will install the target automatically and warn if no cross-compiler is found.
 
-### Type Generation (run after API changes)
-
-```bash
-cargo gen-types                # Generate OpenAPI spec + TypeScript types
-# Or individually:
-cargo gen-spec                 # Generate only OpenAPI spec (services/api/openapi.json)
-cargo gen-ts                   # Generate only TypeScript types
-```
-
-### Console Setup
-
-```bash
-cd services/console
-npm run typeshare              # Generate TypeScript types from Rust structs
-npm run wasm                   # Build WASM packages (bencher_valid)
-npm run setup                  # Run typeshare + wasm + copy files
-```
-
-## Architecture
-
-### Repository Structure
-
-```
-services/
-  api/            # Rust API server (Dropshot)
-  cli/            # Rust CLI
-  console/        # Astro + SolidJS web UI
-lib/
-  api_auth/       # Authentication endpoints
-  api_checkout/   # Billing endpoints
-  api_organizations/ # Organization endpoints
-  api_projects/   # Project endpoints
-  api_run/        # Benchmark run endpoints
-  api_server/     # Server config endpoints
-  api_users/      # User endpoints
-  bencher_adapter/   # Benchmark harness output parsers
-  bencher_boundary/  # Statistical threshold detection
-  bencher_client/    # Generated API client (from OpenAPI via progenitor)
-  bencher_json/      # Shared JSON types (typeshare annotated)
-  bencher_schema/    # Database schema, models, migrations (Diesel)
-  bencher_valid/     # Input validation (compiled to WASM for frontend)
-plus/             # Bencher Plus (commercial) features
-  api_oci/           # OCI Distribution Spec registry endpoints
-  api_runners/       # Runner management and agent endpoints (Plus)
-  bencher_oci_storage/ # OCI blob/manifest storage (S3-backed)
-  bencher_otel/      # OpenTelemetry instrumentation (Plus)
-tasks/            # Build tasks invoked via cargo aliases
-xtask/            # Administrative tasks (local only, not CI)
-```
-
-### Type Sharing Flow
-
-Rust is the single source of truth for types:
-1. Rust structs annotated with `#[typeshare]` in `bencher_json` and other crates
-2. `cargo gen-types` generates OpenAPI spec (`services/api/openapi.json`) and TypeScript types (`services/console/src/types/bencher.ts`)
-3. `bencher_valid` is compiled to WASM for browser-side validation
-4. `bencher_client` is auto-generated from the OpenAPI spec via progenitor
-
-### Database Access Macros
-
-Three macros control database access patterns:
-- `public_conn!()` - Read-only public access (optionally takes a `PublicUser`)
-- `auth_conn!()` - Read-only authenticated access
-- `write_conn!()` - Single writer access
-
-All have single-use and expanded closure-like forms for multiple uses in the same scope.
-
-### Cargo Aliases
-
-Defined in `.cargo/config.toml`:
-- `cargo xtask` - Administrative tasks
-- `cargo gen-types` / `cargo gen-spec` / `cargo gen-ts` - Type generation
-- `cargo test-api` - API testing and DB seeding
-- `cargo test-runner` - Runner integration tests (requires Linux + KVM; see [`services/runner/CLAUDE.md`](services/runner/CLAUDE.md))
-- `cargo bin-version` - Version management
-
-### Feature Flags
-
-- `plus` - Bencher Plus (commercial) features
-- `sentry` - Sentry error tracking
-- `otel` - OpenTelemetry observability
-
-Default builds include all features. Build without: `cargo build --no-default-features`
-
-### OCI Registry (Plus Feature)
-
-The API server includes an OCI Distribution Spec compliant container registry, registered at `/v2/` paths. Key crates:
-- `plus/api_oci` - Dropshot endpoints for blobs, manifests, tags, referrers, and uploads
-- `plus/bencher_oci_storage` - Storage backend using S3 (via Access Points)
-- OCI auth tokens use a dedicated `Oci` audience in `bencher_token`
-- Registry is configured via `JsonRegistry` in the server config (`plus.registry`)
-- Run the OCI conformance tests with `cargo test-api oci --admin`
-
-## Code Style Rules
-
-### Rust
+## Code Quality
 
 - Always run `cargo fmt` and `cargo clippy` when testing or before committing
 - Run `cargo fmt` one final time after all changes are complete (including any generated code or lint fixes), since clippy fixes and other automated changes can introduce formatting drift
@@ -201,15 +113,17 @@ The API server includes an OCI Distribution Spec compliant container registry, r
   - The subcommand handler logic should live in a separate module named after the binary for production code (ie `bencher`) or a module named `task` for `tasks/*` crates
   - Do **NOT** use `num_args` on flags in `bencher run` — it uses `trailing_var_arg = true` to match `docker run` semantics, and `num_args` conflicts with trailing vararg parsing. Validate collection sizes at the type/deserialization layer instead (e.g., `TryFrom` impls in `bencher_json`).
 
-### Frontend (TypeScript)
-
-- Formatted and linted with Biome
-- Use SolidJS patterns for reactivity
-- Types are generated from Rust via typeshare - do not manually edit `src/types/bencher.ts`
-
-### Scripts Policy
+## Scripts Policy
 
 Shell scripts are used very sparingly. Prefer creating tasks in `tasks/` (invoked via cargo aliases). Administrative-only tasks go in `xtask/`. Shell scripts are only acceptable as ultra-lightweight wrappers around commands like `git` or `docker`.
+
+### Cargo Aliases
+
+Defined in `.cargo/config.toml`:
+- `cargo xtask` - Administrative tasks
+- `cargo gen-types` / `cargo gen-spec` / `cargo gen-ts` - Type generation
+- `cargo test-api` - API testing and DB seeding
+- `cargo test-runner` - Runner integration tests (requires Linux + KVM)
 
 ## Git Flow
 
@@ -218,73 +132,16 @@ Shell scripts are used very sparingly. Prefer creating tasks in `tasks/` (invoke
 - After successful deploy: CI resets `main` to `cloud`
 - Release tags (e.g., `v0.5.10`) are created off `devel`
 
-## Database
+### Type Sharing Flow
 
-SQLite database at `services/api/data/bencher.db`. Migrations live in `lib/bencher_schema/migrations/`. If a migration is already in the `cloud` branch, it has been applied to production.
-
-## Database Access
-
-In the Rust code there are three macros used to access the database:
-
-1. `public_conn!()` - For read-only public access
-   1. This optionally takes in a `PublicUser`
-2. `auth_conn!()` - For read-only authenticated access
-3. `write_conn!()` - For single writer access
-
-All of these macros have a single-use and expanded closure-like form for use multiple times in the same scope.
+Rust is the single source of truth for types:
+1. Rust structs annotated with `#[typeshare]` in `bencher_json` and other crates
+2. `cargo gen-types` generates OpenAPI spec (`services/api/openapi.json`) and TypeScript types (`services/console/src/types/bencher.ts`)
+3. `bencher_valid` is compiled to WASM for browser-side validation
+4. `bencher_client` is auto-generated from the OpenAPI spec via progenitor
 
 ## Docker
 
-When adding a new crate, update both Dockerfiles:
-- `services/api/Dockerfile`
-- `services/console/Dockerfile`
-
-## Runner System (Plus Feature)
-
-Bare metal benchmark runners that claim and execute jobs from the API. Server-scoped (runners serve all projects).
-
-**Key concepts:**
-- **Runner**: A registered agent authenticated via `bencher_runner_`-prefixed tokens (SHA-256 hashed in DB)
-- **Job**: Linked to a report, follows state machine: `pending → claimed → running → completed/failed/canceled`
-- **Claim endpoint**: Long-poll POST that atomically claims pending jobs (priority DESC, FIFO within tier)
-- **WebSocket channel**: Persistent connection for heartbeat and status updates during job execution
-
-**Key files:**
-- `plus/api_runners/` - Runner CRUD, token rotation, job claiming, job updates, WebSocket channel
-- `lib/bencher_json/src/runner/` - Shared JSON types (`JsonRunner`, `JsonJob`, `JobStatus`)
-- `lib/bencher_schema/src/model/runner/` - Database models and queries
-- `lib/api_projects/src/jobs.rs` - Project-scoped job listing (public API)
-- `lib/bencher_schema/migrations/2026-02-02-120000_runner/` - Migration for `runner` and `job` tables
-
-**Runner authentication** is separate from user auth — runner tokens use `Authorization: Bearer bencher_runner_<token>` and are validated by hashing and looking up `token_hash` in the `runner` table.
-
-**Runner integration tests** require Linux + KVM and run on a remote GCP VM. See [`services/runner/CLAUDE.md`](services/runner/CLAUDE.md) for the full guide on connecting, transferring code, and running `cargo test-runner scenarios`.
-
-## Key Coordination Points
-
-Changes in these areas often require updates across multiple files:
-- **API endpoints** → run `cargo gen-types` → commit updated `openapi.json` + `bencher.ts`
-- **Rust types with `#[typeshare]`** → run `npm run typeshare` in console
-- **New crate** → update workspace `Cargo.toml` + both Dockerfiles
-- **Validation types** → may need WASM rebuild (`npm run wasm` in console)
-- **Runner endpoints** → behind `plus` feature flag; runner model in `bencher_schema` also gated on `plus`
-
-## Documentation
-
-Available locally at `services/console/src/content/` or online at https://bencher.dev/docs/.
-
-See [`services/console/CLAUDE.md`](services/console/CLAUDE.md) for console-specific guides, including how to add API documentation pages.
-
-### Changelog
-
-The changelog lives at `services/console/src/chunks/docs-reference/changelog/en/changelog.mdx`. It is imported by the content pages in `services/console/src/content/docs-reference/{lang}/changelog.mdx`.
-
-### Server Configuration Documentation
-
-Server config types live in `lib/bencher_json/src/system/config/`. The corresponding documentation chunks live in `services/console/src/chunks/docs-reference/server-config/`.
-
-When adding a new config field:
-1. Update the Rust type in `lib/bencher_json/src/system/config/`
-2. Update the documentation chunks in all 9 language directories (`en`, `de`, `es`, `fr`, `ja`, `ko`, `pt`, `ru`, `zh`)
-3. Update the example config in `services/console/src/chunks/docs-reference/server-config/example.mdx`
-4. If adding a new subsection under `plus`, create a new `plus-<name>.mdx` chunk in all 9 languages and import/render it in each language's `plus.mdx`
+When adding a new crate, update both `Dockerfile`s:
+- [`services/api/Dockerfile`](./services/api/Dockerfile)
+- [`services/console/Dockerfile`](./services/console/Dockerfile)

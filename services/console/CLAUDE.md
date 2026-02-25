@@ -1,104 +1,81 @@
 # Console CLAUDE.md
 
-## Adding API Documentation
+The goal of this file is to describe the common mistakes and confusion points
+an agent might face as they work in this codebase.
+If you ever encounter something in the project that surprises you,
+please alert the developer working with you and indicate that this is the case by editing the `CLAUDE.md` file to help prevent future agents from having the same issue.
 
-API docs pages are `.mdx` files in `src/content/api-{collection}/` directories. Astro's content layer auto-discovers them — no menu, routing, or sidebar config changes are needed.
+## Project Overview
 
-### Collections
+**Bencher Console** (`services/console`) - Web UI:
+- TypeScript
+- Astro
+- SolidJS
+- Bulma CSS
 
-| Collection | Directory | URL prefix |
-|---|---|---|
-| `api_organizations` | `src/content/api-organizations/` | `/docs/api/organizations/{slug}/` |
-| `api_projects` | `src/content/api-projects/` | `/docs/api/projects/{slug}/` |
-| `api_users` | `src/content/api-users/` | `/docs/api/users/{slug}/` |
-| `api_server` | `src/content/api-server/` | `/docs/api/server/{slug}/` |
+## Code Style
 
-### Steps to add a new API docs page
+- Formatted and linted with Biome
+- Use SolidJS patterns for reactivity
+- Types are generated from Rust via typeshare - do not manually edit `src/types/bencher.ts`
 
-1. **Create the `.mdx` file** in the appropriate `src/content/api-{collection}/` directory.
 
-2. **Use this frontmatter template:**
+## Building & Running
 
-```mdx
----
-title: "Page Title"
-description: "The Bencher ... REST API"
-heading: "... REST API"
-sortOrder: N
-paths:
-  - path: /v0/the/api/path
-    method: get
-    headers: pub
-    cli: subcommand list RESOURCE
-  - path: /v0/the/api/path/{id}
-    method: get
-    headers: pub
-    cli: subcommand view RESOURCE ID
----
+```bash
+npm run dev
 ```
 
-3. **Bump `sortOrder`** in sibling files if inserting between existing entries. Every file in the same collection must have a unique `sortOrder` — it controls sidebar ordering.
+Runs at: http://localhost:3000
 
-4. **Ensure the endpoints exist in the OpenAPI spec** (`services/api/openapi.json` and `public/download/openapi.json`). The `Operation.astro` component reads endpoint details (summary, description, parameters, request body) from `public/download/openapi.json`. If the path/method pair is missing from the spec, the page renders but the endpoint details are empty. Run `cargo gen-types` if needed, and `npm run copy` (or `npm run setup`) to sync the spec into `public/download/`.
+## Testing
 
-### Frontmatter fields
+```bash
+&& npm test
+```
 
-| Field | Required | Description |
-|---|---|---|
-| `title` | yes | Page title, shown in sidebar menu |
-| `description` | yes | Meta description for SEO |
-| `heading` | yes | H1 heading rendered on the page |
-| `sortOrder` | yes | Integer controlling sidebar position (ascending) |
-| `paths` | yes | Array of API operations to render |
+## Formatting
 
-### Path entry fields
+```bash
+npx biome format --write .
+```
 
-| Field | Required | Values | Description |
-|---|---|---|---|
-| `path` | yes | e.g. `/v0/projects/{project}/jobs` | Must match a key in `openapi.json` `paths` |
-| `method` | yes | `get`, `post`, `put`, `patch`, `delete` | Must match the HTTP method under the path |
-| `headers` | yes | `pub`, `auth`, `img` | `pub` = public (optional auth), `auth` = required auth, `img` = image endpoint |
-| `cli` | no | e.g. `job list PROJECT` or `null` | Bencher CLI command shown on the page. Set to `null` or omit if no CLI equivalent |
+## Linting
 
-### How it works (key files)
+```bash
+npx biome lint .
+```
 
-- `src/content.config.ts` — Defines the `api()` collection with a Zod schema and glob loader (`*.mdx`)
-- `src/components/docs/menu/ApiList.astro` — Renders the sidebar menu by loading all entries from each API collection via `getEnOnlyCollection()`, sorted by `sortOrder`
-- `src/pages/docs/api/{collection}/[slug].astro` — Dynamic route that generates a page per entry via `getStaticPaths()`
-- `src/components/docs/api/Operation.astro` — Renders each endpoint by looking up `path`+`method` in `public/download/openapi.json`
-- `src/i18n/utils.ts` — `getEnOnlyCollection()` loads and sorts entries; `getEnOnlyPaths()` generates static paths
+## Console Setup
 
-### Updating endpoint descriptions
+Runs Typeshare, WASM, and copies files to set up the console.
 
-Endpoint summaries and descriptions displayed on API docs pages come from Rust doc comments on the endpoint handler functions (e.g., `/// List runners` / `/// ➕ Bencher Plus: List all runners...`). After changing any endpoint doc comment, run `cargo gen-types` to regenerate `openapi.json` and sync the updated descriptions into the docs.
+```bash
+npm run setup
+```
 
-### Verification
+### Generate Types
 
-Run `cd services/console && npm run dev` and navigate to the new page URL. Confirm:
-- The page renders with endpoint details (summary, parameters, etc.)
-- The page title appears in the API sidebar under the correct collection heading
-- The sidebar ordering matches the intended `sortOrder` position
+```bash
+npm run typeshare
+```
 
-### API endpoint ordering convention
+### Generate WASM
 
-Within a single page's `paths` array, list endpoints in this order: `GET` (list), `POST` (create), `GET` (view), `PATCH` (update), `DELETE` (delete).
+```bash
+npm run wasm
+```
 
-## Server Config Reference Docs
+## Documentation
 
-The server config reference page (`/docs/reference/server-config/`) uses a chunk-based architecture. Parent pages import from `src/chunks/docs-reference/server-config/{lang}/`.
+Available locally at [`services/console/src/content/`](./src/content/) or online at https://bencher.dev/docs/.
 
-### Languages
+### i18n
 
-All config doc chunks must exist in 9 language directories: `en`, `de`, `es`, `fr`, `ja`, `ko`, `pt`, `ru`, `zh`.
+When adding a new documentation update the chunks in all 9 language directories
+(`en`, `de`, `es`, `fr`, `ja`, `ko`, `pt`, `ru`, `zh`)
 
-### `plus.mdx` composition pattern
+### Changelog
 
-Each language's `plus.mdx` imports sub-chunk components (e.g., `plus-github.mdx`, `plus-registry.mdx`, `plus-runners.mdx`) and renders them in order. When adding a new Plus config subsection:
-
-1. Create `plus-<name>.mdx` in all 9 language directories with translated content
-2. Add `import Plus<Name> from "./plus-<name>.mdx";` to each language's `plus.mdx`
-3. Add `<Plus<Name> />` in the appropriate position within each language's `plus.mdx`
-
-### Example config
-
-The shared example config lives at `src/chunks/docs-reference/server-config/example.mdx`. Update it when adding new config fields or sections.
+The changelog lives at [`services/console/src/chunks/docs-reference/changelog/en/changelog.mdx`](./src/chunks/docs-reference/changelog/en/changelog.mdx).
+It is imported by the content pages in [`services/console/src/content/docs-reference/{lang}/changelog.mdx`](./src/content/docs-reference/{lang}/changelog.mdx).
