@@ -12,7 +12,7 @@ use bencher_api_tests::TestServer;
 use bencher_api_tests::oci::compute_digest;
 use bencher_json::JsonReport;
 #[cfg(feature = "plus")]
-use bencher_json::{JsonJob, JsonRunners, JsonSpec, runner::JsonJobs};
+use bencher_json::{JsonJob, JsonReports, JsonRunners, JsonSpec, runner::JsonJobs};
 use http::StatusCode;
 
 // POST /v0/run - create a run with authentication
@@ -24,14 +24,7 @@ async fn run_post_authenticated() {
     let project = server.create_project(&user, &org, "Run Project").await;
 
     let project_slug: &str = project.slug.as_ref();
-    // BMF format results
-    let bmf_results = serde_json::json!({
-        "benchmark_name": {
-            "latency": {
-                "value": 100.0
-            }
-        }
-    });
+    let bmf_results = bmf_results();
 
     let body = serde_json::json!({
         "project": project_slug,
@@ -65,14 +58,7 @@ async fn run_post_creates_branch_testbed() {
         .create_project(&user, &org, "Auto Create Project")
         .await;
 
-    // BMF format results
-    let bmf_results = serde_json::json!({
-        "benchmark_name": {
-            "latency": {
-                "value": 100.0
-            }
-        }
-    });
+    let bmf_results = bmf_results();
 
     let project_slug: &str = project.slug.as_ref();
     // Run with new branch and testbed names that don't exist yet
@@ -108,14 +94,7 @@ async fn run_post_unauthenticated() {
         .create_project(&user, &org, "Public Run Project")
         .await;
 
-    // BMF format results
-    let bmf_results = serde_json::json!({
-        "benchmark_name": {
-            "latency": {
-                "value": 100.0
-            }
-        }
-    });
+    let bmf_results = bmf_results();
 
     let project_slug: &str = project.slug.as_ref();
     let body = serde_json::json!({
@@ -146,7 +125,6 @@ async fn run_post_unauthenticated() {
 
 // --- Job creation integration tests (Plus only) ---
 
-#[cfg(feature = "plus")]
 fn bmf_results() -> serde_json::Value {
     serde_json::json!({
         "benchmark_name": {
@@ -331,23 +309,7 @@ async fn run_post_with_job_explicit_spec() {
     // Create two specs: one fallback, one non-fallback
     let _fallback = create_fallback_spec(&server, &user).await;
 
-    let body = serde_json::json!({
-        "name": "Explicit Spec",
-        "architecture": "aarch64",
-        "cpu": 4,
-        "memory": 8_589_934_592i64,
-        "disk": 21_474_836_480i64
-    });
-    let resp = server
-        .client
-        .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&user.token))
-        .json(&body)
-        .send()
-        .await
-        .expect("Failed to create spec");
-    assert_eq!(resp.status(), StatusCode::CREATED);
-    let explicit_spec: JsonSpec = resp.json().await.expect("Failed to parse spec response");
+    let explicit_spec = create_spec(&server, &user, "Explicit Spec").await;
 
     // Push OCI image
     let project_slug: &str = project.slug.as_ref();
@@ -856,8 +818,8 @@ async fn run_post_with_job_custom_timeout() {
     let project_slug: &str = project.slug.as_ref();
     push_test_image(&server, &project, &user, "v1").await;
 
-    // Request a 120s timeout — should be clamped to unclaimed max (300s)
-    // since the project is not claimed (no billing plan)
+    // Request a 120s timeout — stored as-is since 120s < unclaimed max (300s)
+    // (the project is not claimed, so unclaimed max applies, but no clamping needed)
     let body = serde_json::json!({
         "project": project_slug,
         "branch": "main",
@@ -1158,5 +1120,258 @@ async fn run_post_with_job_invalid_image_fails() {
         .await
         .expect("Request failed");
 
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+// POST /v0/run with unsupported registry — validation fails before report creation
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_validation_failure_no_report() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_val_fail@example.com")
+        .await;
+    let org = server.create_org(&user, "Val Fail Org").await;
+    let project = server.create_project(&user, &org, "Val Fail Project").await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    // Use an external registry that is not supported
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": "ghcr.io/some-user/some-image:v1"
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+    // Verify no report was created
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/reports")))
+        .header("Authorization", server.bearer(&user.token))
+        .send()
+        .await
+        .expect("Failed to list reports");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let reports: JsonReports = resp.json().await.expect("Failed to parse reports response");
+    assert!(
+        reports.0.is_empty(),
+        "Expected no reports after validation failure, got {}",
+        reports.0.len()
+    );
+}
+
+// POST /v0/run with job timeout exceeding free max — clamped to 900
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_timeout_clamped() {
+    let server = TestServer::new().await;
+    let user = server.signup("Job User", "runjob_clamp@example.com").await;
+    let org = server.create_org(&user, "Clamp Org").await;
+    let project = server.create_project(&user, &org, "Clamp Project").await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    // Request a 1200s timeout — the org is claimed (has members) with no billing plan,
+    // so PlanKind::None applies FREE_MAX (900s) and the timeout should be clamped
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1"),
+            "timeout": 1200
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert_eq!(jobs.len(), 1);
+
+    // Verify timeout was clamped to free max (900s)
+    {
+        use bencher_schema::schema;
+        use diesel::{QueryDsl as _, RunQueryDsl as _};
+        let mut conn = server.db_conn();
+        let stored_timeout: i32 = schema::job::table
+            .select(schema::job::timeout)
+            .first(&mut conn)
+            .expect("Failed to query job timeout");
+        assert_eq!(stored_timeout, 900, "Timeout should be clamped to free max");
+    }
+}
+
+// POST /v0/run with job but no authentication on a claimed project — fails
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_unauthenticated_with_job_fails() {
+    let server = TestServer::new().await;
+    let user = server.signup("Job User", "runjob_unauth@example.com").await;
+    let org = server.create_org(&user, "Unauth Job Org").await;
+    let project = server
+        .create_project(&user, &org, "Unauth Job Project")
+        .await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    // Submit run with job but NO Authorization header
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    // Organization is claimed (has members), so unauthenticated requests are rejected
+    assert!(
+        resp.status() == StatusCode::UNAUTHORIZED || resp.status() == StatusCode::FORBIDDEN,
+        "Expected auth error, got: {}",
+        resp.status()
+    );
+
+    // Verify no jobs were created
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert!(jobs.is_empty(), "Expected no jobs, got {}", jobs.len());
+}
+
+// POST /v0/run with job referencing an archived spec — fails
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_archived_spec_fails() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_archived@example.com")
+        .await;
+    let org = server.create_org(&user, "Archived Spec Org").await;
+    let project = server
+        .create_project(&user, &org, "Archived Spec Project")
+        .await;
+
+    // Create a spec then archive it
+    let spec = create_spec(&server, &user, "Archived Spec").await;
+    let body = serde_json::json!({"archived": true});
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/specs/{}", spec.uuid)))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Failed to archive spec");
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    // Submit run with job referencing the archived spec
+    let archived_slug: &str = spec.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1"),
+            "spec": archived_slug
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    // from_active_resource_id filters archived specs, so this should 404
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// POST /v0/run with job referencing a nonexistent tag — fails
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_nonexistent_tag_fails() {
+    let server = TestServer::new().await;
+    let user = server.signup("Job User", "runjob_notag@example.com").await;
+    let org = server.create_org(&user, "No Tag Org").await;
+    let project = server.create_project(&user, &org, "No Tag Project").await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    // Do NOT push any image — reference a tag that does not exist
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v999")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    // OCI digest resolution should fail for nonexistent tag
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }

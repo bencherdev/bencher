@@ -203,8 +203,7 @@ impl QueryReport {
         };
 
         // Capture the current time before acquiring the write lock.
-        // This is used for the job insert timestamp inside the transaction.
-        #[cfg(feature = "plus")]
+        // This is used for the report created timestamp and the job insert timestamp.
         let now = context.clock.now();
 
         // Single transaction wraps version + report + job for true atomicity.
@@ -232,6 +231,7 @@ impl QueryReport {
                     spec_id,
                     &json_report,
                     adapter,
+                    now,
                 );
 
                 diesel::insert_into(schema::report::table)
@@ -586,6 +586,7 @@ impl InsertReport {
         spec_id: Option<SpecId>,
         report: &JsonNewReport,
         adapter: Adapter,
+        now: DateTime,
     ) -> Self {
         Self {
             uuid: ReportUuid::new(),
@@ -598,7 +599,7 @@ impl InsertReport {
             adapter,
             start_time: report.start_time,
             end_time: report.end_time,
-            created: DateTime::now(),
+            created: now,
         }
     }
 }
