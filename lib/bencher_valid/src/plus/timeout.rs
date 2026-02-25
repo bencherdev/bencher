@@ -156,4 +156,35 @@ mod tests {
         assert_eq!(false, is_valid_timeout(0));
         assert_eq!(false, is_valid_timeout(i32::MAX as u32 + 1));
     }
+
+    #[test]
+    fn clamp_max_below() {
+        let timeout = Timeout::try_from(100).unwrap();
+        let max = Timeout::try_from(200).unwrap();
+        assert_eq!(u32::from(timeout.clamp_max(max)), 100);
+    }
+
+    #[test]
+    fn clamp_max_equal() {
+        let timeout = Timeout::try_from(200).unwrap();
+        let max = Timeout::try_from(200).unwrap();
+        assert_eq!(u32::from(timeout.clamp_max(max)), 200);
+    }
+
+    #[test]
+    fn clamp_max_above() {
+        let timeout = Timeout::try_from(500).unwrap();
+        let max = Timeout::try_from(200).unwrap();
+        assert_eq!(u32::from(timeout.clamp_max(max)), 200);
+    }
+
+    #[test]
+    fn tier_constants_valid() {
+        assert!(is_valid_timeout(Timeout::UNCLAIMED_MAX.into()));
+        assert!(is_valid_timeout(Timeout::FREE_MAX.into()));
+        assert!(is_valid_timeout(Timeout::PAID_DEFAULT.into()));
+        assert_eq!(u32::from(Timeout::UNCLAIMED_MAX), 300);
+        assert_eq!(u32::from(Timeout::FREE_MAX), 900);
+        assert_eq!(u32::from(Timeout::PAID_DEFAULT), 3_600);
+    }
 }

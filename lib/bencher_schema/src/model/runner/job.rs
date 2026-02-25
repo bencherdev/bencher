@@ -240,6 +240,149 @@ fn determine_priority(plan_kind: &PlanKind, is_claimed: bool) -> JobPriority {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use bencher_json::{Entitlements, MeteredPlanId};
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+
+    fn metered_plan() -> PlanKind {
+        PlanKind::Metered("test_plan".parse::<MeteredPlanId>().unwrap())
+    }
+
+    fn licensed_plan(level: PlanLevel) -> PlanKind {
+        PlanKind::Licensed(crate::model::organization::plan::LicenseUsage {
+            entitlements: Entitlements::try_from(1000).unwrap(),
+            usage: 0,
+            level,
+        })
+    }
+
+    // --- resolve_timeout tests ---
+
+    #[test]
+    fn timeout_unclaimed_default() {
+        let timeout = resolve_timeout(None, &PlanKind::None, false);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::UNCLAIMED_MAX));
+    }
+
+    #[test]
+    fn timeout_unclaimed_clamped() {
+        let requested = Timeout::try_from(600).unwrap(); // 10 min > 5 min max
+        let timeout = resolve_timeout(Some(requested), &PlanKind::None, false);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::UNCLAIMED_MAX));
+    }
+
+    #[test]
+    fn timeout_unclaimed_below_max() {
+        let requested = Timeout::try_from(60).unwrap(); // 1 min < 5 min max
+        let timeout = resolve_timeout(Some(requested), &PlanKind::None, false);
+        assert_eq!(u32::from(timeout), 60);
+    }
+
+    #[test]
+    fn timeout_free_default() {
+        let timeout = resolve_timeout(None, &PlanKind::None, true);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::FREE_MAX));
+    }
+
+    #[test]
+    fn timeout_free_clamped() {
+        let requested = Timeout::try_from(1800).unwrap(); // 30 min > 15 min max
+        let timeout = resolve_timeout(Some(requested), &PlanKind::None, true);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::FREE_MAX));
+    }
+
+    #[test]
+    fn timeout_free_below_max() {
+        let requested = Timeout::try_from(120).unwrap();
+        let timeout = resolve_timeout(Some(requested), &PlanKind::None, true);
+        assert_eq!(u32::from(timeout), 120);
+    }
+
+    #[test]
+    fn timeout_metered_default() {
+        let timeout = resolve_timeout(None, &metered_plan(), true);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::PAID_DEFAULT));
+    }
+
+    #[test]
+    fn timeout_metered_custom() {
+        let requested = Timeout::try_from(7200).unwrap(); // 2 hours, no cap
+        let timeout = resolve_timeout(Some(requested), &metered_plan(), true);
+        assert_eq!(u32::from(timeout), 7200);
+    }
+
+    #[test]
+    fn timeout_licensed_default() {
+        let plan = licensed_plan(PlanLevel::Team);
+        let timeout = resolve_timeout(None, &plan, true);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::PAID_DEFAULT));
+    }
+
+    #[test]
+    fn timeout_licensed_custom() {
+        let plan = licensed_plan(PlanLevel::Enterprise);
+        let requested = Timeout::try_from(86400).unwrap(); // 24 hours, no cap
+        let timeout = resolve_timeout(Some(requested), &plan, true);
+        assert_eq!(u32::from(timeout), 86400);
+    }
+
+    // --- determine_priority tests ---
+
+    #[test]
+    fn priority_unclaimed() {
+        assert_eq!(
+            determine_priority(&PlanKind::None, false),
+            JobPriority::Unclaimed
+        );
+    }
+
+    #[test]
+    fn priority_unclaimed_ignores_plan() {
+        // Even with a paid plan, unclaimed is always Unclaimed
+        assert_eq!(
+            determine_priority(&metered_plan(), false),
+            JobPriority::Unclaimed
+        );
+    }
+
+    #[test]
+    fn priority_free() {
+        assert_eq!(determine_priority(&PlanKind::None, true), JobPriority::Free);
+    }
+
+    #[test]
+    fn priority_metered() {
+        assert_eq!(determine_priority(&metered_plan(), true), JobPriority::Team);
+    }
+
+    #[test]
+    fn priority_licensed_free() {
+        assert_eq!(
+            determine_priority(&licensed_plan(PlanLevel::Free), true),
+            JobPriority::Free
+        );
+    }
+
+    #[test]
+    fn priority_licensed_team() {
+        assert_eq!(
+            determine_priority(&licensed_plan(PlanLevel::Team), true),
+            JobPriority::Team
+        );
+    }
+
+    #[test]
+    fn priority_licensed_enterprise() {
+        assert_eq!(
+            determine_priority(&licensed_plan(PlanLevel::Enterprise), true),
+            JobPriority::Enterprise
+        );
+    }
+}
+
 #[derive(Debug, Default, diesel::AsChangeset)]
 #[diesel(table_name = job_table)]
 pub struct UpdateJob {

@@ -332,4 +332,41 @@ mod tests {
         assert_eq!(ref_.repository(), "library/registry.io");
         assert_eq!(ref_.reference(), "5000");
     }
+
+    #[test]
+    fn validate_registry_default_ok() {
+        // Images from docker.io are always accepted
+        let ref_ = ImageReference::parse("alpine:3.18").unwrap();
+        assert!(ref_.validate_registry("registry.bencher.dev").is_ok());
+    }
+
+    #[test]
+    fn validate_registry_expected_ok() {
+        // Images from the expected registry are accepted
+        let ref_ = ImageReference::parse("registry.bencher.dev/owner/repo:v1").unwrap();
+        assert!(ref_.validate_registry("registry.bencher.dev").is_ok());
+    }
+
+    #[test]
+    fn validate_registry_unsupported() {
+        // Images from an external registry are rejected
+        let ref_ = ImageReference::parse("ghcr.io/owner/repo:v1").unwrap();
+        let err = ref_.validate_registry("registry.bencher.dev").unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("ghcr.io"),
+            "Error should mention the image registry: {msg}"
+        );
+        assert!(
+            msg.contains("registry.bencher.dev"),
+            "Error should mention the expected registry: {msg}"
+        );
+    }
+
+    #[test]
+    fn validate_registry_user_image_ok() {
+        // user/image format defaults to docker.io, which is allowed
+        let ref_ = ImageReference::parse("myuser/myimage:v1").unwrap();
+        assert!(ref_.validate_registry("registry.bencher.dev").is_ok());
+    }
 }
