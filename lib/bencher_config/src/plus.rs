@@ -7,7 +7,9 @@ use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
 use bencher_json::{
     is_bencher_cloud,
-    system::config::{JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha},
+    system::config::{
+        JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha, RegistryDataStore,
+    },
 };
 use bencher_license::Licensor;
 use bencher_oci_storage::OciStorage;
@@ -25,6 +27,7 @@ pub struct Plus {
     pub biller: Option<Biller>,
     pub licensor: Licensor,
     pub recaptcha_client: Option<RecaptchaClient>,
+    pub registry_url: Url,
     pub oci_storage: OciStorage,
 }
 
@@ -42,6 +45,8 @@ pub enum PlusError {
     Billing(bencher_billing::BillingError),
     #[error("{0}")]
     Index(#[from] bencher_schema::context::IndexError),
+    #[error("Invalid registry URL: {0}")]
+    RegistryUrl(bencher_json::ValidError),
     #[error("Failed to initialize OCI storage: {0}")]
     OciStorage(bencher_oci_storage::OciStorageError),
 }
@@ -59,7 +64,7 @@ impl Plus {
     ) -> Result<Self, PlusError> {
         let Some(plus) = plus else {
             // No Plus config, but still provide local OCI storage
-            info!(log, "Using local filesystem OCI storage (no S3 configured)");
+            info!(log, "Using local filesystem registry storage");
             return Ok(Self {
                 github_client: None,
                 google_client: None,
@@ -68,6 +73,7 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
+                registry_url: default_registry_url(console_url),
                 oci_storage: OciStorage::try_from_config(
                     log.clone(),
                     None,
@@ -81,21 +87,24 @@ impl Plus {
         };
 
         // Initialize registry storage - uses S3 if configured, otherwise local filesystem
-        let (registry_data_store, upload_timeout, max_body_size) =
-            plus.registry.map_or((None, None, None), |registry| {
+        let (registry_url, registry_data_store, upload_timeout, max_body_size) =
+            plus.registry.map_or((None, None, None, None), |registry| {
                 (
-                    Some(registry.data_store),
+                    registry.url,
+                    registry.data_store,
                     Some(registry.upload_timeout),
                     Some(registry.max_body_size),
                 )
             });
-        if registry_data_store.is_none() {
-            info!(
-                log,
-                "Using local filesystem registry storage (no S3 configured)"
-            );
-        } else {
-            info!(log, "Using S3 registry storage");
+        let registry_url = registry_url
+            .map(|url| url.try_into().map_err(PlusError::RegistryUrl))
+            .transpose()?
+            .unwrap_or_else(|| default_registry_url(console_url));
+        match &registry_data_store {
+            Some(RegistryDataStore::Local) | None => {
+                info!(log, "Using local filesystem registry storage");
+            },
+            Some(RegistryDataStore::AwsS3 { .. }) => info!(log, "Using S3 registry storage"),
         }
         let oci_storage = OciStorage::try_from_config(
             log.clone(),
@@ -149,6 +158,7 @@ impl Plus {
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
                 recaptcha_client: None,
+                registry_url,
                 oci_storage,
             });
         };
@@ -179,7 +189,16 @@ impl Plus {
             biller,
             licensor,
             recaptcha_client,
+            registry_url,
             oci_storage,
         })
+    }
+}
+
+fn default_registry_url(console_url: &Url) -> Url {
+    if is_bencher_cloud(console_url) {
+        bencher_json::BENCHER_REGISTRY_URL.clone()
+    } else {
+        bencher_json::LOCALHOST_BENCHER_REGISTRY_URL.clone()
     }
 }

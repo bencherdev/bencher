@@ -10,7 +10,8 @@ This is suitable for development and single-instance deployments.
 For production deployments with multiple instances or for durability,
 configure S3-based storage.
 
-There is one storage `service`:
+There are two storage `service` options:
+- `local`: Store registry artifacts on the local filesystem (default)
 - `aws_s3`: Store registry artifacts in AWS S3
     - `access_key_id`: AWS access key ID
     - `secret_access_key`: AWS secret access key
@@ -19,10 +20,11 @@ There is one storage `service`:
 
 |             Name             |                                  Example                                  | Default | Required |                                       Description                                        |
 | :--------------------------: | :-----------------------------------------------------------------------: | :-----: | :------: | :--------------------------------------------------------------------------------------: |
+|             url              |                  "https://registry.bencher.example.com"                    | "http://localhost:61016" |    No    | The externally-reachable URL of the API server for OCI registry access. |
 |          data_store          |                                \{ ... \}                                  |   ---   |    No    |             Specifies the registry storage backend. Local if omitted.                    |
-|      data_store.service      |                                 "aws_s3"                                  |   ---   |   Yes    |                       Specifies the storage service type.                                |
-|   data_store.access_key_id   |                          "AKIAIOSFODNN7EXAMPLE"                           |   ---   |   Yes    |                                AWS access key ID.                                        |
-| data_store.secret_access_key |                "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"                 |   ---   |   Yes    |                              AWS secret access key.                                      |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |   ---   |   Yes    |        S3 Access Point ARN. Optional path prefix after access point name.                |
+|      data_store.service      |                          "local" or "aws_s3"                              |   ---   |   Yes    |                       Specifies the storage service type.                                |
+|   data_store.access_key_id   |                          "AKIAIOSFODNN7EXAMPLE"                           |   ---   | aws_s3 only |                                AWS access key ID.                                        |
+| data_store.secret_access_key |                "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"                 |   ---   | aws_s3 only |                              AWS secret access key.                                      |
+|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |   ---   | aws_s3 only |        S3 Access Point ARN. Optional path prefix after access point name.                |
 |       upload_timeout         |                                   3600                                    |  3600   |    No    | Upload session timeout in seconds. Stale uploads are cleaned up when new uploads start. |
 |       max_body_size          |                               1073741824                                  | 1073741824 |    No    | Maximum body size in bytes for blob and manifest uploads. Requests exceeding this limit are rejected with 413 Payload Too Large. Defaults to 1 GiB. |

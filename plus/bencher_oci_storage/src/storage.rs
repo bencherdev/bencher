@@ -294,6 +294,13 @@ impl OciStorage {
         let body_size = max_body_size.unwrap_or(DEFAULT_MAX_BODY_SIZE);
         let clock = clock.unwrap_or(Clock::System);
         match data_store {
+            Some(RegistryDataStore::Local) | None => Ok(OciStorage::Local(OciLocalStorage::new(
+                log,
+                database_path,
+                timeout,
+                body_size,
+                clock,
+            ))),
             Some(RegistryDataStore::AwsS3 {
                 access_key_id,
                 secret_access_key,
@@ -308,13 +315,6 @@ impl OciStorage {
                 clock,
             )
             .map(OciStorage::S3),
-            None => Ok(OciStorage::Local(OciLocalStorage::new(
-                log,
-                database_path,
-                timeout,
-                body_size,
-                clock,
-            ))),
         }
     }
 
