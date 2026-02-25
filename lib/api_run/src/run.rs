@@ -8,7 +8,6 @@ use bencher_schema::{
         project::{
             QueryProject,
             report::{NewRunReport, QueryReport},
-            testbed::RunTestbed,
         },
         user::public::{PubBearerToken, PublicUser},
     },
@@ -17,7 +16,10 @@ use bencher_schema::{
 #[cfg(feature = "plus")]
 use bencher_schema::{
     context::RateLimiting,
-    model::{project::report::NewRunJob, runner::SourceIp},
+    model::{
+        project::{report::NewRunJob, testbed::RunTestbed},
+        runner::SourceIp,
+    },
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
@@ -139,6 +141,7 @@ async fn post_inner(
             .await?;
     }
 
+    #[cfg(feature = "plus")]
     let testbed = if json_run.testbed.is_some() {
         RunTestbed::Explicit
     } else {
@@ -167,6 +170,7 @@ async fn post_inner(
 
     let new_run_report = NewRunReport {
         report: json_run.into(),
+        #[cfg(feature = "plus")]
         testbed,
         #[cfg(feature = "plus")]
         job,

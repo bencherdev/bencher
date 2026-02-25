@@ -20,6 +20,8 @@ use crate::model::organization::plan::PlanKind;
 #[cfg(feature = "plus")]
 use crate::model::project::testbed::RunJob;
 #[cfg(feature = "plus")]
+use crate::model::project::testbed::RunTestbed;
+#[cfg(feature = "plus")]
 use crate::model::runner::{PendingInsertJob, SourceIp};
 use crate::model::spec::SpecId;
 use crate::{
@@ -32,7 +34,7 @@ use crate::{
             benchmark::QueryBenchmark,
             branch::version::QueryVersion,
             measure::QueryMeasure,
-            testbed::{QueryTestbed, ResolvedTestbed, RunTestbed, TestbedId},
+            testbed::{QueryTestbed, ResolvedTestbed, TestbedId},
             threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
         },
         user::{QueryUser, UserId, public::PublicUser},
@@ -45,6 +47,7 @@ use crate::{
 /// Encapsulates all context from a run request for report creation.
 pub struct NewRunReport {
     pub report: JsonNewReport,
+    #[cfg(feature = "plus")]
     pub testbed: RunTestbed,
     #[cfg(feature = "plus")]
     pub job: Option<NewRunJob>,
@@ -131,7 +134,8 @@ impl QueryReport {
 
         let NewRunReport {
             report: mut json_report,
-            testbed: run_testbed,
+            #[cfg(feature = "plus")]
+                testbed: run_testbed,
             #[cfg(feature = "plus")]
                 job: new_run_job,
         } = new_run_report;
@@ -157,6 +161,7 @@ impl QueryReport {
             context,
             project_id,
             &json_report.testbed,
+            #[cfg(feature = "plus")]
             &run_testbed,
             #[cfg(feature = "plus")]
             &run_job,

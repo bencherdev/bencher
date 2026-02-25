@@ -96,7 +96,7 @@ impl QueryTestbed {
         context: &ApiContext,
         project_id: ProjectId,
         testbed: &TestbedNameId,
-        run_testbed: &RunTestbed,
+        #[cfg(feature = "plus")] run_testbed: &RunTestbed,
         #[cfg(feature = "plus")] run_job: &RunJob<'_>,
     ) -> Result<ResolvedTestbed, HttpError> {
         #[cfg(feature = "plus")]
