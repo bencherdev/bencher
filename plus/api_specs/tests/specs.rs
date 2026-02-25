@@ -1190,3 +1190,148 @@ async fn specs_update_unset_fallback_already_unset() {
         "fallback should still be unset (no-op)"
     );
 }
+
+// PATCH /v0/specs/{uuid} - setting fallback: true and archived: true in the same PATCH
+#[tokio::test]
+async fn specs_patch_fallback_true_and_archived_true() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specfb15@example.com").await;
+
+    // Create spec A with fallback
+    let body_a = serde_json::json!({
+        "name": "FB Archive A",
+        "architecture": "x86_64",
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64,
+        "fallback": true
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body_a)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let spec_a: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert!(spec_a.fallback.is_some());
+
+    // Create spec B without fallback
+    let body_b = serde_json::json!({
+        "name": "FB Archive B",
+        "architecture": "x86_64",
+        "cpu": 4,
+        "memory": 8_589_934_592i64,
+        "disk": 21_474_836_480i64
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body_b)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let spec_b: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert!(spec_b.fallback.is_none());
+
+    // PATCH spec B with both fallback: true and archived: true
+    let body = serde_json::json!({"fallback": true, "archived": true});
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/specs/{}", spec_b.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let spec_b_updated: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert!(spec_b_updated.archived.is_some(), "B should be archived");
+    assert!(
+        spec_b_updated.fallback.is_none(),
+        "B's fallback should be cleared because archive takes priority"
+    );
+
+    // Verify A also lost its fallback (clear_fallback ran since is_setting_fallback was true)
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/specs/{}", spec_a.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .send()
+        .await
+        .expect("Request failed");
+    let spec_a_refreshed: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert!(
+        spec_a_refreshed.fallback.is_none(),
+        "A should have lost its fallback because clear_fallback ran"
+    );
+}
+
+// PATCH /v0/specs/{uuid} - unarchiving a former fallback does not restore fallback
+#[tokio::test]
+async fn specs_unarchive_former_fallback() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specfb16@example.com").await;
+
+    // Create spec with fallback
+    let body = serde_json::json!({
+        "name": "Unarchive FB",
+        "architecture": "x86_64",
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64,
+        "fallback": true
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let created: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert!(created.fallback.is_some());
+
+    // Archive it
+    let body = serde_json::json!({"archived": true});
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let archived: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert!(archived.archived.is_some());
+    assert!(
+        archived.fallback.is_none(),
+        "fallback should be cleared after archiving"
+    );
+
+    // Unarchive it
+    let body = serde_json::json!({"archived": false});
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let unarchived: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert!(unarchived.archived.is_none(), "spec should be unarchived");
+    assert!(
+        unarchived.fallback.is_none(),
+        "fallback should NOT be restored after unarchiving"
+    );
+}

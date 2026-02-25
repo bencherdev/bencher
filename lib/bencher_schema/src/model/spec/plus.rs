@@ -10,7 +10,7 @@ use dropshot::HttpError;
 use super::SpecId;
 use crate::{
     context::DbConnection,
-    error::{resource_conflict_err, resource_not_found_err},
+    error::issue_error,
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
@@ -68,7 +68,10 @@ impl QuerySpec {
             .filter(schema::spec::fallback.is_not_null())
             .first::<Self>(conn)
             .optional()
-            .map_err(resource_not_found_err!(Spec))
+            .map_err(|e| {
+                let message = "Failed to query spec table for fallback";
+                issue_error(message, message, e)
+            })
     }
 
     /// Clear fallback on all specs (set `fallback = NULL` where IS NOT NULL).
@@ -76,7 +79,10 @@ impl QuerySpec {
         diesel::update(schema::spec::table.filter(schema::spec::fallback.is_not_null()))
             .set(schema::spec::fallback.eq(None::<DateTime>))
             .execute(conn)
-            .map_err(resource_conflict_err!(Spec, "clear fallback"))?;
+            .map_err(|e| {
+                let message = "Failed to clear fallback on spec table";
+                issue_error(message, message, e)
+            })?;
         Ok(())
     }
 }
