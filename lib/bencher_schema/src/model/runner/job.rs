@@ -13,7 +13,7 @@ use tokio::sync::Mutex;
 
 use crate::{
     context::{ApiContext, DbConnection},
-    error::bad_request_error,
+    error::{bad_request_error, issue_error},
     macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
     model::{
         organization::{OrganizationId, plan::PlanKind},
@@ -246,7 +246,12 @@ async fn resolve_digest(
             .resolve_tag(project_uuid, &tag)
             .await
             .map_err(|e| {
-                bad_request_error(format!("Failed to resolve image tag for `{image}`: {e}"))
+                let msg = format!("Failed to resolve image tag for `{image}`: {e}");
+                if e.status_code().is_server_error() {
+                    issue_error(&msg, &msg, e)
+                } else {
+                    bad_request_error(msg)
+                }
             })?;
         oci_digest.as_str().parse().map_err(|e| {
             bad_request_error(format!(

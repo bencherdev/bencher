@@ -1335,3 +1335,148 @@ async fn specs_unarchive_former_fallback() {
         "fallback should NOT be restored after unarchiving"
     );
 }
+
+// PATCH /v0/specs/{uuid} - archiving a spec clears testbed spec_id references
+#[cfg(feature = "plus")]
+#[tokio::test]
+#[expect(clippy::too_many_lines, reason = "integration test with OCI setup")]
+async fn specs_archive_clears_testbed_spec_id() {
+    use bencher_api_tests::oci::compute_digest;
+    use bencher_json::JsonReport;
+
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "spec_tb_clear@example.com").await;
+    let org = server.create_org(&admin, "TB Clear Org").await;
+    let project = server
+        .create_project(&admin, &org, "TB Clear Project")
+        .await;
+
+    // Create a fallback spec
+    let body = serde_json::json!({
+        "name": "Clearable Spec",
+        "architecture": "x86_64",
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64,
+        "fallback": true
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Failed to create spec");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let spec: JsonSpec = resp.json().await.expect("Failed to parse spec");
+
+    // Push an OCI image so we can submit a run with job
+    let project_slug: &str = project.slug.as_ref();
+    let oci_token = server.oci_push_token(&admin, &project);
+
+    let config_data = b"config data for spec clear test";
+    let config_digest = server
+        .upload_blob(project_slug, &oci_token, config_data)
+        .await;
+    let layer_data = b"layer data for spec clear test";
+    let layer_digest = server
+        .upload_blob(project_slug, &oci_token, layer_data)
+        .await;
+    let manifest = serde_json::json!({
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.oci.image.manifest.v1+json",
+        "config": {
+            "mediaType": "application/vnd.oci.image.config.v1+json",
+            "digest": config_digest,
+            "size": 100
+        },
+        "layers": [{
+            "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+            "digest": layer_digest,
+            "size": 200
+        }]
+    })
+    .to_string();
+    let _manifest_digest = compute_digest(manifest.as_bytes());
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{project_slug}/manifests/v1")))
+        .header("Authorization", format!("Bearer {oci_token}"))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Manifest push failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Submit a run with a job — this assigns the spec to the testbed
+    let bmf_results = serde_json::json!({
+        "benchmark_name": { "latency": { "value": 100.0 } }
+    });
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "spec-testbed",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results.to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Run request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let _report: JsonReport = resp.json().await.expect("Failed to parse report");
+
+    // Verify the testbed has a spec_id set
+    {
+        use bencher_schema::schema;
+        use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+        let mut conn = server.db_conn();
+        let spec_id: Option<i32> = schema::testbed::table
+            .filter(schema::testbed::name.eq("spec-testbed"))
+            .select(schema::testbed::spec_id)
+            .first(&mut conn)
+            .expect("Failed to query testbed");
+        assert!(
+            spec_id.is_some(),
+            "Testbed should have a spec_id after run with job"
+        );
+    }
+
+    // Archive the spec
+    let body = serde_json::json!({"archived": true});
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/specs/{}", spec.uuid)))
+        .header("Authorization", server.bearer(&admin.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Failed to archive spec");
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Verify the testbed's spec_id has been cleared
+    {
+        use bencher_schema::schema;
+        use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+        let mut conn = server.db_conn();
+        let spec_id: Option<i32> = schema::testbed::table
+            .filter(schema::testbed::name.eq("spec-testbed"))
+            .select(schema::testbed::spec_id)
+            .first(&mut conn)
+            .expect("Failed to query testbed");
+        assert!(
+            spec_id.is_none(),
+            "Testbed spec_id should be cleared after spec is archived"
+        );
+    }
+}

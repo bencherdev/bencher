@@ -4,7 +4,10 @@ use bencher_json::{
     Architecture, Cpu, DateTime, Disk, JsonNewSpec, JsonSpec, JsonUpdateSpec, Memory, ResourceName,
     SpecResourceId, SpecSlug, SpecUuid,
 };
-use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
+    result::QueryResult,
+};
 use dropshot::HttpError;
 
 use super::SpecId;
@@ -88,14 +91,10 @@ impl QuerySpec {
     }
 
     /// Clear fallback on all specs (set `fallback = NULL` where IS NOT NULL).
-    pub fn clear_fallback(conn: &mut DbConnection) -> Result<(), HttpError> {
+    pub fn clear_fallback(conn: &mut DbConnection) -> QueryResult<()> {
         diesel::update(schema::spec::table.filter(schema::spec::fallback.is_not_null()))
             .set(schema::spec::fallback.eq(None::<DateTime>))
-            .execute(conn)
-            .map_err(|e| {
-                let message = "Failed to clear fallback on spec table";
-                issue_error(message, message, e)
-            })?;
+            .execute(conn)?;
         Ok(())
     }
 }

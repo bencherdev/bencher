@@ -818,8 +818,8 @@ async fn run_post_with_job_custom_timeout() {
     let project_slug: &str = project.slug.as_ref();
     push_test_image(&server, &project, &user, "v1").await;
 
-    // Request a 120s timeout — stored as-is since 120s < unclaimed max (300s)
-    // (the project is not claimed, so unclaimed max applies, but no clamping needed)
+    // Request a 120s timeout — stored as-is since 120s < free max (900s)
+    // (the user is authenticated and org is claimed, so free max applies, but no clamping needed)
     let body = serde_json::json!({
         "project": project_slug,
         "branch": "main",
@@ -846,7 +846,7 @@ async fn run_post_with_job_custom_timeout() {
     let jobs = list_project_jobs(&server, &user, project_slug).await;
     assert_eq!(jobs.len(), 1);
 
-    // Verify timeout stored correctly (120s < unclaimed max 300s, so unchanged)
+    // Verify timeout stored correctly (120s < free max 900s, so unchanged)
     {
         use bencher_schema::schema;
         use diesel::{QueryDsl as _, RunQueryDsl as _};
@@ -1336,6 +1336,185 @@ async fn run_post_with_job_archived_spec_fails() {
 
     // from_active_resource_id filters archived specs, so this should 404
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// POST /v0/run with job and no timeout field — defaults to FREE_MAX for claimed/free org
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_default_timeout() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_deftimeout@example.com")
+        .await;
+    let org = server.create_org(&user, "Def Timeout Org").await;
+    let project = server
+        .create_project(&user, &org, "Def Timeout Project")
+        .await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    // Submit run with job but no timeout field
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Verify timeout defaults to FREE_MAX (900s) for a claimed org with no plan
+    {
+        use bencher_schema::schema;
+        use diesel::{QueryDsl as _, RunQueryDsl as _};
+        let mut conn = server.db_conn();
+        let stored_timeout: i32 = schema::job::table
+            .select(schema::job::timeout)
+            .first(&mut conn)
+            .expect("Failed to query job timeout");
+        assert_eq!(
+            stored_timeout, 900,
+            "Default timeout should be FREE_MAX (900s)"
+        );
+    }
+}
+
+// POST /v0/run with job — verify priority is Free for a claimed org with no billing plan
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_priority_free() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_priority@example.com")
+        .await;
+    let org = server.create_org(&user, "Priority Org").await;
+    let project = server.create_project(&user, &org, "Priority Project").await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Verify priority is Free (org is claimed, no billing plan)
+    {
+        use bencher_schema::schema;
+        use diesel::{QueryDsl as _, RunQueryDsl as _};
+        let mut conn = server.db_conn();
+        let stored_priority: i32 = schema::job::table
+            .select(schema::job::priority)
+            .first(&mut conn)
+            .expect("Failed to query job priority");
+        assert_eq!(
+            stored_priority,
+            i32::from(bencher_json::JobPriority::Free),
+            "Priority should be Free for a claimed org with no billing plan"
+        );
+    }
+}
+
+// POST /v0/run with job config fields (entrypoint, cmd, env) — verify round-trip
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_config_fields() {
+    let server = TestServer::new().await;
+    let user = server.signup("Job User", "runjob_config@example.com").await;
+    let org = server.create_org(&user, "Config Org").await;
+    let project = server.create_project(&user, &org, "Config Project").await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1"),
+            "entrypoint": ["/bin/sh", "-c"],
+            "cmd": ["echo", "hello"],
+            "env": {"MY_VAR": "my_value", "OTHER": "123"}
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header("Authorization", server.bearer(&user.token))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Query config from DB and verify entrypoint, cmd, env round-trip
+    {
+        use bencher_schema::schema;
+        use diesel::{QueryDsl as _, RunQueryDsl as _};
+        let mut conn = server.db_conn();
+        let stored_config: String = schema::job::table
+            .select(schema::job::config)
+            .first(&mut conn)
+            .expect("Failed to query job config");
+        let config: bencher_json::JsonJobConfig =
+            serde_json::from_str(&stored_config).expect("Failed to parse job config");
+
+        assert_eq!(
+            config.entrypoint.as_deref(),
+            Some(["/bin/sh".to_owned(), "-c".to_owned()].as_slice()),
+            "Entrypoint should round-trip"
+        );
+        assert_eq!(
+            config.cmd.as_deref(),
+            Some(["echo".to_owned(), "hello".to_owned()].as_slice()),
+            "Cmd should round-trip"
+        );
+        let env = config.env.as_ref().expect("env should be present");
+        assert_eq!(env.get("MY_VAR").map(String::as_str), Some("my_value"));
+        assert_eq!(env.get("OTHER").map(String::as_str), Some("123"));
+    }
 }
 
 // POST /v0/run with job referencing a nonexistent tag — fails
