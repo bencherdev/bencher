@@ -257,7 +257,7 @@ async fn patch_inner(
     json_spec: JsonUpdateSpec,
 ) -> Result<JsonSpec, HttpError> {
     let query_spec = QuerySpec::from_resource_id(auth_conn!(context), &path_params.spec)?;
-    let is_setting_fallback = json_spec.fallback == Some(true);
+    let is_setting_fallback = json_spec.fallback == Some(true) && json_spec.archived != Some(true);
     let now = context.clock.now();
     let update_spec = UpdateSpec::new(json_spec.clone(), now);
 

@@ -1257,7 +1257,7 @@ async fn specs_patch_fallback_true_and_archived_true() {
         "B's fallback should be cleared because archive takes priority"
     );
 
-    // Verify A also lost its fallback (clear_fallback ran since is_setting_fallback was true)
+    // Verify A still has its fallback (archived takes priority, clear_fallback should not run)
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/specs/{}", spec_a.uuid)))
@@ -1267,8 +1267,8 @@ async fn specs_patch_fallback_true_and_archived_true() {
         .expect("Request failed");
     let spec_a_refreshed: JsonSpec = resp.json().await.expect("Failed to parse response");
     assert!(
-        spec_a_refreshed.fallback.is_none(),
-        "A should have lost its fallback because clear_fallback ran"
+        spec_a_refreshed.fallback.is_some(),
+        "A should still have its fallback because archived takes priority over fallback"
     );
 }
 
