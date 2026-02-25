@@ -138,13 +138,15 @@ impl InsertJob {
         new_run_job: JsonNewRunJob,
     ) -> Result<Self, HttpError> {
         // 1. Validate registry and resolve image digest
-        let url_url = context.registry_url();
-        let registry_host = url_url.host_str().unwrap_or_default();
+        let registry_url = context.registry_url();
+        let registry_host = registry_url.host_str().ok_or_else(|| {
+            bad_request_error(format!("Registry URL has no host: {registry_url}"))
+        })?;
         new_run_job
             .image
             .validate_registry(registry_host)
             .map_err(|e| bad_request_error(e.to_string()))?;
-        let registry_url: bencher_json::Url = url_url.clone().into();
+        let registry_url: bencher_json::Url = registry_url.clone().into();
         let digest = resolve_digest(
             &new_run_job.image,
             &query_project.uuid,
@@ -191,20 +193,23 @@ async fn resolve_digest(
         image
             .reference()
             .parse()
-            .map_err(|e| bad_request_error(format!("Invalid image digest: {e}")))
+            .map_err(|e| bad_request_error(format!("Invalid image digest for `{image}`: {e}")))
     } else {
         let tag: bencher_oci_storage::Tag = image
             .reference()
             .parse()
-            .map_err(|e| bad_request_error(format!("Invalid image tag: {e}")))?;
+            .map_err(|e| bad_request_error(format!("Invalid image tag for `{image}`: {e}")))?;
         let oci_digest = oci_storage
             .resolve_tag(project_uuid, &tag)
             .await
-            .map_err(|e| bad_request_error(format!("Failed to resolve image tag: {e}")))?;
-        oci_digest
-            .as_str()
-            .parse()
-            .map_err(|e| bad_request_error(format!("Failed to parse resolved digest: {e}")))
+            .map_err(|e| {
+                bad_request_error(format!("Failed to resolve image tag for `{image}`: {e}"))
+            })?;
+        oci_digest.as_str().parse().map_err(|e| {
+            bad_request_error(format!(
+                "Failed to parse resolved digest for `{image}`: {e}"
+            ))
+        })
     }
 }
 
