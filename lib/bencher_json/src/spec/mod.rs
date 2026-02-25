@@ -31,6 +31,9 @@ pub struct JsonNewSpec {
     /// Whether the VM has network access
     #[serde(default)]
     pub network: bool,
+    /// Whether this spec is the fallback spec
+    #[serde(default)]
+    pub fallback: bool,
 }
 
 /// List of specs
@@ -55,9 +58,10 @@ pub struct JsonSpec {
     pub memory: Memory,
     pub disk: Disk,
     pub network: bool,
-    pub archived: Option<DateTime>,
+    pub fallback: Option<DateTime>,
     pub created: DateTime,
     pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 /// Update a spec
@@ -69,6 +73,8 @@ pub struct JsonUpdateSpec {
     pub name: Option<ResourceName>,
     /// The new slug for the spec.
     pub slug: Option<SpecSlug>,
+    /// Set whether the spec is the fallback spec.
+    pub fallback: Option<bool>,
     /// Set whether the spec is archived.
     pub archived: Option<bool>,
 }

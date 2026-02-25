@@ -13154,6 +13154,11 @@
               }
             ]
           },
+          "fallback": {
+            "description": "Whether this spec is the fallback spec",
+            "default": false,
+            "type": "boolean"
+          },
           "memory": {
             "description": "Memory size in bytes",
             "allOf": [
@@ -15439,6 +15444,14 @@
           "disk": {
             "$ref": "#/components/schemas/Disk"
           },
+          "fallback": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "memory": {
             "$ref": "#/components/schemas/Memory"
           },
@@ -16158,6 +16171,11 @@
           "archived": {
             "nullable": true,
             "description": "Set whether the spec is archived.",
+            "type": "boolean"
+          },
+          "fallback": {
+            "nullable": true,
+            "description": "Set whether the spec is the fallback spec.",
             "type": "boolean"
           },
           "name": {

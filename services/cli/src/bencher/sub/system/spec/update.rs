@@ -12,6 +12,7 @@ pub struct Update {
     pub spec: SpecResourceId,
     pub name: Option<ResourceName>,
     pub slug: Option<SpecSlug>,
+    pub fallback: Option<bool>,
     pub archived: Option<bool>,
     pub backend: AuthBackend,
 }
@@ -24,6 +25,7 @@ impl TryFrom<CliSpecUpdate> for Update {
             spec,
             name,
             slug,
+            fallback,
             archived,
             backend,
         } = update;
@@ -31,6 +33,7 @@ impl TryFrom<CliSpecUpdate> for Update {
             spec,
             name,
             slug,
+            fallback,
             archived: archived.into(),
             backend: backend.try_into()?,
         })
@@ -42,12 +45,14 @@ impl From<Update> for JsonUpdateSpec {
         let Update {
             name,
             slug,
+            fallback,
             archived,
             ..
         } = update;
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
+            fallback,
             archived,
         }
     }
