@@ -1,16 +1,20 @@
 use std::sync::Arc;
 
-use bencher_json::{DateTime, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig, Timeout};
+use bencher_json::{
+    DateTime, ImageDigest, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig, PlanLevel,
+    Timeout, runner::job::JsonNewRunJob,
+};
 use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
 
 use crate::{
-    context::DbConnection,
+    context::{ApiContext, DbConnection},
+    error::bad_request_error,
     macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
     model::{
-        organization::OrganizationId,
-        project::report::ReportId,
+        organization::{OrganizationId, plan::PlanKind},
+        project::{QueryProject, report::ReportId},
         runner::{QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
     },
@@ -117,6 +121,122 @@ impl InsertJob {
             created: now,
             modified: now,
         }
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "job creation has many dimensions"
+    )]
+    pub async fn from_run(
+        context: &ApiContext,
+        report_id: ReportId,
+        query_project: &QueryProject,
+        source_ip: SourceIp,
+        spec_id: SpecId,
+        plan_kind: &PlanKind,
+        is_claimed: bool,
+        new_run_job: JsonNewRunJob,
+    ) -> Result<Self, HttpError> {
+        // 1. Validate registry and resolve image digest
+        let url_url = context.registry_url();
+        let registry_host = url_url.host_str().unwrap_or_default();
+        new_run_job
+            .image
+            .validate_registry(registry_host)
+            .map_err(|e| bad_request_error(e.to_string()))?;
+        let registry_url: bencher_json::Url = url_url.clone().into();
+        let digest = resolve_digest(
+            &new_run_job.image,
+            &query_project.uuid,
+            context.oci_storage(),
+        )
+        .await?;
+
+        // 2. Determine priority
+        let priority = determine_priority(plan_kind, is_claimed);
+
+        // 3. Resolve timeout (clamped by plan tier)
+        let timeout = resolve_timeout(new_run_job.timeout, plan_kind, is_claimed);
+
+        // 4. Build config
+        let config = JsonJobConfig {
+            registry: registry_url,
+            project: query_project.uuid,
+            digest,
+            entrypoint: new_run_job.entrypoint,
+            cmd: new_run_job.cmd,
+            env: new_run_job.env,
+            timeout,
+            file_paths: new_run_job.file_paths,
+        };
+
+        Ok(Self::new(
+            report_id,
+            query_project.organization_id,
+            source_ip,
+            spec_id,
+            config,
+            timeout,
+            priority,
+        ))
+    }
+}
+
+async fn resolve_digest(
+    image: &bencher_json::ImageReference,
+    project_uuid: &bencher_json::ProjectUuid,
+    oci_storage: &bencher_oci_storage::OciStorage,
+) -> Result<ImageDigest, HttpError> {
+    if image.is_digest() {
+        image
+            .reference()
+            .parse()
+            .map_err(|e| bad_request_error(format!("Invalid image digest: {e}")))
+    } else {
+        let tag: bencher_oci_storage::Tag = image
+            .reference()
+            .parse()
+            .map_err(|e| bad_request_error(format!("Invalid image tag: {e}")))?;
+        let oci_digest = oci_storage
+            .resolve_tag(project_uuid, &tag)
+            .await
+            .map_err(|e| bad_request_error(format!("Failed to resolve image tag: {e}")))?;
+        oci_digest
+            .as_str()
+            .parse()
+            .map_err(|e| bad_request_error(format!("Failed to parse resolved digest: {e}")))
+    }
+}
+
+/// Resolve the job timeout, clamping to plan-tier maximums.
+/// - Unclaimed: max 5 min
+/// - Free (`PlanKind::None`): max 15 min
+/// - Paid (Metered/Licensed): default 1 hour, no upper bound
+fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed: bool) -> Timeout {
+    if !is_claimed {
+        return requested.map_or(Timeout::UNCLAIMED_MAX, |t| {
+            t.clamp_max(Timeout::UNCLAIMED_MAX)
+        });
+    }
+    match plan_kind {
+        PlanKind::None => requested.map_or(Timeout::FREE_MAX, |t| t.clamp_max(Timeout::FREE_MAX)),
+        PlanKind::Metered(_) | PlanKind::Licensed(_) => requested.unwrap_or(Timeout::PAID_DEFAULT),
+    }
+}
+
+fn determine_priority(plan_kind: &PlanKind, is_claimed: bool) -> JobPriority {
+    if !is_claimed {
+        return JobPriority::Unclaimed;
+    }
+    match plan_kind {
+        PlanKind::None => JobPriority::Free,
+        // TODO: Check metered plan level to distinguish Team vs Enterprise
+        PlanKind::Metered(_) => JobPriority::Team,
+        PlanKind::Licensed(license_usage) => match license_usage.level {
+            PlanLevel::Free => JobPriority::Free,
+            PlanLevel::Team => JobPriority::Team,
+            PlanLevel::Enterprise => JobPriority::Enterprise,
+        },
     }
 }
 

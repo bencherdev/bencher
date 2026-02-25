@@ -2,7 +2,7 @@ use std::string::ToString as _;
 
 use bencher_json::{
     Architecture, Cpu, DateTime, Disk, JsonNewSpec, JsonSpec, JsonUpdateSpec, Memory, ResourceName,
-    SpecSlug, SpecUuid,
+    SpecResourceId, SpecSlug, SpecUuid,
 };
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -10,12 +10,13 @@ use dropshot::HttpError;
 use super::SpecId;
 use crate::{
     context::DbConnection,
-    error::issue_error,
+    error::{bad_request_error, issue_error, resource_conflict_err},
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
+    model::project::testbed::{QueryTestbed, TestbedId},
     schema::{self, spec as spec_table},
 };
 
@@ -72,6 +73,36 @@ impl QuerySpec {
                 let message = "Failed to query spec table for fallback";
                 issue_error(message, message, e)
             })
+    }
+
+    /// Resolve a spec for a job run:
+    /// 1. Explicit `--spec` from the run request
+    /// 2. Testbed's `spec_id`
+    /// 3. Fallback spec (where `fallback IS NOT NULL`)
+    /// 4. Error if none found
+    pub fn resolve_for_job(
+        conn: &mut DbConnection,
+        spec: Option<&SpecResourceId>,
+        testbed_id: TestbedId,
+    ) -> Result<SpecId, HttpError> {
+        if let Some(spec) = spec {
+            return Ok(Self::from_resource_id(conn, spec)?.id);
+        }
+        let testbed = QueryTestbed::get(conn, testbed_id)?;
+        if let Some(spec_id) = testbed.spec_id {
+            return Ok(spec_id);
+        }
+        if let Some(spec) = Self::get_fallback(conn)? {
+            // Assign the fallback spec to the testbed for future runs
+            diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
+                .set(schema::testbed::spec_id.eq(Some(spec.id)))
+                .execute(conn)
+                .map_err(resource_conflict_err!(Testbed, testbed_id))?;
+            return Ok(spec.id);
+        }
+        Err(bad_request_error(
+            "No spec provided, no spec on testbed, and no fallback spec configured",
+        ))
     }
 
     /// Clear fallback on all specs (set `fallback = NULL` where IS NOT NULL).

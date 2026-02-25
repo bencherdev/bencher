@@ -13,6 +13,8 @@ use bencher_json::{
     },
 };
 use bencher_rbac::project::Permission;
+#[cfg(feature = "plus")]
+use bencher_schema::model::runner::SourceIp;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -304,7 +306,20 @@ async fn post_inner(
         &auth_user,
         Permission::Create,
     )?;
-    QueryReport::create(log, context, &query_project, json_report, &auth_user.into()).await
+    QueryReport::create(
+        log,
+        context,
+        &query_project,
+        json_report,
+        &auth_user.into(),
+        #[cfg(feature = "plus")]
+        true,
+        #[cfg(feature = "plus")]
+        None,
+        #[cfg(feature = "plus")]
+        SourceIp::new(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST)),
+    )
+    .await
 }
 
 #[derive(Deserialize, JsonSchema)]

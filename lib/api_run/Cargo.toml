@@ -8,7 +8,7 @@ publish = false
 
 [features]
 default = []
-plus = ["bencher_endpoint/plus", "bencher_json/plus", "bencher_schema/plus"]
+plus = ["bencher_endpoint/plus", "bencher_json/plus", "bencher_schema/plus", "dep:http"]
 sentry = ["bencher_schema/sentry"]
 otel = ["dep:bencher_otel", "bencher_schema/otel"]
 
@@ -19,6 +19,7 @@ bencher_otel = { workspace = true, optional = true }
 bencher_rbac.workspace = true
 bencher_schema.workspace = true
 dropshot.workspace = true
+http = { workspace = true, optional = true }
 slog.workspace = true
 
 [dev-dependencies]

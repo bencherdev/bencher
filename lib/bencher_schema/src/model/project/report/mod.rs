@@ -1,3 +1,5 @@
+#[cfg(feature = "plus")]
+use bencher_json::runner::job::JsonNewRunJob;
 use bencher_json::{
     DateTime, JsonNewReport, JsonReport, ReportUuid,
     project::report::{
@@ -16,6 +18,11 @@ use slog::Logger;
 #[cfg(feature = "plus")]
 use crate::model::organization::plan::PlanKind;
 use crate::model::spec::SpecId;
+#[cfg(feature = "plus")]
+use crate::model::{
+    runner::{InsertJob, SourceIp},
+    spec::QuerySpec,
+};
 use crate::{
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
@@ -70,12 +77,20 @@ impl QueryReport {
     fn_get_id!(report, ReportId, ReportUuid);
     fn_get_uuid!(report, ReportId, ReportUuid);
 
+    #[expect(
+        clippy::too_many_arguments,
+        clippy::too_many_lines,
+        reason = "report creation has many dimensions and steps"
+    )]
     pub async fn create(
         log: &Logger,
         context: &ApiContext,
         query_project: &QueryProject,
         mut json_report: JsonNewReport,
         public_user: &PublicUser,
+        #[cfg(feature = "plus")] is_claimed: bool,
+        #[cfg(feature = "plus")] new_run_job: Option<JsonNewRunJob>,
+        #[cfg(feature = "plus")] source_ip: SourceIp,
     ) -> Result<JsonReport, HttpError> {
         #[cfg(feature = "plus")]
         InsertReport::rate_limit(context, query_project.id).await?;
@@ -129,15 +144,28 @@ impl QueryReport {
         let json_settings = json_report.settings.take().unwrap_or_default();
         let adapter = json_settings.adapter.unwrap_or_default();
 
+        // Resolve the spec for the job, if a job was requested
+        #[cfg(feature = "plus")]
+        let spec_id = if let Some(job) = new_run_job.as_ref() {
+            Some(QuerySpec::resolve_for_job(
+                write_conn!(context),
+                job.spec.as_ref(),
+                testbed_id,
+            )?)
+        } else {
+            None
+        };
+        #[cfg(not(feature = "plus"))]
+        let spec_id: Option<SpecId> = None;
+
         // Create a new report and add it to the database
-        // TODO: Set spec_id from the job's spec at report creation time
         let insert_report = InsertReport::from_json(
             public_user.user_id(),
             project_id,
             head_id,
             version_id,
             testbed_id,
-            None,
+            spec_id,
             &json_report,
             adapter,
         );
@@ -157,6 +185,27 @@ impl QueryReport {
                 e,
             )
         })?;
+
+        // Create the job record if a job was requested
+        #[cfg(feature = "plus")]
+        if let (Some(spec_id), Some(new_run_job)) = (spec_id, new_run_job) {
+            let insert_job = InsertJob::from_run(
+                context,
+                query_report.id,
+                query_project,
+                source_ip,
+                spec_id,
+                &plan_kind,
+                is_claimed,
+                new_run_job,
+            )
+            .await?;
+
+            diesel::insert_into(schema::job::table)
+                .values(&insert_job)
+                .execute(write_conn!(context))
+                .map_err(resource_conflict_err!(Job, insert_job))?;
+        }
 
         #[cfg(feature = "plus")]
         let mut usage = 0;

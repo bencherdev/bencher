@@ -10,6 +10,8 @@ use bencher_schema::{
     },
     public_conn,
 };
+#[cfg(feature = "plus")]
+use bencher_schema::{context::RateLimiting, model::runner::SourceIp};
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
 
@@ -46,7 +48,15 @@ pub async fn run_post(
     )
     .await?;
 
-    let json = post_inner(&rqctx.log, rqctx.context(), &public_user, body.into_inner()).await?;
+    let json = post_inner(
+        &rqctx.log,
+        rqctx.context(),
+        &public_user,
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        body.into_inner(),
+    )
+    .await?;
 
     Ok(Post::auth_response_created(json))
 }
@@ -55,7 +65,8 @@ async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     public_user: &PublicUser,
-    json_run: JsonNewRun,
+    #[cfg(feature = "plus")] headers: &http::HeaderMap,
+    #[cfg_attr(not(feature = "plus"), expect(unused_mut))] mut json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
     match public_user {
         PublicUser::Public(remote_ip) => {
@@ -121,8 +132,29 @@ async fn post_inner(
             .await?;
     }
 
+    #[cfg(feature = "plus")]
+    let new_run_job = json_run.job.take();
+    #[cfg(feature = "plus")]
+    let source_ip = SourceIp::new(
+        RateLimiting::remote_ip(log, headers)
+            .unwrap_or(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST)),
+    );
+
     slog::info!(log, "New run requested"; "project" => ?query_project, "run" => ?json_run);
-    QueryReport::create(log, context, &query_project, json_run.into(), public_user).await
+    QueryReport::create(
+        log,
+        context,
+        &query_project,
+        json_run.into(),
+        public_user,
+        #[cfg(feature = "plus")]
+        is_claimed,
+        #[cfg(feature = "plus")]
+        new_run_job,
+        #[cfg(feature = "plus")]
+        source_ip,
+    )
+    .await
 }
 
 fn project_name(json_run: &JsonNewRun) -> Result<ResourceName, HttpError> {
