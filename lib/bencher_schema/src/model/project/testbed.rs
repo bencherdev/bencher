@@ -143,17 +143,14 @@ impl QueryTestbed {
         // 1. Explicit --spec
         if let RunJob::WithSpec(spec) = run_job {
             let query_spec = QuerySpec::from_active_resource_id(auth_conn!(context), spec)?;
-            let testbed = match run_testbed {
-                RunTestbed::Explicit => testbed.clone(),
-                RunTestbed::Derived => TestbedNameId::new_name(query_spec.name.clone()),
-            };
-            let query_testbed =
-                Self::get_or_create_for_report(context, project_id, &testbed).await?;
-            Self::maybe_assign_spec(context, &query_testbed, query_spec.id).await?;
-            return Ok(ResolvedTestbed {
-                testbed_id: query_testbed.id,
-                spec_id: Some(query_spec.id),
-            });
+            return Self::resolve_testbed_with_spec(
+                context,
+                project_id,
+                testbed,
+                run_testbed,
+                query_spec,
+            )
+            .await;
         }
 
         // 2. Explicit testbed that already exists with a spec
@@ -178,17 +175,14 @@ impl QueryTestbed {
 
         // 3. Fallback spec
         if let Some(query_spec) = QuerySpec::get_fallback(auth_conn!(context))? {
-            let testbed = match run_testbed {
-                RunTestbed::Explicit => testbed.clone(),
-                RunTestbed::Derived => TestbedNameId::new_name(query_spec.name.clone()),
-            };
-            let query_testbed =
-                Self::get_or_create_for_report(context, project_id, &testbed).await?;
-            Self::maybe_assign_spec(context, &query_testbed, query_spec.id).await?;
-            return Ok(ResolvedTestbed {
-                testbed_id: query_testbed.id,
-                spec_id: Some(query_spec.id),
-            });
+            return Self::resolve_testbed_with_spec(
+                context,
+                project_id,
+                testbed,
+                run_testbed,
+                query_spec,
+            )
+            .await;
         }
 
         // 4. Error
@@ -197,24 +191,34 @@ impl QueryTestbed {
         ))
     }
 
-    /// Assign a spec to a testbed only if it differs from the current spec.
+    /// Resolve the testbed name (explicit or derived from spec), get or create
+    /// the testbed, assign the spec, and return the resolved testbed.
     #[cfg(feature = "plus")]
-    async fn maybe_assign_spec(
+    async fn resolve_testbed_with_spec(
         context: &ApiContext,
-        testbed: &Self,
-        spec_id: SpecId,
-    ) -> Result<(), HttpError> {
-        if testbed.spec_id == Some(spec_id) {
-            return Ok(());
+        project_id: ProjectId,
+        testbed: &TestbedNameId,
+        run_testbed: &RunTestbed,
+        query_spec: QuerySpec,
+    ) -> Result<ResolvedTestbed, HttpError> {
+        let testbed = match run_testbed {
+            RunTestbed::Explicit => testbed.clone(),
+            RunTestbed::Derived => TestbedNameId::new_name(query_spec.name.clone()),
+        };
+        let query_testbed = Self::get_or_create_for_report(context, project_id, &testbed).await?;
+        if query_testbed.spec_id != Some(query_spec.id) {
+            diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
+                .set((
+                    schema::testbed::spec_id.eq(Some(query_spec.id)),
+                    schema::testbed::modified.eq(context.clock.now()),
+                ))
+                .execute(write_conn!(context))
+                .map_err(resource_conflict_err!(Testbed, query_testbed.id))?;
         }
-        diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed.id)))
-            .set((
-                schema::testbed::spec_id.eq(Some(spec_id)),
-                schema::testbed::modified.eq(context.clock.now()),
-            ))
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Testbed, testbed.id))?;
-        Ok(())
+        Ok(ResolvedTestbed {
+            testbed_id: query_testbed.id,
+            spec_id: Some(query_spec.id),
+        })
     }
 
     async fn get_or_create_inner(

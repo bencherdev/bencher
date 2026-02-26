@@ -175,11 +175,10 @@ async fn post_inner(context: &ApiContext, json_spec: JsonNewSpec) -> Result<Json
                 QuerySpec::clear_fallback(conn)?;
             }
             let insert_spec = InsertSpec::new(conn, &json_spec, now);
-            let uuid = insert_spec.uuid;
             diesel::insert_into(schema::spec::table)
                 .values(&insert_spec)
                 .execute(conn)?;
-            Ok::<_, diesel::result::Error>(uuid)
+            Ok::<_, diesel::result::Error>(insert_spec.uuid)
         })
         .map_err(resource_conflict_err!(Spec, &json_spec))?
     };

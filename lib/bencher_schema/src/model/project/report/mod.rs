@@ -15,15 +15,13 @@ use dropshot::HttpError;
 use results::ReportResults;
 use slog::Logger;
 
-#[cfg(feature = "plus")]
-use crate::model::organization::plan::PlanKind;
-#[cfg(feature = "plus")]
-use crate::model::project::testbed::RunJob;
-#[cfg(feature = "plus")]
-use crate::model::project::testbed::RunTestbed;
-#[cfg(feature = "plus")]
-use crate::model::runner::{PendingInsertJob, SourceIp};
 use crate::model::spec::SpecId;
+#[cfg(feature = "plus")]
+use crate::model::{
+    organization::plan::PlanKind,
+    project::testbed::{RunJob, RunTestbed},
+    runner::{PendingInsertJob, SourceIp},
+};
 use crate::{
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
