@@ -404,3 +404,51 @@ pub fn delete_spec(conn: &mut SqliteConnection, spec_id: i32) {
         .execute(conn)
         .expect("Failed to delete spec");
 }
+
+/// Archive a testbed.
+pub fn archive_testbed(conn: &mut SqliteConnection, testbed_id: i32) {
+    diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
+        .set(schema::testbed::archived.eq(Some(1i64)))
+        .execute(conn)
+        .expect("Failed to archive testbed");
+}
+
+/// Get testbed `archived` timestamp.
+pub fn get_testbed_archived(conn: &mut SqliteConnection, testbed_id: i32) -> Option<i64> {
+    schema::testbed::table
+        .filter(schema::testbed::id.eq(testbed_id))
+        .select(schema::testbed::archived)
+        .first::<Option<i64>>(conn)
+        .expect("Failed to get testbed archived")
+}
+
+/// Create a report for testing.
+pub fn create_report(
+    conn: &mut SqliteConnection,
+    report_uuid: &str,
+    project_id: i32,
+    head_id: i32,
+    version_id: i32,
+    testbed_id: i32,
+) -> i32 {
+    diesel::insert_into(schema::report::table)
+        .values((
+            schema::report::uuid.eq(report_uuid),
+            schema::report::project_id.eq(project_id),
+            schema::report::head_id.eq(head_id),
+            schema::report::version_id.eq(version_id),
+            schema::report::testbed_id.eq(testbed_id),
+            schema::report::adapter.eq(0),
+            schema::report::start_time.eq(0i64),
+            schema::report::end_time.eq(0i64),
+            schema::report::created.eq(0i64),
+        ))
+        .execute(conn)
+        .expect("Failed to insert report");
+
+    schema::report::table
+        .filter(schema::report::uuid.eq(report_uuid))
+        .select(schema::report::id)
+        .first(conn)
+        .expect("Failed to get report id")
+}

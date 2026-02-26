@@ -193,6 +193,9 @@ impl QueryTestbed {
 
     /// Resolve the testbed name (explicit or derived from spec), get or create
     /// the testbed, assign the spec, and return the resolved testbed.
+    ///
+    /// Uses `get_or_create_inner` directly and combines the unarchive + spec
+    /// assignment into a single UPDATE to reduce write lock acquisitions.
     #[cfg(feature = "plus")]
     async fn resolve_testbed_with_spec(
         context: &ApiContext,
@@ -205,16 +208,25 @@ impl QueryTestbed {
             RunTestbed::Explicit => testbed.clone(),
             RunTestbed::Derived => TestbedNameId::new_name(query_spec.name.clone()),
         };
-        let query_testbed = Self::get_or_create_for_report(context, project_id, &testbed).await?;
-        if query_testbed.spec_id != Some(query_spec.id) {
+        let query_testbed = Self::get_or_create_inner(context, project_id, &testbed).await?;
+
+        let needs_unarchive = query_testbed.archived.is_some();
+        let needs_spec_update = query_testbed.spec_id != Some(query_spec.id);
+
+        if needs_unarchive || needs_spec_update {
+            let update_testbed = UpdateTestbed {
+                name: None,
+                slug: None,
+                spec_id: needs_spec_update.then_some(Some(query_spec.id)),
+                modified: context.clock.now(),
+                archived: needs_unarchive.then_some(None),
+            };
             diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
-                .set((
-                    schema::testbed::spec_id.eq(Some(query_spec.id)),
-                    schema::testbed::modified.eq(context.clock.now()),
-                ))
+                .set(&update_testbed)
                 .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Testbed, query_testbed.id))?;
         }
+
         Ok(ResolvedTestbed {
             testbed_id: query_testbed.id,
             spec_id: Some(query_spec.id),
@@ -496,7 +508,9 @@ impl UpdateTestbed {
 mod tests {
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
+    use super::UpdateTestbed;
     use crate::{
+        model::spec::SpecId,
         schema,
         test_util::{
             CreateSpecArgs, clear_testbed_spec, create_base_entities, create_spec, create_testbed,
@@ -751,6 +765,141 @@ mod tests {
             .execute(&mut conn)
             .expect("Failed to update testbed name");
 
+        assert_eq!(get_testbed_spec_id(&mut conn, testbed_id), Some(spec_id));
+    }
+
+    #[test]
+    fn testbed_combined_unarchive_and_spec_assignment() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let spec_id = create_spec(
+            &mut conn,
+            CreateSpecArgs {
+                uuid: "00000000-0000-0000-0000-0000000000a1",
+                name: "Spec A",
+                slug: "spec-a",
+                architecture: "x86_64",
+                cpu: 4,
+                memory: 0x0002_0000_0000,
+                disk: 107_374_182_400,
+                network: false,
+            },
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "Test Testbed",
+            "test-testbed",
+        );
+
+        // Archive the testbed
+        crate::test_util::archive_testbed(&mut conn, testbed_id);
+        assert!(crate::test_util::get_testbed_archived(&mut conn, testbed_id).is_some());
+        assert_eq!(get_testbed_spec_id(&mut conn, testbed_id), None);
+
+        // Apply a combined update: unarchive + assign spec in one UPDATE
+        let update_testbed = UpdateTestbed {
+            name: None,
+            slug: None,
+            spec_id: Some(Some(SpecId::from_raw(spec_id))),
+            modified: bencher_json::DateTime::now(),
+            archived: Some(None),
+        };
+        diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
+            .set(&update_testbed)
+            .execute(&mut conn)
+            .expect("Failed to update testbed");
+
+        // Both unarchive and spec assignment should have taken effect
+        assert!(crate::test_util::get_testbed_archived(&mut conn, testbed_id).is_none());
+        assert_eq!(get_testbed_spec_id(&mut conn, testbed_id), Some(spec_id));
+    }
+
+    #[test]
+    fn testbed_combined_update_spec_only() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let spec_id = create_spec(
+            &mut conn,
+            CreateSpecArgs {
+                uuid: "00000000-0000-0000-0000-0000000000a1",
+                name: "Spec A",
+                slug: "spec-a",
+                architecture: "x86_64",
+                cpu: 4,
+                memory: 0x0002_0000_0000,
+                disk: 107_374_182_400,
+                network: false,
+            },
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "Test Testbed",
+            "test-testbed",
+        );
+
+        // Testbed is not archived — combined update with only spec_id set
+        let update_testbed = UpdateTestbed {
+            name: None,
+            slug: None,
+            spec_id: Some(Some(SpecId::from_raw(spec_id))),
+            modified: bencher_json::DateTime::now(),
+            archived: None, // outer None = don't touch archived column
+        };
+        diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
+            .set(&update_testbed)
+            .execute(&mut conn)
+            .expect("Failed to update testbed");
+
+        assert!(crate::test_util::get_testbed_archived(&mut conn, testbed_id).is_none());
+        assert_eq!(get_testbed_spec_id(&mut conn, testbed_id), Some(spec_id));
+    }
+
+    #[test]
+    fn testbed_combined_update_unarchive_only() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let spec_id = create_spec(
+            &mut conn,
+            CreateSpecArgs {
+                uuid: "00000000-0000-0000-0000-0000000000a1",
+                name: "Spec A",
+                slug: "spec-a",
+                architecture: "x86_64",
+                cpu: 4,
+                memory: 0x0002_0000_0000,
+                disk: 107_374_182_400,
+                network: false,
+            },
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "Test Testbed",
+            "test-testbed",
+        );
+        set_testbed_spec(&mut conn, testbed_id, spec_id);
+        crate::test_util::archive_testbed(&mut conn, testbed_id);
+
+        // Unarchive only — spec_id outer None means don't touch it
+        let update_testbed = UpdateTestbed {
+            name: None,
+            slug: None,
+            spec_id: None, // outer None = don't touch spec column
+            modified: bencher_json::DateTime::now(),
+            archived: Some(None),
+        };
+        diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
+            .set(&update_testbed)
+            .execute(&mut conn)
+            .expect("Failed to update testbed");
+
+        // Spec should be preserved, testbed should be unarchived
+        assert!(crate::test_util::get_testbed_archived(&mut conn, testbed_id).is_none());
         assert_eq!(get_testbed_spec_id(&mut conn, testbed_id), Some(spec_id));
     }
 

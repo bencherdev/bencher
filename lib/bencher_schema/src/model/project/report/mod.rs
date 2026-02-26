@@ -11,9 +11,15 @@ use diesel::{
     Connection as _, ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _,
     RunQueryDsl as _, SelectableHelper as _,
 };
+
 use dropshot::HttpError;
 use results::ReportResults;
 use slog::Logger;
+
+diesel::define_sql_function! {
+    /// `SQLite` `last_insert_rowid()` — returns the rowid of the most recent INSERT.
+    fn last_insert_rowid() -> diesel::sql_types::Integer;
+}
 
 use crate::model::spec::SpecId;
 #[cfg(feature = "plus")]
@@ -204,20 +210,39 @@ impl QueryReport {
         // This is used for the report created timestamp and the job insert timestamp.
         let now = context.clock.now();
 
+        // Pre-check: if a git hash is provided, try to find an existing version
+        // via the read pool *before* acquiring the write lock. This avoids holding
+        // the write lock for a read-only query in the common case (same hash re-submitted).
+        let existing_version_id = if let Some(hash) = json_report.hash.as_ref() {
+            QueryVersion::find_by_hash(
+                public_conn!(context, public_user),
+                project_id,
+                head_id,
+                hash,
+            )
+            .ok()
+            .flatten()
+        } else {
+            None
+        };
+
         // Single transaction wraps version + report + job for true atomicity.
         // If any insert fails, all are rolled back.
         let insert_report_uuid = {
             let conn = write_conn!(context);
             conn.transaction(|conn| {
-                // If there is a hash then try to see if there is already a code version for
-                // this branch with that particular hash.
-                // Otherwise, create a new code version for this branch with/without the hash.
-                let version_id = QueryVersion::get_or_increment(
-                    conn,
-                    project_id,
-                    head_id,
-                    json_report.hash.as_ref(),
-                )?;
+                // If the version was already found outside the transaction, use it.
+                // Otherwise, fall back to the full get-or-increment inside the transaction.
+                let version_id = if let Some(version_id) = existing_version_id {
+                    version_id
+                } else {
+                    QueryVersion::get_or_increment(
+                        conn,
+                        project_id,
+                        head_id,
+                        json_report.hash.as_ref(),
+                    )?
+                };
 
                 // Create a new report and add it to the database
                 let insert_report = InsertReport::from_json(
@@ -238,10 +263,8 @@ impl QueryReport {
 
                 #[cfg(feature = "plus")]
                 if let Some(pending_job) = pending_job {
-                    let report_id: ReportId = schema::report::table
-                        .filter(schema::report::uuid.eq(&insert_report.uuid))
-                        .select(schema::report::id)
-                        .first(conn)?;
+                    let report_id =
+                        diesel::select(last_insert_rowid()).get_result::<ReportId>(conn)?;
                     pending_job.insert(conn, report_id, now)?;
                 }
 
@@ -599,5 +622,163 @@ impl InsertReport {
             end_time: report.end_time,
             created: now,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    use crate::{
+        schema,
+        test_util::{
+            create_base_entities, create_branch_with_head, create_head_version, create_testbed,
+            create_version, setup_test_db,
+        },
+    };
+
+    use super::{ReportId, last_insert_rowid};
+
+    #[test]
+    fn last_insert_rowid_returns_report_id() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+        let version_id = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            0,
+            None,
+        );
+        create_head_version(&mut conn, branch.head_id, version_id);
+
+        let report_uuid = "00000000-0000-0000-0000-000000000050";
+
+        // Insert a report and immediately call last_insert_rowid inside a transaction
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::report::table)
+                    .values((
+                        schema::report::uuid.eq(report_uuid),
+                        schema::report::project_id.eq(base.project_id),
+                        schema::report::head_id.eq(branch.head_id),
+                        schema::report::version_id.eq(version_id),
+                        schema::report::testbed_id.eq(testbed_id),
+                        schema::report::adapter.eq(0),
+                        schema::report::start_time.eq(0i64),
+                        schema::report::end_time.eq(0i64),
+                        schema::report::created.eq(0i64),
+                    ))
+                    .execute(conn)?;
+
+                let rowid = diesel::select(last_insert_rowid()).get_result::<ReportId>(conn)?;
+                let select_id: ReportId = schema::report::table
+                    .filter(schema::report::uuid.eq(report_uuid))
+                    .select(schema::report::id)
+                    .first(conn)?;
+
+                Ok::<_, diesel::result::Error>((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(rowid, select_id);
+    }
+
+    #[test]
+    fn last_insert_rowid_matches_second_report() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+        let version_id = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            0,
+            None,
+        );
+        create_head_version(&mut conn, branch.head_id, version_id);
+
+        // Insert first report
+        diesel::insert_into(schema::report::table)
+            .values((
+                schema::report::uuid.eq("00000000-0000-0000-0000-000000000050"),
+                schema::report::project_id.eq(base.project_id),
+                schema::report::head_id.eq(branch.head_id),
+                schema::report::version_id.eq(version_id),
+                schema::report::testbed_id.eq(testbed_id),
+                schema::report::adapter.eq(0),
+                schema::report::start_time.eq(0i64),
+                schema::report::end_time.eq(0i64),
+                schema::report::created.eq(0i64),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert first report");
+
+        // Insert second report and verify last_insert_rowid points to the second one
+        let second_uuid = "00000000-0000-0000-0000-000000000051";
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::report::table)
+                    .values((
+                        schema::report::uuid.eq(second_uuid),
+                        schema::report::project_id.eq(base.project_id),
+                        schema::report::head_id.eq(branch.head_id),
+                        schema::report::version_id.eq(version_id),
+                        schema::report::testbed_id.eq(testbed_id),
+                        schema::report::adapter.eq(0),
+                        schema::report::start_time.eq(0i64),
+                        schema::report::end_time.eq(0i64),
+                        schema::report::created.eq(0i64),
+                    ))
+                    .execute(conn)?;
+
+                let rowid = diesel::select(last_insert_rowid()).get_result::<ReportId>(conn)?;
+                let select_id: ReportId = schema::report::table
+                    .filter(schema::report::uuid.eq(second_uuid))
+                    .select(schema::report::id)
+                    .first(conn)?;
+
+                Ok::<_, diesel::result::Error>((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        // last_insert_rowid should match the SECOND report, not the first
+        assert_eq!(rowid, select_id);
+        // And it should NOT be the first report's id
+        let first_id: ReportId = schema::report::table
+            .filter(schema::report::uuid.eq("00000000-0000-0000-0000-000000000050"))
+            .select(schema::report::id)
+            .first(&mut conn)
+            .expect("Failed to get first report id");
+        assert_ne!(rowid, first_id);
     }
 }
