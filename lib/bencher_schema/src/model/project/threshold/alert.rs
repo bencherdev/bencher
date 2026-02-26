@@ -356,6 +356,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::too_many_lines)]
     fn silence_all_updates_all_alerts_for_head() {
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
@@ -502,6 +503,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::too_many_lines)]
     fn silence_all_ignores_other_heads() {
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);

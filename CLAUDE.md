@@ -112,6 +112,7 @@ The clippy script will install the target automatically and warn if no cross-com
   - The `clap` struct definitions should live in a separate `parser` module
   - The subcommand handler logic should live in a separate module named after the binary for production code (ie `bencher`) or a module named `task` for `tasks/*` crates
   - Do **NOT** use `num_args` on flags in `bencher run` — it uses `trailing_var_arg = true` to match `docker run` semantics, and `num_args` conflicts with trailing vararg parsing. Validate collection sizes at the type/deserialization layer instead (e.g., `TryFrom` impls in `bencher_json`).
+- Prefer destructuring a struct (`let Self { field1, field2, .. } = self;` or `let Foo { .. } = foo;`) over individual field access (`.field1`, `.field2`) when consuming or converting all fields. This ensures the compiler flags a build error when a field is added, preventing silent omissions.
 
 ## Scripts Policy
 

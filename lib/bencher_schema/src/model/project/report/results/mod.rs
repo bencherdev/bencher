@@ -167,9 +167,7 @@ impl ReportResults {
                     // If there's a prepared detection, write boundary + optional alert
                     if let Some(prepared_detection) = prepared_metric.detection {
                         let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
-                        prepared_detection
-                            .write(conn, metric_id)
-                            .map_err(|e| diesel::result::Error::QueryBuilderError(e.into()))?;
+                        prepared_detection.write(conn, metric_id)?;
                     }
                 }
             }

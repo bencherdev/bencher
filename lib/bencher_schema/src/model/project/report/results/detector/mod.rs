@@ -2,14 +2,15 @@ use bencher_boundary::MetricsBoundary;
 use bencher_json::{
     AlertUuid, BoundaryUuid, project::alert::AlertStatus, project::boundary::BoundaryLimit,
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
 
+use crate::macros::sql::last_insert_rowid;
 use crate::model::spec::SpecId;
 use crate::{
     context::DbConnection,
-    error::{bad_request_error, resource_conflict_err},
+    error::bad_request_error,
     model::project::{
         benchmark::BenchmarkId,
         branch::{BranchId, head::HeadId},
@@ -57,7 +58,7 @@ pub struct PreparedDetection {
 impl PreparedDetection {
     /// Write this prepared detection (boundary + optional alert) into the database
     /// using the provided connection (expected to be within a transaction).
-    pub fn write(self, conn: &mut DbConnection, metric_id: MetricId) -> Result<(), HttpError> {
+    pub fn write(self, conn: &mut DbConnection, metric_id: MetricId) -> diesel::QueryResult<()> {
         let insert_boundary = InsertBoundary {
             uuid: self.boundary_uuid,
             threshold_id: self.threshold_id,
@@ -70,25 +71,16 @@ impl PreparedDetection {
 
         diesel::insert_into(schema::boundary::table)
             .values(&insert_boundary)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Boundary, insert_boundary))?;
+            .execute(conn)?;
 
-        let boundary_id = schema::boundary::table
-            .filter(schema::boundary::uuid.eq(self.boundary_uuid.to_string()))
-            .select(schema::boundary::id)
-            .first::<BoundaryId>(conn)
-            .map_err(|e| {
-                let message = format!(
-                    "Failed to query boundary table for ID with UUID ({})",
-                    self.boundary_uuid,
-                );
-                crate::error::issue_error(&message, &message, e)
-            })?;
+        let boundary_id = diesel::select(last_insert_rowid()).get_result::<BoundaryId>(conn)?;
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::MetricCreate);
 
-        if !self.ignore_benchmark && let Some(boundary_limit) = self.outlier {
+        if !self.ignore_benchmark
+            && let Some(boundary_limit) = self.outlier
+        {
             let insert_alert = InsertAlert {
                 uuid: AlertUuid::new(),
                 boundary_id,
@@ -98,8 +90,7 @@ impl PreparedDetection {
             };
             diesel::insert_into(schema::alert::table)
                 .values(&insert_alert)
-                .execute(conn)
-                .map_err(resource_conflict_err!(Alert, insert_alert))?;
+                .execute(conn)?;
         }
 
         Ok(())
@@ -219,7 +210,7 @@ mod tests {
     }
 
     #[test]
-    fn test_detector_new_returns_some_with_threshold() {
+    fn detector_new_returns_some_with_threshold() {
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
         let branch = create_branch_with_head(
