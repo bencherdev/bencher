@@ -33,7 +33,7 @@ use crate::{
         project::{
             ProjectId, QueryProject,
             benchmark::QueryBenchmark,
-            branch::version::QueryVersion,
+            branch::version::{InsertVersion, QueryVersion},
             measure::QueryMeasure,
             testbed::{QueryTestbed, ResolvedTestbed, TestbedId},
             threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
@@ -218,8 +218,10 @@ impl QueryReport {
                 hash,
             )
             .ok()
+            // This is an optimization for the common case (same hash re-submitted).
             // If this version is deleted between this read and the write transaction,
-            // the `get_or_increment` fallback inside the transaction handles it.
+            // the transaction will fail — the same as any other referenced entity
+            // (branch, testbed, etc.) being deleted mid-request.
             .flatten()
         } else {
             None
@@ -231,16 +233,11 @@ impl QueryReport {
             let conn = write_conn!(context);
             conn.transaction(|conn| {
                 // If the version was already found outside the transaction, use it.
-                // Otherwise, fall back to the full get-or-increment inside the transaction.
+                // Otherwise, increment a new version inside the transaction.
                 let version_id = if let Some(version_id) = existing_version_id {
                     version_id
                 } else {
-                    QueryVersion::get_or_increment(
-                        conn,
-                        project_id,
-                        head_id,
-                        json_report.hash.as_ref(),
-                    )?
+                    InsertVersion::increment(conn, project_id, head_id, json_report.hash.clone())?
                 };
 
                 // Create a new report and add it to the database

@@ -574,6 +574,7 @@ impl InsertThreshold {
         slog::debug!(log, "Start point thresholds: {start_point_thresholds:?}");
 
         // Pre-compute actions using read connections
+        let auth_conn = auth_conn!(context);
         let mut actions = Vec::new();
         for (
             (start_point_testbed_id, start_point_measure_id),
@@ -584,7 +585,7 @@ impl InsertThreshold {
                 current_thresholds.remove(&(*start_point_testbed_id, *start_point_measure_id))
             {
                 match QueryThreshold::compute_model_action(
-                    auth_conn!(context),
+                    auth_conn,
                     current_threshold.model_id,
                     *start_point_model,
                 )? {
@@ -663,6 +664,7 @@ impl InsertThreshold {
 
         // Phase 1: Pre-resolve all measure IDs (may trigger get_or_create writes)
         // and read current model state.
+        let auth_conn = auth_conn!(context);
         let mut actions = Vec::new();
         if let Some(models) = json_thresholds.models {
             for (measure, model) in models {
@@ -670,7 +672,7 @@ impl InsertThreshold {
                 slog::debug!(log, "Processing threshold for measure {measure_id}");
                 if let Some(current_threshold) = current_thresholds.remove(&measure_id) {
                     match QueryThreshold::compute_model_action(
-                        auth_conn!(context),
+                        auth_conn,
                         current_threshold.model_id,
                         Some(model),
                     )? {
@@ -757,6 +759,11 @@ pub struct UpdateThreshold {
 }
 
 impl UpdateThreshold {
+    /// Create an `UpdateThreshold` that sets the `model_id` to the most recently inserted model.
+    ///
+    /// # Precondition
+    /// Must be called immediately after an `INSERT INTO model` on the same connection,
+    /// within the same transaction. Uses `last_insert_rowid()` to retrieve the model ID.
     pub fn new_model(conn: &mut DbConnection) -> diesel::QueryResult<Self> {
         Ok(Self {
             model_id: Some(Some(

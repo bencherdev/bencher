@@ -658,5 +658,15 @@ mod tests {
                 .expect("Failed to query alerts");
 
         assert!(alert_ids.is_empty());
+
+        // Replicate the silence_all early-return logic:
+        // When alert_ids is empty, the update should affect 0 rows.
+        let silenced_alert = UpdateAlert::silence();
+        let updated =
+            diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alert_ids)))
+                .set(&silenced_alert)
+                .execute(&mut conn)
+                .expect("Failed to bulk silence alerts");
+        assert_eq!(updated, 0);
     }
 }

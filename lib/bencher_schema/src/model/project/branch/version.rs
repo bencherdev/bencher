@@ -58,25 +58,6 @@ impl QueryVersion {
             .optional()
     }
 
-    /// Must be called within a transaction — delegates to `increment()` which uses
-    /// `last_insert_rowid()`.
-    pub fn get_or_increment(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        head_id: HeadId,
-        hash: Option<&GitHash>,
-    ) -> QueryResult<VersionId> {
-        if let Some(hash) = hash {
-            if let Some(version_id) = Self::find_by_hash(conn, project_id, head_id, hash)? {
-                Ok(version_id)
-            } else {
-                InsertVersion::increment(conn, project_id, head_id, Some(hash.clone()))
-            }
-        } else {
-            InsertVersion::increment(conn, project_id, head_id, None)
-        }
-    }
-
     pub fn into_json(self) -> JsonVersion {
         let Self { number, hash, .. } = self;
         JsonVersion { number, hash }
@@ -94,7 +75,7 @@ pub struct InsertVersion {
 
 impl InsertVersion {
     // Must be called within a transaction — uses `last_insert_rowid()`.
-    fn increment(
+    pub(crate) fn increment(
         conn: &mut DbConnection,
         project_id: ProjectId,
         head_id: HeadId,
@@ -339,5 +320,69 @@ mod tests {
         let result = QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash);
         // Should return the version with the highest number (most recent)
         assert_eq!(result.unwrap(), Some(version_new));
+    }
+
+    #[test]
+    fn find_by_hash_returns_latest_by_number_not_insertion_order() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+
+        // Insert version with higher number FIRST
+        let version_high = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            5,
+            Some("1234567890abcdef1234567890abcdef12345678"),
+        );
+        create_head_version(&mut conn, branch.head_id, version_high);
+        create_report(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000050",
+            base.project_id,
+            branch.head_id,
+            version_high,
+            testbed_id,
+        );
+
+        // Insert version with lower number SECOND
+        let version_low = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000041",
+            2,
+            Some("1234567890abcdef1234567890abcdef12345678"),
+        );
+        create_head_version(&mut conn, branch.head_id, version_low);
+        create_report(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000051",
+            base.project_id,
+            branch.head_id,
+            version_low,
+            testbed_id,
+        );
+
+        let hash: bencher_json::GitHash = "1234567890abcdef1234567890abcdef12345678"
+            .parse()
+            .expect("valid hash");
+        let result = QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash);
+        // Should return the version with the highest number (5), not the last-inserted one (2)
+        assert_eq!(result.unwrap(), Some(version_high));
     }
 }

@@ -3,6 +3,7 @@
 //! This module provides helper functions for setting up test databases
 //! and creating test fixtures for unit testing.
 
+use bencher_json::DateTime;
 use diesel::{
     Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SqliteConnection,
 };
@@ -48,8 +49,8 @@ pub fn create_base_entities(conn: &mut SqliteConnection) -> BaseEntityIds {
             schema::organization::uuid.eq("00000000-0000-0000-0000-000000000001"),
             schema::organization::name.eq("Test Org"),
             schema::organization::slug.eq("test-org"),
-            schema::organization::created.eq(0i64),
-            schema::organization::modified.eq(0i64),
+            schema::organization::created.eq(DateTime::TEST),
+            schema::organization::modified.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert organization");
@@ -65,8 +66,8 @@ pub fn create_base_entities(conn: &mut SqliteConnection) -> BaseEntityIds {
             schema::project::name.eq("Test Project"),
             schema::project::slug.eq("test-project"),
             schema::project::visibility.eq(0),
-            schema::project::created.eq(0i64),
-            schema::project::modified.eq(0i64),
+            schema::project::created.eq(DateTime::TEST),
+            schema::project::modified.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert project");
@@ -104,8 +105,8 @@ pub fn create_branch_with_head(
             schema::branch::project_id.eq(project_id),
             schema::branch::name.eq(branch_name),
             schema::branch::slug.eq(branch_slug),
-            schema::branch::created.eq(0i64),
-            schema::branch::modified.eq(0i64),
+            schema::branch::created.eq(DateTime::TEST),
+            schema::branch::modified.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert branch");
@@ -118,7 +119,7 @@ pub fn create_branch_with_head(
         .values((
             schema::head::uuid.eq(head_uuid),
             schema::head::branch_id.eq(branch_id),
-            schema::head::created.eq(0i64),
+            schema::head::created.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert head");
@@ -202,8 +203,8 @@ pub fn create_testbed(
             schema::testbed::project_id.eq(project_id),
             schema::testbed::name.eq(testbed_name),
             schema::testbed::slug.eq(testbed_slug),
-            schema::testbed::created.eq(0i64),
-            schema::testbed::modified.eq(0i64),
+            schema::testbed::created.eq(DateTime::TEST),
+            schema::testbed::modified.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert testbed");
@@ -228,8 +229,8 @@ pub fn create_measure(
             schema::measure::name.eq(measure_name),
             schema::measure::slug.eq(measure_slug),
             schema::measure::units.eq("ns"),
-            schema::measure::created.eq(0i64),
-            schema::measure::modified.eq(0i64),
+            schema::measure::created.eq(DateTime::TEST),
+            schema::measure::modified.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert measure");
@@ -255,8 +256,8 @@ pub fn create_threshold(
             schema::threshold::branch_id.eq(branch_id),
             schema::threshold::testbed_id.eq(testbed_id),
             schema::threshold::measure_id.eq(measure_id),
-            schema::threshold::created.eq(0i64),
-            schema::threshold::modified.eq(0i64),
+            schema::threshold::created.eq(DateTime::TEST),
+            schema::threshold::modified.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert threshold");
@@ -278,7 +279,7 @@ pub fn create_model(
             schema::model::uuid.eq(model_uuid),
             schema::model::threshold_id.eq(threshold_id),
             schema::model::test.eq(test_type),
-            schema::model::created.eq(0i64),
+            schema::model::created.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert model");
@@ -378,8 +379,8 @@ pub fn create_spec(conn: &mut SqliteConnection, args: CreateSpecArgs<'_>) -> Spe
             schema::spec::memory.eq(memory),
             schema::spec::disk.eq(disk),
             schema::spec::network.eq(network),
-            schema::spec::created.eq(0i64),
-            schema::spec::modified.eq(0i64),
+            schema::spec::created.eq(DateTime::TEST),
+            schema::spec::modified.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert spec");
@@ -455,9 +456,9 @@ pub fn create_report(
             schema::report::version_id.eq(version_id),
             schema::report::testbed_id.eq(testbed_id),
             schema::report::adapter.eq(0),
-            schema::report::start_time.eq(0i64),
-            schema::report::end_time.eq(0i64),
-            schema::report::created.eq(0i64),
+            schema::report::start_time.eq(DateTime::TEST),
+            schema::report::end_time.eq(DateTime::TEST),
+            schema::report::created.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert report");
@@ -481,8 +482,8 @@ pub fn create_benchmark(
             schema::benchmark::project_id.eq(project_id),
             schema::benchmark::name.eq(benchmark_name),
             schema::benchmark::slug.eq(benchmark_slug),
-            schema::benchmark::created.eq(0i64),
-            schema::benchmark::modified.eq(0i64),
+            schema::benchmark::created.eq(DateTime::TEST),
+            schema::benchmark::modified.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert benchmark");
@@ -575,7 +576,7 @@ pub fn create_alert(
             schema::alert::boundary_id.eq(boundary_id),
             schema::alert::boundary_limit.eq(boundary_limit),
             schema::alert::status.eq(status),
-            schema::alert::modified.eq(0i64),
+            schema::alert::modified.eq(DateTime::TEST),
         ))
         .execute(conn)
         .expect("Failed to insert alert");
