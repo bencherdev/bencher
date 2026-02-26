@@ -81,21 +81,40 @@ impl QueryThreshold {
         }
     }
 
+    /// Compare the current model (if any) with a new model and return the appropriate action.
+    fn compute_model_action(
+        conn: &mut DbConnection,
+        model_id: Option<ModelId>,
+        new_model: Option<Model>,
+    ) -> Result<ThresholdModelAction, HttpError> {
+        Ok(match (model_id, new_model) {
+            // No current model and no new model — nothing to do.
+            (None, None) => ThresholdModelAction::NoChange,
+            // No current model but a new model — insert it.
+            (None, Some(model)) => ThresholdModelAction::Update(model),
+            // Current model but no new model — remove it.
+            (Some(_), None) => ThresholdModelAction::Remove,
+            // Both present — update only if they differ.
+            (Some(model_id), Some(model)) => {
+                let current_model = QueryModel::get(conn, model_id)?.into_model();
+                if current_model == model {
+                    ThresholdModelAction::NoChange
+                } else {
+                    ThresholdModelAction::Update(model)
+                }
+            },
+        })
+    }
+
     pub async fn update_model_if_changed(
         &self,
         context: &ApiContext,
         model: Option<Model>,
     ) -> Result<(), HttpError> {
-        match (self.model_id, model) {
-            // No current model and no new model,
-            // nothing to do.
-            (None, None) => Ok(()),
-            // No current model but a new model,
-            // insert the new model.
-            (None, Some(model)) => self.update_from_model(context, model).await,
-            // Current model but no new model,
-            // remove the current model.
-            (Some(_), None) => self
+        match Self::compute_model_action(auth_conn!(context), self.model_id, model)? {
+            ThresholdModelAction::NoChange => Ok(()),
+            ThresholdModelAction::Update(model) => self.update_from_model(context, model).await,
+            ThresholdModelAction::Remove => self
                 .remove_current_model(write_conn!(context))
                 .map_err(|e| {
                     crate::error::issue_error(
@@ -104,18 +123,6 @@ impl QueryThreshold {
                         e,
                     )
                 }),
-            // Current model and new model,
-            // update the current if it has changed.
-            (Some(model_id), Some(model)) => {
-                let current_model = QueryModel::get(auth_conn!(context), model_id)?.into_model();
-                // Skip updating the model if it has not changed.
-                // This keeps us from needlessly replacing old models with identical new ones.
-                if current_model == model {
-                    Ok(())
-                } else {
-                    self.update_from_model(context, model).await
-                }
-            },
         }
     }
 
@@ -290,6 +297,16 @@ pub struct InsertThreshold {
     pub model_id: Option<ModelId>,
     pub created: DateTime,
     pub modified: DateTime,
+}
+
+/// The result of comparing a threshold's current model with a new model.
+enum ThresholdModelAction {
+    /// The new model differs from the current one — update it.
+    Update(Model),
+    /// There is a current model but no new model — remove it.
+    Remove,
+    /// The model is unchanged (or both are `None`) — nothing to do.
+    NoChange,
 }
 
 enum StartPointAction {
@@ -566,28 +583,21 @@ impl InsertThreshold {
             if let Some(current_threshold) =
                 current_thresholds.remove(&(*start_point_testbed_id, *start_point_measure_id))
             {
-                match (&current_threshold.model_id, start_point_model) {
-                    (None, None) => {
+                match QueryThreshold::compute_model_action(
+                    auth_conn!(context),
+                    current_threshold.model_id,
+                    *start_point_model,
+                )? {
+                    ThresholdModelAction::NoChange => {
                         actions.push(StartPointAction::NoChange);
                     },
-                    (None, Some(model)) => {
+                    ThresholdModelAction::Update(model) => {
                         #[cfg(feature = "plus")]
                         InsertModel::rate_limit(context, &current_threshold).await?;
-                        actions.push(StartPointAction::Update(current_threshold, *model));
+                        actions.push(StartPointAction::Update(current_threshold, model));
                     },
-                    (Some(_), None) => {
+                    ThresholdModelAction::Remove => {
                         actions.push(StartPointAction::Remove(current_threshold));
-                    },
-                    (Some(model_id), Some(model)) => {
-                        let current_model =
-                            QueryModel::get(auth_conn!(context), *model_id)?.into_model();
-                        if current_model == *model {
-                            actions.push(StartPointAction::NoChange);
-                        } else {
-                            #[cfg(feature = "plus")]
-                            InsertModel::rate_limit(context, &current_threshold).await?;
-                            actions.push(StartPointAction::Update(current_threshold, *model));
-                        }
                     },
                 }
             } else if let Some(model) = start_point_model {
@@ -610,6 +620,10 @@ impl InsertThreshold {
         Ok((actions, orphans))
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "Batch threshold processing with rate limiting"
+    )]
     pub async fn from_report_json(
         log: &Logger,
         context: &ApiContext,
@@ -655,20 +669,29 @@ impl InsertThreshold {
                 let measure_id = QueryMeasure::get_or_create(context, project_id, &measure).await?;
                 slog::debug!(log, "Processing threshold for measure {measure_id}");
                 if let Some(current_threshold) = current_thresholds.remove(&measure_id) {
-                    // Check if the model has changed
-                    if let Some(model_id) = current_threshold.model_id {
-                        let current_model =
-                            QueryModel::get(auth_conn!(context), model_id)?.into_model();
-                        if current_model == model {
-                            slog::debug!(log, "Model unchanged for measure {measure_id}");
-                            actions.push(ThresholdAction::NoChange);
-                        } else {
+                    match QueryThreshold::compute_model_action(
+                        auth_conn!(context),
+                        current_threshold.model_id,
+                        Some(model),
+                    )? {
+                        ThresholdModelAction::Update(model) => {
+                            #[cfg(feature = "plus")]
+                            InsertModel::rate_limit(context, &current_threshold).await?;
                             slog::debug!(log, "Updating threshold for measure {measure_id}");
                             actions.push(ThresholdAction::Update(current_threshold, model));
-                        }
-                    } else {
-                        slog::debug!(log, "Adding model to threshold for measure {measure_id}");
-                        actions.push(ThresholdAction::Update(current_threshold, model));
+                        },
+                        ThresholdModelAction::NoChange => {
+                            slog::debug!(log, "Model unchanged for measure {measure_id}");
+                            actions.push(ThresholdAction::NoChange);
+                        },
+                        // Cannot happen: we always pass Some(model) as new_model.
+                        ThresholdModelAction::Remove => {
+                            return Err(crate::error::issue_error(
+                                "Unexpected threshold model removal",
+                                "compute_model_action returned Remove with Some(model) input for measure:",
+                                measure_id,
+                            ));
+                        },
                     }
                 } else {
                     slog::debug!(log, "Creating threshold for measure {measure_id}");
@@ -769,7 +792,8 @@ mod tests {
         },
     };
 
-    use super::{QueryThreshold, UpdateThreshold};
+    use super::{QueryThreshold, ThresholdId, UpdateThreshold, model::ModelId};
+    use crate::model::project::{measure::MeasureId, testbed::TestbedId};
 
     /// Test that thresholds can be queried by `branch_id`.
     /// This is the foundation of threshold cloning.
@@ -995,14 +1019,14 @@ mod tests {
         );
 
         // Query and collect into HashMap like from_start_point does
-        let thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
+        let thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> = schema::threshold::table
             .filter(schema::threshold::branch_id.eq(branch.branch_id))
             .select((
                 schema::threshold::testbed_id,
                 schema::threshold::measure_id,
                 schema::threshold::id,
             ))
-            .load::<(i32, i32, i32)>(&mut conn)
+            .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
             .expect("Failed to query")
             .into_iter()
             .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
@@ -1095,32 +1119,34 @@ mod tests {
         );
 
         // Collect source thresholds
-        let source_thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(source.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-            ))
-            .load::<(i32, i32, i32)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
-            .collect();
+        let source_thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(source.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
+                .collect();
 
         // Collect dest thresholds
-        let mut dest_thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(dest.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-            ))
-            .load::<(i32, i32, i32)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
-            .collect();
+        let mut dest_thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(dest.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
+                .collect();
 
         assert_eq!(source_thresholds.len(), 2);
         assert_eq!(dest_thresholds.len(), 1);
@@ -1224,32 +1250,34 @@ mod tests {
         );
 
         // Collect source thresholds
-        let source_thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(source.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-            ))
-            .load::<(i32, i32, i32)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
-            .collect();
+        let source_thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(source.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
+                .collect();
 
         // Collect dest thresholds
-        let mut dest_thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(dest.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-            ))
-            .load::<(i32, i32, i32)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
-            .collect();
+        let mut dest_thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(dest.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
+                .collect();
 
         // Process source thresholds (removes matching from dest)
         for (testbed_id, measure_id) in source_thresholds.keys() {
@@ -1311,11 +1339,10 @@ mod tests {
             .first(&mut conn)
             .expect("Failed to query threshold");
 
-        // Use i32::from() to extract values from typed IDs
-        assert_eq!(i32::from(threshold.project_id), base.project_id);
-        assert_eq!(i32::from(threshold.branch_id), branch.branch_id);
-        assert_eq!(i32::from(threshold.testbed_id), testbed);
-        assert_eq!(i32::from(threshold.measure_id), measure);
+        assert_eq!(threshold.project_id, base.project_id);
+        assert_eq!(threshold.branch_id, branch.branch_id);
+        assert_eq!(threshold.testbed_id, testbed);
+        assert_eq!(threshold.measure_id, measure);
         assert!(threshold.model_id.is_none());
     }
 
@@ -1445,7 +1472,7 @@ mod tests {
 
         // Use LEFT JOIN to get thresholds with optional models
 
-        let results: Vec<(i32, Option<i32>)> = schema::threshold::table
+        let results: Vec<(ThresholdId, Option<ModelId>)> = schema::threshold::table
             .left_join(
                 schema::model::table
                     .on(schema::model::id.nullable().eq(schema::threshold::model_id)),
@@ -1529,7 +1556,7 @@ mod tests {
 
         // Use LEFT JOIN to fetch all at once
 
-        let results: Vec<(i32, Option<i32>)> = schema::threshold::table
+        let results: Vec<(ThresholdId, Option<ModelId>)> = schema::threshold::table
             .left_join(
                 schema::model::table
                     .on(schema::model::id.nullable().eq(schema::threshold::model_id)),
@@ -1685,32 +1712,34 @@ mod tests {
         );
 
         // Simulate from_start_point logic
-        let source_thresholds: HashMap<(i32, i32), (i32, Option<i32>)> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(source.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-                schema::threshold::model_id,
-            ))
-            .load::<(i32, i32, i32, Option<i32>)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(t, m, id, model)| ((t, m), (id, model)))
-            .collect();
+        let source_thresholds: HashMap<(TestbedId, MeasureId), (ThresholdId, Option<ModelId>)> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(source.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                    schema::threshold::model_id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId, Option<ModelId>)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(t, m, id, model)| ((t, m), (id, model)))
+                .collect();
 
-        let mut current_thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(current.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-            ))
-            .load::<(i32, i32, i32)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(t, m, id)| ((t, m), id))
-            .collect();
+        let mut current_thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(current.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(t, m, id)| ((t, m), id))
+                .collect();
 
         assert_eq!(source_thresholds.len(), 2);
         assert_eq!(current_thresholds.len(), 2);
@@ -1873,7 +1902,7 @@ mod tests {
 
         // Verify all have models using JOIN query
 
-        let results: Vec<(i32, Option<i32>)> = schema::threshold::table
+        let results: Vec<(ThresholdId, Option<ModelId>)> = schema::threshold::table
             .left_join(
                 schema::model::table
                     .on(schema::model::id.nullable().eq(schema::threshold::model_id)),

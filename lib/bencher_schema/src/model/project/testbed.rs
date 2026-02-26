@@ -539,7 +539,6 @@ mod tests {
 
     use super::UpdateTestbed;
     use crate::{
-        model::spec::SpecId,
         schema,
         test_util::{
             CreateSpecArgs, clear_testbed_spec, create_base_entities, create_spec, create_testbed,
@@ -831,7 +830,7 @@ mod tests {
         let update_testbed = UpdateTestbed {
             name: None,
             slug: None,
-            spec_id: Some(Some(SpecId::from_raw(spec_id))),
+            spec_id: Some(Some(spec_id)),
             modified: bencher_json::DateTime::TEST,
             archived: Some(None),
         };
@@ -874,7 +873,7 @@ mod tests {
         let update_testbed = UpdateTestbed {
             name: None,
             slug: None,
-            spec_id: Some(Some(SpecId::from_raw(spec_id))),
+            spec_id: Some(Some(spec_id)),
             modified: bencher_json::DateTime::TEST,
             archived: None, // outer None = don't touch archived column
         };
@@ -1060,14 +1059,14 @@ mod tests {
         );
         set_testbed_spec(&mut conn, testbed_with, spec_id);
 
-        let with_spec: Vec<i32> = schema::testbed::table
+        let with_spec: Vec<super::TestbedId> = schema::testbed::table
             .filter(schema::testbed::spec_id.eq(spec_id))
             .select(schema::testbed::id)
             .load(&mut conn)
             .expect("Failed to query testbeds by spec_id");
         assert_eq!(with_spec, vec![testbed_with]);
 
-        let without_spec: Vec<i32> = schema::testbed::table
+        let without_spec: Vec<super::TestbedId> = schema::testbed::table
             .filter(schema::testbed::spec_id.is_null())
             .select(schema::testbed::id)
             .load(&mut conn)

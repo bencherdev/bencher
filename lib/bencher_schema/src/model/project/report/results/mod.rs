@@ -17,7 +17,7 @@ use crate::model::spec::SpecId;
 use crate::{
     auth_conn,
     context::ApiContext,
-    error::bad_request_error,
+    error::{bad_request_error, issue_error},
     model::project::{
         ProjectId,
         benchmark::{BenchmarkId, QueryBenchmark},
@@ -174,7 +174,7 @@ impl ReportResults {
             Ok::<_, diesel::result::Error>(())
         })
         .map_err(|e| {
-            crate::error::issue_error(
+            issue_error(
                 "Failed to write report results",
                 "Failed to write report results in batch transaction:",
                 e,

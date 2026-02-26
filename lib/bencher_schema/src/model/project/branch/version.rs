@@ -58,6 +58,8 @@ impl QueryVersion {
             .optional()
     }
 
+    /// Must be called within a transaction — delegates to `increment()` which uses
+    /// `last_insert_rowid()`.
     pub fn get_or_increment(
         conn: &mut DbConnection,
         project_id: ProjectId,
@@ -143,15 +145,12 @@ impl InsertVersion {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        model::project::{ProjectId, branch::head::HeadId},
-        test_util::{
-            create_base_entities, create_branch_with_head, create_head_version, create_report,
-            create_testbed, create_version, setup_test_db,
-        },
+    use crate::test_util::{
+        create_base_entities, create_branch_with_head, create_head_version, create_report,
+        create_testbed, create_version, setup_test_db,
     };
 
-    use super::{QueryVersion, VersionId};
+    use super::QueryVersion;
 
     #[test]
     fn find_by_hash_returns_existing_version() {
@@ -194,13 +193,8 @@ mod tests {
         let hash: bencher_json::GitHash = "1234567890abcdef1234567890abcdef12345678"
             .parse()
             .expect("valid hash");
-        let result = QueryVersion::find_by_hash(
-            &mut conn,
-            ProjectId::from_raw(base.project_id),
-            HeadId::from_raw(branch.head_id),
-            &hash,
-        );
-        assert_eq!(result.unwrap(), Some(VersionId::from_raw(version_id)));
+        let result = QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash);
+        assert_eq!(result.unwrap(), Some(version_id));
     }
 
     #[test]
@@ -219,12 +213,7 @@ mod tests {
         let hash: bencher_json::GitHash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
             .parse()
             .expect("valid hash");
-        let result = QueryVersion::find_by_hash(
-            &mut conn,
-            ProjectId::from_raw(base.project_id),
-            HeadId::from_raw(branch.head_id),
-            &hash,
-        );
+        let result = QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash);
         assert_eq!(result.unwrap(), None);
     }
 
@@ -279,21 +268,13 @@ mod tests {
             .expect("valid hash");
 
         // Should find on branch_a's head
-        let result = QueryVersion::find_by_hash(
-            &mut conn,
-            ProjectId::from_raw(base.project_id),
-            HeadId::from_raw(branch_a.head_id),
-            &hash,
-        );
-        assert_eq!(result.unwrap(), Some(VersionId::from_raw(version_id)));
+        let result =
+            QueryVersion::find_by_hash(&mut conn, base.project_id, branch_a.head_id, &hash);
+        assert_eq!(result.unwrap(), Some(version_id));
 
         // Should NOT find on branch_b's head (no report there)
-        let result = QueryVersion::find_by_hash(
-            &mut conn,
-            ProjectId::from_raw(base.project_id),
-            HeadId::from_raw(branch_b.head_id),
-            &hash,
-        );
+        let result =
+            QueryVersion::find_by_hash(&mut conn, base.project_id, branch_b.head_id, &hash);
         assert_eq!(result.unwrap(), None);
     }
 
@@ -355,13 +336,8 @@ mod tests {
         let hash: bencher_json::GitHash = "1234567890abcdef1234567890abcdef12345678"
             .parse()
             .expect("valid hash");
-        let result = QueryVersion::find_by_hash(
-            &mut conn,
-            ProjectId::from_raw(base.project_id),
-            HeadId::from_raw(branch.head_id),
-            &hash,
-        );
+        let result = QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash);
         // Should return the version with the highest number (most recent)
-        assert_eq!(result.unwrap(), Some(VersionId::from_raw(version_new)));
+        assert_eq!(result.unwrap(), Some(version_new));
     }
 }

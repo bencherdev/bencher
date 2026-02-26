@@ -281,25 +281,31 @@ mod tests {
         },
     };
 
-    use super::UpdateAlert;
+    use super::{AlertId, UpdateAlert};
+    use crate::model::project::{
+        ProjectId,
+        branch::{BranchId, head::HeadId, version::VersionId},
+        measure::MeasureId,
+        testbed::TestbedId,
+    };
 
     // AlertStatus::Active = 0, AlertStatus::Silenced = 10
     const ACTIVE: i32 = 0;
     const SILENCED: i32 = 10;
 
     /// Helper to create the full entity chain needed for an alert.
-    /// Returns `(head_id, alert_id)`.
+    /// Returns the alert id.
     #[expect(clippy::too_many_arguments)]
     fn create_alert_chain(
         conn: &mut diesel::SqliteConnection,
-        base_project_id: i32,
-        head_id: i32,
-        version_id: i32,
-        testbed_id: i32,
-        branch_id: i32,
-        measure_id: i32,
+        base_project_id: ProjectId,
+        head_id: HeadId,
+        version_id: VersionId,
+        testbed_id: TestbedId,
+        branch_id: BranchId,
+        measure_id: MeasureId,
         uuids: &AlertChainUuids<'_>,
-    ) -> i32 {
+    ) -> AlertId {
         let report_id = create_report(
             conn,
             uuids.report_uuid,
@@ -477,7 +483,7 @@ mod tests {
         assert_eq!(get_alert_status(&mut conn, alert3), ACTIVE);
 
         // Query alert IDs for this head
-        let alert_ids: Vec<i32> =
+        let alert_ids: Vec<AlertId> =
             schema::alert::table
                 .inner_join(schema::boundary::table.inner_join(
                     schema::metric::table.inner_join(
@@ -486,7 +492,7 @@ mod tests {
                 ))
                 .filter(schema::report::head_id.eq(branch.head_id))
                 .select(schema::alert::id)
-                .load::<i32>(&mut conn)
+                .load::<AlertId>(&mut conn)
                 .expect("Failed to query alerts");
         assert_eq!(alert_ids.len(), 3);
 
@@ -602,7 +608,7 @@ mod tests {
         );
 
         // Silence only head1's alerts
-        let head1_alert_ids: Vec<i32> =
+        let head1_alert_ids: Vec<AlertId> =
             schema::alert::table
                 .inner_join(schema::boundary::table.inner_join(
                     schema::metric::table.inner_join(
@@ -611,7 +617,7 @@ mod tests {
                 ))
                 .filter(schema::report::head_id.eq(branch1.head_id))
                 .select(schema::alert::id)
-                .load::<i32>(&mut conn)
+                .load::<AlertId>(&mut conn)
                 .expect("Failed to query alerts");
 
         let silenced_alert = UpdateAlert::silence();
@@ -639,7 +645,7 @@ mod tests {
         );
 
         // Query alerts for a head with no alerts
-        let alert_ids: Vec<i32> =
+        let alert_ids: Vec<AlertId> =
             schema::alert::table
                 .inner_join(schema::boundary::table.inner_join(
                     schema::metric::table.inner_join(
@@ -648,7 +654,7 @@ mod tests {
                 ))
                 .filter(schema::report::head_id.eq(branch.head_id))
                 .select(schema::alert::id)
-                .load::<i32>(&mut conn)
+                .load::<AlertId>(&mut conn)
                 .expect("Failed to query alerts");
 
         assert!(alert_ids.is_empty());

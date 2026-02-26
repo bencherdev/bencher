@@ -152,12 +152,6 @@ mod tests {
     };
 
     use super::Detector;
-    use crate::model::project::{
-        branch::{BranchId, head::HeadId},
-        measure::MeasureId,
-        testbed::TestbedId,
-        threshold::ThresholdId,
-    };
 
     #[test]
     fn detector_new_returns_none_without_threshold() {
@@ -189,11 +183,11 @@ mod tests {
         // No threshold exists => Detector::new returns None
         let detector = Detector::new(
             &mut conn,
-            BranchId::from_raw(branch.branch_id),
-            HeadId::from_raw(branch.head_id),
-            TestbedId::from_raw(testbed),
+            branch.branch_id,
+            branch.head_id,
+            testbed,
             None,
-            MeasureId::from_raw(measure),
+            measure,
         );
         assert!(detector.is_none());
     }
@@ -242,17 +236,14 @@ mod tests {
         // Threshold + model exist => Detector::new returns Some
         let detector = Detector::new(
             &mut conn,
-            BranchId::from_raw(branch.branch_id),
-            HeadId::from_raw(branch.head_id),
-            TestbedId::from_raw(testbed),
+            branch.branch_id,
+            branch.head_id,
+            testbed,
             None,
-            MeasureId::from_raw(measure),
+            measure,
         );
         assert!(detector.is_some());
         let detector = detector.unwrap();
-        assert_eq!(
-            i32::from(detector.threshold.id),
-            i32::from(ThresholdId::from_raw(threshold_id))
-        );
+        assert_eq!(detector.threshold.id, threshold_id);
     }
 }

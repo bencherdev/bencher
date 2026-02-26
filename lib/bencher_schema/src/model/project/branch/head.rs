@@ -343,6 +343,7 @@ mod tests {
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use crate::{
+        model::project::branch::version::VersionId,
         schema,
         test_util::{
             count_head_versions, create_base_entities, create_branch_with_head,
@@ -466,7 +467,7 @@ mod tests {
         create_head_version(&mut conn, source.head_id, v5);
 
         // Query versions <= 3 (simulating start point at version 3)
-        let version_ids: Vec<i32> = schema::head_version::table
+        let version_ids: Vec<VersionId> = schema::head_version::table
             .inner_join(schema::version::table)
             .filter(schema::head_version::head_id.eq(source.head_id))
             .filter(schema::version::number.le(3))
@@ -511,7 +512,7 @@ mod tests {
         }
 
         // Query with limit 5 (simulating max_versions=5)
-        let version_ids: Vec<i32> = schema::head_version::table
+        let version_ids: Vec<VersionId> = schema::head_version::table
             .inner_join(schema::version::table)
             .filter(schema::head_version::head_id.eq(source.head_id))
             .order(schema::version::number.desc())
@@ -580,7 +581,7 @@ mod tests {
 
         // Simulate clone_versions: clone versions <= 3 to dest head
         // This uses individual inserts like the current implementation
-        let version_ids: Vec<i32> = schema::head_version::table
+        let version_ids: Vec<VersionId> = schema::head_version::table
             .inner_join(schema::version::table)
             .filter(schema::head_version::head_id.eq(source.head_id))
             .filter(schema::version::number.le(3))
@@ -665,7 +666,7 @@ mod tests {
         create_head_version(&mut conn, source.head_id, v3);
 
         // Simulate clone_versions with batch insert (optimized behavior)
-        let version_ids: Vec<i32> = schema::head_version::table
+        let version_ids: Vec<VersionId> = schema::head_version::table
             .inner_join(schema::version::table)
             .filter(schema::head_version::head_id.eq(source.head_id))
             .filter(schema::version::number.le(3))
@@ -742,7 +743,7 @@ mod tests {
         );
 
         // Create same versions in both databases
-        let versions1: Vec<i32> = (1..=5)
+        let versions1: Vec<VersionId> = (1..=5)
             .map(|i| {
                 let v = create_version(
                     &mut conn1,
@@ -756,7 +757,7 @@ mod tests {
             })
             .collect();
 
-        let versions2: Vec<i32> = (1..=5)
+        let versions2: Vec<VersionId> = (1..=5)
             .map(|i| {
                 let v = create_version(
                     &mut conn2,
@@ -829,7 +830,7 @@ mod tests {
         );
 
         // Source has no versions linked
-        let version_ids: Vec<i32> = schema::head_version::table
+        let version_ids: Vec<VersionId> = schema::head_version::table
             .inner_join(schema::version::table)
             .filter(schema::head_version::head_id.eq(source.head_id))
             .select(schema::head_version::version_id)
@@ -900,7 +901,7 @@ mod tests {
 
         // Clone with max_versions=3
         let max_versions: i64 = 3;
-        let version_ids: Vec<i32> = schema::head_version::table
+        let version_ids: Vec<VersionId> = schema::head_version::table
             .inner_join(schema::version::table)
             .filter(schema::head_version::head_id.eq(source.head_id))
             .order(schema::version::number.desc())
@@ -974,7 +975,7 @@ mod tests {
         let start_point_version_number = 7;
         let max_versions: i64 = 5;
 
-        let version_ids: Vec<i32> = schema::head_version::table
+        let version_ids: Vec<VersionId> = schema::head_version::table
             .inner_join(schema::version::table)
             .filter(schema::head_version::head_id.eq(source.head_id))
             .filter(schema::version::number.le(start_point_version_number))

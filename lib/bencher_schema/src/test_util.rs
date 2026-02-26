@@ -7,7 +7,24 @@ use diesel::{
     Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SqliteConnection,
 };
 
-use crate::{macros::sql::last_insert_rowid, run_migrations, schema};
+use crate::{
+    macros::sql::last_insert_rowid,
+    model::{
+        organization::OrganizationId,
+        project::{
+            ProjectId,
+            benchmark::BenchmarkId,
+            branch::{BranchId, head::HeadId, head_version::HeadVersionId, version::VersionId},
+            measure::MeasureId,
+            metric::MetricId,
+            report::{ReportId, report_benchmark::ReportBenchmarkId},
+            testbed::TestbedId,
+            threshold::{ThresholdId, alert::AlertId, boundary::BoundaryId, model::ModelId},
+        },
+        spec::SpecId,
+    },
+    run_migrations, schema,
+};
 
 /// Create an in-memory `SQLite` database with migrations applied.
 pub fn setup_test_db() -> SqliteConnection {
@@ -20,8 +37,8 @@ pub fn setup_test_db() -> SqliteConnection {
 /// IDs returned from creating base entities.
 #[derive(Debug, Clone, Copy)]
 pub struct BaseEntityIds {
-    pub organization_id: i32,
-    pub project_id: i32,
+    pub organization_id: OrganizationId,
+    pub project_id: ProjectId,
 }
 
 /// Create the base entities (organization, project) required for most tests.
@@ -37,7 +54,7 @@ pub fn create_base_entities(conn: &mut SqliteConnection) -> BaseEntityIds {
         .execute(conn)
         .expect("Failed to insert organization");
 
-    let organization_id: i32 = diesel::select(last_insert_rowid())
+    let organization_id: OrganizationId = diesel::select(last_insert_rowid())
         .get_result(conn)
         .expect("Failed to get organization id");
 
@@ -54,7 +71,7 @@ pub fn create_base_entities(conn: &mut SqliteConnection) -> BaseEntityIds {
         .execute(conn)
         .expect("Failed to insert project");
 
-    let project_id: i32 = diesel::select(last_insert_rowid())
+    let project_id: ProjectId = diesel::select(last_insert_rowid())
         .get_result(conn)
         .expect("Failed to get project id");
 
@@ -67,14 +84,14 @@ pub fn create_base_entities(conn: &mut SqliteConnection) -> BaseEntityIds {
 /// IDs returned from creating a branch with head.
 #[derive(Debug, Clone, Copy)]
 pub struct BranchIds {
-    pub branch_id: i32,
-    pub head_id: i32,
+    pub branch_id: BranchId,
+    pub head_id: HeadId,
 }
 
 /// Create a branch and head for testing.
 pub fn create_branch_with_head(
     conn: &mut SqliteConnection,
-    project_id: i32,
+    project_id: ProjectId,
     branch_uuid: &str,
     branch_name: &str,
     branch_slug: &str,
@@ -93,7 +110,7 @@ pub fn create_branch_with_head(
         .execute(conn)
         .expect("Failed to insert branch");
 
-    let branch_id: i32 = diesel::select(last_insert_rowid())
+    let branch_id: BranchId = diesel::select(last_insert_rowid())
         .get_result(conn)
         .expect("Failed to get branch id");
 
@@ -106,7 +123,7 @@ pub fn create_branch_with_head(
         .execute(conn)
         .expect("Failed to insert head");
 
-    let head_id: i32 = diesel::select(last_insert_rowid())
+    let head_id: HeadId = diesel::select(last_insert_rowid())
         .get_result(conn)
         .expect("Failed to get head id");
 
@@ -122,11 +139,11 @@ pub fn create_branch_with_head(
 /// Create a version for testing.
 pub fn create_version(
     conn: &mut SqliteConnection,
-    project_id: i32,
+    project_id: ProjectId,
     version_uuid: &str,
     version_number: i32,
     hash: Option<&str>,
-) -> i32 {
+) -> VersionId {
     let values = if let Some(h) = hash {
         diesel::insert_into(schema::version::table)
             .values((
@@ -153,7 +170,11 @@ pub fn create_version(
 }
 
 /// Link a version to a head.
-pub fn create_head_version(conn: &mut SqliteConnection, head_id: i32, version_id: i32) -> i32 {
+pub fn create_head_version(
+    conn: &mut SqliteConnection,
+    head_id: HeadId,
+    version_id: VersionId,
+) -> HeadVersionId {
     diesel::insert_into(schema::head_version::table)
         .values((
             schema::head_version::head_id.eq(head_id),
@@ -170,11 +191,11 @@ pub fn create_head_version(conn: &mut SqliteConnection, head_id: i32, version_id
 /// Create a testbed for testing.
 pub fn create_testbed(
     conn: &mut SqliteConnection,
-    project_id: i32,
+    project_id: ProjectId,
     testbed_uuid: &str,
     testbed_name: &str,
     testbed_slug: &str,
-) -> i32 {
+) -> TestbedId {
     diesel::insert_into(schema::testbed::table)
         .values((
             schema::testbed::uuid.eq(testbed_uuid),
@@ -195,11 +216,11 @@ pub fn create_testbed(
 /// Create a measure for testing.
 pub fn create_measure(
     conn: &mut SqliteConnection,
-    project_id: i32,
+    project_id: ProjectId,
     measure_uuid: &str,
     measure_name: &str,
     measure_slug: &str,
-) -> i32 {
+) -> MeasureId {
     diesel::insert_into(schema::measure::table)
         .values((
             schema::measure::uuid.eq(measure_uuid),
@@ -221,12 +242,12 @@ pub fn create_measure(
 /// Create a threshold for testing.
 pub fn create_threshold(
     conn: &mut SqliteConnection,
-    project_id: i32,
-    branch_id: i32,
-    testbed_id: i32,
-    measure_id: i32,
+    project_id: ProjectId,
+    branch_id: BranchId,
+    testbed_id: TestbedId,
+    measure_id: MeasureId,
     threshold_uuid: &str,
-) -> i32 {
+) -> ThresholdId {
     diesel::insert_into(schema::threshold::table)
         .values((
             schema::threshold::uuid.eq(threshold_uuid),
@@ -248,10 +269,10 @@ pub fn create_threshold(
 /// Create a model for a threshold.
 pub fn create_model(
     conn: &mut SqliteConnection,
-    threshold_id: i32,
+    threshold_id: ThresholdId,
     model_uuid: &str,
     test_type: i32,
-) -> i32 {
+) -> ModelId {
     diesel::insert_into(schema::model::table)
         .values((
             schema::model::uuid.eq(model_uuid),
@@ -262,7 +283,7 @@ pub fn create_model(
         .execute(conn)
         .expect("Failed to insert model");
 
-    let model_id: i32 = diesel::select(last_insert_rowid())
+    let model_id: ModelId = diesel::select(last_insert_rowid())
         .get_result(conn)
         .expect("Failed to get model id");
 
@@ -276,7 +297,7 @@ pub fn create_model(
 }
 
 /// Get all `head_version` records for a given head.
-pub fn get_head_versions(conn: &mut SqliteConnection, head_id: i32) -> Vec<(i32, i32)> {
+pub fn get_head_versions(conn: &mut SqliteConnection, head_id: HeadId) -> Vec<(HeadId, VersionId)> {
     use diesel::QueryDsl as _;
 
     schema::head_version::table
@@ -285,12 +306,12 @@ pub fn get_head_versions(conn: &mut SqliteConnection, head_id: i32) -> Vec<(i32,
             schema::head_version::head_id,
             schema::head_version::version_id,
         ))
-        .load::<(i32, i32)>(conn)
+        .load::<(HeadId, VersionId)>(conn)
         .expect("Failed to get head_versions")
 }
 
 /// Get count of `head_version` records for a given head.
-pub fn count_head_versions(conn: &mut SqliteConnection, head_id: i32) -> i64 {
+pub fn count_head_versions(conn: &mut SqliteConnection, head_id: HeadId) -> i64 {
     schema::head_version::table
         .filter(schema::head_version::head_id.eq(head_id))
         .count()
@@ -299,20 +320,26 @@ pub fn count_head_versions(conn: &mut SqliteConnection, head_id: i32) -> i64 {
 }
 
 /// Get all thresholds for a given branch.
-pub fn get_thresholds_for_branch(conn: &mut SqliteConnection, branch_id: i32) -> Vec<i32> {
+pub fn get_thresholds_for_branch(
+    conn: &mut SqliteConnection,
+    branch_id: BranchId,
+) -> Vec<ThresholdId> {
     schema::threshold::table
         .filter(schema::threshold::branch_id.eq(branch_id))
         .select(schema::threshold::id)
-        .load::<i32>(conn)
+        .load::<ThresholdId>(conn)
         .expect("Failed to get thresholds")
 }
 
 /// Get threshold `model_id`.
-pub fn get_threshold_model_id(conn: &mut SqliteConnection, threshold_id: i32) -> Option<i32> {
+pub fn get_threshold_model_id(
+    conn: &mut SqliteConnection,
+    threshold_id: ThresholdId,
+) -> Option<ModelId> {
     schema::threshold::table
         .filter(schema::threshold::id.eq(threshold_id))
         .select(schema::threshold::model_id)
-        .first::<Option<i32>>(conn)
+        .first::<Option<ModelId>>(conn)
         .expect("Failed to get threshold model_id")
 }
 
@@ -330,7 +357,7 @@ pub struct CreateSpecArgs<'a> {
 }
 
 /// Create a spec for testing.
-pub fn create_spec(conn: &mut SqliteConnection, args: CreateSpecArgs<'_>) -> i32 {
+pub fn create_spec(conn: &mut SqliteConnection, args: CreateSpecArgs<'_>) -> SpecId {
     let CreateSpecArgs {
         uuid,
         name,
@@ -363,16 +390,16 @@ pub fn create_spec(conn: &mut SqliteConnection, args: CreateSpecArgs<'_>) -> i32
 }
 
 /// Get testbed `spec_id`.
-pub fn get_testbed_spec_id(conn: &mut SqliteConnection, testbed_id: i32) -> Option<i32> {
+pub fn get_testbed_spec_id(conn: &mut SqliteConnection, testbed_id: TestbedId) -> Option<SpecId> {
     schema::testbed::table
         .filter(schema::testbed::id.eq(testbed_id))
         .select(schema::testbed::spec_id)
-        .first::<Option<i32>>(conn)
+        .first::<Option<SpecId>>(conn)
         .expect("Failed to get testbed spec_id")
 }
 
 /// Set testbed `spec_id`.
-pub fn set_testbed_spec(conn: &mut SqliteConnection, testbed_id: i32, spec_id: i32) {
+pub fn set_testbed_spec(conn: &mut SqliteConnection, testbed_id: TestbedId, spec_id: SpecId) {
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
         .set(schema::testbed::spec_id.eq(Some(spec_id)))
         .execute(conn)
@@ -380,22 +407,22 @@ pub fn set_testbed_spec(conn: &mut SqliteConnection, testbed_id: i32, spec_id: i
 }
 
 /// Clear testbed `spec_id`.
-pub fn clear_testbed_spec(conn: &mut SqliteConnection, testbed_id: i32) {
+pub fn clear_testbed_spec(conn: &mut SqliteConnection, testbed_id: TestbedId) {
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
-        .set(schema::testbed::spec_id.eq(None::<i32>))
+        .set(schema::testbed::spec_id.eq(None::<SpecId>))
         .execute(conn)
         .expect("Failed to clear testbed spec_id");
 }
 
 /// Delete a spec by id.
-pub fn delete_spec(conn: &mut SqliteConnection, spec_id: i32) {
+pub fn delete_spec(conn: &mut SqliteConnection, spec_id: SpecId) {
     diesel::delete(schema::spec::table.filter(schema::spec::id.eq(spec_id)))
         .execute(conn)
         .expect("Failed to delete spec");
 }
 
 /// Archive a testbed.
-pub fn archive_testbed(conn: &mut SqliteConnection, testbed_id: i32) {
+pub fn archive_testbed(conn: &mut SqliteConnection, testbed_id: TestbedId) {
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
         .set(schema::testbed::archived.eq(Some(1i64)))
         .execute(conn)
@@ -403,7 +430,7 @@ pub fn archive_testbed(conn: &mut SqliteConnection, testbed_id: i32) {
 }
 
 /// Get testbed `archived` timestamp.
-pub fn get_testbed_archived(conn: &mut SqliteConnection, testbed_id: i32) -> Option<i64> {
+pub fn get_testbed_archived(conn: &mut SqliteConnection, testbed_id: TestbedId) -> Option<i64> {
     schema::testbed::table
         .filter(schema::testbed::id.eq(testbed_id))
         .select(schema::testbed::archived)
@@ -415,11 +442,11 @@ pub fn get_testbed_archived(conn: &mut SqliteConnection, testbed_id: i32) -> Opt
 pub fn create_report(
     conn: &mut SqliteConnection,
     report_uuid: &str,
-    project_id: i32,
-    head_id: i32,
-    version_id: i32,
-    testbed_id: i32,
-) -> i32 {
+    project_id: ProjectId,
+    head_id: HeadId,
+    version_id: VersionId,
+    testbed_id: TestbedId,
+) -> ReportId {
     diesel::insert_into(schema::report::table)
         .values((
             schema::report::uuid.eq(report_uuid),
@@ -443,11 +470,11 @@ pub fn create_report(
 /// Create a benchmark for testing.
 pub fn create_benchmark(
     conn: &mut SqliteConnection,
-    project_id: i32,
+    project_id: ProjectId,
     benchmark_uuid: &str,
     benchmark_name: &str,
     benchmark_slug: &str,
-) -> i32 {
+) -> BenchmarkId {
     diesel::insert_into(schema::benchmark::table)
         .values((
             schema::benchmark::uuid.eq(benchmark_uuid),
@@ -469,10 +496,10 @@ pub fn create_benchmark(
 pub fn create_report_benchmark(
     conn: &mut SqliteConnection,
     report_benchmark_uuid: &str,
-    report_id: i32,
+    report_id: ReportId,
     iteration: i32,
-    benchmark_id: i32,
-) -> i32 {
+    benchmark_id: BenchmarkId,
+) -> ReportBenchmarkId {
     diesel::insert_into(schema::report_benchmark::table)
         .values((
             schema::report_benchmark::uuid.eq(report_benchmark_uuid),
@@ -492,10 +519,10 @@ pub fn create_report_benchmark(
 pub fn create_metric(
     conn: &mut SqliteConnection,
     metric_uuid: &str,
-    report_benchmark_id: i32,
-    measure_id: i32,
+    report_benchmark_id: ReportBenchmarkId,
+    measure_id: MeasureId,
     value: f64,
-) -> i32 {
+) -> MetricId {
     diesel::insert_into(schema::metric::table)
         .values((
             schema::metric::uuid.eq(metric_uuid),
@@ -515,10 +542,10 @@ pub fn create_metric(
 pub fn create_boundary(
     conn: &mut SqliteConnection,
     boundary_uuid: &str,
-    metric_id: i32,
-    threshold_id: i32,
-    model_id: i32,
-) -> i32 {
+    metric_id: MetricId,
+    threshold_id: ThresholdId,
+    model_id: ModelId,
+) -> BoundaryId {
     diesel::insert_into(schema::boundary::table)
         .values((
             schema::boundary::uuid.eq(boundary_uuid),
@@ -538,10 +565,10 @@ pub fn create_boundary(
 pub fn create_alert(
     conn: &mut SqliteConnection,
     alert_uuid: &str,
-    boundary_id: i32,
+    boundary_id: BoundaryId,
     boundary_limit: bool,
     status: i32,
-) -> i32 {
+) -> AlertId {
     diesel::insert_into(schema::alert::table)
         .values((
             schema::alert::uuid.eq(alert_uuid),
@@ -559,7 +586,7 @@ pub fn create_alert(
 }
 
 /// Get alert status by id.
-pub fn get_alert_status(conn: &mut SqliteConnection, alert_id: i32) -> i32 {
+pub fn get_alert_status(conn: &mut SqliteConnection, alert_id: AlertId) -> i32 {
     schema::alert::table
         .filter(schema::alert::id.eq(alert_id))
         .select(schema::alert::status)
