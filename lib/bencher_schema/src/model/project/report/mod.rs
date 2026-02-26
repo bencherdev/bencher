@@ -16,11 +16,8 @@ use dropshot::HttpError;
 use results::ReportResults;
 use slog::Logger;
 
-diesel::define_sql_function! {
-    /// `SQLite` `last_insert_rowid()` — returns the rowid of the most recent INSERT.
-    fn last_insert_rowid() -> diesel::sql_types::Integer;
-}
-
+#[cfg(feature = "plus")]
+use crate::macros::sql::last_insert_rowid;
 use crate::model::spec::SpecId;
 #[cfg(feature = "plus")]
 use crate::model::{
@@ -637,7 +634,8 @@ mod tests {
         },
     };
 
-    use super::{ReportId, last_insert_rowid};
+    use super::ReportId;
+    use crate::macros::sql::last_insert_rowid;
 
     #[test]
     fn last_insert_rowid_returns_report_id() {

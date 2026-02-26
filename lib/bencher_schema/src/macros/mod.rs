@@ -3,4 +3,5 @@ pub mod name_id;
 pub mod rate_limit;
 pub mod resource_id;
 pub mod slug;
+pub mod sql;
 pub mod typed_id;

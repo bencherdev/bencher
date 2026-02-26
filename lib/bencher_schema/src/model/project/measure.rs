@@ -5,7 +5,7 @@ use bencher_json::{
         built_in::{self, BuiltInMeasure},
     },
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{
@@ -17,6 +17,7 @@ use crate::{
         name_id::{fn_eq_name_id, fn_from_name_id},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
+        sql::last_insert_rowid,
     },
     model::project::QueryProject,
     schema::{self, measure as measure_table},
@@ -194,12 +195,16 @@ impl QueryMeasure {
 
         let insert_measure =
             InsertMeasure::from_json(auth_conn!(context), project_id, json_measure);
-        diesel::insert_into(schema::measure::table)
-            .values(&insert_measure)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Measure, insert_measure))?;
 
-        Self::from_uuid(auth_conn!(context), project_id, insert_measure.uuid)
+        let conn = write_conn!(context);
+        conn.transaction(|conn| {
+            diesel::insert_into(schema::measure::table)
+                .values(&insert_measure)
+                .execute(conn)?;
+            diesel::select(last_insert_rowid()).get_result(conn)
+        })
+        .map_err(resource_conflict_err!(Measure, &insert_measure))
+        .map(|id| insert_measure.into_query(id))
     }
 
     pub fn into_json_for_project(self, project: &QueryProject) -> JsonMeasure {
@@ -249,6 +254,30 @@ pub struct InsertMeasure {
 impl InsertMeasure {
     #[cfg(feature = "plus")]
     crate::macros::rate_limit::fn_rate_limit!(measure, Measure);
+
+    pub fn into_query(self, id: MeasureId) -> QueryMeasure {
+        let Self {
+            uuid,
+            project_id,
+            name,
+            slug,
+            units,
+            created,
+            modified,
+            archived,
+        } = self;
+        QueryMeasure {
+            id,
+            uuid,
+            project_id,
+            name,
+            slug,
+            units,
+            created,
+            modified,
+            archived,
+        }
+    }
 
     pub fn from_measure<T: BuiltInMeasure>(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json(conn, project_id, T::new_json())
@@ -310,5 +339,105 @@ impl UpdateMeasure {
             archived: Some(false),
         }
         .into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    use super::MeasureId;
+    use crate::{
+        macros::sql::last_insert_rowid,
+        schema,
+        test_util::{create_base_entities, setup_test_db},
+    };
+
+    #[test]
+    fn last_insert_rowid_returns_measure_id() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let uuid = "00000000-0000-0000-0000-000000000010";
+
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::measure::table)
+                    .values((
+                        schema::measure::uuid.eq(uuid),
+                        schema::measure::project_id.eq(base.project_id),
+                        schema::measure::name.eq("Measure 1"),
+                        schema::measure::slug.eq("measure-1"),
+                        schema::measure::units.eq("ns"),
+                        schema::measure::created.eq(0i64),
+                        schema::measure::modified.eq(0i64),
+                    ))
+                    .execute(conn)?;
+
+                let rowid = diesel::select(last_insert_rowid()).get_result::<MeasureId>(conn)?;
+                let select_id: MeasureId = schema::measure::table
+                    .filter(schema::measure::uuid.eq(uuid))
+                    .select(schema::measure::id)
+                    .first(conn)?;
+
+                Ok::<_, diesel::result::Error>((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(rowid, select_id);
+    }
+
+    #[test]
+    fn last_insert_rowid_matches_second_measure() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        // Insert first
+        diesel::insert_into(schema::measure::table)
+            .values((
+                schema::measure::uuid.eq("00000000-0000-0000-0000-000000000010"),
+                schema::measure::project_id.eq(base.project_id),
+                schema::measure::name.eq("Measure 1"),
+                schema::measure::slug.eq("measure-1"),
+                schema::measure::units.eq("ns"),
+                schema::measure::created.eq(0i64),
+                schema::measure::modified.eq(0i64),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert first measure");
+
+        // Insert second + verify
+        let second_uuid = "00000000-0000-0000-0000-000000000011";
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::measure::table)
+                    .values((
+                        schema::measure::uuid.eq(second_uuid),
+                        schema::measure::project_id.eq(base.project_id),
+                        schema::measure::name.eq("Measure 2"),
+                        schema::measure::slug.eq("measure-2"),
+                        schema::measure::units.eq("ms"),
+                        schema::measure::created.eq(0i64),
+                        schema::measure::modified.eq(0i64),
+                    ))
+                    .execute(conn)?;
+
+                let rowid = diesel::select(last_insert_rowid()).get_result::<MeasureId>(conn)?;
+                let select_id: MeasureId = schema::measure::table
+                    .filter(schema::measure::uuid.eq(second_uuid))
+                    .select(schema::measure::id)
+                    .first(conn)?;
+
+                Ok::<_, diesel::result::Error>((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(rowid, select_id);
+
+        let first_id: MeasureId = schema::measure::table
+            .filter(schema::measure::uuid.eq("00000000-0000-0000-0000-000000000010"))
+            .select(schema::measure::id)
+            .first(&mut conn)
+            .expect("Failed to get first measure id");
+        assert_ne!(rowid, first_id);
     }
 }

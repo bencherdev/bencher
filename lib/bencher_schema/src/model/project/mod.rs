@@ -7,8 +7,8 @@ use bencher_json::{
 };
 use bencher_rbac::{Organization, Project, project::Permission};
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    TextExpressionMethods as _,
+    BoolExpressionMethods as _, Connection as _, ExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, TextExpressionMethods as _,
 };
 use dropshot::HttpError;
 use project_role::InsertProjectRole;
@@ -26,6 +26,7 @@ use crate::{
         fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
+        sql::last_insert_rowid,
     },
     model::{
         organization::QueryOrganization,
@@ -308,23 +309,35 @@ impl QueryProject {
             )
             .map_err(forbidden_error)?;
 
-        let query_project =
-            Self::create_inner(log, context, query_organization, insert_project).await?;
-
         let timestamp = DateTime::now();
-        // Connect the user to the project as a `Maintainer`
-        let insert_proj_role = InsertProjectRole {
-            user_id: auth_user.id(),
-            project_id: query_project.id,
-            role: ProjectRole::Maintainer,
-            created: timestamp,
-            modified: timestamp,
+        let user_id = auth_user.id();
+
+        let query_project = {
+            let conn = write_conn!(context);
+            conn.transaction(|conn| {
+                let id = Self::insert(conn, &insert_project)?;
+
+                // Connect the user to the project as a `Maintainer`
+                let insert_proj_role = InsertProjectRole {
+                    user_id,
+                    project_id: id,
+                    role: ProjectRole::Maintainer,
+                    created: timestamp,
+                    modified: timestamp,
+                };
+                diesel::insert_into(schema::project_role::table)
+                    .values(&insert_proj_role)
+                    .execute(conn)?;
+
+                Ok::<_, diesel::result::Error>(id)
+            })
+            .map_err(resource_conflict_err!(Project, &insert_project))
+            .map(|id| insert_project.into_query(id))?
         };
-        diesel::insert_into(schema::project_role::table)
-            .values(&insert_proj_role)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(ProjectRole, insert_proj_role))?;
-        slog::debug!(log, "Added project role: {insert_proj_role:?}");
+        slog::debug!(log, "Created project: {query_project:?}");
+
+        #[cfg(feature = "plus")]
+        context.update_index(log, &query_project).await;
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectCreate);
@@ -335,24 +348,31 @@ impl QueryProject {
     async fn create_inner(
         log: &Logger,
         context: &ApiContext,
-        query_organization: &QueryOrganization,
+        _query_organization: &QueryOrganization,
         insert_project: InsertProject,
     ) -> Result<Self, HttpError> {
-        diesel::insert_into(project_table::table)
-            .values(&insert_project)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Project, &insert_project))?;
-        let query_project = Self::from_uuid(
-            auth_conn!(context),
-            query_organization.id,
-            insert_project.uuid,
-        )?;
+        let query_project = {
+            let conn = write_conn!(context);
+            conn.transaction(|conn| Self::insert(conn, &insert_project))
+                .map_err(resource_conflict_err!(Project, &insert_project))
+                .map(|id| insert_project.into_query(id))?
+        };
         slog::debug!(log, "Created project: {query_project:?}");
 
         #[cfg(feature = "plus")]
         context.update_index(log, &query_project).await;
 
         Ok(query_project)
+    }
+
+    fn insert(
+        conn: &mut DbConnection,
+        insert_project: &InsertProject,
+    ) -> Result<ProjectId, diesel::result::Error> {
+        diesel::insert_into(project_table::table)
+            .values(insert_project)
+            .execute(conn)?;
+        diesel::select(last_insert_rowid()).get_result(conn)
     }
 
     pub fn organization(&self, conn: &mut DbConnection) -> Result<QueryOrganization, HttpError> {
@@ -639,6 +659,31 @@ impl InsertProject {
         }
     }
 
+    pub fn into_query(self, id: ProjectId) -> QueryProject {
+        let Self {
+            uuid,
+            organization_id,
+            name,
+            slug,
+            url,
+            visibility,
+            created,
+            modified,
+        } = self;
+        QueryProject {
+            id,
+            uuid,
+            organization_id,
+            name,
+            slug,
+            url,
+            visibility,
+            created,
+            modified,
+            deleted: None,
+        }
+    }
+
     pub fn from_json(
         conn: &mut DbConnection,
         organization: &QueryOrganization,
@@ -739,5 +784,105 @@ impl From<&QueryProject> for Project {
             id: project.id.to_string(),
             organization_id: project.organization_id.to_string(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    use super::ProjectId;
+    use crate::{
+        macros::sql::last_insert_rowid,
+        schema,
+        test_util::{create_base_entities, setup_test_db},
+    };
+
+    #[test]
+    fn last_insert_rowid_returns_project_id() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let uuid = "00000000-0000-0000-0000-000000000010";
+
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::project::table)
+                    .values((
+                        schema::project::uuid.eq(uuid),
+                        schema::project::organization_id.eq(base.organization_id),
+                        schema::project::name.eq("Project 1"),
+                        schema::project::slug.eq("project-1"),
+                        schema::project::visibility.eq(0),
+                        schema::project::created.eq(0i64),
+                        schema::project::modified.eq(0i64),
+                    ))
+                    .execute(conn)?;
+
+                let rowid = diesel::select(last_insert_rowid()).get_result::<ProjectId>(conn)?;
+                let select_id: ProjectId = schema::project::table
+                    .filter(schema::project::uuid.eq(uuid))
+                    .select(schema::project::id)
+                    .first(conn)?;
+
+                Ok::<_, diesel::result::Error>((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(rowid, select_id);
+    }
+
+    #[test]
+    fn last_insert_rowid_matches_second_project() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        // Insert first
+        diesel::insert_into(schema::project::table)
+            .values((
+                schema::project::uuid.eq("00000000-0000-0000-0000-000000000010"),
+                schema::project::organization_id.eq(base.organization_id),
+                schema::project::name.eq("Project 1"),
+                schema::project::slug.eq("project-1"),
+                schema::project::visibility.eq(0),
+                schema::project::created.eq(0i64),
+                schema::project::modified.eq(0i64),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert first project");
+
+        // Insert second + verify
+        let second_uuid = "00000000-0000-0000-0000-000000000011";
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::project::table)
+                    .values((
+                        schema::project::uuid.eq(second_uuid),
+                        schema::project::organization_id.eq(base.organization_id),
+                        schema::project::name.eq("Project 2"),
+                        schema::project::slug.eq("project-2"),
+                        schema::project::visibility.eq(0),
+                        schema::project::created.eq(0i64),
+                        schema::project::modified.eq(0i64),
+                    ))
+                    .execute(conn)?;
+
+                let rowid = diesel::select(last_insert_rowid()).get_result::<ProjectId>(conn)?;
+                let select_id: ProjectId = schema::project::table
+                    .filter(schema::project::uuid.eq(second_uuid))
+                    .select(schema::project::id)
+                    .first(conn)?;
+
+                Ok::<_, diesel::result::Error>((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(rowid, select_id);
+
+        let first_id: ProjectId = schema::project::table
+            .filter(schema::project::uuid.eq("00000000-0000-0000-0000-000000000010"))
+            .select(schema::project::id)
+            .first(&mut conn)
+            .expect("Failed to get first project id");
+        assert_ne!(rowid, first_id);
     }
 }

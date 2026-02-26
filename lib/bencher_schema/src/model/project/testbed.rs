@@ -5,7 +5,7 @@ use bencher_json::{
 };
 #[cfg(feature = "plus")]
 use bencher_json::{JsonSpec, SpecResourceId, project::testbed::JsonTestbedPatchNull};
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
@@ -23,6 +23,7 @@ use crate::{
         name_id::{fn_eq_name_id, fn_from_name_id},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
+        sql::last_insert_rowid,
     },
     schema::{self, testbed as testbed_table},
     write_conn,
@@ -278,12 +279,16 @@ impl QueryTestbed {
             json_testbed,
             context.clock.now(),
         )?;
-        diesel::insert_into(schema::testbed::table)
-            .values(&insert_testbed)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
 
-        Self::from_uuid(auth_conn!(context), project_id, insert_testbed.uuid)
+        let conn = write_conn!(context);
+        conn.transaction(|conn| {
+            diesel::insert_into(schema::testbed::table)
+                .values(&insert_testbed)
+                .execute(conn)?;
+            diesel::select(last_insert_rowid()).get_result(conn)
+        })
+        .map_err(resource_conflict_err!(Testbed, &insert_testbed))
+        .map(|id| insert_testbed.into_query(id))
     }
 
     #[cfg(feature = "plus")]
@@ -404,6 +409,30 @@ impl InsertTestbed {
             modified: now,
             archived: None,
         })
+    }
+
+    pub fn into_query(self, id: TestbedId) -> QueryTestbed {
+        let Self {
+            uuid,
+            project_id,
+            name,
+            slug,
+            spec_id,
+            created,
+            modified,
+            archived,
+        } = self;
+        QueryTestbed {
+            id,
+            uuid,
+            project_id,
+            name,
+            slug,
+            spec_id,
+            created,
+            modified,
+            archived,
+        }
     }
 
     #[expect(
@@ -901,6 +930,101 @@ mod tests {
         // Spec should be preserved, testbed should be unarchived
         assert!(crate::test_util::get_testbed_archived(&mut conn, testbed_id).is_none());
         assert_eq!(get_testbed_spec_id(&mut conn, testbed_id), Some(spec_id));
+    }
+
+    #[test]
+    fn last_insert_rowid_returns_testbed_id() {
+        use diesel::Connection as _;
+
+        use super::TestbedId;
+        use crate::macros::sql::last_insert_rowid;
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let uuid = "00000000-0000-0000-0000-000000000020";
+
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::testbed::table)
+                    .values((
+                        schema::testbed::uuid.eq(uuid),
+                        schema::testbed::project_id.eq(base.project_id),
+                        schema::testbed::name.eq("Testbed 1"),
+                        schema::testbed::slug.eq("testbed-1"),
+                        schema::testbed::created.eq(0i64),
+                        schema::testbed::modified.eq(0i64),
+                    ))
+                    .execute(conn)?;
+
+                let rowid = diesel::select(last_insert_rowid()).get_result::<TestbedId>(conn)?;
+                let select_id: TestbedId = schema::testbed::table
+                    .filter(schema::testbed::uuid.eq(uuid))
+                    .select(schema::testbed::id)
+                    .first(conn)?;
+
+                Ok::<_, diesel::result::Error>((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(rowid, select_id);
+    }
+
+    #[test]
+    fn last_insert_rowid_matches_second_testbed() {
+        use diesel::Connection as _;
+
+        use super::TestbedId;
+        use crate::macros::sql::last_insert_rowid;
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        // Insert first
+        diesel::insert_into(schema::testbed::table)
+            .values((
+                schema::testbed::uuid.eq("00000000-0000-0000-0000-000000000020"),
+                schema::testbed::project_id.eq(base.project_id),
+                schema::testbed::name.eq("Testbed 1"),
+                schema::testbed::slug.eq("testbed-1"),
+                schema::testbed::created.eq(0i64),
+                schema::testbed::modified.eq(0i64),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert first testbed");
+
+        // Insert second + verify
+        let second_uuid = "00000000-0000-0000-0000-000000000021";
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::testbed::table)
+                    .values((
+                        schema::testbed::uuid.eq(second_uuid),
+                        schema::testbed::project_id.eq(base.project_id),
+                        schema::testbed::name.eq("Testbed 2"),
+                        schema::testbed::slug.eq("testbed-2"),
+                        schema::testbed::created.eq(0i64),
+                        schema::testbed::modified.eq(0i64),
+                    ))
+                    .execute(conn)?;
+
+                let rowid = diesel::select(last_insert_rowid()).get_result::<TestbedId>(conn)?;
+                let select_id: TestbedId = schema::testbed::table
+                    .filter(schema::testbed::uuid.eq(second_uuid))
+                    .select(schema::testbed::id)
+                    .first(conn)?;
+
+                Ok::<_, diesel::result::Error>((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(rowid, select_id);
+
+        let first_id: TestbedId = schema::testbed::table
+            .filter(schema::testbed::uuid.eq("00000000-0000-0000-0000-000000000020"))
+            .select(schema::testbed::id)
+            .first(&mut conn)
+            .expect("Failed to get first testbed id");
+        assert_ne!(rowid, first_id);
     }
 
     #[test]

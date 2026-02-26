@@ -7,7 +7,7 @@ use diesel::{
     Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SqliteConnection,
 };
 
-use crate::{run_migrations, schema};
+use crate::{macros::sql::last_insert_rowid, run_migrations, schema};
 
 /// Create an in-memory `SQLite` database with migrations applied.
 pub fn setup_test_db() -> SqliteConnection {
@@ -85,10 +85,8 @@ pub fn create_branch_with_head(
         .execute(conn)
         .expect("Failed to insert branch");
 
-    let branch_id: i32 = schema::branch::table
-        .filter(schema::branch::uuid.eq(branch_uuid))
-        .select(schema::branch::id)
-        .first(conn)
+    let branch_id: i32 = diesel::select(last_insert_rowid())
+        .get_result(conn)
         .expect("Failed to get branch id");
 
     diesel::insert_into(schema::head::table)
@@ -100,10 +98,8 @@ pub fn create_branch_with_head(
         .execute(conn)
         .expect("Failed to insert head");
 
-    let head_id: i32 = schema::head::table
-        .filter(schema::head::uuid.eq(head_uuid))
-        .select(schema::head::id)
-        .first(conn)
+    let head_id: i32 = diesel::select(last_insert_rowid())
+        .get_result(conn)
         .expect("Failed to get head id");
 
     // Update branch to point to head
@@ -143,10 +139,8 @@ pub fn create_version(
     };
     values.expect("Failed to insert version");
 
-    schema::version::table
-        .filter(schema::version::uuid.eq(version_uuid))
-        .select(schema::version::id)
-        .first(conn)
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
         .expect("Failed to get version id")
 }
 
@@ -160,11 +154,8 @@ pub fn create_head_version(conn: &mut SqliteConnection, head_id: i32, version_id
         .execute(conn)
         .expect("Failed to insert head_version");
 
-    schema::head_version::table
-        .filter(schema::head_version::head_id.eq(head_id))
-        .filter(schema::head_version::version_id.eq(version_id))
-        .select(schema::head_version::id)
-        .first(conn)
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
         .expect("Failed to get head_version id")
 }
 
@@ -188,10 +179,8 @@ pub fn create_testbed(
         .execute(conn)
         .expect("Failed to insert testbed");
 
-    schema::testbed::table
-        .filter(schema::testbed::uuid.eq(testbed_uuid))
-        .select(schema::testbed::id)
-        .first(conn)
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
         .expect("Failed to get testbed id")
 }
 
@@ -216,10 +205,8 @@ pub fn create_measure(
         .execute(conn)
         .expect("Failed to insert measure");
 
-    schema::measure::table
-        .filter(schema::measure::uuid.eq(measure_uuid))
-        .select(schema::measure::id)
-        .first(conn)
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
         .expect("Failed to get measure id")
 }
 
@@ -245,10 +232,8 @@ pub fn create_threshold(
         .execute(conn)
         .expect("Failed to insert threshold");
 
-    schema::threshold::table
-        .filter(schema::threshold::uuid.eq(threshold_uuid))
-        .select(schema::threshold::id)
-        .first(conn)
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
         .expect("Failed to get threshold id")
 }
 
@@ -269,10 +254,8 @@ pub fn create_model(
         .execute(conn)
         .expect("Failed to insert model");
 
-    let model_id: i32 = schema::model::table
-        .filter(schema::model::uuid.eq(model_uuid))
-        .select(schema::model::id)
-        .first(conn)
+    let model_id: i32 = diesel::select(last_insert_rowid())
+        .get_result(conn)
         .expect("Failed to get model id");
 
     // Update threshold to reference model
@@ -366,10 +349,8 @@ pub fn create_spec(conn: &mut SqliteConnection, args: CreateSpecArgs<'_>) -> i32
         .execute(conn)
         .expect("Failed to insert spec");
 
-    schema::spec::table
-        .filter(schema::spec::uuid.eq(uuid))
-        .select(schema::spec::id)
-        .first(conn)
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
         .expect("Failed to get spec id")
 }
 
@@ -446,9 +427,7 @@ pub fn create_report(
         .execute(conn)
         .expect("Failed to insert report");
 
-    schema::report::table
-        .filter(schema::report::uuid.eq(report_uuid))
-        .select(schema::report::id)
-        .first(conn)
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
         .expect("Failed to get report id")
 }

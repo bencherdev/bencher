@@ -9,7 +9,10 @@ use diesel::{
 
 use crate::{
     context::DbConnection,
-    macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
+    macros::{
+        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        sql::last_insert_rowid,
+    },
     schema,
     schema::version as version_table,
 };
@@ -122,10 +125,7 @@ impl InsertVersion {
             .values(&insert_version)
             .execute(conn)?;
 
-        let version_id = schema::version::table
-            .filter(schema::version::uuid.eq(version_uuid))
-            .select(schema::version::id)
-            .first::<VersionId>(conn)?;
+        let version_id = diesel::select(last_insert_rowid()).get_result::<VersionId>(conn)?;
 
         let insert_head_version = InsertHeadVersion {
             head_id,
