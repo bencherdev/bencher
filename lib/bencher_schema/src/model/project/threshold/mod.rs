@@ -550,6 +550,12 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         json_thresholds: Option<JsonReportThresholds>,
     ) -> Result<(), HttpError> {
+        enum ThresholdAction {
+            Create(MeasureId, Model),
+            Update(QueryThreshold, Model),
+            NoChange,
+        }
+
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
 
@@ -567,7 +573,7 @@ impl InsertThreshold {
             return Ok(());
         }
 
-        // Get all thresholds for the report branch and testbed
+        // Get all thresholds for the report branch and testbed (read phase)
         let mut current_thresholds = schema::threshold::table
             .filter(schema::threshold::project_id.eq(project_id))
             .filter(schema::threshold::branch_id.eq(branch_id))
@@ -579,36 +585,67 @@ impl InsertThreshold {
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
 
-        // Iterate over the threshold models in the report.
-        // If the threshold does not exist, create it.
-        // If it does exist and has changed, update it.
+        // Phase 1: Pre-resolve all measure IDs (may trigger get_or_create writes)
+        // and read current model state.
+        let mut actions = Vec::new();
         if let Some(models) = json_thresholds.models {
             for (measure, model) in models {
                 let measure_id = QueryMeasure::get_or_create(context, project_id, &measure).await?;
                 slog::debug!(log, "Processing threshold for measure {measure_id}");
                 if let Some(current_threshold) = current_thresholds.remove(&measure_id) {
-                    slog::debug!(log, "Updating threshold for measure {measure_id}");
-                    current_threshold
-                        .update_model_if_changed(context, Some(model))
-                        .await?;
-                    slog::debug!(log, "Updated threshold for measure {measure_id}");
+                    // Check if the model has changed
+                    if let Some(model_id) = current_threshold.model_id {
+                        let current_model =
+                            QueryModel::get(auth_conn!(context), model_id)?.into_model();
+                        if current_model == model {
+                            slog::debug!(log, "Model unchanged for measure {measure_id}");
+                            actions.push(ThresholdAction::NoChange);
+                        } else {
+                            slog::debug!(log, "Updating threshold for measure {measure_id}");
+                            actions.push(ThresholdAction::Update(current_threshold, model));
+                        }
+                    } else {
+                        slog::debug!(log, "Adding model to threshold for measure {measure_id}");
+                        actions.push(ThresholdAction::Update(current_threshold, model));
+                    }
                 } else {
                     slog::debug!(log, "Creating threshold for measure {measure_id}");
-                    Self::from_model(
-                        context, project_id, branch_id, testbed_id, measure_id, model,
-                    )
-                    .await?;
-                    slog::debug!(log, "Created threshold for measure {measure_id}");
+                    actions.push(ThresholdAction::Create(measure_id, model));
                 }
             }
         }
 
-        slog::debug!(log, "Remaining thresholds: {current_thresholds:?}");
-        // If the reset flag is set, remove any thresholds that were not in the report
-        if reset_thresholds {
-            for (_, current_threshold) in current_thresholds {
-                current_threshold.remove_current_model(write_conn!(context))?;
-                slog::debug!(log, "Removed model from threshold {current_threshold:?}");
+        // Collect orphan thresholds to reset
+        let orphans: Vec<QueryThreshold> = if reset_thresholds {
+            current_thresholds.into_values().collect()
+        } else {
+            Vec::new()
+        };
+
+        // Phase 2: Batch all threshold writes in a single write lock acquisition.
+        // Skip if there's nothing to write.
+        let has_writes = actions
+            .iter()
+            .any(|a| !matches!(a, ThresholdAction::NoChange))
+            || !orphans.is_empty();
+        if has_writes {
+            let conn = write_conn!(context);
+            for action in actions {
+                match action {
+                    ThresholdAction::Create(measure_id, model) => {
+                        InsertThreshold::from_model_inner(
+                            conn, project_id, branch_id, testbed_id, measure_id, model,
+                        )?;
+                    },
+                    ThresholdAction::Update(threshold, model) => {
+                        threshold.update_from_model_inner(conn, model)?;
+                    },
+                    ThresholdAction::NoChange => {},
+                }
+            }
+            for threshold in orphans {
+                threshold.remove_current_model(conn)?;
+                slog::debug!(log, "Removed model from threshold {threshold:?}");
             }
         }
 

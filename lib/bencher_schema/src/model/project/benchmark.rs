@@ -256,7 +256,7 @@ mod tests {
     use crate::{
         macros::sql::last_insert_rowid,
         schema,
-        test_util::{create_base_entities, setup_test_db},
+        test_util::{create_base_entities, create_benchmark, setup_test_db},
     };
 
     #[test]
@@ -342,5 +342,93 @@ mod tests {
             .first(&mut conn)
             .expect("Failed to get first benchmark id");
         assert_ne!(rowid, first_id);
+    }
+
+    #[test]
+    fn benchmark_insert_and_readback_same_conn() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let uuid = "00000000-0000-0000-0000-000000000010";
+
+        // Insert and read back within same transaction
+        let (inserted_id, readback_name) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::benchmark::table)
+                    .values((
+                        schema::benchmark::uuid.eq(uuid),
+                        schema::benchmark::project_id.eq(base.project_id),
+                        schema::benchmark::name.eq("Test Bench"),
+                        schema::benchmark::slug.eq("test-bench"),
+                        schema::benchmark::created.eq(0i64),
+                        schema::benchmark::modified.eq(0i64),
+                    ))
+                    .execute(conn)?;
+
+                let id = diesel::select(last_insert_rowid()).get_result::<BenchmarkId>(conn)?;
+                let name: String = schema::benchmark::table
+                    .filter(schema::benchmark::uuid.eq(uuid))
+                    .select(schema::benchmark::name)
+                    .first(conn)?;
+
+                Ok::<_, diesel::result::Error>((id, name))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(readback_name, "Test Bench");
+
+        // Verify outside transaction
+        let outside_id: BenchmarkId = schema::benchmark::table
+            .filter(schema::benchmark::uuid.eq(uuid))
+            .select(schema::benchmark::id)
+            .first(&mut conn)
+            .expect("Failed to read back");
+        assert_eq!(inserted_id, outside_id);
+    }
+
+    #[test]
+    fn benchmark_unarchive() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let benchmark_id = create_benchmark(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "bench1",
+            "bench1",
+        );
+
+        // Initially not archived
+        let archived: Option<i64> = schema::benchmark::table
+            .filter(schema::benchmark::id.eq(benchmark_id))
+            .select(schema::benchmark::archived)
+            .first(&mut conn)
+            .expect("Failed to query");
+        assert!(archived.is_none());
+
+        // Archive it
+        diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(benchmark_id)))
+            .set(schema::benchmark::archived.eq(Some(1i64)))
+            .execute(&mut conn)
+            .expect("Failed to archive");
+
+        let archived: Option<i64> = schema::benchmark::table
+            .filter(schema::benchmark::id.eq(benchmark_id))
+            .select(schema::benchmark::archived)
+            .first(&mut conn)
+            .expect("Failed to query");
+        assert!(archived.is_some());
+
+        // Unarchive it
+        diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(benchmark_id)))
+            .set(schema::benchmark::archived.eq(None::<i64>))
+            .execute(&mut conn)
+            .expect("Failed to unarchive");
+
+        let archived: Option<i64> = schema::benchmark::table
+            .filter(schema::benchmark::id.eq(benchmark_id))
+            .select(schema::benchmark::archived)
+            .first(&mut conn)
+            .expect("Failed to query");
+        assert!(archived.is_none());
     }
 }

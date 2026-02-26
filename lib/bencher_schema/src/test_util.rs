@@ -431,3 +431,145 @@ pub fn create_report(
         .get_result(conn)
         .expect("Failed to get report id")
 }
+
+/// Create a benchmark for testing.
+pub fn create_benchmark(
+    conn: &mut SqliteConnection,
+    project_id: i32,
+    benchmark_uuid: &str,
+    benchmark_name: &str,
+    benchmark_slug: &str,
+) -> i32 {
+    diesel::insert_into(schema::benchmark::table)
+        .values((
+            schema::benchmark::uuid.eq(benchmark_uuid),
+            schema::benchmark::project_id.eq(project_id),
+            schema::benchmark::name.eq(benchmark_name),
+            schema::benchmark::slug.eq(benchmark_slug),
+            schema::benchmark::created.eq(0i64),
+            schema::benchmark::modified.eq(0i64),
+        ))
+        .execute(conn)
+        .expect("Failed to insert benchmark");
+
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
+        .expect("Failed to get benchmark id")
+}
+
+/// Create a report benchmark for testing.
+pub fn create_report_benchmark(
+    conn: &mut SqliteConnection,
+    report_benchmark_uuid: &str,
+    report_id: i32,
+    iteration: i32,
+    benchmark_id: i32,
+) -> i32 {
+    diesel::insert_into(schema::report_benchmark::table)
+        .values((
+            schema::report_benchmark::uuid.eq(report_benchmark_uuid),
+            schema::report_benchmark::report_id.eq(report_id),
+            schema::report_benchmark::iteration.eq(iteration),
+            schema::report_benchmark::benchmark_id.eq(benchmark_id),
+        ))
+        .execute(conn)
+        .expect("Failed to insert report_benchmark");
+
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
+        .expect("Failed to get report_benchmark id")
+}
+
+/// Create a metric for testing.
+pub fn create_metric(
+    conn: &mut SqliteConnection,
+    metric_uuid: &str,
+    report_benchmark_id: i32,
+    measure_id: i32,
+    value: f64,
+) -> i32 {
+    diesel::insert_into(schema::metric::table)
+        .values((
+            schema::metric::uuid.eq(metric_uuid),
+            schema::metric::report_benchmark_id.eq(report_benchmark_id),
+            schema::metric::measure_id.eq(measure_id),
+            schema::metric::value.eq(value),
+        ))
+        .execute(conn)
+        .expect("Failed to insert metric");
+
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
+        .expect("Failed to get metric id")
+}
+
+/// Create a boundary for testing.
+pub fn create_boundary(
+    conn: &mut SqliteConnection,
+    boundary_uuid: &str,
+    metric_id: i32,
+    threshold_id: i32,
+    model_id: i32,
+) -> i32 {
+    diesel::insert_into(schema::boundary::table)
+        .values((
+            schema::boundary::uuid.eq(boundary_uuid),
+            schema::boundary::metric_id.eq(metric_id),
+            schema::boundary::threshold_id.eq(threshold_id),
+            schema::boundary::model_id.eq(model_id),
+        ))
+        .execute(conn)
+        .expect("Failed to insert boundary");
+
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
+        .expect("Failed to get boundary id")
+}
+
+/// Create an alert for testing.
+pub fn create_alert(
+    conn: &mut SqliteConnection,
+    alert_uuid: &str,
+    boundary_id: i32,
+    boundary_limit: bool,
+    status: i32,
+) -> i32 {
+    diesel::insert_into(schema::alert::table)
+        .values((
+            schema::alert::uuid.eq(alert_uuid),
+            schema::alert::boundary_id.eq(boundary_id),
+            schema::alert::boundary_limit.eq(boundary_limit),
+            schema::alert::status.eq(status),
+            schema::alert::modified.eq(0i64),
+        ))
+        .execute(conn)
+        .expect("Failed to insert alert");
+
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
+        .expect("Failed to get alert id")
+}
+
+/// Get alert status by id.
+pub fn get_alert_status(conn: &mut SqliteConnection, alert_id: i32) -> i32 {
+    schema::alert::table
+        .filter(schema::alert::id.eq(alert_id))
+        .select(schema::alert::status)
+        .first::<i32>(conn)
+        .expect("Failed to get alert status")
+}
+
+/// Count alerts through the report JOIN chain for a given `head_id`.
+pub fn count_alerts_for_head(conn: &mut SqliteConnection, head_id: i32) -> i64 {
+    schema::alert::table
+        .inner_join(
+            schema::boundary::table.inner_join(
+                schema::metric::table
+                    .inner_join(schema::report_benchmark::table.inner_join(schema::report::table)),
+            ),
+        )
+        .filter(schema::report::head_id.eq(head_id))
+        .count()
+        .get_result(conn)
+        .expect("Failed to count alerts for head")
+}

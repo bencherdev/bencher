@@ -440,4 +440,46 @@ mod tests {
             .expect("Failed to get first measure id");
         assert_ne!(rowid, first_id);
     }
+
+    #[test]
+    fn measure_insert_and_readback_same_conn() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let uuid = "00000000-0000-0000-0000-000000000010";
+
+        // Insert and read back within same transaction
+        let (inserted_id, readback_name) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::measure::table)
+                    .values((
+                        schema::measure::uuid.eq(uuid),
+                        schema::measure::project_id.eq(base.project_id),
+                        schema::measure::name.eq("Test Measure"),
+                        schema::measure::slug.eq("test-measure"),
+                        schema::measure::units.eq("ns"),
+                        schema::measure::created.eq(0i64),
+                        schema::measure::modified.eq(0i64),
+                    ))
+                    .execute(conn)?;
+
+                let id = diesel::select(last_insert_rowid()).get_result::<MeasureId>(conn)?;
+                let name: String = schema::measure::table
+                    .filter(schema::measure::uuid.eq(uuid))
+                    .select(schema::measure::name)
+                    .first(conn)?;
+
+                Ok::<_, diesel::result::Error>((id, name))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(readback_name, "Test Measure");
+
+        // Verify outside transaction
+        let outside_id: MeasureId = schema::measure::table
+            .filter(schema::measure::uuid.eq(uuid))
+            .select(schema::measure::id)
+            .first(&mut conn)
+            .expect("Failed to read back");
+        assert_eq!(inserted_id, outside_id);
+    }
 }
