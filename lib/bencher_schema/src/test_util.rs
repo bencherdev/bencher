@@ -37,10 +37,14 @@ pub fn create_base_entities(conn: &mut SqliteConnection) -> BaseEntityIds {
         .execute(conn)
         .expect("Failed to insert organization");
 
+    let organization_id: i32 = diesel::select(last_insert_rowid())
+        .get_result(conn)
+        .expect("Failed to get organization id");
+
     diesel::insert_into(schema::project::table)
         .values((
             schema::project::uuid.eq("00000000-0000-0000-0000-000000000002"),
-            schema::project::organization_id.eq(1),
+            schema::project::organization_id.eq(organization_id),
             schema::project::name.eq("Test Project"),
             schema::project::slug.eq("test-project"),
             schema::project::visibility.eq(0),
@@ -50,9 +54,13 @@ pub fn create_base_entities(conn: &mut SqliteConnection) -> BaseEntityIds {
         .execute(conn)
         .expect("Failed to insert project");
 
+    let project_id: i32 = diesel::select(last_insert_rowid())
+        .get_result(conn)
+        .expect("Failed to get project id");
+
     BaseEntityIds {
-        organization_id: 1,
-        project_id: 1,
+        organization_id,
+        project_id,
     }
 }
 
@@ -557,19 +565,4 @@ pub fn get_alert_status(conn: &mut SqliteConnection, alert_id: i32) -> i32 {
         .select(schema::alert::status)
         .first::<i32>(conn)
         .expect("Failed to get alert status")
-}
-
-/// Count alerts through the report JOIN chain for a given `head_id`.
-pub fn count_alerts_for_head(conn: &mut SqliteConnection, head_id: i32) -> i64 {
-    schema::alert::table
-        .inner_join(
-            schema::boundary::table.inner_join(
-                schema::metric::table
-                    .inner_join(schema::report_benchmark::table.inner_join(schema::report::table)),
-            ),
-        )
-        .filter(schema::report::head_id.eq(head_id))
-        .count()
-        .get_result(conn)
-        .expect("Failed to count alerts for head")
 }

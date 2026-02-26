@@ -832,7 +832,7 @@ mod tests {
             name: None,
             slug: None,
             spec_id: Some(Some(SpecId::from_raw(spec_id))),
-            modified: bencher_json::DateTime::now(),
+            modified: bencher_json::DateTime::TEST,
             archived: Some(None),
         };
         diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
@@ -875,7 +875,7 @@ mod tests {
             name: None,
             slug: None,
             spec_id: Some(Some(SpecId::from_raw(spec_id))),
-            modified: bencher_json::DateTime::now(),
+            modified: bencher_json::DateTime::TEST,
             archived: None, // outer None = don't touch archived column
         };
         diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
@@ -919,7 +919,7 @@ mod tests {
             name: None,
             slug: None,
             spec_id: None, // outer None = don't touch spec column
-            modified: bencher_json::DateTime::now(),
+            modified: bencher_json::DateTime::TEST,
             archived: Some(None),
         };
         diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))

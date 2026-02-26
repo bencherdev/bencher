@@ -218,6 +218,8 @@ impl QueryReport {
                 hash,
             )
             .ok()
+            // If this version is deleted between this read and the write transaction,
+            // the `get_or_increment` fallback inside the transaction handles it.
             .flatten()
         } else {
             None

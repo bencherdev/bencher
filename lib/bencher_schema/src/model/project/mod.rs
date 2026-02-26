@@ -174,7 +174,7 @@ impl QueryProject {
                     project_name,
                     project_slug,
                 );
-                Self::create_inner(log, context, &query_organization, insert_project).await
+                Self::create_inner(log, context, insert_project).await
             },
             PublicUser::Auth(auth_user) => {
                 let query_organization =
@@ -348,7 +348,6 @@ impl QueryProject {
     async fn create_inner(
         log: &Logger,
         context: &ApiContext,
-        _query_organization: &QueryOrganization,
         insert_project: InsertProject,
     ) -> Result<Self, HttpError> {
         let query_project = {

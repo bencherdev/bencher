@@ -14,7 +14,7 @@ server = ["bencher_context/server", "bencher_valid/server"]
 schema = ["dep:schemars", "bencher_context/schema", "ordered-float/schemars"]
 db = ["dep:diesel", "dep:serde_yaml", "bencher_valid/db"]
 plus = ["dep:camino", "bencher_valid/plus"]
-test-clock = []
+test-clock = ["bencher_valid/test-clock"]
 
 [dependencies]
 bencher_context.workspace = true

@@ -1,5 +1,5 @@
 use bencher_json::{
-    AlertUuid, BoundaryUuid, DateTime, ReportUuid,
+    AlertUuid, DateTime, ReportUuid,
     project::{
         alert::{AlertStatus, JsonAlert, JsonPerfAlert, JsonUpdateAlert},
         boundary::BoundaryLimit,
@@ -218,14 +218,16 @@ pub struct InsertAlert {
 }
 
 impl InsertAlert {
-    pub fn from_boundary(
+    /// Insert a new alert for the given boundary.
+    /// Must be called within a transaction — uses the caller-provided `BoundaryId`.
+    pub fn insert(
         conn: &mut DbConnection,
-        boundary_uuid: BoundaryUuid,
+        boundary_id: BoundaryId,
         boundary_limit: BoundaryLimit,
-    ) -> Result<(), HttpError> {
+    ) -> diesel::QueryResult<()> {
         let insert_alert = InsertAlert {
             uuid: AlertUuid::new(),
-            boundary_id: QueryBoundary::get_id(conn, boundary_uuid)?,
+            boundary_id,
             boundary_limit,
             status: AlertStatus::default(),
             modified: DateTime::now(),
@@ -233,8 +235,7 @@ impl InsertAlert {
 
         diesel::insert_into(schema::alert::table)
             .values(&insert_alert)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Alert, insert_alert))?;
+            .execute(conn)?;
 
         Ok(())
     }

@@ -1,7 +1,5 @@
 use bencher_boundary::MetricsBoundary;
-use bencher_json::{
-    AlertUuid, BoundaryUuid, project::alert::AlertStatus, project::boundary::BoundaryLimit,
-};
+use bencher_json::{BoundaryUuid, project::boundary::BoundaryLimit};
 use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
@@ -81,16 +79,7 @@ impl PreparedDetection {
         if !self.ignore_benchmark
             && let Some(boundary_limit) = self.outlier
         {
-            let insert_alert = InsertAlert {
-                uuid: AlertUuid::new(),
-                boundary_id,
-                boundary_limit,
-                status: AlertStatus::default(),
-                modified: bencher_json::DateTime::now(),
-            };
-            diesel::insert_into(schema::alert::table)
-                .values(&insert_alert)
-                .execute(conn)?;
+            InsertAlert::insert(conn, boundary_id, boundary_limit)?;
         }
 
         Ok(())

@@ -16,6 +16,7 @@ server = ["dep:rand", "dep:regex"]
 schema = ["dep:schemars", "ordered-float/schemars"]
 db = ["dep:diesel"]
 plus = ["chrono/clock"]
+test-clock = []
 wasm = [
     "client",
     "dep:console_error_panic_hook",

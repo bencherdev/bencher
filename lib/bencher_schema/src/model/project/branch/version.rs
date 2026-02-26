@@ -91,6 +91,7 @@ pub struct InsertVersion {
 }
 
 impl InsertVersion {
+    // Must be called within a transaction — uses `last_insert_rowid()`.
     fn increment(
         conn: &mut DbConnection,
         project_id: ProjectId,

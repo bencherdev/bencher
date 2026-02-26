@@ -299,6 +299,12 @@ enum StartPointAction {
     NoChange,
 }
 
+enum ThresholdAction {
+    Create(MeasureId, Model),
+    Update(QueryThreshold, Model),
+    NoChange,
+}
+
 impl InsertThreshold {
     #[cfg(feature = "plus")]
     crate::macros::rate_limit::fn_rate_limit!(threshold, Threshold);
@@ -612,12 +618,6 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         json_thresholds: Option<JsonReportThresholds>,
     ) -> Result<(), HttpError> {
-        enum ThresholdAction {
-            Create(MeasureId, Model),
-            Update(QueryThreshold, Model),
-            NoChange,
-        }
-
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
 
