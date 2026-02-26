@@ -1,0 +1,12 @@
+### `--image <IMAGE>`
+
+<br />
+
+➕ Bencher Plus: リモート[Bare Metal Runner][spec]実行用のOCIイメージ参照を設定します
+（例: `my-image:tag`、`registry.bencher.dev/my-image:tag`、
+またはBencher Self-Hostedインスタンスの場合 `localhost:61016/my-image:tag`）。
+Bencher APIサーバーのOCIレジストリのみがサポートされています。
+`--image` が設定されている場合、ベンチマークコマンドはローカルではなく
+リモートのBare Metal Runnerで実行されます。
+
+[spec]: /ja/docs/explanation/benchmarking/#spec

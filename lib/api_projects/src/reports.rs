@@ -13,6 +13,8 @@ use bencher_json::{
     },
 };
 use bencher_rbac::project::Permission;
+#[cfg(feature = "plus")]
+use bencher_schema::model::project::testbed::RunTestbed;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -24,7 +26,7 @@ use bencher_schema::{
                 head::HeadId,
                 version::{QueryVersion, VersionId},
             },
-            report::{QueryReport, ReportId},
+            report::{NewRunReport, QueryReport, ReportId},
         },
         user::{
             auth::{AuthUser, BearerToken},
@@ -304,7 +306,22 @@ async fn post_inner(
         &auth_user,
         Permission::Create,
     )?;
-    QueryReport::create(log, context, &query_project, json_report, &auth_user.into()).await
+    let new_run_report = NewRunReport {
+        report: json_report,
+        #[cfg(feature = "plus")]
+        testbed: RunTestbed::Explicit,
+        #[cfg(feature = "plus")]
+        job: None,
+    };
+
+    QueryReport::create(
+        log,
+        context,
+        &query_project,
+        new_run_report,
+        &auth_user.into(),
+    )
+    .await
 }
 
 #[derive(Deserialize, JsonSchema)]

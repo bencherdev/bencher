@@ -2,3 +2,13 @@
 Una Spec es una especificación de hardware que describe los recursos disponibles para un banco de pruebas.
 Incluye la arquitectura de CPU, el número de CPUs, el tamaño de memoria, el tamaño de disco y si el entorno tiene acceso a la red.
 Las Specs tienen alcance de servidor, por lo que la misma Spec puede compartirse entre múltiples bancos de pruebas.
+
+Cuando una ejecución crea un Bare Metal Job, la Spec determina
+tanto los recursos de hardware como el nombre predeterminado del Testbed:
+
+| [`--testbed`](/es/docs/explanation/bencher-run/#--testbed-testbed) proporcionado | [`--image`](/es/docs/explanation/bencher-run/#--image-image) proporcionado | Fuente del nombre del Testbed  |
+|--------------------------|----------------|--------------------------------|
+| No                       | No             | SO del contexto                |
+| Sí                       | No             | Valor explícito del usuario    |
+| No                       | Sí             | Nombre de la Spec resuelta (Spec asignada al Testbed) |
+| Sí                       | Sí             | Valor explícito del usuario (Spec asignada al Testbed) |

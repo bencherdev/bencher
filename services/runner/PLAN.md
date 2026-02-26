@@ -4,7 +4,7 @@ Track the work needed to go from `bencher run --image` invocation through runner
 
 ## Current State
 
-The CLI, runner daemon, WebSocket protocol, and job viewing endpoints are all implemented. Three critical gaps prevent the flow from working end-to-end.
+The CLI, runner daemon, WebSocket protocol, job viewing endpoints, and job creation in `run_post` (Gap 1) are all implemented. Two gaps remain before the flow works end-to-end.
 
 ## Flow Overview
 
@@ -15,7 +15,7 @@ bencher run --image ghcr.io/org/bench:v1 --adapter json
   ├─2. CLI sends POST /v0/run to API
   │
   ├─3. API creates report (empty results)
-  ├─4. API creates job record linked to report          ← GAP 1
+  ├─4. API creates job record linked to report
   │     └─ resolves image digest, spec, priority
   │
   ├─5. Runner daemon long-polls POST /v0/runners/{runner}/jobs
@@ -32,92 +32,15 @@ bencher run --image ghcr.io/org/bench:v1 --adapter json
   └─12. CLI fetches updated report, displays results
 ```
 
-## Gap 1: Job Creation in `run_post`
+## In-Code TODOs
 
-**Problem:** The `From<JsonNewRun> for JsonNewReport` conversion silently discards the `job` field (`lib/bencher_json/src/run.rs:88` — `job: _`). No job record is ever inserted into the database.
+Tracked TODOs from the Gap 1 implementation that need follow-up:
 
-### Job Creation in `run_post`
+1. **`lib/bencher_schema/src/model/runner/job.rs:281`** — `TODO: Check metered plan level to distinguish Team vs Enterprise`
+   - Currently all `PlanKind::Metered` maps to `JobPriority::Team`; should distinguish Enterprise tier
 
-#### B1. Extract job and source IP in `post_inner`
-
-File: `lib/api_run/src/run.rs`
-
-- [ ] Pass `headers` from `run_post` into `post_inner` (available via `rqctx.request.headers()`)
-- [ ] Before `json_run.into()`, extract the job: `let new_run_job = json_run.job.take();`
-- [ ] Extract source IP: `RateLimiting::remote_ip(log, headers)`, fallback to `127.0.0.1`, wrap in `SourceIp::new(ip)`
-- [ ] Pass `new_run_job` and `source_ip` to `QueryReport::create`
-
-The `job` field is already `pub`. After `.take()`, the `From` impl sees `None` and the existing `job: _` pattern match works unchanged.
-
-#### B2. Modify `QueryReport::create` signature
-
-File: `lib/bencher_schema/src/model/project/report/mod.rs`
-
-- [ ] Add `#[cfg(feature = "plus")] new_run_job: Option<JsonNewRunJob>` parameter
-- [ ] Add `#[cfg(feature = "plus")] source_ip: SourceIp` parameter
-
-#### B3. Job creation logic inside `QueryReport::create`
-
-After the report is inserted and queried back (~line 155), before results processing:
-
-- [ ] If `new_run_job` is `Some`:
-  1. Resolve spec via chain (B4)
-  2. If explicit `--spec` was provided and differs from testbed, update testbed's `spec_id`
-  3. Resolve image → digest (B5)
-  4. Determine priority (B6)
-  5. Build `JsonJobConfig` (registry_url, project UUID, digest, entrypoint, cmd, env, timeout, file_paths)
-  6. `InsertJob::new(...)` and `diesel::insert_into(job::table)`
-  7. Skip results processing (results array is empty for job runs)
-- [ ] If `new_run_job` is `None`: process results as before
-
-`organization_id` available via `query_project.organization_id`. `plan_kind` already computed earlier in the function.
-
-#### B4. Spec resolution chain
-
-- [ ] Implement `resolve_spec(conn, new_run_job, testbed_id)`:
-  1. If `new_run_job.spec` is `Some` → `QuerySpec::from_resource_id(conn, id)` → return `spec.id`
-  2. Else if testbed has `spec_id` → return that
-  3. Else → `QuerySpec::get_default(conn)` → return `spec.id`
-  4. If none found → error: "No spec provided and no default spec configured"
-
-#### B5. Image resolution
-
-- [ ] Implement `resolve_image(context, project, image_ref)`:
-  1. If `image.registry() == "docker.io"` (unqualified name → local registry):
-     - Get `registry_url` from `context.registry_url`
-     - If `image.is_digest()`: parse `image.reference()` as `ImageDigest` directly
-     - If tag: parse as `bencher_oci_storage::Tag`, call `context.oci_storage().resolve_tag(&project_uuid, &tag)`, convert `Digest` → `ImageDigest` via `digest.as_str().parse()`
-  2. If external registry → error: "External registries not yet supported"
-  3. Return `(registry_url, image_digest)`
-
-#### B6. Priority determination
-
-- [ ] Implement `determine_priority(plan_kind, is_claimed)`:
-  - Unclaimed org → `JobPriority::Unclaimed`
-  - `PlanKind::None` → `JobPriority::Free`
-  - `PlanKind::Metered` → `JobPriority::Team`
-  - `PlanKind::Licensed` → `JobPriority::Team`
-
-### Key types already implemented
-
-- `InsertJob::new()` in `lib/bencher_schema/src/model/runner/job.rs`
-- `JsonNewRunJob` in `lib/bencher_json/src/runner/job.rs`
-- `JsonJobConfig` in `lib/bencher_json/src/runner/job.rs`
-- `ImageReference` in `lib/bencher_valid/src/plus/image_reference.rs`
-- `ImageDigest` in `lib/bencher_valid/src/image_digest.rs`
-- `OciStorage::resolve_tag()` in `plus/bencher_oci_storage/src/storage.rs`
-- `QuerySpec::from_resource_id()` in `lib/bencher_schema/src/model/spec.rs`
-- `QuerySpec::get_fallback()` in `lib/bencher_schema/src/model/spec.rs`
-- `PlanKind` in `lib/bencher_schema/src/model/organization/plan.rs`
-- `SourceIp` in `lib/bencher_schema/src/model/runner/source_ip.rs`
-- `RateLimiting::remote_ip()` in `lib/bencher_schema/src/context/rate_limiting.rs`
-
-### Files to modify
-
-| File | Changes |
-|------|---------|
-| `lib/api_run/src/run.rs` | Extract job + source_ip, pass headers |
-| `lib/bencher_schema/src/model/project/report/mod.rs` | Job creation, conditional results processing, report-specific spec via `get_json_for_report()` |
+2. **`plus/api_runners/src/jobs/websocket.rs:574`** — `TODO: Billing logic - check elapsed minutes and bill to Stripe`
+   - Billing for runner usage not yet implemented
 
 ## Gap 2: Benchmark Result Processing After Job Completion
 
@@ -170,8 +93,6 @@ After the report is inserted and queried back (~line 155), before results proces
 
 ## Implementation Order
 
-1. **Gap 1 (job creation)** — Without this, no jobs enter the queue and the runner has nothing to claim.
+1. ~~**Gap 1 (job creation)**~~ — Complete. Jobs are created in `run_post` with spec resolution, image resolution, and priority determination.
 2. **Gap 2 (result processing)** — Without this, completed jobs produce no metrics/alerts even if the runner executes successfully.
-3. **Gap 3 (CLI polling)** — Without this, the user sees empty results even after gaps 1 and 2 are fixed.
-
-
+3. **Gap 3 (CLI polling)** — Without this, the user sees empty results even after Gap 2 is fixed.

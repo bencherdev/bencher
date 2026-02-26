@@ -8,7 +8,7 @@ publish = false
 
 [features]
 default = []
-plus = ["bencher_endpoint/plus", "bencher_json/plus", "bencher_schema/plus"]
+plus = ["bencher_endpoint/plus", "bencher_json/plus", "bencher_schema/plus", "dep:http"]
 sentry = ["bencher_schema/sentry"]
 otel = ["dep:bencher_otel", "bencher_schema/otel"]
 
@@ -19,11 +19,14 @@ bencher_otel = { workspace = true, optional = true }
 bencher_rbac.workspace = true
 bencher_schema.workspace = true
 dropshot.workspace = true
+http = { workspace = true, optional = true }
 slog.workspace = true
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema"] }
+bencher_schema.workspace = true
+diesel.workspace = true
 http.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

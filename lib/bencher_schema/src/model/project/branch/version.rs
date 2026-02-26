@@ -2,12 +2,10 @@ use bencher_json::{
     GitHash, VersionUuid,
     project::head::{JsonVersion, VersionNumber},
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
-use dropshot::HttpError;
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, result::QueryResult};
 
 use crate::{
     context::DbConnection,
-    error::resource_conflict_err,
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     schema,
     schema::version as version_table,
@@ -40,7 +38,7 @@ impl QueryVersion {
         project_id: ProjectId,
         head_id: HeadId,
         hash: Option<&GitHash>,
-    ) -> Result<VersionId, HttpError> {
+    ) -> QueryResult<VersionId> {
         if let Some(hash) = hash {
             // We need to join directly back to the report.
             // This ensures that we are only looking for code versions for the current branch head that generated the report.
@@ -84,7 +82,7 @@ impl InsertVersion {
         project_id: ProjectId,
         head_id: HeadId,
         hash: Option<GitHash>,
-    ) -> Result<VersionId, HttpError> {
+    ) -> QueryResult<VersionId> {
         // Get the most recent code version number for this branch head and increment it.
         // Otherwise, start a new branch code version number count from zero.
         // Do NOT join directly to the report for the particular branch head.
@@ -111,10 +109,12 @@ impl InsertVersion {
 
         diesel::insert_into(schema::version::table)
             .values(&insert_version)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Version, insert_version))?;
+            .execute(conn)?;
 
-        let version_id = QueryVersion::get_id(conn, version_uuid)?;
+        let version_id = schema::version::table
+            .filter(schema::version::uuid.eq(version_uuid))
+            .select(schema::version::id)
+            .first::<VersionId>(conn)?;
 
         let insert_head_version = InsertHeadVersion {
             head_id,
@@ -123,8 +123,7 @@ impl InsertVersion {
 
         diesel::insert_into(schema::head_version::table)
             .values(&insert_head_version)
-            .execute(conn)
-            .map_err(resource_conflict_err!(HeadVersion, insert_head_version))?;
+            .execute(conn)?;
 
         Ok(version_id)
     }

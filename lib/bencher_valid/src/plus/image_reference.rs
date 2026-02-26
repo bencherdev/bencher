@@ -5,6 +5,19 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::ValidError;
 
+#[derive(Debug, thiserror::Error)]
+pub enum ImageRegistryError {
+    #[error(
+        "External registry '{image_registry}' is not supported. Expected '{expected_registry}' or an unqualified image name. Push your image to the Bencher registry or omit the registry prefix."
+    )]
+    UnsupportedRegistry {
+        image_registry: String,
+        expected_registry: String,
+    },
+}
+
+const DEFAULT_OCI_REGISTRY: &str = "docker.io";
+
 /// A parsed OCI image reference.
 ///
 /// Supports formats like:
@@ -17,7 +30,7 @@ use crate::ValidError;
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ImageReference {
     raw: String,
-    /// Registry host (e.g., "registry.example.com", "docker.io").
+    /// Registry host (e.g., "registry.example.com").
     registry: String,
     /// Repository name (e.g., "library/alpine", "myuser/myimage").
     repository: String,
@@ -76,7 +89,7 @@ impl ImageReference {
         match parts.as_slice() {
             [image] => {
                 // Just image name: docker.io/library/image
-                ("docker.io".to_owned(), format!("library/{image}"))
+                (DEFAULT_OCI_REGISTRY.to_owned(), format!("library/{image}"))
             },
             [first, rest]
                 if first.contains('.') || first.contains(':') || *first == "localhost" =>
@@ -86,7 +99,7 @@ impl ImageReference {
             },
             _ => {
                 // user/image format: docker.io/user/image
-                ("docker.io".to_owned(), name.to_owned())
+                (DEFAULT_OCI_REGISTRY.to_owned(), name.to_owned())
             },
         }
     }
@@ -123,6 +136,19 @@ impl ImageReference {
     #[must_use]
     pub fn is_digest(&self) -> bool {
         self.is_digest
+    }
+
+    /// Validate that this image's registry is either the default (`docker.io`)
+    /// or the expected Bencher registry.
+    pub fn validate_registry(&self, expected_registry: &str) -> Result<(), ImageRegistryError> {
+        let image_registry = self.registry();
+        if image_registry != DEFAULT_OCI_REGISTRY && image_registry != expected_registry {
+            return Err(ImageRegistryError::UnsupportedRegistry {
+                image_registry: image_registry.to_owned(),
+                expected_registry: expected_registry.to_owned(),
+            });
+        }
+        Ok(())
     }
 }
 
@@ -184,7 +210,7 @@ mod tests {
     #[test]
     fn parse_simple_image() {
         let ref_ = ImageReference::parse("alpine").unwrap();
-        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.registry(), DEFAULT_OCI_REGISTRY);
         assert_eq!(ref_.repository(), "library/alpine");
         assert_eq!(ref_.reference(), "latest");
         assert!(!ref_.is_digest());
@@ -193,7 +219,7 @@ mod tests {
     #[test]
     fn parse_image_with_tag() {
         let ref_ = ImageReference::parse("alpine:3.18").unwrap();
-        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.registry(), DEFAULT_OCI_REGISTRY);
         assert_eq!(ref_.repository(), "library/alpine");
         assert_eq!(ref_.reference(), "3.18");
         assert!(!ref_.is_digest());
@@ -202,7 +228,7 @@ mod tests {
     #[test]
     fn parse_user_image() {
         let ref_ = ImageReference::parse("myuser/myimage:v1").unwrap();
-        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.registry(), DEFAULT_OCI_REGISTRY);
         assert_eq!(ref_.repository(), "myuser/myimage");
         assert_eq!(ref_.reference(), "v1");
     }
@@ -226,7 +252,7 @@ mod tests {
     #[test]
     fn parse_digest() {
         let ref_ = ImageReference::parse("alpine@sha256:abc123").unwrap();
-        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.registry(), DEFAULT_OCI_REGISTRY);
         assert_eq!(ref_.repository(), "library/alpine");
         assert_eq!(ref_.reference(), "sha256:abc123");
         assert!(ref_.is_digest());
@@ -248,7 +274,7 @@ mod tests {
     #[test]
     fn from_str_impl() {
         let ref_: ImageReference = "alpine:3.18".parse().unwrap();
-        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.registry(), DEFAULT_OCI_REGISTRY);
         assert_eq!(ref_.reference(), "3.18");
     }
 
@@ -263,7 +289,7 @@ mod tests {
     #[test]
     fn parse_bare_name_with_numeric_tag() {
         let ref_ = ImageReference::parse("myregistry:5000").unwrap();
-        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.registry(), DEFAULT_OCI_REGISTRY);
         assert_eq!(ref_.repository(), "library/myregistry");
         assert_eq!(ref_.reference(), "5000");
         assert!(!ref_.is_digest());
@@ -294,7 +320,7 @@ mod tests {
     #[test]
     fn parse_localhost_with_port_no_path() {
         let ref_ = ImageReference::parse("localhost:5000").unwrap();
-        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.registry(), DEFAULT_OCI_REGISTRY);
         assert_eq!(ref_.repository(), "library/localhost");
         assert_eq!(ref_.reference(), "5000");
     }
@@ -302,8 +328,45 @@ mod tests {
     #[test]
     fn parse_dotted_registry_with_port_no_path() {
         let ref_ = ImageReference::parse("registry.io:5000").unwrap();
-        assert_eq!(ref_.registry(), "docker.io");
+        assert_eq!(ref_.registry(), DEFAULT_OCI_REGISTRY);
         assert_eq!(ref_.repository(), "library/registry.io");
         assert_eq!(ref_.reference(), "5000");
+    }
+
+    #[test]
+    fn validate_registry_default_ok() {
+        // Images from docker.io are always accepted
+        let ref_ = ImageReference::parse("alpine:3.18").unwrap();
+        assert!(ref_.validate_registry("registry.bencher.dev").is_ok());
+    }
+
+    #[test]
+    fn validate_registry_expected_ok() {
+        // Images from the expected registry are accepted
+        let ref_ = ImageReference::parse("registry.bencher.dev/owner/repo:v1").unwrap();
+        assert!(ref_.validate_registry("registry.bencher.dev").is_ok());
+    }
+
+    #[test]
+    fn validate_registry_unsupported() {
+        // Images from an external registry are rejected
+        let ref_ = ImageReference::parse("ghcr.io/owner/repo:v1").unwrap();
+        let err = ref_.validate_registry("registry.bencher.dev").unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("ghcr.io"),
+            "Error should mention the image registry: {msg}"
+        );
+        assert!(
+            msg.contains("registry.bencher.dev"),
+            "Error should mention the expected registry: {msg}"
+        );
+    }
+
+    #[test]
+    fn validate_registry_user_image_ok() {
+        // user/image format defaults to docker.io, which is allowed
+        let ref_ = ImageReference::parse("myuser/myimage:v1").unwrap();
+        assert!(ref_.validate_registry("registry.bencher.dev").is_ok());
     }
 }

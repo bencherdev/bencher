@@ -2,3 +2,13 @@
 Spec 是描述 Testbed 可用资源的硬件规格。
 它包括 CPU 架构、CPU 数量、内存大小、磁盘大小以及环境是否具有网络访问权限。
 Spec 是服务器范围的，因此同一个 Spec 可以在多个 Testbed 之间共享。
+
+当运行创建 Bare Metal Job 时，Spec 同时决定
+硬件资源和默认的 Testbed 名称：
+
+| [`--testbed`](/zh/docs/explanation/bencher-run/#--testbed-testbed) 已提供 | [`--image`](/zh/docs/explanation/bencher-run/#--image-image) 已提供 | Testbed 名称来源         |
+|-------------------|-----------|--------------------------|
+| 否                | 否         | 上下文操作系统            |
+| 是                | 否         | 用户的显式值              |
+| 否                | 是         | 已解析的 Spec 名称（Spec 分配给 Testbed） |
+| 是                | 是         | 用户的显式值（Spec 分配给 Testbed） |

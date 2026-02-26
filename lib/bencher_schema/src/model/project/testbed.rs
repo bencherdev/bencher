@@ -4,11 +4,13 @@ use bencher_json::{
     project::testbed::{JsonTestbedPatch, JsonUpdateTestbed},
 };
 #[cfg(feature = "plus")]
-use bencher_json::{JsonSpec, project::testbed::JsonTestbedPatchNull};
+use bencher_json::{JsonSpec, SpecResourceId, project::testbed::JsonTestbedPatchNull};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
+#[cfg(feature = "plus")]
+use crate::error::bad_request_error;
 #[cfg(feature = "plus")]
 use crate::model::spec::QuerySpec;
 use crate::model::spec::SpecId;
@@ -27,6 +29,31 @@ use crate::{
 };
 
 crate::macros::typed_id::typed_id!(TestbedId);
+
+/// Resolved testbed and optional spec for report creation.
+pub struct ResolvedTestbed {
+    pub testbed_id: TestbedId,
+    pub spec_id: Option<SpecId>,
+}
+
+/// Whether the testbed was explicitly specified by the user or derived from context.
+pub enum RunTestbed {
+    /// User explicitly provided `--testbed`.
+    Explicit,
+    /// Testbed was derived from context (OS name) or defaulted.
+    Derived,
+}
+
+/// Whether a job was requested and how its spec should be resolved.
+#[cfg(feature = "plus")]
+pub enum RunJob<'a> {
+    /// No job requested — skip the job resolution path entirely.
+    None,
+    /// Job requested with an explicit `--spec`.
+    WithSpec(&'a SpecResourceId),
+    /// Job requested without an explicit spec — resolve from testbed or fallback.
+    WithoutSpec,
+}
 
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
@@ -57,22 +84,141 @@ impl QueryTestbed {
     fn_get_uuid!(testbed, TestbedId, TestbedUuid);
     fn_from_uuid!(project_id, ProjectId, testbed, TestbedUuid, Testbed);
 
+    /// Get or create a testbed for a report.
+    ///
+    /// When no job is requested, this is a simple get-or-create.
+    /// When a job is requested, spec resolution follows this order:
+    /// 1. Explicit `--spec` → use it; derive testbed name from spec for `Derived`
+    /// 2. Explicit testbed exists with `spec_id` → use that spec
+    /// 3. Fallback spec → use it; derive testbed name from spec for `Derived`
+    /// 4. Error if no spec resolvable
     pub async fn get_or_create(
         context: &ApiContext,
         project_id: ProjectId,
         testbed: &TestbedNameId,
-    ) -> Result<TestbedId, HttpError> {
+        #[cfg(feature = "plus")] run_testbed: &RunTestbed,
+        #[cfg(feature = "plus")] run_job: &RunJob<'_>,
+    ) -> Result<ResolvedTestbed, HttpError> {
+        #[cfg(feature = "plus")]
+        if matches!(run_job, RunJob::WithSpec(_) | RunJob::WithoutSpec) {
+            return Self::get_or_create_for_job(context, project_id, testbed, run_testbed, run_job)
+                .await;
+        }
+
+        let query_testbed = Self::get_or_create_for_report(context, project_id, testbed).await?;
+        Ok(ResolvedTestbed {
+            testbed_id: query_testbed.id,
+            spec_id: None,
+        })
+    }
+
+    async fn get_or_create_for_report(
+        context: &ApiContext,
+        project_id: ProjectId,
+        testbed: &TestbedNameId,
+    ) -> Result<Self, HttpError> {
         let query_testbed = Self::get_or_create_inner(context, project_id, testbed).await?;
 
         if query_testbed.archived.is_some() {
-            let update_testbed = UpdateTestbed::unarchive();
+            let update_testbed = UpdateTestbed::unarchive(context.clock.now());
             diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
                 .set(&update_testbed)
                 .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Testbed, &query_testbed))?;
         }
 
-        Ok(query_testbed.id)
+        Ok(query_testbed)
+    }
+
+    /// Get or create a testbed for a job run, resolving the spec and
+    /// potentially deriving the testbed name from the spec.
+    #[cfg(feature = "plus")]
+    async fn get_or_create_for_job(
+        context: &ApiContext,
+        project_id: ProjectId,
+        testbed: &TestbedNameId,
+        run_testbed: &RunTestbed,
+        run_job: &RunJob<'_>,
+    ) -> Result<ResolvedTestbed, HttpError> {
+        // 1. Explicit --spec
+        if let RunJob::WithSpec(spec) = run_job {
+            let query_spec = QuerySpec::from_active_resource_id(auth_conn!(context), spec)?;
+            return Self::resolve_testbed_with_spec(
+                context,
+                project_id,
+                testbed,
+                run_testbed,
+                query_spec,
+            )
+            .await;
+        }
+
+        // 2. Explicit testbed that already exists with a spec
+        if matches!(run_testbed, RunTestbed::Explicit)
+            && let Ok(query_testbed) = Self::from_name_id(auth_conn!(context), project_id, testbed)
+            && let Some(spec_id) = query_testbed.spec_id
+        {
+            if query_testbed.archived.is_some() {
+                let update_testbed = UpdateTestbed::unarchive(context.clock.now());
+                diesel::update(
+                    schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)),
+                )
+                .set(&update_testbed)
+                .execute(write_conn!(context))
+                .map_err(resource_conflict_err!(Testbed, &query_testbed))?;
+            }
+            return Ok(ResolvedTestbed {
+                testbed_id: query_testbed.id,
+                spec_id: Some(spec_id),
+            });
+        }
+
+        // 3. Fallback spec
+        if let Some(query_spec) = QuerySpec::get_fallback(auth_conn!(context))? {
+            return Self::resolve_testbed_with_spec(
+                context,
+                project_id,
+                testbed,
+                run_testbed,
+                query_spec,
+            )
+            .await;
+        }
+
+        // 4. Error
+        Err(bad_request_error(
+            "No spec provided, no spec on testbed, and no fallback spec configured",
+        ))
+    }
+
+    /// Resolve the testbed name (explicit or derived from spec), get or create
+    /// the testbed, assign the spec, and return the resolved testbed.
+    #[cfg(feature = "plus")]
+    async fn resolve_testbed_with_spec(
+        context: &ApiContext,
+        project_id: ProjectId,
+        testbed: &TestbedNameId,
+        run_testbed: &RunTestbed,
+        query_spec: QuerySpec,
+    ) -> Result<ResolvedTestbed, HttpError> {
+        let testbed = match run_testbed {
+            RunTestbed::Explicit => testbed.clone(),
+            RunTestbed::Derived => TestbedNameId::new_name(query_spec.name.clone()),
+        };
+        let query_testbed = Self::get_or_create_for_report(context, project_id, &testbed).await?;
+        if query_testbed.spec_id != Some(query_spec.id) {
+            diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
+                .set((
+                    schema::testbed::spec_id.eq(Some(query_spec.id)),
+                    schema::testbed::modified.eq(context.clock.now()),
+                ))
+                .execute(write_conn!(context))
+                .map_err(resource_conflict_err!(Testbed, query_testbed.id))?;
+        }
+        Ok(ResolvedTestbed {
+            testbed_id: query_testbed.id,
+            spec_id: Some(query_spec.id),
+        })
     }
 
     async fn get_or_create_inner(
@@ -114,8 +260,12 @@ impl QueryTestbed {
         #[cfg(feature = "plus")]
         InsertTestbed::rate_limit(context, project_id).await?;
 
-        let insert_testbed =
-            InsertTestbed::from_json(auth_conn!(context), project_id, json_testbed)?;
+        let insert_testbed = InsertTestbed::from_json(
+            auth_conn!(context),
+            project_id,
+            json_testbed,
+            context.clock.now(),
+        )?;
         diesel::insert_into(schema::testbed::table)
             .values(&insert_testbed)
             .execute(write_conn!(context))
@@ -214,6 +364,7 @@ impl InsertTestbed {
         conn: &mut DbConnection,
         project_id: ProjectId,
         testbed: JsonNewTestbed,
+        now: DateTime,
     ) -> Result<Self, HttpError> {
         let JsonNewTestbed {
             name,
@@ -231,15 +382,14 @@ impl InsertTestbed {
             .transpose()?;
         #[cfg(not(feature = "plus"))]
         let spec_id = None;
-        let timestamp = DateTime::now();
         Ok(Self {
             uuid: TestbedUuid::new(),
             project_id,
             name,
             slug,
             spec_id,
-            created: timestamp,
-            modified: timestamp,
+            created: now,
+            modified: now,
             archived: None,
         })
     }
@@ -249,8 +399,13 @@ impl InsertTestbed {
         reason = "localhost has no spec, so from_json cannot fail"
     )]
     pub fn localhost(conn: &mut DbConnection, project_id: ProjectId) -> Self {
-        Self::from_json(conn, project_id, JsonNewTestbed::localhost())
-            .expect("Failed to create localhost testbed")
+        Self::from_json(
+            conn,
+            project_id,
+            JsonNewTestbed::localhost(),
+            DateTime::now(),
+        )
+        .expect("Failed to create localhost testbed")
     }
 }
 
@@ -265,7 +420,11 @@ pub struct UpdateTestbed {
 }
 
 impl UpdateTestbed {
-    pub fn from_json(conn: &mut DbConnection, json: JsonUpdateTestbed) -> Result<Self, HttpError> {
+    pub fn from_json(
+        conn: &mut DbConnection,
+        json: JsonUpdateTestbed,
+        now: DateTime,
+    ) -> Result<Self, HttpError> {
         match json {
             JsonUpdateTestbed::Patch(patch) => {
                 let JsonTestbedPatch {
@@ -287,13 +446,12 @@ impl UpdateTestbed {
                     let _ = conn;
                     None
                 };
-                let modified = DateTime::now();
-                let archived = archived.map(|archived| archived.then_some(modified));
+                let archived = archived.map(|archived| archived.then_some(now));
                 Ok(Self {
                     name,
                     slug,
                     spec_id,
-                    modified,
+                    modified: now,
                     archived,
                 })
             },
@@ -305,13 +463,12 @@ impl UpdateTestbed {
                     spec: (),
                     archived,
                 } = patch_null;
-                let modified = DateTime::now();
-                let archived = archived.map(|archived| archived.then_some(modified));
+                let archived = archived.map(|archived| archived.then_some(now));
                 Ok(Self {
                     name,
                     slug,
                     spec_id: Some(None),
-                    modified,
+                    modified: now,
                     archived,
                 })
             },
@@ -324,13 +481,12 @@ impl UpdateTestbed {
         }
     }
 
-    fn unarchive() -> Self {
-        let modified = DateTime::now();
+    fn unarchive(now: DateTime) -> Self {
         Self {
             name: None,
             slug: None,
             spec_id: None,
-            modified,
+            modified: now,
             archived: Some(None),
         }
     }

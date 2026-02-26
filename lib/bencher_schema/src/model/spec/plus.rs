@@ -2,15 +2,18 @@ use std::string::ToString as _;
 
 use bencher_json::{
     Architecture, Cpu, DateTime, Disk, JsonNewSpec, JsonSpec, JsonUpdateSpec, Memory, ResourceName,
-    SpecSlug, SpecUuid,
+    SpecResourceId, SpecSlug, SpecUuid,
 };
-use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
+    result::QueryResult,
+};
 use dropshot::HttpError;
 
 use super::SpecId;
 use crate::{
     context::DbConnection,
-    error::issue_error,
+    error::{issue_error, resource_not_found_err},
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
@@ -62,10 +65,23 @@ impl QuerySpec {
         }
     }
 
-    /// Get the current fallback spec (where `fallback IS NOT NULL`).
+    /// Like `from_resource_id` but excludes archived specs.
+    pub fn from_active_resource_id(
+        conn: &mut DbConnection,
+        resource_id: &SpecResourceId,
+    ) -> Result<Self, HttpError> {
+        schema::spec::table
+            .filter(Self::eq_resource_id(resource_id))
+            .filter(schema::spec::archived.is_null())
+            .first::<Self>(conn)
+            .map_err(resource_not_found_err!(Spec, resource_id))
+    }
+
+    /// Get the current fallback spec (where `fallback IS NOT NULL` and not archived).
     pub fn get_fallback(conn: &mut DbConnection) -> Result<Option<Self>, HttpError> {
         schema::spec::table
             .filter(schema::spec::fallback.is_not_null())
+            .filter(schema::spec::archived.is_null())
             .first::<Self>(conn)
             .optional()
             .map_err(|e| {
@@ -75,14 +91,10 @@ impl QuerySpec {
     }
 
     /// Clear fallback on all specs (set `fallback = NULL` where IS NOT NULL).
-    pub fn clear_fallback(conn: &mut DbConnection) -> Result<(), HttpError> {
+    pub fn clear_fallback(conn: &mut DbConnection) -> QueryResult<()> {
         diesel::update(schema::spec::table.filter(schema::spec::fallback.is_not_null()))
             .set(schema::spec::fallback.eq(None::<DateTime>))
-            .execute(conn)
-            .map_err(|e| {
-                let message = "Failed to clear fallback on spec table";
-                issue_error(message, message, e)
-            })?;
+            .execute(conn)?;
         Ok(())
     }
 }

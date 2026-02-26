@@ -1,16 +1,23 @@
 use std::sync::Arc;
 
-use bencher_json::{DateTime, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig, Timeout};
-use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use bencher_json::{
+    DateTime, ImageDigest, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig, PlanLevel,
+    Timeout, runner::job::JsonNewRunJob,
+};
+use diesel::{
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    result::QueryResult,
+};
 use dropshot::HttpError;
 use tokio::sync::Mutex;
 
 use crate::{
-    context::DbConnection,
+    context::{ApiContext, DbConnection},
+    error::{bad_request_error, issue_error},
     macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
     model::{
-        organization::OrganizationId,
-        project::report::ReportId,
+        organization::{OrganizationId, plan::PlanKind},
+        project::{QueryProject, report::ReportId},
         runner::{QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
     },
@@ -94,7 +101,11 @@ pub struct InsertJob {
 }
 
 impl InsertJob {
-    pub fn new(
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "job creation has many dimensions"
+    )]
+    fn new(
         report_id: ReportId,
         organization_id: OrganizationId,
         source_ip: SourceIp,
@@ -102,8 +113,8 @@ impl InsertJob {
         config: JsonJobConfig,
         timeout: Timeout,
         priority: JobPriority,
+        now: DateTime,
     ) -> Self {
-        let now = DateTime::now();
         Self {
             uuid: JobUuid::new(),
             report_id,
@@ -117,6 +128,312 @@ impl InsertJob {
             created: now,
             modified: now,
         }
+    }
+}
+
+/// Pre-validated job that is ready to be inserted once a report ID is available.
+///
+/// This separates async validation (registry checks, OCI digest resolution) from
+/// the actual database insert, allowing callers to validate the job *before*
+/// inserting the report — making report + job creation atomic.
+pub struct PendingInsertJob {
+    organization_id: OrganizationId,
+    source_ip: SourceIp,
+    spec_id: SpecId,
+    config: JsonJobConfig,
+    timeout: Timeout,
+    priority: JobPriority,
+}
+
+impl PendingInsertJob {
+    pub async fn from_run(
+        context: &ApiContext,
+        query_project: &QueryProject,
+        source_ip: SourceIp,
+        spec_id: SpecId,
+        plan_kind: &PlanKind,
+        is_claimed: bool,
+        new_run_job: JsonNewRunJob,
+    ) -> Result<Self, HttpError> {
+        // 1. Validate registry and resolve image digest
+        let registry_url = context.registry_url();
+        let registry_host = registry_url.host_str().ok_or_else(|| {
+            bad_request_error(format!("Registry URL has no host: {registry_url}"))
+        })?;
+        new_run_job
+            .image
+            .validate_registry(registry_host)
+            .map_err(|e| bad_request_error(e.to_string()))?;
+        let registry_url: bencher_json::Url = registry_url.clone().into();
+        let digest = resolve_digest(
+            &new_run_job.image,
+            &query_project.uuid,
+            context.oci_storage(),
+        )
+        .await?;
+
+        // 2. Determine priority
+        let priority = determine_priority(plan_kind, is_claimed);
+
+        // 3. Resolve timeout (clamped by plan tier)
+        let timeout = resolve_timeout(new_run_job.timeout, plan_kind, is_claimed);
+
+        // 4. Build config
+        let config = JsonJobConfig {
+            registry: registry_url,
+            project: query_project.uuid,
+            digest,
+            entrypoint: new_run_job.entrypoint,
+            cmd: new_run_job.cmd,
+            env: new_run_job.env,
+            timeout,
+            file_paths: new_run_job.file_paths,
+        };
+
+        Ok(Self {
+            organization_id: query_project.organization_id,
+            source_ip,
+            spec_id,
+            config,
+            timeout,
+            priority,
+        })
+    }
+
+    /// Finalize the pending job with a report ID and insert it into the database.
+    ///
+    /// Accepts a `&mut DbConnection` and `DateTime` directly so it can be called
+    /// inside a diesel `transaction()` closure for atomicity with the report insert.
+    pub fn insert(
+        self,
+        conn: &mut DbConnection,
+        report_id: ReportId,
+        now: DateTime,
+    ) -> QueryResult<()> {
+        let insert_job = InsertJob::new(
+            report_id,
+            self.organization_id,
+            self.source_ip,
+            self.spec_id,
+            self.config,
+            self.timeout,
+            self.priority,
+            now,
+        );
+        diesel::insert_into(schema::job::table)
+            .values(&insert_job)
+            .execute(conn)?;
+        Ok(())
+    }
+}
+
+async fn resolve_digest(
+    image: &bencher_json::ImageReference,
+    project_uuid: &bencher_json::ProjectUuid,
+    oci_storage: &bencher_oci_storage::OciStorage,
+) -> Result<ImageDigest, HttpError> {
+    if image.is_digest() {
+        image
+            .reference()
+            .parse()
+            .map_err(|e| bad_request_error(format!("Invalid image digest for `{image}`: {e}")))
+    } else {
+        let tag: bencher_oci_storage::Tag = image
+            .reference()
+            .parse()
+            .map_err(|e| bad_request_error(format!("Invalid image tag for `{image}`: {e}")))?;
+        let oci_digest = oci_storage
+            .resolve_tag(project_uuid, &tag)
+            .await
+            .map_err(|e| {
+                let msg = format!("Failed to resolve image tag for `{image}`: {e}");
+                if e.status_code().is_server_error() {
+                    issue_error(&msg, &msg, e)
+                } else {
+                    bad_request_error(msg)
+                }
+            })?;
+        oci_digest.as_str().parse().map_err(|e| {
+            bad_request_error(format!(
+                "Failed to parse resolved digest for `{image}`: {e}"
+            ))
+        })
+    }
+}
+
+/// Resolve the job timeout, clamping to plan-tier maximums.
+/// - Unclaimed: max 5 min
+/// - Free (`PlanKind::None`): max 15 min
+/// - Paid (Metered/Licensed): default 1 hour, no upper bound
+fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed: bool) -> Timeout {
+    if !is_claimed {
+        return requested.map_or(Timeout::UNCLAIMED_MAX, |t| {
+            t.clamp_max(Timeout::UNCLAIMED_MAX)
+        });
+    }
+    match plan_kind {
+        PlanKind::None => requested.map_or(Timeout::FREE_MAX, |t| t.clamp_max(Timeout::FREE_MAX)),
+        PlanKind::Metered(_) | PlanKind::Licensed(_) => requested.unwrap_or(Timeout::PAID_DEFAULT),
+    }
+}
+
+fn determine_priority(plan_kind: &PlanKind, is_claimed: bool) -> JobPriority {
+    if !is_claimed {
+        return JobPriority::Unclaimed;
+    }
+    match plan_kind {
+        PlanKind::None => JobPriority::Free,
+        // TODO: Check metered plan level to distinguish Team vs Enterprise
+        PlanKind::Metered(_) => JobPriority::Team,
+        PlanKind::Licensed(license_usage) => match license_usage.level {
+            PlanLevel::Free => JobPriority::Free,
+            PlanLevel::Team => JobPriority::Team,
+            PlanLevel::Enterprise => JobPriority::Enterprise,
+        },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::{Entitlements, MeteredPlanId};
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+    use crate::model::organization::plan::LicenseUsage;
+
+    fn metered_plan() -> PlanKind {
+        PlanKind::Metered("test_plan".parse::<MeteredPlanId>().unwrap())
+    }
+
+    fn licensed_plan(level: PlanLevel) -> PlanKind {
+        PlanKind::Licensed(LicenseUsage {
+            entitlements: Entitlements::try_from(1000).unwrap(),
+            usage: 0,
+            level,
+        })
+    }
+
+    // --- resolve_timeout tests ---
+
+    #[test]
+    fn timeout_unclaimed_default() {
+        let timeout = resolve_timeout(None, &PlanKind::None, false);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::UNCLAIMED_MAX));
+    }
+
+    #[test]
+    fn timeout_unclaimed_clamped() {
+        let requested = Timeout::try_from(600).unwrap(); // 10 min > 5 min max
+        let timeout = resolve_timeout(Some(requested), &PlanKind::None, false);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::UNCLAIMED_MAX));
+    }
+
+    #[test]
+    fn timeout_unclaimed_below_max() {
+        let requested = Timeout::try_from(60).unwrap(); // 1 min < 5 min max
+        let timeout = resolve_timeout(Some(requested), &PlanKind::None, false);
+        assert_eq!(u32::from(timeout), 60);
+    }
+
+    #[test]
+    fn timeout_free_default() {
+        let timeout = resolve_timeout(None, &PlanKind::None, true);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::FREE_MAX));
+    }
+
+    #[test]
+    fn timeout_free_clamped() {
+        let requested = Timeout::try_from(1800).unwrap(); // 30 min > 15 min max
+        let timeout = resolve_timeout(Some(requested), &PlanKind::None, true);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::FREE_MAX));
+    }
+
+    #[test]
+    fn timeout_free_below_max() {
+        let requested = Timeout::try_from(120).unwrap();
+        let timeout = resolve_timeout(Some(requested), &PlanKind::None, true);
+        assert_eq!(u32::from(timeout), 120);
+    }
+
+    #[test]
+    fn timeout_metered_default() {
+        let timeout = resolve_timeout(None, &metered_plan(), true);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::PAID_DEFAULT));
+    }
+
+    #[test]
+    fn timeout_metered_custom() {
+        let requested = Timeout::try_from(7200).unwrap(); // 2 hours, no cap
+        let timeout = resolve_timeout(Some(requested), &metered_plan(), true);
+        assert_eq!(u32::from(timeout), 7200);
+    }
+
+    #[test]
+    fn timeout_licensed_default() {
+        let plan = licensed_plan(PlanLevel::Team);
+        let timeout = resolve_timeout(None, &plan, true);
+        assert_eq!(u32::from(timeout), u32::from(Timeout::PAID_DEFAULT));
+    }
+
+    #[test]
+    fn timeout_licensed_custom() {
+        let plan = licensed_plan(PlanLevel::Enterprise);
+        let requested = Timeout::try_from(86400).unwrap(); // 24 hours, no cap
+        let timeout = resolve_timeout(Some(requested), &plan, true);
+        assert_eq!(u32::from(timeout), 86400);
+    }
+
+    // --- determine_priority tests ---
+
+    #[test]
+    fn priority_unclaimed() {
+        assert_eq!(
+            determine_priority(&PlanKind::None, false),
+            JobPriority::Unclaimed
+        );
+    }
+
+    #[test]
+    fn priority_unclaimed_ignores_plan() {
+        // Even with a paid plan, unclaimed is always Unclaimed
+        assert_eq!(
+            determine_priority(&metered_plan(), false),
+            JobPriority::Unclaimed
+        );
+    }
+
+    #[test]
+    fn priority_free() {
+        assert_eq!(determine_priority(&PlanKind::None, true), JobPriority::Free);
+    }
+
+    #[test]
+    fn priority_metered() {
+        assert_eq!(determine_priority(&metered_plan(), true), JobPriority::Team);
+    }
+
+    #[test]
+    fn priority_licensed_free() {
+        assert_eq!(
+            determine_priority(&licensed_plan(PlanLevel::Free), true),
+            JobPriority::Free
+        );
+    }
+
+    #[test]
+    fn priority_licensed_team() {
+        assert_eq!(
+            determine_priority(&licensed_plan(PlanLevel::Team), true),
+            JobPriority::Team
+        );
+    }
+
+    #[test]
+    fn priority_licensed_enterprise() {
+        assert_eq!(
+            determine_priority(&licensed_plan(PlanLevel::Enterprise), true),
+            JobPriority::Enterprise
+        );
     }
 }
 

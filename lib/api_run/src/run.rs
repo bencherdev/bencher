@@ -5,10 +5,21 @@ use bencher_schema::{
     context::ApiContext,
     error::{bad_request_error, unauthorized_error},
     model::{
-        project::{QueryProject, report::QueryReport},
+        project::{
+            QueryProject,
+            report::{NewRunReport, QueryReport},
+        },
         user::public::{PubBearerToken, PublicUser},
     },
     public_conn,
+};
+#[cfg(feature = "plus")]
+use bencher_schema::{
+    context::RateLimiting,
+    model::{
+        project::{report::NewRunJob, testbed::RunTestbed},
+        runner::SourceIp,
+    },
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
@@ -46,7 +57,15 @@ pub async fn run_post(
     )
     .await?;
 
-    let json = post_inner(&rqctx.log, rqctx.context(), &public_user, body.into_inner()).await?;
+    let json = post_inner(
+        &rqctx.log,
+        rqctx.context(),
+        &public_user,
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        body.into_inner(),
+    )
+    .await?;
 
     Ok(Post::auth_response_created(json))
 }
@@ -55,7 +74,8 @@ async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     public_user: &PublicUser,
-    json_run: JsonNewRun,
+    #[cfg(feature = "plus")] headers: &http::HeaderMap,
+    #[cfg_attr(not(feature = "plus"), expect(unused_mut))] mut json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
     match public_user {
         PublicUser::Public(remote_ip) => {
@@ -121,8 +141,42 @@ async fn post_inner(
             .await?;
     }
 
+    #[cfg(feature = "plus")]
+    let testbed = if json_run.testbed.is_some() {
+        RunTestbed::Explicit
+    } else {
+        RunTestbed::Derived
+    };
+
+    #[cfg(feature = "plus")]
+    let job = json_run.job.take().map(|run_job| {
+        let source_ip = if let Some(ip) = RateLimiting::remote_ip(log, headers) {
+            SourceIp::new(ip)
+        } else {
+            slog::warn!(
+                log,
+                "Failed to extract remote IP for job; falling back to LOCALHOST"
+            );
+            SourceIp::new(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST))
+        };
+        NewRunJob {
+            is_claimed,
+            run_job,
+            source_ip,
+        }
+    });
+
     slog::info!(log, "New run requested"; "project" => ?query_project, "run" => ?json_run);
-    QueryReport::create(log, context, &query_project, json_run.into(), public_user).await
+
+    let new_run_report = NewRunReport {
+        report: json_run.into(),
+        #[cfg(feature = "plus")]
+        testbed,
+        #[cfg(feature = "plus")]
+        job,
+    };
+
+    QueryReport::create(log, context, &query_project, new_run_report, public_user).await
 }
 
 fn project_name(json_run: &JsonNewRun) -> Result<ResourceName, HttpError> {

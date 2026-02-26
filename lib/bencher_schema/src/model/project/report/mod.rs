@@ -1,3 +1,5 @@
+#[cfg(feature = "plus")]
+use bencher_json::runner::job::JsonNewRunJob;
 use bencher_json::{
     DateTime, JsonNewReport, JsonReport, ReportUuid,
     project::report::{
@@ -6,16 +8,20 @@ use bencher_json::{
     },
 };
 use diesel::{
-    ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
+    Connection as _, ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::HttpError;
 use results::ReportResults;
 use slog::Logger;
 
-#[cfg(feature = "plus")]
-use crate::model::organization::plan::PlanKind;
 use crate::model::spec::SpecId;
+#[cfg(feature = "plus")]
+use crate::model::{
+    organization::plan::PlanKind,
+    project::testbed::{RunJob, RunTestbed},
+    runner::{PendingInsertJob, SourceIp},
+};
 use crate::{
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
@@ -26,7 +32,7 @@ use crate::{
             benchmark::QueryBenchmark,
             branch::version::QueryVersion,
             measure::QueryMeasure,
-            testbed::{QueryTestbed, TestbedId},
+            testbed::{QueryTestbed, ResolvedTestbed, TestbedId},
             threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
         },
         user::{QueryUser, UserId, public::PublicUser},
@@ -35,6 +41,33 @@ use crate::{
     schema::{self, report as report_table},
     view, write_conn,
 };
+
+/// Encapsulates all context from a run request for report creation.
+pub struct NewRunReport {
+    pub report: JsonNewReport,
+    #[cfg(feature = "plus")]
+    pub testbed: RunTestbed,
+    #[cfg(feature = "plus")]
+    pub job: Option<NewRunJob>,
+}
+
+/// Job-related context for a run.
+#[cfg(feature = "plus")]
+pub struct NewRunJob {
+    pub is_claimed: bool,
+    pub run_job: JsonNewRunJob,
+    pub source_ip: SourceIp,
+}
+
+#[cfg(feature = "plus")]
+impl NewRunJob {
+    pub fn run_job(&self) -> RunJob<'_> {
+        match self.run_job.spec.as_ref() {
+            Some(spec) => RunJob::WithSpec(spec),
+            None => RunJob::WithoutSpec,
+        }
+    }
+}
 
 use super::{
     branch::{QueryBranch, head::HeadId, version::VersionId},
@@ -70,11 +103,15 @@ impl QueryReport {
     fn_get_id!(report, ReportId, ReportUuid);
     fn_get_uuid!(report, ReportId, ReportUuid);
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "report creation has many dimensions and steps"
+    )]
     pub async fn create(
         log: &Logger,
         context: &ApiContext,
         query_project: &QueryProject,
-        mut json_report: JsonNewReport,
+        new_run_report: NewRunReport,
         public_user: &PublicUser,
     ) -> Result<JsonReport, HttpError> {
         #[cfg(feature = "plus")]
@@ -93,6 +130,19 @@ impl QueryReport {
         .await?;
         let project_id = query_project.id;
 
+        let NewRunReport {
+            report: mut json_report,
+            #[cfg(feature = "plus")]
+                testbed: run_testbed,
+            #[cfg(feature = "plus")]
+                job: new_run_job,
+        } = new_run_report;
+
+        #[cfg(feature = "plus")]
+        let run_job = new_run_job
+            .as_ref()
+            .map_or(RunJob::None, NewRunJob::run_job);
+
         // Get or create the branch and testbed
         let (branch_id, head_id) = QueryBranch::get_or_create(
             log,
@@ -102,8 +152,19 @@ impl QueryReport {
             json_report.start_point.as_ref(),
         )
         .await?;
-        let testbed_id =
-            QueryTestbed::get_or_create(context, project_id, &json_report.testbed).await?;
+        let ResolvedTestbed {
+            testbed_id,
+            spec_id,
+        } = QueryTestbed::get_or_create(
+            context,
+            project_id,
+            &json_report.testbed,
+            #[cfg(feature = "plus")]
+            &run_testbed,
+            #[cfg(feature = "plus")]
+            &run_job,
+        )
+        .await?;
 
         // Insert the thresholds for the report
         InsertThreshold::from_report_json(
@@ -116,47 +177,90 @@ impl QueryReport {
         )
         .await?;
 
-        // If there is a hash then try to see if there is already a code version for
-        // this branch with that particular hash.
-        // Otherwise, create a new code version for this branch with/without the hash.
-        let version_id = QueryVersion::get_or_increment(
-            write_conn!(context),
-            project_id,
-            head_id,
-            json_report.hash.as_ref(),
-        )?;
-
         let json_settings = json_report.settings.take().unwrap_or_default();
         let adapter = json_settings.adapter.unwrap_or_default();
 
-        // Create a new report and add it to the database
-        // TODO: Set spec_id from the job's spec at report creation time
-        let insert_report = InsertReport::from_json(
-            public_user.user_id(),
-            project_id,
-            head_id,
-            version_id,
-            testbed_id,
-            None,
-            &json_report,
-            adapter,
-        );
-
-        diesel::insert_into(schema::report::table)
-            .values(&insert_report)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Report, insert_report))?;
-
-        let query_report = schema::report::table
-        .filter(schema::report::uuid.eq(&insert_report.uuid))
-        .first::<QueryReport>(public_conn!(context, public_user))
-        .map_err(|e| {
-            issue_error(
-                "Failed to find new report that was just created",
-                &format!("Failed to find new report ({insert_report:?}) in project ({project_id}) on Bencher even though it was just created."),
-                e,
+        // Validate job before inserting report so that report + job creation is atomic:
+        // if OCI resolution fails, neither the report nor the job is created.
+        #[cfg(feature = "plus")]
+        let pending_job = if let (Some(spec_id), Some(new_run_job)) = (spec_id, new_run_job) {
+            Some(
+                PendingInsertJob::from_run(
+                    context,
+                    query_project,
+                    new_run_job.source_ip,
+                    spec_id,
+                    &plan_kind,
+                    new_run_job.is_claimed,
+                    new_run_job.run_job,
+                )
+                .await?,
             )
-        })?;
+        } else {
+            None
+        };
+
+        // Capture the current time before acquiring the write lock.
+        // This is used for the report created timestamp and the job insert timestamp.
+        let now = context.clock.now();
+
+        // Single transaction wraps version + report + job for true atomicity.
+        // If any insert fails, all are rolled back.
+        let insert_report_uuid = {
+            let conn = write_conn!(context);
+            conn.transaction(|conn| {
+                // If there is a hash then try to see if there is already a code version for
+                // this branch with that particular hash.
+                // Otherwise, create a new code version for this branch with/without the hash.
+                let version_id = QueryVersion::get_or_increment(
+                    conn,
+                    project_id,
+                    head_id,
+                    json_report.hash.as_ref(),
+                )?;
+
+                // Create a new report and add it to the database
+                let insert_report = InsertReport::from_json(
+                    public_user.user_id(),
+                    project_id,
+                    head_id,
+                    version_id,
+                    testbed_id,
+                    spec_id,
+                    &json_report,
+                    adapter,
+                    now,
+                );
+
+                diesel::insert_into(schema::report::table)
+                    .values(&insert_report)
+                    .execute(conn)?;
+
+                #[cfg(feature = "plus")]
+                if let Some(pending_job) = pending_job {
+                    let report_id: ReportId = schema::report::table
+                        .filter(schema::report::uuid.eq(&insert_report.uuid))
+                        .select(schema::report::id)
+                        .first(conn)?;
+                    pending_job.insert(conn, report_id, now)?;
+                }
+
+                Ok::<_, diesel::result::Error>(insert_report.uuid)
+            })
+            .map_err(resource_conflict_err!(Report, &json_report))?
+        };
+
+        // Read full report via public_conn (outside write lock)
+        let query_report = schema::report::table
+            .filter(schema::report::uuid.eq(&insert_report_uuid))
+            .first::<QueryReport>(public_conn!(context, public_user))
+            .map_err(|e| {
+                issue_error(
+                    "Failed to find new report that was just created",
+                    &format!("Failed to find new report ({insert_report_uuid}) in project ({project_id}) on Bencher even though it was just created."),
+                    e,
+                )
+            })?;
 
         #[cfg(feature = "plus")]
         let mut usage = 0;
@@ -480,6 +584,7 @@ impl InsertReport {
         spec_id: Option<SpecId>,
         report: &JsonNewReport,
         adapter: Adapter,
+        now: DateTime,
     ) -> Self {
         Self {
             uuid: ReportUuid::new(),
@@ -492,7 +597,7 @@ impl InsertReport {
             adapter,
             start_time: report.start_time,
             end_time: report.end_time,
-            created: DateTime::now(),
+            created: now,
         }
     }
 }
