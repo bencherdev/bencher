@@ -119,12 +119,17 @@ impl Environment {
 }
 
 fn api_run() -> anyhow::Result<Child> {
-    let child = Command::new("cargo")
+    let mut child = Command::new("cargo")
         .args(["run"])
         .current_dir("./services/api")
         .spawn()?;
 
     while TcpStream::connect("localhost:61016").is_err() {
+        if let Some(status) = child.try_wait()? {
+            anyhow::bail!(
+                "API server process exited before it started listening. Exit status: {status}"
+            );
+        }
         thread::sleep(Duration::from_secs(1));
         println!("Waiting for API server to start...");
     }
