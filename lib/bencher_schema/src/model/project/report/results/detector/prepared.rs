@@ -74,7 +74,7 @@ impl PreparedDetection {
 #[cfg(test)]
 mod tests {
     use bencher_json::{BoundaryUuid, project::boundary::BoundaryLimit};
-    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use crate::{
         context::DbConnection,
@@ -191,8 +191,7 @@ mod tests {
             ignore_benchmark: false,
         };
 
-        detection
-            .write(&mut conn, metric_id)
+        conn.transaction(|conn| detection.write(conn, metric_id))
             .expect("Failed to write detection");
 
         // Assert 1 boundary row exists with correct fields
@@ -229,8 +228,7 @@ mod tests {
             ignore_benchmark: false,
         };
 
-        detection
-            .write(&mut conn, metric_id)
+        conn.transaction(|conn| detection.write(conn, metric_id))
             .expect("Failed to write detection");
 
         // Assert 1 boundary exists
@@ -265,8 +263,7 @@ mod tests {
             ignore_benchmark: true,
         };
 
-        detection
-            .write(&mut conn, metric_id)
+        conn.transaction(|conn| detection.write(conn, metric_id))
             .expect("Failed to write detection");
 
         // Assert 1 boundary exists

@@ -171,7 +171,7 @@ impl ReportResults {
                     }
                 }
             }
-            Ok::<_, diesel::result::Error>(())
+            diesel::QueryResult::Ok(())
         })
         .map_err(|e| {
             issue_error(

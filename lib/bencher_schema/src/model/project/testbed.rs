@@ -963,7 +963,7 @@ mod tests {
                     .select(schema::testbed::id)
                     .first(conn)?;
 
-                Ok::<_, diesel::result::Error>((rowid, select_id))
+                diesel::QueryResult::Ok((rowid, select_id))
             })
             .expect("Transaction failed");
 
@@ -1014,7 +1014,7 @@ mod tests {
                     .select(schema::testbed::id)
                     .first(conn)?;
 
-                Ok::<_, diesel::result::Error>((rowid, select_id))
+                diesel::QueryResult::Ok((rowid, select_id))
             })
             .expect("Transaction failed");
 

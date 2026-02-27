@@ -2,8 +2,17 @@
 //!
 //! This module provides helper functions for setting up test databases
 //! and creating test fixtures for unit testing.
+//!
+//! # Transaction safety of `last_insert_rowid()`
+//!
+//! The helpers in this module call `last_insert_rowid()` outside explicit transactions.
+//! This is safe because each test runs on its own single-threaded, in-memory `SqliteConnection`,
+//! so no concurrent INSERT can interleave between the INSERT and the `last_insert_rowid()` call.
 
-use bencher_json::DateTime;
+use bencher_json::{
+    DateTime,
+    project::{alert::AlertStatus, boundary::BoundaryLimit},
+};
 use diesel::{
     Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SqliteConnection,
 };
@@ -426,17 +435,20 @@ pub fn delete_spec(conn: &mut SqliteConnection, spec_id: SpecId) {
 /// Archive a testbed.
 pub fn archive_testbed(conn: &mut SqliteConnection, testbed_id: TestbedId) {
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
-        .set(schema::testbed::archived.eq(Some(1i64)))
+        .set(schema::testbed::archived.eq(Some(DateTime::TEST)))
         .execute(conn)
         .expect("Failed to archive testbed");
 }
 
 /// Get testbed `archived` timestamp.
-pub fn get_testbed_archived(conn: &mut SqliteConnection, testbed_id: TestbedId) -> Option<i64> {
+pub fn get_testbed_archived(
+    conn: &mut SqliteConnection,
+    testbed_id: TestbedId,
+) -> Option<DateTime> {
     schema::testbed::table
         .filter(schema::testbed::id.eq(testbed_id))
         .select(schema::testbed::archived)
-        .first::<Option<i64>>(conn)
+        .first::<Option<DateTime>>(conn)
         .expect("Failed to get testbed archived")
 }
 
@@ -568,8 +580,8 @@ pub fn create_alert(
     conn: &mut SqliteConnection,
     alert_uuid: &str,
     boundary_id: BoundaryId,
-    boundary_limit: bool,
-    status: i32,
+    boundary_limit: BoundaryLimit,
+    status: AlertStatus,
 ) -> AlertId {
     diesel::insert_into(schema::alert::table)
         .values((
@@ -588,11 +600,11 @@ pub fn create_alert(
 }
 
 /// Get alert status by id.
-pub fn get_alert_status(conn: &mut SqliteConnection, alert_id: AlertId) -> i32 {
+pub fn get_alert_status(conn: &mut SqliteConnection, alert_id: AlertId) -> AlertStatus {
     schema::alert::table
         .filter(schema::alert::id.eq(alert_id))
         .select(schema::alert::status)
-        .first::<i32>(conn)
+        .first::<AlertStatus>(conn)
         .expect("Failed to get alert status")
 }
 
@@ -606,18 +618,18 @@ pub fn get_branch_head_id(conn: &mut SqliteConnection, branch_id: BranchId) -> O
 }
 
 /// Get head `replaced` timestamp.
-pub fn get_head_replaced(conn: &mut SqliteConnection, head_id: HeadId) -> Option<i64> {
+pub fn get_head_replaced(conn: &mut SqliteConnection, head_id: HeadId) -> Option<DateTime> {
     schema::head::table
         .filter(schema::head::id.eq(head_id))
         .select(schema::head::replaced)
-        .first::<Option<i64>>(conn)
+        .first::<Option<DateTime>>(conn)
         .expect("Failed to get head replaced")
 }
 
 /// Archive a benchmark.
 pub fn archive_benchmark(conn: &mut SqliteConnection, benchmark_id: BenchmarkId) {
     diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(benchmark_id)))
-        .set(schema::benchmark::archived.eq(Some(1i64)))
+        .set(schema::benchmark::archived.eq(Some(DateTime::TEST)))
         .execute(conn)
         .expect("Failed to archive benchmark");
 }
@@ -625,7 +637,7 @@ pub fn archive_benchmark(conn: &mut SqliteConnection, benchmark_id: BenchmarkId)
 /// Archive a measure.
 pub fn archive_measure(conn: &mut SqliteConnection, measure_id: MeasureId) {
     diesel::update(schema::measure::table.filter(schema::measure::id.eq(measure_id)))
-        .set(schema::measure::archived.eq(Some(1i64)))
+        .set(schema::measure::archived.eq(Some(DateTime::TEST)))
         .execute(conn)
         .expect("Failed to archive measure");
 }
@@ -634,20 +646,23 @@ pub fn archive_measure(conn: &mut SqliteConnection, measure_id: MeasureId) {
 pub fn get_benchmark_archived(
     conn: &mut SqliteConnection,
     benchmark_id: BenchmarkId,
-) -> Option<i64> {
+) -> Option<DateTime> {
     schema::benchmark::table
         .filter(schema::benchmark::id.eq(benchmark_id))
         .select(schema::benchmark::archived)
-        .first::<Option<i64>>(conn)
+        .first::<Option<DateTime>>(conn)
         .expect("Failed to get benchmark archived")
 }
 
 /// Get measure `archived` timestamp.
-pub fn get_measure_archived(conn: &mut SqliteConnection, measure_id: MeasureId) -> Option<i64> {
+pub fn get_measure_archived(
+    conn: &mut SqliteConnection,
+    measure_id: MeasureId,
+) -> Option<DateTime> {
     schema::measure::table
         .filter(schema::measure::id.eq(measure_id))
         .select(schema::measure::archived)
-        .first::<Option<i64>>(conn)
+        .first::<Option<DateTime>>(conn)
         .expect("Failed to get measure archived")
 }
 

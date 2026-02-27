@@ -36,7 +36,9 @@ const DISMISSED_INT: i32 = 1;
 const SILENCED_INT: i32 = 10;
 
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, Default, derive_more::Display, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, derive_more::Display, Serialize, Deserialize,
+)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]

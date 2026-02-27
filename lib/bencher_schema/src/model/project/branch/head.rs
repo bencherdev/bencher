@@ -276,7 +276,7 @@ impl InsertHead {
         let old_head_id = query_branch.head_id;
 
         // Phase 2: Batch all writes in a single transaction
-        let new_head_id = {
+        let (new_head_id, silenced_alerts) = {
             let conn = write_conn!(context);
             conn.transaction(|conn| {
                 // Insert the new head
@@ -293,16 +293,18 @@ impl InsertHead {
                 .execute(conn)?;
 
                 // If there is an old head, mark it as replaced and silence its alerts
-                if let Some(old_head_id) = old_head_id {
+                let silenced_alerts = if let Some(old_head_id) = old_head_id {
                     let update_head = UpdateHead::replace();
                     diesel::update(schema::head::table.filter(schema::head::id.eq(old_head_id)))
                         .set(&update_head)
                         .execute(conn)?;
 
-                    QueryAlert::silence_all(conn, old_head_id)?;
-                }
+                    QueryAlert::silence_all(conn, old_head_id)?
+                } else {
+                    0
+                };
 
-                Ok::<_, diesel::result::Error>(new_head_id)
+                diesel::QueryResult::Ok((new_head_id, silenced_alerts))
             })
             .map_err(|e| {
                 issue_error(
@@ -314,7 +316,7 @@ impl InsertHead {
         };
         slog::debug!(
             log,
-            "Created head {new_head_id:?} for branch: {insert_head:?}"
+            "Created head {new_head_id:?} for branch: {insert_head:?} (silenced {silenced_alerts} alerts)"
         );
 
         // Read back using read connections
@@ -353,9 +355,11 @@ impl UpdateHead {
 
 #[cfg(test)]
 mod tests {
+    use bencher_json::{
+        DateTime,
+        project::{alert::AlertStatus, boundary::BoundaryLimit},
+    };
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
-
-    use bencher_json::DateTime;
 
     use crate::{
         model::project::branch::version::VersionId,
@@ -1135,7 +1139,7 @@ mod tests {
                 .set(schema::branch::head_id.eq(new_head_id))
                 .execute(conn)?;
 
-                Ok::<_, diesel::result::Error>(new_head_id)
+                diesel::QueryResult::Ok(new_head_id)
             })
             .expect("Transaction failed");
 
@@ -1187,7 +1191,7 @@ mod tests {
                 .set(&update_head)
                 .execute(conn)?;
 
-            Ok::<_, diesel::result::Error>(())
+            diesel::QueryResult::Ok(())
         })
         .expect("Transaction failed");
 
@@ -1290,12 +1294,15 @@ mod tests {
             &mut conn,
             "00000000-0000-0000-0000-000000000107",
             boundary_id,
-            true,
-            0, // Active
+            BoundaryLimit::Upper,
+            AlertStatus::Active,
         );
 
         // Alert should be active
-        assert_eq!(crate::test_util::get_alert_status(&mut conn, alert_id), 0);
+        assert_eq!(
+            crate::test_util::get_alert_status(&mut conn, alert_id),
+            AlertStatus::Active,
+        );
 
         // Run transaction: silence alerts for old head
         conn.transaction(|conn| {
@@ -1318,12 +1325,15 @@ mod tests {
                     .execute(conn)?;
             }
 
-            Ok::<_, diesel::result::Error>(())
+            diesel::QueryResult::Ok(())
         })
         .expect("Transaction failed");
 
-        // Alert should now be silenced (10)
-        assert_eq!(crate::test_util::get_alert_status(&mut conn, alert_id), 10);
+        // Alert should now be silenced
+        assert_eq!(
+            crate::test_util::get_alert_status(&mut conn, alert_id),
+            AlertStatus::Silenced,
+        );
     }
 
     /// Test that transaction works correctly when branch has no old head.
@@ -1374,11 +1384,7 @@ mod tests {
                     .set(schema::branch::head_id.eq(new_head_id))
                     .execute(conn)?;
 
-                // No old head to replace — this is fine
-                let old_head_id: Option<super::HeadId> = None;
-                assert!(old_head_id.is_none(), "Should not have old head");
-
-                Ok::<_, diesel::result::Error>(new_head_id)
+                diesel::QueryResult::Ok(new_head_id)
             })
             .expect("Transaction failed");
 

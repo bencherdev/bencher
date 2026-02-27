@@ -81,9 +81,7 @@ impl QueryAlert {
         let silenced_alert = UpdateAlert::silence();
         diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alerts)))
             .set(&silenced_alert)
-            .execute(conn)?;
-
-        Ok(alerts.len())
+            .execute(conn)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, HttpError> {
@@ -265,6 +263,7 @@ impl UpdateAlert {
 
 #[cfg(test)]
 mod tests {
+    use bencher_json::project::{alert::AlertStatus, boundary::BoundaryLimit};
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use crate::{
@@ -284,10 +283,6 @@ mod tests {
         measure::MeasureId,
         testbed::TestbedId,
     };
-
-    // AlertStatus::Active = 0, AlertStatus::Silenced = 10
-    const ACTIVE: i32 = 0;
-    const SILENCED: i32 = 10;
 
     /// Helper to create the full entity chain needed for an alert.
     /// Returns the alert id.
@@ -342,7 +337,13 @@ mod tests {
         let model_id = create_model(conn, threshold_id, uuids.model_uuid, 0);
         let boundary_id =
             create_boundary(conn, uuids.boundary_uuid, metric_id, threshold_id, model_id);
-        create_alert(conn, uuids.alert_uuid, boundary_id, true, ACTIVE)
+        create_alert(
+            conn,
+            uuids.alert_uuid,
+            boundary_id,
+            BoundaryLimit::Upper,
+            AlertStatus::Active,
+        )
     }
 
     struct AlertChainUuids<'a> {
@@ -474,9 +475,9 @@ mod tests {
         );
 
         // All should be Active
-        assert_eq!(get_alert_status(&mut conn, alert1), ACTIVE);
-        assert_eq!(get_alert_status(&mut conn, alert2), ACTIVE);
-        assert_eq!(get_alert_status(&mut conn, alert3), ACTIVE);
+        assert_eq!(get_alert_status(&mut conn, alert1), AlertStatus::Active);
+        assert_eq!(get_alert_status(&mut conn, alert2), AlertStatus::Active);
+        assert_eq!(get_alert_status(&mut conn, alert3), AlertStatus::Active);
 
         // Query alert IDs for this head
         let alert_ids: Vec<AlertId> =
@@ -500,9 +501,9 @@ mod tests {
             .expect("Failed to bulk silence alerts");
 
         // Verify all are now Silenced
-        assert_eq!(get_alert_status(&mut conn, alert1), SILENCED);
-        assert_eq!(get_alert_status(&mut conn, alert2), SILENCED);
-        assert_eq!(get_alert_status(&mut conn, alert3), SILENCED);
+        assert_eq!(get_alert_status(&mut conn, alert1), AlertStatus::Silenced);
+        assert_eq!(get_alert_status(&mut conn, alert2), AlertStatus::Silenced);
+        assert_eq!(get_alert_status(&mut conn, alert3), AlertStatus::Silenced);
     }
 
     #[test]
@@ -623,8 +624,14 @@ mod tests {
             .expect("Failed to silence");
 
         // head1 alert silenced, head2 alert still active
-        assert_eq!(get_alert_status(&mut conn, alert_head1), SILENCED);
-        assert_eq!(get_alert_status(&mut conn, alert_head2), ACTIVE);
+        assert_eq!(
+            get_alert_status(&mut conn, alert_head1),
+            AlertStatus::Silenced
+        );
+        assert_eq!(
+            get_alert_status(&mut conn, alert_head2),
+            AlertStatus::Active
+        );
     }
 
     #[test]

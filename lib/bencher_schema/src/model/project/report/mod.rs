@@ -264,7 +264,7 @@ impl QueryReport {
                     pending_job.insert(conn, report_id, now)?;
                 }
 
-                Ok::<_, diesel::result::Error>(insert_report.uuid)
+                diesel::QueryResult::Ok(insert_report.uuid)
             })
             .map_err(resource_conflict_err!(Report, &json_report))?
         };
@@ -691,7 +691,7 @@ mod tests {
                     .select(schema::report::id)
                     .first(conn)?;
 
-                Ok::<_, diesel::result::Error>((rowid, select_id))
+                diesel::QueryResult::Ok((rowid, select_id))
             })
             .expect("Transaction failed");
 
@@ -766,7 +766,7 @@ mod tests {
                     .select(schema::report::id)
                     .first(conn)?;
 
-                Ok::<_, diesel::result::Error>((rowid, select_id))
+                diesel::QueryResult::Ok((rowid, select_id))
             })
             .expect("Transaction failed");
 
