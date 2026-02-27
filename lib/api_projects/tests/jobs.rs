@@ -746,9 +746,11 @@ async fn job_get_completed_with_output() {
 
     // Write output to local OCI storage
     let output_json = serde_json::json!({
-        "exit_code": 0,
-        "stdout": "benchmark results here",
-        "stderr": "some warnings"
+        "results": [{
+            "exit_code": 0,
+            "stdout": "benchmark results here",
+            "stderr": "some warnings"
+        }]
     });
     write_job_output(&server, project.uuid, job_uuid, &output_json);
 
@@ -767,10 +769,14 @@ async fn job_get_completed_with_output() {
     assert_eq!(job.status, bencher_json::JobStatus::Completed);
     // Terminal job should have output fetched from blob storage
     let output = job.output.expect("Expected output for completed job");
-    assert_eq!(output.exit_code, Some(0));
+    assert_eq!(output.results.len(), 1);
+    assert_eq!(output.results[0].exit_code, 0);
     assert!(output.error.is_none());
-    assert_eq!(output.stdout.as_deref(), Some("benchmark results here"));
-    assert_eq!(output.stderr.as_deref(), Some("some warnings"));
+    assert_eq!(
+        output.results[0].stdout.as_deref(),
+        Some("benchmark results here")
+    );
+    assert_eq!(output.results[0].stderr.as_deref(), Some("some warnings"));
 }
 
 // GET /v0/projects/{project}/jobs/{job} - completed job without stored output (graceful)
@@ -830,10 +836,12 @@ async fn job_get_failed_with_output() {
 
     // Write error output to local OCI storage
     let output_json = serde_json::json!({
-        "exit_code": 1,
-        "error": "container crashed",
-        "stdout": "partial output",
-        "stderr": "fatal error: out of memory"
+        "results": [{
+            "exit_code": 1,
+            "stdout": "partial output",
+            "stderr": "fatal error: out of memory"
+        }],
+        "error": "container crashed"
     });
     write_job_output(&server, project.uuid, job_uuid, &output_json);
 
@@ -852,10 +860,14 @@ async fn job_get_failed_with_output() {
     assert_eq!(job.status, bencher_json::JobStatus::Failed);
     // Failed jobs are terminal and should also have output fetched
     let output = job.output.expect("Expected output for failed job");
-    assert_eq!(output.exit_code, Some(1));
+    assert_eq!(output.results.len(), 1);
+    assert_eq!(output.results[0].exit_code, 1);
     assert_eq!(output.error.as_deref(), Some("container crashed"));
-    assert_eq!(output.stdout.as_deref(), Some("partial output"));
-    assert_eq!(output.stderr.as_deref(), Some("fatal error: out of memory"));
+    assert_eq!(output.results[0].stdout.as_deref(), Some("partial output"));
+    assert_eq!(
+        output.results[0].stderr.as_deref(),
+        Some("fatal error: out of memory")
+    );
 }
 
 // GET /v0/projects/{project}/jobs/{job} - running job has no output
@@ -880,8 +892,10 @@ async fn job_get_running_no_output() {
 
     // Even if output exists in storage, running jobs should not fetch it
     let output_json = serde_json::json!({
-        "exit_code": 0,
-        "stdout": "should not be returned"
+        "results": [{
+            "exit_code": 0,
+            "stdout": "should not be returned"
+        }]
     });
     write_job_output(&server, project.uuid, job_uuid, &output_json);
 

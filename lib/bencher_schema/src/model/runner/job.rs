@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use bencher_json::{
     DateTime, ImageDigest, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig, PlanLevel,
-    Timeout, runner::job::JsonNewRunJob,
+    Timeout, project::report::JsonReportSettings, runner::JsonIterationOutput,
+    runner::job::JsonNewRunJob,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -11,17 +12,25 @@ use diesel::{
 use dropshot::HttpError;
 use tokio::sync::Mutex;
 
+use slog::Logger;
+
 use crate::{
+    auth_conn,
     context::{ApiContext, DbConnection},
-    error::{bad_request_error, issue_error},
+    error::{bad_request_error, issue_error, resource_not_found_err},
     macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
     model::{
         organization::{OrganizationId, plan::PlanKind},
-        project::{QueryProject, report::ReportId},
+        project::{
+            QueryProject,
+            report::{QueryReport, ReportId},
+        },
         runner::{QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
+        user::public::PublicUser,
     },
     schema::{self, job as job_table},
+    write_conn,
 };
 
 crate::macros::typed_id::typed_id!(JobId);
@@ -57,6 +66,95 @@ impl QueryJob {
     fn_get_id!(job, JobId, JobUuid);
     fn_get_uuid!(job, JobId, JobUuid);
     fn_from_uuid!(job, JobUuid, Job);
+
+    /// Process benchmark results from a completed job into the report.
+    ///
+    /// Looks up the report and branch, parses benchmark output via the adapter,
+    /// creates metrics/alerts, checks plan usage, and updates the report timestamps.
+    pub async fn process_results(
+        &self,
+        log: &Logger,
+        context: &ApiContext,
+        results: &[JsonIterationOutput],
+        now: DateTime,
+    ) -> Result<(), HttpError> {
+        // Look up the report
+        let query_report: QueryReport = schema::report::table
+            .filter(schema::report::id.eq(self.report_id))
+            .first(auth_conn!(context))
+            .map_err(resource_not_found_err!(Report, self.report_id))?;
+
+        // Get branch_id from the head
+        let branch_id = schema::head::table
+            .filter(schema::head::id.eq(query_report.head_id))
+            .select(schema::head::branch_id)
+            .first(auth_conn!(context))
+            .map_err(resource_not_found_err!(Head, query_report.head_id))?;
+
+        // Look up the project for plan checks
+        let query_project = QueryProject::get(auth_conn!(context), query_report.project_id)?;
+
+        // TODO: Refactor PlanKind to support auth_conn directly so we don't need this PublicUser hack.
+        // In the runner context we're already authenticated but PlanKind::new_for_project requires
+        // a PublicUser for public_conn! routing.
+        let public_user = PublicUser::Public(None);
+        let plan_kind = PlanKind::new_for_project(
+            context,
+            context.biller.as_ref(),
+            &context.licensor,
+            &query_project,
+            &public_user,
+        )
+        .await?;
+
+        // Build results array from per-iteration stdout
+        let results_array: Vec<&str> = results.iter().filter_map(|r| r.stdout.as_deref()).collect();
+
+        // Build settings from job config
+        let settings = JsonReportSettings {
+            adapter: Some(query_report.adapter),
+            average: self.config.average,
+            fold: self.config.fold,
+        };
+
+        // Process results (adapter parsing, metrics, alerts, usage)
+        query_report
+            .process_results(
+                log,
+                context,
+                branch_id,
+                &results_array,
+                query_report.adapter,
+                settings,
+                plan_kind,
+                &query_project,
+            )
+            .await?;
+
+        // Update report start_time and end_time to reflect actual execution
+        let started = self.started.unwrap_or(now);
+        let (start_time, end_time) = if let Some(backdate) = self.config.backdate {
+            let elapsed = now.into_inner() - started.into_inner();
+            (backdate, DateTime::from(backdate.into_inner() + elapsed))
+        } else {
+            (started, now)
+        };
+        diesel::update(schema::report::table.filter(schema::report::id.eq(self.report_id)))
+            .set((
+                schema::report::start_time.eq(start_time),
+                schema::report::end_time.eq(end_time),
+            ))
+            .execute(write_conn!(context))
+            .map_err(|e| {
+                issue_error(
+                    "Failed to update report times",
+                    "Failed to update report start_time/end_time after job completion.",
+                    e,
+                )
+            })?;
+
+        Ok(())
+    }
 
     /// Convert to JSON for public API (config is not included).
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
@@ -146,6 +244,7 @@ pub struct PendingInsertJob {
 }
 
 impl PendingInsertJob {
+    #[expect(clippy::too_many_arguments)]
     pub async fn from_run(
         context: &ApiContext,
         query_project: &QueryProject,
@@ -154,6 +253,7 @@ impl PendingInsertJob {
         plan_kind: &PlanKind,
         is_claimed: bool,
         new_run_job: JsonNewRunJob,
+        settings: &JsonReportSettings,
     ) -> Result<Self, HttpError> {
         // 1. Validate registry and resolve image digest
         let registry_url = context.registry_url();
@@ -188,6 +288,11 @@ impl PendingInsertJob {
             env: new_run_job.env,
             timeout,
             file_paths: new_run_job.file_paths,
+            average: settings.average,
+            iter: new_run_job.iter,
+            fold: settings.fold,
+            allow_failure: new_run_job.allow_failure,
+            backdate: new_run_job.backdate,
         };
 
         Ok(Self {
@@ -458,7 +563,7 @@ pub struct UpdateJob {
 /// `timeout` plus `job_timeout_grace_period`, it is marked as Canceled so the runner
 /// receives a Cancel event on its next heartbeat.
 pub fn spawn_heartbeat_timeout(
-    log: slog::Logger,
+    log: Logger,
     timeout: std::time::Duration,
     connection: Arc<Mutex<DbConnection>>,
     job_id: JobId,
@@ -572,7 +677,7 @@ pub fn spawn_heartbeat_timeout(
 ///
 /// Returns the number of jobs recovered (transitioned to `Failed`).
 pub fn recover_orphaned_claimed_jobs(
-    log: &slog::Logger,
+    log: &Logger,
     conn: &mut DbConnection,
     heartbeat_timeout: std::time::Duration,
     clock: &bencher_json::Clock,
@@ -644,7 +749,7 @@ pub fn recover_orphaned_claimed_jobs(
 /// Check if a job has exceeded its timeout + grace period.
 /// If so, mark it as canceled and return `true` to indicate the caller should stop.
 fn check_job_timeout(
-    log: &slog::Logger,
+    log: &Logger,
     job: &QueryJob,
     job_timeout_grace_period: std::time::Duration,
     conn: &mut DbConnection,

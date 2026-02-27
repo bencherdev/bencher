@@ -430,9 +430,23 @@ impl JsonReportQuery {
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
 pub struct Iteration(pub u32);
 
+impl Iteration {
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
+    }
+}
+
 impl From<Iteration> for u32 {
     fn from(value: Iteration) -> Self {
         value.0
+    }
+}
+
+impl std::str::FromStr for Iteration {
+    type Err = std::num::ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse::<u32>().map(Self)
     }
 }
 

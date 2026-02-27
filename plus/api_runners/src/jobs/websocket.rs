@@ -2,9 +2,7 @@
 //!
 //! Provides a persistent connection for heartbeat and status updates during job execution.
 
-use std::collections::HashMap;
-
-use bencher_json::{JobStatus, JobUuid, RunnerResourceId};
+use bencher_json::{JobStatus, JobUuid, RunnerResourceId, runner::JsonIterationOutput};
 use bencher_oci_storage::OciStorageError;
 use bencher_schema::{
     auth_conn,
@@ -13,7 +11,6 @@ use bencher_schema::{
     model::runner::{JobId, QueryJob, UpdateJob, job::spawn_heartbeat_timeout},
     schema, write_conn,
 };
-use camino::Utf8PathBuf;
 use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::WebsocketConnectionRaw;
 use dropshot::{Path, RequestContext, WebsocketChannelResult, WebsocketConnection, channel};
@@ -72,23 +69,15 @@ pub enum RunnerMessage {
     Heartbeat,
     /// Benchmark completed successfully.
     Completed {
-        exit_code: i32,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        stdout: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        stderr: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        output: Option<HashMap<Utf8PathBuf, String>>,
+        /// Per-iteration results
+        results: Vec<JsonIterationOutput>,
     },
     /// Benchmark failed.
     Failed {
-        #[serde(skip_serializing_if = "Option::is_none")]
-        exit_code: Option<i32>,
+        /// Per-iteration results collected before failure
+        results: Vec<JsonIterationOutput>,
+        /// Error description
         error: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        stdout: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        stderr: Option<String>,
     },
     /// Acknowledge cancellation from server.
     Canceled,
@@ -383,41 +372,13 @@ async fn handle_runner_message(
                 return Ok(cancel);
             }
         },
-        RunnerMessage::Completed {
-            exit_code,
-            stdout,
-            stderr,
-            output,
-        } => {
-            slog::info!(log, "Job completed"; "job_id" => ?job.id, "exit_code" => exit_code);
-            handle_completed(
-                log,
-                context,
-                job,
-                *exit_code,
-                stdout.clone(),
-                stderr.clone(),
-                output.clone(),
-            )
-            .await?;
+        RunnerMessage::Completed { results } => {
+            slog::info!(log, "Job completed"; "job_id" => ?job.id, "iterations" => results.len());
+            handle_completed(log, context, job, results.clone()).await?;
         },
-        RunnerMessage::Failed {
-            exit_code,
-            error,
-            stdout,
-            stderr,
-        } => {
-            slog::warn!(log, "Job failed"; "job_id" => ?job.id, "exit_code" => ?exit_code, "error" => &error);
-            handle_failed(
-                log,
-                context,
-                job,
-                *exit_code,
-                error.clone(),
-                stdout.clone(),
-                stderr.clone(),
-            )
-            .await?;
+        RunnerMessage::Failed { results, error } => {
+            slog::warn!(log, "Job failed"; "job_id" => ?job.id, "error" => &error);
+            handle_failed(log, context, job, results.clone(), error.clone()).await?;
         },
         RunnerMessage::Canceled => {
             slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job.id);
@@ -576,17 +537,15 @@ async fn handle_heartbeat(
     Ok(None)
 }
 
-/// Handle a Completed message: transition job from Running to Completed.
+/// Handle a Completed message: transition job from Running to Completed,
+/// store output, and process benchmark results into the report.
 ///
 /// Uses a status filter on the UPDATE to avoid TOCTOU races.
 async fn handle_completed(
     log: &slog::Logger,
     context: &ApiContext,
     job: &QueryJob,
-    exit_code: i32,
-    stdout: Option<String>,
-    stderr: Option<String>,
-    output: Option<HashMap<Utf8PathBuf, String>>,
+    results: Vec<JsonIterationOutput>,
 ) -> Result<(), ChannelError> {
     let now = context.clock.now();
 
@@ -634,14 +593,16 @@ async fn handle_completed(
 
     // Store output in blob storage (best-effort)
     let job_output = bencher_json::runner::JsonJobOutput {
-        exit_code: Some(exit_code),
+        results: results.clone(),
         error: None,
-        stdout,
-        stderr,
-        output,
     };
     if let Err(e) = store_job_output(context, job, &job_output).await {
         slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
+    }
+
+    // Process benchmark results into the report
+    if let Err(e) = job.process_results(log, context, &results, now).await {
+        slog::error!(log, "Failed to process job results"; "job_id" => ?job.id, "error" => %e);
     }
 
     Ok(())
@@ -654,10 +615,8 @@ async fn handle_failed(
     log: &slog::Logger,
     context: &ApiContext,
     job: &QueryJob,
-    exit_code: Option<i32>,
+    results: Vec<JsonIterationOutput>,
     error: String,
-    stdout: Option<String>,
-    stderr: Option<String>,
 ) -> Result<(), ChannelError> {
     let now = context.clock.now();
 
@@ -709,11 +668,8 @@ async fn handle_failed(
 
     // Store output in blob storage (best-effort)
     let job_output = bencher_json::runner::JsonJobOutput {
-        exit_code,
+        results,
         error: Some(error),
-        stdout,
-        stderr,
-        output: None,
     };
     if let Err(e) = store_job_output(context, job, &job_output).await {
         slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);

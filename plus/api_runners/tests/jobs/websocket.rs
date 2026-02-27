@@ -5,7 +5,9 @@ use super::common::{
 };
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
-use bencher_json::{JobStatus, JobUuid, JsonClaimedJob, JsonRunnerToken, RunnerUuid};
+use bencher_json::{
+    JobStatus, JobUuid, JsonClaimedJob, JsonRunnerToken, RunnerUuid, runner::JsonIterationOutput,
+};
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
@@ -312,10 +314,12 @@ async fn channel_lifecycle_completed() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
-            exit_code: 0,
-            stdout: None,
-            stderr: None,
-            output: None,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
         },
     )
     .await;
@@ -344,10 +348,13 @@ async fn channel_lifecycle_failed() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
-            exit_code: Some(1),
+            results: vec![JsonIterationOutput {
+                exit_code: 1,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
             error: "segfault".to_owned(),
-            stdout: None,
-            stderr: None,
         },
     )
     .await;
@@ -530,10 +537,12 @@ async fn channel_lifecycle_with_full_spec() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
-            exit_code: 0,
-            stdout: None,
-            stderr: None,
-            output: None,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
         },
     )
     .await;
@@ -735,10 +744,12 @@ async fn channel_completed_before_running() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
-            exit_code: 0,
-            stdout: None,
-            stderr: None,
-            output: None,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
         },
     )
     .await;
@@ -763,10 +774,13 @@ async fn channel_failed_from_claimed() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
-            exit_code: Some(127),
+            results: vec![JsonIterationOutput {
+                exit_code: 127,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
             error: "command not found".to_owned(),
-            stdout: None,
-            stderr: None,
         },
     )
     .await;
@@ -800,10 +814,12 @@ async fn channel_close_on_completed() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
-            exit_code: 0,
-            stdout: None,
-            stderr: None,
-            output: None,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
         },
     )
     .await;
@@ -832,10 +848,13 @@ async fn channel_close_on_failed() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
-            exit_code: Some(1),
+            results: vec![JsonIterationOutput {
+                exit_code: 1,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
             error: "test failure".to_owned(),
-            stdout: None,
-            stderr: None,
         },
     )
     .await;
@@ -873,10 +892,12 @@ async fn channel_completed_with_output() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
-            exit_code: 0,
-            stdout: Some("line of output\n".into()),
-            stderr: None,
-            output: Some(output),
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some("line of output\n".into()),
+                stderr: None,
+                output: Some(output),
+            }],
         },
     )
     .await;
@@ -904,10 +925,13 @@ async fn channel_failed_with_output() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
-            exit_code: Some(1),
+            results: vec![JsonIterationOutput {
+                exit_code: 1,
+                stdout: Some("partial output\n".into()),
+                stderr: Some("error output\n".into()),
+                output: None,
+            }],
             error: "benchmark crashed".to_owned(),
-            stdout: Some("partial output\n".into()),
-            stderr: Some("error output\n".into()),
         },
     )
     .await;
@@ -935,10 +959,12 @@ async fn channel_completed_with_stderr_only() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
-            exit_code: 0,
-            stdout: None,
-            stderr: Some("warning: benchmark variance high\n".into()),
-            output: None,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: Some("warning: benchmark variance high\n".into()),
+                output: None,
+            }],
         },
     )
     .await;
@@ -1268,10 +1294,12 @@ async fn channel_completed_after_concurrent_cancel() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
-            exit_code: 0,
-            stdout: Some("benchmark results\n".into()),
-            stderr: None,
-            output: None,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some("benchmark results\n".into()),
+                stderr: None,
+                output: None,
+            }],
         },
     )
     .await;
@@ -1309,10 +1337,12 @@ async fn channel_completed_after_concurrent_failure() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
-            exit_code: 0,
-            stdout: None,
-            stderr: None,
-            output: None,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
         },
     )
     .await;
@@ -1348,10 +1378,12 @@ async fn channel_completed_idempotent_duplicate() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
-            exit_code: 0,
-            stdout: None,
-            stderr: None,
-            output: None,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
         },
     )
     .await;
@@ -1386,10 +1418,13 @@ async fn channel_failed_after_concurrent_cancel() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
-            exit_code: Some(1),
+            results: vec![JsonIterationOutput {
+                exit_code: 1,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
             error: "benchmark crashed".to_owned(),
-            stdout: None,
-            stderr: None,
         },
     )
     .await;
@@ -1426,10 +1461,13 @@ async fn channel_failed_after_concurrent_completion() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
-            exit_code: Some(137),
+            results: vec![JsonIterationOutput {
+                exit_code: 137,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
             error: "killed".to_owned(),
-            stdout: None,
-            stderr: None,
         },
     )
     .await;
@@ -1465,10 +1503,13 @@ async fn channel_failed_idempotent_duplicate() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
-            exit_code: Some(1),
+            results: vec![JsonIterationOutput {
+                exit_code: 1,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
             error: "crash".to_owned(),
-            stdout: None,
-            stderr: None,
         },
     )
     .await;
@@ -1495,10 +1536,12 @@ async fn channel_completed_rejects_non_terminal_unexpected_state() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
-            exit_code: 0,
-            stdout: None,
-            stderr: None,
-            output: None,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
         },
     )
     .await;

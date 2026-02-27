@@ -4,6 +4,8 @@
 #[cfg(test)]
 use bencher_api_tests as _;
 #[cfg(test)]
+use camino as _;
+#[cfg(test)]
 use futures_concurrency as _;
 #[cfg(test)]
 use http as _;

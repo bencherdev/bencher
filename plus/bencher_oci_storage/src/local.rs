@@ -1034,6 +1034,7 @@ async fn dir_is_stale(entry: &fs::DirEntry, now: i64, timeout_secs: i64) -> bool
 }
 
 #[cfg(test)]
+#[expect(clippy::indexing_slicing)]
 mod tests {
     use super::*;
     use bytes::Bytes;
@@ -1239,20 +1240,23 @@ mod tests {
         let job = test_job_uuid();
 
         let output = bencher_json::runner::JsonJobOutput {
-            exit_code: Some(0),
+            results: vec![bencher_json::runner::JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some("hello stdout".into()),
+                stderr: Some("hello stderr".into()),
+                output: None,
+            }],
             error: None,
-            stdout: Some("hello stdout".into()),
-            stderr: Some("hello stderr".into()),
-            output: None,
         };
 
         storage.put_job_output(repo, job, &output).await.unwrap();
 
         let retrieved = storage.get_job_output(repo, job).await.unwrap().unwrap();
-        assert_eq!(retrieved.exit_code, Some(0));
-        assert_eq!(retrieved.stdout.as_deref(), Some("hello stdout"));
-        assert_eq!(retrieved.stderr.as_deref(), Some("hello stderr"));
-        assert!(retrieved.output.is_none());
+        assert_eq!(retrieved.results.len(), 1);
+        assert_eq!(retrieved.results[0].exit_code, 0);
+        assert_eq!(retrieved.results[0].stdout.as_deref(), Some("hello stdout"));
+        assert_eq!(retrieved.results[0].stderr.as_deref(), Some("hello stderr"));
+        assert!(retrieved.results[0].output.is_none());
         assert!(retrieved.error.is_none());
     }
 
@@ -1275,11 +1279,13 @@ mod tests {
         let job = test_job_uuid();
 
         let output = bencher_json::runner::JsonJobOutput {
-            exit_code: Some(0),
+            results: vec![bencher_json::runner::JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
             error: None,
-            stdout: None,
-            stderr: None,
-            output: None,
         };
 
         // Directory doesn't exist yet
@@ -1300,26 +1306,30 @@ mod tests {
         let job = test_job_uuid();
 
         let output1 = bencher_json::runner::JsonJobOutput {
-            exit_code: Some(0),
+            results: vec![bencher_json::runner::JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some("first".into()),
+                stderr: None,
+                output: None,
+            }],
             error: None,
-            stdout: Some("first".into()),
-            stderr: None,
-            output: None,
         };
         storage.put_job_output(repo, job, &output1).await.unwrap();
 
         let output2 = bencher_json::runner::JsonJobOutput {
-            exit_code: Some(1),
+            results: vec![bencher_json::runner::JsonIterationOutput {
+                exit_code: 1,
+                stdout: Some("second".into()),
+                stderr: None,
+                output: None,
+            }],
             error: None,
-            stdout: Some("second".into()),
-            stderr: None,
-            output: None,
         };
         storage.put_job_output(repo, job, &output2).await.unwrap();
 
         let retrieved = storage.get_job_output(repo, job).await.unwrap().unwrap();
-        assert_eq!(retrieved.exit_code, Some(1));
-        assert_eq!(retrieved.stdout.as_deref(), Some("second"));
+        assert_eq!(retrieved.results[0].exit_code, 1);
+        assert_eq!(retrieved.results[0].stdout.as_deref(), Some("second"));
     }
 
     #[tokio::test]
@@ -1334,21 +1344,23 @@ mod tests {
         file_outputs.insert("/tmp/log.txt".into(), "some log".to_owned());
 
         let output = bencher_json::runner::JsonJobOutput {
-            exit_code: Some(42),
+            results: vec![bencher_json::runner::JsonIterationOutput {
+                exit_code: 42,
+                stdout: Some("full stdout".into()),
+                stderr: Some("full stderr".into()),
+                output: Some(file_outputs),
+            }],
             error: None,
-            stdout: Some("full stdout".into()),
-            stderr: Some("full stderr".into()),
-            output: Some(file_outputs),
         };
 
         storage.put_job_output(repo, job, &output).await.unwrap();
 
         let retrieved = storage.get_job_output(repo, job).await.unwrap().unwrap();
-        assert_eq!(retrieved.exit_code, Some(42));
-        assert_eq!(retrieved.stdout.as_deref(), Some("full stdout"));
-        assert_eq!(retrieved.stderr.as_deref(), Some("full stderr"));
+        assert_eq!(retrieved.results[0].exit_code, 42);
+        assert_eq!(retrieved.results[0].stdout.as_deref(), Some("full stdout"));
+        assert_eq!(retrieved.results[0].stderr.as_deref(), Some("full stderr"));
         assert!(retrieved.error.is_none());
-        let output_map = retrieved.output.as_ref().unwrap();
+        let output_map = retrieved.results[0].output.as_ref().unwrap();
         assert_eq!(output_map.len(), 2);
     }
 
@@ -1360,21 +1372,23 @@ mod tests {
         let job = test_job_uuid();
 
         let output = bencher_json::runner::JsonJobOutput {
-            exit_code: Some(1),
+            results: vec![bencher_json::runner::JsonIterationOutput {
+                exit_code: 1,
+                stdout: Some("fail stdout".into()),
+                stderr: Some("fail stderr".into()),
+                output: None,
+            }],
             error: Some("something went wrong".into()),
-            stdout: Some("fail stdout".into()),
-            stderr: Some("fail stderr".into()),
-            output: None,
         };
 
         storage.put_job_output(repo, job, &output).await.unwrap();
 
         let retrieved = storage.get_job_output(repo, job).await.unwrap().unwrap();
-        assert_eq!(retrieved.exit_code, Some(1));
-        assert_eq!(retrieved.stdout.as_deref(), Some("fail stdout"));
-        assert_eq!(retrieved.stderr.as_deref(), Some("fail stderr"));
+        assert_eq!(retrieved.results[0].exit_code, 1);
+        assert_eq!(retrieved.results[0].stdout.as_deref(), Some("fail stdout"));
+        assert_eq!(retrieved.results[0].stderr.as_deref(), Some("fail stderr"));
         assert_eq!(retrieved.error.as_deref(), Some("something went wrong"));
-        assert!(retrieved.output.is_none());
+        assert!(retrieved.results[0].output.is_none());
     }
 
     #[tokio::test]
@@ -1385,20 +1399,22 @@ mod tests {
         let job = test_job_uuid();
 
         let output = bencher_json::runner::JsonJobOutput {
-            exit_code: Some(0),
+            results: vec![bencher_json::runner::JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
             error: None,
-            stdout: None,
-            stderr: None,
-            output: None,
         };
 
         storage.put_job_output(repo, job, &output).await.unwrap();
 
         let retrieved = storage.get_job_output(repo, job).await.unwrap().unwrap();
-        assert_eq!(retrieved.exit_code, Some(0));
-        assert!(retrieved.stdout.is_none());
-        assert!(retrieved.stderr.is_none());
-        assert!(retrieved.output.is_none());
+        assert_eq!(retrieved.results[0].exit_code, 0);
+        assert!(retrieved.results[0].stdout.is_none());
+        assert!(retrieved.results[0].stderr.is_none());
+        assert!(retrieved.results[0].output.is_none());
         assert!(retrieved.error.is_none());
     }
 
@@ -1411,18 +1427,22 @@ mod tests {
         let job = test_job_uuid();
 
         let output1 = bencher_json::runner::JsonJobOutput {
-            exit_code: Some(0),
+            results: vec![bencher_json::runner::JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some("project1".into()),
+                stderr: None,
+                output: None,
+            }],
             error: None,
-            stdout: Some("project1".into()),
-            stderr: None,
-            output: None,
         };
         let output2 = bencher_json::runner::JsonJobOutput {
-            exit_code: Some(1),
+            results: vec![bencher_json::runner::JsonIterationOutput {
+                exit_code: 1,
+                stdout: Some("project2".into()),
+                stderr: None,
+                output: None,
+            }],
             error: None,
-            stdout: Some("project2".into()),
-            stderr: None,
-            output: None,
         };
 
         storage.put_job_output(repo1, job, &output1).await.unwrap();
@@ -1430,8 +1450,8 @@ mod tests {
 
         let r1 = storage.get_job_output(repo1, job).await.unwrap().unwrap();
         let r2 = storage.get_job_output(repo2, job).await.unwrap().unwrap();
-        assert_eq!(r1.stdout.as_deref(), Some("project1"));
-        assert_eq!(r2.stdout.as_deref(), Some("project2"));
+        assert_eq!(r1.results[0].stdout.as_deref(), Some("project1"));
+        assert_eq!(r2.results[0].stdout.as_deref(), Some("project2"));
     }
 
     #[tokio::test]
@@ -1443,11 +1463,13 @@ mod tests {
         let job = test_job_uuid();
 
         let output = bencher_json::runner::JsonJobOutput {
-            exit_code: Some(0),
+            results: vec![bencher_json::runner::JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some("only project1".into()),
+                stderr: None,
+                output: None,
+            }],
             error: None,
-            stdout: Some("only project1".into()),
-            stderr: None,
-            output: None,
         };
 
         storage.put_job_output(repo1, job, &output).await.unwrap();

@@ -4,7 +4,7 @@ Track the work needed to go from `bencher run --image` invocation through runner
 
 ## Current State
 
-The CLI, runner daemon, WebSocket protocol, job viewing endpoints, and job creation in `run_post` (Gap 1) are all implemented. Two gaps remain before the flow works end-to-end.
+The CLI, runner daemon, WebSocket protocol, job viewing endpoints, job creation in `run_post` (Gap 1), and benchmark result processing (Gap 2) are all implemented. One gap remains before the flow works end-to-end.
 
 ## Flow Overview
 
@@ -21,10 +21,10 @@ bencher run --image ghcr.io/org/bench:v1 --adapter json
   ├─5. Runner daemon long-polls POST /v0/runners/{runner}/jobs
   ├─6. Runner claims job, opens WebSocket
   ├─7. Runner executes benchmark in Firecracker microVM
-  ├─8. Runner sends Completed{exit_code, stdout, stderr, output}
+  ├─8. Runner sends Completed{results: Vec<JsonIterationOutput>}
   │
   ├─9. API receives Completed via WebSocket
-  ├─10. API processes benchmark output through adapter   ← GAP 2
+  ├─10. API processes benchmark results via adapter
   │      └─ creates metrics, benchmarks, alerts
   │      └─ updates report with results and end_time
   │
@@ -34,37 +34,14 @@ bencher run --image ghcr.io/org/bench:v1 --adapter json
 
 ## In-Code TODOs
 
-Tracked TODOs from the Gap 1 implementation that need follow-up:
-
-1. **`lib/bencher_schema/src/model/runner/job.rs:281`** — `TODO: Check metered plan level to distinguish Team vs Enterprise`
+1. **`lib/bencher_schema/src/model/runner/job.rs`** — `TODO: Check metered plan level to distinguish Team vs Enterprise`
    - Currently all `PlanKind::Metered` maps to `JobPriority::Team`; should distinguish Enterprise tier
 
-2. **`plus/api_runners/src/jobs/websocket.rs:574`** — `TODO: Billing logic - check elapsed minutes and bill to Stripe`
+2. **`plus/api_runners/src/jobs/websocket.rs`** — `TODO: Billing logic - check elapsed minutes and bill to Stripe`
    - Billing for runner usage not yet implemented
 
-## Gap 2: Benchmark Result Processing After Job Completion
-
-**Where:** `plus/api_runners/src/jobs/websocket.rs` — `handle_completed()`
-
-**Problem:** When the runner sends `Completed{exit_code, stdout, stderr, output}`, the handler only stores raw output to blob storage. It does not parse benchmark results or create metrics/alerts.
-
-**What needs to happen:**
-- [ ] After storing raw output, determine which adapter to use (from the report's settings)
-- [ ] Parse stdout (and/or output files) through `bencher_adapter` to extract benchmark results
-- [ ] Call `ReportResults::process()` (or equivalent) to create metrics, benchmarks, and report_benchmarks
-- [ ] Run threshold detection to generate alerts
-- [ ] Update the report with real `end_time` and processed results
-- [ ] Handle the case where the adapter fails to parse (mark report as failed? store raw output anyway?)
-
-**Key types already implemented:**
-- `bencher_adapter` crate for parsing benchmark output
-- `ReportResults` in `lib/api_run/` for processing results into metrics
-- Blob storage for raw output already works
-
-**Open questions:**
-- Which field contains the benchmark output — stdout, a specific output file, or configurable?
-- Should the adapter be stored on the report/job, or inferred from the run settings?
-- What happens if the benchmark exits non-zero but produces partial output?
+3. **`lib/bencher_schema/src/model/runner/job.rs` — `process_results()`** — `TODO: Refactor PlanKind to support auth_conn directly`
+   - `PlanKind::new_for_project` requires a `PublicUser` for `public_conn!` routing. In the runner context we're already authenticated, so we use `PublicUser::Public(None)` as a workaround. Refactor `PlanKind` (and its callees like `QueryPlan::get_active_metered_plan`, `LicenseUsage::get`, `QueryOrganization::window_usage`) to accept a `&mut DbConnection` directly instead of requiring `public_conn!`.
 
 ## Gap 3: CLI Polling and Result Display
 
@@ -94,7 +71,7 @@ Tracked TODOs from the Gap 1 implementation that need follow-up:
 ## Implementation Order
 
 1. ~~**Gap 1 (job creation)**~~ — Complete. Jobs are created in `run_post` with spec resolution, image resolution, and priority determination.
-2. **Gap 2 (result processing)** — Without this, completed jobs produce no metrics/alerts even if the runner executes successfully.
+2. ~~**Gap 2 (result processing)**~~ — Complete. `QueryJob::process_results()` parses benchmark output via adapter, creates metrics/alerts, and updates report timestamps. WebSocket protocol uses `Vec<JsonIterationOutput>` for per-iteration results.
 3. **Gap 3 (CLI polling)** — Without this, the user sees empty results even after Gap 2 is fixed.
 
 ## SQLite Write Lock Contention

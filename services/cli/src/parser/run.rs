@@ -1,6 +1,8 @@
 #[cfg(feature = "plus")]
 use bencher_json::SpecResourceId;
-use bencher_json::{BranchNameId, DateTime, GitHash, ProjectResourceId, TestbedNameId};
+use bencher_json::{
+    BranchNameId, DateTime, GitHash, ProjectResourceId, TestbedNameId, project::report::Iteration,
+};
 #[cfg(feature = "plus")]
 use bencher_parser::check_env;
 use camino::Utf8PathBuf;
@@ -35,7 +37,7 @@ pub struct CliRun {
 
     /// Number of run iterations
     #[clap(long, value_name = "COUNT", default_value = "1")]
-    pub iter: usize,
+    pub iter: Iteration,
 
     /// Fold multiple results into a single result using an aggregate function
     #[clap(value_enum, long, requires = "iter", value_name = "AGGREGATE_FUNCTION")]

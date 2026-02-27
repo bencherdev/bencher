@@ -9,7 +9,9 @@ use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewRun, JsonRepo
 use bencher_comment::ReportComment;
 #[cfg(feature = "plus")]
 use bencher_json::SpecResourceId;
-use bencher_json::{DateTime, JsonReport, ProjectResourceId, RunContext, TestbedNameId};
+use bencher_json::{
+    DateTime, JsonReport, ProjectResourceId, RunContext, TestbedNameId, project::report::Iteration,
+};
 
 use crate::{
     CliError,
@@ -47,7 +49,7 @@ pub struct Run {
     adapter: Adapter,
     sub_adapter: SubAdapter,
     average: Option<JsonAverage>,
-    iter: usize,
+    iter: Iteration,
     fold: Option<JsonFold>,
     backdate: Option<DateTime>,
     allow_failure: bool,
@@ -226,8 +228,9 @@ impl Run {
     async fn generate_local_report(&self) -> Result<Option<JsonNewRun>, RunError> {
         let runner = self.runner.as_ref().ok_or(RunError::NoRunner)?;
         let start_time = DateTime::now();
-        let mut results = Vec::with_capacity(self.iter);
-        for _ in 0..self.iter {
+        let iter = self.iter.as_usize();
+        let mut results = Vec::with_capacity(iter);
+        for _ in 0..iter {
             let outputs = runner.run(self.log).await?;
             for output in outputs {
                 if output.is_success() {
@@ -316,6 +319,8 @@ impl Run {
                 file_paths,
                 build_time: job.build_time.then_some(true),
                 file_size: file_size.then_some(true),
+                iter: Some(self.iter.into()),
+                allow_failure: self.allow_failure.then_some(true),
                 backdate: self.backdate.map(Into::into),
             }),
         }

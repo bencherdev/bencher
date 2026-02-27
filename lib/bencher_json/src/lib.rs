@@ -78,7 +78,7 @@ pub use project::{
     model::{JsonModel, ModelUuid},
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
-    report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
+    report::{Iteration, JsonNewReport, JsonReport, JsonReports, ReportUuid},
     testbed::{
         JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedNameId, TestbedResourceId, TestbedSlug,
         TestbedUuid,

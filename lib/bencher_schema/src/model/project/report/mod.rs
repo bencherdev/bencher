@@ -4,7 +4,7 @@ use bencher_json::{
     DateTime, JsonNewReport, JsonReport, ReportUuid,
     project::report::{
         Adapter, Iteration, JsonReportAlerts, JsonReportMeasure, JsonReportResult,
-        JsonReportResults,
+        JsonReportResults, JsonReportSettings,
     },
 };
 use diesel::{
@@ -73,7 +73,7 @@ impl NewRunJob {
 }
 
 use super::{
-    branch::{QueryBranch, head::HeadId, version::VersionId},
+    branch::{BranchId, QueryBranch, head::HeadId, version::VersionId},
     metric::QueryMetric,
     metric_boundary::QueryMetricBoundary,
     threshold::{InsertThreshold, boundary::QueryBoundary},
@@ -196,12 +196,17 @@ impl QueryReport {
                     &plan_kind,
                     new_run_job.is_claimed,
                     new_run_job.run_job,
+                    &json_settings,
                 )
                 .await?,
             )
         } else {
             None
         };
+
+        // Capture whether this is a job-based run before the transaction moves pending_job.
+        #[cfg(feature = "plus")]
+        let is_job_run = pending_job.is_some();
 
         // Capture the current time before acquiring the write lock.
         // This is used for the report created timestamp and the job insert timestamp.
@@ -282,40 +287,32 @@ impl QueryReport {
             })?;
 
         #[cfg(feature = "plus")]
-        let mut usage = 0;
+        if is_job_run {
+            // Job-based run: results will be processed in handle_completed()
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ReportCreate);
+            return query_report.into_json(log, public_conn!(context, public_user));
+        }
 
         // Process and record the report results
-        let mut report_results = ReportResults::new(
-            project_id,
-            branch_id,
-            head_id,
-            testbed_id,
-            query_report.spec_id,
-            query_report.id,
-        );
         let results_array: Vec<&str> = json_report.results.iter().map(AsRef::as_ref).collect();
-        let processed_report = report_results
-            .process(
+        query_report
+            .process_results(
                 log,
                 context,
+                branch_id,
                 &results_array,
                 adapter,
                 json_settings,
                 #[cfg(feature = "plus")]
-                &mut usage,
+                plan_kind,
+                #[cfg(feature = "plus")]
+                query_project,
             )
-            .await;
-
-        #[cfg(feature = "plus")]
-        plan_kind
-            .check_usage(context.biller.as_ref(), query_project, usage)
             .await?;
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ReportCreate);
-
-        // Don't return the error from processing the report until after the metrics usage has been checked
-        processed_report?;
         // If the report was processed successfully, then return the report with the results
         query_report.into_json(log, public_conn!(context, public_user))
     }
@@ -361,6 +358,53 @@ impl QueryReport {
             alerts,
             created,
         })
+    }
+
+    /// Process benchmark results and record metrics/alerts for this report.
+    ///
+    /// Shared between `create()` (local runs) and `handle_completed()` (job-based runs).
+    /// Includes plan usage tracking and validation.
+    #[expect(clippy::too_many_arguments)]
+    pub async fn process_results(
+        &self,
+        log: &Logger,
+        context: &ApiContext,
+        branch_id: BranchId,
+        results: &[&str],
+        adapter: Adapter,
+        settings: JsonReportSettings,
+        #[cfg(feature = "plus")] plan_kind: PlanKind,
+        #[cfg(feature = "plus")] query_project: &QueryProject,
+    ) -> Result<(), HttpError> {
+        #[cfg(feature = "plus")]
+        let mut usage = 0;
+
+        let mut report_results = ReportResults::new(
+            self.project_id,
+            branch_id,
+            self.head_id,
+            self.testbed_id,
+            self.spec_id,
+            self.id,
+        );
+        let processed = report_results
+            .process(
+                log,
+                context,
+                results,
+                adapter,
+                settings,
+                #[cfg(feature = "plus")]
+                &mut usage,
+            )
+            .await;
+
+        #[cfg(feature = "plus")]
+        plan_kind
+            .check_usage(context.biller.as_ref(), query_project, usage)
+            .await?;
+
+        processed
     }
 }
 
