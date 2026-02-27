@@ -72,12 +72,17 @@ bencher run --image ghcr.io/org/bench:v1 --adapter json
 
 See [`services/cli/NOISE_PLAN.md`](../cli/NOISE_PLAN.md) for the design of the `bencher noise` subcommand, which will generate synthetic benchmark results for testing the full runner flow without needing real benchmarks or a real adapter.
 
+## Gap 5: Claude Code Skill for Bencher Workflow
+
+See [`services/cli/SKILL_PLAN.md`](../cli/SKILL_PLAN.md) for the design of a Claude Code skill that teaches AI agents the Bencher workflow: project setup, benchmark runs (local and bare metal), threshold configuration, CI integration, and result interpretation.
+
 ## Implementation Order
 
 1. ~~**Gap 1 (job creation)**~~ — Complete. Jobs are created in `run_post` with spec resolution, image resolution, and priority determination.
 2. ~~**Gap 2 (result processing)**~~ — Complete. `QueryJob::process_results()` parses benchmark output via adapter, creates metrics/alerts, and updates report timestamps. WebSocket protocol uses `Vec<JsonIterationOutput>` for per-iteration results.
 3. **Gap 3 (CLI polling)** — Without this, the user sees empty results even after Gap 2 is fixed.
 4. **Gap 4 (`bencher noise`)** — This is a separate feature that can be implemented after the main flow works end-to-end.
+5. **Gap 5 (Claude Code skill)** — Agent skill for guiding users through Bencher workflows. Can be implemented independently of Gaps 2-4.
 
 ## SQLite Write Lock Contention
 
