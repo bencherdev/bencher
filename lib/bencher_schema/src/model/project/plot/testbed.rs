@@ -69,7 +69,7 @@ impl InsertPlotTestbed {
         conn: &mut DbConnection,
         plot_id: PlotId,
         testbed_ids: &[TestbedId],
-    ) -> Result<(), diesel::result::Error> {
+    ) -> diesel::QueryResult<()> {
         let ranker = RankGenerator::new(testbed_ids.len());
         let inserts: Vec<Self> = testbed_ids
             .iter()

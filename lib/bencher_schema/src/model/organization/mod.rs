@@ -155,7 +155,7 @@ impl QueryOrganization {
                     .values(&insert_org_role)
                     .execute(conn)?;
 
-                Ok::<_, diesel::result::Error>(id)
+                diesel::QueryResult::Ok(id)
             })
             .map_err(resource_conflict_err!(Organization, &insert_organization))
             .map(|id| insert_organization.into_query(id))?
@@ -187,7 +187,7 @@ impl QueryOrganization {
     fn insert(
         conn: &mut DbConnection,
         insert_organization: &InsertOrganization,
-    ) -> Result<OrganizationId, diesel::result::Error> {
+    ) -> diesel::QueryResult<OrganizationId> {
         diesel::insert_into(schema::organization::table)
             .values(insert_organization)
             .execute(conn)?;
@@ -637,6 +637,8 @@ impl From<&QueryOrganization> for Organization {
 mod tests {
     use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
+    use bencher_json::DateTime;
+
     use super::OrganizationId;
     use crate::{macros::sql::last_insert_rowid, schema, test_util::setup_test_db};
 
@@ -652,8 +654,8 @@ mod tests {
                         schema::organization::uuid.eq(uuid),
                         schema::organization::name.eq("Org 1"),
                         schema::organization::slug.eq("org-1"),
-                        schema::organization::created.eq(0i64),
-                        schema::organization::modified.eq(0i64),
+                        schema::organization::created.eq(DateTime::TEST),
+                        schema::organization::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
@@ -664,7 +666,7 @@ mod tests {
                     .select(schema::organization::id)
                     .first(conn)?;
 
-                Ok::<_, diesel::result::Error>((rowid, select_id))
+                diesel::QueryResult::Ok((rowid, select_id))
             })
             .expect("Transaction failed");
 
@@ -681,8 +683,8 @@ mod tests {
                 schema::organization::uuid.eq("00000000-0000-0000-0000-000000000010"),
                 schema::organization::name.eq("Org 1"),
                 schema::organization::slug.eq("org-1"),
-                schema::organization::created.eq(0i64),
-                schema::organization::modified.eq(0i64),
+                schema::organization::created.eq(DateTime::TEST),
+                schema::organization::modified.eq(DateTime::TEST),
             ))
             .execute(&mut conn)
             .expect("Failed to insert first organization");
@@ -696,8 +698,8 @@ mod tests {
                         schema::organization::uuid.eq(second_uuid),
                         schema::organization::name.eq("Org 2"),
                         schema::organization::slug.eq("org-2"),
-                        schema::organization::created.eq(0i64),
-                        schema::organization::modified.eq(0i64),
+                        schema::organization::created.eq(DateTime::TEST),
+                        schema::organization::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
@@ -708,7 +710,7 @@ mod tests {
                     .select(schema::organization::id)
                     .first(conn)?;
 
-                Ok::<_, diesel::result::Error>((rowid, select_id))
+                diesel::QueryResult::Ok((rowid, select_id))
             })
             .expect("Transaction failed");
 

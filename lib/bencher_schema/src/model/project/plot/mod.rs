@@ -109,6 +109,7 @@ impl QueryPlot {
 
         // If the rank cannot be calculated, then we need to redistribute the ranks.
         // Wrap the redistribution in a transaction for atomicity.
+        let now = DateTime::now();
         conn.transaction(|conn| {
             let plot_ranker = RankGenerator::new(plots.len());
             for (plot, rank) in plots.iter().zip(plot_ranker) {
@@ -116,13 +117,13 @@ impl QueryPlot {
                     rank: Some(rank),
                     title: None,
                     window: None,
-                    modified: DateTime::now(),
+                    modified: now,
                 };
                 diesel::update(plot_table::table.filter(plot_table::id.eq(plot.id)))
                     .set(&update_plot)
                     .execute(conn)?;
             }
-            Ok::<_, diesel::result::Error>(())
+            diesel::QueryResult::Ok(())
         })
         .map_err(|e| resource_conflict_error(BencherResource::Plot, &plots, e))?;
 
@@ -156,6 +157,7 @@ impl QueryPlot {
         // If the rank cannot be calculated, then we need to redistribute all the ranks.
         // Wrap the redistribution in a transaction for atomicity.
         let all_plots = QueryPlot::all_for_project(conn, query_project)?;
+        let now = DateTime::now();
         conn.transaction(|conn| {
             let plot_ranker = RankGenerator::new(all_plots.len());
             for (plot, rank) in all_plots.iter().zip(plot_ranker) {
@@ -163,13 +165,13 @@ impl QueryPlot {
                     rank: Some(rank),
                     title: None,
                     window: None,
-                    modified: DateTime::now(),
+                    modified: now,
                 };
                 diesel::update(plot_table::table.filter(plot_table::id.eq(plot.id)))
                     .set(&update_plot)
                     .execute(conn)?;
             }
-            Ok::<_, diesel::result::Error>(())
+            diesel::QueryResult::Ok(())
         })
         .map_err(|e| resource_conflict_error(BencherResource::Plot, &all_plots, e))?;
 
@@ -328,7 +330,7 @@ impl InsertPlot {
                 InsertPlotBenchmark::from_resolved(conn, plot_id, &benchmark_ids)?;
                 InsertPlotMeasure::from_resolved(conn, plot_id, &measure_ids)?;
 
-                Ok::<_, diesel::result::Error>(plot_id)
+                diesel::QueryResult::Ok(plot_id)
             })
             .map_err(resource_conflict_err!(Plot, insert_plot))?;
 
@@ -400,6 +402,7 @@ mod tests {
         InsertPlot, PlotId, QueryPlot, branch::InsertPlotBranch, measure::InsertPlotMeasure,
     };
     use crate::{
+        context::DbConnection,
         macros::sql::last_insert_rowid,
         model::project::{ProjectId, QueryProject},
         schema,
@@ -410,10 +413,7 @@ mod tests {
         },
     };
 
-    fn get_query_project(
-        conn: &mut diesel::SqliteConnection,
-        project_id: ProjectId,
-    ) -> QueryProject {
+    fn get_query_project(conn: &mut DbConnection, project_id: ProjectId) -> QueryProject {
         schema::project::table
             .filter(schema::project::id.eq(project_id))
             .select(QueryProject::as_select())
@@ -422,7 +422,7 @@ mod tests {
     }
 
     /// Helper to get all plot ranks for a project, ordered by rank ascending.
-    fn get_all_plot_ranks(conn: &mut diesel::SqliteConnection) -> Vec<i64> {
+    fn get_all_plot_ranks(conn: &mut DbConnection) -> Vec<i64> {
         schema::plot::table
             .order(schema::plot::rank.asc())
             .select(schema::plot::rank)
@@ -675,7 +675,7 @@ mod tests {
                         .execute(conn)?;
                 }
 
-                Ok::<_, diesel::result::Error>(plot_id)
+                diesel::QueryResult::Ok(plot_id)
             })
             .expect("Transaction failed");
 
@@ -739,7 +739,7 @@ mod tests {
         conn.transaction(|conn| {
             InsertPlotBranch::from_resolved(conn, plot_id, &[b1.branch_id, b2.branch_id])?;
             InsertPlotMeasure::from_resolved(conn, plot_id, &[m1, m2])?;
-            Ok::<_, diesel::result::Error>(())
+            diesel::QueryResult::Ok(())
         })
         .expect("Transaction failed");
 

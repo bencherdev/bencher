@@ -346,6 +346,8 @@ impl UpdateMeasure {
 mod tests {
     use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
+    use bencher_json::DateTime;
+
     use super::MeasureId;
     use crate::{
         macros::sql::last_insert_rowid,
@@ -368,8 +370,8 @@ mod tests {
                         schema::measure::name.eq("Measure 1"),
                         schema::measure::slug.eq("measure-1"),
                         schema::measure::units.eq("ns"),
-                        schema::measure::created.eq(0i64),
-                        schema::measure::modified.eq(0i64),
+                        schema::measure::created.eq(DateTime::TEST),
+                        schema::measure::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
@@ -399,8 +401,8 @@ mod tests {
                 schema::measure::name.eq("Measure 1"),
                 schema::measure::slug.eq("measure-1"),
                 schema::measure::units.eq("ns"),
-                schema::measure::created.eq(0i64),
-                schema::measure::modified.eq(0i64),
+                schema::measure::created.eq(DateTime::TEST),
+                schema::measure::modified.eq(DateTime::TEST),
             ))
             .execute(&mut conn)
             .expect("Failed to insert first measure");
@@ -416,8 +418,8 @@ mod tests {
                         schema::measure::name.eq("Measure 2"),
                         schema::measure::slug.eq("measure-2"),
                         schema::measure::units.eq("ms"),
-                        schema::measure::created.eq(0i64),
-                        schema::measure::modified.eq(0i64),
+                        schema::measure::created.eq(DateTime::TEST),
+                        schema::measure::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
@@ -457,8 +459,8 @@ mod tests {
                         schema::measure::name.eq("Test Measure"),
                         schema::measure::slug.eq("test-measure"),
                         schema::measure::units.eq("ns"),
-                        schema::measure::created.eq(0i64),
-                        schema::measure::modified.eq(0i64),
+                        schema::measure::created.eq(DateTime::TEST),
+                        schema::measure::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 

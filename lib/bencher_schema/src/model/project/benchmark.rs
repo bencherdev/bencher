@@ -252,6 +252,8 @@ impl UpdateBenchmark {
 mod tests {
     use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
+    use bencher_json::DateTime;
+
     use super::BenchmarkId;
     use crate::{
         macros::sql::last_insert_rowid,
@@ -273,8 +275,8 @@ mod tests {
                         schema::benchmark::project_id.eq(base.project_id),
                         schema::benchmark::name.eq("Bench 1"),
                         schema::benchmark::slug.eq("bench-1"),
-                        schema::benchmark::created.eq(0i64),
-                        schema::benchmark::modified.eq(0i64),
+                        schema::benchmark::created.eq(DateTime::TEST),
+                        schema::benchmark::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
@@ -303,8 +305,8 @@ mod tests {
                 schema::benchmark::project_id.eq(base.project_id),
                 schema::benchmark::name.eq("Bench 1"),
                 schema::benchmark::slug.eq("bench-1"),
-                schema::benchmark::created.eq(0i64),
-                schema::benchmark::modified.eq(0i64),
+                schema::benchmark::created.eq(DateTime::TEST),
+                schema::benchmark::modified.eq(DateTime::TEST),
             ))
             .execute(&mut conn)
             .expect("Failed to insert first benchmark");
@@ -319,8 +321,8 @@ mod tests {
                         schema::benchmark::project_id.eq(base.project_id),
                         schema::benchmark::name.eq("Bench 2"),
                         schema::benchmark::slug.eq("bench-2"),
-                        schema::benchmark::created.eq(0i64),
-                        schema::benchmark::modified.eq(0i64),
+                        schema::benchmark::created.eq(DateTime::TEST),
+                        schema::benchmark::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
@@ -359,8 +361,8 @@ mod tests {
                         schema::benchmark::project_id.eq(base.project_id),
                         schema::benchmark::name.eq("Test Bench"),
                         schema::benchmark::slug.eq("test-bench"),
-                        schema::benchmark::created.eq(0i64),
-                        schema::benchmark::modified.eq(0i64),
+                        schema::benchmark::created.eq(DateTime::TEST),
+                        schema::benchmark::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 

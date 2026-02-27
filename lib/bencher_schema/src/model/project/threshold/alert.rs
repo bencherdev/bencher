@@ -62,10 +62,7 @@ impl QueryAlert {
             .map_err(resource_not_found_err!(Alert, (project_id, uuid)))
     }
 
-    pub fn silence_all(
-        conn: &mut DbConnection,
-        head_id: HeadId,
-    ) -> Result<usize, diesel::result::Error> {
+    pub fn silence_all(conn: &mut DbConnection, head_id: HeadId) -> diesel::QueryResult<usize> {
         let alerts =
             schema::alert::table
                 .inner_join(schema::boundary::table.inner_join(

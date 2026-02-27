@@ -70,7 +70,7 @@ impl InsertPlotBranch {
         conn: &mut DbConnection,
         plot_id: PlotId,
         branch_ids: &[BranchId],
-    ) -> Result<(), diesel::result::Error> {
+    ) -> diesel::QueryResult<()> {
         let ranker = RankGenerator::new(branch_ids.len());
         let inserts: Vec<Self> = branch_ids
             .iter()

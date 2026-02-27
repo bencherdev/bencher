@@ -114,22 +114,25 @@ impl QueryThreshold {
         match Self::compute_model_action(auth_conn!(context), self.model_id, model)? {
             ThresholdModelAction::NoChange => Ok(()),
             ThresholdModelAction::Update(model) => self.update_from_model(context, model).await,
-            ThresholdModelAction::Remove => self
-                .remove_current_model(write_conn!(context))
-                .map_err(|e| {
-                    crate::error::issue_error(
-                        "Failed to remove threshold model",
-                        "Failed to remove threshold model:",
-                        e,
-                    )
-                }),
+            ThresholdModelAction::Remove => {
+                let conn = write_conn!(context);
+                conn.transaction(|conn| self.remove_current_model(conn))
+                    .map_err(|e| {
+                        crate::error::issue_error(
+                            "Failed to remove threshold model",
+                            "Failed to remove threshold model:",
+                            e,
+                        )
+                    })
+            },
         }
     }
 
     async fn update_from_model(&self, context: &ApiContext, model: Model) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]
         InsertModel::rate_limit(context, self).await?;
-        self.update_from_model_inner(write_conn!(context), model)
+        let conn = write_conn!(context);
+        conn.transaction(|conn| self.update_from_model_inner(conn, model))
             .map_err(|e| {
                 crate::error::issue_error(
                     "Failed to update threshold model",
@@ -144,21 +147,19 @@ impl QueryThreshold {
         conn: &mut DbConnection,
         model: Model,
     ) -> diesel::QueryResult<()> {
-        conn.transaction(|conn| {
-            // Insert the new model
-            let insert_model = InsertModel::new(self.id, model);
-            diesel::insert_into(schema::model::table)
-                .values(&insert_model)
-                .execute(conn)?;
+        // Insert the new model
+        let insert_model = InsertModel::new(self.id, model);
+        diesel::insert_into(schema::model::table)
+            .values(&insert_model)
+            .execute(conn)?;
 
-            // Get the new model ID and update the threshold
-            let update_threshold = UpdateThreshold::new_model(conn)?;
-            diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(self.id)))
-                .set(&update_threshold)
-                .execute(conn)?;
+        // Get the new model ID and update the threshold
+        let update_threshold = UpdateThreshold::new_model(conn)?;
+        diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(self.id)))
+            .set(&update_threshold)
+            .execute(conn)?;
 
-            self.update_replaced_model(conn, update_threshold.modified)
-        })
+        self.update_replaced_model(conn, update_threshold.modified)
     }
 
     fn remove_current_model(&self, conn: &mut DbConnection) -> diesel::QueryResult<()> {
@@ -167,15 +168,13 @@ impl QueryThreshold {
             return Ok(());
         }
 
-        conn.transaction(|conn| {
-            // Update the current threshold to remove the current model
-            let update_threshold = UpdateThreshold::remove_model();
-            diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(self.id)))
-                .set(&update_threshold)
-                .execute(conn)?;
+        // Update the current threshold to remove the current model
+        let update_threshold = UpdateThreshold::remove_model();
+        diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(self.id)))
+            .set(&update_threshold)
+            .execute(conn)?;
 
-            self.update_replaced_model(conn, update_threshold.modified)
-        })
+        self.update_replaced_model(conn, update_threshold.modified)
     }
 
     fn update_replaced_model(
@@ -355,14 +354,10 @@ impl InsertThreshold {
     ) -> Result<ThresholdId, HttpError> {
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
-        Self::from_model_inner(
-            write_conn!(context),
-            project_id,
-            branch_id,
-            testbed_id,
-            measure_id,
-            model,
-        )
+        let conn = write_conn!(context);
+        conn.transaction(|conn| {
+            Self::from_model_inner(conn, project_id, branch_id, testbed_id, measure_id, model)
+        })
         .map_err(|e| {
             crate::error::issue_error(
                 "Failed to create threshold from model",
@@ -380,32 +375,28 @@ impl InsertThreshold {
         measure_id: MeasureId,
         model: Model,
     ) -> diesel::QueryResult<ThresholdId> {
-        conn.transaction(|conn| {
-            // Create the new threshold
-            let insert_threshold =
-                InsertThreshold::new(project_id, branch_id, testbed_id, measure_id);
-            diesel::insert_into(schema::threshold::table)
-                .values(&insert_threshold)
-                .execute(conn)?;
+        // Create the new threshold
+        let insert_threshold = InsertThreshold::new(project_id, branch_id, testbed_id, measure_id);
+        diesel::insert_into(schema::threshold::table)
+            .values(&insert_threshold)
+            .execute(conn)?;
 
-            // Get the new threshold ID
-            let threshold_id =
-                diesel::select(last_insert_rowid()).get_result::<ThresholdId>(conn)?;
+        // Get the new threshold ID
+        let threshold_id = diesel::select(last_insert_rowid()).get_result::<ThresholdId>(conn)?;
 
-            // Create the new model
-            let insert_model = InsertModel::new(threshold_id, model);
-            diesel::insert_into(schema::model::table)
-                .values(&insert_model)
-                .execute(conn)?;
+        // Create the new model
+        let insert_model = InsertModel::new(threshold_id, model);
+        diesel::insert_into(schema::model::table)
+            .values(&insert_model)
+            .execute(conn)?;
 
-            // Get the new model ID and set it on the threshold
-            let model_id = diesel::select(last_insert_rowid()).get_result::<ModelId>(conn)?;
-            diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
-                .set(schema::threshold::model_id.eq(model_id))
-                .execute(conn)?;
+        // Get the new model ID and set it on the threshold
+        let model_id = diesel::select(last_insert_rowid()).get_result::<ModelId>(conn)?;
+        diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
+            .set(schema::threshold::model_id.eq(model_id))
+            .execute(conn)?;
 
-            Ok(threshold_id)
-        })
+        Ok(threshold_id)
     }
 
     pub fn lower_boundary(
@@ -415,14 +406,16 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::from_model_inner(
-            conn,
-            project_id,
-            branch_id,
-            testbed_id,
-            measure_id,
-            Model::lower_boundary(),
-        )
+        conn.transaction(|conn| {
+            Self::from_model_inner(
+                conn,
+                project_id,
+                branch_id,
+                testbed_id,
+                measure_id,
+                Model::lower_boundary(),
+            )
+        })
         .map_err(|e| {
             crate::error::issue_error(
                 "Failed to create lower boundary threshold",
@@ -439,14 +432,16 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::from_model_inner(
-            conn,
-            project_id,
-            branch_id,
-            testbed_id,
-            measure_id,
-            Model::upper_boundary(),
-        )
+        conn.transaction(|conn| {
+            Self::from_model_inner(
+                conn,
+                project_id,
+                branch_id,
+                testbed_id,
+                measure_id,
+                Model::upper_boundary(),
+            )
+        })
         .map_err(|e| {
             crate::error::issue_error(
                 "Failed to create upper boundary threshold",
@@ -513,7 +508,7 @@ impl InsertThreshold {
                     threshold.remove_current_model(conn)?;
                     slog::debug!(log, "Removed model from current threshold {threshold:?}",);
                 }
-                Ok::<_, diesel::result::Error>(())
+                diesel::QueryResult::Ok(())
             })
             .map_err(|e| {
                 crate::error::issue_error(
@@ -736,7 +731,7 @@ impl InsertThreshold {
                     threshold.remove_current_model(conn)?;
                     slog::debug!(log, "Removed model from threshold {threshold:?}");
                 }
-                Ok::<_, diesel::result::Error>(())
+                diesel::QueryResult::Ok(())
             })
             .map_err(|e| {
                 crate::error::issue_error(

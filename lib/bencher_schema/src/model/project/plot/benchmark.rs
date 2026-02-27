@@ -69,7 +69,7 @@ impl InsertPlotBenchmark {
         conn: &mut DbConnection,
         plot_id: PlotId,
         benchmark_ids: &[BenchmarkId],
-    ) -> Result<(), diesel::result::Error> {
+    ) -> diesel::QueryResult<()> {
         let ranker = RankGenerator::new(benchmark_ids.len());
         let inserts: Vec<Self> = benchmark_ids
             .iter()

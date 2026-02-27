@@ -329,7 +329,7 @@ impl QueryProject {
                     .values(&insert_proj_role)
                     .execute(conn)?;
 
-                Ok::<_, diesel::result::Error>(id)
+                diesel::QueryResult::Ok(id)
             })
             .map_err(resource_conflict_err!(Project, &insert_project))
             .map(|id| insert_project.into_query(id))?
@@ -367,7 +367,7 @@ impl QueryProject {
     fn insert(
         conn: &mut DbConnection,
         insert_project: &InsertProject,
-    ) -> Result<ProjectId, diesel::result::Error> {
+    ) -> diesel::QueryResult<ProjectId> {
         diesel::insert_into(project_table::table)
             .values(insert_project)
             .execute(conn)?;
@@ -790,6 +790,8 @@ impl From<&QueryProject> for Project {
 mod tests {
     use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
+    use bencher_json::DateTime;
+
     use super::ProjectId;
     use crate::{
         macros::sql::last_insert_rowid,
@@ -812,8 +814,8 @@ mod tests {
                         schema::project::name.eq("Project 1"),
                         schema::project::slug.eq("project-1"),
                         schema::project::visibility.eq(0),
-                        schema::project::created.eq(0i64),
-                        schema::project::modified.eq(0i64),
+                        schema::project::created.eq(DateTime::TEST),
+                        schema::project::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
@@ -823,7 +825,7 @@ mod tests {
                     .select(schema::project::id)
                     .first(conn)?;
 
-                Ok::<_, diesel::result::Error>((rowid, select_id))
+                diesel::QueryResult::Ok((rowid, select_id))
             })
             .expect("Transaction failed");
 
@@ -843,8 +845,8 @@ mod tests {
                 schema::project::name.eq("Project 1"),
                 schema::project::slug.eq("project-1"),
                 schema::project::visibility.eq(0),
-                schema::project::created.eq(0i64),
-                schema::project::modified.eq(0i64),
+                schema::project::created.eq(DateTime::TEST),
+                schema::project::modified.eq(DateTime::TEST),
             ))
             .execute(&mut conn)
             .expect("Failed to insert first project");
@@ -860,8 +862,8 @@ mod tests {
                         schema::project::name.eq("Project 2"),
                         schema::project::slug.eq("project-2"),
                         schema::project::visibility.eq(0),
-                        schema::project::created.eq(0i64),
-                        schema::project::modified.eq(0i64),
+                        schema::project::created.eq(DateTime::TEST),
+                        schema::project::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
@@ -871,7 +873,7 @@ mod tests {
                     .select(schema::project::id)
                     .first(conn)?;
 
-                Ok::<_, diesel::result::Error>((rowid, select_id))
+                diesel::QueryResult::Ok((rowid, select_id))
             })
             .expect("Transaction failed");
 

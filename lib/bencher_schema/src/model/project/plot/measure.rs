@@ -69,7 +69,7 @@ impl InsertPlotMeasure {
         conn: &mut DbConnection,
         plot_id: PlotId,
         measure_ids: &[MeasureId],
-    ) -> Result<(), diesel::result::Error> {
+    ) -> diesel::QueryResult<()> {
         let ranker = RankGenerator::new(measure_ids.len());
         let inserts: Vec<Self> = measure_ids
             .iter()

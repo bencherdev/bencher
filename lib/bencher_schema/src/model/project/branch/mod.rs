@@ -400,6 +400,11 @@ impl InsertBranch {
         InsertHead::for_branch(log, context, query_branch, branch_start_point.as_ref()).await
     }
 
+    /// Convert into a [`QueryBranch`] using the given ID.
+    ///
+    /// Note: The returned `QueryBranch` has `head_id: None` because the head
+    /// is created separately via [`InsertHead::for_branch`] after the branch insert.
+    /// Callers should re-read the branch after the full transaction to get the final `head_id`.
     pub fn into_query(self, id: BranchId) -> QueryBranch {
         let Self {
             uuid,
@@ -499,6 +504,8 @@ impl UpdateBranch {
 mod tests {
     use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
+    use bencher_json::DateTime;
+
     use super::BranchId;
     use crate::{
         macros::sql::last_insert_rowid,
@@ -520,8 +527,8 @@ mod tests {
                         schema::branch::project_id.eq(base.project_id),
                         schema::branch::name.eq("Branch 1"),
                         schema::branch::slug.eq("branch-1"),
-                        schema::branch::created.eq(0i64),
-                        schema::branch::modified.eq(0i64),
+                        schema::branch::created.eq(DateTime::TEST),
+                        schema::branch::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
@@ -550,8 +557,8 @@ mod tests {
                 schema::branch::project_id.eq(base.project_id),
                 schema::branch::name.eq("Branch 1"),
                 schema::branch::slug.eq("branch-1"),
-                schema::branch::created.eq(0i64),
-                schema::branch::modified.eq(0i64),
+                schema::branch::created.eq(DateTime::TEST),
+                schema::branch::modified.eq(DateTime::TEST),
             ))
             .execute(&mut conn)
             .expect("Failed to insert first branch");
@@ -566,8 +573,8 @@ mod tests {
                         schema::branch::project_id.eq(base.project_id),
                         schema::branch::name.eq("Branch 2"),
                         schema::branch::slug.eq("branch-2"),
-                        schema::branch::created.eq(0i64),
-                        schema::branch::modified.eq(0i64),
+                        schema::branch::created.eq(DateTime::TEST),
+                        schema::branch::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 

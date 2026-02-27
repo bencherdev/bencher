@@ -625,6 +625,8 @@ impl InsertReport {
 mod tests {
     use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
+    use bencher_json::DateTime;
+
     use crate::{
         schema,
         test_util::{
@@ -677,9 +679,9 @@ mod tests {
                         schema::report::version_id.eq(version_id),
                         schema::report::testbed_id.eq(testbed_id),
                         schema::report::adapter.eq(0),
-                        schema::report::start_time.eq(0i64),
-                        schema::report::end_time.eq(0i64),
-                        schema::report::created.eq(0i64),
+                        schema::report::start_time.eq(DateTime::TEST),
+                        schema::report::end_time.eq(DateTime::TEST),
+                        schema::report::created.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
@@ -733,9 +735,9 @@ mod tests {
                 schema::report::version_id.eq(version_id),
                 schema::report::testbed_id.eq(testbed_id),
                 schema::report::adapter.eq(0),
-                schema::report::start_time.eq(0i64),
-                schema::report::end_time.eq(0i64),
-                schema::report::created.eq(0i64),
+                schema::report::start_time.eq(DateTime::TEST),
+                schema::report::end_time.eq(DateTime::TEST),
+                schema::report::created.eq(DateTime::TEST),
             ))
             .execute(&mut conn)
             .expect("Failed to insert first report");
@@ -752,9 +754,9 @@ mod tests {
                         schema::report::version_id.eq(version_id),
                         schema::report::testbed_id.eq(testbed_id),
                         schema::report::adapter.eq(0),
-                        schema::report::start_time.eq(0i64),
-                        schema::report::end_time.eq(0i64),
-                        schema::report::created.eq(0i64),
+                        schema::report::start_time.eq(DateTime::TEST),
+                        schema::report::end_time.eq(DateTime::TEST),
+                        schema::report::created.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 

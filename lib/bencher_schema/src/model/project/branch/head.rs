@@ -355,6 +355,8 @@ impl UpdateHead {
 mod tests {
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
+    use bencher_json::DateTime;
+
     use crate::{
         model::project::branch::version::VersionId,
         schema,
@@ -1339,8 +1341,8 @@ mod tests {
                 schema::branch::project_id.eq(base.project_id),
                 schema::branch::name.eq("new-branch"),
                 schema::branch::slug.eq("new-branch"),
-                schema::branch::created.eq(0i64),
-                schema::branch::modified.eq(0i64),
+                schema::branch::created.eq(DateTime::TEST),
+                schema::branch::modified.eq(DateTime::TEST),
             ))
             .execute(&mut conn)
             .expect("Failed to insert branch");

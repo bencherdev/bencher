@@ -126,9 +126,12 @@ impl InsertVersion {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_util::{
-        create_base_entities, create_branch_with_head, create_head_version, create_report,
-        create_testbed, create_version, setup_test_db,
+    use crate::{
+        schema,
+        test_util::{
+            create_base_entities, create_branch_with_head, create_head_version, create_report,
+            create_testbed, create_version, setup_test_db,
+        },
     };
 
     use super::QueryVersion;
@@ -384,5 +387,82 @@ mod tests {
         let result = QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash);
         // Should return the version with the highest number (5), not the last-inserted one (2)
         assert_eq!(result.unwrap(), Some(version_high));
+    }
+
+    #[test]
+    fn increment_creates_first_version() {
+        use bencher_json::project::head::VersionNumber;
+        use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+
+        let version_id = conn
+            .transaction(|conn| {
+                super::InsertVersion::increment(conn, base.project_id, branch.head_id, None)
+            })
+            .expect("Failed to increment version");
+
+        // Verify version number is 0 (default for first version)
+        let number: VersionNumber = schema::version::table
+            .filter(schema::version::id.eq(version_id))
+            .select(schema::version::number)
+            .first(&mut conn)
+            .expect("Failed to get version number");
+        assert_eq!(number, VersionNumber::default());
+
+        // Verify head_version row exists
+        let hv_count: i64 = schema::head_version::table
+            .filter(schema::head_version::head_id.eq(branch.head_id))
+            .filter(schema::head_version::version_id.eq(version_id))
+            .count()
+            .get_result(&mut conn)
+            .expect("Failed to count head_versions");
+        assert_eq!(hv_count, 1);
+    }
+
+    #[test]
+    fn increment_increments_version_number() {
+        use bencher_json::project::head::VersionNumber;
+        use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+
+        // First increment — version number should be 0
+        conn.transaction(|conn| {
+            super::InsertVersion::increment(conn, base.project_id, branch.head_id, None)
+        })
+        .expect("Failed to increment first version");
+
+        // Second increment — version number should be 1
+        let version_id = conn
+            .transaction(|conn| {
+                super::InsertVersion::increment(conn, base.project_id, branch.head_id, None)
+            })
+            .expect("Failed to increment second version");
+
+        let number: VersionNumber = schema::version::table
+            .filter(schema::version::id.eq(version_id))
+            .select(schema::version::number)
+            .first(&mut conn)
+            .expect("Failed to get version number");
+        assert_eq!(number, VersionNumber::default().increment());
     }
 }

@@ -537,6 +537,8 @@ impl UpdateTestbed {
 mod tests {
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
+    use bencher_json::DateTime;
+
     use super::UpdateTestbed;
     use crate::{
         schema,
@@ -831,7 +833,7 @@ mod tests {
             name: None,
             slug: None,
             spec_id: Some(Some(spec_id)),
-            modified: bencher_json::DateTime::TEST,
+            modified: DateTime::TEST,
             archived: Some(None),
         };
         diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
@@ -874,7 +876,7 @@ mod tests {
             name: None,
             slug: None,
             spec_id: Some(Some(spec_id)),
-            modified: bencher_json::DateTime::TEST,
+            modified: DateTime::TEST,
             archived: None, // outer None = don't touch archived column
         };
         diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
@@ -918,7 +920,7 @@ mod tests {
             name: None,
             slug: None,
             spec_id: None, // outer None = don't touch spec column
-            modified: bencher_json::DateTime::TEST,
+            modified: DateTime::TEST,
             archived: Some(None),
         };
         diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
@@ -950,8 +952,8 @@ mod tests {
                         schema::testbed::project_id.eq(base.project_id),
                         schema::testbed::name.eq("Testbed 1"),
                         schema::testbed::slug.eq("testbed-1"),
-                        schema::testbed::created.eq(0i64),
-                        schema::testbed::modified.eq(0i64),
+                        schema::testbed::created.eq(DateTime::TEST),
+                        schema::testbed::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
@@ -985,8 +987,8 @@ mod tests {
                 schema::testbed::project_id.eq(base.project_id),
                 schema::testbed::name.eq("Testbed 1"),
                 schema::testbed::slug.eq("testbed-1"),
-                schema::testbed::created.eq(0i64),
-                schema::testbed::modified.eq(0i64),
+                schema::testbed::created.eq(DateTime::TEST),
+                schema::testbed::modified.eq(DateTime::TEST),
             ))
             .execute(&mut conn)
             .expect("Failed to insert first testbed");
@@ -1001,8 +1003,8 @@ mod tests {
                         schema::testbed::project_id.eq(base.project_id),
                         schema::testbed::name.eq("Testbed 2"),
                         schema::testbed::slug.eq("testbed-2"),
-                        schema::testbed::created.eq(0i64),
-                        schema::testbed::modified.eq(0i64),
+                        schema::testbed::created.eq(DateTime::TEST),
+                        schema::testbed::modified.eq(DateTime::TEST),
                     ))
                     .execute(conn)?;
 
