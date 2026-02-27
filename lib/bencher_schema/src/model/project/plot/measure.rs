@@ -64,6 +64,30 @@ pub struct InsertPlotMeasure {
 }
 
 impl InsertPlotMeasure {
+    /// Batch-insert pre-resolved measure IDs into the `plot_measure` table.
+    pub fn from_resolved(
+        conn: &mut DbConnection,
+        plot_id: PlotId,
+        measure_ids: &[MeasureId],
+    ) -> diesel::QueryResult<()> {
+        let ranker = RankGenerator::new(measure_ids.len());
+        let inserts: Vec<Self> = measure_ids
+            .iter()
+            .zip(ranker)
+            .map(|(&measure_id, rank)| Self {
+                plot_id,
+                measure_id,
+                rank,
+            })
+            .collect();
+        if !inserts.is_empty() {
+            diesel::insert_into(plot_measure_table::table)
+                .values(&inserts)
+                .execute(conn)?;
+        }
+        Ok(())
+    }
+
     pub async fn from_json(
         context: &ApiContext,
         plot_id: PlotId,

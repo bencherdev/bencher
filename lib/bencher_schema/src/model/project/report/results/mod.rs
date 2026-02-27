@@ -5,25 +5,26 @@ use bencher_adapter::{
     results::adapter_metrics::AdapterMetrics,
 };
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, MeasureNameId, Slug,
+    BenchmarkName, BenchmarkNameId, JsonNewMetric, MeasureNameId, Slug,
     project::report::{Adapter, Iteration, JsonReportSettings},
 };
-use diesel::RunQueryDsl as _;
+use diesel::{Connection as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use slog::Logger;
 
+use crate::macros::sql::last_insert_rowid;
 use crate::model::spec::SpecId;
 use crate::{
     auth_conn,
     context::ApiContext,
-    error::{bad_request_error, issue_error, resource_conflict_err},
+    error::{bad_request_error, issue_error},
     model::project::{
         ProjectId,
         benchmark::{BenchmarkId, QueryBenchmark},
         branch::{BranchId, head::HeadId},
         measure::{MeasureId, QueryMeasure},
-        metric::{InsertMetric, QueryMetric},
-        report::report_benchmark::{InsertReportBenchmark, QueryReportBenchmark},
+        metric::InsertMetric,
+        report::report_benchmark::{InsertReportBenchmark, ReportBenchmarkId},
         testbed::TestbedId,
     },
     schema, write_conn,
@@ -31,7 +32,7 @@ use crate::{
 
 pub mod detector;
 
-use detector::Detector;
+use detector::{Detector, PreparedDetection};
 
 use super::ReportId;
 
@@ -123,77 +124,115 @@ impl ReportResults {
         results: AdapterResults,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
+        // Phase 1: Pre-compute all data using read connections.
+        // Resolve IDs (get_or_create), fetch historical data, compute boundaries.
+        let mut prepared_benchmarks = Vec::with_capacity(results.inner.len());
+        #[cfg(feature = "plus")]
+        let mut metric_count: u32 = 0;
+
         for (benchmark, metrics) in results.inner {
-            self.metrics(
-                log,
-                context,
-                iteration,
-                benchmark,
-                metrics,
-                #[cfg(feature = "plus")]
-                usage,
-            )
-            .await?;
+            let prepared = self
+                .prepare_benchmark(log, context, iteration, benchmark, metrics)
+                .await?;
+            #[cfg(feature = "plus")]
+            {
+                metric_count = metric_count
+                    .saturating_add(u32::try_from(prepared.metrics.len()).unwrap_or(u32::MAX));
+            }
+            prepared_benchmarks.push(prepared);
         }
+
+        // Phase 2: Write all data in a single transaction.
+        let conn = write_conn!(context);
+        conn.transaction(|conn| {
+            for prepared in prepared_benchmarks {
+                // Insert report_benchmark
+                diesel::insert_into(schema::report_benchmark::table)
+                    .values(&prepared.insert_report_benchmark)
+                    .execute(conn)?;
+                let report_benchmark_id: ReportBenchmarkId =
+                    diesel::select(last_insert_rowid()).get_result(conn)?;
+
+                // Insert all metrics for this benchmark
+                for prepared_metric in prepared.metrics {
+                    let insert_metric = InsertMetric::from_json(
+                        report_benchmark_id,
+                        prepared_metric.measure_id,
+                        prepared_metric.metric,
+                    );
+                    diesel::insert_into(schema::metric::table)
+                        .values(&insert_metric)
+                        .execute(conn)?;
+
+                    // If there's a prepared detection, write boundary + optional alert
+                    if let Some(prepared_detection) = prepared_metric.detection {
+                        let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
+                        prepared_detection.write(conn, metric_id)?;
+                    }
+                }
+            }
+            diesel::QueryResult::Ok(())
+        })
+        .map_err(|e| {
+            issue_error(
+                "Failed to write report results",
+                "Failed to write report results in batch transaction:",
+                e,
+            )
+        })?;
+
+        #[cfg(feature = "plus")]
+        {
+            *usage = usage.saturating_add(metric_count);
+        }
+
         Ok(())
     }
 
-    async fn metrics(
+    /// Phase 1: Prepare all data for a single benchmark (reads + compute only).
+    async fn prepare_benchmark(
         &mut self,
         log: &Logger,
         context: &ApiContext,
         iteration: Iteration,
         benchmark: BenchmarkNameId,
         metrics: AdapterMetrics,
-        #[cfg(feature = "plus")] usage: &mut u32,
-    ) -> Result<(), HttpError> {
+    ) -> Result<PreparedBenchmark, HttpError> {
         // If benchmark name is ignored then strip the special suffix before querying
         let (benchmark, ignore_benchmark) = strip_ignore_suffix(benchmark);
         let benchmark_id = self.benchmark_id(context, benchmark).await?;
 
         let insert_report_benchmark =
             InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id);
-        diesel::insert_into(schema::report_benchmark::table)
-            .values(&insert_report_benchmark)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(
-                ReportBenchmark,
-                insert_report_benchmark
-            ))?;
-        let report_benchmark_id =
-            QueryReportBenchmark::get_id(auth_conn!(context), insert_report_benchmark.uuid)?;
 
+        let mut prepared_metrics = Vec::with_capacity(metrics.inner.len());
         for (measure_key, metric) in metrics.inner {
             let measure_id = self.measure_id(context, measure_key).await?;
 
-            let insert_metric = InsertMetric::from_json(report_benchmark_id, measure_id, metric);
-            diesel::insert_into(schema::metric::table)
-                .values(&insert_metric)
-                .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(Metric, insert_metric))?;
-
-            #[cfg(feature = "plus")]
-            {
-                // Increment usage count
-                *usage += 1;
-            }
-
-            let Some(detector) = self.detector(context, measure_id).await? else {
-                continue;
+            // Pre-compute detection if a detector exists for this measure
+            let detection = if let Some(detector) = self.detector(context, measure_id).await? {
+                Some(detector.prepare_detection(
+                    log,
+                    auth_conn!(context),
+                    benchmark_id,
+                    metric.value.into(),
+                    ignore_benchmark,
+                )?)
+            } else {
+                None
             };
-            let query_metric = QueryMetric::from_uuid(auth_conn!(context), insert_metric.uuid).map_err(|e| {
-                    issue_error(
-                        "Failed to find metric",
-                        &format!("Failed to find new metric ({insert_metric:?}) for report benchmark ({insert_report_benchmark:?}) even though it was just created."),
-                        e,
-                    )
-                })?;
-            detector
-                .detect(log, context, benchmark_id, &query_metric, ignore_benchmark)
-                .await?;
+
+            prepared_metrics.push(PreparedMetric {
+                measure_id,
+                metric,
+                detection,
+            });
         }
 
-        Ok(())
+        Ok(PreparedBenchmark {
+            insert_report_benchmark,
+            metrics: prepared_metrics,
+        })
     }
 
     async fn benchmark_id(
@@ -250,6 +289,19 @@ impl ReportResults {
     }
 }
 
+/// Pre-computed data for a single benchmark within a report iteration.
+struct PreparedBenchmark {
+    insert_report_benchmark: InsertReportBenchmark,
+    metrics: Vec<PreparedMetric>,
+}
+
+/// Pre-computed data for a single metric within a benchmark.
+struct PreparedMetric {
+    measure_id: MeasureId,
+    metric: JsonNewMetric,
+    detection: Option<PreparedDetection>,
+}
+
 fn strip_ignore_suffix(benchmark: BenchmarkNameId) -> (BenchmarkNameId, bool) {
     match benchmark {
         BenchmarkNameId::Uuid(uuid) => (BenchmarkNameId::Uuid(uuid), false),
@@ -271,5 +323,27 @@ fn strip_ignore_suffix(benchmark: BenchmarkNameId) -> (BenchmarkNameId, bool) {
             let (name, is_ignored) = name.strip_ignore();
             (BenchmarkNameId::Name(name), is_ignored)
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::strip_ignore_suffix;
+    use bencher_json::BenchmarkNameId;
+
+    #[test]
+    fn strip_ignore_suffix_with_suffix() {
+        let name: BenchmarkNameId = "my-bench-bencher-ignore".parse().unwrap();
+        let (stripped, is_ignored) = strip_ignore_suffix(name);
+        assert!(is_ignored);
+        assert_eq!(stripped.to_string(), "my-bench");
+    }
+
+    #[test]
+    fn strip_ignore_suffix_without_suffix() {
+        let name: BenchmarkNameId = "my-bench".parse().unwrap();
+        let (original, is_ignored) = strip_ignore_suffix(name);
+        assert!(!is_ignored);
+        assert_eq!(original.to_string(), "my-bench");
     }
 }

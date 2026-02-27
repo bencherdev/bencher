@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    DateTime, Model, ModelUuid, ThresholdUuid,
+    DateTime, Model, ThresholdUuid,
     project::{
         report::JsonReportThresholds,
         threshold::{JsonThreshold, JsonThresholdModel},
     },
 };
 use diesel::{
-    BelongingToDsl as _, ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _,
-    QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    BelongingToDsl as _, Connection as _, ExpressionMethods as _, JoinOnDsl as _,
+    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::HttpError;
 use model::UpdateModel;
@@ -25,11 +25,11 @@ use super::{
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
-    error::{
-        BencherResource, assert_parentage, assert_siblings, resource_conflict_err,
-        resource_not_found_err,
+    error::{BencherResource, assert_parentage, assert_siblings, resource_not_found_err},
+    macros::{
+        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        sql::last_insert_rowid,
     },
-    macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     schema::{self, threshold as threshold_table},
     write_conn,
 };
@@ -81,32 +81,49 @@ impl QueryThreshold {
         }
     }
 
+    /// Compare the current model (if any) with a new model and return the appropriate action.
+    fn compute_model_action(
+        conn: &mut DbConnection,
+        model_id: Option<ModelId>,
+        new_model: Option<Model>,
+    ) -> Result<ThresholdModelAction, HttpError> {
+        Ok(match (model_id, new_model) {
+            // No current model and no new model — nothing to do.
+            (None, None) => ThresholdModelAction::NoChange,
+            // No current model but a new model — insert it.
+            (None, Some(model)) => ThresholdModelAction::Update(model),
+            // Current model but no new model — remove it.
+            (Some(_), None) => ThresholdModelAction::Remove,
+            // Both present — update only if they differ.
+            (Some(model_id), Some(model)) => {
+                let current_model = QueryModel::get(conn, model_id)?.into_model();
+                if current_model == model {
+                    ThresholdModelAction::NoChange
+                } else {
+                    ThresholdModelAction::Update(model)
+                }
+            },
+        })
+    }
+
     pub async fn update_model_if_changed(
         &self,
         context: &ApiContext,
         model: Option<Model>,
     ) -> Result<(), HttpError> {
-        match (self.model_id, model) {
-            // No current model and no new model,
-            // nothing to do.
-            (None, None) => Ok(()),
-            // No current model but a new model,
-            // insert the new model.
-            (None, Some(model)) => self.update_from_model(context, model).await,
-            // Current model but no new model,
-            // remove the current model.
-            (Some(_), None) => self.remove_current_model(write_conn!(context)),
-            // Current model and new model,
-            // update the current if it has changed.
-            (Some(model_id), Some(model)) => {
-                let current_model = QueryModel::get(auth_conn!(context), model_id)?.into_model();
-                // Skip updating the model if it has not changed.
-                // This keeps us from needlessly replacing old models with identical new ones.
-                if current_model == model {
-                    Ok(())
-                } else {
-                    self.update_from_model(context, model).await
-                }
+        match Self::compute_model_action(auth_conn!(context), self.model_id, model)? {
+            ThresholdModelAction::NoChange => Ok(()),
+            ThresholdModelAction::Update(model) => self.update_from_model(context, model).await,
+            ThresholdModelAction::Remove => {
+                let conn = write_conn!(context);
+                conn.transaction(|conn| self.remove_current_model(conn))
+                    .map_err(|e| {
+                        crate::error::issue_error(
+                            "Failed to remove threshold model",
+                            "Failed to remove threshold model:",
+                            e,
+                        )
+                    })
             },
         }
     }
@@ -114,65 +131,63 @@ impl QueryThreshold {
     async fn update_from_model(&self, context: &ApiContext, model: Model) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]
         InsertModel::rate_limit(context, self).await?;
-        self.update_from_model_inner(write_conn!(context), model)
+        let conn = write_conn!(context);
+        conn.transaction(|conn| self.update_from_model_inner(conn, model))
+            .map_err(|e| {
+                crate::error::issue_error(
+                    "Failed to update threshold model",
+                    "Failed to update threshold model:",
+                    e,
+                )
+            })
     }
 
     fn update_from_model_inner(
         &self,
         conn: &mut DbConnection,
         model: Model,
-    ) -> Result<(), HttpError> {
+    ) -> diesel::QueryResult<()> {
         // Insert the new model
         let insert_model = InsertModel::new(self.id, model);
         diesel::insert_into(schema::model::table)
             .values(&insert_model)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Model, (self, &insert_model)))?;
+            .execute(conn)?;
 
-        // Update the current threshold to use the new model
-        let update_threshold = UpdateThreshold::new_model(conn, insert_model.uuid)?;
+        // Get the new model ID and update the threshold
+        let update_threshold = UpdateThreshold::new_model(conn)?;
         diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(self.id)))
             .set(&update_threshold)
-            .execute(conn)
-            .map_err(resource_conflict_err!(
-                Threshold,
-                (&self, &insert_model, &update_threshold)
-            ))?;
+            .execute(conn)?;
 
         self.update_replaced_model(conn, update_threshold.modified)
     }
 
-    pub fn remove_current_model(&self, conn: &mut DbConnection) -> Result<(), HttpError> {
+    fn remove_current_model(&self, conn: &mut DbConnection) -> diesel::QueryResult<()> {
         // Skip if there is no current model
         if self.model_id.is_none() {
             return Ok(());
         }
 
-        // Update the current threshold to remove the new model
+        // Update the current threshold to remove the current model
         let update_threshold = UpdateThreshold::remove_model();
         diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(self.id)))
             .set(&update_threshold)
-            .execute(conn)
-            .map_err(resource_conflict_err!(
-                Threshold,
-                (&self, &update_threshold)
-            ))?;
+            .execute(conn)?;
 
         self.update_replaced_model(conn, update_threshold.modified)
     }
 
-    pub fn update_replaced_model(
+    fn update_replaced_model(
         &self,
         conn: &mut DbConnection,
         date_time: DateTime,
-    ) -> Result<(), HttpError> {
+    ) -> diesel::QueryResult<()> {
         // Update the old model to be replaced, if there is one
         if let Some(model_id) = self.model_id {
             let update_model = UpdateModel::replaced_at(date_time);
             diesel::update(schema::model::table.filter(schema::model::id.eq(model_id)))
                 .set(&update_model)
-                .execute(conn)
-                .map_err(resource_conflict_err!(Model, (&self, &update_model)))?;
+                .execute(conn)?;
         }
         Ok(())
     }
@@ -283,6 +298,29 @@ pub struct InsertThreshold {
     pub modified: DateTime,
 }
 
+/// The result of comparing a threshold's current model with a new model.
+enum ThresholdModelAction {
+    /// The new model differs from the current one — update it.
+    Update(Model),
+    /// There is a current model but no new model — remove it.
+    Remove,
+    /// The model is unchanged (or both are `None`) — nothing to do.
+    NoChange,
+}
+
+enum StartPointAction {
+    Create(TestbedId, MeasureId, Model),
+    Update(QueryThreshold, Model),
+    Remove(QueryThreshold),
+    NoChange,
+}
+
+enum ThresholdAction {
+    Create(MeasureId, Model),
+    Update(QueryThreshold, Model),
+    NoChange,
+}
+
 impl InsertThreshold {
     #[cfg(feature = "plus")]
     crate::macros::rate_limit::fn_rate_limit!(threshold, Threshold);
@@ -316,14 +354,17 @@ impl InsertThreshold {
     ) -> Result<ThresholdId, HttpError> {
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
-        Self::from_model_inner(
-            write_conn!(context),
-            project_id,
-            branch_id,
-            testbed_id,
-            measure_id,
-            model,
-        )
+        let conn = write_conn!(context);
+        conn.transaction(|conn| {
+            Self::from_model_inner(conn, project_id, branch_id, testbed_id, measure_id, model)
+        })
+        .map_err(|e| {
+            crate::error::issue_error(
+                "Failed to create threshold from model",
+                "Failed to create threshold from model:",
+                e,
+            )
+        })
     }
 
     fn from_model_inner(
@@ -333,35 +374,27 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         measure_id: MeasureId,
         model: Model,
-    ) -> Result<ThresholdId, HttpError> {
+    ) -> diesel::QueryResult<ThresholdId> {
         // Create the new threshold
         let insert_threshold = InsertThreshold::new(project_id, branch_id, testbed_id, measure_id);
         diesel::insert_into(schema::threshold::table)
             .values(&insert_threshold)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Threshold, insert_threshold))?;
+            .execute(conn)?;
 
         // Get the new threshold ID
-        let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
+        let threshold_id = diesel::select(last_insert_rowid()).get_result::<ThresholdId>(conn)?;
 
         // Create the new model
         let insert_model = InsertModel::new(threshold_id, model);
         diesel::insert_into(schema::model::table)
             .values(&insert_model)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Model, insert_model))?;
+            .execute(conn)?;
 
-        // Get the new model ID
-        let model_id = QueryModel::get_id(conn, insert_model.uuid)?;
-
-        // Set the new model for the new threshold
+        // Get the new model ID and set it on the threshold
+        let model_id = diesel::select(last_insert_rowid()).get_result::<ModelId>(conn)?;
         diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
             .set(schema::threshold::model_id.eq(model_id))
-            .execute(conn)
-            .map_err(resource_conflict_err!(
-                Threshold,
-                (threshold_id, &insert_model)
-            ))?;
+            .execute(conn)?;
 
         Ok(threshold_id)
     }
@@ -373,14 +406,23 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::from_model_inner(
-            conn,
-            project_id,
-            branch_id,
-            testbed_id,
-            measure_id,
-            Model::lower_boundary(),
-        )
+        conn.transaction(|conn| {
+            Self::from_model_inner(
+                conn,
+                project_id,
+                branch_id,
+                testbed_id,
+                measure_id,
+                Model::lower_boundary(),
+            )
+        })
+        .map_err(|e| {
+            crate::error::issue_error(
+                "Failed to create lower boundary threshold",
+                "Failed to create lower boundary threshold:",
+                e,
+            )
+        })
     }
 
     pub fn upper_boundary(
@@ -390,14 +432,23 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::from_model_inner(
-            conn,
-            project_id,
-            branch_id,
-            testbed_id,
-            measure_id,
-            Model::upper_boundary(),
-        )
+        conn.transaction(|conn| {
+            Self::from_model_inner(
+                conn,
+                project_id,
+                branch_id,
+                testbed_id,
+                measure_id,
+                Model::upper_boundary(),
+            )
+        })
+        .map_err(|e| {
+            crate::error::issue_error(
+                "Failed to create upper boundary threshold",
+                "Failed to create upper boundary threshold:",
+                e,
+            )
+        })
     }
 
     pub async fn from_start_point(
@@ -422,6 +473,63 @@ impl InsertThreshold {
             branch_start_point.branch.project_id,
         );
 
+        // Phase 1: Read current and start point thresholds, pre-compute actions.
+        let (actions, orphans) =
+            Self::compute_start_point_actions(log, context, query_branch, branch_start_point)
+                .await?;
+
+        // Phase 2: Batch all writes in a single write lock + transaction.
+        let has_writes = actions
+            .iter()
+            .any(|a| !matches!(a, StartPointAction::NoChange))
+            || !orphans.is_empty();
+        if has_writes {
+            let project_id = query_branch.project_id;
+            let branch_id = query_branch.id;
+            let conn = write_conn!(context);
+            conn.transaction(|conn| {
+                for action in actions {
+                    match action {
+                        StartPointAction::Create(testbed_id, measure_id, model) => {
+                            InsertThreshold::from_model_inner(
+                                conn, project_id, branch_id, testbed_id, measure_id, model,
+                            )?;
+                        },
+                        StartPointAction::Update(threshold, model) => {
+                            threshold.update_from_model_inner(conn, model)?;
+                        },
+                        StartPointAction::Remove(threshold) => {
+                            threshold.remove_current_model(conn)?;
+                        },
+                        StartPointAction::NoChange => {},
+                    }
+                }
+                for threshold in orphans {
+                    threshold.remove_current_model(conn)?;
+                    slog::debug!(log, "Removed model from current threshold {threshold:?}",);
+                }
+                diesel::QueryResult::Ok(())
+            })
+            .map_err(|e| {
+                crate::error::issue_error(
+                    "Failed to sync start point thresholds",
+                    "Failed to sync start point thresholds in batch transaction:",
+                    e,
+                )
+            })?;
+        }
+
+        Ok(())
+    }
+
+    /// Phase 1 of start point sync: read thresholds and pre-compute actions.
+    /// Rate limit checks happen here, before the write transaction.
+    async fn compute_start_point_actions(
+        log: &Logger,
+        context: &ApiContext,
+        query_branch: &QueryBranch,
+        branch_start_point: &StartPoint,
+    ) -> Result<(Vec<StartPointAction>, Vec<QueryThreshold>), HttpError> {
         let mut current_thresholds = schema::threshold::table
             .filter(schema::threshold::branch_id.eq(query_branch.id))
             .load::<QueryThreshold>(auth_conn!(context))
@@ -435,7 +543,6 @@ impl InsertThreshold {
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
 
         // Fetch start point thresholds with their models in a single JOIN query
-        // This eliminates the N+1 query pattern where each threshold's model was fetched individually
         let start_point_thresholds = schema::threshold::table
             .left_join(
                 schema::model::table
@@ -461,87 +568,58 @@ impl InsertThreshold {
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Start point thresholds: {start_point_thresholds:?}");
 
-        Self::sync_thresholds_from_start_point(
-            log,
-            context,
-            query_branch,
-            start_point_thresholds,
-            &mut current_thresholds,
-        )
-        .await?;
-
-        slog::debug!(log, "Remaining current thresholds: {current_thresholds:?}");
-        for (_, current_threshold) in current_thresholds {
-            current_threshold.remove_current_model(write_conn!(context))?;
-            slog::debug!(
-                log,
-                "Removed model from current threshold {current_threshold:?}",
-            );
-        }
-
-        Ok(())
-    }
-
-    /// Sync thresholds from the start point branch to the current branch.
-    /// Updates existing thresholds or creates new ones as needed.
-    async fn sync_thresholds_from_start_point(
-        log: &Logger,
-        context: &ApiContext,
-        query_branch: &QueryBranch,
-        start_point_thresholds: HashMap<(TestbedId, MeasureId), (QueryThreshold, Option<Model>)>,
-        current_thresholds: &mut HashMap<(TestbedId, MeasureId), QueryThreshold>,
-    ) -> Result<(), HttpError> {
+        // Pre-compute actions using read connections
+        let auth_conn = auth_conn!(context);
+        let mut actions = Vec::new();
         for (
             (start_point_testbed_id, start_point_measure_id),
-            (start_point_threshold, start_point_model),
-        ) in start_point_thresholds
+            (_start_point_threshold, start_point_model),
+        ) in &start_point_thresholds
         {
-            slog::debug!(
-                log,
-                "Processing start point threshold ({start_point_threshold:?}) with model ({start_point_model:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
-            );
             if let Some(current_threshold) =
-                current_thresholds.remove(&(start_point_testbed_id, start_point_measure_id))
+                current_thresholds.remove(&(*start_point_testbed_id, *start_point_measure_id))
             {
-                slog::debug!(
-                    log,
-                    "Updating current threshold ({current_threshold:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
-                );
-                current_threshold
-                    .update_model_if_changed(context, start_point_model)
-                    .await?;
-                slog::debug!(
-                    log,
-                    "Updated current threshold ({current_threshold:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
-                );
-            } else if let Some(start_point_model) = start_point_model {
-                slog::debug!(
-                    log,
-                    "Creating new threshold from start point ({start_point_model:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
-                );
-                Self::from_model(
-                    context,
-                    query_branch.project_id,
-                    query_branch.id,
-                    start_point_testbed_id,
-                    start_point_measure_id,
-                    start_point_model,
-                )
-                .await?;
-                slog::debug!(
-                    log,
-                    "Created new threshold from start point ({start_point_model:?}) for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
-                );
+                match QueryThreshold::compute_model_action(
+                    auth_conn,
+                    current_threshold.model_id,
+                    *start_point_model,
+                )? {
+                    ThresholdModelAction::NoChange => {
+                        actions.push(StartPointAction::NoChange);
+                    },
+                    ThresholdModelAction::Update(model) => {
+                        #[cfg(feature = "plus")]
+                        InsertModel::rate_limit(context, &current_threshold).await?;
+                        actions.push(StartPointAction::Update(current_threshold, model));
+                    },
+                    ThresholdModelAction::Remove => {
+                        actions.push(StartPointAction::Remove(current_threshold));
+                    },
+                }
+            } else if let Some(model) = start_point_model {
+                #[cfg(feature = "plus")]
+                Self::rate_limit(context, query_branch.project_id).await?;
+                actions.push(StartPointAction::Create(
+                    *start_point_testbed_id,
+                    *start_point_measure_id,
+                    *model,
+                ));
             } else {
-                slog::debug!(
-                    log,
-                    "No model for start point threshold for testbed ({start_point_testbed_id}) and measure ({start_point_measure_id})"
-                );
+                actions.push(StartPointAction::NoChange);
             }
         }
-        Ok(())
+
+        // Remaining current thresholds are orphans to remove
+        let orphans: Vec<QueryThreshold> = current_thresholds.into_values().collect();
+        slog::debug!(log, "Orphan thresholds to remove: {orphans:?}");
+
+        Ok((actions, orphans))
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "Batch threshold processing with rate limiting"
+    )]
     pub async fn from_report_json(
         log: &Logger,
         context: &ApiContext,
@@ -567,7 +645,7 @@ impl InsertThreshold {
             return Ok(());
         }
 
-        // Get all thresholds for the report branch and testbed
+        // Get all thresholds for the report branch and testbed (read phase)
         let mut current_thresholds = schema::threshold::table
             .filter(schema::threshold::project_id.eq(project_id))
             .filter(schema::threshold::branch_id.eq(branch_id))
@@ -579,37 +657,89 @@ impl InsertThreshold {
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
 
-        // Iterate over the threshold models in the report.
-        // If the threshold does not exist, create it.
-        // If it does exist and has changed, update it.
+        // Phase 1: Pre-resolve all measure IDs (may trigger get_or_create writes)
+        // and read current model state.
+        let auth_conn = auth_conn!(context);
+        let mut actions = Vec::new();
         if let Some(models) = json_thresholds.models {
             for (measure, model) in models {
                 let measure_id = QueryMeasure::get_or_create(context, project_id, &measure).await?;
                 slog::debug!(log, "Processing threshold for measure {measure_id}");
                 if let Some(current_threshold) = current_thresholds.remove(&measure_id) {
-                    slog::debug!(log, "Updating threshold for measure {measure_id}");
-                    current_threshold
-                        .update_model_if_changed(context, Some(model))
-                        .await?;
-                    slog::debug!(log, "Updated threshold for measure {measure_id}");
+                    match QueryThreshold::compute_model_action(
+                        auth_conn,
+                        current_threshold.model_id,
+                        Some(model),
+                    )? {
+                        ThresholdModelAction::Update(model) => {
+                            #[cfg(feature = "plus")]
+                            InsertModel::rate_limit(context, &current_threshold).await?;
+                            slog::debug!(log, "Updating threshold for measure {measure_id}");
+                            actions.push(ThresholdAction::Update(current_threshold, model));
+                        },
+                        ThresholdModelAction::NoChange => {
+                            slog::debug!(log, "Model unchanged for measure {measure_id}");
+                            actions.push(ThresholdAction::NoChange);
+                        },
+                        // Cannot happen: we always pass Some(model) as new_model.
+                        ThresholdModelAction::Remove => {
+                            return Err(crate::error::issue_error(
+                                "Unexpected threshold model removal",
+                                "compute_model_action returned Remove with Some(model) input for measure:",
+                                measure_id,
+                            ));
+                        },
+                    }
                 } else {
                     slog::debug!(log, "Creating threshold for measure {measure_id}");
-                    Self::from_model(
-                        context, project_id, branch_id, testbed_id, measure_id, model,
-                    )
-                    .await?;
-                    slog::debug!(log, "Created threshold for measure {measure_id}");
+                    actions.push(ThresholdAction::Create(measure_id, model));
                 }
             }
         }
 
-        slog::debug!(log, "Remaining thresholds: {current_thresholds:?}");
-        // If the reset flag is set, remove any thresholds that were not in the report
-        if reset_thresholds {
-            for (_, current_threshold) in current_thresholds {
-                current_threshold.remove_current_model(write_conn!(context))?;
-                slog::debug!(log, "Removed model from threshold {current_threshold:?}");
-            }
+        // Collect orphan thresholds to reset
+        let orphans: Vec<QueryThreshold> = if reset_thresholds {
+            current_thresholds.into_values().collect()
+        } else {
+            Vec::new()
+        };
+
+        // Phase 2: Batch all threshold writes in a single write lock acquisition
+        // wrapped in a transaction for atomicity.
+        // Skip if there's nothing to write.
+        let has_writes = actions
+            .iter()
+            .any(|a| !matches!(a, ThresholdAction::NoChange))
+            || !orphans.is_empty();
+        if has_writes {
+            let conn = write_conn!(context);
+            conn.transaction(|conn| {
+                for action in actions {
+                    match action {
+                        ThresholdAction::Create(measure_id, model) => {
+                            InsertThreshold::from_model_inner(
+                                conn, project_id, branch_id, testbed_id, measure_id, model,
+                            )?;
+                        },
+                        ThresholdAction::Update(threshold, model) => {
+                            threshold.update_from_model_inner(conn, model)?;
+                        },
+                        ThresholdAction::NoChange => {},
+                    }
+                }
+                for threshold in orphans {
+                    threshold.remove_current_model(conn)?;
+                    slog::debug!(log, "Removed model from threshold {threshold:?}");
+                }
+                diesel::QueryResult::Ok(())
+            })
+            .map_err(|e| {
+                crate::error::issue_error(
+                    "Failed to write report thresholds",
+                    "Failed to write report thresholds in batch transaction:",
+                    e,
+                )
+            })?;
         }
 
         Ok(())
@@ -624,9 +754,16 @@ pub struct UpdateThreshold {
 }
 
 impl UpdateThreshold {
-    pub fn new_model(conn: &mut DbConnection, model_uuid: ModelUuid) -> Result<Self, HttpError> {
+    /// Create an `UpdateThreshold` that sets the `model_id` to the most recently inserted model.
+    ///
+    /// # Precondition
+    /// Must be called immediately after an `INSERT INTO model` on the same connection,
+    /// within the same transaction. Uses `last_insert_rowid()` to retrieve the model ID.
+    pub fn new_model(conn: &mut DbConnection) -> diesel::QueryResult<Self> {
         Ok(Self {
-            model_id: Some(Some(QueryModel::get_id(conn, model_uuid)?)),
+            model_id: Some(Some(
+                diesel::select(last_insert_rowid()).get_result::<ModelId>(conn)?,
+            )),
             modified: DateTime::now(),
         })
     }
@@ -657,7 +794,8 @@ mod tests {
         },
     };
 
-    use super::{QueryThreshold, UpdateThreshold};
+    use super::{QueryThreshold, ThresholdId, UpdateThreshold, model::ModelId};
+    use crate::model::project::{measure::MeasureId, testbed::TestbedId};
 
     /// Test that thresholds can be queried by `branch_id`.
     /// This is the foundation of threshold cloning.
@@ -883,14 +1021,14 @@ mod tests {
         );
 
         // Query and collect into HashMap like from_start_point does
-        let thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
+        let thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> = schema::threshold::table
             .filter(schema::threshold::branch_id.eq(branch.branch_id))
             .select((
                 schema::threshold::testbed_id,
                 schema::threshold::measure_id,
                 schema::threshold::id,
             ))
-            .load::<(i32, i32, i32)>(&mut conn)
+            .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
             .expect("Failed to query")
             .into_iter()
             .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
@@ -983,32 +1121,34 @@ mod tests {
         );
 
         // Collect source thresholds
-        let source_thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(source.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-            ))
-            .load::<(i32, i32, i32)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
-            .collect();
+        let source_thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(source.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
+                .collect();
 
         // Collect dest thresholds
-        let mut dest_thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(dest.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-            ))
-            .load::<(i32, i32, i32)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
-            .collect();
+        let mut dest_thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(dest.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
+                .collect();
 
         assert_eq!(source_thresholds.len(), 2);
         assert_eq!(dest_thresholds.len(), 1);
@@ -1112,32 +1252,34 @@ mod tests {
         );
 
         // Collect source thresholds
-        let source_thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(source.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-            ))
-            .load::<(i32, i32, i32)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
-            .collect();
+        let source_thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(source.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
+                .collect();
 
         // Collect dest thresholds
-        let mut dest_thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(dest.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-            ))
-            .load::<(i32, i32, i32)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
-            .collect();
+        let mut dest_thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(dest.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(testbed_id, measure_id, id)| ((testbed_id, measure_id), id))
+                .collect();
 
         // Process source thresholds (removes matching from dest)
         for (testbed_id, measure_id) in source_thresholds.keys() {
@@ -1199,11 +1341,10 @@ mod tests {
             .first(&mut conn)
             .expect("Failed to query threshold");
 
-        // Use i32::from() to extract values from typed IDs
-        assert_eq!(i32::from(threshold.project_id), base.project_id);
-        assert_eq!(i32::from(threshold.branch_id), branch.branch_id);
-        assert_eq!(i32::from(threshold.testbed_id), testbed);
-        assert_eq!(i32::from(threshold.measure_id), measure);
+        assert_eq!(threshold.project_id, base.project_id);
+        assert_eq!(threshold.branch_id, branch.branch_id);
+        assert_eq!(threshold.testbed_id, testbed);
+        assert_eq!(threshold.measure_id, measure);
         assert!(threshold.model_id.is_none());
     }
 
@@ -1333,7 +1474,7 @@ mod tests {
 
         // Use LEFT JOIN to get thresholds with optional models
 
-        let results: Vec<(i32, Option<i32>)> = schema::threshold::table
+        let results: Vec<(ThresholdId, Option<ModelId>)> = schema::threshold::table
             .left_join(
                 schema::model::table
                     .on(schema::model::id.nullable().eq(schema::threshold::model_id)),
@@ -1417,7 +1558,7 @@ mod tests {
 
         // Use LEFT JOIN to fetch all at once
 
-        let results: Vec<(i32, Option<i32>)> = schema::threshold::table
+        let results: Vec<(ThresholdId, Option<ModelId>)> = schema::threshold::table
             .left_join(
                 schema::model::table
                     .on(schema::model::id.nullable().eq(schema::threshold::model_id)),
@@ -1573,32 +1714,34 @@ mod tests {
         );
 
         // Simulate from_start_point logic
-        let source_thresholds: HashMap<(i32, i32), (i32, Option<i32>)> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(source.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-                schema::threshold::model_id,
-            ))
-            .load::<(i32, i32, i32, Option<i32>)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(t, m, id, model)| ((t, m), (id, model)))
-            .collect();
+        let source_thresholds: HashMap<(TestbedId, MeasureId), (ThresholdId, Option<ModelId>)> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(source.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                    schema::threshold::model_id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId, Option<ModelId>)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(t, m, id, model)| ((t, m), (id, model)))
+                .collect();
 
-        let mut current_thresholds: HashMap<(i32, i32), i32> = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(current.branch_id))
-            .select((
-                schema::threshold::testbed_id,
-                schema::threshold::measure_id,
-                schema::threshold::id,
-            ))
-            .load::<(i32, i32, i32)>(&mut conn)
-            .expect("Failed to query")
-            .into_iter()
-            .map(|(t, m, id)| ((t, m), id))
-            .collect();
+        let mut current_thresholds: HashMap<(TestbedId, MeasureId), ThresholdId> =
+            schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(current.branch_id))
+                .select((
+                    schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::id,
+                ))
+                .load::<(TestbedId, MeasureId, ThresholdId)>(&mut conn)
+                .expect("Failed to query")
+                .into_iter()
+                .map(|(t, m, id)| ((t, m), id))
+                .collect();
 
         assert_eq!(source_thresholds.len(), 2);
         assert_eq!(current_thresholds.len(), 2);
@@ -1761,7 +1904,7 @@ mod tests {
 
         // Verify all have models using JOIN query
 
-        let results: Vec<(i32, Option<i32>)> = schema::threshold::table
+        let results: Vec<(ThresholdId, Option<ModelId>)> = schema::threshold::table
             .left_join(
                 schema::model::table
                     .on(schema::model::id.nullable().eq(schema::threshold::model_id)),

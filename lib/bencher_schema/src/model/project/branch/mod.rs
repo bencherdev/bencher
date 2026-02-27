@@ -3,7 +3,8 @@ use bencher_json::{
     project::branch::{JsonUpdateBranch, JsonUpdateStartPoint},
 };
 use diesel::{
-    ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    Connection as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _,
+    SelectableHelper as _,
 };
 use dropshot::HttpError;
 use slog::Logger;
@@ -22,6 +23,7 @@ use crate::{
         name_id::{fn_eq_name_id, fn_from_name_id},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
+        sql::last_insert_rowid,
     },
     schema::{self, branch as branch_table},
     write_conn,
@@ -370,18 +372,18 @@ impl InsertBranch {
 
         // Create branch
         let insert_branch = Self::from_json_inner(auth_conn!(context), project_id, name, slug);
-        diesel::insert_into(schema::branch::table)
-            .values(&insert_branch)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Branch, insert_branch))?;
-        slog::debug!(log, "Created branch {insert_branch:?}");
-
-        // Get the new branch
-        let query_branch = schema::branch::table
-            .filter(schema::branch::uuid.eq(&insert_branch.uuid))
-            .first::<QueryBranch>(auth_conn!(context))
-            .map_err(resource_not_found_err!(Branch, insert_branch))?;
-        slog::debug!(log, "Got branch {query_branch:?}");
+        let query_branch = {
+            let conn = write_conn!(context);
+            conn.transaction(|conn| {
+                diesel::insert_into(schema::branch::table)
+                    .values(&insert_branch)
+                    .execute(conn)?;
+                diesel::select(last_insert_rowid()).get_result(conn)
+            })
+            .map_err(resource_conflict_err!(Branch, &insert_branch))
+            .map(|id| insert_branch.into_query(id))?
+        };
+        slog::debug!(log, "Created branch {query_branch:?}");
 
         // Get the branch head version for the start point
         let branch_start_point = if let Some(start_point) = start_point {
@@ -396,6 +398,35 @@ impl InsertBranch {
         slog::debug!(log, "Using start point {branch_start_point:?}");
 
         InsertHead::for_branch(log, context, query_branch, branch_start_point.as_ref()).await
+    }
+
+    /// Convert into a [`QueryBranch`] using the given ID.
+    ///
+    /// Note: The returned `QueryBranch` has `head_id: None` because the head
+    /// is created separately via [`InsertHead::for_branch`] after the branch insert.
+    /// Callers should re-read the branch after the full transaction to get the final `head_id`.
+    pub fn into_query(self, id: BranchId) -> QueryBranch {
+        let Self {
+            uuid,
+            project_id,
+            name,
+            slug,
+            head_id,
+            created,
+            modified,
+            archived,
+        } = self;
+        QueryBranch {
+            id,
+            uuid,
+            project_id,
+            name,
+            slug,
+            head_id,
+            created,
+            modified,
+            archived,
+        }
     }
 
     fn from_json_inner(
@@ -466,5 +497,104 @@ impl UpdateBranch {
             archived: Some(false),
         }
         .into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    use bencher_json::DateTime;
+
+    use super::BranchId;
+    use crate::{
+        macros::sql::last_insert_rowid,
+        schema,
+        test_util::{create_base_entities, setup_test_db},
+    };
+
+    #[test]
+    fn last_insert_rowid_returns_branch_id() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let uuid = "00000000-0000-0000-0000-000000000010";
+
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::branch::table)
+                    .values((
+                        schema::branch::uuid.eq(uuid),
+                        schema::branch::project_id.eq(base.project_id),
+                        schema::branch::name.eq("Branch 1"),
+                        schema::branch::slug.eq("branch-1"),
+                        schema::branch::created.eq(DateTime::TEST),
+                        schema::branch::modified.eq(DateTime::TEST),
+                    ))
+                    .execute(conn)?;
+
+                let rowid = diesel::select(last_insert_rowid()).get_result::<BranchId>(conn)?;
+                let select_id: BranchId = schema::branch::table
+                    .filter(schema::branch::uuid.eq(uuid))
+                    .select(schema::branch::id)
+                    .first(conn)?;
+
+                diesel::QueryResult::Ok((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(rowid, select_id);
+    }
+
+    #[test]
+    fn last_insert_rowid_matches_second_branch() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        // Insert first
+        diesel::insert_into(schema::branch::table)
+            .values((
+                schema::branch::uuid.eq("00000000-0000-0000-0000-000000000010"),
+                schema::branch::project_id.eq(base.project_id),
+                schema::branch::name.eq("Branch 1"),
+                schema::branch::slug.eq("branch-1"),
+                schema::branch::created.eq(DateTime::TEST),
+                schema::branch::modified.eq(DateTime::TEST),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert first branch");
+
+        // Insert second + verify
+        let second_uuid = "00000000-0000-0000-0000-000000000011";
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::branch::table)
+                    .values((
+                        schema::branch::uuid.eq(second_uuid),
+                        schema::branch::project_id.eq(base.project_id),
+                        schema::branch::name.eq("Branch 2"),
+                        schema::branch::slug.eq("branch-2"),
+                        schema::branch::created.eq(DateTime::TEST),
+                        schema::branch::modified.eq(DateTime::TEST),
+                    ))
+                    .execute(conn)?;
+
+                let rowid = diesel::select(last_insert_rowid()).get_result::<BranchId>(conn)?;
+                let select_id: BranchId = schema::branch::table
+                    .filter(schema::branch::uuid.eq(second_uuid))
+                    .select(schema::branch::id)
+                    .first(conn)?;
+
+                diesel::QueryResult::Ok((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(rowid, select_id);
+
+        let first_id: BranchId = schema::branch::table
+            .filter(schema::branch::uuid.eq("00000000-0000-0000-0000-000000000010"))
+            .select(schema::branch::id)
+            .first(&mut conn)
+            .expect("Failed to get first branch id");
+        assert_ne!(rowid, first_id);
     }
 }

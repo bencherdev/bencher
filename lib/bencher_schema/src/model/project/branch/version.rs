@@ -2,11 +2,17 @@ use bencher_json::{
     GitHash, VersionUuid,
     project::head::{JsonVersion, VersionNumber},
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, result::QueryResult};
+use diesel::{
+    ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
+    result::QueryResult,
+};
 
 use crate::{
     context::DbConnection,
-    macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
+    macros::{
+        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        sql::last_insert_rowid,
+    },
     schema,
     schema::version as version_table,
 };
@@ -33,32 +39,23 @@ impl QueryVersion {
     fn_get_id!(version, VersionId, VersionUuid);
     fn_get_uuid!(version, VersionId, VersionUuid);
 
-    pub fn get_or_increment(
+    /// Read-only lookup: find an existing version by git hash for the given branch head.
+    /// Used outside the write transaction to avoid holding the write lock for read-only queries.
+    pub fn find_by_hash(
         conn: &mut DbConnection,
         project_id: ProjectId,
         head_id: HeadId,
-        hash: Option<&GitHash>,
-    ) -> QueryResult<VersionId> {
-        if let Some(hash) = hash {
-            // We need to join directly back to the report.
-            // This ensures that we are only looking for code versions for the current branch head that generated the report.
-            // That is, we do not want to use the exact same code version for a branch head that was later used us as a start point.
-            if let Ok(version_id) = schema::version::table
-                .inner_join(schema::report::table)
-                .filter(schema::report::head_id.eq(head_id))
-                .filter(schema::version::project_id.eq(project_id))
-                .filter(schema::version::hash.eq(hash.as_ref()))
-                .order(schema::version::number.desc())
-                .select(schema::version::id)
-                .first::<VersionId>(conn)
-            {
-                Ok(version_id)
-            } else {
-                InsertVersion::increment(conn, project_id, head_id, Some(hash.clone()))
-            }
-        } else {
-            InsertVersion::increment(conn, project_id, head_id, None)
-        }
+        hash: &GitHash,
+    ) -> QueryResult<Option<VersionId>> {
+        schema::version::table
+            .inner_join(schema::report::table)
+            .filter(schema::report::head_id.eq(head_id))
+            .filter(schema::version::project_id.eq(project_id))
+            .filter(schema::version::hash.eq(hash.as_ref()))
+            .order(schema::version::number.desc())
+            .select(schema::version::id)
+            .first::<VersionId>(conn)
+            .optional()
     }
 
     pub fn into_json(self) -> JsonVersion {
@@ -77,7 +74,8 @@ pub struct InsertVersion {
 }
 
 impl InsertVersion {
-    fn increment(
+    // Must be called within a transaction — uses `last_insert_rowid()`.
+    pub(crate) fn increment(
         conn: &mut DbConnection,
         project_id: ProjectId,
         head_id: HeadId,
@@ -111,10 +109,7 @@ impl InsertVersion {
             .values(&insert_version)
             .execute(conn)?;
 
-        let version_id = schema::version::table
-            .filter(schema::version::uuid.eq(version_uuid))
-            .select(schema::version::id)
-            .first::<VersionId>(conn)?;
+        let version_id = diesel::select(last_insert_rowid()).get_result::<VersionId>(conn)?;
 
         let insert_head_version = InsertHeadVersion {
             head_id,
@@ -126,5 +121,348 @@ impl InsertVersion {
             .execute(conn)?;
 
         Ok(version_id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        schema,
+        test_util::{
+            create_base_entities, create_branch_with_head, create_head_version, create_report,
+            create_testbed, create_version, setup_test_db,
+        },
+    };
+
+    use super::QueryVersion;
+
+    #[test]
+    fn find_by_hash_returns_existing_version() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+        let version_id = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            0,
+            Some("1234567890abcdef1234567890abcdef12345678"),
+        );
+        create_head_version(&mut conn, branch.head_id, version_id);
+
+        // Create a report that references this head + version
+        create_report(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000050",
+            base.project_id,
+            branch.head_id,
+            version_id,
+            testbed_id,
+        );
+
+        let hash: bencher_json::GitHash = "1234567890abcdef1234567890abcdef12345678"
+            .parse()
+            .expect("valid hash");
+        let result = QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash);
+        assert_eq!(result.unwrap(), Some(version_id));
+    }
+
+    #[test]
+    fn find_by_hash_returns_none_for_missing_hash() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+
+        let hash: bencher_json::GitHash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            .parse()
+            .expect("valid hash");
+        let result = QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn find_by_hash_isolates_by_head() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch_a = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "branch-a",
+            "branch-a",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let branch_b = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000011",
+            "branch-b",
+            "branch-b",
+            "00000000-0000-0000-0000-000000000021",
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+        let version_id = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            0,
+            Some("1234567890abcdef1234567890abcdef12345678"),
+        );
+        create_head_version(&mut conn, branch_a.head_id, version_id);
+
+        // Report is on branch_a's head
+        create_report(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000050",
+            base.project_id,
+            branch_a.head_id,
+            version_id,
+            testbed_id,
+        );
+
+        let hash: bencher_json::GitHash = "1234567890abcdef1234567890abcdef12345678"
+            .parse()
+            .expect("valid hash");
+
+        // Should find on branch_a's head
+        let result =
+            QueryVersion::find_by_hash(&mut conn, base.project_id, branch_a.head_id, &hash);
+        assert_eq!(result.unwrap(), Some(version_id));
+
+        // Should NOT find on branch_b's head (no report there)
+        let result =
+            QueryVersion::find_by_hash(&mut conn, base.project_id, branch_b.head_id, &hash);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn find_by_hash_returns_latest_version_number() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+
+        // Create two versions with the same hash but different version numbers
+        let version_old = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            0,
+            Some("1234567890abcdef1234567890abcdef12345678"),
+        );
+        create_head_version(&mut conn, branch.head_id, version_old);
+        create_report(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000050",
+            base.project_id,
+            branch.head_id,
+            version_old,
+            testbed_id,
+        );
+
+        let version_new = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000041",
+            1,
+            Some("1234567890abcdef1234567890abcdef12345678"),
+        );
+        create_head_version(&mut conn, branch.head_id, version_new);
+        create_report(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000051",
+            base.project_id,
+            branch.head_id,
+            version_new,
+            testbed_id,
+        );
+
+        let hash: bencher_json::GitHash = "1234567890abcdef1234567890abcdef12345678"
+            .parse()
+            .expect("valid hash");
+        let result = QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash);
+        // Should return the version with the highest number (most recent)
+        assert_eq!(result.unwrap(), Some(version_new));
+    }
+
+    #[test]
+    fn find_by_hash_returns_latest_by_number_not_insertion_order() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+
+        // Insert version with higher number FIRST
+        let version_high = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            5,
+            Some("1234567890abcdef1234567890abcdef12345678"),
+        );
+        create_head_version(&mut conn, branch.head_id, version_high);
+        create_report(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000050",
+            base.project_id,
+            branch.head_id,
+            version_high,
+            testbed_id,
+        );
+
+        // Insert version with lower number SECOND
+        let version_low = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000041",
+            2,
+            Some("1234567890abcdef1234567890abcdef12345678"),
+        );
+        create_head_version(&mut conn, branch.head_id, version_low);
+        create_report(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000051",
+            base.project_id,
+            branch.head_id,
+            version_low,
+            testbed_id,
+        );
+
+        let hash: bencher_json::GitHash = "1234567890abcdef1234567890abcdef12345678"
+            .parse()
+            .expect("valid hash");
+        let result = QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash);
+        // Should return the version with the highest number (5), not the last-inserted one (2)
+        assert_eq!(result.unwrap(), Some(version_high));
+    }
+
+    #[test]
+    fn increment_creates_first_version() {
+        use bencher_json::project::head::VersionNumber;
+        use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+
+        let version_id = conn
+            .transaction(|conn| {
+                super::InsertVersion::increment(conn, base.project_id, branch.head_id, None)
+            })
+            .expect("Failed to increment version");
+
+        // Verify version number is 0 (default for first version)
+        let number: VersionNumber = schema::version::table
+            .filter(schema::version::id.eq(version_id))
+            .select(schema::version::number)
+            .first(&mut conn)
+            .expect("Failed to get version number");
+        assert_eq!(number, VersionNumber::default());
+
+        // Verify head_version row exists
+        let hv_count: i64 = schema::head_version::table
+            .filter(schema::head_version::head_id.eq(branch.head_id))
+            .filter(schema::head_version::version_id.eq(version_id))
+            .count()
+            .get_result(&mut conn)
+            .expect("Failed to count head_versions");
+        assert_eq!(hv_count, 1);
+    }
+
+    #[test]
+    fn increment_increments_version_number() {
+        use bencher_json::project::head::VersionNumber;
+        use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+
+        // First increment — version number should be 0
+        conn.transaction(|conn| {
+            super::InsertVersion::increment(conn, base.project_id, branch.head_id, None)
+        })
+        .expect("Failed to increment first version");
+
+        // Second increment — version number should be 1
+        let version_id = conn
+            .transaction(|conn| {
+                super::InsertVersion::increment(conn, base.project_id, branch.head_id, None)
+            })
+            .expect("Failed to increment second version");
+
+        let number: VersionNumber = schema::version::table
+            .filter(schema::version::id.eq(version_id))
+            .select(schema::version::number)
+            .first(&mut conn)
+            .expect("Failed to get version number");
+        assert_eq!(number, VersionNumber::default().increment());
     }
 }

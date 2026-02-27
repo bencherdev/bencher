@@ -13,7 +13,7 @@ use bencher_json::{
 use bencher_rbac::{Organization, organization::Permission};
 #[cfg(feature = "plus")]
 use diesel::BelongingToDsl as _;
-use diesel::{ExpressionMethods as _, QueryDsl as _, Queryable, RunQueryDsl as _};
+use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, Queryable, RunQueryDsl as _};
 use dropshot::HttpError;
 use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 #[cfg(feature = "plus")]
@@ -31,6 +31,7 @@ use crate::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
+        sql::last_insert_rowid,
     },
     model::user::auth::AuthUser,
     public_conn, resource_conflict_err, resource_not_found_err,
@@ -121,7 +122,7 @@ impl QueryOrganization {
 
         let insert_organization =
             InsertOrganization::new(project_name.clone(), project_slug.clone().into());
-        Self::create_inner(context, insert_organization).await
+        Self::create_from_project(context, insert_organization).await
     }
 
     pub async fn create(
@@ -133,43 +134,64 @@ impl QueryOrganization {
         context
             .rate_limiting
             .create_organization(auth_user.user.uuid)?;
-        let query_organization = Self::create_inner(context, insert_organization).await?;
 
         let timestamp = DateTime::now();
-        // Connect the user to the organization as a `Leader`
-        let insert_org_role = InsertOrganizationRole {
-            user_id: auth_user.id,
-            organization_id: query_organization.id,
-            role: OrganizationRole::Leader,
-            created: timestamp,
-            modified: timestamp,
+        let user_id = auth_user.id;
+
+        let query_organization = {
+            let conn = write_conn!(context);
+            conn.transaction(|conn| {
+                let id = Self::insert(conn, &insert_organization)?;
+
+                // Connect the user to the organization as a `Leader`
+                let insert_org_role = InsertOrganizationRole {
+                    user_id,
+                    organization_id: id,
+                    role: OrganizationRole::Leader,
+                    created: timestamp,
+                    modified: timestamp,
+                };
+                diesel::insert_into(schema::organization_role::table)
+                    .values(&insert_org_role)
+                    .execute(conn)?;
+
+                diesel::QueryResult::Ok(id)
+            })
+            .map_err(resource_conflict_err!(Organization, &insert_organization))
+            .map(|id| insert_organization.into_query(id))?
         };
-        diesel::insert_into(schema::organization_role::table)
-            .values(&insert_org_role)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
-
-        Ok(query_organization)
-    }
-
-    async fn create_inner(
-        context: &ApiContext,
-        insert_organization: InsertOrganization,
-    ) -> Result<Self, HttpError> {
-        diesel::insert_into(schema::organization::table)
-            .values(&insert_organization)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Organization, insert_organization))?;
-
-        let query_organization = schema::organization::table
-            .filter(schema::organization::uuid.eq(&insert_organization.uuid))
-            .first::<QueryOrganization>(auth_conn!(context))
-            .map_err(resource_not_found_err!(Organization, insert_organization))?;
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
 
         Ok(query_organization)
+    }
+
+    async fn create_from_project(
+        context: &ApiContext,
+        insert_organization: InsertOrganization,
+    ) -> Result<Self, HttpError> {
+        let query_organization = {
+            let conn = write_conn!(context);
+            conn.transaction(|conn| Self::insert(conn, &insert_organization))
+                .map_err(resource_conflict_err!(Organization, &insert_organization))
+                .map(|id| insert_organization.into_query(id))?
+        };
+
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
+
+        Ok(query_organization)
+    }
+
+    fn insert(
+        conn: &mut DbConnection,
+        insert_organization: &InsertOrganization,
+    ) -> diesel::QueryResult<OrganizationId> {
+        diesel::insert_into(schema::organization::table)
+            .values(insert_organization)
+            .execute(conn)?;
+        diesel::select(last_insert_rowid()).get_result(conn)
     }
 
     pub fn is_allowed_resource_id(
@@ -506,6 +528,26 @@ impl InsertOrganization {
         }
     }
 
+    pub fn into_query(self, id: OrganizationId) -> QueryOrganization {
+        let Self {
+            uuid,
+            name,
+            slug,
+            created,
+            modified,
+        } = self;
+        QueryOrganization {
+            id,
+            uuid,
+            name,
+            slug,
+            license: None,
+            created,
+            modified,
+            deleted: None,
+        }
+    }
+
     pub fn from_json(conn: &mut DbConnection, organization: JsonNewOrganization) -> Self {
         let JsonNewOrganization { name, slug } = organization;
         let slug = ok_slug!(conn, &name, slug, organization, QueryOrganization);
@@ -588,5 +630,97 @@ impl From<&QueryOrganization> for Organization {
         Organization {
             id: organization.id.to_string(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    use bencher_json::DateTime;
+
+    use super::OrganizationId;
+    use crate::{macros::sql::last_insert_rowid, schema, test_util::setup_test_db};
+
+    #[test]
+    fn last_insert_rowid_returns_organization_id() {
+        let mut conn = setup_test_db();
+        let uuid = "00000000-0000-0000-0000-000000000010";
+
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::organization::table)
+                    .values((
+                        schema::organization::uuid.eq(uuid),
+                        schema::organization::name.eq("Org 1"),
+                        schema::organization::slug.eq("org-1"),
+                        schema::organization::created.eq(DateTime::TEST),
+                        schema::organization::modified.eq(DateTime::TEST),
+                    ))
+                    .execute(conn)?;
+
+                let rowid =
+                    diesel::select(last_insert_rowid()).get_result::<OrganizationId>(conn)?;
+                let select_id: OrganizationId = schema::organization::table
+                    .filter(schema::organization::uuid.eq(uuid))
+                    .select(schema::organization::id)
+                    .first(conn)?;
+
+                diesel::QueryResult::Ok((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(rowid, select_id);
+    }
+
+    #[test]
+    fn last_insert_rowid_matches_second_organization() {
+        let mut conn = setup_test_db();
+
+        // Insert first
+        diesel::insert_into(schema::organization::table)
+            .values((
+                schema::organization::uuid.eq("00000000-0000-0000-0000-000000000010"),
+                schema::organization::name.eq("Org 1"),
+                schema::organization::slug.eq("org-1"),
+                schema::organization::created.eq(DateTime::TEST),
+                schema::organization::modified.eq(DateTime::TEST),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert first organization");
+
+        // Insert second + verify
+        let second_uuid = "00000000-0000-0000-0000-000000000011";
+        let (rowid, select_id) = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::organization::table)
+                    .values((
+                        schema::organization::uuid.eq(second_uuid),
+                        schema::organization::name.eq("Org 2"),
+                        schema::organization::slug.eq("org-2"),
+                        schema::organization::created.eq(DateTime::TEST),
+                        schema::organization::modified.eq(DateTime::TEST),
+                    ))
+                    .execute(conn)?;
+
+                let rowid =
+                    diesel::select(last_insert_rowid()).get_result::<OrganizationId>(conn)?;
+                let select_id: OrganizationId = schema::organization::table
+                    .filter(schema::organization::uuid.eq(second_uuid))
+                    .select(schema::organization::id)
+                    .first(conn)?;
+
+                diesel::QueryResult::Ok((rowid, select_id))
+            })
+            .expect("Transaction failed");
+
+        assert_eq!(rowid, select_id);
+
+        let first_id: OrganizationId = schema::organization::table
+            .filter(schema::organization::uuid.eq("00000000-0000-0000-0000-000000000010"))
+            .select(schema::organization::id)
+            .first(&mut conn)
+            .expect("Failed to get first organization id");
+        assert_ne!(rowid, first_id);
     }
 }

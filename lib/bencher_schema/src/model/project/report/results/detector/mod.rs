@@ -1,27 +1,25 @@
 use bencher_boundary::MetricsBoundary;
 use bencher_json::BoundaryUuid;
-use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
 
 use crate::model::spec::SpecId;
 use crate::{
-    auth_conn,
-    context::{ApiContext, DbConnection},
-    error::{bad_request_error, resource_conflict_err},
+    context::DbConnection,
+    error::bad_request_error,
     model::project::{
         benchmark::BenchmarkId,
         branch::{BranchId, head::HeadId},
         measure::MeasureId,
-        metric::QueryMetric,
         testbed::TestbedId,
-        threshold::{alert::InsertAlert, boundary::InsertBoundary},
     },
-    schema, write_conn,
 };
 
 pub mod data;
+mod prepared;
 pub mod threshold;
+
+pub use prepared::PreparedDetection;
 
 use data::metrics_data;
 use threshold::Threshold;
@@ -55,21 +53,23 @@ impl Detector {
         })
     }
 
-    pub async fn detect(
+    /// Phase 1: Read historical data and compute the boundary.
+    /// Returns a `PreparedDetection` that can be written in Phase 2.
+    pub fn prepare_detection(
         &self,
         log: &Logger,
-        context: &ApiContext,
+        conn: &mut DbConnection,
         benchmark_id: BenchmarkId,
-        query_metric: &QueryMetric,
+        metric_value: f64,
         ignore_benchmark: bool,
-    ) -> Result<(), HttpError> {
+    ) -> Result<PreparedDetection, HttpError> {
         // Query the historical population/sample data for the benchmark
-        let metrics_data = metrics_data(log, auth_conn!(context), self, benchmark_id)?;
+        let metrics_data = metrics_data(log, conn, self, benchmark_id)?;
 
         // Check to see if the metric has a boundary check for the given threshold model.
         let boundary = MetricsBoundary::new(
             log,
-            query_metric.value,
+            metric_value,
             &metrics_data,
             self.threshold.model.test,
             self.threshold.model.min_sample_size,
@@ -78,33 +78,119 @@ impl Detector {
         )
         .map_err(bad_request_error)?;
 
-        let boundary_uuid = BoundaryUuid::new();
-        let insert_boundary = InsertBoundary {
-            uuid: boundary_uuid,
+        Ok(PreparedDetection {
             threshold_id: self.threshold.id,
             model_id: self.threshold.model.id,
-            metric_id: query_metric.id,
+            boundary_uuid: BoundaryUuid::new(),
             baseline: boundary.limits.baseline,
             lower_limit: boundary.limits.lower.map(Into::into),
             upper_limit: boundary.limits.upper.map(Into::into),
-        };
+            outlier: boundary.outlier,
+            ignore_benchmark,
+        })
+    }
+}
 
-        diesel::insert_into(schema::boundary::table)
-            .values(&insert_boundary)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Boundary, insert_boundary))?;
+#[cfg(test)]
+mod tests {
+    use crate::test_util::{
+        create_base_entities, create_branch_with_head, create_measure, create_model,
+        create_testbed, create_threshold, setup_test_db,
+    };
 
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::MetricCreate);
+    use super::Detector;
 
-        // If the boundary check detects an outlier then create an alert for it on the given side.
-        // As long as the benchmark is not being ignored.
-        if ignore_benchmark {
-            Ok(())
-        } else if let Some(boundary_limit) = boundary.outlier {
-            InsertAlert::from_boundary(write_conn!(context), boundary_uuid, boundary_limit)
-        } else {
-            Ok(())
-        }
+    #[test]
+    fn detector_new_returns_none_without_threshold() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000011",
+        );
+        let testbed = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000020",
+            "localhost",
+            "localhost",
+        );
+        let measure = create_measure(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "latency",
+            "latency",
+        );
+
+        // No threshold exists => Detector::new returns None
+        let detector = Detector::new(
+            &mut conn,
+            branch.branch_id,
+            branch.head_id,
+            testbed,
+            None,
+            measure,
+        );
+        assert!(detector.is_none());
+    }
+
+    #[test]
+    fn detector_new_returns_some_with_threshold() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000011",
+        );
+        let testbed = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000020",
+            "localhost",
+            "localhost",
+        );
+        let measure = create_measure(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "latency",
+            "latency",
+        );
+        let threshold_id = create_threshold(
+            &mut conn,
+            base.project_id,
+            branch.branch_id,
+            testbed,
+            measure,
+            "00000000-0000-0000-0000-000000000040",
+        );
+        create_model(
+            &mut conn,
+            threshold_id,
+            "00000000-0000-0000-0000-000000000050",
+            0,
+        );
+
+        // Threshold + model exist => Detector::new returns Some
+        let detector = Detector::new(
+            &mut conn,
+            branch.branch_id,
+            branch.head_id,
+            testbed,
+            None,
+            measure,
+        );
+        assert!(detector.is_some());
+        let detector = detector.unwrap();
+        assert_eq!(detector.threshold.id, threshold_id);
     }
 }

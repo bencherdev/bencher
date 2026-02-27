@@ -100,6 +100,7 @@ The clippy script will install the target automatically and warn if no cross-com
 - Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
 - All time-based tests should be deterministic and use time manipulation not real wall-clock time
 - Use `bencher_json::Clock::Custom` (behind the `test-clock` feature) to inject a fake clock in tests instead of calling `DateTime::now()` directly. `Clock` is available on `ApiContext`.
+- For unit tests without access to `ApiContext`/`Clock`, use `bencher_json::DateTime::TEST` (a fixed deterministic const). Enable `test-clock` in `bencher_json` dev-dependencies to access it.
 - Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
 - Always pass strong types (`MyTypeId`, `MyTypeUuid`, etc) into a function instead of its stringly typed equivalent, even in tests
 - Do **NOT** use shared, global mutable state
@@ -112,6 +113,9 @@ The clippy script will install the target automatically and warn if no cross-com
   - The `clap` struct definitions should live in a separate `parser` module
   - The subcommand handler logic should live in a separate module named after the binary for production code (ie `bencher`) or a module named `task` for `tasks/*` crates
   - Do **NOT** use `num_args` on flags in `bencher run` — it uses `trailing_var_arg = true` to match `docker run` semantics, and `num_args` conflicts with trailing vararg parsing. Validate collection sizes at the type/deserialization layer instead (e.g., `TryFrom` impls in `bencher_json`).
+- Prefer destructuring a struct (`let Self { field1, field2, .. } = self;` or `let Foo { .. } = foo;`) over individual field access (`.field1`, `.field2`) when consuming or converting all fields. This ensures the compiler flags a build error when a field is added, preventing silent omissions.
+- Use `diesel::QueryResult<T>` instead of `Result<T, diesel::result::Error>` — it is a type alias and more idiomatic
+- Database write methods that may be called both standalone and from within an outer transaction should NOT wrap in `conn.transaction()` internally. Instead, the standalone callers should wrap the call in a transaction. This avoids unnecessary SQLite savepoints when the method is called from batch operations.
 
 ## Scripts Policy
 

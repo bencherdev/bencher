@@ -93,6 +93,13 @@ fn date_time_millis(millis: i64) -> Option<chrono::DateTime<Utc>> {
 }
 
 impl DateTime {
+    /// Fixed deterministic [`DateTime`] for tests: 06:23 UTC, 11 July 2024.
+    #[cfg(any(test, feature = "test-clock"))]
+    pub const TEST: Self = Self(match chrono::DateTime::from_timestamp(1_720_678_980, 0) {
+        Some(dt) => dt,
+        None => panic!("invalid test timestamp"),
+    });
+
     pub fn now() -> Self {
         Self(Utc::now())
     }

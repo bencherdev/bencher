@@ -64,6 +64,30 @@ pub struct InsertPlotTestbed {
 }
 
 impl InsertPlotTestbed {
+    /// Batch-insert pre-resolved testbed IDs into the `plot_testbed` table.
+    pub fn from_resolved(
+        conn: &mut DbConnection,
+        plot_id: PlotId,
+        testbed_ids: &[TestbedId],
+    ) -> diesel::QueryResult<()> {
+        let ranker = RankGenerator::new(testbed_ids.len());
+        let inserts: Vec<Self> = testbed_ids
+            .iter()
+            .zip(ranker)
+            .map(|(&testbed_id, rank)| Self {
+                plot_id,
+                testbed_id,
+                rank,
+            })
+            .collect();
+        if !inserts.is_empty() {
+            diesel::insert_into(plot_testbed_table::table)
+                .values(&inserts)
+                .execute(conn)?;
+        }
+        Ok(())
+    }
+
     pub async fn from_json(
         context: &ApiContext,
         plot_id: PlotId,

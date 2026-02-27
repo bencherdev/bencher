@@ -64,6 +64,30 @@ pub struct InsertPlotBenchmark {
 }
 
 impl InsertPlotBenchmark {
+    /// Batch-insert pre-resolved benchmark IDs into the `plot_benchmark` table.
+    pub fn from_resolved(
+        conn: &mut DbConnection,
+        plot_id: PlotId,
+        benchmark_ids: &[BenchmarkId],
+    ) -> diesel::QueryResult<()> {
+        let ranker = RankGenerator::new(benchmark_ids.len());
+        let inserts: Vec<Self> = benchmark_ids
+            .iter()
+            .zip(ranker)
+            .map(|(&benchmark_id, rank)| Self {
+                plot_id,
+                benchmark_id,
+                rank,
+            })
+            .collect();
+        if !inserts.is_empty() {
+            diesel::insert_into(plot_benchmark_table::table)
+                .values(&inserts)
+                .execute(conn)?;
+        }
+        Ok(())
+    }
+
     pub async fn from_json(
         context: &ApiContext,
         plot_id: PlotId,

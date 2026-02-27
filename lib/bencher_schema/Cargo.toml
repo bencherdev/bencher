@@ -77,6 +77,7 @@ url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 
 [dev-dependencies]
+bencher_json = { workspace = true, features = ["server", "schema", "db", "test-clock"] }
 criterion.workspace = true
 pretty_assertions.workspace = true
 

@@ -205,7 +205,6 @@ impl SeedTest {
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args(["project", "ls", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
             .current_dir(CLI_DIR);
-        cmd.assert().success();
         let assert = cmd.assert().success();
         let projects: bencher_json::JsonProjects =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -253,7 +252,6 @@ impl SeedTest {
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args(["project", "ls", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
             .current_dir(CLI_DIR);
-        cmd.assert().success();
         let assert = cmd.assert().success();
         let projects: bencher_json::JsonProjects =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
