@@ -14,9 +14,8 @@ use super::{
     boundary::{BoundaryId, QueryBoundary},
 };
 use crate::{
-    auth_conn,
-    context::{ApiContext, DbConnection},
-    error::{resource_conflict_err, resource_not_found_err},
+    context::DbConnection,
+    error::resource_not_found_err,
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     model::project::{
         ProjectId, QueryProject,
@@ -25,7 +24,6 @@ use crate::{
         metric::QueryMetric,
     },
     schema::{self, alert as alert_table},
-    write_conn,
 };
 
 crate::macros::typed_id::typed_id!(AlertId);
@@ -64,7 +62,10 @@ impl QueryAlert {
             .map_err(resource_not_found_err!(Alert, (project_id, uuid)))
     }
 
-    pub async fn silence_all(context: &ApiContext, head_id: HeadId) -> Result<usize, HttpError> {
+    pub fn silence_all(
+        conn: &mut DbConnection,
+        head_id: HeadId,
+    ) -> Result<usize, diesel::result::Error> {
         let alerts =
             schema::alert::table
                 .inner_join(schema::boundary::table.inner_join(
@@ -74,8 +75,7 @@ impl QueryAlert {
                 ))
                 .filter(schema::report::head_id.eq(head_id))
                 .select(schema::alert::id)
-                .load::<AlertId>(auth_conn!(context))
-                .map_err(resource_not_found_err!(Alert, head_id))?;
+                .load::<AlertId>(conn)?;
 
         if alerts.is_empty() {
             return Ok(0);
@@ -84,8 +84,7 @@ impl QueryAlert {
         let silenced_alert = UpdateAlert::silence();
         diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alerts)))
             .set(&silenced_alert)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Alert, (&alerts, &silenced_alert)))?;
+            .execute(conn)?;
 
         Ok(alerts.len())
     }

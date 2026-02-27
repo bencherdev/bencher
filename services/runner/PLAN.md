@@ -96,3 +96,7 @@ Tracked TODOs from the Gap 1 implementation that need follow-up:
 1. ~~**Gap 1 (job creation)**~~ — Complete. Jobs are created in `run_post` with spec resolution, image resolution, and priority determination.
 2. **Gap 2 (result processing)** — Without this, completed jobs produce no metrics/alerts even if the runner executes successfully.
 3. **Gap 3 (CLI polling)** — Without this, the user sees empty results even after Gap 2 is fixed.
+
+## SQLite Write Lock Contention
+
+`spawn_heartbeat_timeout()` in `lib/bencher_schema/src/model/runner/job.rs` uses the same shared `Arc<Mutex<DbConnection>>` as API request handlers. Background heartbeat tasks contend with foreground writes. Create a notification mechanism for runners awaiting jobs so they don't poll the DB, and consider a dedicated background connection.

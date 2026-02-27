@@ -3,8 +3,8 @@ use bencher_json::{
     project::head::{JsonVersion, VersionNumber},
 };
 use diesel::{
-    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _,
+    Connection as _, ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _,
+    QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 
 use dropshot::HttpError;
@@ -20,7 +20,7 @@ use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
-    macros::fn_get::fn_get,
+    macros::{fn_get::fn_get, sql::last_insert_rowid},
     model::project::{
         ProjectId,
         threshold::{InsertThreshold, alert::QueryAlert},
@@ -264,50 +264,63 @@ impl InsertHead {
         query_branch: QueryBranch,
         branch_start_point: Option<&StartPoint>,
     ) -> Result<(QueryBranch, QueryHead), HttpError> {
+        // Phase 1: Rate limit (requires await)
         #[cfg(feature = "plus")]
         Self::rate_limit(context, &query_branch).await?;
 
-        // Create the head for the branch
+        // Build the insert_head before acquiring the write lock
         let insert_head = Self::new(
             query_branch.id,
             branch_start_point.map(StartPoint::head_version_id),
         );
-        diesel::insert_into(schema::head::table)
-            .values(&insert_head)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Head, insert_head))?;
-        slog::debug!(log, "Created head: {insert_head:?}");
+        let old_head_id = query_branch.head_id;
 
-        // Get the new head
-        let query_head = schema::head::table
-            .filter(schema::head::uuid.eq(&insert_head.uuid))
-            .first::<QueryHead>(auth_conn!(context))
-            .map_err(resource_not_found_err!(Head, insert_head))?;
+        // Phase 2: Batch all writes in a single transaction
+        let new_head_id = {
+            let conn = write_conn!(context);
+            conn.transaction(|conn| {
+                // Insert the new head
+                diesel::insert_into(schema::head::table)
+                    .values(&insert_head)
+                    .execute(conn)?;
+                let new_head_id: HeadId = diesel::select(last_insert_rowid()).get_result(conn)?;
+
+                // Update the branch to point to the new head
+                diesel::update(
+                    schema::branch::table.filter(schema::branch::id.eq(query_branch.id)),
+                )
+                .set(schema::branch::head_id.eq(new_head_id))
+                .execute(conn)?;
+
+                // If there is an old head, mark it as replaced and silence its alerts
+                if let Some(old_head_id) = old_head_id {
+                    let update_head = UpdateHead::replace();
+                    diesel::update(schema::head::table.filter(schema::head::id.eq(old_head_id)))
+                        .set(&update_head)
+                        .execute(conn)?;
+
+                    QueryAlert::silence_all(conn, old_head_id)?;
+                }
+
+                Ok::<_, diesel::result::Error>(new_head_id)
+            })
+            .map_err(|e| {
+                issue_error(
+                    "Failed to create head for branch",
+                    "Failed to create head for branch in batch transaction:",
+                    e,
+                )
+            })?
+        };
+        slog::debug!(
+            log,
+            "Created head {new_head_id:?} for branch: {insert_head:?}"
+        );
+
+        // Read back using read connections
+        let query_head = QueryHead::get(auth_conn!(context), new_head_id)?;
         slog::debug!(log, "Got head: {query_head:?}");
 
-        // Update the branch head
-        diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
-            .set(schema::branch::head_id.eq(query_head.id))
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Branch, (&query_branch, &query_head)))?;
-        slog::debug!(log, "Updated branch: {query_branch:?}");
-
-        // If the branch has an old head, then mark it as replaced.
-        // This should not run if the branch is new.
-        if let Some(old_head_id) = query_branch.head_id {
-            let update_head = UpdateHead::replace();
-            diesel::update(schema::head::table.filter(schema::head::id.eq(old_head_id)))
-                .set(&update_head)
-                .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(Head, (&query_branch, &update_head)))?;
-            slog::debug!(log, "Updated old head to replaced: {update_head:?}");
-            // Silence all alerts for the old head
-            let count = QueryAlert::silence_all(context, old_head_id).await?;
-            slog::debug!(log, "Silenced {count} alerts for old head");
-        }
-
-        // Get the updated branch
-        // Make sure to do this after updating the old branch head to replaced
         let query_branch = QueryBranch::get(auth_conn!(context), query_branch.id)?;
         slog::debug!(log, "Got updated branch: {query_branch:?}");
 
@@ -347,7 +360,8 @@ mod tests {
         schema,
         test_util::{
             count_head_versions, create_base_entities, create_branch_with_head,
-            create_head_version, create_version, get_head_versions, setup_test_db,
+            create_head_version, create_version, get_branch_head_id, get_head_replaced,
+            get_head_versions, setup_test_db,
         },
     };
 
@@ -1080,6 +1094,295 @@ mod tests {
             .get_result(&mut conn)
             .expect("Failed to count");
         assert_eq!(total, 6);
+    }
+
+    /// Test that inserting a head and updating branch `head_id` works in a single transaction.
+    #[test]
+    fn for_branch_inserts_head_and_updates_branch() {
+        use diesel::Connection as _;
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        // Create a branch with an initial head
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000011",
+        );
+
+        // Run the transaction: insert new head + update branch
+        let new_head_id = conn
+            .transaction(|conn| {
+                use super::InsertHead;
+                use crate::macros::sql::last_insert_rowid;
+
+                let insert_head = InsertHead::new(branch.branch_id, None);
+                diesel::insert_into(schema::head::table)
+                    .values(&insert_head)
+                    .execute(conn)?;
+                let new_head_id: super::HeadId =
+                    diesel::select(last_insert_rowid()).get_result(conn)?;
+
+                diesel::update(
+                    schema::branch::table.filter(schema::branch::id.eq(branch.branch_id)),
+                )
+                .set(schema::branch::head_id.eq(new_head_id))
+                .execute(conn)?;
+
+                Ok::<_, diesel::result::Error>(new_head_id)
+            })
+            .expect("Transaction failed");
+
+        // Verify branch now points to the new head
+        let head_id = get_branch_head_id(&mut conn, branch.branch_id);
+        assert_eq!(head_id, Some(new_head_id));
+        assert_ne!(new_head_id, branch.head_id);
+    }
+
+    /// Test that old head gets marked as replaced in a transaction.
+    #[test]
+    fn for_branch_replaces_old_head() {
+        use diesel::Connection as _;
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000011",
+        );
+
+        // Old head should not be replaced yet
+        assert!(get_head_replaced(&mut conn, branch.head_id).is_none());
+
+        // Run transaction: insert new head, update branch, mark old head replaced
+        conn.transaction(|conn| {
+            use super::{InsertHead, UpdateHead};
+            use crate::macros::sql::last_insert_rowid;
+
+            let insert_head = InsertHead::new(branch.branch_id, None);
+            diesel::insert_into(schema::head::table)
+                .values(&insert_head)
+                .execute(conn)?;
+            let new_head_id: super::HeadId =
+                diesel::select(last_insert_rowid()).get_result(conn)?;
+
+            diesel::update(schema::branch::table.filter(schema::branch::id.eq(branch.branch_id)))
+                .set(schema::branch::head_id.eq(new_head_id))
+                .execute(conn)?;
+
+            // Mark old head as replaced
+            let update_head = UpdateHead::replace();
+            diesel::update(schema::head::table.filter(schema::head::id.eq(branch.head_id)))
+                .set(&update_head)
+                .execute(conn)?;
+
+            Ok::<_, diesel::result::Error>(())
+        })
+        .expect("Transaction failed");
+
+        // Old head should now be replaced
+        assert!(get_head_replaced(&mut conn, branch.head_id).is_some());
+    }
+
+    /// Test that silencing alerts for old head works within a transaction.
+    #[test]
+    #[expect(clippy::too_many_lines)]
+    fn for_branch_silences_old_head_alerts() {
+        use diesel::Connection as _;
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000011",
+        );
+        let testbed = crate::test_util::create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000020",
+            "localhost",
+            "localhost",
+        );
+        let version_id = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            1,
+            None,
+        );
+        create_head_version(&mut conn, branch.head_id, version_id);
+        let measure = crate::test_util::create_measure(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            "latency",
+            "latency",
+        );
+
+        // Create an alert chain on the old head
+        let report_id = crate::test_util::create_report(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000100",
+            base.project_id,
+            branch.head_id,
+            version_id,
+            testbed,
+        );
+        let benchmark_id = crate::test_util::create_benchmark(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000101",
+            "bench1",
+            "bench1",
+        );
+        let report_benchmark_id = crate::test_util::create_report_benchmark(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000102",
+            report_id,
+            0,
+            benchmark_id,
+        );
+        let metric_id = crate::test_util::create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000103",
+            report_benchmark_id,
+            measure,
+            1.0,
+        );
+        let threshold_id = crate::test_util::create_threshold(
+            &mut conn,
+            base.project_id,
+            branch.branch_id,
+            testbed,
+            measure,
+            "00000000-0000-0000-0000-000000000104",
+        );
+        let model_id = crate::test_util::create_model(
+            &mut conn,
+            threshold_id,
+            "00000000-0000-0000-0000-000000000105",
+            0,
+        );
+        let boundary_id = crate::test_util::create_boundary(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000106",
+            metric_id,
+            threshold_id,
+            model_id,
+        );
+        let alert_id = crate::test_util::create_alert(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000107",
+            boundary_id,
+            true,
+            0, // Active
+        );
+
+        // Alert should be active
+        assert_eq!(crate::test_util::get_alert_status(&mut conn, alert_id), 0);
+
+        // Run transaction: silence alerts for old head
+        conn.transaction(|conn| {
+            use super::super::super::threshold::alert::{AlertId, UpdateAlert};
+
+            let alerts = schema::alert::table
+                .inner_join(schema::boundary::table.inner_join(
+                    schema::metric::table.inner_join(
+                        schema::report_benchmark::table.inner_join(schema::report::table),
+                    ),
+                ))
+                .filter(schema::report::head_id.eq(branch.head_id))
+                .select(schema::alert::id)
+                .load::<AlertId>(conn)?;
+
+            if !alerts.is_empty() {
+                let silenced_alert = UpdateAlert::silence();
+                diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alerts)))
+                    .set(&silenced_alert)
+                    .execute(conn)?;
+            }
+
+            Ok::<_, diesel::result::Error>(())
+        })
+        .expect("Transaction failed");
+
+        // Alert should now be silenced (10)
+        assert_eq!(crate::test_util::get_alert_status(&mut conn, alert_id), 10);
+    }
+
+    /// Test that transaction works correctly when branch has no old head.
+    #[test]
+    fn for_branch_no_old_head_skips_replace() {
+        use diesel::Connection as _;
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        // Create a branch WITHOUT a head (manually, so head_id is None)
+        diesel::insert_into(schema::branch::table)
+            .values((
+                schema::branch::uuid.eq("00000000-0000-0000-0000-000000000010"),
+                schema::branch::project_id.eq(base.project_id),
+                schema::branch::name.eq("new-branch"),
+                schema::branch::slug.eq("new-branch"),
+                schema::branch::created.eq(0i64),
+                schema::branch::modified.eq(0i64),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert branch");
+
+        let branch_id: super::super::BranchId = {
+            use crate::macros::sql::last_insert_rowid;
+            diesel::select(last_insert_rowid())
+                .get_result(&mut conn)
+                .expect("Failed to get branch id")
+        };
+
+        // Branch has no head
+        assert!(get_branch_head_id(&mut conn, branch_id).is_none());
+
+        // Run transaction: insert new head, update branch, no old head to replace
+        let new_head_id = conn
+            .transaction(|conn| {
+                use super::InsertHead;
+                use crate::macros::sql::last_insert_rowid;
+
+                let insert_head = InsertHead::new(branch_id, None);
+                diesel::insert_into(schema::head::table)
+                    .values(&insert_head)
+                    .execute(conn)?;
+                let new_head_id: super::HeadId =
+                    diesel::select(last_insert_rowid()).get_result(conn)?;
+
+                diesel::update(schema::branch::table.filter(schema::branch::id.eq(branch_id)))
+                    .set(schema::branch::head_id.eq(new_head_id))
+                    .execute(conn)?;
+
+                // No old head to replace — this is fine
+                let old_head_id: Option<super::HeadId> = None;
+                assert!(old_head_id.is_none(), "Should not have old head");
+
+                Ok::<_, diesel::result::Error>(new_head_id)
+            })
+            .expect("Transaction failed");
+
+        // Branch should now point to the new head
+        let head_id = get_branch_head_id(&mut conn, branch_id);
+        assert_eq!(head_id, Some(new_head_id));
     }
 
     /// Test large batch insert (simulating `max_versions=255`).

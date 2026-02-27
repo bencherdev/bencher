@@ -18,6 +18,7 @@ use crate::{
             branch::{BranchId, head::HeadId, head_version::HeadVersionId, version::VersionId},
             measure::MeasureId,
             metric::MetricId,
+            plot::PlotId,
             report::{ReportId, report_benchmark::ReportBenchmarkId},
             testbed::TestbedId,
             threshold::{ThresholdId, alert::AlertId, boundary::BoundaryId, model::ModelId},
@@ -593,4 +594,137 @@ pub fn get_alert_status(conn: &mut SqliteConnection, alert_id: AlertId) -> i32 {
         .select(schema::alert::status)
         .first::<i32>(conn)
         .expect("Failed to get alert status")
+}
+
+/// Get branch `head_id`.
+pub fn get_branch_head_id(conn: &mut SqliteConnection, branch_id: BranchId) -> Option<HeadId> {
+    schema::branch::table
+        .filter(schema::branch::id.eq(branch_id))
+        .select(schema::branch::head_id)
+        .first::<Option<HeadId>>(conn)
+        .expect("Failed to get branch head_id")
+}
+
+/// Get head `replaced` timestamp.
+pub fn get_head_replaced(conn: &mut SqliteConnection, head_id: HeadId) -> Option<i64> {
+    schema::head::table
+        .filter(schema::head::id.eq(head_id))
+        .select(schema::head::replaced)
+        .first::<Option<i64>>(conn)
+        .expect("Failed to get head replaced")
+}
+
+/// Archive a benchmark.
+pub fn archive_benchmark(conn: &mut SqliteConnection, benchmark_id: BenchmarkId) {
+    diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(benchmark_id)))
+        .set(schema::benchmark::archived.eq(Some(1i64)))
+        .execute(conn)
+        .expect("Failed to archive benchmark");
+}
+
+/// Archive a measure.
+pub fn archive_measure(conn: &mut SqliteConnection, measure_id: MeasureId) {
+    diesel::update(schema::measure::table.filter(schema::measure::id.eq(measure_id)))
+        .set(schema::measure::archived.eq(Some(1i64)))
+        .execute(conn)
+        .expect("Failed to archive measure");
+}
+
+/// Get benchmark `archived` timestamp.
+pub fn get_benchmark_archived(
+    conn: &mut SqliteConnection,
+    benchmark_id: BenchmarkId,
+) -> Option<i64> {
+    schema::benchmark::table
+        .filter(schema::benchmark::id.eq(benchmark_id))
+        .select(schema::benchmark::archived)
+        .first::<Option<i64>>(conn)
+        .expect("Failed to get benchmark archived")
+}
+
+/// Get measure `archived` timestamp.
+pub fn get_measure_archived(conn: &mut SqliteConnection, measure_id: MeasureId) -> Option<i64> {
+    schema::measure::table
+        .filter(schema::measure::id.eq(measure_id))
+        .select(schema::measure::archived)
+        .first::<Option<i64>>(conn)
+        .expect("Failed to get measure archived")
+}
+
+/// Create a plot for testing.
+pub fn create_plot(
+    conn: &mut SqliteConnection,
+    project_id: ProjectId,
+    uuid: &str,
+    rank: i64,
+) -> PlotId {
+    diesel::insert_into(schema::plot::table)
+        .values((
+            schema::plot::uuid.eq(uuid),
+            schema::plot::project_id.eq(project_id),
+            schema::plot::rank.eq(rank),
+            schema::plot::lower_value.eq(true),
+            schema::plot::upper_value.eq(true),
+            schema::plot::lower_boundary.eq(false),
+            schema::plot::upper_boundary.eq(false),
+            schema::plot::x_axis.eq(0),
+            schema::plot::window.eq(2_592_000i64),
+            schema::plot::created.eq(DateTime::TEST),
+            schema::plot::modified.eq(DateTime::TEST),
+        ))
+        .execute(conn)
+        .expect("Failed to insert plot");
+
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
+        .expect("Failed to get plot id")
+}
+
+/// Get plot rank.
+pub fn get_plot_rank(conn: &mut SqliteConnection, plot_id: PlotId) -> i64 {
+    schema::plot::table
+        .filter(schema::plot::id.eq(plot_id))
+        .select(schema::plot::rank)
+        .first::<i64>(conn)
+        .expect("Failed to get plot rank")
+}
+
+/// Get plot branch IDs.
+pub fn get_plot_branches(conn: &mut SqliteConnection, plot_id: PlotId) -> Vec<BranchId> {
+    schema::plot_branch::table
+        .filter(schema::plot_branch::plot_id.eq(plot_id))
+        .order(schema::plot_branch::rank.asc())
+        .select(schema::plot_branch::branch_id)
+        .load(conn)
+        .expect("Failed to get plot branches")
+}
+
+/// Get plot testbed IDs.
+pub fn get_plot_testbeds(conn: &mut SqliteConnection, plot_id: PlotId) -> Vec<TestbedId> {
+    schema::plot_testbed::table
+        .filter(schema::plot_testbed::plot_id.eq(plot_id))
+        .order(schema::plot_testbed::rank.asc())
+        .select(schema::plot_testbed::testbed_id)
+        .load(conn)
+        .expect("Failed to get plot testbeds")
+}
+
+/// Get plot benchmark IDs.
+pub fn get_plot_benchmarks(conn: &mut SqliteConnection, plot_id: PlotId) -> Vec<BenchmarkId> {
+    schema::plot_benchmark::table
+        .filter(schema::plot_benchmark::plot_id.eq(plot_id))
+        .order(schema::plot_benchmark::rank.asc())
+        .select(schema::plot_benchmark::benchmark_id)
+        .load(conn)
+        .expect("Failed to get plot benchmarks")
+}
+
+/// Get plot measure IDs.
+pub fn get_plot_measures(conn: &mut SqliteConnection, plot_id: PlotId) -> Vec<MeasureId> {
+    schema::plot_measure::table
+        .filter(schema::plot_measure::plot_id.eq(plot_id))
+        .order(schema::plot_measure::rank.asc())
+        .select(schema::plot_measure::measure_id)
+        .load(conn)
+        .expect("Failed to get plot measures")
 }

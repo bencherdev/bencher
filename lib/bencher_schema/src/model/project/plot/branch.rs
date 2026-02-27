@@ -65,6 +65,30 @@ pub struct InsertPlotBranch {
 }
 
 impl InsertPlotBranch {
+    /// Batch-insert pre-resolved branch IDs into the `plot_branch` table.
+    pub fn from_resolved(
+        conn: &mut DbConnection,
+        plot_id: PlotId,
+        branch_ids: &[BranchId],
+    ) -> Result<(), diesel::result::Error> {
+        let ranker = RankGenerator::new(branch_ids.len());
+        let inserts: Vec<Self> = branch_ids
+            .iter()
+            .zip(ranker)
+            .map(|(&branch_id, rank)| Self {
+                plot_id,
+                branch_id,
+                rank,
+            })
+            .collect();
+        if !inserts.is_empty() {
+            diesel::insert_into(plot_branch_table::table)
+                .values(&inserts)
+                .execute(conn)?;
+        }
+        Ok(())
+    }
+
     pub async fn from_json(
         context: &ApiContext,
         plot_id: PlotId,
