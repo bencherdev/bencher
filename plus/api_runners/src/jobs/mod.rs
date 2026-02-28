@@ -14,7 +14,7 @@ use bencher_schema::{
         runner::{QueryJob, UpdateJob},
         spec::QuerySpec,
     },
-    schema,
+    schema, write_conn,
 };
 use bencher_token::OciAction;
 use diesel::{
@@ -177,49 +177,41 @@ async fn try_claim_job(
 
     // Acquire write lock for the entire read-check-update to prevent TOCTOU races
     // where concurrent runners could bypass concurrency limits.
-    let mut conn = context.database.connection.lock().await;
+    // Scoped so the lock is released before doing non-DB work (OCI token generation).
+    let (query_job, json_spec) = {
+        let conn = write_conn!(context);
 
-    // Find the highest-priority eligible pending job matching this runner's specs
-    let pending_job: Option<QueryJob> = schema::job::table
-        .filter(status.eq(JobStatus::Pending))
-        .filter(eligible)
-        .filter(spec_filter)
-        .order((priority.desc(), created.asc(), id.asc()))
-        .first(&mut *conn)
-        .optional()
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to query pending jobs: {e}")))?;
+        // Find the highest-priority eligible pending job matching this runner's specs
+        let pending_job: Option<QueryJob> = schema::job::table
+            .filter(status.eq(JobStatus::Pending))
+            .filter(eligible)
+            .filter(spec_filter)
+            .order((priority.desc(), created.asc(), id.asc()))
+            .first(conn)
+            .optional()
+            .map_err(|e| {
+                HttpError::for_internal_error(format!("Failed to query pending jobs: {e}"))
+            })?;
 
-    let Some(query_job) = pending_job else {
-        return Ok(None);
+        let Some(query_job) = pending_job else {
+            return Ok(None);
+        };
+
+        // Claim the job under the same lock
+        let now = context.clock.now();
+        let update_job = UpdateJob::claim(runner_token.runner_id, now);
+
+        let updated = update_job
+            .execute_if_status(conn, query_job.id, JobStatus::Pending)
+            .map_err(resource_conflict_err!(Job, query_job))?;
+
+        // Look up the spec before releasing the lock
+        let json_spec = (updated > 0)
+            .then(|| QuerySpec::get(conn, query_job.spec_id).map(QuerySpec::into_json))
+            .transpose()?;
+
+        (query_job, json_spec)
     };
-
-    // Claim the job under the same lock
-    let now = context.clock.now();
-    let update_job = UpdateJob {
-        status: Some(JobStatus::Claimed),
-        runner_id: Some(Some(runner_token.runner_id)),
-        claimed: Some(Some(now)),
-        last_heartbeat: Some(Some(now)),
-        modified: Some(now),
-        ..Default::default()
-    };
-
-    let updated = diesel::update(
-        schema::job::table
-            .filter(id.eq(query_job.id))
-            .filter(status.eq(JobStatus::Pending)),
-    )
-    .set(&update_job)
-    .execute(&mut *conn)
-    .map_err(resource_conflict_err!(Job, query_job))?;
-
-    // Look up the spec before releasing the lock
-    let json_spec = (updated > 0)
-        .then(|| QuerySpec::get(&mut conn, query_job.spec_id).map(QuerySpec::into_json))
-        .transpose()?;
-
-    // Release the lock before doing non-DB work
-    drop(conn);
 
     if let Some(json_spec) = json_spec {
         Ok(Some(build_claimed_job(

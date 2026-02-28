@@ -124,7 +124,10 @@ impl TestServer {
         let resp = self
             .client
             .post(self.api_url("/v0/organizations"))
-            .header("Authorization", self.bearer(&user.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
             .json(&body)
             .send()
             .await
@@ -163,7 +166,10 @@ impl TestServer {
         let resp = self
             .client
             .post(self.api_url(&format!("/v0/organizations/{org_slug}/projects")))
-            .header("Authorization", self.bearer(&user.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
             .json(&body)
             .send()
             .await

@@ -92,7 +92,10 @@ impl TestServer {
         let resp = self
             .client
             .put(self.api_url(&format!("/v2/{project_slug}/blobs/uploads?digest={digest}")))
-            .header("Authorization", format!("Bearer {auth_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(auth_token),
+            )
             .body(data.to_vec())
             .send()
             .await

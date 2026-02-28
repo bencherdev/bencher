@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use bencher_valid::{DateTime, ImageDigest, ImageReference, Jwt, PollTimeout, Timeout, Url};
 use camino::Utf8PathBuf;
@@ -62,11 +62,8 @@ pub struct JsonIterationOutput {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[typeshare(typescript(type = "Record<string, string> | undefined"))]
     #[cfg_attr(feature = "schema", schemars(with = "Option<HashMap<String, String>>"))]
-    pub output: Option<HashMap<Utf8PathBuf, String>>,
+    pub output: Option<BTreeMap<Utf8PathBuf, String>>,
 }
-
-/// Maximum number of iterations allowed.
-pub const MAX_ITERATIONS: u32 = 255;
 
 /// Job output stored in blob storage after job completion or failure.
 #[typeshare::typeshare]
@@ -357,7 +354,7 @@ mod tests {
 
     #[test]
     fn round_trip_all_fields() {
-        let mut output_files = HashMap::new();
+        let mut output_files = BTreeMap::new();
         output_files.insert(Utf8PathBuf::from("/tmp/results.json"), "{}".to_owned());
 
         let original = JsonJobOutput {
@@ -388,7 +385,7 @@ mod tests {
                 exit_code: 0,
                 stdout: Some("stdout".into()),
                 stderr: Some("stderr".into()),
-                output: Some(HashMap::new()),
+                output: Some(BTreeMap::new()),
             }],
             error: None,
         };
@@ -440,7 +437,7 @@ mod tests {
 
     #[test]
     fn round_trip_with_output_files() {
-        let mut files = HashMap::new();
+        let mut files = BTreeMap::new();
         files.insert(
             Utf8PathBuf::from("/tmp/results.json"),
             r#"{"metric": 42}"#.to_owned(),
@@ -661,6 +658,63 @@ mod tests {
         let json = new_run_job_json(0, 0, 0, MAX_ENV_LEN);
         let job: JsonNewRunJob = serde_json::from_str(&json).unwrap();
         assert_eq!(job.env.as_ref().unwrap().len(), MAX_ENV_LEN);
+    }
+
+    // --- Backwards compatibility: deserialize known JSON strings ---
+
+    #[test]
+    fn backwards_compat_completed_json() {
+        let json = r#"{"results":[{"exit_code":0,"stdout":"hello","stderr":"world","output":{"/tmp/f.txt":"data"}}]}"#;
+        let output: JsonJobOutput = serde_json::from_str(json).unwrap();
+        assert_eq!(output.results.len(), 1);
+        assert_eq!(output.results[0].exit_code, 0);
+        assert_eq!(output.results[0].stdout.as_deref(), Some("hello"));
+        assert_eq!(output.results[0].stderr.as_deref(), Some("world"));
+        assert_eq!(
+            output.results[0]
+                .output
+                .as_ref()
+                .unwrap()
+                .get(Utf8PathBuf::from("/tmp/f.txt").as_path()),
+            Some(&"data".to_owned())
+        );
+        assert!(output.error.is_none());
+    }
+
+    #[test]
+    fn backwards_compat_failed_json() {
+        let json = r#"{"results":[{"exit_code":1,"stdout":"out","stderr":"err"}],"error":"something broke"}"#;
+        let output: JsonJobOutput = serde_json::from_str(json).unwrap();
+        assert_eq!(output.results.len(), 1);
+        assert_eq!(output.results[0].exit_code, 1);
+        assert_eq!(output.results[0].stdout.as_deref(), Some("out"));
+        assert_eq!(output.results[0].stderr.as_deref(), Some("err"));
+        assert_eq!(output.error.as_deref(), Some("something broke"));
+    }
+
+    #[test]
+    fn backwards_compat_empty_results() {
+        let json = r#"{"results":[]}"#;
+        let output: JsonJobOutput = serde_json::from_str(json).unwrap();
+        assert!(output.results.is_empty());
+        assert!(output.error.is_none());
+    }
+
+    #[test]
+    fn backwards_compat_file_only_output() {
+        let json =
+            r#"{"results":[{"exit_code":0,"output":{"/tmp/results.json":"{\"metric\":42}"}}]}"#;
+        let output: JsonJobOutput = serde_json::from_str(json).unwrap();
+        assert_eq!(output.results.len(), 1);
+        assert_eq!(output.results[0].exit_code, 0);
+        assert!(output.results[0].stdout.is_none());
+        assert!(output.results[0].stderr.is_none());
+        let files = output.results[0].output.as_ref().unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(
+            files.get(Utf8PathBuf::from("/tmp/results.json").as_path()),
+            Some(&r#"{"metric":42}"#.to_owned())
+        );
     }
 }
 

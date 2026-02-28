@@ -61,7 +61,10 @@ async fn manifest_put_with_tag() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, config_digest
         )))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .body(config_data.to_vec())
         .send()
         .await
@@ -74,7 +77,10 @@ async fn manifest_put_with_tag() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, layer_digest
         )))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .body(layer_data.to_vec())
         .send()
         .await
@@ -85,7 +91,10 @@ async fn manifest_put_with_tag() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -129,7 +138,10 @@ async fn manifest_put_by_digest() {
             "/v2/{}/manifests/{}",
             project_slug, manifest_digest
         )))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -168,7 +180,10 @@ async fn manifest_exists() {
     let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/v1.0.0", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -181,7 +196,10 @@ async fn manifest_exists() {
     let resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/manifests/v1.0.0", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -209,7 +227,10 @@ async fn manifest_not_found() {
     let resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/manifests/nonexistent", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -246,7 +267,10 @@ async fn manifest_get_by_tag() {
     server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/stable", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest.clone())
         .send()
@@ -258,7 +282,10 @@ async fn manifest_get_by_tag() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/manifests/stable", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -301,7 +328,10 @@ async fn manifest_get_by_digest() {
     server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/test", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest.clone())
         .send()
@@ -316,7 +346,10 @@ async fn manifest_get_by_digest() {
             "/v2/{}/manifests/{}",
             project_slug, manifest_digest
         )))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -354,7 +387,10 @@ async fn manifest_delete_by_tag() {
     let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/to-delete", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -366,7 +402,10 @@ async fn manifest_delete_by_tag() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v2/{}/manifests/to-delete", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -378,7 +417,10 @@ async fn manifest_delete_by_tag() {
     let check_resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/manifests/to-delete", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -392,7 +434,10 @@ async fn manifest_delete_by_tag() {
             "/v2/{}/manifests/{}",
             project_slug, manifest_digest
         )))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -434,7 +479,10 @@ async fn manifest_delete_by_digest() {
     let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/digest-delete", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -449,7 +497,10 @@ async fn manifest_delete_by_digest() {
             "/v2/{}/manifests/{}",
             project_slug, manifest_digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -461,7 +512,10 @@ async fn manifest_delete_by_digest() {
     let check_resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/manifests/digest-delete", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -505,7 +559,10 @@ async fn manifest_delete_by_digest_cleans_multiple_tags() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/alpha", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest.clone())
         .send()
@@ -517,7 +574,10 @@ async fn manifest_delete_by_digest_cleans_multiple_tags() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/beta", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -532,7 +592,10 @@ async fn manifest_delete_by_digest_cleans_multiple_tags() {
             "/v2/{}/manifests/{}",
             project_slug, manifest_digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .send()
         .await
         .expect("Delete failed");
@@ -542,7 +605,10 @@ async fn manifest_delete_by_digest_cleans_multiple_tags() {
     let check_alpha = server
         .client
         .head(server.api_url(&format!("/v2/{}/manifests/alpha", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Check alpha failed");
@@ -555,7 +621,10 @@ async fn manifest_delete_by_digest_cleans_multiple_tags() {
     let check_beta = server
         .client
         .head(server.api_url(&format!("/v2/{}/manifests/beta", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Check beta failed");
@@ -706,7 +775,10 @@ async fn manifest_put_authenticated_to_unclaimed() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/v2", unclaimed_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest2)
         .send()
@@ -753,7 +825,10 @@ async fn manifest_put_nonexistent_uuid() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/latest", fake_uuid)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -790,7 +865,10 @@ async fn manifest_put_nonexistent_slug_authenticated() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/latest", new_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -849,7 +927,10 @@ async fn manifest_put_invalid_media_type() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.evil.custom.v1+json")
         .body(manifest)
         .send()
@@ -896,7 +977,10 @@ async fn manifest_tag_overwrite() {
     let resp1 = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest1)
         .send()
@@ -921,7 +1005,10 @@ async fn manifest_tag_overwrite() {
     let resp2 = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest2)
         .send()
@@ -933,7 +1020,10 @@ async fn manifest_tag_overwrite() {
     let resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("HEAD failed");
@@ -984,7 +1074,10 @@ async fn manifest_content_type_round_trip() {
     let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/ct-test", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -998,7 +1091,10 @@ async fn manifest_content_type_round_trip() {
     let head_resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/manifests/ct-test", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("HEAD request failed");
@@ -1018,7 +1114,10 @@ async fn manifest_content_type_round_trip() {
     let get_resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/manifests/ct-test", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("GET request failed");
@@ -1055,7 +1154,10 @@ async fn manifest_get_nonexistent_digest() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/manifests/{}", project_slug, fake_digest)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1084,7 +1186,10 @@ async fn upload_test_blobs(
             project_slug, digest
         )));
         if let Some(token) = auth_token {
-            req = req.header("Authorization", format!("Bearer {}", token));
+            req = req.header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(token),
+            );
         }
         let resp = req
             .body(data.to_vec())
@@ -1153,7 +1258,10 @@ async fn manifest_put_docker_v2() {
     let put_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/docker-v2-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header(
             "Content-Type",
             "application/vnd.docker.distribution.manifest.v2+json",
@@ -1174,7 +1282,10 @@ async fn manifest_put_docker_v2() {
             "/v2/{}/manifests/{}",
             project_slug, manifest_digest
         )))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("GET failed");
@@ -1227,7 +1338,10 @@ async fn manifest_get_docker_v2_by_tag() {
     let put_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/docker-v2-get-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header(
             "Content-Type",
             "application/vnd.docker.distribution.manifest.v2+json",
@@ -1242,7 +1356,10 @@ async fn manifest_get_docker_v2_by_tag() {
     let get_resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/manifests/docker-v2-get-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("GET failed");
@@ -1320,7 +1437,10 @@ async fn manifest_put_docker_manifest_list() {
     let put_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/docker-list-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header(
             "Content-Type",
             "application/vnd.docker.distribution.manifest.list.v2+json",
@@ -1337,7 +1457,10 @@ async fn manifest_put_docker_manifest_list() {
     let get_resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/manifests/docker-list-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("GET failed");
@@ -1370,7 +1493,10 @@ async fn manifest_get_docker_manifest_list() {
     server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/docker-list-get", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header(
             "Content-Type",
             "application/vnd.docker.distribution.manifest.list.v2+json",
@@ -1383,7 +1509,10 @@ async fn manifest_get_docker_manifest_list() {
     let get_resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/manifests/docker-list-get", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("GET failed");
@@ -1476,7 +1605,10 @@ async fn manifest_put_oci_image_index() {
     let put_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/oci-index-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.index.v1+json")
         .body(manifest)
         .send()
@@ -1510,7 +1642,10 @@ async fn manifest_get_oci_image_index() {
     server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/oci-index-get", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.index.v1+json")
         .body(manifest.clone())
         .send()
@@ -1521,7 +1656,10 @@ async fn manifest_get_oci_image_index() {
     let get_resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/manifests/oci-index-get", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("GET failed");
@@ -1589,7 +1727,10 @@ async fn manifest_put_content_type_mismatch() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/ct-mismatch-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header(
             "Content-Type",
             "application/vnd.docker.distribution.manifest.v2+json",
@@ -1630,7 +1771,10 @@ async fn manifest_put_missing_blobs() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/missing-blobs", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -1672,7 +1816,10 @@ async fn manifest_put_content_type_match() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/ct-match-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header(
             "Content-Type",
             "application/vnd.docker.distribution.manifest.v2+json",
@@ -1716,7 +1863,10 @@ async fn manifest_put_digest_mismatch() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, config_digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .body(config_data.to_vec())
         .send()
         .await
@@ -1728,7 +1878,10 @@ async fn manifest_put_digest_mismatch() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, layer_digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .body(layer_data.to_vec())
         .send()
         .await
@@ -1742,7 +1895,10 @@ async fn manifest_put_digest_mismatch() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/{}", project_slug, wrong_digest)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -1800,7 +1956,10 @@ async fn concurrent_manifest_tag_overwrite() {
                 "/v2/{}/blobs/uploads?digest={}",
                 project_slug, digest
             )))
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token),
+            )
             .header("Content-Type", "application/octet-stream")
             .body(data.to_vec())
             .send()
@@ -1821,14 +1980,20 @@ async fn concurrent_manifest_tag_overwrite() {
         server
             .client
             .put(&url)
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token)
+            )
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(manifest1.clone())
             .send(),
         server
             .client
             .put(&url)
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token)
+            )
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(manifest2.clone())
             .send()
@@ -1849,7 +2014,10 @@ async fn concurrent_manifest_tag_overwrite() {
     let head_resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/manifests/race-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("HEAD failed");
@@ -1874,7 +2042,10 @@ async fn concurrent_manifest_tag_overwrite() {
     let get_resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/manifests/race-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("GET failed");
@@ -1921,7 +2092,10 @@ async fn manifest_put_exceeds_max_body_size() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/too-large", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -1971,7 +2145,10 @@ async fn manifest_read_after_storage_deleted() {
                 "/v2/{}/blobs/uploads?digest={}",
                 project_slug, digest
             )))
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token),
+            )
             .header("Content-Type", "application/octet-stream")
             .body(data.to_vec())
             .send()
@@ -1984,7 +2161,10 @@ async fn manifest_read_after_storage_deleted() {
     let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/storage-fail-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -2008,7 +2188,10 @@ async fn manifest_read_after_storage_deleted() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/manifests/storage-fail-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2038,7 +2221,10 @@ async fn manifest_put_invalid_json_body() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body("this is not valid json {{{")
         .send()

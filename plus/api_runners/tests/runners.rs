@@ -24,7 +24,10 @@ async fn runners_create_as_admin() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -52,7 +55,10 @@ async fn runners_create_forbidden_for_non_admin() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -75,7 +81,10 @@ async fn runners_create_with_slug() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -87,7 +96,10 @@ async fn runners_create_with_slug() {
     let resp = server
         .client
         .get(server.api_url("/v0/runners/custom-runner-slug"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -110,7 +122,10 @@ async fn runners_list_as_admin() {
     server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -120,7 +135,10 @@ async fn runners_list_as_admin() {
     let resp = server
         .client
         .get(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -143,7 +161,10 @@ async fn runners_get_by_uuid() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -155,7 +176,10 @@ async fn runners_get_by_uuid() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/runners/{}", runner_token.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -179,7 +203,10 @@ async fn runners_update_name() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -194,7 +221,10 @@ async fn runners_update_name() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/runners/{}", runner_token.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -218,7 +248,10 @@ async fn runners_archive() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -233,7 +266,10 @@ async fn runners_archive() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/runners/{}", runner_token.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -247,7 +283,10 @@ async fn runners_archive() {
     let resp = server
         .client
         .get(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -270,7 +309,10 @@ async fn runners_list_with_archived() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -284,7 +326,10 @@ async fn runners_list_with_archived() {
     server
         .client
         .patch(server.api_url(&format!("/v0/runners/{}", runner_token.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -294,7 +339,10 @@ async fn runners_list_with_archived() {
     let resp = server
         .client
         .get(server.api_url("/v0/runners?archived=true"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -315,7 +363,10 @@ async fn runners_total_count_header() {
     server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body1)
         .send()
         .await
@@ -325,7 +376,10 @@ async fn runners_total_count_header() {
     server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body2)
         .send()
         .await
@@ -335,7 +389,10 @@ async fn runners_total_count_header() {
     let resp = server
         .client
         .get(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -386,7 +443,10 @@ async fn runner_delete_restricted_by_fk() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&body)
         .send()
         .await
@@ -418,7 +478,10 @@ async fn duplicate_runner_name() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -429,7 +492,10 @@ async fn duplicate_runner_name() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -453,7 +519,10 @@ async fn runners_list_sort_name_asc() {
         let resp = server
             .client
             .post(server.api_url("/v0/runners"))
-            .header("Authorization", server.bearer(&admin.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&admin.token),
+            )
             .json(&body)
             .send()
             .await
@@ -465,7 +534,10 @@ async fn runners_list_sort_name_asc() {
     let resp = server
         .client
         .get(server.api_url("/v0/runners?sort=name&direction=asc"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -497,7 +569,10 @@ async fn runners_list_sort_name_desc() {
         let resp = server
             .client
             .post(server.api_url("/v0/runners"))
-            .header("Authorization", server.bearer(&admin.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&admin.token),
+            )
             .json(&body)
             .send()
             .await
@@ -508,7 +583,10 @@ async fn runners_list_sort_name_desc() {
     let resp = server
         .client
         .get(server.api_url("/v0/runners?sort=name&direction=desc"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -540,7 +618,10 @@ async fn runners_list_pagination() {
         let resp = server
             .client
             .post(server.api_url("/v0/runners"))
-            .header("Authorization", server.bearer(&admin.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&admin.token),
+            )
             .json(&body)
             .send()
             .await
@@ -552,7 +633,10 @@ async fn runners_list_pagination() {
     let resp = server
         .client
         .get(server.api_url("/v0/runners?per_page=2&page=1"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -565,7 +649,10 @@ async fn runners_list_pagination() {
     let resp = server
         .client
         .get(server.api_url("/v0/runners?per_page=2&page=2"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -597,7 +684,10 @@ async fn runners_list_search() {
         let resp = server
             .client
             .post(server.api_url("/v0/runners"))
-            .header("Authorization", server.bearer(&admin.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&admin.token),
+            )
             .json(&body)
             .send()
             .await
@@ -609,7 +699,10 @@ async fn runners_list_search() {
     let resp = server
         .client
         .get(server.api_url("/v0/runners?search=Search"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -639,7 +732,10 @@ async fn runner_token_rejected_on_user_endpoint() {
     let resp = server
         .client
         .get(server.api_url("/v0/users"))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .send()
         .await
         .expect("Request failed");

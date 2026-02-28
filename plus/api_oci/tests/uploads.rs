@@ -39,7 +39,10 @@ async fn upload_status() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -84,7 +87,10 @@ async fn upload_chunk() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -139,7 +145,10 @@ async fn upload_chunk_with_content_range() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -208,7 +217,10 @@ async fn upload_chunk_wrong_range() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -256,7 +268,10 @@ async fn upload_complete() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -319,7 +334,10 @@ async fn upload_complete_with_final_chunk() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -387,7 +405,10 @@ async fn upload_complete_wrong_digest() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -446,7 +467,10 @@ async fn upload_cancel() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -505,7 +529,10 @@ async fn upload_to_cancelled_session() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -570,7 +597,10 @@ async fn upload_malformed_content_range() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -625,7 +655,10 @@ async fn upload_content_range_bytes_prefix() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -696,7 +729,10 @@ async fn upload_partial_content_range_bad_end() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -748,7 +784,10 @@ async fn upload_partial_content_range_bad_start() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -806,7 +845,10 @@ async fn concurrent_uploads_different_sessions() {
     let start1 = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload 1 failed");
@@ -823,7 +865,10 @@ async fn concurrent_uploads_different_sessions() {
     let start2 = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload 2 failed");
@@ -905,7 +950,10 @@ async fn concurrent_uploads_different_sessions() {
     let head1 = server
         .client
         .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest1)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("HEAD blob 1 failed");
@@ -918,7 +966,10 @@ async fn concurrent_uploads_different_sessions() {
     let head2 = server
         .client
         .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest2)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("HEAD blob 2 failed");
@@ -959,7 +1010,10 @@ async fn upload_session_expired() {
     let start_a = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload A failed");
@@ -980,7 +1034,10 @@ async fn upload_session_expired() {
     let start_b = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload B failed");
@@ -1056,7 +1113,10 @@ async fn chunked_upload_exceeds_max_body_size() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -1132,7 +1192,10 @@ async fn upload_complete_after_storage_deleted() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");
@@ -1210,7 +1273,10 @@ async fn chunked_upload_size_not_written_on_reject() {
     let start_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Start upload failed");

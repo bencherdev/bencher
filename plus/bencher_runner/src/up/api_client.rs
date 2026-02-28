@@ -61,7 +61,10 @@ impl RunnerApiClient {
         let response = self
             .agent
             .post(&url)
-            .header("Authorization", &format!("Bearer {}", self.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                &bencher_json::bearer_header(&self.token),
+            )
             .header("Content-Type", "application/json")
             .send_json(&body)
             .map_err(|e| match classify_ureq_error(&e) {

@@ -27,7 +27,7 @@ impl RunnerToken {
         let auth_header = rqctx
             .request
             .headers()
-            .get("Authorization")
+            .get(bencher_json::AUTHORIZATION)
             .and_then(|v| v.to_str().ok());
         Self::from_header(rqctx.context(), auth_header, expected_runner).await
     }
@@ -38,7 +38,7 @@ impl RunnerToken {
         expected_runner: &RunnerResourceId,
     ) -> Result<Self, HttpError> {
         let token = auth_header
-            .and_then(|h| h.strip_prefix("Bearer "))
+            .and_then(bencher_json::strip_bearer_token)
             .ok_or_else(|| unauthorized_error("Missing or invalid Authorization header"))?;
 
         // Validate token format (prefix + length)

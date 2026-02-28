@@ -22,7 +22,10 @@ use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
 use bencher_schema::{
     context::RateLimiting,
-    model::{runner::job::spawn_heartbeat_timeout, server::QueryServer},
+    model::{
+        runner::job::{reprocess_completed_jobs, spawn_heartbeat_timeout},
+        server::QueryServer,
+    },
     write_conn,
 };
 use bencher_token::TokenKey;
@@ -525,26 +528,28 @@ async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
     };
     use diesel::BoolExpressionMethods as _;
 
-    let conn = &mut *context.database.connection.lock().await;
+    let in_flight_jobs = {
+        let conn = &mut *context.database.connection.lock().await;
 
-    // First, fail any claimed jobs that have been orphaned (claimed longer ago
-    // than the heartbeat timeout without transitioning to Running).
-    recover_orphaned_claimed_jobs(log, conn, context.heartbeat_timeout, &context.clock);
+        // First, fail any claimed jobs that have been orphaned (claimed longer ago
+        // than the heartbeat timeout without transitioning to Running).
+        recover_orphaned_claimed_jobs(log, conn, context.heartbeat_timeout, &context.clock);
 
-    // Then schedule heartbeat timeouts for remaining in-flight jobs.
-    let in_flight_jobs: Vec<QueryJob> = match schema::job::table
-        .filter(
-            schema::job::status
-                .eq(JobStatus::Claimed)
-                .or(schema::job::status.eq(JobStatus::Running)),
-        )
-        .load(conn)
-    {
-        Ok(jobs) => jobs,
-        Err(e) => {
-            error!(log, "Failed to query in-flight jobs for recovery: {e}");
-            return;
-        },
+        // Then schedule heartbeat timeouts for remaining in-flight jobs.
+        match schema::job::table
+            .filter(
+                schema::job::status
+                    .eq(JobStatus::Claimed)
+                    .or(schema::job::status.eq(JobStatus::Running)),
+            )
+            .load::<QueryJob>(conn)
+        {
+            Ok(jobs) => jobs,
+            Err(e) => {
+                error!(log, "Failed to query in-flight jobs for recovery: {e}");
+                return;
+            },
+        }
     };
 
     let count = in_flight_jobs.len();
@@ -566,6 +571,9 @@ async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
             context.clock.clone(),
         );
     }
+
+    // Finally, reprocess any jobs stuck in Completed (output stored but results not parsed).
+    reprocess_completed_jobs(log, context).await;
 }
 
 #[cfg(feature = "plus")]

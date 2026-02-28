@@ -21,7 +21,10 @@ async fn reports_list_empty() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{}/reports", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -49,7 +52,10 @@ async fn reports_list_with_pagination() {
             "/v0/projects/{}/reports?per_page=10&page=1",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -76,7 +82,10 @@ async fn reports_get_not_found() {
             "/v0/projects/{}/reports/00000000-0000-0000-0000-000000000000",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -103,7 +112,10 @@ async fn reports_delete_not_found() {
             "/v0/projects/{}/reports/00000000-0000-0000-0000-000000000000",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

@@ -485,3 +485,37 @@ mod iteration {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_str_valid() {
+        assert_eq!("0".parse::<Iteration>().unwrap(), Iteration(0));
+        assert_eq!("1".parse::<Iteration>().unwrap(), Iteration(1));
+        assert_eq!("42".parse::<Iteration>().unwrap(), Iteration(42));
+    }
+
+    #[test]
+    fn from_str_invalid() {
+        assert!("".parse::<Iteration>().is_err());
+        assert!("abc".parse::<Iteration>().is_err());
+        assert!("-1".parse::<Iteration>().is_err());
+    }
+
+    #[test]
+    fn as_usize() {
+        assert_eq!(Iteration(42).as_usize(), 42usize);
+    }
+
+    #[test]
+    fn default_is_zero() {
+        assert_eq!(Iteration::default(), Iteration(0));
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!(Iteration(7).to_string(), "7");
+    }
+}

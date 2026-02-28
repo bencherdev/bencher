@@ -20,7 +20,10 @@ async fn projects_list_empty() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -43,7 +46,10 @@ async fn projects_list_with_project() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -69,7 +75,10 @@ async fn projects_create() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -96,7 +105,10 @@ async fn projects_create_with_url() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -123,7 +135,10 @@ async fn projects_create_duplicate_slug() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -134,7 +149,10 @@ async fn projects_create_duplicate_slug() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await

@@ -49,7 +49,10 @@ async fn config_get_as_admin() {
     let resp = server
         .client
         .get(server.api_url("/v0/server/config"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -70,7 +73,10 @@ async fn config_get_forbidden_for_non_admin() {
     let resp = server
         .client
         .get(server.api_url("/v0/server/config"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

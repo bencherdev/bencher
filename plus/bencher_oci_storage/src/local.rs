@@ -1339,7 +1339,7 @@ mod tests {
         let repo = test_repository();
         let job = test_job_uuid();
 
-        let mut file_outputs = std::collections::HashMap::new();
+        let mut file_outputs = std::collections::BTreeMap::new();
         file_outputs.insert("/tmp/results.json".into(), "{\"metric\": 42}".to_owned());
         file_outputs.insert("/tmp/log.txt".into(), "some log".to_owned());
 

@@ -29,7 +29,10 @@ async fn thresholds_list() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{}/thresholds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -87,7 +90,10 @@ async fn thresholds_get_not_found() {
             "/v0/projects/{}/thresholds/00000000-0000-0000-0000-000000000000",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -110,7 +116,10 @@ async fn create_threshold_with_model(
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -125,7 +134,10 @@ async fn create_threshold_with_model(
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -141,7 +153,10 @@ async fn create_threshold_with_model(
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/measures", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -160,7 +175,10 @@ async fn create_threshold_with_model(
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/thresholds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -194,7 +212,10 @@ async fn thresholds_get_with_model_query() {
             "/v0/projects/{}/thresholds/{}",
             project_slug, threshold.uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -217,7 +238,10 @@ async fn thresholds_get_with_model_query() {
             "/v0/projects/{}/thresholds/{}",
             project_slug, threshold.uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&update_body)
         .send()
         .await
@@ -241,7 +265,10 @@ async fn thresholds_get_with_model_query() {
             "/v0/projects/{}/thresholds/{}",
             project_slug, threshold.uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -259,7 +286,10 @@ async fn thresholds_get_with_model_query() {
             "/v0/projects/{}/thresholds/{}?model={}",
             project_slug, threshold.uuid, model_a_uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -277,7 +307,10 @@ async fn thresholds_get_with_model_query() {
             "/v0/projects/{}/thresholds/{}?model={}",
             project_slug, threshold.uuid, model_b_uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -313,7 +346,10 @@ async fn thresholds_get_with_nonexistent_model() {
             "/v0/projects/{}/thresholds/{}?model={}",
             project_slug, threshold.uuid, bogus_uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -345,7 +381,10 @@ async fn thresholds_get_with_wrong_threshold_model() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -364,7 +403,10 @@ async fn thresholds_get_with_wrong_threshold_model() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/thresholds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -379,7 +421,10 @@ async fn thresholds_get_with_wrong_threshold_model() {
             "/v0/projects/{}/thresholds/{}?model={}",
             project_slug, threshold_b.uuid, model_a_uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

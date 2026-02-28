@@ -13,7 +13,9 @@ use super::UpConfig;
 #[cfg(target_os = "linux")]
 use super::error::{UpError, WebSocketError};
 #[cfg(target_os = "linux")]
-use super::websocket::{JobChannel, RunnerMessage, ServerMessage};
+use super::websocket::JobChannel;
+#[cfg(target_os = "linux")]
+use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
 
 pub enum JobOutcome {
     Completed {
@@ -89,19 +91,19 @@ pub fn execute_job(
     // Send result
     let outcome = match result {
         Ok(output) => {
-            // Convert output files from HashMap<Utf8PathBuf, Vec<u8>> to HashMap<Utf8PathBuf, String>
+            // Convert output files from HashMap<Utf8PathBuf, Vec<u8>> to BTreeMap<Utf8PathBuf, String>
             let file_output = output.output_files.map(|files| {
                 files
                     .into_iter()
                     .map(|(path, bytes)| (path, String::from_utf8_lossy(&bytes).into_owned()))
-                    .collect::<std::collections::HashMap<_, _>>()
+                    .collect::<std::collections::BTreeMap<_, _>>()
             });
             let stdout_preview = if output.stdout.is_empty() {
                 None
             } else {
                 Some(output.stdout.clone())
             };
-            let msg = RunnerMessage::Completed {
+            let iteration = JsonIterationOutput {
                 exit_code: output.exit_code,
                 stdout: if output.stdout.is_empty() {
                     None
@@ -114,6 +116,9 @@ pub fn execute_job(
                     Some(output.stderr)
                 },
                 output: file_output,
+            };
+            let msg = RunnerMessage::Completed {
+                results: vec![iteration],
             };
             let mut ws_guard = ws
                 .lock()
@@ -130,10 +135,8 @@ pub fn execute_job(
         Err(e) => {
             let error_msg = e.to_string();
             let msg = RunnerMessage::Failed {
-                exit_code: None,
+                results: Vec::new(),
                 error: error_msg.clone(),
-                stdout: None,
-                stderr: None,
             };
             let mut ws_guard = ws
                 .lock()

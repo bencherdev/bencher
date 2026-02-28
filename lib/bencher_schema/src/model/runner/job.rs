@@ -107,8 +107,23 @@ impl QueryJob {
         )
         .await?;
 
-        // Build results array from per-iteration stdout
-        let results_array: Vec<&str> = results.iter().filter_map(|r| r.stdout.as_deref()).collect();
+        // Build results array from per-iteration output.
+        // File output takes precedence (mirrors CLI CommandToFile mode):
+        // each file's contents = one result string for the adapter.
+        // Otherwise fall back to stdout (mirrors CLI Command mode).
+        let results_strings: Vec<String> = results
+            .iter()
+            .flat_map(|r| {
+                if let Some(output) = &r.output {
+                    output.values().cloned().collect::<Vec<_>>()
+                } else if let Some(stdout) = &r.stdout {
+                    vec![stdout.clone()]
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect();
+        let results_array: Vec<&str> = results_strings.iter().map(AsRef::as_ref).collect();
 
         // Build settings from job config
         let settings = JsonReportSettings {
@@ -555,6 +570,100 @@ pub struct UpdateJob {
     pub modified: Option<DateTime>,
 }
 
+impl UpdateJob {
+    /// Terminal status + completed timestamp.
+    pub fn terminate(status: JobStatus, now: DateTime) -> Self {
+        Self {
+            status: Some(status),
+            completed: Some(Some(now)),
+            modified: Some(now),
+            ..Default::default()
+        }
+    }
+
+    /// Status-only transition (no completed timestamp).
+    pub fn set_status(status: JobStatus, now: DateTime) -> Self {
+        Self {
+            status: Some(status),
+            modified: Some(now),
+            ..Default::default()
+        }
+    }
+
+    /// Update heartbeat timestamp only.
+    pub fn heartbeat(now: DateTime) -> Self {
+        Self {
+            last_heartbeat: Some(Some(now)),
+            modified: Some(now),
+            ..Default::default()
+        }
+    }
+
+    /// Transition to Running (Claimed -> Running).
+    pub fn start(now: DateTime) -> Self {
+        Self {
+            status: Some(JobStatus::Running),
+            started: Some(Some(now)),
+            last_heartbeat: Some(Some(now)),
+            modified: Some(now),
+            ..Default::default()
+        }
+    }
+
+    /// Claim a pending job.
+    pub fn claim(runner_id: RunnerId, now: DateTime) -> Self {
+        Self {
+            status: Some(JobStatus::Claimed),
+            runner_id: Some(Some(runner_id)),
+            claimed: Some(Some(now)),
+            last_heartbeat: Some(Some(now)),
+            modified: Some(now),
+            ..Default::default()
+        }
+    }
+
+    /// Apply this changeset to a job, filtering on the expected current status.
+    ///
+    /// Returns the number of rows updated (0 if the job was not in the expected status).
+    pub fn execute_if_status(
+        &self,
+        conn: &mut DbConnection,
+        job_id: JobId,
+        expected_status: JobStatus,
+    ) -> QueryResult<usize> {
+        diesel::update(
+            schema::job::table
+                .filter(schema::job::id.eq(job_id))
+                .filter(schema::job::status.eq(expected_status)),
+        )
+        .set(self)
+        .execute(conn)
+    }
+
+    /// Apply this changeset to a job, filtering on either of two expected statuses.
+    ///
+    /// Returns the number of rows updated (0 if the job was not in either expected status).
+    pub fn execute_if_either_status(
+        &self,
+        conn: &mut DbConnection,
+        job_id: JobId,
+        status_a: JobStatus,
+        status_b: JobStatus,
+    ) -> QueryResult<usize> {
+        diesel::update(
+            schema::job::table
+                .filter(schema::job::id.eq(job_id))
+                .filter(
+                    schema::job::status
+                        .eq(status_a)
+                        .or(schema::job::status.eq(status_b)),
+                ),
+        )
+        .set(self)
+        .execute(conn)
+    }
+}
+
 /// Spawn a background task that marks a job as failed if no heartbeat is received
 /// within the timeout period. This handles both "disconnected runner" recovery
 /// and startup recovery for in-flight jobs.
@@ -633,25 +742,14 @@ pub fn spawn_heartbeat_timeout(
             // Mark the job as failed
             slog::warn!(log, "Heartbeat timeout, marking job as failed"; "job_id" => ?job_id);
             let now = clock.now();
-            let update = UpdateJob {
-                status: Some(JobStatus::Failed),
-                completed: Some(Some(now)),
-                modified: Some(now),
-                ..Default::default()
-            };
+            let update = UpdateJob::terminate(JobStatus::Failed, now);
 
-            match diesel::update(
-                schema::job::table
-                    .filter(schema::job::id.eq(job_id))
-                    .filter(
-                        schema::job::status
-                            .eq(JobStatus::Claimed)
-                            .or(schema::job::status.eq(JobStatus::Running)),
-                    ),
-            )
-            .set(&update)
-            .execute(&mut *conn)
-            {
+            match update.execute_if_either_status(
+                &mut conn,
+                job_id,
+                JobStatus::Claimed,
+                JobStatus::Running,
+            ) {
                 Ok(0) => {
                     slog::info!(log, "Heartbeat timeout: job already in terminal state"; "job_id" => ?job_id);
                 },
@@ -712,21 +810,9 @@ pub fn recover_orphaned_claimed_jobs(
 
         slog::warn!(log, "Recovering orphaned claimed job"; "job_id" => ?job.id);
         let now = clock.now();
-        let update = UpdateJob {
-            status: Some(JobStatus::Failed),
-            completed: Some(Some(now)),
-            modified: Some(now),
-            ..Default::default()
-        };
+        let update = UpdateJob::terminate(JobStatus::Failed, now);
 
-        match diesel::update(
-            schema::job::table
-                .filter(schema::job::id.eq(job.id))
-                .filter(schema::job::status.eq(JobStatus::Claimed)),
-        )
-        .set(&update)
-        .execute(conn)
-        {
+        match update.execute_if_status(conn, job.id, JobStatus::Claimed) {
             Ok(0) => {
                 slog::info!(log, "Orphaned job already changed state"; "job_id" => ?job.id);
             },
@@ -770,25 +856,14 @@ fn check_job_timeout(
         return false;
     }
     slog::warn!(log, "Job timeout exceeded, marking as canceled"; "job_id" => ?job.id, "elapsed" => elapsed, "limit" => limit);
-    let cancel_update = UpdateJob {
-        status: Some(JobStatus::Canceled),
-        completed: Some(Some(now)),
-        modified: Some(now),
-        ..Default::default()
-    };
+    let cancel_update = UpdateJob::terminate(JobStatus::Canceled, now);
     // Use status filter to avoid TOCTOU race
-    match diesel::update(
-        schema::job::table
-            .filter(schema::job::id.eq(job.id))
-            .filter(
-                schema::job::status
-                    .eq(JobStatus::Claimed)
-                    .or(schema::job::status.eq(JobStatus::Running)),
-            ),
-    )
-    .set(&cancel_update)
-    .execute(conn)
-    {
+    match cancel_update.execute_if_either_status(
+        conn,
+        job.id,
+        JobStatus::Claimed,
+        JobStatus::Running,
+    ) {
         Ok(updated) if updated > 0 => {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobTimeout);
@@ -799,4 +874,97 @@ fn check_job_timeout(
         },
     }
     true
+}
+
+#[cfg(feature = "plus")]
+/// Reprocess jobs stuck in `Completed` status on startup.
+///
+/// These are jobs where output was stored but result processing (adapter parsing,
+/// metrics, alerts) failed or was interrupted. Fetches stored output from OCI
+/// storage, runs `process_results`, and transitions to `Processed` on success.
+pub async fn reprocess_completed_jobs(log: &Logger, context: &ApiContext) {
+    let completed_jobs: Vec<QueryJob> = {
+        match schema::job::table
+            .filter(schema::job::status.eq(JobStatus::Completed))
+            .load(write_conn!(context))
+        {
+            Ok(jobs) => jobs,
+            Err(e) => {
+                slog::error!(log, "Failed to query completed jobs for reprocessing"; "error" => %e);
+                return;
+            },
+        }
+    };
+
+    let count = completed_jobs.len();
+    if count == 0 {
+        return;
+    }
+    slog::info!(log, "Reprocessing {count} completed job(s)");
+
+    for job in &completed_jobs {
+        let output = match context
+            .oci_storage()
+            .job_output()
+            .get(job.config.project, job.uuid)
+            .await
+        {
+            Ok(Some(output)) => output,
+            Ok(None) => {
+                slog::warn!(log, "No stored output for completed job"; "job_id" => ?job.id);
+                continue;
+            },
+            Err(e) => {
+                slog::error!(log, "Failed to fetch job output for reprocessing"; "job_id" => ?job.id, "error" => %e);
+                continue;
+            },
+        };
+
+        let now = context.clock.now();
+        if let Err(e) = job
+            .process_results(log, context, &output.results, now)
+            .await
+        {
+            slog::warn!(log, "Failed to reprocess job results, marking as Failed"; "job_id" => ?job.id, "error" => %e);
+            let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
+            match failed_update.execute_if_status(
+                write_conn!(context),
+                job.id,
+                JobStatus::Completed,
+            ) {
+                Ok(updated) if updated > 0 => {
+                    slog::info!(log, "Marked failed reprocessing job as Failed"; "job_id" => ?job.id);
+                    #[cfg(feature = "otel")]
+                    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+                        bencher_otel::JobStatusKind::Failed,
+                    ));
+                },
+                Ok(_) => {
+                    slog::info!(log, "Job already changed state during reprocessing failure"; "job_id" => ?job.id);
+                },
+                Err(e) => {
+                    slog::error!(log, "Failed to mark reprocessing job as Failed"; "job_id" => ?job.id, "error" => %e);
+                },
+            }
+            continue;
+        }
+
+        let processed_update = UpdateJob::set_status(JobStatus::Processed, now);
+        match processed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed)
+        {
+            Ok(updated) if updated > 0 => {
+                slog::info!(log, "Reprocessed completed job"; "job_id" => ?job.id);
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+                    bencher_otel::JobStatusKind::Processed,
+                ));
+            },
+            Ok(_) => {
+                slog::info!(log, "Job already changed state during reprocessing"; "job_id" => ?job.id);
+            },
+            Err(e) => {
+                slog::error!(log, "Failed to mark reprocessed job as processed"; "job_id" => ?job.id, "error" => %e);
+            },
+        }
+    }
 }

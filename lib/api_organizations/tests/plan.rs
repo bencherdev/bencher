@@ -19,7 +19,10 @@ async fn plan_get() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/organizations/{}/plan", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -64,7 +67,10 @@ async fn plan_org_not_found() {
     let resp = server
         .client
         .get(server.api_url("/v0/organizations/nonexistent-org/plan"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

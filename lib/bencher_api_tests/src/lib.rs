@@ -18,7 +18,7 @@
 //!
 //!     let resp = server.client
 //!         .get(server.api_url("/v0/my/endpoint"))
-//!         .header("Authorization", server.bearer(&user.token))
+//!         .header(bencher_json::AUTHORIZATION, bencher_json::bearer_header(&user.token))
 //!         .send()
 //!         .await
 //!         .unwrap();

@@ -11153,6 +11153,7 @@
           "claimed",
           "running",
           "completed",
+          "processed",
           "failed",
           "canceled"
         ]

@@ -21,6 +21,8 @@ pub mod runner_spec;
 mod source_ip;
 mod token_hash;
 
+#[cfg(feature = "plus")]
+pub use job::reprocess_completed_jobs;
 pub use job::{
     InsertJob, JobId, PendingInsertJob, QueryJob, UpdateJob, recover_orphaned_claimed_jobs,
     spawn_heartbeat_timeout,

@@ -28,7 +28,10 @@ async fn specs_create() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -66,7 +69,10 @@ async fn specs_create_custom_slug() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -96,7 +102,10 @@ async fn specs_create_forbidden_for_non_admin() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -123,7 +132,10 @@ async fn specs_list() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -134,7 +146,10 @@ async fn specs_list() {
     let resp = server
         .client
         .get(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -162,7 +177,10 @@ async fn specs_get_by_uuid() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -173,7 +191,10 @@ async fn specs_get_by_uuid() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -201,7 +222,10 @@ async fn specs_get_by_slug() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -212,7 +236,10 @@ async fn specs_get_by_slug() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/specs/{}", created.slug)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -241,7 +268,10 @@ async fn specs_archive() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -253,7 +283,10 @@ async fn specs_archive() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -267,7 +300,10 @@ async fn specs_archive() {
     let resp = server
         .client
         .get(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -295,7 +331,10 @@ async fn specs_list_with_archived() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -306,7 +345,10 @@ async fn specs_list_with_archived() {
     server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -316,7 +358,10 @@ async fn specs_list_with_archived() {
     let resp = server
         .client
         .get(server.api_url("/v0/specs?archived=true"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -344,7 +389,10 @@ async fn specs_unarchive() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -355,7 +403,10 @@ async fn specs_unarchive() {
     server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -366,7 +417,10 @@ async fn specs_unarchive() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -395,7 +449,10 @@ async fn specs_delete() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -406,7 +463,10 @@ async fn specs_delete() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -417,7 +477,10 @@ async fn specs_delete() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -443,7 +506,10 @@ async fn specs_delete_fails_when_in_use() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -456,7 +522,10 @@ async fn specs_delete_fails_when_in_use() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&runner_body)
         .send()
         .await
@@ -469,7 +538,10 @@ async fn specs_delete_fails_when_in_use() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&assoc_body)
         .send()
         .await
@@ -480,7 +552,10 @@ async fn specs_delete_fails_when_in_use() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/specs/{}", spec.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -506,7 +581,10 @@ async fn specs_create_fallback() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -534,7 +612,10 @@ async fn specs_create_without_fallback() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -563,7 +644,10 @@ async fn specs_create_fallback_false() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -595,7 +679,10 @@ async fn specs_create_fallback_replaces_existing() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body_a)
         .send()
         .await
@@ -616,7 +703,10 @@ async fn specs_create_fallback_replaces_existing() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body_b)
         .send()
         .await
@@ -629,7 +719,10 @@ async fn specs_create_fallback_replaces_existing() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/specs/{}", spec_a.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -657,7 +750,10 @@ async fn specs_update_set_fallback() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -670,7 +766,10 @@ async fn specs_update_set_fallback() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -699,7 +798,10 @@ async fn specs_update_unset_fallback() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -712,7 +814,10 @@ async fn specs_update_unset_fallback() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -741,7 +846,10 @@ async fn specs_update_fallback_no_change() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -754,7 +862,10 @@ async fn specs_update_fallback_no_change() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -783,7 +894,10 @@ async fn specs_update_fallback_replaces_existing() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body_a)
         .send()
         .await
@@ -801,7 +915,10 @@ async fn specs_update_fallback_replaces_existing() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body_b)
         .send()
         .await
@@ -813,7 +930,10 @@ async fn specs_update_fallback_replaces_existing() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", spec_b.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -826,7 +946,10 @@ async fn specs_update_fallback_replaces_existing() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/specs/{}", spec_a.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -855,7 +978,10 @@ async fn specs_archive_clears_fallback() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -868,7 +994,10 @@ async fn specs_archive_clears_fallback() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -901,7 +1030,10 @@ async fn specs_delete_fallback_spec() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -912,7 +1044,10 @@ async fn specs_delete_fallback_spec() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -929,7 +1064,10 @@ async fn specs_delete_fallback_spec() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -959,7 +1097,10 @@ async fn specs_list_includes_fallback_field() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -978,7 +1119,10 @@ async fn specs_list_includes_fallback_field() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -990,7 +1134,10 @@ async fn specs_list_includes_fallback_field() {
     let resp = server
         .client
         .get(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1037,7 +1184,10 @@ async fn specs_create_fallback_replaces_archived_fallback() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body_a)
         .send()
         .await
@@ -1051,7 +1201,10 @@ async fn specs_create_fallback_replaces_archived_fallback() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", spec_a.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1076,7 +1229,10 @@ async fn specs_create_fallback_replaces_archived_fallback() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body_b)
         .send()
         .await
@@ -1089,7 +1245,10 @@ async fn specs_create_fallback_replaces_archived_fallback() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/specs/{}", spec_a.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1118,7 +1277,10 @@ async fn specs_update_set_fallback_already_fallback() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1132,7 +1294,10 @@ async fn specs_update_set_fallback_already_fallback() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1163,7 +1328,10 @@ async fn specs_update_unset_fallback_already_unset() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1177,7 +1345,10 @@ async fn specs_update_unset_fallback_already_unset() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1209,7 +1380,10 @@ async fn specs_patch_fallback_true_and_archived_true() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body_a)
         .send()
         .await
@@ -1229,7 +1403,10 @@ async fn specs_patch_fallback_true_and_archived_true() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body_b)
         .send()
         .await
@@ -1243,7 +1420,10 @@ async fn specs_patch_fallback_true_and_archived_true() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", spec_b.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1261,7 +1441,10 @@ async fn specs_patch_fallback_true_and_archived_true() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/specs/{}", spec_a.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1290,7 +1473,10 @@ async fn specs_unarchive_former_fallback() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1304,7 +1490,10 @@ async fn specs_unarchive_former_fallback() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1322,7 +1511,10 @@ async fn specs_unarchive_former_fallback() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", created.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1362,7 +1554,10 @@ async fn specs_archive_clears_testbed_spec_id() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1400,7 +1595,10 @@ async fn specs_archive_clears_testbed_spec_id() {
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{project_slug}/manifests/v1")))
-        .header("Authorization", format!("Bearer {oci_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -1426,7 +1624,10 @@ async fn specs_archive_clears_testbed_spec_id() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1455,7 +1656,10 @@ async fn specs_archive_clears_testbed_spec_id() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", spec.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await

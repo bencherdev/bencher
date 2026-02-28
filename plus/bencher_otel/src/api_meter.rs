@@ -434,6 +434,7 @@ impl AuthorizationKind {
 pub enum JobStatusKind {
     Running,
     Completed,
+    Processed,
     Failed,
     Canceled,
 }
@@ -443,6 +444,7 @@ impl fmt::Display for JobStatusKind {
         match self {
             Self::Running => write!(f, "running"),
             Self::Completed => write!(f, "completed"),
+            Self::Processed => write!(f, "processed"),
             Self::Failed => write!(f, "failed"),
             Self::Canceled => write!(f, "canceled"),
         }

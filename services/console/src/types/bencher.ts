@@ -63,6 +63,7 @@ export enum JobStatus {
 	Claimed = "claimed",
 	Running = "running",
 	Completed = "completed",
+	Processed = "processed",
 	Failed = "failed",
 	Canceled = "canceled",
 }

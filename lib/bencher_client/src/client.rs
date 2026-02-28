@@ -241,9 +241,11 @@ impl BencherClient {
 
         if let Some(token) = &self.token {
             let mut headers = reqwest::header::HeaderMap::new();
-            let bearer_token = reqwest::header::HeaderValue::from_str(&format!("Bearer {token}"))
-                .map_err(ClientError::HeaderValue)?;
-            headers.insert("Authorization", bearer_token);
+            let bearer_token = reqwest::header::HeaderValue::from_str(
+                &bencher_json::bearer_header(token.as_ref()),
+            )
+            .map_err(ClientError::HeaderValue)?;
+            headers.insert(bencher_json::AUTHORIZATION, bearer_token);
             client_builder = client_builder.default_headers(headers);
         }
 

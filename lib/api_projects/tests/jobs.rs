@@ -29,7 +29,10 @@ async fn jobs_list_empty() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -54,7 +57,10 @@ async fn jobs_list_with_pagination() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/jobs?per_page=10&page=1"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -78,7 +84,10 @@ async fn jobs_list_with_status_filter() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs?status=pending")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -100,7 +109,10 @@ async fn jobs_list_ascending_order() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs?direction=asc")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -124,7 +136,10 @@ async fn jobs_get_not_found() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/jobs/00000000-0000-0000-0000-000000000000"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -188,7 +203,10 @@ async fn jobs_list_project_not_found() {
     let resp = server
         .client
         .get(server.api_url("/v0/projects/nonexistent-project/jobs"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -210,7 +228,10 @@ async fn jobs_list_total_count_header() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -233,7 +254,10 @@ async fn jobs_list_by_uuid() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{}/jobs", project.uuid)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -390,7 +414,10 @@ async fn jobs_list_with_data() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -426,7 +453,10 @@ async fn jobs_list_pagination_with_data() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/jobs?per_page=2&page=1"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -441,7 +471,10 @@ async fn jobs_list_pagination_with_data() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/jobs?per_page=2&page=2"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -481,7 +514,10 @@ async fn jobs_list_status_filter_with_data() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs?status=pending")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -495,7 +531,10 @@ async fn jobs_list_status_filter_with_data() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs?status=running")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -533,7 +572,10 @@ async fn jobs_list_ordering_with_data() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -551,7 +593,10 @@ async fn jobs_list_ordering_with_data() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs?direction=asc")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -589,7 +634,10 @@ async fn jobs_total_count_with_data() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/jobs?per_page=2&page=1"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -643,7 +691,10 @@ async fn non_member_private_project_jobs() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs")))
-        .header("Authorization", server.bearer(&non_member.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&non_member.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -711,7 +762,10 @@ async fn job_get_pending_no_output() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -758,7 +812,10 @@ async fn job_get_completed_with_output() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -803,7 +860,10 @@ async fn job_get_completed_no_stored_output() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -849,7 +909,10 @@ async fn job_get_failed_with_output() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -903,7 +966,10 @@ async fn job_get_running_no_output() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

@@ -21,7 +21,10 @@ async fn measures_list() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{}/measures", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -52,7 +55,10 @@ async fn measures_create() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/measures", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -85,7 +91,10 @@ async fn measures_create_auto_slug() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/measures", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -116,7 +125,10 @@ async fn measures_delete() {
     let create_resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/measures", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -129,7 +141,10 @@ async fn measures_delete() {
             "/v0/projects/{}/measures/delete-measure",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

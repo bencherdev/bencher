@@ -558,7 +558,10 @@ async fn perf_get_single_result() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -596,7 +599,10 @@ async fn perf_get_response_structure() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -646,7 +652,10 @@ async fn perf_get_empty_results() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -759,7 +768,10 @@ async fn perf_get_multiple_metrics_same_permutation() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -813,7 +825,10 @@ async fn perf_filter_by_start_time() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -858,7 +873,10 @@ async fn perf_filter_by_end_time() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -904,7 +922,10 @@ async fn perf_filter_includes_matching_time() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -942,7 +963,10 @@ async fn perf_multi_branch_query() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -981,7 +1005,10 @@ async fn perf_multi_testbed_query() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1052,7 +1079,10 @@ async fn perf_multi_measure_query() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1136,7 +1166,10 @@ async fn perf_multi_benchmark_query() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1166,7 +1199,10 @@ async fn perf_missing_branches_param() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/perf?testbeds={uuid}&benchmarks={uuid}&measures={uuid}"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1192,7 +1228,10 @@ async fn perf_missing_testbeds_param() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/perf?branches={uuid}&benchmarks={uuid}&measures={uuid}"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1216,7 +1255,10 @@ async fn perf_missing_benchmarks_param() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/perf?branches={uuid}&testbeds={uuid}&measures={uuid}"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1242,7 +1284,10 @@ async fn perf_missing_measures_param() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/perf?branches={uuid}&testbeds={uuid}&benchmarks={uuid}"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1268,7 +1313,7 @@ async fn perf_invalid_branch_uuid() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/perf?branches=not-a-uuid&testbeds={uuid}&benchmarks={uuid}&measures={uuid}"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(bencher_json::AUTHORIZATION, bencher_json::bearer_header(&user.token))
         .send()
         .await
         .expect("Request failed");
@@ -1287,7 +1332,7 @@ async fn perf_nonexistent_project() {
         .get(server.api_url(&format!(
             "/v0/projects/nonexistent-project/perf?branches={uuid}&testbeds={uuid}&benchmarks={uuid}&measures={uuid}"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(bencher_json::AUTHORIZATION, bencher_json::bearer_header(&user.token))
         .send()
         .await
         .expect("Request failed");
@@ -1308,7 +1353,10 @@ async fn perf_no_query_params() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/perf")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1334,7 +1382,7 @@ async fn perf_empty_branches_value() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/perf?branches=&testbeds={uuid}&benchmarks={uuid}&measures={uuid}"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(bencher_json::AUTHORIZATION, bencher_json::bearer_header(&user.token))
         .send()
         .await
         .expect("Request failed");
@@ -1442,7 +1490,10 @@ async fn perf_private_project_with_auth() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1477,7 +1528,10 @@ async fn perf_private_project_wrong_user() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&other.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&other.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1553,7 +1607,10 @@ async fn perf_permutation_limit_exact_255() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1623,7 +1680,10 @@ async fn perf_permutation_limit_truncated_256() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1663,7 +1723,10 @@ async fn perf_without_threshold() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1700,7 +1763,10 @@ async fn perf_with_boundary() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1744,7 +1810,10 @@ async fn perf_with_alert() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1875,7 +1944,10 @@ async fn perf_ordered_by_version_number() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2003,7 +2075,10 @@ async fn perf_ordered_by_start_time_within_version() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2048,7 +2123,10 @@ async fn perf_version_hash_returned() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2097,7 +2175,10 @@ async fn perf_default_head() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2133,7 +2214,10 @@ async fn perf_explicit_head() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2174,7 +2258,10 @@ async fn perf_no_head_id_set_on_branch() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2216,7 +2303,10 @@ async fn perf_wrong_project_branch() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2258,7 +2348,10 @@ async fn perf_wrong_project_testbed() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2298,7 +2391,10 @@ async fn perf_wrong_project_benchmark() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2338,7 +2434,10 @@ async fn perf_wrong_project_measure() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2386,7 +2485,10 @@ async fn perf_lower_upper_values() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2461,7 +2563,10 @@ async fn perf_multiple_iterations() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2511,7 +2616,10 @@ async fn perf_time_echo() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2566,7 +2674,10 @@ async fn perf_spec_from_query_param() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2614,7 +2725,10 @@ async fn perf_no_spec_when_omitted() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2652,7 +2766,10 @@ async fn perf_spec_empty_entry() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2777,7 +2894,10 @@ async fn perf_spec_filters_results() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2799,7 +2919,10 @@ async fn perf_spec_filters_results() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2821,7 +2944,10 @@ async fn perf_spec_filters_results() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2858,7 +2984,10 @@ async fn perf_spec_nonexistent_uuid() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -2897,7 +3026,10 @@ async fn perf_access_by_project_uuid() {
     let resp = server
         .client
         .get(server.api_url(&url))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

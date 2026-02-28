@@ -20,7 +20,10 @@ async fn allowed_view() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/organizations/{}/allowed/view", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -41,7 +44,10 @@ async fn allowed_edit() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/organizations/{}/allowed/edit", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -65,7 +71,10 @@ async fn allowed_delete() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/organizations/{}/allowed/delete", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -92,7 +101,10 @@ async fn allowed_invalid_permission() {
             "/v0/organizations/{}/allowed/invalid_permission",
             org_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

@@ -6,8 +6,9 @@ const PENDING_INT: i32 = 0;
 const CLAIMED_INT: i32 = 1;
 const RUNNING_INT: i32 = 2;
 const COMPLETED_INT: i32 = 3;
-const FAILED_INT: i32 = 4;
-const CANCELED_INT: i32 = 5;
+const PROCESSED_INT: i32 = 4;
+const FAILED_INT: i32 = 5;
+const CANCELED_INT: i32 = 6;
 
 /// Job status
 #[typeshare::typeshare]
@@ -23,20 +24,25 @@ pub enum JobStatus {
     Claimed = CLAIMED_INT,
     Running = RUNNING_INT,
     Completed = COMPLETED_INT,
+    Processed = PROCESSED_INT,
     Failed = FAILED_INT,
     Canceled = CANCELED_INT,
 }
 
 impl JobStatus {
     pub fn is_terminal(&self) -> bool {
-        matches!(self, Self::Completed | Self::Failed | Self::Canceled)
+        matches!(
+            self,
+            Self::Completed | Self::Processed | Self::Failed | Self::Canceled
+        )
     }
 }
 
 #[cfg(feature = "db")]
 mod job_status_db {
     use super::{
-        CANCELED_INT, CLAIMED_INT, COMPLETED_INT, FAILED_INT, JobStatus, PENDING_INT, RUNNING_INT,
+        CANCELED_INT, CLAIMED_INT, COMPLETED_INT, FAILED_INT, JobStatus, PENDING_INT,
+        PROCESSED_INT, RUNNING_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -59,6 +65,7 @@ mod job_status_db {
                 Self::Claimed => CLAIMED_INT.to_sql(out),
                 Self::Running => RUNNING_INT.to_sql(out),
                 Self::Completed => COMPLETED_INT.to_sql(out),
+                Self::Processed => PROCESSED_INT.to_sql(out),
                 Self::Failed => FAILED_INT.to_sql(out),
                 Self::Canceled => CANCELED_INT.to_sql(out),
             }
@@ -76,10 +83,40 @@ mod job_status_db {
                 CLAIMED_INT => Ok(Self::Claimed),
                 RUNNING_INT => Ok(Self::Running),
                 COMPLETED_INT => Ok(Self::Completed),
+                PROCESSED_INT => Ok(Self::Processed),
                 FAILED_INT => Ok(Self::Failed),
                 CANCELED_INT => Ok(Self::Canceled),
                 value => Err(Box::new(JobStatusError::Invalid(value))),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn processed_is_terminal() {
+        assert!(JobStatus::Processed.is_terminal());
+    }
+
+    #[test]
+    fn processed_serde_roundtrip() {
+        let json = serde_json::to_string(&JobStatus::Processed).unwrap();
+        assert_eq!(json, r#""processed""#);
+        let deserialized: JobStatus = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized, JobStatus::Processed);
+    }
+
+    #[test]
+    fn all_terminal_states() {
+        assert!(!JobStatus::Pending.is_terminal());
+        assert!(!JobStatus::Claimed.is_terminal());
+        assert!(!JobStatus::Running.is_terminal());
+        assert!(JobStatus::Completed.is_terminal());
+        assert!(JobStatus::Processed.is_terminal());
+        assert!(JobStatus::Failed.is_terminal());
+        assert!(JobStatus::Canceled.is_terminal());
     }
 }

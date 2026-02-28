@@ -212,7 +212,10 @@ async fn metrics_get_not_found() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/metrics/00000000-0000-0000-0000-000000000000"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -241,7 +244,10 @@ async fn metrics_get_basic() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/metrics/{metric_uuid}"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -277,7 +283,10 @@ async fn metrics_get_with_job_spec() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/metrics/{metric_uuid}"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -314,7 +323,10 @@ async fn metrics_get_without_job() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_slug}/metrics/{metric_uuid}"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -384,7 +396,10 @@ async fn metrics_get_wrong_project() {
         .get(server.api_url(&format!(
             "/v0/projects/{project_b_slug}/metrics/{metric_uuid}"
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

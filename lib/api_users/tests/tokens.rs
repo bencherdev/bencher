@@ -24,7 +24,10 @@ async fn tokens_list() {
     let create_resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&create_body)
         .send()
         .await
@@ -36,7 +39,10 @@ async fn tokens_list() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -60,7 +66,10 @@ async fn tokens_create() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -86,7 +95,10 @@ async fn tokens_create_with_ttl() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -110,7 +122,10 @@ async fn tokens_get() {
     let create_resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -126,7 +141,10 @@ async fn tokens_get() {
             "/v0/users/{}/tokens/{}",
             user_slug, created_token.uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -151,7 +169,10 @@ async fn tokens_get_not_found() {
             "/v0/users/{}/tokens/00000000-0000-0000-0000-000000000000",
             user_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -174,7 +195,10 @@ async fn tokens_update() {
     let create_resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -194,7 +218,10 @@ async fn tokens_update() {
             "/v0/users/{}/tokens/{}",
             user_slug, created_token.uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&update_body)
         .send()
         .await
@@ -221,7 +248,10 @@ async fn tokens_create_other_user_forbidden() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/tokens", user2_slug)))
-        .header("Authorization", server.bearer(&user1.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user1.token),
+        )
         .json(&body)
         .send()
         .await

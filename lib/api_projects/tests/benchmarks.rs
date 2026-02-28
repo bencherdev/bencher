@@ -25,7 +25,10 @@ async fn benchmarks_list_empty() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{}/benchmarks", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -55,7 +58,10 @@ async fn benchmarks_list_with_search() {
             "/v0/projects/{}/benchmarks?search=foo",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -82,7 +88,10 @@ async fn benchmarks_get_not_found() {
             "/v0/projects/{}/benchmarks/nonexistent-benchmark",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -109,7 +118,10 @@ async fn benchmarks_delete_not_found() {
             "/v0/projects/{}/benchmarks/nonexistent-benchmark",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

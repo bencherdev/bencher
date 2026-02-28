@@ -38,7 +38,10 @@ async fn claim_job(
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{runner_uuid}/jobs")))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&body)
         .send()
         .await
@@ -93,8 +96,8 @@ fn ws_request(
     );
     let mut request = url.into_client_request().expect("Failed to build request");
     request.headers_mut().insert(
-        "Authorization",
-        format!("Bearer {runner_token}")
+        bencher_json::AUTHORIZATION,
+        bencher_json::bearer_header(runner_token)
             .parse()
             .expect("Invalid header"),
     );
@@ -181,7 +184,7 @@ async fn channel_invalid_token() {
     );
     let mut request = url.into_client_request().expect("Failed to build request");
     request.headers_mut().insert(
-        "Authorization",
+        bencher_json::AUTHORIZATION,
         "Bearer bencher_runner_badbadbadbad"
             .parse()
             .expect("Invalid header"),
@@ -325,7 +328,7 @@ async fn channel_lifecycle_completed() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }
@@ -548,7 +551,7 @@ async fn channel_lifecycle_with_full_spec() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }
@@ -828,7 +831,7 @@ async fn channel_close_on_completed() {
 
     // Server should close the connection after Completed
     assert_ws_closed(&mut ws).await;
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 }
 
 /// Server closes the WebSocket after Failed message.
@@ -884,7 +887,7 @@ async fn channel_completed_with_output() {
     assert!(matches!(resp, ServerMessage::Ack));
 
     // Send Completed with stdout and output
-    let mut output = std::collections::HashMap::new();
+    let mut output = std::collections::BTreeMap::new();
     output.insert(
         camino::Utf8PathBuf::from("/output/results.json"),
         "final results".to_owned(),
@@ -903,7 +906,9 @@ async fn channel_completed_with_output() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+    // File output ("final results") is now passed to the adapter (no longer silently dropped).
+    // The Magic adapter cannot parse it, so process_results fails and the job is marked Failed.
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
     assert_ws_closed(&mut ws).await;
 }
@@ -970,7 +975,198 @@ async fn channel_completed_with_stderr_only() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+
+    assert_ws_closed(&mut ws).await;
+}
+
+/// Verifies job transitions to Failed (not Processed) when `process_results` fails.
+#[tokio::test]
+async fn channel_completed_result_processing_failure() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "proc-fail").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Send Completed with stdout that the adapter cannot parse.
+    // The Magic adapter will fail to convert this invalid benchmark output.
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some("this is not valid benchmark output".into()),
+                stderr: None,
+                output: None,
+            }],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    assert_ws_closed(&mut ws).await;
+
+    // Job is marked Failed (not Processed) because process_results failed
+    // (the adapter could not parse the output).
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+}
+
+// =============================================================================
+// Multi-Iteration Tests
+// =============================================================================
+
+/// Completed with multiple iterations (empty stdout/output, `exit_code` 0).
+/// Since there's no stdout or file output, the adapter receives an empty results
+/// array, which succeeds and the job transitions to Processed.
+#[tokio::test]
+async fn channel_completed_multiple_iterations() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "multi-iter").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Send Completed with 3 iterations, all empty
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            results: vec![
+                JsonIterationOutput {
+                    exit_code: 0,
+                    stdout: None,
+                    stderr: None,
+                    output: None,
+                },
+                JsonIterationOutput {
+                    exit_code: 0,
+                    stdout: None,
+                    stderr: None,
+                    output: None,
+                },
+                JsonIterationOutput {
+                    exit_code: 0,
+                    stdout: None,
+                    stderr: None,
+                    output: None,
+                },
+            ],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    // Empty results -> adapter succeeds (no benchmarks to parse) -> Processed
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+
+    assert_ws_closed(&mut ws).await;
+}
+
+/// Completed with multiple iterations each having file output.
+/// The Magic adapter cannot parse the file content, so `process_results` fails
+/// and the job is marked Failed.
+#[tokio::test]
+async fn channel_completed_multiple_iterations_with_file_output() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "multi-iter-file").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Send Completed with 2 iterations, each having file output
+    let mut output1 = std::collections::BTreeMap::new();
+    output1.insert(
+        camino::Utf8PathBuf::from("/output/iter1.txt"),
+        "not parseable benchmark data".to_owned(),
+    );
+    let mut output2 = std::collections::BTreeMap::new();
+    output2.insert(
+        camino::Utf8PathBuf::from("/output/iter2.txt"),
+        "also not parseable".to_owned(),
+    );
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            results: vec![
+                JsonIterationOutput {
+                    exit_code: 0,
+                    stdout: None,
+                    stderr: None,
+                    output: Some(output1),
+                },
+                JsonIterationOutput {
+                    exit_code: 0,
+                    stdout: None,
+                    stderr: None,
+                    output: Some(output2),
+                },
+            ],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    // Magic adapter cannot parse the file content -> process_results fails -> Failed
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+
+    assert_ws_closed(&mut ws).await;
+}
+
+/// Failed with multiple iterations (partial results before failure).
+/// The job should transition to Failed.
+#[tokio::test]
+async fn channel_failed_multiple_iterations() {
+    let server = TestServer::new().await;
+    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "multi-iter-fail").await;
+
+    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Send Failed with 2 iterations (partial results before failure)
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Failed {
+            results: vec![
+                JsonIterationOutput {
+                    exit_code: 0,
+                    stdout: None,
+                    stderr: None,
+                    output: None,
+                },
+                JsonIterationOutput {
+                    exit_code: 1,
+                    stdout: None,
+                    stderr: Some("benchmark crashed on iteration 2\n".into()),
+                    output: None,
+                },
+            ],
+            error: "iteration 2 failed".to_owned(),
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
     assert_ws_closed(&mut ws).await;
 }
@@ -1101,7 +1297,10 @@ async fn channel_token_rotation_invalidates_old_token() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/token", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Rotation request failed");

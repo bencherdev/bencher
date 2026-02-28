@@ -36,7 +36,10 @@ async fn backup_forbidden_for_non_admin() {
     let resp = server
         .client
         .post(server.api_url("/v0/server/backup"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -61,7 +64,10 @@ async fn backup_as_admin() {
     let resp = server
         .client
         .post(server.api_url("/v0/server/backup"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
