@@ -513,12 +513,18 @@ async fn handle_completed(
 
     // Transition to Processed on success
     let processed_update = UpdateJob::set_status(JobStatus::Processed, now);
-    processed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed)?;
+    let updated =
+        processed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed)?;
+    if updated == 0 {
+        slog::info!(log, "Job already changed state during Processed transition"; "job_id" => ?job.id);
+    }
 
     #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-        bencher_otel::JobStatusKind::Processed,
-    ));
+    if updated > 0 {
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+            bencher_otel::JobStatusKind::Processed,
+        ));
+    }
 
     Ok(())
 }

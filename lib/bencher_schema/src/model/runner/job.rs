@@ -589,6 +589,10 @@ pub struct UpdateJob {
 impl UpdateJob {
     /// Terminal status + completed timestamp.
     pub fn terminate(status: JobStatus, now: DateTime) -> Self {
+        debug_assert!(
+            status.has_run(),
+            "terminate() called with non-terminal status: {status:?}"
+        );
         Self {
             status: Some(status),
             completed: Some(Some(now)),
@@ -963,7 +967,8 @@ async fn reprocess_single_completed_job(log: &Logger, context: &ApiContext, job:
             return;
         },
         Err(e) => {
-            slog::error!(log, "Failed to fetch job output for reprocessing"; "job_id" => ?job.id, "error" => %e);
+            slog::error!(log, "Failed to fetch job output for reprocessing, marking as Failed"; "job_id" => ?job.id, "error" => %e);
+            mark_orphaned_completed_as_failed(log, context, job).await;
             return;
         },
     };
