@@ -46,6 +46,7 @@ pub fn execute_job(
     // Build runner Config from claimed job spec (all values from job spec, no defaults)
     let job_config = build_config_from_job(config, job);
     let iter_count = job.config.iter.map_or(1, bencher_json::Iteration::as_usize);
+    let allow_failure = job.config.allow_failure.unwrap_or_default();
 
     // Send Running status
     {
@@ -96,26 +97,24 @@ pub fn execute_job(
                 if !output.stdout.is_empty() {
                     last_stdout_preview = Some(output.stdout.clone());
                 }
+                if output.exit_code != 0 && !allow_failure {
+                    // Non-zero exit code fails the job (matches CLI behavior)
+                    results.push(output_to_iteration(output));
+                    let error_msg =
+                        format!("Benchmark exited with non-zero exit code: {last_exit_code}");
+                    return send_failed(results, error_msg, heartbeat, &stop_flag, &ws);
+                }
                 results.push(output_to_iteration(output));
             },
             Err(e) => {
-                // On failure, stop heartbeat and send Failed with partial results
-                stop_flag.store(true, Ordering::SeqCst);
-                if let Err(panic) = heartbeat.join() {
-                    eprintln!("Warning: heartbeat thread panicked: {panic:?}");
+                if allow_failure {
+                    eprintln!(
+                        "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
+                        iteration + 1
+                    );
+                    continue;
                 }
-                let error_msg = e.to_string();
-                let msg = RunnerMessage::Failed {
-                    results,
-                    error: error_msg.clone(),
-                };
-                let mut ws_guard = ws
-                    .lock()
-                    .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-                ws_guard.send_message(&msg)?;
-                drop(ws_guard.read_message_timeout(ACK_TIMEOUT));
-                ws_guard.close();
-                return Ok(JobOutcome::Failed { error: error_msg });
+                return send_failed(results, e.to_string(), heartbeat, &stop_flag, &ws);
             },
         }
     }
@@ -150,6 +149,34 @@ pub fn execute_job(
         exit_code: last_exit_code,
         output: last_stdout_preview,
     })
+}
+
+/// Stop the heartbeat thread, send a `Failed` message over the WebSocket,
+/// and return a [`JobOutcome::Failed`].
+#[cfg(target_os = "linux")]
+#[expect(clippy::print_stderr, clippy::use_debug)]
+fn send_failed(
+    results: Vec<JsonIterationOutput>,
+    error_msg: String,
+    heartbeat: std::thread::JoinHandle<()>,
+    stop_flag: &Arc<AtomicBool>,
+    ws: &Arc<Mutex<JobChannel>>,
+) -> Result<JobOutcome, UpError> {
+    stop_flag.store(true, Ordering::SeqCst);
+    if let Err(panic) = heartbeat.join() {
+        eprintln!("Warning: heartbeat thread panicked: {panic:?}");
+    }
+    let msg = RunnerMessage::Failed {
+        results,
+        error: error_msg.clone(),
+    };
+    let mut ws_guard = ws
+        .lock()
+        .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
+    ws_guard.send_message(&msg)?;
+    drop(ws_guard.read_message_timeout(ACK_TIMEOUT));
+    ws_guard.close();
+    Ok(JobOutcome::Failed { error: error_msg })
 }
 
 /// Convert a [`RunOutput`](crate::RunOutput) into a [`JsonIterationOutput`].

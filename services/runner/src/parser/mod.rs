@@ -97,6 +97,10 @@ pub struct CliRun {
     #[arg(long, default_value = "1")]
     pub iter: Iteration,
 
+    /// Allow benchmark failure without short-circuiting iterations.
+    #[arg(long)]
+    pub allow_failure: bool,
+
     /// Grace period in seconds after exit code before final collection (default: 1).
     #[arg(long, default_value = "1")]
     pub grace_period: bencher_runner::GracePeriod,

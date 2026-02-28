@@ -98,25 +98,39 @@ impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
     type Error = JobConfigError;
 
     fn try_from(unchecked: JsonUncheckedNewRunJob) -> Result<Self, Self::Error> {
+        let JsonUncheckedNewRunJob {
+            image,
+            spec,
+            entrypoint,
+            cmd,
+            env,
+            timeout,
+            file_paths,
+            build_time,
+            file_size,
+            iter,
+            allow_failure,
+            backdate,
+        } = unchecked;
         validate_collection_sizes(
-            unchecked.entrypoint.as_ref(),
-            unchecked.cmd.as_ref(),
-            unchecked.file_paths.as_ref(),
-            unchecked.env.as_ref(),
+            entrypoint.as_ref(),
+            cmd.as_ref(),
+            file_paths.as_ref(),
+            env.as_ref(),
         )?;
         Ok(JsonNewRunJob {
-            image: unchecked.image,
-            spec: unchecked.spec,
-            entrypoint: unchecked.entrypoint,
-            cmd: unchecked.cmd,
-            env: unchecked.env,
-            timeout: unchecked.timeout,
-            file_paths: unchecked.file_paths,
-            build_time: unchecked.build_time,
-            file_size: unchecked.file_size,
-            iter: unchecked.iter,
-            allow_failure: unchecked.allow_failure,
-            backdate: unchecked.backdate,
+            image,
+            spec,
+            entrypoint,
+            cmd,
+            env,
+            timeout,
+            file_paths,
+            build_time,
+            file_size,
+            iter,
+            allow_failure,
+            backdate,
         })
     }
 }
@@ -272,26 +286,41 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
     type Error = JobConfigError;
 
     fn try_from(unchecked: JsonUncheckedJobConfig) -> Result<Self, Self::Error> {
+        let JsonUncheckedJobConfig {
+            registry,
+            project,
+            digest,
+            entrypoint,
+            cmd,
+            env,
+            timeout,
+            file_paths,
+            average,
+            iter,
+            fold,
+            allow_failure,
+            backdate,
+        } = unchecked;
         validate_collection_sizes(
-            unchecked.entrypoint.as_ref(),
-            unchecked.cmd.as_ref(),
-            unchecked.file_paths.as_ref(),
-            unchecked.env.as_ref(),
+            entrypoint.as_ref(),
+            cmd.as_ref(),
+            file_paths.as_ref(),
+            env.as_ref(),
         )?;
         Ok(JsonJobConfig {
-            registry: unchecked.registry,
-            project: unchecked.project,
-            digest: unchecked.digest,
-            entrypoint: unchecked.entrypoint,
-            cmd: unchecked.cmd,
-            env: unchecked.env,
-            timeout: unchecked.timeout,
-            file_paths: unchecked.file_paths,
-            average: unchecked.average,
-            iter: unchecked.iter,
-            fold: unchecked.fold,
-            allow_failure: unchecked.allow_failure,
-            backdate: unchecked.backdate,
+            registry,
+            project,
+            digest,
+            entrypoint,
+            cmd,
+            env,
+            timeout,
+            file_paths,
+            average,
+            iter,
+            fold,
+            allow_failure,
+            backdate,
         })
     }
 }

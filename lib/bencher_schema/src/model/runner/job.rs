@@ -111,6 +111,11 @@ impl QueryJob {
         // File output takes precedence (mirrors CLI CommandToFile mode):
         // each file's contents = one result string for the adapter.
         // Otherwise fall back to stdout (mirrors CLI Command mode).
+        //
+        // All iterations are flattened into a single Vec<String>, matching
+        // the CLI's local behavior (services/cli/src/bencher/sub/run/mod.rs).
+        // Without fold: each string becomes a separate enumerated iteration.
+        // With fold: all strings are combined via the fold operation.
         let results_strings: Vec<String> = results
             .into_iter()
             .flat_map(|r| {
@@ -883,7 +888,7 @@ fn check_job_timeout(
 /// meaning its results were lost. Transitions to Failed with a completed timestamp.
 async fn mark_orphaned_completed_as_failed(log: &Logger, context: &ApiContext, job: &QueryJob) {
     let now = context.clock.now();
-    let failed_update = UpdateJob::terminate(JobStatus::Failed, now);
+    let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
     match failed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed) {
         Ok(updated) if updated > 0 => {
             slog::info!(log, "Marked orphaned completed job as Failed"; "job_id" => ?job.id);

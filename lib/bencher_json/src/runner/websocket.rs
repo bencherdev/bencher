@@ -202,6 +202,16 @@ mod tests {
         for (variant, expected_json) in variants {
             let json = serde_json::to_string(&variant).unwrap();
             assert_eq!(json, expected_json, "serialize {variant:?}");
+            // RFC 6455 §5.5: control frame payload ≤ 125 bytes.
+            // Close frames use 2 bytes for the status code, leaving 123 bytes
+            // for the reason string. We serialize CloseReason as JSON into the
+            // close frame's reason field, so each variant must fit.
+            assert!(
+                json.len() <= 123,
+                "CloseReason {variant:?} serializes to {len} bytes, exceeding the \
+                 123-byte WebSocket close frame reason limit (RFC 6455 §5.5)",
+                len = json.len(),
+            );
             let deserialized: CloseReason = serde_json::from_str(&json).unwrap();
             assert_eq!(deserialized, variant, "roundtrip {variant:?}");
         }

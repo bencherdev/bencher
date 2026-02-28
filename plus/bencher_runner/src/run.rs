@@ -89,6 +89,8 @@ pub struct RunArgs {
     pub network: bool,
     /// Number of benchmark iterations.
     pub iter: Iteration,
+    /// Allow benchmark failure without short-circuiting iterations.
+    pub allow_failure: bool,
     /// Host tuning configuration.
     pub tuning: TuningConfig,
     /// Grace period in seconds after exit code before final collection.
@@ -147,11 +149,27 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     config.firecracker_log_level = args.firecracker_log_level;
 
     let iter_count = args.iter.as_usize();
-    for _ in 0..iter_count {
-        let output = execute(&config, None)?;
-        println!("{}", output.stdout);
-        if !output.stderr.is_empty() {
-            eprintln!("{}", output.stderr);
+    for iteration in 0..iter_count {
+        match execute(&config, None) {
+            Ok(output) => {
+                println!("{}", output.stdout);
+                if !output.stderr.is_empty() {
+                    eprintln!("{}", output.stderr);
+                }
+                if output.exit_code != 0 && !args.allow_failure {
+                    return Err(RunnerError::NonZeroExitCode(output.exit_code));
+                }
+            },
+            Err(e) => {
+                if args.allow_failure {
+                    eprintln!(
+                        "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
+                        iteration + 1
+                    );
+                    continue;
+                }
+                return Err(e);
+            },
         }
     }
     Ok(())

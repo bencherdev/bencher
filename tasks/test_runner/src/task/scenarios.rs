@@ -1880,6 +1880,46 @@ CMD ["echo", "should_not_appear"]"#,
                 Ok(())
             },
         },
+        Scenario {
+            name: "allow_failure_false_aborts",
+            description: "Non-zero exit code aborts iteration without --allow-failure",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo iteration_ran && exit 1"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--iter", "3"],
+            validate: |output| {
+                if output.exit_code == 0 {
+                    bail!("Expected non-zero exit code")
+                }
+                // Only 1 iteration should run before aborting
+                let count = output.stdout.matches("iteration_ran").count();
+                if count > 1 {
+                    bail!("Expected at most 1 iteration, found {count}")
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "allow_failure_true_continues",
+            description: "Non-zero exit code continues with --allow-failure",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo iteration_ran && exit 1"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--iter", "3", "--allow-failure"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    bail!(
+                        "Expected exit code 0 with --allow-failure, got {}",
+                        output.exit_code
+                    )
+                }
+                let count = output.stdout.matches("iteration_ran").count();
+                if count < 3 {
+                    bail!("Expected 3 iterations with --allow-failure, found {count}")
+                }
+                Ok(())
+            },
+        },
     ]
 }
 

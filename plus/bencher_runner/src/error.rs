@@ -19,6 +19,9 @@ pub enum RunnerError {
     #[error("Config error: {0}")]
     Config(#[from] ConfigError),
 
+    #[error("Benchmark exited with non-zero exit code: {0}")]
+    NonZeroExitCode(i32),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 }

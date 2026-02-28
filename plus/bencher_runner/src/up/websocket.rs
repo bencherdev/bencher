@@ -120,9 +120,19 @@ impl JobChannel {
                     .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
                 Ok(None)
             },
-            Ok(Message::Close(_)) => Err(WebSocketError::Receive(
-                "Server closed connection".to_owned(),
-            )),
+            Ok(Message::Close(frame)) => {
+                let reason = frame.and_then(|f| {
+                    serde_json::from_str::<bencher_json::runner::CloseReason>(&f.reason).ok()
+                });
+                match reason {
+                    Some(reason) => Err(WebSocketError::Receive(format!(
+                        "Server closed connection: {reason:?}"
+                    ))),
+                    None => Err(WebSocketError::Receive(
+                        "Server closed connection".to_owned(),
+                    )),
+                }
+            },
             Ok(_) => Ok(None),
             Err(tungstenite::Error::Io(e))
                 if e.kind() == std::io::ErrorKind::WouldBlock
