@@ -881,7 +881,6 @@ fn check_job_timeout(
     true
 }
 
-#[cfg(feature = "plus")]
 /// Mark an orphaned Completed job as Failed.
 ///
 /// Called when a Completed job has no stored output in OCI storage,
