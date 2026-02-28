@@ -30,7 +30,7 @@ pub enum JobStatus {
 }
 
 impl JobStatus {
-    pub fn is_terminal(&self) -> bool {
+    pub fn has_run(&self) -> bool {
         matches!(
             self,
             Self::Completed | Self::Processed | Self::Failed | Self::Canceled
@@ -97,8 +97,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn processed_is_terminal() {
-        assert!(JobStatus::Processed.is_terminal());
+    fn processed_has_run() {
+        assert!(JobStatus::Processed.has_run());
     }
 
     #[test]
@@ -110,13 +110,13 @@ mod tests {
     }
 
     #[test]
-    fn all_terminal_states() {
-        assert!(!JobStatus::Pending.is_terminal());
-        assert!(!JobStatus::Claimed.is_terminal());
-        assert!(!JobStatus::Running.is_terminal());
-        assert!(JobStatus::Completed.is_terminal());
-        assert!(JobStatus::Processed.is_terminal());
-        assert!(JobStatus::Failed.is_terminal());
-        assert!(JobStatus::Canceled.is_terminal());
+    fn all_has_run_states() {
+        assert!(!JobStatus::Pending.has_run());
+        assert!(!JobStatus::Claimed.has_run());
+        assert!(!JobStatus::Running.has_run());
+        assert!(JobStatus::Completed.has_run());
+        assert!(JobStatus::Processed.has_run());
+        assert!(JobStatus::Failed.has_run());
+        assert!(JobStatus::Canceled.has_run());
     }
 }

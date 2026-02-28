@@ -159,19 +159,30 @@ impl QueryJob {
         } else {
             (started, now)
         };
-        diesel::update(schema::report::table.filter(schema::report::id.eq(self.report_id)))
-            .set((
-                schema::report::start_time.eq(start_time),
-                schema::report::end_time.eq(end_time),
-            ))
-            .execute(write_conn!(context))
-            .map_err(|e| {
-                issue_error(
-                    "Failed to update report times",
-                    "Failed to update report start_time/end_time after job completion.",
-                    e,
-                )
-            })?;
+        let updated =
+            diesel::update(schema::report::table.filter(schema::report::id.eq(self.report_id)))
+                .set((
+                    schema::report::start_time.eq(start_time),
+                    schema::report::end_time.eq(end_time),
+                ))
+                .execute(write_conn!(context))
+                .map_err(|e| {
+                    issue_error(
+                        "Failed to update report times",
+                        "Failed to update report start_time/end_time after job completion.",
+                        e,
+                    )
+                })?;
+        if updated == 0 {
+            return Err(issue_error(
+                "Failed to update report times",
+                &format!(
+                    "Report {} not found when updating start_time/end_time after job completion.",
+                    self.report_id
+                ),
+                "Zero rows updated",
+            ));
+        }
 
         Ok(())
     }
@@ -705,7 +716,7 @@ pub fn spawn_heartbeat_timeout(
             };
 
             // If the job is already in a terminal state, nothing to do
-            if job.status.is_terminal() {
+            if job.status.has_run() {
                 return;
             }
 
@@ -884,7 +895,7 @@ fn check_job_timeout(
 /// Mark an orphaned Completed job as Failed.
 ///
 /// Called when a Completed job has no stored output in OCI storage,
-/// meaning its results were lost. Transitions to Failed with a completed timestamp.
+/// meaning its results were lost. Transitions to Failed, preserving the original completed timestamp.
 async fn mark_orphaned_completed_as_failed(log: &Logger, context: &ApiContext, job: &QueryJob) {
     let now = context.clock.now();
     let failed_update = UpdateJob::set_status(JobStatus::Failed, now);

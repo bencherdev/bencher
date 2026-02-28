@@ -4,8 +4,8 @@ pub const AUTHORIZATION: &str = "Authorization";
 /// Format a bearer token for the HTTP `Authorization` header.
 ///
 /// Returns a value like `Bearer <token>` suitable for the `Authorization` header.
-pub fn bearer_header(token: &str) -> String {
-    format!("Bearer {token}")
+pub fn bearer_header<T: AsRef<str>>(token: T) -> String {
+    format!("Bearer {}", token.as_ref())
 }
 
 /// Extract the bearer token from an `Authorization` header value.

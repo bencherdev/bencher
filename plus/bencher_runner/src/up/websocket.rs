@@ -4,6 +4,7 @@ use std::time::Duration;
 use bencher_json::runner::{RunnerMessage, ServerMessage};
 use tungstenite::handshake::client::generate_key;
 use tungstenite::http::Request;
+use tungstenite::protocol::CloseFrame;
 use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{Message, WebSocket};
 use url::Url;
@@ -70,19 +71,7 @@ impl JobChannel {
                     .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
                 Ok(None)
             },
-            Ok(Message::Close(frame)) => {
-                let reason = frame.and_then(|f| {
-                    serde_json::from_str::<bencher_json::runner::CloseReason>(&f.reason).ok()
-                });
-                match reason {
-                    Some(reason) => Err(WebSocketError::Receive(format!(
-                        "Server closed connection: {reason:?}"
-                    ))),
-                    None => Err(WebSocketError::Receive(
-                        "Server closed connection".to_owned(),
-                    )),
-                }
-            },
+            Ok(Message::Close(frame)) => Self::handle_close_frame(frame),
             Ok(_) => Ok(None),
             Err(tungstenite::Error::Io(e)) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 Ok(None)
@@ -120,19 +109,7 @@ impl JobChannel {
                     .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
                 Ok(None)
             },
-            Ok(Message::Close(frame)) => {
-                let reason = frame.and_then(|f| {
-                    serde_json::from_str::<bencher_json::runner::CloseReason>(&f.reason).ok()
-                });
-                match reason {
-                    Some(reason) => Err(WebSocketError::Receive(format!(
-                        "Server closed connection: {reason:?}"
-                    ))),
-                    None => Err(WebSocketError::Receive(
-                        "Server closed connection".to_owned(),
-                    )),
-                }
-            },
+            Ok(Message::Close(frame)) => Self::handle_close_frame(frame),
             Ok(_) => Ok(None),
             Err(tungstenite::Error::Io(e))
                 if e.kind() == std::io::ErrorKind::WouldBlock
@@ -141,6 +118,22 @@ impl JobChannel {
                 Ok(None)
             },
             Err(e) => Err(WebSocketError::Receive(e.to_string())),
+        }
+    }
+
+    fn handle_close_frame(
+        frame: Option<CloseFrame>,
+    ) -> Result<Option<ServerMessage>, WebSocketError> {
+        let reason = frame.and_then(|f| {
+            serde_json::from_str::<bencher_json::runner::CloseReason>(&f.reason).ok()
+        });
+        match reason {
+            Some(reason) => Err(WebSocketError::Receive(format!(
+                "Server closed connection: {reason:?}"
+            ))),
+            None => Err(WebSocketError::Receive(
+                "Server closed connection".to_owned(),
+            )),
         }
     }
 

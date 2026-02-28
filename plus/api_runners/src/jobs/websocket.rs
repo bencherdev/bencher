@@ -122,7 +122,7 @@ pub async fn runner_job_channel(
 
     // After WS disconnect, check if job is still in-flight and spawn a timeout task
     let job = QueryJob::get(auth_conn!(context), job.id)?;
-    if !job.status.is_terminal() {
+    if !job.status.has_run() {
         slog::info!(log, "WS disconnected for in-flight job, spawning heartbeat timeout"; "job_id" => ?job.id);
         spawn_heartbeat_timeout(
             log,
@@ -253,7 +253,7 @@ async fn handle_timeout(
         .filter(schema::job::id.eq(job_id))
         .first(auth_conn!(context))?;
 
-    if job.status.is_terminal() {
+    if job.status.has_run() {
         slog::info!(log, "Heartbeat timeout: job already in terminal state"; "job_id" => ?job_id);
         return Ok(CloseReason::HeartbeatTimeout);
     }
@@ -471,7 +471,7 @@ async fn handle_completed(
             slog::debug!(log, "Job already completed (idempotent duplicate)"; "job_id" => ?job.id);
             return Ok(());
         }
-        if current_job.status.is_terminal() {
+        if current_job.status.has_run() {
             slog::warn!(log, "Job already in terminal state, completion report lost"; "job_id" => ?job.id, "current_status" => ?current_job.status);
             return Ok(());
         }
@@ -555,7 +555,7 @@ async fn handle_failed(
             slog::debug!(log, "Job already failed (idempotent duplicate)"; "job_id" => ?job.id);
             return Ok(());
         }
-        if current_job.status.is_terminal() {
+        if current_job.status.has_run() {
             slog::warn!(log, "Job already in terminal state, failure report lost"; "job_id" => ?job.id, "current_status" => ?current_job.status);
             return Ok(());
         }
