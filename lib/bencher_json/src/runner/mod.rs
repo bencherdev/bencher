@@ -16,7 +16,7 @@ pub use job::{
 };
 pub use job_priority::JobPriority;
 pub use job_status::JobStatus;
-pub use websocket::{RunnerMessage, ServerMessage};
+pub use websocket::{CloseReason, RunnerMessage, ServerMessage};
 
 crate::typed_uuid::typed_uuid!(RunnerUuid);
 crate::typed_slug::typed_slug!(RunnerSlug, ResourceName);

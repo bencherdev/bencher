@@ -75,7 +75,7 @@ impl QueryJob {
         &self,
         log: &Logger,
         context: &ApiContext,
-        results: &[JsonIterationOutput],
+        results: Vec<JsonIterationOutput>,
         now: DateTime,
     ) -> Result<(), HttpError> {
         // Look up the report
@@ -112,12 +112,12 @@ impl QueryJob {
         // each file's contents = one result string for the adapter.
         // Otherwise fall back to stdout (mirrors CLI Command mode).
         let results_strings: Vec<String> = results
-            .iter()
+            .into_iter()
             .flat_map(|r| {
-                if let Some(output) = &r.output {
-                    output.values().cloned().collect::<Vec<_>>()
-                } else if let Some(stdout) = &r.stdout {
-                    vec![stdout.clone()]
+                if let Some(output) = r.output {
+                    output.into_values().collect::<Vec<_>>()
+                } else if let Some(stdout) = r.stdout {
+                    vec![stdout]
                 } else {
                     Vec::new()
                 }
@@ -921,10 +921,7 @@ pub async fn reprocess_completed_jobs(log: &Logger, context: &ApiContext) {
         };
 
         let now = context.clock.now();
-        if let Err(e) = job
-            .process_results(log, context, &output.results, now)
-            .await
-        {
+        if let Err(e) = job.process_results(log, context, output.results, now).await {
             slog::warn!(log, "Failed to reprocess job results, marking as Failed"; "job_id" => ?job.id, "error" => %e);
             let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
             match failed_update.execute_if_status(

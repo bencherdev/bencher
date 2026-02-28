@@ -4,7 +4,7 @@
 
 use bencher_json::{
     JobStatus, JobUuid, RunnerResourceId,
-    runner::{JsonIterationOutput, RunnerMessage, ServerMessage},
+    runner::{CloseReason, JsonIterationOutput, RunnerMessage, ServerMessage},
 };
 use bencher_oci_storage::OciStorageError;
 use bencher_schema::{
@@ -20,7 +20,7 @@ use dropshot::{Path, RequestContext, WebsocketChannelResult, WebsocketConnection
 use futures::{SinkExt as _, StreamExt as _};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use std::{fmt, time::Duration};
+use std::time::Duration;
 
 use tokio_tungstenite::tungstenite::{
     Message,
@@ -51,36 +51,6 @@ pub(crate) enum ChannelError {
         target: JobStatus,
         current: JobStatus,
     },
-}
-
-/// Reason for closing a WebSocket connection, sent in the close frame.
-#[derive(Debug, Clone, Copy)]
-enum CloseReason {
-    /// Job completed successfully (runner sent `Completed`).
-    JobCompleted,
-    /// Job failed (runner sent `Failed`).
-    JobFailed,
-    /// Job was canceled (server detected cancellation).
-    JobCanceled,
-    /// Runner acknowledged cancellation (runner sent `Canceled`).
-    JobCanceledByRunner,
-    /// No valid protocol message within the heartbeat window.
-    HeartbeatTimeout,
-    /// Job exceeded its configured timeout + grace period.
-    JobTimeoutExceeded,
-}
-
-impl fmt::Display for CloseReason {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::JobCompleted => f.write_str("job completed"),
-            Self::JobFailed => f.write_str("job failed"),
-            Self::JobCanceled => f.write_str("job canceled"),
-            Self::JobCanceledByRunner => f.write_str("job canceled by runner"),
-            Self::HeartbeatTimeout => f.write_str("heartbeat timeout"),
-            Self::JobTimeoutExceeded => f.write_str("job timeout exceeded"),
-        }
-    }
 }
 
 /// Path parameters for the job WebSocket endpoint.
@@ -199,7 +169,7 @@ async fn handle_websocket(
                 if let Err(e) = tx
                     .send(Message::Close(Some(CloseFrame {
                         code: CloseCode::Policy,
-                        reason: reason.to_string().into(),
+                        reason: serde_json::to_string(&reason)?.into(),
                     })))
                     .await
                 {
@@ -242,7 +212,7 @@ async fn handle_websocket(
                     if let Err(e) = tx
                         .send(Message::Close(Some(CloseFrame {
                             code: CloseCode::Normal,
-                            reason: reason.to_string().into(),
+                            reason: serde_json::to_string(&reason)?.into(),
                         })))
                         .await
                     {
@@ -307,7 +277,7 @@ async fn handle_timeout(
         (JobStatus::Failed, CloseReason::HeartbeatTimeout)
     };
 
-    slog::warn!(log, "Marking job"; "job_id" => ?job_id, "status" => ?status, "reason" => %reason);
+    slog::warn!(log, "Marking job"; "job_id" => ?job_id, "status" => ?status, "reason" => ?reason);
     let update = UpdateJob::terminate(status, now);
     let updated = update.execute_if_either_status(
         write_conn!(context),
@@ -526,11 +496,10 @@ async fn handle_completed(
         slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
     }
 
+    let bencher_json::runner::JsonJobOutput { results, error: _ } = job_output;
+
     // Process benchmark results into the report
-    if let Err(e) = job
-        .process_results(log, context, &job_output.results, now)
-        .await
-    {
+    if let Err(e) = job.process_results(log, context, results, now).await {
         slog::error!(log, "Failed to process job results"; "job_id" => ?job.id, "error" => %e);
         // Transition to Failed so startup recovery doesn't retry forever
         let failed_update = UpdateJob::set_status(JobStatus::Failed, now);

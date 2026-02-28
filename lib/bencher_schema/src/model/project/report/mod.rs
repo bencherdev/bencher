@@ -313,6 +313,7 @@ impl QueryReport {
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ReportCreate);
+
         // If the report was processed successfully, then return the report with the results
         query_report.into_json(log, public_conn!(context, public_user))
     }

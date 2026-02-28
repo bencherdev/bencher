@@ -36,6 +36,24 @@ pub enum ServerMessage {
     Cancel,
 }
 
+/// Reason for closing a WebSocket connection, sent in the close frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CloseReason {
+    /// Job completed successfully (runner sent `Completed`).
+    JobCompleted,
+    /// Job failed (runner sent `Failed`).
+    JobFailed,
+    /// Job was canceled (server detected cancellation).
+    JobCanceled,
+    /// Runner acknowledged cancellation (runner sent `Canceled`).
+    JobCanceledByRunner,
+    /// No valid protocol message within the heartbeat window.
+    HeartbeatTimeout,
+    /// Job exceeded its configured timeout + grace period.
+    JobTimeoutExceeded,
+}
+
 #[cfg(test)]
 #[expect(
     clippy::indexing_slicing,
@@ -166,6 +184,27 @@ mod tests {
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: ServerMessage = serde_json::from_str(&json).unwrap();
         assert!(matches!(deserialized, ServerMessage::Cancel));
+    }
+
+    #[test]
+    fn close_reason_serde_roundtrip() {
+        let variants = [
+            (CloseReason::JobCompleted, "\"job_completed\""),
+            (CloseReason::JobFailed, "\"job_failed\""),
+            (CloseReason::JobCanceled, "\"job_canceled\""),
+            (
+                CloseReason::JobCanceledByRunner,
+                "\"job_canceled_by_runner\"",
+            ),
+            (CloseReason::HeartbeatTimeout, "\"heartbeat_timeout\""),
+            (CloseReason::JobTimeoutExceeded, "\"job_timeout_exceeded\""),
+        ];
+        for (variant, expected_json) in variants {
+            let json = serde_json::to_string(&variant).unwrap();
+            assert_eq!(json, expected_json, "serialize {variant:?}");
+            let deserialized: CloseReason = serde_json::from_str(&json).unwrap();
+            assert_eq!(deserialized, variant, "roundtrip {variant:?}");
+        }
     }
 
     #[test]

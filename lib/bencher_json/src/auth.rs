@@ -15,7 +15,11 @@ pub fn bearer_header(token: &str) -> String {
 /// header value doesn't start with `Bearer `.
 pub fn strip_bearer_token(header_value: &str) -> Option<&str> {
     let (scheme, token) = header_value.split_once(' ')?;
-    scheme.eq_ignore_ascii_case("Bearer").then(|| token.trim())
+    let token = token.trim();
+    scheme
+        .eq_ignore_ascii_case("Bearer")
+        .then_some(token)
+        .filter(|t| !t.is_empty())
 }
 
 #[cfg(test)]
@@ -62,5 +66,15 @@ mod tests {
     #[test]
     fn strip_bearer_token_empty() {
         assert_eq!(strip_bearer_token(""), None);
+    }
+
+    #[test]
+    fn strip_bearer_token_empty_token() {
+        assert_eq!(strip_bearer_token("Bearer "), None);
+    }
+
+    #[test]
+    fn strip_bearer_token_whitespace_only() {
+        assert_eq!(strip_bearer_token("Bearer   "), None);
     }
 }

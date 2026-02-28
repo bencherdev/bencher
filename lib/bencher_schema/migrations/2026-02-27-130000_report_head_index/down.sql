@@ -1,1 +1,1 @@
-DROP INDEX index_report_head;
+DROP INDEX IF EXISTS index_report_head;
