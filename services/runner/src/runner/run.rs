@@ -47,6 +47,7 @@ impl TryFrom<CliRun> for Run {
                 cmd: task.cmd,
                 env,
                 network: task.network,
+                iter: task.iter,
                 tuning,
                 grace_period: task.grace_period,
                 firecracker_log_level: task.firecracker_log_level,

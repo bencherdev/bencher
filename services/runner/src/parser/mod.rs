@@ -4,6 +4,8 @@ mod tuning;
 mod up;
 
 #[cfg(feature = "plus")]
+use bencher_json::Iteration;
+#[cfg(feature = "plus")]
 use bencher_parser::check_env;
 #[cfg(feature = "plus")]
 use camino::Utf8PathBuf;
@@ -90,6 +92,10 @@ pub struct CliRun {
 
     #[command(flatten)]
     pub tuning: CliTuning,
+
+    /// Number of benchmark iterations to execute (default: 1).
+    #[arg(long, default_value = "1")]
+    pub iter: Iteration,
 
     /// Grace period in seconds after exit code before final collection (default: 1).
     #[arg(long, default_value = "1")]

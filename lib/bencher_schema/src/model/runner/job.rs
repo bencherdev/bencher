@@ -877,6 +877,30 @@ fn check_job_timeout(
 }
 
 #[cfg(feature = "plus")]
+/// Mark an orphaned Completed job as Failed.
+///
+/// Called when a Completed job has no stored output in OCI storage,
+/// meaning its results were lost. Transitions to Failed with a completed timestamp.
+async fn mark_orphaned_completed_as_failed(log: &Logger, context: &ApiContext, job: &QueryJob) {
+    let now = context.clock.now();
+    let failed_update = UpdateJob::terminate(JobStatus::Failed, now);
+    match failed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed) {
+        Ok(updated) if updated > 0 => {
+            slog::info!(log, "Marked orphaned completed job as Failed"; "job_id" => ?job.id);
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+                bencher_otel::JobStatusKind::Failed,
+            ));
+        },
+        Ok(_) => {
+            slog::info!(log, "Job already changed state during orphan recovery"; "job_id" => ?job.id);
+        },
+        Err(e) => {
+            slog::error!(log, "Failed to mark orphaned completed job as Failed"; "job_id" => ?job.id, "error" => %e);
+        },
+    }
+}
+
 /// Reprocess jobs stuck in `Completed` status on startup.
 ///
 /// These are jobs where output was stored but result processing (adapter parsing,
@@ -903,65 +927,68 @@ pub async fn reprocess_completed_jobs(log: &Logger, context: &ApiContext) {
     slog::info!(log, "Reprocessing {count} completed job(s)");
 
     for job in &completed_jobs {
-        let output = match context
-            .oci_storage()
-            .job_output()
-            .get(job.config.project, job.uuid)
-            .await
-        {
-            Ok(Some(output)) => output,
-            Ok(None) => {
-                slog::warn!(log, "No stored output for completed job"; "job_id" => ?job.id);
-                continue;
-            },
-            Err(e) => {
-                slog::error!(log, "Failed to fetch job output for reprocessing"; "job_id" => ?job.id, "error" => %e);
-                continue;
-            },
-        };
+        reprocess_single_completed_job(log, context, job).await;
+    }
+}
 
-        let now = context.clock.now();
-        if let Err(e) = job.process_results(log, context, output.results, now).await {
-            slog::warn!(log, "Failed to reprocess job results, marking as Failed"; "job_id" => ?job.id, "error" => %e);
-            let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
-            match failed_update.execute_if_status(
-                write_conn!(context),
-                job.id,
-                JobStatus::Completed,
-            ) {
-                Ok(updated) if updated > 0 => {
-                    slog::info!(log, "Marked failed reprocessing job as Failed"; "job_id" => ?job.id);
-                    #[cfg(feature = "otel")]
-                    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-                        bencher_otel::JobStatusKind::Failed,
-                    ));
-                },
-                Ok(_) => {
-                    slog::info!(log, "Job already changed state during reprocessing failure"; "job_id" => ?job.id);
-                },
-                Err(e) => {
-                    slog::error!(log, "Failed to mark reprocessing job as Failed"; "job_id" => ?job.id, "error" => %e);
-                },
-            }
-            continue;
-        }
+/// Attempt to reprocess a single Completed job.
+///
+/// Fetches stored output, runs result processing, and transitions state accordingly.
+async fn reprocess_single_completed_job(log: &Logger, context: &ApiContext, job: &QueryJob) {
+    let output = match context
+        .oci_storage()
+        .job_output()
+        .get(job.config.project, job.uuid)
+        .await
+    {
+        Ok(Some(output)) => output,
+        Ok(None) => {
+            slog::warn!(log, "No stored output for completed job, marking as Failed"; "job_id" => ?job.id);
+            mark_orphaned_completed_as_failed(log, context, job).await;
+            return;
+        },
+        Err(e) => {
+            slog::error!(log, "Failed to fetch job output for reprocessing"; "job_id" => ?job.id, "error" => %e);
+            return;
+        },
+    };
 
-        let processed_update = UpdateJob::set_status(JobStatus::Processed, now);
-        match processed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed)
-        {
+    let now = context.clock.now();
+    if let Err(e) = job.process_results(log, context, output.results, now).await {
+        slog::warn!(log, "Failed to reprocess job results, marking as Failed"; "job_id" => ?job.id, "error" => %e);
+        let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
+        match failed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed) {
             Ok(updated) if updated > 0 => {
-                slog::info!(log, "Reprocessed completed job"; "job_id" => ?job.id);
+                slog::info!(log, "Marked failed reprocessing job as Failed"; "job_id" => ?job.id);
                 #[cfg(feature = "otel")]
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-                    bencher_otel::JobStatusKind::Processed,
+                    bencher_otel::JobStatusKind::Failed,
                 ));
             },
             Ok(_) => {
-                slog::info!(log, "Job already changed state during reprocessing"; "job_id" => ?job.id);
+                slog::info!(log, "Job already changed state during reprocessing failure"; "job_id" => ?job.id);
             },
             Err(e) => {
-                slog::error!(log, "Failed to mark reprocessed job as processed"; "job_id" => ?job.id, "error" => %e);
+                slog::error!(log, "Failed to mark reprocessing job as Failed"; "job_id" => ?job.id, "error" => %e);
             },
         }
+        return;
+    }
+
+    let processed_update = UpdateJob::set_status(JobStatus::Processed, now);
+    match processed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed) {
+        Ok(updated) if updated > 0 => {
+            slog::info!(log, "Reprocessed completed job"; "job_id" => ?job.id);
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+                bencher_otel::JobStatusKind::Processed,
+            ));
+        },
+        Ok(_) => {
+            slog::info!(log, "Job already changed state during reprocessing"; "job_id" => ?job.id);
+        },
+        Err(e) => {
+            slog::error!(log, "Failed to mark reprocessed job as processed"; "job_id" => ?job.id, "error" => %e);
+        },
     }
 }

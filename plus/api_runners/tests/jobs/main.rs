@@ -3383,8 +3383,8 @@ async fn reprocess_completed_job_success() {
     );
 }
 
-/// Test that `reprocess_completed_jobs` leaves a Completed job as-is when no
-/// output is stored (logs an error but continues).
+/// Test that `reprocess_completed_jobs` marks a Completed job as Failed when no
+/// output is stored (orphaned job recovery).
 #[tokio::test]
 async fn reprocess_completed_job_no_output() {
     let server = TestServer::new().await;
@@ -3406,7 +3406,7 @@ async fn reprocess_completed_job_no_output() {
     let log = slog::Logger::root(slog::Discard, slog::o!());
     reprocess_completed_jobs(&log, server.context()).await;
 
-    // Verify job is still Completed (no output to reprocess)
+    // Verify job transitioned to Failed (orphaned completed job)
     let mut conn = server.db_conn();
     let status: JobStatus = schema::job::table
         .filter(schema::job::uuid.eq(job_uuid))
@@ -3415,7 +3415,7 @@ async fn reprocess_completed_job_no_output() {
         .expect("Failed to get job status");
     assert_eq!(
         status,
-        JobStatus::Completed,
-        "Completed job without stored output should remain Completed"
+        JobStatus::Failed,
+        "Completed job without stored output should be marked as Failed"
     );
 }

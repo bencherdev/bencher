@@ -1844,6 +1844,42 @@ CMD ["hello", "world"]"#,
                 Ok(())
             },
         },
+        Scenario {
+            name: "multiple_iterations",
+            description: "Multiple iterations execute sequentially",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "iter_output"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--iter", "3"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    bail!("Expected exit code 0, got {}", output.exit_code)
+                }
+                // Each iteration prints "iter_output", so we should see it at least 3 times
+                let count = output.stdout.matches("iter_output").count();
+                if count < 3 {
+                    bail!("Expected 3 iterations of output, found {count}")
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "zero_iterations",
+            description: "Zero iterations executes no benchmarks",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "should_not_appear"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--iter", "0"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    bail!("Expected exit code 0, got {}", output.exit_code)
+                }
+                if output.stdout.contains("should_not_appear") {
+                    bail!("Expected no benchmark execution with --iter 0, but output was produced")
+                }
+                Ok(())
+            },
+        },
     ]
 }
 

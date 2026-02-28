@@ -17,6 +17,10 @@ use super::websocket::JobChannel;
 #[cfg(target_os = "linux")]
 use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
 
+/// Timeout for waiting for server Ack after sending Completed/Failed.
+#[cfg(target_os = "linux")]
+const ACK_TIMEOUT: Duration = Duration::from_secs(5);
+
 pub enum JobOutcome {
     Completed {
         exit_code: i32,
@@ -41,6 +45,7 @@ pub fn execute_job(
 
     // Build runner Config from claimed job spec (all values from job spec, no defaults)
     let job_config = build_config_from_job(config, job);
+    let iter_count = job.config.iter.map_or(1, bencher_json::Iteration::as_usize);
 
     // Send Running status
     {
@@ -66,9 +71,54 @@ pub fn execute_job(
         heartbeat_loop(&ws_heartbeat, &cancel_heartbeat, &stop_heartbeat);
     });
 
-    // Execute benchmark (blocking) — pass cancel_flag so the vsock poll loop
+    // Execute benchmark iterations — pass cancel_flag so the vsock poll loop
     // can abort early when the server sends a cancellation message.
-    let result = crate::execute(&job_config, Some(&cancel_flag));
+    let mut results = Vec::with_capacity(iter_count);
+    let mut last_exit_code = 0;
+    let mut last_stdout_preview = None;
+
+    for iteration in 0..iter_count {
+        // Check cancel before each iteration for responsive cancellation
+        if cancel_flag.load(Ordering::SeqCst) {
+            break;
+        }
+
+        println!(
+            "Starting iteration {}/{iter_count} for job {}",
+            iteration + 1,
+            job.uuid
+        );
+        let result = crate::execute(&job_config, Some(&cancel_flag));
+
+        match result {
+            Ok(output) => {
+                last_exit_code = output.exit_code;
+                if !output.stdout.is_empty() {
+                    last_stdout_preview = Some(output.stdout.clone());
+                }
+                results.push(output_to_iteration(output));
+            },
+            Err(e) => {
+                // On failure, stop heartbeat and send Failed with partial results
+                stop_flag.store(true, Ordering::SeqCst);
+                if let Err(panic) = heartbeat.join() {
+                    eprintln!("Warning: heartbeat thread panicked: {panic:?}");
+                }
+                let error_msg = e.to_string();
+                let msg = RunnerMessage::Failed {
+                    results,
+                    error: error_msg.clone(),
+                };
+                let mut ws_guard = ws
+                    .lock()
+                    .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
+                ws_guard.send_message(&msg)?;
+                drop(ws_guard.read_message_timeout(ACK_TIMEOUT));
+                ws_guard.close();
+                return Ok(JobOutcome::Failed { error: error_msg });
+            },
+        }
+    }
 
     // Stop heartbeat thread
     stop_flag.store(true, Ordering::SeqCst);
@@ -82,74 +132,49 @@ pub fn execute_job(
         let mut ws_guard = ws
             .lock()
             .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-        // Send Canceled message to notify server
         drop(ws_guard.send_message(&RunnerMessage::Canceled));
         ws_guard.close();
         return Ok(JobOutcome::Canceled);
     }
 
-    // Send result
-    let outcome = match result {
-        Ok(output) => {
-            // Convert output files from HashMap<Utf8PathBuf, Vec<u8>> to BTreeMap<Utf8PathBuf, String>
-            let file_output = output.output_files.map(|files| {
-                files
-                    .into_iter()
-                    .map(|(path, bytes)| (path, String::from_utf8_lossy(&bytes).into_owned()))
-                    .collect::<std::collections::BTreeMap<_, _>>()
-            });
-            let stdout_preview = if output.stdout.is_empty() {
-                None
-            } else {
-                Some(output.stdout.clone())
-            };
-            let iteration = JsonIterationOutput {
-                exit_code: output.exit_code,
-                stdout: if output.stdout.is_empty() {
-                    None
-                } else {
-                    Some(output.stdout)
-                },
-                stderr: if output.stderr.is_empty() {
-                    None
-                } else {
-                    Some(output.stderr)
-                },
-                output: file_output,
-            };
-            let msg = RunnerMessage::Completed {
-                results: vec![iteration],
-            };
-            let mut ws_guard = ws
-                .lock()
-                .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-            ws_guard.send_message(&msg)?;
-            // Wait for Ack with 5s timeout
-            drop(ws_guard.read_message_timeout(Duration::from_secs(5)));
-            ws_guard.close();
-            JobOutcome::Completed {
-                exit_code: output.exit_code,
-                output: stdout_preview,
-            }
-        },
-        Err(e) => {
-            let error_msg = e.to_string();
-            let msg = RunnerMessage::Failed {
-                results: Vec::new(),
-                error: error_msg.clone(),
-            };
-            let mut ws_guard = ws
-                .lock()
-                .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-            ws_guard.send_message(&msg)?;
-            // Wait for Ack with 5s timeout
-            drop(ws_guard.read_message_timeout(Duration::from_secs(5)));
-            ws_guard.close();
-            JobOutcome::Failed { error: error_msg }
-        },
-    };
+    // Send completed with all iteration results
+    let msg = RunnerMessage::Completed { results };
+    let mut ws_guard = ws
+        .lock()
+        .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
+    ws_guard.send_message(&msg)?;
+    drop(ws_guard.read_message_timeout(ACK_TIMEOUT));
+    ws_guard.close();
 
-    Ok(outcome)
+    Ok(JobOutcome::Completed {
+        exit_code: last_exit_code,
+        output: last_stdout_preview,
+    })
+}
+
+/// Convert a [`RunOutput`](crate::RunOutput) into a [`JsonIterationOutput`].
+#[cfg(target_os = "linux")]
+fn output_to_iteration(output: crate::RunOutput) -> JsonIterationOutput {
+    let file_output = output.output_files.map(|files| {
+        files
+            .into_iter()
+            .map(|(path, bytes)| (path, String::from_utf8_lossy(&bytes).into_owned()))
+            .collect::<std::collections::BTreeMap<_, _>>()
+    });
+    JsonIterationOutput {
+        exit_code: output.exit_code,
+        stdout: if output.stdout.is_empty() {
+            None
+        } else {
+            Some(output.stdout)
+        },
+        stderr: if output.stderr.is_empty() {
+            None
+        } else {
+            Some(output.stderr)
+        },
+        output: file_output,
+    }
 }
 
 /// Build a runner Config from the claimed job and up config.

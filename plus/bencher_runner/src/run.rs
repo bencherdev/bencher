@@ -7,6 +7,8 @@ use std::sync::atomic::AtomicBool;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
+use bencher_json::Iteration;
+
 use crate::error::RunnerError;
 use crate::tuning::TuningConfig;
 
@@ -85,6 +87,8 @@ pub struct RunArgs {
     pub env: Option<HashMap<String, String>>,
     /// Whether to enable network access in the VM.
     pub network: bool,
+    /// Number of benchmark iterations.
+    pub iter: Iteration,
     /// Host tuning configuration.
     pub tuning: TuningConfig,
     /// Grace period in seconds after exit code before final collection.
@@ -142,10 +146,13 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     config = config.with_grace_period(args.grace_period);
     config.firecracker_log_level = args.firecracker_log_level;
 
-    let output = execute(&config, None)?;
-    println!("{}", output.stdout);
-    if !output.stderr.is_empty() {
-        eprintln!("{}", output.stderr);
+    let iter_count = args.iter.as_usize();
+    for _ in 0..iter_count {
+        let output = execute(&config, None)?;
+        println!("{}", output.stdout);
+        if !output.stderr.is_empty() {
+            eprintln!("{}", output.stderr);
+        }
     }
     Ok(())
 }

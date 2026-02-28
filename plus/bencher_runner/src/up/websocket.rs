@@ -120,6 +120,9 @@ impl JobChannel {
                     .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
                 Ok(None)
             },
+            Ok(Message::Close(_)) => Err(WebSocketError::Receive(
+                "Server closed connection".to_owned(),
+            )),
             Ok(_) => Ok(None),
             Err(tungstenite::Error::Io(e))
                 if e.kind() == std::io::ErrorKind::WouldBlock
