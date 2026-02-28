@@ -291,10 +291,7 @@ fn mount_filesystems() -> Result<(), InitError> {
         mount("devtmpfs", "/dev", "devtmpfs", 0, None)?;
     }
 
-    // Mount tmpfs on /tmp and /run
-    if !is_mounted("/tmp") {
-        mount("tmpfs", "/tmp", "tmpfs", 0, Some("mode=1777"))?;
-    }
+    // Mount tmpfs on /run
     if !is_mounted("/run") {
         mount("tmpfs", "/run", "tmpfs", 0, Some("mode=755"))?;
     }
