@@ -19,7 +19,10 @@ async fn users_list_as_admin() {
     let resp = server
         .client
         .get(server.api_url("/v0/users"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -42,7 +45,10 @@ async fn users_list_forbidden_for_non_admin() {
     let resp = server
         .client
         .get(server.api_url("/v0/users"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -60,7 +66,10 @@ async fn users_get_self() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/users/{}", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -79,7 +88,10 @@ async fn users_get_by_uuid() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/users/{}", user.uuid)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -101,7 +113,10 @@ async fn users_get_other_forbidden() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/users/{}", user2_slug)))
-        .header("Authorization", server.bearer(&user1.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user1.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -129,7 +144,10 @@ async fn users_update_self() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/users/{}", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -154,7 +172,10 @@ async fn users_update_slug() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/users/{}", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -181,7 +202,10 @@ async fn users_update_admin_forbidden() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/users/{}", user_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await

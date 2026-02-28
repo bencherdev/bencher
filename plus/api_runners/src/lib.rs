@@ -4,6 +4,8 @@
 #[cfg(test)]
 use bencher_api_tests as _;
 #[cfg(test)]
+use camino as _;
+#[cfg(test)]
 use futures_concurrency as _;
 #[cfg(test)]
 use http as _;
@@ -18,7 +20,7 @@ mod runners;
 mod specs;
 mod token;
 
-pub use jobs::websocket::{RunnerMessage, ServerMessage};
+pub use bencher_json::runner::{RunnerMessage, ServerMessage};
 pub use runners::RUNNER_TOKEN_LENGTH;
 
 pub struct Api;

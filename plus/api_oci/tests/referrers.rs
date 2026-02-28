@@ -76,7 +76,10 @@ async fn referrers_list_empty() {
     let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/base", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(base_manifest)
         .send()
@@ -89,7 +92,10 @@ async fn referrers_list_empty() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/referrers/{}", project_slug, base_digest)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -132,7 +138,10 @@ async fn referrers_list_with_results() {
     let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/subject", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(base_manifest)
         .send()
@@ -158,7 +167,10 @@ async fn referrers_list_with_results() {
                 project_slug,
                 compute_digest(referrer.as_bytes())
             )))
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token),
+            )
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(referrer)
             .send()
@@ -172,7 +184,10 @@ async fn referrers_list_with_results() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/referrers/{}", project_slug, base_digest)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -196,6 +211,7 @@ async fn referrers_list_with_results() {
 
 // GET /v2/{name}/referrers/{digest}?artifactType= - Filter by artifact type
 #[tokio::test]
+#[expect(clippy::too_many_lines)]
 async fn referrers_filter_by_artifact_type() {
     let server = TestServer::new().await;
     let user = server
@@ -219,7 +235,10 @@ async fn referrers_filter_by_artifact_type() {
     let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/filter-subject", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(base_manifest)
         .send()
@@ -243,7 +262,10 @@ async fn referrers_filter_by_artifact_type() {
             project_slug,
             compute_digest(sbom_referrer.as_bytes())
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(sbom_referrer)
         .send()
@@ -263,7 +285,10 @@ async fn referrers_filter_by_artifact_type() {
             project_slug,
             compute_digest(sig_referrer.as_bytes())
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(sig_referrer)
         .send()
@@ -279,7 +304,10 @@ async fn referrers_filter_by_artifact_type() {
             "/v2/{}/referrers/{}?artifactType=application/vnd.example.sbom",
             project_slug, base_digest
         )))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -347,7 +375,10 @@ async fn referrers_invalid_digest() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/referrers/invalid-digest", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -399,7 +430,10 @@ async fn referrers_nonexistent_subject() {
             "/v2/{}/referrers/{}",
             project_slug, nonexistent_digest
         )))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -420,6 +454,7 @@ async fn referrers_nonexistent_subject() {
 
 // DELETE /v2/{name}/manifests/{digest} - Verify referrer link cleanup
 #[tokio::test]
+#[expect(clippy::too_many_lines)]
 async fn referrers_cleanup_on_manifest_delete() {
     let server = TestServer::new().await;
     let user = server
@@ -444,7 +479,10 @@ async fn referrers_cleanup_on_manifest_delete() {
     let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/cleanup-subject", project_slug)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(base_manifest)
         .send()
@@ -469,7 +507,10 @@ async fn referrers_cleanup_on_manifest_delete() {
             "/v2/{}/manifests/{}",
             project_slug, referrer_digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(referrer)
         .send()
@@ -481,7 +522,10 @@ async fn referrers_cleanup_on_manifest_delete() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/referrers/{}", project_slug, base_digest)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("List referrers failed");
@@ -504,7 +548,10 @@ async fn referrers_cleanup_on_manifest_delete() {
             "/v2/{}/manifests/{}",
             project_slug, referrer_digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .send()
         .await
         .expect("Delete referrer failed");
@@ -514,7 +561,10 @@ async fn referrers_cleanup_on_manifest_delete() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/referrers/{}", project_slug, base_digest)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("List referrers failed");

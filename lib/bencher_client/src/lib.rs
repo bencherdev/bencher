@@ -39,6 +39,7 @@ from_client!(
     Email,
     GitHash,
     Index,
+    Iteration,
     Jwt,
     NonEmpty,
     ResourceName,

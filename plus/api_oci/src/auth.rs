@@ -44,7 +44,7 @@ pub use api_auth::oci::unauthorized_with_www_authenticate;
 pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jwt, HttpError> {
     let headers = rqctx.request.headers();
 
-    let auth_header = headers.get(http::header::AUTHORIZATION).ok_or_else(|| {
+    let auth_header = headers.get(bencher_json::AUTHORIZATION).ok_or_else(|| {
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::UNAUTHORIZED,
@@ -63,23 +63,15 @@ pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jw
         )
     })?;
 
-    let (scheme, token) = auth_str.split_once(' ').ok_or_else(|| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            oci_error_body(OCI_ERROR_UNSUPPORTED, "Invalid Authorization header format"),
-        )
-    })?;
-
-    if !scheme.eq_ignore_ascii_case("bearer") {
+    let Some(token) = bencher_json::strip_bearer_token(auth_str) else {
         return Err(HttpError::for_client_error(
             None,
             ClientErrorStatusCode::UNAUTHORIZED,
             oci_error_body(OCI_ERROR_UNAUTHORIZED, "Expected Bearer authentication"),
         ));
-    }
+    };
 
-    token.trim().parse().map_err(|_err| {
+    token.parse().map_err(|_err| {
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::BAD_REQUEST,

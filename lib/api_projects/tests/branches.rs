@@ -24,7 +24,10 @@ async fn branches_list() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -52,7 +55,10 @@ async fn branches_create() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -84,7 +90,10 @@ async fn branches_create_auto_slug() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -113,7 +122,10 @@ async fn branches_get() {
     let create_resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -129,7 +141,10 @@ async fn branches_get() {
             "/v0/projects/{}/branches/{}",
             project_slug, created.slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -157,7 +172,10 @@ async fn branches_delete() {
     let create_resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -172,7 +190,10 @@ async fn branches_delete() {
             "/v0/projects/{}/branches/delete-branch",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -199,7 +220,10 @@ async fn branches_get_with_head_query() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -233,7 +257,10 @@ async fn branches_get_with_head_query() {
             "/v0/projects/{}/branches/head-branch",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -248,7 +275,10 @@ async fn branches_get_with_head_query() {
             "/v0/projects/{}/branches/head-branch?head={}",
             project_slug, head_a_uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -263,7 +293,10 @@ async fn branches_get_with_head_query() {
             "/v0/projects/{}/branches/head-branch?head={}",
             project_slug, head_b_uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -291,7 +324,10 @@ async fn branches_get_with_nonexistent_head() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -306,7 +342,10 @@ async fn branches_get_with_nonexistent_head() {
             "/v0/projects/{}/branches/headnf-branch?head={}",
             project_slug, bogus_uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -334,7 +373,10 @@ async fn branches_get_with_wrong_branch_head() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -349,7 +391,10 @@ async fn branches_get_with_wrong_branch_head() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -365,7 +410,10 @@ async fn branches_get_with_wrong_branch_head() {
             "/v0/projects/{}/branches/branch-a?head={}",
             project_slug, branch_b_head_uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

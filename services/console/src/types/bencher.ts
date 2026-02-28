@@ -63,6 +63,7 @@ export enum JobStatus {
 	Claimed = "claimed",
 	Running = "running",
 	Completed = "completed",
+	Processed = "processed",
 	Failed = "failed",
 	Canceled = "canceled",
 }
@@ -120,17 +121,36 @@ export interface JsonJobConfig {
 	timeout: Timeout;
 	/** File paths to read from the VM after job completion */
 	file_paths?: string[];
+	/** Benchmark harness suggested central tendency */
+	average?: JsonAverage;
+	/** Number of benchmark iterations for the runner to execute */
+	iter?: Iteration;
+	/** Fold operation for combining multiple iteration results */
+	fold?: JsonFold;
+	/** Allow benchmark failure without short-circuiting iterations */
+	allow_failure?: boolean;
+	/** Backdate the report start time */
+	backdate?: string;
+}
+
+/** Output from a single benchmark iteration. */
+export interface JsonIterationOutput {
+	/** Exit code from the benchmark command */
+	exit_code: number;
+	/** Standard output from the benchmark */
+	stdout?: string;
+	/** Standard error from the benchmark */
+	stderr?: string;
+	/** File path to contents map */
+	output?: Record<string, string> | undefined;
 }
 
 /** Job output stored in blob storage after job completion or failure. */
 export interface JsonJobOutput {
-	exit_code?: number;
+	/** Per-iteration results */
+	results: JsonIterationOutput[];
 	/** Error message (present when the job failed). */
 	error?: string;
-	stdout?: string;
-	stderr?: string;
-	/** File path to contents map */
-	output?: Record<string, string> | undefined;
 }
 
 /** A benchmark job */
@@ -652,6 +672,10 @@ export interface JsonNewRunJob {
 	build_time?: boolean;
 	/** Track the file size of the output files instead of parsing their contents */
 	file_size?: boolean;
+	/** Number of benchmark iterations for the runner to execute */
+	iter?: Iteration;
+	/** Allow benchmark failure without short-circuiting iterations */
+	allow_failure?: boolean;
 	/** Backdate the report start time */
 	backdate?: string;
 }

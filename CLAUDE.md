@@ -36,6 +36,12 @@ cargo build
 cargo nextest run
 ```
 
+Test a single package:
+
+```bash
+cargo nextest run -p my_package
+```
+
 `nextest` does not support doctests, so also run:
 
 ```bash
@@ -114,6 +120,11 @@ The clippy script will install the target automatically and warn if no cross-com
   - The subcommand handler logic should live in a separate module named after the binary for production code (ie `bencher`) or a module named `task` for `tasks/*` crates
   - Do **NOT** use `num_args` on flags in `bencher run` — it uses `trailing_var_arg = true` to match `docker run` semantics, and `num_args` conflicts with trailing vararg parsing. Validate collection sizes at the type/deserialization layer instead (e.g., `TryFrom` impls in `bencher_json`).
 - Prefer destructuring a struct (`let Self { field1, field2, .. } = self;` or `let Foo { .. } = foo;`) over individual field access (`.field1`, `.field2`) when consuming or converting all fields. This ensures the compiler flags a build error when a field is added, preventing silent omissions.
+- Use macros for database connection access. All of these macros have a single-use and expanded closure-like form for use multiple times in the same scope.
+  - `public_conn!()` - For read-only public access
+    - This optionally takes in a `PublicUser`
+  - `auth_conn!()` - For read-only authenticated access
+  - `write_conn!()` - For single writer access
 - Use `diesel::QueryResult<T>` instead of `Result<T, diesel::result::Error>` — it is a type alias and more idiomatic
 - Database write methods that may be called both standalone and from within an outer transaction should NOT wrap in `conn.transaction()` internally. Instead, the standalone callers should wrap the call in a transaction. This avoids unnecessary SQLite savepoints when the method is called from batch operations.
 

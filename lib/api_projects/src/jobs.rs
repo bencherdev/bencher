@@ -234,11 +234,11 @@ async fn get_one_inner(
         .first(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(Job, (&query_project, job_uuid)))?;
 
-    let is_terminal = query_job.status.is_terminal();
+    let has_run = query_job.status.has_run();
     let mut job = query_job.into_json(public_conn!(context, public_user))?;
 
     // Fetch output from blob storage for terminal jobs only when authenticated
-    if is_terminal && public_user.is_auth() {
+    if has_run && public_user.is_auth() {
         job.output = match context
             .oci_storage()
             .job_output()

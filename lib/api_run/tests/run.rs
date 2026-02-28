@@ -38,7 +38,10 @@ async fn run_post_authenticated() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -74,7 +77,10 @@ async fn run_post_creates_branch_testbed() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -182,7 +188,10 @@ async fn push_test_image(
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{project_slug}/manifests/{tag}")))
-        .header("Authorization", format!("Bearer {oci_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -214,7 +223,10 @@ async fn create_fallback_spec(
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -237,7 +249,10 @@ async fn list_project_jobs(
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Failed to list jobs");
@@ -278,7 +293,10 @@ async fn run_post_with_job_creates_job() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -333,7 +351,10 @@ async fn run_post_with_job_explicit_spec() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -374,7 +395,10 @@ async fn run_post_with_job_no_spec_fails() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -412,7 +436,10 @@ async fn run_post_with_job_unsupported_registry() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -445,7 +472,10 @@ async fn run_post_without_job_no_job_created() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -492,7 +522,10 @@ async fn run_post_with_job_docker_io_image() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -538,7 +571,10 @@ async fn run_post_with_job_digest_reference() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -567,7 +603,10 @@ async fn create_spec(
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -609,7 +648,10 @@ async fn run_post_with_job_derived_testbed_uses_spec_name() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -659,7 +701,10 @@ async fn run_post_with_job_explicit_testbed_keeps_name() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -710,7 +755,10 @@ async fn run_post_with_job_derived_testbed_explicit_spec() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -762,7 +810,10 @@ async fn run_post_with_job_explicit_testbed_existing_spec() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -790,7 +841,10 @@ async fn run_post_with_job_explicit_testbed_existing_spec() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -839,7 +893,10 @@ async fn run_post_with_job_custom_timeout() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -893,7 +950,10 @@ async fn run_post_explicit_testbed_no_job_with_fallback_spec() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -933,7 +993,10 @@ async fn run_post_no_testbed_no_job_succeeds() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -971,7 +1034,10 @@ async fn run_post_no_testbed_no_job_with_fallback_spec_succeeds() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1015,7 +1081,10 @@ async fn run_post_with_job_derived_no_spec_fails() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1059,7 +1128,10 @@ async fn run_post_with_job_no_runners_stays_pending() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1070,7 +1142,10 @@ async fn run_post_with_job_no_runners_stays_pending() {
     let resp = server
         .client
         .get(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Failed to list runners");
@@ -1120,7 +1195,10 @@ async fn run_post_with_job_invalid_image_fails() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1159,7 +1237,10 @@ async fn run_post_with_job_validation_failure_no_report() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1170,7 +1251,10 @@ async fn run_post_with_job_validation_failure_no_report() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{project_slug}/reports")))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Failed to list reports");
@@ -1215,7 +1299,10 @@ async fn run_post_with_job_timeout_clamped() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1310,7 +1397,10 @@ async fn run_post_with_job_archived_spec_fails() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/specs/{}", spec.uuid)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1338,7 +1428,10 @@ async fn run_post_with_job_archived_spec_fails() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1382,7 +1475,10 @@ async fn run_post_with_job_default_timeout() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1437,7 +1533,10 @@ async fn run_post_with_job_priority_free() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1493,7 +1592,10 @@ async fn run_post_with_job_config_fields() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -1556,7 +1658,10 @@ async fn run_post_with_job_nonexistent_tag_fails() {
     let resp = server
         .client
         .post(server.api_url("/v0/run"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await

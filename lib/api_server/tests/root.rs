@@ -50,7 +50,10 @@ async fn root_get_with_auth() {
     let resp = server
         .client
         .get(server.api_url("/"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

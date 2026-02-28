@@ -415,7 +415,10 @@ impl RegistryClient {
         let mut request = self.agent.get(url).header("Accept", accept);
 
         if let Some(token) = self.bearer_tokens.get(&scope) {
-            request = request.header("Authorization", &format!("Bearer {token}"));
+            request = request.header(
+                bencher_json::AUTHORIZATION,
+                &bencher_json::bearer_header(token),
+            );
         }
 
         let response = request
@@ -439,7 +442,10 @@ impl RegistryClient {
                 .agent
                 .get(url)
                 .header("Accept", accept)
-                .header("Authorization", &format!("Bearer {token}"))
+                .header(
+                    bencher_json::AUTHORIZATION,
+                    &bencher_json::bearer_header(&token),
+                )
                 .call()
                 .map_err(|e| OciError::Registry(format!("Request failed: {e}")))?;
 
@@ -483,7 +489,7 @@ impl RegistryClient {
         // If we have a base token, use it as Basic auth password
         if let Some(base_token) = &self.base_token {
             let credentials = BASE64_STANDARD.encode(format!("_token:{}", base_token.as_ref()));
-            request = request.header("Authorization", &format!("Basic {credentials}"));
+            request = request.header(bencher_json::AUTHORIZATION, &format!("Basic {credentials}"));
         }
 
         let response = request

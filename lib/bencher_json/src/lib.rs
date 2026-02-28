@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(all(not(feature = "plus"), feature = "db"))]
 use serde_yaml as _;
 
+mod auth;
 pub mod big_int;
 pub mod clock;
 #[cfg(feature = "plus")]
@@ -78,7 +79,7 @@ pub use project::{
     model::{JsonModel, ModelUuid},
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
-    report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
+    report::{Iteration, JsonNewReport, JsonReport, JsonReports, ReportUuid},
     testbed::{
         JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedNameId, TestbedResourceId, TestbedSlug,
         TestbedUuid,
@@ -119,6 +120,8 @@ pub use user::{
 };
 
 pub const BENCHER_API_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub use auth::{AUTHORIZATION, bearer_header, strip_bearer_token};
 
 pub const BENCHER_CONSOLE_PORT: u16 = 3000;
 pub const LOCALHOST_BENCHER_URL_STR: &str = "http://localhost:3000";

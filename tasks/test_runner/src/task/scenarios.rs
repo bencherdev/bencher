@@ -1844,6 +1844,92 @@ CMD ["hello", "world"]"#,
                 Ok(())
             },
         },
+        Scenario {
+            name: "multiple_iterations",
+            description: "Multiple iterations execute sequentially",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "iter_output"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--iter", "3"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    bail!("Expected exit code 0, got {}", output.exit_code)
+                }
+                // Each iteration prints "iter_output", so we should see it at least 3 times
+                let count = output.stdout.matches("iter_output").count();
+                if count < 3 {
+                    bail!("Expected 3 iterations of output, found {count}")
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "zero_iterations",
+            description: "Zero iterations executes no benchmarks",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "should_not_appear"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--iter", "0"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    bail!("Expected exit code 0, got {}", output.exit_code)
+                }
+                if output.stdout.contains("should_not_appear") {
+                    bail!("Expected no benchmark execution with --iter 0, but output was produced")
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "allow_failure_false_aborts",
+            description: "Non-zero exit code aborts iteration without --allow-failure",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--iter", "3"],
+            validate: |output| {
+                if output.exit_code == 0 {
+                    bail!("Expected non-zero exit code")
+                }
+                // Only 1 iteration should run before aborting.
+                // Count lines that are exactly the marker to avoid matching
+                // the informational "Command: ..." line printed to stdout.
+                let count = output
+                    .stdout
+                    .lines()
+                    .filter(|l| l.trim() == "__ITER_DONE__")
+                    .count();
+                if count > 1 {
+                    bail!("Expected at most 1 iteration, found {count}")
+                }
+                Ok(())
+            },
+        },
+        Scenario {
+            name: "allow_failure_true_continues",
+            description: "Non-zero exit code continues with --allow-failure",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "60", "--iter", "3", "--allow-failure"],
+            validate: |output| {
+                if output.exit_code != 0 {
+                    bail!(
+                        "Expected exit code 0 with --allow-failure, got {}",
+                        output.exit_code
+                    )
+                }
+                let count = output
+                    .stdout
+                    .lines()
+                    .filter(|l| l.trim() == "__ITER_DONE__")
+                    .count();
+                if count < 3 {
+                    bail!("Expected 3 iterations with --allow-failure, found {count}")
+                }
+                Ok(())
+            },
+        },
     ]
 }
 

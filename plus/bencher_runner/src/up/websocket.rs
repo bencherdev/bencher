@@ -1,49 +1,15 @@
-use std::collections::HashMap;
 use std::net::TcpStream;
 use std::time::Duration;
 
-use camino::Utf8PathBuf;
-use serde::{Deserialize, Serialize};
+use bencher_json::runner::{RunnerMessage, ServerMessage};
 use tungstenite::handshake::client::generate_key;
 use tungstenite::http::Request;
+use tungstenite::protocol::CloseFrame;
 use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{Message, WebSocket};
 use url::Url;
 
 use super::error::WebSocketError;
-
-#[derive(Debug, Serialize)]
-#[serde(tag = "event", rename_all = "snake_case")]
-pub enum RunnerMessage {
-    Running,
-    Heartbeat,
-    Completed {
-        exit_code: i32,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        stdout: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        stderr: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        output: Option<HashMap<Utf8PathBuf, String>>,
-    },
-    Failed {
-        #[serde(skip_serializing_if = "Option::is_none")]
-        exit_code: Option<i32>,
-        error: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        stdout: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        stderr: Option<String>,
-    },
-    Canceled,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(tag = "event", rename_all = "snake_case")]
-pub enum ServerMessage {
-    Ack,
-    Cancel,
-}
 
 pub struct JobChannel {
     ws: WebSocket<MaybeTlsStream<TcpStream>>,
@@ -53,7 +19,10 @@ impl JobChannel {
     pub fn connect(ws_url: &Url, token: &str) -> Result<Self, WebSocketError> {
         let request = Request::builder()
             .uri(ws_url.as_str())
-            .header("Sec-WebSocket-Protocol", format!("bearer.{token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(token),
+            )
             .header("Sec-WebSocket-Version", "13")
             .header("Connection", "Upgrade")
             .header("Upgrade", "websocket")
@@ -102,9 +71,7 @@ impl JobChannel {
                     .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
                 Ok(None)
             },
-            Ok(Message::Close(_)) => Err(WebSocketError::Receive(
-                "Server closed connection".to_owned(),
-            )),
+            Ok(Message::Close(frame)) => Self::handle_close_frame(frame),
             Ok(_) => Ok(None),
             Err(tungstenite::Error::Io(e)) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 Ok(None)
@@ -142,6 +109,7 @@ impl JobChannel {
                     .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
                 Ok(None)
             },
+            Ok(Message::Close(frame)) => Self::handle_close_frame(frame),
             Ok(_) => Ok(None),
             Err(tungstenite::Error::Io(e))
                 if e.kind() == std::io::ErrorKind::WouldBlock
@@ -150,6 +118,22 @@ impl JobChannel {
                 Ok(None)
             },
             Err(e) => Err(WebSocketError::Receive(e.to_string())),
+        }
+    }
+
+    fn handle_close_frame(
+        frame: Option<CloseFrame>,
+    ) -> Result<Option<ServerMessage>, WebSocketError> {
+        let reason = frame.and_then(|f| {
+            serde_json::from_str::<bencher_json::runner::CloseReason>(&f.reason).ok()
+        });
+        match reason {
+            Some(reason) => Err(WebSocketError::Receive(format!(
+                "Server closed connection: {reason:?}"
+            ))),
+            None => Err(WebSocketError::Receive(
+                "Server closed connection".to_owned(),
+            )),
         }
     }
 
@@ -196,6 +180,11 @@ fn set_read_timeout(
 #[cfg(test)]
 #[expect(clippy::indexing_slicing, reason = "Test assertions on JSON values")]
 mod tests {
+    use std::collections::BTreeMap;
+
+    use bencher_json::runner::JsonIterationOutput;
+    use camino::Utf8PathBuf;
+
     use super::*;
 
     // --- RunnerMessage serialization ---
@@ -214,24 +203,26 @@ mod tests {
 
     #[test]
     fn completed_serializes_with_all_fields() {
-        let mut output = HashMap::new();
+        let mut output = BTreeMap::new();
         output.insert(
             Utf8PathBuf::from("/tmp/results.json"),
             "benchmark results here".to_owned(),
         );
         let msg = RunnerMessage::Completed {
-            exit_code: 0,
-            stdout: Some("stdout output".to_owned()),
-            stderr: Some("stderr output".to_owned()),
-            output: Some(output),
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some("stdout output".to_owned()),
+                stderr: Some("stderr output".to_owned()),
+                output: Some(output),
+            }],
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "completed");
-        assert_eq!(json["exit_code"], 0);
-        assert_eq!(json["stdout"], "stdout output");
-        assert_eq!(json["stderr"], "stderr output");
+        assert_eq!(json["results"][0]["exit_code"], 0);
+        assert_eq!(json["results"][0]["stdout"], "stdout output");
+        assert_eq!(json["results"][0]["stderr"], "stderr output");
         assert_eq!(
-            json["output"]["/tmp/results.json"],
+            json["results"][0]["output"]["/tmp/results.json"],
             "benchmark results here"
         );
     }
@@ -239,49 +230,50 @@ mod tests {
     #[test]
     fn completed_serializes_minimal() {
         let msg = RunnerMessage::Completed {
-            exit_code: 1,
-            stdout: None,
-            stderr: None,
-            output: None,
+            results: vec![JsonIterationOutput {
+                exit_code: 1,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "completed");
-        assert_eq!(json["exit_code"], 1);
-        assert!(json.get("stdout").is_none());
-        assert!(json.get("stderr").is_none());
-        assert!(json.get("output").is_none());
+        assert_eq!(json["results"][0]["exit_code"], 1);
+        assert!(json["results"][0].get("stdout").is_none());
+        assert!(json["results"][0].get("stderr").is_none());
+        assert!(json["results"][0].get("output").is_none());
     }
 
     #[test]
     fn failed_serializes_with_all_fields() {
         let msg = RunnerMessage::Failed {
-            exit_code: Some(137),
+            results: vec![JsonIterationOutput {
+                exit_code: 137,
+                stdout: Some("partial stdout".to_owned()),
+                stderr: Some("error details".to_owned()),
+                output: None,
+            }],
             error: "OOM killed".to_owned(),
-            stdout: Some("partial stdout".to_owned()),
-            stderr: Some("error details".to_owned()),
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "failed");
-        assert_eq!(json["exit_code"], 137);
+        assert_eq!(json["results"][0]["exit_code"], 137);
         assert_eq!(json["error"], "OOM killed");
-        assert_eq!(json["stdout"], "partial stdout");
-        assert_eq!(json["stderr"], "error details");
+        assert_eq!(json["results"][0]["stdout"], "partial stdout");
+        assert_eq!(json["results"][0]["stderr"], "error details");
     }
 
     #[test]
     fn failed_serializes_minimal() {
         let msg = RunnerMessage::Failed {
-            exit_code: None,
+            results: Vec::new(),
             error: "timeout".to_owned(),
-            stdout: None,
-            stderr: None,
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "failed");
-        assert!(json.get("exit_code").is_none());
+        assert!(json["results"].as_array().unwrap().is_empty());
         assert_eq!(json["error"], "timeout");
-        assert!(json.get("stdout").is_none());
-        assert!(json.get("stderr").is_none());
     }
 
     #[test]

@@ -26,7 +26,10 @@ async fn testbeds_list() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -56,7 +59,10 @@ async fn testbeds_create() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -88,7 +94,10 @@ async fn testbeds_create_duplicate() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -99,7 +108,10 @@ async fn testbeds_create_duplicate() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -128,7 +140,10 @@ async fn testbeds_delete() {
     let create_resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -141,7 +156,10 @@ async fn testbeds_delete() {
             "/v0/projects/{}/testbeds/delete-testbed",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -173,7 +191,10 @@ async fn testbeds_get_with_spec_query() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&spec_a_body)
         .send()
         .await
@@ -192,7 +213,10 @@ async fn testbeds_get_with_spec_query() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&spec_b_body)
         .send()
         .await
@@ -208,7 +232,10 @@ async fn testbeds_get_with_spec_query() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&testbed_body)
         .send()
         .await
@@ -226,7 +253,10 @@ async fn testbeds_get_with_spec_query() {
             "/v0/projects/{}/testbeds/spec-testbed",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&patch_body)
         .send()
         .await
@@ -246,7 +276,10 @@ async fn testbeds_get_with_spec_query() {
             "/v0/projects/{}/testbeds/spec-testbed",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&patch_body)
         .send()
         .await
@@ -265,7 +298,10 @@ async fn testbeds_get_with_spec_query() {
             "/v0/projects/{}/testbeds/spec-testbed",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -283,7 +319,10 @@ async fn testbeds_get_with_spec_query() {
             "/v0/projects/{}/testbeds/spec-testbed?spec={}",
             project_slug, spec_a.uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -301,7 +340,10 @@ async fn testbeds_get_with_spec_query() {
             "/v0/projects/{}/testbeds/spec-testbed?spec={}",
             project_slug, spec_b.uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -335,7 +377,10 @@ async fn testbeds_get_with_nonexistent_spec() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&testbed_body)
         .send()
         .await
@@ -350,7 +395,10 @@ async fn testbeds_get_with_nonexistent_spec() {
             "/v0/projects/{}/testbeds/specnf-testbed?spec={}",
             project_slug, bogus_uuid
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -383,7 +431,10 @@ async fn testbeds_create_with_spec() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&spec_body)
         .send()
         .await
@@ -400,7 +451,10 @@ async fn testbeds_create_with_spec() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&testbed_body)
         .send()
         .await
@@ -439,7 +493,10 @@ async fn testbeds_patch_spec_null() {
     let resp = server
         .client
         .post(server.api_url("/v0/specs"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&spec_body)
         .send()
         .await
@@ -455,7 +512,10 @@ async fn testbeds_patch_spec_null() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&testbed_body)
         .send()
         .await
@@ -470,7 +530,10 @@ async fn testbeds_patch_spec_null() {
             "/v0/projects/{}/testbeds/null-spec-testbed",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&patch_body)
         .send()
         .await
@@ -490,7 +553,10 @@ async fn testbeds_patch_spec_null() {
             "/v0/projects/{}/testbeds/null-spec-testbed",
             project_slug
         )))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&patch_body)
         .send()
         .await

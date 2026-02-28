@@ -255,6 +255,11 @@ impl TestServer {
         }
     }
 
+    /// Get the shared API context for direct access (e.g. OCI storage, clock).
+    pub fn context(&self) -> &ApiContext {
+        self.server.app_private()
+    }
+
     /// Get a database connection for test setup.
     /// Use this to insert test data directly into the database.
     #[expect(clippy::expect_used)]
@@ -270,11 +275,6 @@ impl TestServer {
     /// Get the path to the temporary database file
     pub fn db_path(&self) -> &std::path::Path {
         self.db_file.path()
-    }
-
-    /// Create a bearer token header value
-    pub fn bearer(&self, token: &str) -> String {
-        format!("Bearer {token}")
     }
 
     /// Get the base URL for API requests

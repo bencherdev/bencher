@@ -11153,6 +11153,7 @@
           "claimed",
           "running",
           "completed",
+          "processed",
           "failed",
           "canceled"
         ]
@@ -11912,6 +11913,38 @@
           "google"
         ]
       },
+      "JsonIterationOutput": {
+        "description": "Output from a single benchmark iteration.",
+        "type": "object",
+        "properties": {
+          "exit_code": {
+            "description": "Exit code from the benchmark command",
+            "type": "integer",
+            "format": "int32"
+          },
+          "output": {
+            "nullable": true,
+            "description": "File path to contents map",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "stderr": {
+            "nullable": true,
+            "description": "Standard error from the benchmark",
+            "type": "string"
+          },
+          "stdout": {
+            "nullable": true,
+            "description": "Standard output from the benchmark",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exit_code"
+        ]
+      },
       "JsonJob": {
         "description": "A benchmark job",
         "type": "object",
@@ -11999,6 +12032,29 @@
         "description": "Job configuration sent to runners.\n\nContains the execution details needed for a runner to execute a job. Designed to minimize data leakage - runners only learn what's necessary to pull and execute an OCI image. Resource requirements (cpu, memory, disk, network) are in the associated spec.",
         "type": "object",
         "properties": {
+          "allow_failure": {
+            "nullable": true,
+            "description": "Allow benchmark failure without short-circuiting iterations",
+            "type": "boolean"
+          },
+          "average": {
+            "nullable": true,
+            "description": "Benchmark harness suggested central tendency",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonAverage"
+              }
+            ]
+          },
+          "backdate": {
+            "nullable": true,
+            "description": "Backdate the report start time",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "cmd": {
             "nullable": true,
             "description": "Command override (like Docker CMD)",
@@ -12038,6 +12094,24 @@
             "items": {
               "type": "string"
             }
+          },
+          "fold": {
+            "nullable": true,
+            "description": "Fold operation for combining multiple iteration results",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonFold"
+              }
+            ]
+          },
+          "iter": {
+            "nullable": true,
+            "description": "Number of benchmark iterations for the runner to execute",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Iteration"
+              }
+            ]
           },
           "project": {
             "description": "Project UUID for OCI authentication scoping",
@@ -12080,28 +12154,17 @@
             "description": "Error message (present when the job failed).",
             "type": "string"
           },
-          "exit_code": {
-            "nullable": true,
-            "type": "integer",
-            "format": "int32"
-          },
-          "output": {
-            "nullable": true,
-            "description": "File path to contents map",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
+          "results": {
+            "description": "Per-iteration results",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonIterationOutput"
             }
-          },
-          "stderr": {
-            "nullable": true,
-            "type": "string"
-          },
-          "stdout": {
-            "nullable": true,
-            "type": "string"
           }
-        }
+        },
+        "required": [
+          "results"
+        ]
       },
       "JsonJobs": {
         "description": "A list of jobs",
@@ -13001,6 +13064,11 @@
         "description": "Job configuration for a remote runner execution.\n\nSent as part of `JsonNewRun` when the CLI `--image` flag is used. The API server uses this to create a job for a bare metal runner instead of expecting locally-executed benchmark results.",
         "type": "object",
         "properties": {
+          "allow_failure": {
+            "nullable": true,
+            "description": "Allow benchmark failure without short-circuiting iterations",
+            "type": "boolean"
+          },
           "backdate": {
             "nullable": true,
             "description": "Backdate the report start time",
@@ -13057,6 +13125,15 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/ImageReference"
+              }
+            ]
+          },
+          "iter": {
+            "nullable": true,
+            "description": "Number of benchmark iterations for the runner to execute",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Iteration"
               }
             ]
           },

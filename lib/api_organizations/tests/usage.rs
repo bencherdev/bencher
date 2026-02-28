@@ -19,7 +19,10 @@ async fn usage_get() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/organizations/{}/usage", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -66,7 +69,10 @@ async fn usage_org_not_found() {
     let resp = server
         .client
         .get(server.api_url("/v0/organizations/nonexistent-org/usage"))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

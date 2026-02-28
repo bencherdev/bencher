@@ -15,7 +15,6 @@ plus = [
     "bencher_schema/plus",
     "bencher_token/plus",
     "dep:bencher_token",
-    "dep:camino",
     "dep:diesel",
     "dep:dropshot",
     "dep:futures",
@@ -40,7 +39,6 @@ bencher_oci_storage = { workspace = true, optional = true }
 bencher_token = { workspace = true, optional = true }
 bencher_otel = { workspace = true, optional = true }
 bencher_schema = { workspace = true, optional = true }
-camino = { workspace = true, optional = true }
 diesel = { workspace = true, optional = true }
 dropshot = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
@@ -59,6 +57,7 @@ uuid = { workspace = true, features = ["v4"], optional = true }
 bencher_api_tests.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db", "test-clock"] }
 bencher_schema.workspace = true
+camino.workspace = true
 diesel.workspace = true
 futures-concurrency.workspace = true
 http.workspace = true

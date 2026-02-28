@@ -1,9 +1,5 @@
 #![cfg(feature = "plus")]
-#![expect(
-    unused_crate_dependencies,
-    clippy::tests_outside_test_module,
-    clippy::uninlined_format_args
-)]
+#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
 //! Integration tests for OCI base endpoint (/v2/).
 
 use bencher_api_tests::TestServer;
@@ -41,7 +37,10 @@ async fn oci_base_authenticated() {
     let resp = server
         .client
         .get(server.api_url("/v2/"))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -65,7 +64,10 @@ async fn oci_base_runner_token_rejected() {
     let resp = server
         .client
         .get(server.api_url("/v2/"))
-        .header("Authorization", format!("Bearer {}", runner_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&runner_token),
+        )
         .send()
         .await
         .expect("Request failed");

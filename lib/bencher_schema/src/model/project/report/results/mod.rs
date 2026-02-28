@@ -71,6 +71,13 @@ impl ReportResults {
         }
     }
 
+    /// Process report results by iterating over each result set sequentially.
+    ///
+    /// The sequential per-iteration processing is load-bearing:
+    /// each iteration performs a Phase 1 read (querying historical metrics via `metrics_data()`)
+    /// followed by a Phase 2 write (committing new metrics).
+    /// Iteration N+1's boundary detection must see iteration N's committed metrics,
+    /// so iterations cannot be collapsed into a single deferred transaction.
     pub async fn process(
         &mut self,
         log: &Logger,

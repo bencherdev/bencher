@@ -22,7 +22,10 @@ pub async fn create_runner(server: &TestServer, admin_token: &str, name: &str) -
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", format!("Bearer {admin_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(admin_token),
+        )
         .json(&body)
         .send()
         .await

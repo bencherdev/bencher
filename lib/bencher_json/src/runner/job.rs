@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use bencher_valid::{DateTime, ImageDigest, ImageReference, Jwt, PollTimeout, Timeout, Url};
 use camino::Utf8PathBuf;
@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::RunnerUuid;
 use super::job_status::JobStatus;
 use crate::ProjectUuid;
+use crate::project::report::{Iteration, JsonAverage, JsonFold};
 use crate::spec::{JsonSpec, SpecResourceId};
 
 crate::typed_uuid::typed_uuid!(JobUuid);
@@ -44,25 +45,36 @@ pub struct JsonJob {
     pub output: Option<JsonJobOutput>,
 }
 
-/// Job output stored in blob storage after job completion or failure.
+/// Output from a single benchmark iteration.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonJobOutput {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub exit_code: Option<i32>,
-    /// Error message (present when the job failed).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<String>,
+pub struct JsonIterationOutput {
+    /// Exit code from the benchmark command
+    pub exit_code: i32,
+    /// Standard output from the benchmark
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stdout: Option<String>,
+    /// Standard error from the benchmark
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stderr: Option<String>,
     /// File path to contents map
     #[serde(skip_serializing_if = "Option::is_none")]
     #[typeshare(typescript(type = "Record<string, string> | undefined"))]
     #[cfg_attr(feature = "schema", schemars(with = "Option<HashMap<String, String>>"))]
-    pub output: Option<HashMap<Utf8PathBuf, String>>,
+    pub output: Option<BTreeMap<Utf8PathBuf, String>>,
+}
+
+/// Job output stored in blob storage after job completion or failure.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonJobOutput {
+    /// Per-iteration results
+    pub results: Vec<JsonIterationOutput>,
+    /// Error message (present when the job failed).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// Unchecked deserialization target for `JsonNewRunJob`.
@@ -77,6 +89,8 @@ struct JsonUncheckedNewRunJob {
     pub file_paths: Option<Vec<Utf8PathBuf>>,
     pub build_time: Option<bool>,
     pub file_size: Option<bool>,
+    pub iter: Option<Iteration>,
+    pub allow_failure: Option<bool>,
     pub backdate: Option<DateTime>,
 }
 
@@ -84,23 +98,39 @@ impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
     type Error = JobConfigError;
 
     fn try_from(unchecked: JsonUncheckedNewRunJob) -> Result<Self, Self::Error> {
+        let JsonUncheckedNewRunJob {
+            image,
+            spec,
+            entrypoint,
+            cmd,
+            env,
+            timeout,
+            file_paths,
+            build_time,
+            file_size,
+            iter,
+            allow_failure,
+            backdate,
+        } = unchecked;
         validate_collection_sizes(
-            unchecked.entrypoint.as_ref(),
-            unchecked.cmd.as_ref(),
-            unchecked.file_paths.as_ref(),
-            unchecked.env.as_ref(),
+            entrypoint.as_ref(),
+            cmd.as_ref(),
+            file_paths.as_ref(),
+            env.as_ref(),
         )?;
         Ok(JsonNewRunJob {
-            image: unchecked.image,
-            spec: unchecked.spec,
-            entrypoint: unchecked.entrypoint,
-            cmd: unchecked.cmd,
-            env: unchecked.env,
-            timeout: unchecked.timeout,
-            file_paths: unchecked.file_paths,
-            build_time: unchecked.build_time,
-            file_size: unchecked.file_size,
-            backdate: unchecked.backdate,
+            image,
+            spec,
+            entrypoint,
+            cmd,
+            env,
+            timeout,
+            file_paths,
+            build_time,
+            file_size,
+            iter,
+            allow_failure,
+            backdate,
         })
     }
 }
@@ -142,6 +172,12 @@ pub struct JsonNewRunJob {
     /// Track the file size of the output files instead of parsing their contents
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_size: Option<bool>,
+    /// Number of benchmark iterations for the runner to execute
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub iter: Option<Iteration>,
+    /// Allow benchmark failure without short-circuiting iterations
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_failure: Option<bool>,
     /// Backdate the report start time
     #[serde(skip_serializing_if = "Option::is_none")]
     pub backdate: Option<DateTime>,
@@ -239,27 +275,52 @@ struct JsonUncheckedJobConfig {
     pub env: Option<HashMap<String, String>>,
     pub timeout: Timeout,
     pub file_paths: Option<Vec<Utf8PathBuf>>,
+    pub average: Option<JsonAverage>,
+    pub iter: Option<Iteration>,
+    pub fold: Option<JsonFold>,
+    pub allow_failure: Option<bool>,
+    pub backdate: Option<DateTime>,
 }
 
 impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
     type Error = JobConfigError;
 
     fn try_from(unchecked: JsonUncheckedJobConfig) -> Result<Self, Self::Error> {
+        let JsonUncheckedJobConfig {
+            registry,
+            project,
+            digest,
+            entrypoint,
+            cmd,
+            env,
+            timeout,
+            file_paths,
+            average,
+            iter,
+            fold,
+            allow_failure,
+            backdate,
+        } = unchecked;
         validate_collection_sizes(
-            unchecked.entrypoint.as_ref(),
-            unchecked.cmd.as_ref(),
-            unchecked.file_paths.as_ref(),
-            unchecked.env.as_ref(),
+            entrypoint.as_ref(),
+            cmd.as_ref(),
+            file_paths.as_ref(),
+            env.as_ref(),
         )?;
         Ok(JsonJobConfig {
-            registry: unchecked.registry,
-            project: unchecked.project,
-            digest: unchecked.digest,
-            entrypoint: unchecked.entrypoint,
-            cmd: unchecked.cmd,
-            env: unchecked.env,
-            timeout: unchecked.timeout,
-            file_paths: unchecked.file_paths,
+            registry,
+            project,
+            digest,
+            entrypoint,
+            cmd,
+            env,
+            timeout,
+            file_paths,
+            average,
+            iter,
+            fold,
+            allow_failure,
+            backdate,
         })
     }
 }
@@ -298,95 +359,114 @@ pub struct JsonJobConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "schema", schemars(with = "Option<Vec<String>>"))]
     pub file_paths: Option<Vec<Utf8PathBuf>>,
+    /// Benchmark harness suggested central tendency
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub average: Option<JsonAverage>,
+    /// Number of benchmark iterations for the runner to execute
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub iter: Option<Iteration>,
+    /// Fold operation for combining multiple iteration results
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fold: Option<JsonFold>,
+    /// Allow benchmark failure without short-circuiting iterations
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_failure: Option<bool>,
+    /// Backdate the report start time
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backdate: Option<DateTime>,
 }
 
 #[cfg(test)]
+#[expect(clippy::indexing_slicing)]
 mod tests {
     use super::*;
 
     #[test]
     fn round_trip_all_fields() {
-        let mut output_files = HashMap::new();
+        let mut output_files = BTreeMap::new();
         output_files.insert(Utf8PathBuf::from("/tmp/results.json"), "{}".to_owned());
 
         let original = JsonJobOutput {
-            exit_code: Some(0),
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some("hello".into()),
+                stderr: Some("world".into()),
+                output: Some(output_files),
+            }],
             error: Some("oops".into()),
-            stdout: Some("hello".into()),
-            stderr: Some("world".into()),
-            output: Some(output_files),
         };
 
         let json = serde_json::to_string(&original).unwrap();
         let deserialized: JsonJobOutput = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(deserialized.exit_code, Some(0));
+        assert_eq!(deserialized.results.len(), 1);
+        assert_eq!(deserialized.results[0].exit_code, 0);
+        assert_eq!(deserialized.results[0].stdout.as_deref(), Some("hello"));
+        assert_eq!(deserialized.results[0].stderr.as_deref(), Some("world"));
+        assert_eq!(deserialized.results[0].output.as_ref().unwrap().len(), 1);
         assert_eq!(deserialized.error.as_deref(), Some("oops"));
-        assert_eq!(deserialized.stdout.as_deref(), Some("hello"));
-        assert_eq!(deserialized.stderr.as_deref(), Some("world"));
-        assert_eq!(deserialized.output.as_ref().unwrap().len(), 1);
     }
 
     #[test]
     fn round_trip_completed_shape() {
         let original = JsonJobOutput {
-            exit_code: Some(0),
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: Some("stdout".into()),
+                stderr: Some("stderr".into()),
+                output: Some(BTreeMap::new()),
+            }],
             error: None,
-            stdout: Some("stdout".into()),
-            stderr: Some("stderr".into()),
-            output: Some(HashMap::new()),
         };
 
         let json = serde_json::to_string(&original).unwrap();
         let deserialized: JsonJobOutput = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(deserialized.exit_code, Some(0));
+        assert_eq!(deserialized.results.len(), 1);
+        assert_eq!(deserialized.results[0].exit_code, 0);
         assert!(deserialized.error.is_none());
-        assert_eq!(deserialized.stdout.as_deref(), Some("stdout"));
-        assert_eq!(deserialized.stderr.as_deref(), Some("stderr"));
+        assert_eq!(deserialized.results[0].stdout.as_deref(), Some("stdout"));
+        assert_eq!(deserialized.results[0].stderr.as_deref(), Some("stderr"));
     }
 
     #[test]
     fn round_trip_failed_shape() {
         let original = JsonJobOutput {
-            exit_code: Some(1),
+            results: vec![JsonIterationOutput {
+                exit_code: 1,
+                stdout: Some("stdout".into()),
+                stderr: Some("stderr".into()),
+                output: None,
+            }],
             error: Some("something broke".into()),
-            stdout: Some("stdout".into()),
-            stderr: Some("stderr".into()),
-            output: None,
         };
 
         let json = serde_json::to_string(&original).unwrap();
         let deserialized: JsonJobOutput = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(deserialized.exit_code, Some(1));
+        assert_eq!(deserialized.results.len(), 1);
+        assert_eq!(deserialized.results[0].exit_code, 1);
         assert_eq!(deserialized.error.as_deref(), Some("something broke"));
-        assert!(deserialized.output.is_none());
+        assert!(deserialized.results[0].output.is_none());
     }
 
     #[test]
     fn round_trip_minimal() {
         let original = JsonJobOutput {
-            exit_code: None,
+            results: Vec::new(),
             error: None,
-            stdout: None,
-            stderr: None,
-            output: None,
         };
 
         let json = serde_json::to_string(&original).unwrap();
         let deserialized: JsonJobOutput = serde_json::from_str(&json).unwrap();
 
-        assert!(deserialized.exit_code.is_none());
+        assert!(deserialized.results.is_empty());
         assert!(deserialized.error.is_none());
-        assert!(deserialized.stdout.is_none());
-        assert!(deserialized.stderr.is_none());
-        assert!(deserialized.output.is_none());
     }
 
     #[test]
     fn round_trip_with_output_files() {
-        let mut files = HashMap::new();
+        let mut files = BTreeMap::new();
         files.insert(
             Utf8PathBuf::from("/tmp/results.json"),
             r#"{"metric": 42}"#.to_owned(),
@@ -394,17 +474,19 @@ mod tests {
         files.insert(Utf8PathBuf::from("/tmp/log.txt"), "log data".to_owned());
 
         let original = JsonJobOutput {
-            exit_code: Some(0),
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: Some(files),
+            }],
             error: None,
-            stdout: None,
-            stderr: None,
-            output: Some(files),
         };
 
         let json = serde_json::to_string(&original).unwrap();
         let deserialized: JsonJobOutput = serde_json::from_str(&json).unwrap();
 
-        let output = deserialized.output.as_ref().unwrap();
+        let output = deserialized.results[0].output.as_ref().unwrap();
         assert_eq!(output.len(), 2);
         assert_eq!(
             output.get(Utf8PathBuf::from("/tmp/results.json").as_path()),
@@ -413,30 +495,31 @@ mod tests {
     }
 
     #[test]
-    fn backwards_compat_completed_json() {
-        // JSON matching the old JsonJobOutputCompleted shape
-        let json =
-            r#"{"exit_code":0,"stdout":"hello","stderr":"world","output":{"/tmp/f.txt":"data"}}"#;
-        let deserialized: JsonJobOutput = serde_json::from_str(json).unwrap();
+    fn round_trip_multiple_iterations() {
+        let original = JsonJobOutput {
+            results: vec![
+                JsonIterationOutput {
+                    exit_code: 0,
+                    stdout: Some("iter1".into()),
+                    stderr: None,
+                    output: None,
+                },
+                JsonIterationOutput {
+                    exit_code: 0,
+                    stdout: Some("iter2".into()),
+                    stderr: None,
+                    output: None,
+                },
+            ],
+            error: None,
+        };
 
-        assert_eq!(deserialized.exit_code, Some(0));
-        assert!(deserialized.error.is_none());
-        assert_eq!(deserialized.stdout.as_deref(), Some("hello"));
-        assert_eq!(deserialized.stderr.as_deref(), Some("world"));
-        assert_eq!(deserialized.output.as_ref().unwrap().len(), 1);
-    }
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: JsonJobOutput = serde_json::from_str(&json).unwrap();
 
-    #[test]
-    fn backwards_compat_failed_json() {
-        // JSON matching the old JsonJobOutputFailed shape
-        let json = r#"{"exit_code":1,"error":"something broke","stdout":"out","stderr":"err"}"#;
-        let deserialized: JsonJobOutput = serde_json::from_str(json).unwrap();
-
-        assert_eq!(deserialized.exit_code, Some(1));
-        assert_eq!(deserialized.error.as_deref(), Some("something broke"));
-        assert_eq!(deserialized.stdout.as_deref(), Some("out"));
-        assert_eq!(deserialized.stderr.as_deref(), Some("err"));
-        assert!(deserialized.output.is_none());
+        assert_eq!(deserialized.results.len(), 2);
+        assert_eq!(deserialized.results[0].stdout.as_deref(), Some("iter1"));
+        assert_eq!(deserialized.results[1].stdout.as_deref(), Some("iter2"));
     }
 
     fn job_config_json(
@@ -604,6 +687,63 @@ mod tests {
         let json = new_run_job_json(0, 0, 0, MAX_ENV_LEN);
         let job: JsonNewRunJob = serde_json::from_str(&json).unwrap();
         assert_eq!(job.env.as_ref().unwrap().len(), MAX_ENV_LEN);
+    }
+
+    // --- Backwards compatibility: deserialize known JSON strings ---
+
+    #[test]
+    fn backwards_compat_completed_json() {
+        let json = r#"{"results":[{"exit_code":0,"stdout":"hello","stderr":"world","output":{"/tmp/f.txt":"data"}}]}"#;
+        let output: JsonJobOutput = serde_json::from_str(json).unwrap();
+        assert_eq!(output.results.len(), 1);
+        assert_eq!(output.results[0].exit_code, 0);
+        assert_eq!(output.results[0].stdout.as_deref(), Some("hello"));
+        assert_eq!(output.results[0].stderr.as_deref(), Some("world"));
+        assert_eq!(
+            output.results[0]
+                .output
+                .as_ref()
+                .unwrap()
+                .get(Utf8PathBuf::from("/tmp/f.txt").as_path()),
+            Some(&"data".to_owned())
+        );
+        assert!(output.error.is_none());
+    }
+
+    #[test]
+    fn backwards_compat_failed_json() {
+        let json = r#"{"results":[{"exit_code":1,"stdout":"out","stderr":"err"}],"error":"something broke"}"#;
+        let output: JsonJobOutput = serde_json::from_str(json).unwrap();
+        assert_eq!(output.results.len(), 1);
+        assert_eq!(output.results[0].exit_code, 1);
+        assert_eq!(output.results[0].stdout.as_deref(), Some("out"));
+        assert_eq!(output.results[0].stderr.as_deref(), Some("err"));
+        assert_eq!(output.error.as_deref(), Some("something broke"));
+    }
+
+    #[test]
+    fn backwards_compat_empty_results() {
+        let json = r#"{"results":[]}"#;
+        let output: JsonJobOutput = serde_json::from_str(json).unwrap();
+        assert!(output.results.is_empty());
+        assert!(output.error.is_none());
+    }
+
+    #[test]
+    fn backwards_compat_file_only_output() {
+        let json =
+            r#"{"results":[{"exit_code":0,"output":{"/tmp/results.json":"{\"metric\":42}"}}]}"#;
+        let output: JsonJobOutput = serde_json::from_str(json).unwrap();
+        assert_eq!(output.results.len(), 1);
+        assert_eq!(output.results[0].exit_code, 0);
+        assert!(output.results[0].stdout.is_none());
+        assert!(output.results[0].stderr.is_none());
+        let files = output.results[0].output.as_ref().unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(
+            files.get(Utf8PathBuf::from("/tmp/results.json").as_path()),
+            Some(&r#"{"metric":42}"#.to_owned())
+        );
     }
 }
 

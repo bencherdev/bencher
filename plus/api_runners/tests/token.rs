@@ -25,7 +25,10 @@ async fn token_rotate_as_admin() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -37,7 +40,10 @@ async fn token_rotate_as_admin() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/token", original_token.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -69,7 +75,10 @@ async fn token_rotate_forbidden_for_non_admin() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -81,7 +90,10 @@ async fn token_rotate_forbidden_for_non_admin() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/token", runner_token.uuid)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -103,7 +115,10 @@ async fn token_rotate_by_slug() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -115,7 +130,10 @@ async fn token_rotate_by_slug() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners/token-slug-runner/token"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -134,7 +152,10 @@ async fn token_rotate_not_found() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners/nonexistent-runner/token"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -153,7 +174,10 @@ async fn concurrent_token_rotation() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -163,14 +187,14 @@ async fn concurrent_token_rotation() {
 
     // Two concurrent rotations
     let url = server.api_url(&format!("/v0/runners/{}/token", original.uuid));
-    let bearer = server.bearer(&admin.token);
+    let bearer = bencher_json::bearer_header(&admin.token);
     let client = &server.client;
 
     let (resp1, resp2) = (
         async {
             client
                 .post(&url)
-                .header("Authorization", &bearer)
+                .header(bencher_json::AUTHORIZATION, &bearer)
                 .send()
                 .await
                 .expect("Request 1 failed")
@@ -178,7 +202,7 @@ async fn concurrent_token_rotation() {
         async {
             client
                 .post(&url)
-                .header("Authorization", &bearer)
+                .header(bencher_json::AUTHORIZATION, &bearer)
                 .send()
                 .await
                 .expect("Request 2 failed")
@@ -226,7 +250,10 @@ async fn old_token_rejected_after_rotation() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -238,7 +265,10 @@ async fn old_token_rejected_after_rotation() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/token", original.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -251,7 +281,10 @@ async fn old_token_rejected_after_rotation() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", original.uuid)))
-        .header("Authorization", format!("Bearer {original_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&original_token),
+        )
         .json(&claim_body)
         .send()
         .await
@@ -266,7 +299,10 @@ async fn old_token_rejected_after_rotation() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", original.uuid)))
-        .header("Authorization", format!("Bearer {new_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&new_token),
+        )
         .json(&claim_body)
         .send()
         .await
@@ -289,7 +325,10 @@ async fn token_rotate_archived_runner() {
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -302,7 +341,10 @@ async fn token_rotate_archived_runner() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/runners/{}", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -313,7 +355,10 @@ async fn token_rotate_archived_runner() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/token", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -351,7 +396,10 @@ async fn token_rotate_with_inflight_jobs() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {original_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&original_token),
+        )
         .json(&claim_body)
         .send()
         .await
@@ -364,7 +412,10 @@ async fn token_rotate_with_inflight_jobs() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/token", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -380,7 +431,10 @@ async fn token_rotate_with_inflight_jobs() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {original_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&original_token),
+        )
         .json(&claim_body)
         .send()
         .await
@@ -395,7 +449,10 @@ async fn token_rotate_with_inflight_jobs() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {new_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&new_token),
+        )
         .json(&claim_body)
         .send()
         .await

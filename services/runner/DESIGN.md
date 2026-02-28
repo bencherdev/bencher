@@ -121,7 +121,7 @@ Represents a benchmark execution request linked to a report.
 | config             | `JsonJobConfig`     | Execution details (JSON serialized in TEXT column)   |
 | timeout            | `Timeout`           | Maximum execution time in seconds (u32, default: 3600) |
 | priority           | `JobPriority`       | Scheduling priority (0/100/200/300)                  |
-| status             | `JobStatus`         | Job lifecycle state (integer enum 0-5)               |
+| status             | `JobStatus`         | Job lifecycle state (integer enum 0-6)               |
 | runner_id          | `Option<RunnerId>`  | FK to runner (RESTRICT), set on claim                |
 | claimed            | `Option<DateTime>`  | When runner claimed the job                          |
 | started            | `Option<DateTime>`  | When benchmark execution began                       |
@@ -136,6 +136,7 @@ Represents a benchmark execution request linked to a report.
 - `index_job_org_in_flight` — on `(organization_id)` WHERE status IN (1, 2)
 - `index_job_source_ip_in_flight` — on `(source_ip)` WHERE status IN (1, 2)
 - `index_job_in_flight` — on `(status)` WHERE status IN (1, 2)
+- `index_job_completed` — on `(status)` WHERE status = 3 (for startup recovery of unprocessed jobs)
 - `index_job_runner_id` — on `(runner_id)` WHERE runner_id IS NOT NULL
 - `index_job_spec_id` — on `(spec_id)`
 - `index_job_report_id` — on `(report_id)`
@@ -147,9 +148,10 @@ Represents a benchmark execution request linked to a report.
 | 0     | `Pending`  | Waiting for a runner to claim                    |
 | 1     | `Claimed`  | Runner claimed but hasn't started execution      |
 | 2     | `Running`  | Benchmark is executing                           |
-| 3     | `Completed`| Finished successfully                            |
-| 4     | `Failed`   | Failed (runner error, setup failure, or timeout)  |
-| 5     | `Canceled` | Canceled by user or hard timeout exceeded        |
+| 3     | `Completed`| Finished successfully, results pending processing |
+| 4     | `Processed`| Results parsed into metrics/alerts                |
+| 5     | `Failed`   | Failed (runner error, setup failure, or timeout)  |
+| 6     | `Canceled` | Canceled by user or hard timeout exceeded        |
 
 ## Job Config Structure
 
@@ -447,6 +449,7 @@ When a WebSocket disconnects and the job is still in-flight (non-terminal), a ba
 On server startup (`spawn_job_recovery`):
 1. `recover_orphaned_claimed_jobs()` finds all `Claimed` jobs where `claimed` (or `created`) is older than the heartbeat timeout and marks them `Failed`.
 2. All remaining in-flight (`Claimed` or `Running`) jobs get a `spawn_heartbeat_timeout()` task, recovering jobs that were active when the server previously shut down.
+3. `reprocess_completed_jobs()` finds all `Completed` jobs (results stored but not yet parsed), fetches their output from OCI storage, runs `process_results()`, and transitions them to `Processed`. This recovers jobs where the server crashed between storing output and finishing result processing.
 
 ### WebSocket Reconnection
 
@@ -455,7 +458,7 @@ If a runner disconnects and reconnects to a `Running` job, the WebSocket channel
 ## Job State Machine
 
 ```
-pending ───▶ claimed ───▶ running ───▶ completed
+pending ───▶ claimed ───▶ running ───▶ completed ───▶ processed
    │            │            │
    │            │            ├────────▶ failed
    │            │            │
@@ -470,11 +473,12 @@ pending ───▶ claimed ───▶ running ───▶ completed
 | claimed | running   | Runner sends `running` event                         |
 | claimed | failed    | Runner sends `failed` event, or heartbeat timeout    |
 | claimed | canceled  | User cancels                                         |
-| running | completed | Runner sends `completed` event                       |
-| running | failed    | Runner sends `failed` event, or heartbeat timeout    |
-| running | canceled  | User cancels, or hard job timeout exceeded           |
+| running   | completed | Runner sends `completed` event                       |
+| completed | processed | Server successfully processes results                |
+| running   | failed    | Runner sends `failed` event, or heartbeat timeout    |
+| running   | canceled  | User cancels, or hard job timeout exceeded           |
 
-**Terminal states:** completed, failed, canceled (no transitions out)
+**Terminal states:** processed, failed, canceled (no transitions out). `completed` is quasi-terminal: transitions to `processed` once results are parsed.
 
 **Race condition prevention:** All state transitions use a status filter on the UPDATE query (e.g., `WHERE status = Claimed OR status = Running`). If the UPDATE matches 0 rows, the job was concurrently modified — the handler re-reads the job to determine the current state and responds appropriately.
 
@@ -488,9 +492,12 @@ Job output (stdout, stderr, file contents) is stored in the **same OCI storage b
 
 ### Output Type
 
-**`JsonJobOutput` (flat struct):**
-- `exit_code: Option<i32>`
+**`JsonJobOutput`:**
+- `results: Vec<JsonIterationOutput>` — per-iteration results
 - `error: Option<String>` — present when the job failed
+
+**`JsonIterationOutput`:**
+- `exit_code: i32`
 - `stdout: Option<String>`
 - `stderr: Option<String>`
 - `output: Option<HashMap<Utf8PathBuf, String>>` — file path to contents map
@@ -499,10 +506,12 @@ Job output (stdout, stderr, file contents) is stored in the **same OCI storage b
 
 1. Runner sends `completed` or `failed` message over WebSocket
 2. WebSocket `max_message_size` enforces an upper bound on ingress payload size
-3. Server transitions the job to terminal state in the database
+3. Server transitions the job to `Completed` in the database
 4. Server serializes `JsonJobOutput` to JSON and stores it via `oci_storage().job_output().put(project, job, output)`
 5. Storage is best-effort (errors logged but don't fail the state transition)
-6. When job details are queried via `GET /v0/projects/{project}/jobs/{job}`, output is fetched from storage and included in the `JsonJob` response
+6. Server runs the adapter on results to parse metrics/alerts into the Report
+7. On success, job transitions from `Completed` to `Processed`; on failure, stays `Completed` for startup recovery
+8. When job details are queried via `GET /v0/projects/{project}/jobs/{job}`, output is fetched from storage and included in the `JsonJob` response
 
 ### Size Limits
 

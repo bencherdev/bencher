@@ -265,7 +265,7 @@ impl SharedExtractor for BearerToken {
     ) -> Result<Self, HttpError> {
         let headers = rqctx.request.headers();
 
-        let Some(authorization) = headers.get("Authorization") else {
+        let Some(authorization) = headers.get(bencher_json::AUTHORIZATION) else {
             return Err(bad_request_error(format!(
                 "Request is missing \"Authorization\" header. {BEARER_TOKEN_FORMAT}"
             )));
@@ -278,14 +278,13 @@ impl SharedExtractor for BearerToken {
                 )));
             },
         };
-        let Some(("Bearer", token)) = authorization_str.split_once(' ') else {
+        let Some(token) = bencher_json::strip_bearer_token(authorization_str) else {
             return Err(bad_request_error(format!(
                 "Request is missing \"Authorization\" Bearer. {BEARER_TOKEN_FORMAT}"
             )));
         };
 
         token
-            .trim()
             .parse::<Jwt>()
             .map(Into::into)
             .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))

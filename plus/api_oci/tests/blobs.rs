@@ -29,7 +29,10 @@ async fn blob_upload_start() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -76,7 +79,10 @@ async fn blob_monolithic_upload() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -109,7 +115,10 @@ async fn blob_exists() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -122,7 +131,10 @@ async fn blob_exists() {
     let resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -150,7 +162,10 @@ async fn blob_not_found() {
     let resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, fake_digest)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -179,7 +194,10 @@ async fn blob_get() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -192,7 +210,10 @@ async fn blob_get() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -224,7 +245,10 @@ async fn blob_delete() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -236,7 +260,10 @@ async fn blob_delete() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -248,7 +275,10 @@ async fn blob_delete() {
     let check_resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -330,7 +360,10 @@ async fn blob_upload_authenticated_to_unclaimed_project() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", unclaimed_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -388,7 +421,10 @@ async fn blob_upload_invalid_token_no_downgrade() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", unclaimed_slug)))
-        .header("Authorization", format!("Bearer {}", tampered))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&tampered),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -414,7 +450,10 @@ async fn blob_upload_nonexistent_uuid() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", fake_uuid)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -436,7 +475,10 @@ async fn blob_upload_nonexistent_slug_authenticated() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", new_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -541,7 +583,10 @@ async fn blob_monolithic_upload_digest_mismatch() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, wrong_digest
         )))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -577,7 +622,10 @@ async fn blob_monolithic_upload_zero_length() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -623,7 +671,10 @@ async fn cross_repo_mount_access_denied_fallback() {
             "/v2/{}/blobs/uploads?digest={}",
             project_a_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token_a))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token_a),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -650,7 +701,10 @@ async fn cross_repo_mount_access_denied_fallback() {
             "/v2/{}/blobs/uploads?digest={}&from={}",
             project_b_slug, digest, project_a_slug
         )))
-        .header("Authorization", format!("Bearer {}", push_token_b))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token_b),
+        )
         .send()
         .await
         .expect("Mount request failed");
@@ -697,7 +751,10 @@ async fn blob_upload_sha512() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, sha512_digest
         )))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -733,7 +790,10 @@ async fn blob_upload_pull_only_token_rejected() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -775,7 +835,10 @@ async fn blob_monolithic_upload_exceeds_max_body_size() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data)
         .send()
@@ -819,7 +882,10 @@ async fn blob_read_after_storage_deleted() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -843,7 +909,10 @@ async fn blob_read_after_storage_deleted() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -878,7 +947,10 @@ async fn blob_head_push_only_token_rejected() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -890,7 +962,10 @@ async fn blob_head_push_only_token_rejected() {
     let resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -934,7 +1009,10 @@ async fn blob_get_runner_oci_token() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -951,7 +1029,10 @@ async fn blob_get_runner_oci_token() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
-        .header("Authorization", format!("Bearer {}", runner_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&runner_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -990,7 +1071,10 @@ async fn blob_head_runner_oci_token() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -1007,7 +1091,10 @@ async fn blob_head_runner_oci_token() {
     let resp = server
         .client
         .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
-        .header("Authorization", format!("Bearer {}", runner_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&runner_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1045,7 +1132,10 @@ async fn blob_get_runner_oci_token_wrong_repo() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -1062,7 +1152,10 @@ async fn blob_get_runner_oci_token_wrong_repo() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
-        .header("Authorization", format!("Bearer {}", wrong_repo_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&wrong_repo_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -1100,7 +1193,10 @@ async fn blob_get_runner_oci_token_push_only() {
             "/v2/{}/blobs/uploads?digest={}",
             project_slug, digest
         )))
-        .header("Authorization", format!("Bearer {}", push_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -1119,8 +1215,8 @@ async fn blob_get_runner_oci_token_push_only() {
         .client
         .get(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
         .header(
-            "Authorization",
-            format!("Bearer {}", push_only_runner_token),
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_only_runner_token),
         )
         .send()
         .await

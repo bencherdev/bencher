@@ -23,7 +23,10 @@ async fn members_list() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -47,7 +50,10 @@ async fn members_creator_is_member() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -77,7 +83,10 @@ async fn members_invite() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -104,7 +113,10 @@ async fn members_invite_no_name() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -130,7 +142,10 @@ async fn members_invite_invalid_email() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await

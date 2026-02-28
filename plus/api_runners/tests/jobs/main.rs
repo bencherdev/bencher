@@ -15,13 +15,16 @@ use bencher_api_tests::TestServer;
 use bencher_json::{DateTime, JobPriority, JobStatus, JsonClaimedJob, JsonJob};
 use bencher_schema::{
     context::HeartbeatTasks,
-    model::runner::{JobId, recover_orphaned_claimed_jobs, spawn_heartbeat_timeout},
+    model::runner::{
+        JobId, recover_orphaned_claimed_jobs, reprocess_completed_jobs, spawn_heartbeat_timeout,
+    },
     schema,
 };
 use common::{
-    associate_runner_spec, create_runner, create_test_report, get_job_priority, get_project_id,
-    get_runner_id, insert_test_job, insert_test_job_full, insert_test_job_with_invalid_config,
-    insert_test_spec, insert_test_spec_full, set_job_runner_id, set_job_status,
+    associate_runner_spec, base_timestamp, create_runner, create_test_report, get_job_priority,
+    get_project_id, get_runner_id, insert_test_job, insert_test_job_full,
+    insert_test_job_with_invalid_config, insert_test_job_with_project, insert_test_spec,
+    insert_test_spec_full, set_job_runner_id, set_job_status,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures_concurrency::future::Join as _;
@@ -47,7 +50,10 @@ async fn claim_job_no_jobs() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&body)
         .send()
         .await
@@ -74,7 +80,10 @@ async fn claim_job_invalid_token() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", "Bearer bencher_runner_invalid_token")
+        .header(
+            bencher_json::AUTHORIZATION,
+            "Bearer bencher_runner_invalid_token",
+        )
         .json(&body)
         .send()
         .await
@@ -101,7 +110,10 @@ async fn claim_job_wrong_runner_token() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid)))
-        .header("Authorization", format!("Bearer {runner1_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner1_token),
+        )
         .json(&body)
         .send()
         .await
@@ -149,7 +161,10 @@ async fn claim_job_no_prefix_token() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", "Bearer some_random_token_without_prefix")
+        .header(
+            bencher_json::AUTHORIZATION,
+            "Bearer some_random_token_without_prefix",
+        )
         .json(&body)
         .send()
         .await
@@ -175,7 +190,7 @@ async fn claim_job_wrong_length_token() {
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
         .header(
-            "Authorization",
+            bencher_json::AUTHORIZATION,
             "Bearer bencher_runner_00112233445566778899aabbccddeeff",
         )
         .json(&body)
@@ -190,7 +205,7 @@ async fn claim_job_wrong_length_token() {
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
         .header(
-            "Authorization",
+            bencher_json::AUTHORIZATION,
             "Bearer bencher_runner_00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffab",
         )
         .json(&body)
@@ -220,7 +235,10 @@ async fn claim_job_archived_runner() {
     server
         .client
         .patch(server.api_url(&format!("/v0/runners/{}", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -233,7 +251,10 @@ async fn claim_job_archived_runner() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&body)
         .send()
         .await
@@ -273,7 +294,10 @@ async fn claim_job_canceled_pending() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&body)
         .send()
         .await
@@ -326,7 +350,10 @@ mod job_lifecycle {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -349,7 +376,10 @@ mod job_lifecycle {
         let resp = server
             .client
             .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
-            .header("Authorization", server.bearer(&admin.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&admin.token),
+            )
             .send()
             .await
             .expect("Request failed");
@@ -390,7 +420,10 @@ mod job_lifecycle {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -412,7 +445,10 @@ mod job_lifecycle {
         let resp = server
             .client
             .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
-            .header("Authorization", server.bearer(&admin.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&admin.token),
+            )
             .send()
             .await
             .expect("Request failed");
@@ -461,7 +497,10 @@ mod job_lifecycle {
             async {
                 client
                     .post(&server_url_1)
-                    .header("Authorization", format!("Bearer {runner1_token}"))
+                    .header(
+                        bencher_json::AUTHORIZATION,
+                        bencher_json::bearer_header(&runner1_token),
+                    )
                     .json(&claim_body)
                     .send()
                     .await
@@ -470,7 +509,10 @@ mod job_lifecycle {
             async {
                 client
                     .post(&server_url_2)
-                    .header("Authorization", format!("Bearer {runner2_token}"))
+                    .header(
+                        bencher_json::AUTHORIZATION,
+                        bencher_json::bearer_header(&runner2_token),
+                    )
                     .json(&claim_body)
                     .send()
                     .await
@@ -539,7 +581,10 @@ mod job_spec {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -595,7 +640,10 @@ mod job_spec {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -657,7 +705,10 @@ mod job_spec {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -691,7 +742,10 @@ mod job_spec {
         server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -702,7 +756,10 @@ mod job_spec {
         let resp = server
             .client
             .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
-            .header("Authorization", server.bearer(&admin.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&admin.token),
+            )
             .send()
             .await
             .expect("Request failed");
@@ -743,7 +800,10 @@ async fn claim_job_poll_timeout_timing() {
         async move {
             client
                 .post(url)
-                .header("Authorization", format!("Bearer {token}"))
+                .header(
+                    bencher_json::AUTHORIZATION,
+                    bencher_json::bearer_header(&token),
+                )
                 .json(&serde_json::json!({ "poll_timeout": 2 }))
                 .send()
                 .await
@@ -772,7 +832,9 @@ async fn claim_job_poll_timeout_timing() {
 mod priority_scheduling {
     use super::*;
     use bencher_json::{DateTime, JobPriority, JobStatus};
-    use common::{get_organization_id, insert_test_job_full, insert_test_job_with_timestamp};
+    use common::{
+        base_timestamp, get_organization_id, insert_test_job_full, insert_test_job_with_timestamp,
+    };
 
     // Test that higher priority jobs are claimed before lower priority ones
     #[tokio::test]
@@ -828,7 +890,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -851,7 +916,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -873,7 +941,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -932,7 +1003,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -949,7 +1023,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1008,7 +1085,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1025,7 +1105,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1083,7 +1166,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1100,7 +1186,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1162,7 +1251,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1179,7 +1271,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1232,7 +1327,10 @@ mod priority_scheduling {
         server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1265,7 +1363,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1324,7 +1425,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1341,7 +1445,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1359,6 +1466,7 @@ mod priority_scheduling {
 
     // Test FIFO ordering within same priority level
     #[tokio::test]
+    #[expect(clippy::too_many_lines)]
     async fn fifo_within_same_priority() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "fifo1@example.com").await;
@@ -1378,7 +1486,7 @@ mod priority_scheduling {
         // Insert jobs with same priority - should be claimed in creation order (FIFO)
         // Use Enterprise tier so there's no concurrency blocking
         // Use explicit timestamps to guarantee deterministic ordering
-        let base_ts = DateTime::now();
+        let base_ts = base_timestamp();
         let ts1 = base_ts;
         let ts2 = DateTime::try_from(base_ts.timestamp() + 1).unwrap();
         let ts3 = DateTime::try_from(base_ts.timestamp() + 2).unwrap();
@@ -1418,7 +1526,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1440,7 +1551,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1462,7 +1576,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1531,7 +1648,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1548,7 +1668,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1608,7 +1731,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1624,7 +1750,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1644,7 +1773,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1701,7 +1833,10 @@ mod priority_scheduling {
         server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1736,7 +1871,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1787,7 +1925,10 @@ mod priority_scheduling {
         server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1842,7 +1983,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1858,6 +2002,7 @@ mod priority_scheduling {
 
     // Test that jobs with identical timestamps are ordered deterministically by id
     #[tokio::test]
+    #[expect(clippy::too_many_lines)]
     async fn fifo_same_timestamp_tiebreaker() {
         use common::insert_test_job_with_timestamp;
 
@@ -1879,7 +2024,7 @@ mod priority_scheduling {
         let report_id = create_test_report(&server, project_id);
 
         // Use a single fixed timestamp for all jobs so the `created` column is identical.
-        let fixed_ts = DateTime::now();
+        let fixed_ts = base_timestamp();
 
         // Insert 3 Enterprise-tier jobs with the exact same timestamp.
         // They will get sequential database IDs.
@@ -1919,7 +2064,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1941,7 +2089,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -1963,7 +2114,10 @@ mod priority_scheduling {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&body)
             .send()
             .await
@@ -2001,7 +2155,10 @@ mod poll_timeout_boundaries {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header("Authorization", format!("Bearer {runner_token}"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(runner_token),
+            )
             .json(&serde_json::json!({ "poll_timeout": 0 }))
             .send()
             .await
@@ -2042,7 +2199,10 @@ mod poll_timeout_boundaries {
             async move {
                 client
                     .post(url)
-                    .header("Authorization", format!("Bearer {token}"))
+                    .header(
+                        bencher_json::AUTHORIZATION,
+                        bencher_json::bearer_header(&token),
+                    )
                     .json(&body)
                     .send()
                     .await
@@ -2125,7 +2285,10 @@ mod concurrency_safety {
             async {
                 client
                     .post(&url1)
-                    .header("Authorization", format!("Bearer {runner1_token}"))
+                    .header(
+                        bencher_json::AUTHORIZATION,
+                        bencher_json::bearer_header(&runner1_token),
+                    )
                     .json(&claim_body)
                     .send()
                     .await
@@ -2134,7 +2297,10 @@ mod concurrency_safety {
             async {
                 client
                     .post(&url2)
-                    .header("Authorization", format!("Bearer {runner2_token}"))
+                    .header(
+                        bencher_json::AUTHORIZATION,
+                        bencher_json::bearer_header(&runner2_token),
+                    )
                     .json(&claim_body)
                     .send()
                     .await
@@ -2218,7 +2384,10 @@ mod concurrency_safety {
             async {
                 client
                     .post(&url1)
-                    .header("Authorization", format!("Bearer {runner1_token}"))
+                    .header(
+                        bencher_json::AUTHORIZATION,
+                        bencher_json::bearer_header(&runner1_token),
+                    )
                     .json(&claim_body)
                     .send()
                     .await
@@ -2227,7 +2396,10 @@ mod concurrency_safety {
             async {
                 client
                     .post(&url2)
-                    .header("Authorization", format!("Bearer {runner2_token}"))
+                    .header(
+                        bencher_json::AUTHORIZATION,
+                        bencher_json::bearer_header(&runner2_token),
+                    )
                     .json(&claim_body)
                     .send()
                     .await
@@ -2272,7 +2444,10 @@ async fn user_jwt_rejected_on_runner_endpoint() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -2356,7 +2531,10 @@ async fn runner_multiple_specs_claims_matching_jobs() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&claim_body)
         .send()
         .await
@@ -2369,7 +2547,10 @@ async fn runner_multiple_specs_claims_matching_jobs() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&claim_body)
         .send()
         .await
@@ -2408,7 +2589,10 @@ async fn non_admin_cannot_patch_runner() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/runners/{}", runner.uuid)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -2436,7 +2620,10 @@ async fn wrong_runner_token_claim() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid)))
-        .header("Authorization", format!("Bearer {runner2_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner2_token),
+        )
         .json(&body)
         .send()
         .await
@@ -2463,7 +2650,10 @@ async fn archived_runner_token_rejected() {
     server
         .client
         .patch(server.api_url(&format!("/v0/runners/{}", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -2474,7 +2664,10 @@ async fn archived_runner_token_rejected() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&body)
         .send()
         .await
@@ -2540,7 +2733,10 @@ async fn free_tier_blocked_same_org_different_runner() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid)))
-        .header("Authorization", format!("Bearer {runner1_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner1_token),
+        )
         .json(&body)
         .send()
         .await
@@ -2556,7 +2752,10 @@ async fn free_tier_blocked_same_org_different_runner() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid)))
-        .header("Authorization", format!("Bearer {runner2_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner2_token),
+        )
         .json(&body)
         .send()
         .await
@@ -2624,7 +2823,10 @@ async fn mixed_tier_free_blocked_enterprise_claimable() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&body)
         .send()
         .await
@@ -2755,7 +2957,10 @@ async fn claim_upgrades_pending_job_priority() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{unclaimed_org_slug}/claim")))
-        .header("Authorization", format!("Bearer {}", admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&serde_json::json!({}))
         .send()
         .await
@@ -2828,7 +3033,10 @@ async fn claim_no_pending_jobs_succeeds() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/organizations/{unclaimed_org_slug}/claim")))
-        .header("Authorization", format!("Bearer {}", admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&serde_json::json!({}))
         .send()
         .await
@@ -2862,7 +3070,7 @@ async fn recover_orphaned_claimed_jobs_marks_as_failed() {
     let job_uuid = insert_test_job(&server, report_id, spec_id);
 
     // Set job to Claimed with an old claimed timestamp (5 minutes ago)
-    let old_timestamp: i64 = DateTime::now().timestamp() - 300;
+    let old_timestamp: i64 = base_timestamp().timestamp() - 300;
     let old_time: DateTime = old_timestamp.try_into().expect("Invalid timestamp");
     {
         let mut conn = server.db_conn();
@@ -3004,7 +3212,10 @@ async fn claim_job_invalid_config() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&body)
         .send()
         .await
@@ -3048,7 +3259,10 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&body)
         .send()
         .await
@@ -3116,5 +3330,92 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
         status,
         JobStatus::Failed,
         "Claimed job should be Failed after heartbeat timeout without WS"
+    );
+}
+
+// --- reprocess_completed_jobs startup recovery tests ---
+
+/// Test that `reprocess_completed_jobs` transitions a Completed job with stored
+/// output to Processed.
+#[tokio::test]
+async fn reprocess_completed_job_success() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "reprocess-ok@example.com").await;
+    let org = server.create_org(&admin, "Reprocess Org").await;
+    let project = server.create_project(&admin, &org, "Reprocess proj").await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job_with_project(&server, report_id, project.uuid, spec_id);
+
+    // Transition job to Completed
+    set_job_status(&server, job_uuid, JobStatus::Completed);
+
+    // Store valid (empty) benchmark output in OCI storage
+    let output = bencher_json::runner::JsonJobOutput {
+        results: Vec::new(),
+        error: None,
+    };
+    server
+        .context()
+        .oci_storage()
+        .job_output()
+        .put(project.uuid, job_uuid, &output)
+        .await
+        .expect("Failed to store job output");
+
+    // Call startup recovery
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    reprocess_completed_jobs(&log, server.context()).await;
+
+    // Verify job transitioned to Processed
+    let mut conn = server.db_conn();
+    let status: JobStatus = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::status)
+        .first(&mut conn)
+        .expect("Failed to get job status");
+    assert_eq!(
+        status,
+        JobStatus::Processed,
+        "Completed job with stored output should be reprocessed to Processed"
+    );
+}
+
+/// Test that `reprocess_completed_jobs` marks a Completed job as Failed when no
+/// output is stored (orphaned job recovery).
+#[tokio::test]
+async fn reprocess_completed_job_no_output() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "reprocess-noout@example.com").await;
+    let org = server.create_org(&admin, "Reprocess NoOut Org").await;
+    let project = server
+        .create_project(&admin, &org, "Reprocess noout proj")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job_with_project(&server, report_id, project.uuid, spec_id);
+
+    // Transition job to Completed — but do NOT store any output
+    set_job_status(&server, job_uuid, JobStatus::Completed);
+
+    // Call startup recovery
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    reprocess_completed_jobs(&log, server.context()).await;
+
+    // Verify job transitioned to Failed (orphaned completed job)
+    let mut conn = server.db_conn();
+    let status: JobStatus = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::status)
+        .first(&mut conn)
+        .expect("Failed to get job status");
+    assert_eq!(
+        status,
+        JobStatus::Failed,
+        "Completed job without stored output should be marked as Failed"
     );
 }

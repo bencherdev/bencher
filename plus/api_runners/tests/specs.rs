@@ -24,7 +24,10 @@ async fn runner_specs_add() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -49,7 +52,10 @@ async fn runner_specs_list() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -60,7 +66,10 @@ async fn runner_specs_list() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -85,7 +94,10 @@ async fn runner_specs_remove() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -96,7 +108,10 @@ async fn runner_specs_remove() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/runners/{}/specs/{}", runner.uuid, spec_uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -107,7 +122,10 @@ async fn runner_specs_remove() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -130,7 +148,10 @@ async fn runner_specs_remove_nonexistent() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/runners/{}/specs/{}", runner.uuid, spec_uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -152,7 +173,10 @@ async fn runner_specs_add_forbidden_for_non_admin() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .json(&body)
         .send()
         .await
@@ -175,7 +199,10 @@ async fn runner_specs_add_duplicate() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -186,7 +213,10 @@ async fn runner_specs_add_duplicate() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -226,7 +256,10 @@ async fn runner_specs_list_multiple() {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-            .header("Authorization", server.bearer(&admin.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&admin.token),
+            )
             .json(&body)
             .send()
             .await
@@ -238,7 +271,10 @@ async fn runner_specs_list_multiple() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -265,7 +301,10 @@ async fn runner_specs_list_empty() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -301,7 +340,10 @@ async fn claim_job_no_specs() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&claim_body)
         .send()
         .await
@@ -361,7 +403,10 @@ async fn claim_job_spec_mismatch() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&claim_body)
         .send()
         .await
@@ -381,7 +426,10 @@ async fn claim_job_spec_mismatch() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header("Authorization", format!("Bearer {runner_token}"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(runner_token),
+        )
         .json(&claim_body)
         .send()
         .await
@@ -413,7 +461,10 @@ async fn runner_specs_get_after_add() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -424,7 +475,10 @@ async fn runner_specs_get_after_add() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -450,7 +504,10 @@ async fn runner_specs_get_after_removal() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .json(&body)
         .send()
         .await
@@ -461,7 +518,10 @@ async fn runner_specs_get_after_removal() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/runners/{}/specs/{}", runner.uuid, spec_uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -471,7 +531,10 @@ async fn runner_specs_get_after_removal() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -506,7 +569,10 @@ async fn runner_specs_get_multiple() {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-            .header("Authorization", server.bearer(&admin.token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&admin.token),
+            )
             .json(&body)
             .send()
             .await
@@ -518,7 +584,10 @@ async fn runner_specs_get_multiple() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&admin.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -543,7 +612,10 @@ async fn runner_specs_get_forbidden_for_non_admin() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/runners/{}/specs", runner.uuid)))
-        .header("Authorization", server.bearer(&user.token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
         .send()
         .await
         .expect("Request failed");

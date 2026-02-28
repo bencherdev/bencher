@@ -57,7 +57,10 @@ async fn tags_list_empty() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list", project_slug)))
-        .header("Authorization", format!("Bearer {}", oci_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -98,7 +101,10 @@ async fn tags_list_with_manifests() {
         let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/{}", project_slug, tag)))
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token),
+            )
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(manifest)
             .send()
@@ -112,7 +118,10 @@ async fn tags_list_with_manifests() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -156,7 +165,10 @@ async fn tags_list_pagination_n() {
         let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token),
+            )
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(manifest)
             .send()
@@ -170,7 +182,10 @@ async fn tags_list_pagination_n() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list?n=2", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -206,7 +221,10 @@ async fn tags_list_pagination_last() {
         let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/{}", project_slug, tag)))
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token),
+            )
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(manifest)
             .send()
@@ -220,7 +238,10 @@ async fn tags_list_pagination_last() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list?last=bbb", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -306,7 +327,10 @@ async fn tags_list_pagination_link_header() {
         let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token),
+            )
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(manifest)
             .send()
@@ -320,7 +344,10 @@ async fn tags_list_pagination_link_header() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list?n=2", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -400,7 +427,10 @@ async fn tags_list_no_link_header_when_complete() {
         let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token),
+            )
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(manifest)
             .send()
@@ -414,7 +444,10 @@ async fn tags_list_no_link_header_when_complete() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list?n=5", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -461,7 +494,10 @@ async fn tags_list_follow_pagination() {
         let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/{}", project_slug, tag)))
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token),
+            )
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(manifest)
             .send()
@@ -476,7 +512,10 @@ async fn tags_list_follow_pagination() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list?n=2", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -510,7 +549,10 @@ async fn tags_list_follow_pagination() {
     let resp = server
         .client
         .get(server.api_url(link_url))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -545,7 +587,10 @@ async fn tags_list_follow_pagination() {
     let resp = server
         .client
         .get(server.api_url(link_url))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -595,7 +640,10 @@ async fn tags_list_pagination_n_zero_clamped() {
         let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token),
+            )
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(manifest)
             .send()
@@ -609,7 +657,10 @@ async fn tags_list_pagination_n_zero_clamped() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list?n=0", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -652,7 +703,10 @@ async fn tags_list_pagination_n_large_clamped() {
         let resp = server
             .client
             .put(server.api_url(&format!("/v2/{}/manifests/tag{}", project_slug, i)))
-            .header("Authorization", format!("Bearer {}", push_token))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&push_token),
+            )
             .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
             .body(manifest)
             .send()
@@ -666,7 +720,10 @@ async fn tags_list_pagination_n_large_clamped() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list?n=999999", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -700,7 +757,10 @@ async fn tags_list_invalid_last_cursor() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list?last=-invalid-tag", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -726,7 +786,10 @@ async fn tags_list_pagination_n_negative() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list?n=-1", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -752,7 +815,10 @@ async fn tags_list_pagination_n_non_integer() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v2/{}/tags/list?n=abc", project_slug)))
-        .header("Authorization", format!("Bearer {}", pull_token))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
         .send()
         .await
         .expect("Request failed");
