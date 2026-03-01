@@ -75,6 +75,7 @@ struct Job {
     env: Option<HashMap<String, String>>,
     timeout: Option<bencher_json::Timeout>,
     build_time: bool,
+    poll_interval: u64,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -112,6 +113,7 @@ impl TryFrom<CliRun> for Run {
                 env: job.env.map(bencher_parser::parse_env),
                 timeout: job.job_timeout,
                 build_time,
+                poll_interval: job.job_poll_interval,
             })
         } else {
             None
@@ -205,6 +207,11 @@ impl Run {
             .send_with(sender)
             .await
             .map_err(RunError::SendReport)?;
+
+        #[cfg(feature = "plus")]
+        if let Some(job_uuid) = json_report.job {
+            return self.poll_job(json_report, job_uuid).await;
+        }
 
         let alerts_count = json_report.alerts.len();
         self.display_results(json_report).await?;
@@ -323,6 +330,126 @@ impl Run {
                 allow_failure: self.allow_failure.then_some(true),
                 backdate: self.backdate.map(Into::into),
             }),
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    async fn poll_job(
+        &self,
+        json_report: JsonReport,
+        job_uuid: bencher_json::JobUuid,
+    ) -> Result<(), RunError> {
+        use bencher_json::JobStatus;
+
+        let poll_interval = self.job.as_ref().map_or(5, |j| j.poll_interval);
+        let job_timeout = self
+            .job
+            .as_ref()
+            .and_then(|j| j.timeout)
+            .map_or(3600u64, |t| u64::from(u32::from(t)));
+        // CLI-side timeout is 2x the job timeout to allow for queue time
+        let cli_timeout = job_timeout.saturating_mul(2);
+
+        let project_resource_id = ProjectResourceId::Slug(json_report.project.slug.clone());
+
+        cli_eprintln_quietable!(self.log, "Waiting for remote job {job_uuid} to complete...");
+
+        let mut last_status: Option<JobStatus> = None;
+        let start = std::time::Instant::now();
+
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(poll_interval)).await;
+
+            if start.elapsed().as_secs() > cli_timeout {
+                return Err(RunError::JobTimeout(cli_timeout));
+            }
+
+            let json_job: bencher_json::JsonJob = self
+                .backend
+                .send_with(|client| {
+                    let project_resource_id = project_resource_id.clone();
+                    async move {
+                        client
+                            .proj_job_get()
+                            .project(project_resource_id)
+                            .job(job_uuid)
+                            .send()
+                            .await
+                    }
+                })
+                .await
+                .map_err(RunError::PollJob)?;
+
+            let status = json_job.status;
+
+            // Print status changes
+            if !last_status.is_some_and(|ls| ls == status) {
+                cli_eprintln_quietable!(self.log, "Job status: {status}");
+                last_status = Some(status);
+            }
+
+            if !status.has_run() {
+                continue;
+            }
+
+            // Display stdout/stderr from job output
+            if let Some(output) = &json_job.output {
+                for result in &output.results {
+                    if let Some(stdout) = &result.stdout
+                        && !stdout.is_empty()
+                    {
+                        cli_eprintln_quietable!(self.log, "\nJob stdout:\n{stdout}");
+                    }
+                    if let Some(stderr) = &result.stderr
+                        && !stderr.is_empty()
+                    {
+                        cli_eprintln_quietable!(self.log, "\nJob stderr:\n{stderr}");
+                    }
+                }
+            }
+
+            match status {
+                JobStatus::Completed | JobStatus::Processed => {
+                    // Fetch the updated report with results
+                    let updated_report: JsonReport = self
+                        .backend
+                        .send_with(|client| {
+                            let project_resource_id = project_resource_id.clone();
+                            let report_uuid = json_report.uuid;
+                            async move {
+                                client
+                                    .proj_report_get()
+                                    .project(project_resource_id)
+                                    .report(report_uuid)
+                                    .send()
+                                    .await
+                            }
+                        })
+                        .await
+                        .map_err(RunError::FetchReport)?;
+
+                    let alerts_count = updated_report.alerts.len();
+                    self.display_results(updated_report).await?;
+
+                    return if self.err && alerts_count > 0 {
+                        Err(RunError::Alerts(alerts_count))
+                    } else {
+                        Ok(())
+                    };
+                },
+                JobStatus::Failed => {
+                    let error_msg = json_job
+                        .output
+                        .and_then(|o| o.error)
+                        .unwrap_or_else(|| "Unknown error".to_owned());
+                    return Err(RunError::JobFailed(error_msg));
+                },
+                JobStatus::Canceled => {
+                    return Err(RunError::JobCanceled);
+                },
+                // Non-terminal states are handled by the continue above
+                JobStatus::Pending | JobStatus::Claimed | JobStatus::Running => {},
+            }
         }
     }
 

@@ -5,6 +5,8 @@ use bencher_valid::{DateTime, DateTimeMillis, GitHash, Model};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "plus")]
+use crate::runner::job::JobUuid;
 use crate::{
     BranchNameId, JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonMetric,
     JsonProject, JsonPubUser, JsonTestbed, MeasureNameId, TestbedNameId,
@@ -316,7 +318,7 @@ pub struct JsonReport {
     pub alerts: JsonReportAlerts,
     #[cfg(feature = "plus")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub job: Option<crate::runner::job::JobUuid>,
+    pub job: Option<JobUuid>,
     pub created: DateTime,
 }
 

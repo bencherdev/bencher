@@ -99,6 +99,22 @@ pub enum RunError {
     #[error("Alerts detected ({0})")]
     Alerts(usize),
 
+    #[cfg(feature = "plus")]
+    #[error("Failed to poll job status: {0}")]
+    PollJob(crate::BackendError),
+    #[cfg(feature = "plus")]
+    #[error("Failed to fetch updated report: {0}")]
+    FetchReport(crate::BackendError),
+    #[cfg(feature = "plus")]
+    #[error("Remote job failed: {0}")]
+    JobFailed(String),
+    #[cfg(feature = "plus")]
+    #[error("Remote job was canceled")]
+    JobCanceled,
+    #[cfg(feature = "plus")]
+    #[error("Timed out waiting for remote job after {0} seconds")]
+    JobTimeout(u64),
+
     #[error("{0}")]
     Ci(#[from] super::ci::CiError),
 }

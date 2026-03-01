@@ -7,9 +7,11 @@ use bencher_json::{
         JsonReportResults, JsonReportSettings,
     },
 };
+#[cfg(feature = "plus")]
+use diesel::OptionalExtension as _;
 use diesel::{
-    Connection as _, ExpressionMethods as _, NullableExpressionMethods as _,
-    OptionalExtension as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    Connection as _, ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableHelper as _,
 };
 
 use dropshot::HttpError;
