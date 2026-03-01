@@ -1,5 +1,5 @@
 #[cfg(feature = "plus")]
-use bencher_json::runner::job::JsonNewRunJob;
+use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
 use bencher_json::{
     DateTime, JsonNewReport, JsonReport, ReportUuid,
     project::report::{
@@ -8,8 +8,8 @@ use bencher_json::{
     },
 };
 use diesel::{
-    Connection as _, ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _,
+    Connection as _, ExpressionMethods as _, NullableExpressionMethods as _,
+    OptionalExtension as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 
 use dropshot::HttpError;
@@ -344,6 +344,13 @@ impl QueryReport {
         let testbed = QueryTestbed::get_json_for_report(conn, &query_project, testbed_id, spec_id)?;
         let results = get_report_results(log, conn, &query_project, id)?;
         let alerts = get_report_alerts(conn, &query_project, id, head_id, version_id)?;
+        #[cfg(feature = "plus")]
+        let job: Option<JobUuid> = schema::job::table
+            .filter(schema::job::report_id.eq(id))
+            .select(schema::job::uuid)
+            .first(conn)
+            .optional()
+            .unwrap_or_default();
 
         let project = query_project.into_json(conn)?;
         Ok(JsonReport {
@@ -357,6 +364,8 @@ impl QueryReport {
             adapter,
             results,
             alerts,
+            #[cfg(feature = "plus")]
+            job,
             created,
         })
     }

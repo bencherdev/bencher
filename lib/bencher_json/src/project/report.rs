@@ -314,6 +314,9 @@ pub struct JsonReport {
     pub adapter: Adapter,
     pub results: JsonReportResults,
     pub alerts: JsonReportAlerts,
+    #[cfg(feature = "plus")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub job: Option<crate::runner::job::JobUuid>,
     pub created: DateTime,
 }
 

@@ -38,6 +38,20 @@ impl JobStatus {
     }
 }
 
+impl std::fmt::Display for JobStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Pending => write!(f, "Pending"),
+            Self::Claimed => write!(f, "Claimed"),
+            Self::Running => write!(f, "Running"),
+            Self::Completed => write!(f, "Completed"),
+            Self::Processed => write!(f, "Processed"),
+            Self::Failed => write!(f, "Failed"),
+            Self::Canceled => write!(f, "Canceled"),
+        }
+    }
+}
+
 #[cfg(feature = "db")]
 mod job_status_db {
     use super::{
@@ -118,5 +132,16 @@ mod tests {
         assert!(JobStatus::Processed.has_run());
         assert!(JobStatus::Failed.has_run());
         assert!(JobStatus::Canceled.has_run());
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!(JobStatus::Pending.to_string(), "Pending");
+        assert_eq!(JobStatus::Claimed.to_string(), "Claimed");
+        assert_eq!(JobStatus::Running.to_string(), "Running");
+        assert_eq!(JobStatus::Completed.to_string(), "Completed");
+        assert_eq!(JobStatus::Processed.to_string(), "Processed");
+        assert_eq!(JobStatus::Failed.to_string(), "Failed");
+        assert_eq!(JobStatus::Canceled.to_string(), "Canceled");
     }
 }
