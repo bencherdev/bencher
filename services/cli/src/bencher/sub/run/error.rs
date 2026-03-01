@@ -109,8 +109,8 @@ pub enum RunError {
     #[error("Remote job failed: {0}")]
     JobFailed(String),
     #[cfg(feature = "plus")]
-    #[error("Remote job was canceled")]
-    JobCanceled,
+    #[error("Remote job was canceled: {0}")]
+    JobCanceled(String),
     #[cfg(feature = "plus")]
     #[error("Timed out waiting for remote job after {0} seconds")]
     JobTimeout(u64),
