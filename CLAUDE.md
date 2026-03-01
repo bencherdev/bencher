@@ -51,7 +51,13 @@ cargo test --doc
 Crates that depend on `bencher_valid` will need to specify either:
 
 1. `server` feature for server-side usage
+```bash
+cargo nextest run -p my_package --features server
+```
 2. `client` feature for client-side usage
+```bash
+cargo nextest run -p my_package --features client
+```
 
 Otherwise, you will see:
 
