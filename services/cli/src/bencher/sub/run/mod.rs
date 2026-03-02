@@ -339,7 +339,10 @@ impl Run {
     ) -> Result<(), RunError> {
         use bencher_json::JobStatus;
 
-        let poll_interval = self.job.as_ref().map_or(DEFAULT_POLL_INTERVAL, |j| j.poll_interval);
+        let poll_interval = self
+            .job
+            .as_ref()
+            .map_or(DEFAULT_POLL_INTERVAL, |j| j.poll_interval);
         let job_timeout = self
             .job
             .as_ref()
