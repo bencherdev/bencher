@@ -59,6 +59,10 @@ See [`services/cli/SKILL_PLAN.md`](../cli/SKILL_PLAN.md) for the design of a Cla
 4. **Gap 4 (`bencher noise`)** — Design complete (`services/cli/NOISE_PLAN.md`), implementation pending.
 5. **Gap 5 (Claude Code skill)** — Design complete (`services/cli/SKILL_PLAN.md`), implementation pending.
 
+## OCI Size Check
+
+The OCI image size check currently relies on the `request_body_max_bytes` config value from Dropshot, which is the HTTP request body limit. Break this out into a dedicated OCI image size limit so the two concerns are independent — the API request body limit and the maximum allowed OCI image size may need to diverge.
+
 ## CLI Polling → Server-Sent Events
 
 The CLI currently polls `GET /v0/projects/{project}/jobs/{job}` on a fixed interval to track job progress. Replace this with server-sent events (SSE) so the API pushes status updates to the CLI in real time, eliminating polling latency and unnecessary requests.

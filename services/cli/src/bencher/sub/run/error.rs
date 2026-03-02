@@ -55,7 +55,7 @@ pub enum RunError {
     PipeStdout(Command),
     #[error("Failed to pipe stderr for command `{0}`")]
     PipeStderr(Command),
-    #[error("Failed to run command `{command}: {err}")]
+    #[error("Failed to run command `{command}`: {err}")]
     RunCommand {
         command: Command,
         err: std::io::Error,
