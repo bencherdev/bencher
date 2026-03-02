@@ -83,6 +83,9 @@ pub enum ValidError {
     #[error("Invalid poll timeout: {0}")]
     PollTimeout(u32),
     #[cfg(feature = "plus")]
+    #[error("Failed to parse poll timeout: {0}")]
+    PollTimeoutStr(std::num::ParseIntError),
+    #[cfg(feature = "plus")]
     #[error("Invalid grace period: {0}")]
     GracePeriod(u32),
     #[cfg(feature = "plus")]

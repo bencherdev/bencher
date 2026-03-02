@@ -1,5 +1,5 @@
 #[cfg(feature = "plus")]
-use bencher_json::runner::job::JsonNewRunJob;
+use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
 use bencher_json::{
     DateTime, JsonNewReport, JsonReport, ReportUuid,
     project::report::{
@@ -7,6 +7,8 @@ use bencher_json::{
         JsonReportResults, JsonReportSettings,
     },
 };
+#[cfg(feature = "plus")]
+use diesel::OptionalExtension as _;
 use diesel::{
     Connection as _, ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _,
     RunQueryDsl as _, SelectableHelper as _,
@@ -344,6 +346,8 @@ impl QueryReport {
         let testbed = QueryTestbed::get_json_for_report(conn, &query_project, testbed_id, spec_id)?;
         let results = get_report_results(log, conn, &query_project, id)?;
         let alerts = get_report_alerts(conn, &query_project, id, head_id, version_id)?;
+        #[cfg(feature = "plus")]
+        let job = get_report_job(conn, id)?;
 
         let project = query_project.into_json(conn)?;
         Ok(JsonReport {
@@ -357,6 +361,8 @@ impl QueryReport {
             adapter,
             results,
             alerts,
+            #[cfg(feature = "plus")]
+            job,
             created,
         })
     }
@@ -548,6 +554,25 @@ fn into_report_results_json(
     slog::trace!(log, "Report results: {report_results:#?}");
 
     report_results
+}
+
+#[cfg(feature = "plus")]
+fn get_report_job(
+    conn: &mut DbConnection,
+    report_id: ReportId,
+) -> Result<Option<JobUuid>, HttpError> {
+    schema::job::table
+        .filter(schema::job::report_id.eq(report_id))
+        .select(schema::job::uuid)
+        .first(conn)
+        .optional()
+        .map_err(|e| {
+            issue_error(
+                "Failed to query job for report",
+                &format!("report id: {report_id}"),
+                e,
+            )
+        })
 }
 
 fn get_report_alerts(

@@ -4,7 +4,7 @@ Track the work needed to go from `bencher run --image` invocation through runner
 
 ## Current State
 
-The CLI, runner daemon, WebSocket protocol, job viewing endpoints, job creation in `run_post` (Gap 1), and benchmark result processing (Gap 2) are all implemented. One gap remains before the flow works end-to-end.
+The end-to-end flow is implemented: CLI, runner daemon, WebSocket protocol, job viewing endpoints, job creation (`run_post`), benchmark result processing, and CLI polling/result display are all complete.
 
 ## Flow Overview
 
@@ -28,7 +28,7 @@ bencher run --image ghcr.io/org/bench:v1 --adapter json
   │      └─ creates metrics, benchmarks, alerts
   │      └─ updates report with results and end_time
   │
-  ├─11. CLI polls for job completion                     ← GAP 3
+  ├─11. CLI polls for job completion
   └─12. CLI fetches updated report, displays results
 ```
 
@@ -43,36 +43,29 @@ bencher run --image ghcr.io/org/bench:v1 --adapter json
 3. **`lib/bencher_schema/src/model/runner/job.rs` — `process_results()`** — `TODO: Refactor PlanKind to support auth_conn directly`
    - `PlanKind::new_for_project` requires a `PublicUser` for `public_conn!` routing. In the runner context we're already authenticated, so we use `PublicUser::Public(None)` as a workaround. Refactor `PlanKind` (and its callees like `QueryPlan::get_active_metered_plan`, `LicenseUsage::get`, `QueryOrganization::window_usage`) to accept a `&mut DbConnection` directly instead of requiring `public_conn!`.
 
-## Gap 3: CLI Polling and Result Display
+## Gap 4: `bencher noise` Subcommand
 
-**Where:** `services/cli/src/bencher/sub/run/mod.rs` — `exec_inner()`
+See [`services/cli/NOISE_PLAN.md`](../cli/NOISE_PLAN.md) for the design of the `bencher noise` subcommand, which will generate synthetic benchmark results for testing the full runner flow without needing real benchmarks or a real adapter.
 
-**Problem:** After sending the run, `exec_inner()` immediately expects a `JsonReport` back with results. For `--image` runs it receives an empty report (zero results) and exits.
+## Gap 5: Claude Code Skill for Bencher Workflow
 
-**What needs to happen:**
-- [ ] Detect that the returned report has an associated pending job
-- [ ] Enter a polling loop: `GET /v0/projects/{project}/jobs/{job}` until terminal state
-- [ ] Display progress/status updates while waiting (e.g., "Job pending...", "Job running...")
-- [ ] On completion: fetch the updated `JsonReport` (now with processed results)
-- [ ] Display stdout/stderr from the job output
-- [ ] Display benchmark results and alerts (same as local runs)
-- [ ] On failure/cancellation: display error details and exit non-zero
-- [ ] Respect `--ci-only` and other display flags
-
-**Key endpoints already implemented:**
-- `GET /v0/projects/{project}/jobs/{job}` returns `JsonJob` with status and output
-- `GET /v0/projects/{project}/reports/{report}` returns `JsonReport` with results
-
-**Open questions:**
-- What poll interval? (The runner daemon uses 55s long-poll; CLI should probably use shorter intervals like 5-10s)
-- Should the CLI stream stdout/stderr in real-time via WebSocket, or just fetch at the end?
-- Timeout behavior: should the CLI have its own timeout for waiting on job completion?
+See [`services/cli/SKILL_PLAN.md`](../cli/SKILL_PLAN.md) for the design of a Claude Code skill that teaches AI agents the Bencher workflow: project setup, benchmark runs (local and bare metal), threshold configuration, CI integration, and result interpretation.
 
 ## Implementation Order
 
-1. ~~**Gap 1 (job creation)**~~ — Complete. Jobs are created in `run_post` with spec resolution, image resolution, and priority determination.
-2. ~~**Gap 2 (result processing)**~~ — Complete. `QueryJob::process_results()` parses benchmark output via adapter, creates metrics/alerts, and updates report timestamps. WebSocket protocol uses `Vec<JsonIterationOutput>` for per-iteration results.
-3. **Gap 3 (CLI polling)** — Without this, the user sees empty results even after Gap 2 is fixed.
+1. ~~**Gap 1 (job creation)**~~ — Complete.
+2. ~~**Gap 2 (result processing)**~~ — Complete.
+3. ~~**Gap 3 (CLI polling)**~~ — Complete. CLI polls `GET /v0/projects/{project}/jobs/{job}` with configurable interval (default 5s), displays status updates, fetches updated report on completion, and handles failure/cancellation/timeout.
+4. **Gap 4 (`bencher noise`)** — Design complete (`services/cli/NOISE_PLAN.md`), implementation pending.
+5. **Gap 5 (Claude Code skill)** — Design complete (`services/cli/SKILL_PLAN.md`), implementation pending.
+
+## OCI Size Check
+
+The OCI image size check currently relies on the `request_body_max_bytes` config value from Dropshot, which is the HTTP request body limit. Break this out into a dedicated OCI image size limit so the two concerns are independent — the API request body limit and the maximum allowed OCI image size may need to diverge.
+
+## CLI Polling → Server-Sent Events
+
+The CLI currently polls `GET /v0/projects/{project}/jobs/{job}` on a fixed interval to track job progress. Replace this with server-sent events (SSE) so the API pushes status updates to the CLI in real time, eliminating polling latency and unnecessary requests.
 
 ## SQLite Write Lock Contention
 

@@ -936,6 +936,7 @@ export interface JsonReport {
 	adapter: Adapter;
 	results: JsonReportResults;
 	alerts: JsonReportAlerts;
+	job?: Uuid;
 	created: string;
 }
 

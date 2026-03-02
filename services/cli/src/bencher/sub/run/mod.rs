@@ -67,6 +67,17 @@ pub struct Run {
 }
 
 #[cfg(feature = "plus")]
+#[expect(clippy::expect_used)]
+static DEFAULT_POLL_INTERVAL: std::sync::LazyLock<bencher_json::PollTimeout> =
+    std::sync::LazyLock::new(|| {
+        bencher_json::PollTimeout::try_from(5).expect("5 is a valid PollTimeout")
+    });
+#[cfg(feature = "plus")]
+const DEFAULT_JOB_TIMEOUT: u64 = bencher_json::Timeout::PAID_DEFAULT.as_secs();
+#[cfg(feature = "plus")]
+const CLI_TIMEOUT_MULTIPLE: u64 = 2;
+
+#[cfg(feature = "plus")]
 #[derive(Debug)]
 struct Job {
     image: bencher_json::ImageReference,
@@ -75,6 +86,7 @@ struct Job {
     env: Option<HashMap<String, String>>,
     timeout: Option<bencher_json::Timeout>,
     build_time: bool,
+    poll_interval: bencher_json::PollTimeout,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -112,6 +124,7 @@ impl TryFrom<CliRun> for Run {
                 env: job.env.map(bencher_parser::parse_env),
                 timeout: job.job_timeout,
                 build_time,
+                poll_interval: job.poll_interval.unwrap_or(*DEFAULT_POLL_INTERVAL),
             })
         } else {
             None
@@ -206,14 +219,12 @@ impl Run {
             .await
             .map_err(RunError::SendReport)?;
 
-        let alerts_count = json_report.alerts.len();
-        self.display_results(json_report).await?;
-
-        if self.err && alerts_count > 0 {
-            Err(RunError::Alerts(alerts_count))
-        } else {
-            Ok(())
+        #[cfg(feature = "plus")]
+        if let Some(job_uuid) = json_report.job {
+            return self.poll_job(json_report, job_uuid).await;
         }
+
+        self.display_and_check_alerts(json_report).await
     }
 
     async fn generate_report(&self) -> Result<Option<JsonNewRun>, RunError> {
@@ -323,6 +334,180 @@ impl Run {
                 allow_failure: self.allow_failure.then_some(true),
                 backdate: self.backdate.map(Into::into),
             }),
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    async fn poll_job(
+        &self,
+        json_report: JsonReport,
+        job_uuid: bencher_json::JobUuid,
+    ) -> Result<(), RunError> {
+        use bencher_json::JobStatus;
+
+        let poll_interval = self
+            .job
+            .as_ref()
+            .map_or(*DEFAULT_POLL_INTERVAL, |j| j.poll_interval);
+        let job_timeout = self
+            .job
+            .as_ref()
+            .and_then(|j| j.timeout)
+            .map_or(DEFAULT_JOB_TIMEOUT, |t| u64::from(u32::from(t)));
+        // CLI-side timeout is 2x the job timeout to allow for queue time
+        let cli_timeout = job_timeout.saturating_mul(CLI_TIMEOUT_MULTIPLE);
+
+        let project_resource_id = ProjectResourceId::Slug(json_report.project.slug.clone());
+
+        cli_eprintln_quietable!(self.log, "Waiting for remote job {job_uuid} to complete...");
+        cli_eprintln_quietable!(
+            self.log,
+            "Note: If you interrupt (Ctrl+C), the remote job will continue running."
+        );
+
+        let mut last_status: Option<JobStatus> = None;
+        let start = std::time::Instant::now();
+
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(u64::from(u32::from(
+                poll_interval,
+            ))))
+            .await;
+
+            if start.elapsed().as_secs() > cli_timeout {
+                return Err(RunError::JobTimeout(cli_timeout));
+            }
+
+            let json_job: bencher_json::JsonJob = self
+                .backend
+                .send_with(|client| {
+                    let project_resource_id = project_resource_id.clone();
+                    async move {
+                        client
+                            .proj_job_get()
+                            .project(project_resource_id)
+                            .job(job_uuid)
+                            .send()
+                            .await
+                    }
+                })
+                .await
+                .map_err(RunError::PollJob)?;
+
+            let status = json_job.status;
+
+            // Print status changes
+            if !last_status.is_some_and(|ls| ls == status) {
+                cli_eprintln_quietable!(self.log, "Job status: {status}");
+                last_status = Some(status);
+            }
+
+            match status {
+                JobStatus::Processed => {
+                    self.log_job_output(json_job.output.as_ref());
+                    let report = self
+                        .fetch_report(&project_resource_id, json_report.uuid)
+                        .await
+                        .map_err(RunError::FetchReport)?;
+                    return self.display_and_check_alerts(report).await;
+                },
+                JobStatus::Failed => {
+                    self.log_job_output(json_job.output.as_ref());
+                    let error_msg = json_job
+                        .output
+                        .and_then(|o| o.error)
+                        .unwrap_or_else(|| "Unknown error".to_owned());
+                    self.best_effort_display_report(&project_resource_id, json_report.uuid)
+                        .await;
+                    return Err(RunError::JobFailed(error_msg));
+                },
+                JobStatus::Canceled => {
+                    self.log_job_output(json_job.output.as_ref());
+                    let error_msg = json_job
+                        .output
+                        .and_then(|o| o.error)
+                        .unwrap_or_else(|| "Job was canceled".to_owned());
+                    self.best_effort_display_report(&project_resource_id, json_report.uuid)
+                        .await;
+                    return Err(RunError::JobCanceled(error_msg));
+                },
+                // Non-terminal states: keep polling.
+                // `Completed` means the runner finished execution and sent results,
+                // but the server hasn't finished processing them into metrics/alerts yet.
+                // It transitions to `Processed` (or `Failed`) once processing completes.
+                JobStatus::Pending
+                | JobStatus::Claimed
+                | JobStatus::Running
+                | JobStatus::Completed => {},
+            }
+        }
+    }
+
+    async fn display_and_check_alerts(&self, json_report: JsonReport) -> Result<(), RunError> {
+        let alerts_count = json_report.alerts.len();
+        self.display_results(json_report).await?;
+        if self.err && alerts_count > 0 {
+            Err(RunError::Alerts(alerts_count))
+        } else {
+            Ok(())
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    fn log_job_output(&self, output: Option<&bencher_json::runner::JsonJobOutput>) {
+        let Some(output) = output else {
+            return;
+        };
+        for result in &output.results {
+            if let Some(stdout) = &result.stdout
+                && !stdout.is_empty()
+            {
+                cli_eprintln_quietable!(self.log, "\nJob stdout:\n{stdout}");
+            }
+            if let Some(stderr) = &result.stderr
+                && !stderr.is_empty()
+            {
+                cli_eprintln_quietable!(self.log, "\nJob stderr:\n{stderr}");
+            }
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    async fn fetch_report(
+        &self,
+        project: &ProjectResourceId,
+        report_uuid: bencher_json::ReportUuid,
+    ) -> Result<JsonReport, crate::BackendError> {
+        self.backend
+            .send_with(|client| {
+                let project = project.clone();
+                async move {
+                    client
+                        .proj_report_get()
+                        .project(project)
+                        .report(report_uuid)
+                        .send()
+                        .await
+                }
+            })
+            .await
+    }
+
+    #[cfg(feature = "plus")]
+    async fn best_effort_display_report(
+        &self,
+        project: &ProjectResourceId,
+        report_uuid: bencher_json::ReportUuid,
+    ) {
+        match self.fetch_report(project, report_uuid).await {
+            Ok(report) => {
+                if let Err(err) = self.display_and_check_alerts(report).await {
+                    cli_eprintln_quietable!(self.log, "Warning: failed to display report: {err}");
+                }
+            },
+            Err(err) => {
+                cli_eprintln_quietable!(self.log, "Warning: could not fetch report: {err}");
+            },
         }
     }
 

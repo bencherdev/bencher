@@ -14798,6 +14798,14 @@
           "end_time": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "job": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JobUuid"
+              }
+            ]
+          },
           "project": {
             "$ref": "#/components/schemas/JsonProject"
           },

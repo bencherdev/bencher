@@ -1,5 +1,5 @@
 name: Bencher CLI
-description: Installs the Bencher CLI for Continuous Benchmarking
+description: Install the Bencher CLI for Continuous Benchmarking
 author: Bencher
 branding:
   icon: bar-chart

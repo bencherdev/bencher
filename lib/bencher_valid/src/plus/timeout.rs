@@ -56,6 +56,12 @@ impl Timeout {
     /// Default timeout for paid projects: 1 hour.
     pub const PAID_DEFAULT: Self = Self(3_600);
 
+    /// Return the inner value as `u64` seconds.
+    #[must_use]
+    pub const fn as_secs(self) -> u64 {
+        self.0 as u64
+    }
+
     /// Clamp this timeout to a maximum value.
     #[must_use]
     pub fn clamp_max(self, max: Self) -> Self {
