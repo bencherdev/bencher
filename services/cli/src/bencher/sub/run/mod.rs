@@ -67,7 +67,11 @@ pub struct Run {
 }
 
 #[cfg(feature = "plus")]
-const DEFAULT_POLL_INTERVAL: u64 = 5;
+#[expect(clippy::expect_used)]
+static DEFAULT_POLL_INTERVAL: std::sync::LazyLock<bencher_json::PollTimeout> =
+    std::sync::LazyLock::new(|| {
+        bencher_json::PollTimeout::try_from(5).expect("5 is a valid PollTimeout")
+    });
 #[cfg(feature = "plus")]
 const DEFAULT_JOB_TIMEOUT: u64 = bencher_json::Timeout::PAID_DEFAULT.as_secs();
 #[cfg(feature = "plus")]
@@ -82,7 +86,7 @@ struct Job {
     env: Option<HashMap<String, String>>,
     timeout: Option<bencher_json::Timeout>,
     build_time: bool,
-    poll_interval: u64,
+    poll_interval: bencher_json::PollTimeout,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -120,7 +124,7 @@ impl TryFrom<CliRun> for Run {
                 env: job.env.map(bencher_parser::parse_env),
                 timeout: job.job_timeout,
                 build_time,
-                poll_interval: job.poll_interval.unwrap_or(DEFAULT_POLL_INTERVAL),
+                poll_interval: job.poll_interval.unwrap_or(*DEFAULT_POLL_INTERVAL),
             })
         } else {
             None
@@ -344,7 +348,7 @@ impl Run {
         let poll_interval = self
             .job
             .as_ref()
-            .map_or(DEFAULT_POLL_INTERVAL, |j| j.poll_interval);
+            .map_or(*DEFAULT_POLL_INTERVAL, |j| j.poll_interval);
         let job_timeout = self
             .job
             .as_ref()
@@ -356,12 +360,19 @@ impl Run {
         let project_resource_id = ProjectResourceId::Slug(json_report.project.slug.clone());
 
         cli_eprintln_quietable!(self.log, "Waiting for remote job {job_uuid} to complete...");
+        cli_eprintln_quietable!(
+            self.log,
+            "Note: If you interrupt (Ctrl+C), the remote job will continue running."
+        );
 
         let mut last_status: Option<JobStatus> = None;
         let start = std::time::Instant::now();
 
         loop {
-            tokio::time::sleep(std::time::Duration::from_secs(poll_interval)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(u64::from(u32::from(
+                poll_interval,
+            ))))
+            .await;
 
             if start.elapsed().as_secs() > cli_timeout {
                 return Err(RunError::JobTimeout(cli_timeout));
@@ -420,7 +431,10 @@ impl Run {
                         .await;
                     return Err(RunError::JobCanceled(error_msg));
                 },
-                // Non-terminal states: keep polling
+                // Non-terminal states: keep polling.
+                // `Completed` means the runner finished execution and sent results,
+                // but the server hasn't finished processing them into metrics/alerts yet.
+                // It transitions to `Processed` (or `Failed`) once processing completes.
                 JobStatus::Pending
                 | JobStatus::Claimed
                 | JobStatus::Running
@@ -485,10 +499,15 @@ impl Run {
         project: &ProjectResourceId,
         report_uuid: bencher_json::ReportUuid,
     ) {
-        if let Ok(report) = self.fetch_report(project, report_uuid).await
-            && let Err(err) = self.display_and_check_alerts(report).await
-        {
-            cli_eprintln_quietable!(self.log, "Warning: failed to display report: {err}");
+        match self.fetch_report(project, report_uuid).await {
+            Ok(report) => {
+                if let Err(err) = self.display_and_check_alerts(report).await {
+                    cli_eprintln_quietable!(self.log, "Warning: failed to display report: {err}");
+                }
+            },
+            Err(err) => {
+                cli_eprintln_quietable!(self.log, "Warning: could not fetch report: {err}");
+            },
         }
     }
 

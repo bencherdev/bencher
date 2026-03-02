@@ -59,6 +59,10 @@ See [`services/cli/SKILL_PLAN.md`](../cli/SKILL_PLAN.md) for the design of a Cla
 4. **Gap 4 (`bencher noise`)** — Design complete (`services/cli/NOISE_PLAN.md`), implementation pending.
 5. **Gap 5 (Claude Code skill)** — Design complete (`services/cli/SKILL_PLAN.md`), implementation pending.
 
+## CLI Polling → Server-Sent Events
+
+The CLI currently polls `GET /v0/projects/{project}/jobs/{job}` on a fixed interval to track job progress. Replace this with server-sent events (SSE) so the API pushes status updates to the CLI in real time, eliminating polling latency and unnecessary requests.
+
 ## SQLite Write Lock Contention
 
 `spawn_heartbeat_timeout()` in `lib/bencher_schema/src/model/runner/job.rs` uses the same shared `Arc<Mutex<DbConnection>>` as API request handlers. Background heartbeat tasks contend with foreground writes. Create a notification mechanism for runners awaiting jobs so they don't poll the DB, and consider a dedicated background connection.

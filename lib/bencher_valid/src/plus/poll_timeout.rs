@@ -2,6 +2,7 @@ use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::fmt;
+use std::str::FromStr;
 
 use serde::{
     Deserialize, Deserializer, Serialize,
@@ -31,6 +32,15 @@ impl TryFrom<u32> for PollTimeout {
 impl From<PollTimeout> for u32 {
     fn from(poll_timeout: PollTimeout) -> Self {
         poll_timeout.0
+    }
+}
+
+impl FromStr for PollTimeout {
+    type Err = ValidError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let poll_timeout: u32 = s.parse().map_err(ValidError::PollTimeoutStr)?;
+        Self::try_from(poll_timeout)
     }
 }
 
@@ -91,5 +101,27 @@ mod tests {
 
         assert_eq!(false, is_valid_poll_timeout(0));
         assert_eq!(false, is_valid_poll_timeout(901));
+    }
+
+    #[test]
+    fn from_str_valid() {
+        let poll_timeout: PollTimeout = "5".parse().unwrap();
+        assert_eq!(u32::from(poll_timeout), 5);
+
+        let min: PollTimeout = "1".parse().unwrap();
+        assert_eq!(u32::from(min), 1);
+
+        let max: PollTimeout = "900".parse().unwrap();
+        assert_eq!(u32::from(max), 900);
+    }
+
+    #[test]
+    fn from_str_zero() {
+        assert!("0".parse::<PollTimeout>().is_err());
+    }
+
+    #[test]
+    fn from_str_not_a_number() {
+        assert!("abc".parse::<PollTimeout>().is_err());
     }
 }

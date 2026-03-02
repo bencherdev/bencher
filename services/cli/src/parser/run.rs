@@ -273,5 +273,5 @@ pub struct CliRunJob {
 
     /// Poll interval in seconds when waiting for remote job completion (requires: --image)
     #[clap(long, requires = "image")]
-    pub poll_interval: Option<u64>,
+    pub poll_interval: Option<bencher_json::PollTimeout>,
 }
