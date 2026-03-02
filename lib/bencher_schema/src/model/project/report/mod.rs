@@ -352,7 +352,13 @@ impl QueryReport {
             .select(schema::job::uuid)
             .first(conn)
             .optional()
-            .unwrap_or_default();
+            .map_err(|e| {
+                issue_error(
+                    "Failed to query job for report",
+                    &format!("report id: {id}"),
+                    e,
+                )
+            })?;
 
         let project = query_project.into_json(conn)?;
         Ok(JsonReport {

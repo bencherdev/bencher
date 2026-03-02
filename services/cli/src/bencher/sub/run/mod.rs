@@ -69,6 +69,8 @@ pub struct Run {
 #[cfg(feature = "plus")]
 const DEFAULT_POLL_INTERVAL: u64 = 5;
 #[cfg(feature = "plus")]
+const DEFAULT_JOB_TIMEOUT: u64 = bencher_json::Timeout::PAID_DEFAULT.as_secs();
+#[cfg(feature = "plus")]
 const CLI_TIMEOUT_MULTIPLE: u64 = 2;
 
 #[cfg(feature = "plus")]
@@ -118,7 +120,7 @@ impl TryFrom<CliRun> for Run {
                 env: job.env.map(bencher_parser::parse_env),
                 timeout: job.job_timeout,
                 build_time,
-                poll_interval: job.job_poll_interval,
+                poll_interval: job.poll_interval.unwrap_or(DEFAULT_POLL_INTERVAL),
             })
         } else {
             None
@@ -347,7 +349,7 @@ impl Run {
             .job
             .as_ref()
             .and_then(|j| j.timeout)
-            .map_or(3600u64, |t| u64::from(u32::from(t)));
+            .map_or(DEFAULT_JOB_TIMEOUT, |t| u64::from(u32::from(t)));
         // CLI-side timeout is 2x the job timeout to allow for queue time
         let cli_timeout = job_timeout.saturating_mul(CLI_TIMEOUT_MULTIPLE);
 
@@ -483,8 +485,10 @@ impl Run {
         project: &ProjectResourceId,
         report_uuid: bencher_json::ReportUuid,
     ) {
-        if let Ok(report) = self.fetch_report(project, report_uuid).await {
-            drop(self.display_and_check_alerts(report).await);
+        if let Ok(report) = self.fetch_report(project, report_uuid).await
+            && let Err(err) = self.display_and_check_alerts(report).await
+        {
+            cli_eprintln_quietable!(self.log, "Warning: failed to display report: {err}");
         }
     }
 
