@@ -17,50 +17,50 @@ WORKDIR /usr/src/bencher/.cargo
 COPY .cargo/config.toml config.toml
 
 WORKDIR /usr/src/bencher/lib
-COPY lib/api_auth api_auth
-COPY lib/api_checkout api_checkout
-COPY lib/api_organizations api_organizations
-COPY lib/api_projects api_projects
-COPY lib/api_run api_run
-COPY lib/api_server api_server
-COPY lib/api_users api_users
+RUN cargo init --lib api_auth
+RUN cargo init --lib api_checkout
+RUN cargo init --lib api_organizations
+RUN cargo init --lib api_projects
+RUN cargo init --lib api_run
+RUN cargo init --lib api_server
+RUN cargo init --lib api_users
+RUN cargo init --lib bencher_api_tests
+RUN cargo init --lib bencher_boundary
+RUN cargo init --lib bencher_config
+RUN cargo init --lib bencher_endpoint
+RUN cargo init --lib bencher_logger
+RUN cargo init --lib bencher_plot
+RUN cargo init --lib bencher_rank
+RUN cargo init --lib bencher_rbac
+RUN cargo init --lib bencher_schema
+RUN cargo init --lib bencher_token
 COPY lib/bencher_adapter bencher_adapter
-COPY lib/bencher_boundary bencher_boundary
 COPY lib/bencher_client bencher_client
 COPY lib/bencher_comment bencher_comment
-COPY lib/bencher_config bencher_config
 COPY lib/bencher_context bencher_context
-COPY lib/bencher_endpoint bencher_endpoint
 COPY lib/bencher_json bencher_json
-COPY lib/bencher_logger bencher_logger
 COPY lib/bencher_parser bencher_parser
-COPY lib/bencher_plot bencher_plot
-COPY lib/bencher_rank bencher_rank
-COPY lib/bencher_rbac bencher_rbac
-COPY lib/bencher_schema bencher_schema
-COPY lib/bencher_token bencher_token
 COPY lib/bencher_valid bencher_valid
-RUN cargo init --lib bencher_api_tests
 
 WORKDIR /usr/src/bencher/plus
-COPY plus/api_runners api_runners
-COPY plus/api_specs api_specs
-COPY plus/api_oci api_oci
-COPY plus/bencher_billing bencher_billing
-COPY plus/bencher_bing_index bencher_bing_index
-COPY plus/bencher_github_client bencher_github_client
-COPY plus/bencher_google_client bencher_google_client
-COPY plus/bencher_google_index bencher_google_index
-COPY plus/bencher_license bencher_license
-COPY plus/bencher_oci bencher_oci
-COPY plus/bencher_oci_storage bencher_oci_storage
-COPY plus/bencher_output_protocol bencher_output_protocol
-COPY plus/bencher_otel bencher_otel
-COPY plus/bencher_otel_provider bencher_otel_provider
-COPY plus/bencher_recaptcha bencher_recaptcha
-COPY plus/bencher_rootfs bencher_rootfs
-COPY plus/bencher_runner bencher_runner
-COPY plus/bencher_init bencher_init
+RUN cargo init --lib api_oci
+RUN cargo init --lib api_runners
+RUN cargo init --lib api_specs
+RUN cargo init --lib bencher_billing
+RUN cargo init --lib bencher_bing_index
+RUN cargo init --lib bencher_github_client
+RUN cargo init --lib bencher_google_client
+RUN cargo init --lib bencher_google_index
+RUN cargo init --lib bencher_license
+RUN cargo init --lib bencher_oci
+RUN cargo init --lib bencher_oci_storage
+RUN cargo init --lib bencher_output_protocol
+RUN cargo init --lib bencher_otel
+RUN cargo init --lib bencher_otel_provider
+RUN cargo init --lib bencher_recaptcha
+RUN cargo init --lib bencher_rootfs
+RUN cargo init --lib bencher_runner
+RUN cargo init --lib bencher_init
 
 WORKDIR /usr/src/bencher/tasks
 RUN cargo init --bin bin_version
