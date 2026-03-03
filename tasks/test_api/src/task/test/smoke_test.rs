@@ -296,6 +296,12 @@ fn run_runner_smoke_test(api_url: &Url) -> anyhow::Result<()> {
     );
     let runner_token: bencher_json::JsonRunnerToken = serde_json::from_slice(&output.stdout)?;
 
+    // Build the runner binary so cargo_bin can find it
+    let build_status = Command::new("cargo")
+        .args(["build", "--bin", "runner"])
+        .status()?;
+    anyhow::ensure!(build_status.success(), "Failed to build runner binary");
+
     // Start the runner daemon as a background process
     println!("Starting runner daemon...");
     #[expect(deprecated)]
