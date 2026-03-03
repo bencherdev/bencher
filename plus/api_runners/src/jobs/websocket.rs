@@ -483,9 +483,18 @@ async fn handle_completed(
     }
 
     #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-        bencher_otel::JobStatusKind::Completed,
-    ));
+    {
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+            bencher_otel::JobStatusKind::Completed,
+        ));
+
+        let duration_secs = job.created.elapsed_secs(now);
+        let tier = bencher_otel::PriorityTier::from_priority(job.priority.into());
+        bencher_otel::ApiMeter::record(
+            bencher_otel::ApiHistogram::JobCompleteDuration(tier),
+            duration_secs,
+        );
+    }
 
     // Store output in blob storage (best-effort)
     let job_output = bencher_json::runner::JsonJobOutput {

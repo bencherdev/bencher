@@ -87,6 +87,9 @@ impl ReportResults {
         settings: JsonReportSettings,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
+        #[cfg(feature = "otel")]
+        let process_start = context.clock.now();
+
         let adapter_settings = AdapterSettings::new(settings.average);
         let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
             .map_err(|e| {
@@ -120,6 +123,15 @@ impl ReportResults {
             }
         }
 
+        #[cfg(feature = "otel")]
+        {
+            let duration_secs = process_start.elapsed_secs(context.clock.now());
+            bencher_otel::ApiMeter::record(
+                bencher_otel::ApiHistogram::ReportProcessDuration,
+                duration_secs,
+            );
+        }
+
         Ok(())
     }
 
@@ -149,47 +161,61 @@ impl ReportResults {
             .fold(0i32, i32::saturating_add);
 
         // Phase 2: Write all data in a single transaction.
-        let conn = write_conn!(context);
-        conn.transaction(|conn| {
-            for prepared in prepared_benchmarks {
-                // Insert report_benchmark
-                diesel::insert_into(schema::report_benchmark::table)
-                    .values(&prepared.insert_report_benchmark)
-                    .execute(conn)?;
-                let report_benchmark_id: ReportBenchmarkId =
-                    diesel::select(last_insert_rowid()).get_result(conn)?;
+        #[cfg(feature = "otel")]
+        let write_start = context.clock.now();
 
-                // Insert all metrics for this benchmark
-                for prepared_metric in prepared.metrics {
-                    let insert_metric = InsertMetric::from_json(
-                        report_benchmark_id,
-                        prepared_metric.measure_id,
-                        prepared_metric.metric,
-                    );
-                    diesel::insert_into(schema::metric::table)
-                        .values(&insert_metric)
+        {
+            let conn = write_conn!(context);
+            conn.transaction(|conn| {
+                for prepared in prepared_benchmarks {
+                    // Insert report_benchmark
+                    diesel::insert_into(schema::report_benchmark::table)
+                        .values(&prepared.insert_report_benchmark)
                         .execute(conn)?;
+                    let report_benchmark_id: ReportBenchmarkId =
+                        diesel::select(last_insert_rowid()).get_result(conn)?;
 
-                    // If there's a prepared detection, write boundary + optional alert
-                    if let Some(prepared_detection) = prepared_metric.detection {
-                        let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
-                        prepared_detection.write(conn, metric_id)?;
+                    // Insert all metrics for this benchmark
+                    for prepared_metric in prepared.metrics {
+                        let insert_metric = InsertMetric::from_json(
+                            report_benchmark_id,
+                            prepared_metric.measure_id,
+                            prepared_metric.metric,
+                        );
+                        diesel::insert_into(schema::metric::table)
+                            .values(&insert_metric)
+                            .execute(conn)?;
+
+                        // If there's a prepared detection, write boundary + optional alert
+                        if let Some(prepared_detection) = prepared_metric.detection {
+                            let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
+                            prepared_detection.write(conn, metric_id)?;
+                        }
                     }
                 }
-            }
 
-            // Upsert metric count summary (count computed before acquiring write lock)
-            super::upsert_metric_count(conn, self.report_id, iteration_metric_count)?;
+                // Upsert metric count summary (count computed before acquiring write lock)
+                super::upsert_metric_count(conn, self.report_id, iteration_metric_count)?;
 
-            diesel::QueryResult::Ok(())
-        })
-        .map_err(|e| {
-            issue_error(
-                "Failed to write report results",
-                "Failed to write report results in batch transaction:",
-                e,
-            )
-        })?;
+                diesel::QueryResult::Ok(())
+            })
+            .map_err(|e| {
+                issue_error(
+                    "Failed to write report results",
+                    "Failed to write report results in batch transaction:",
+                    e,
+                )
+            })?;
+        }
+
+        #[cfg(feature = "otel")]
+        {
+            let duration_secs = write_start.elapsed_secs(context.clock.now());
+            bencher_otel::ApiMeter::record(
+                bencher_otel::ApiHistogram::ReportWriteDuration,
+                duration_secs,
+            );
+        }
 
         #[cfg(feature = "plus")]
         {

@@ -19,7 +19,7 @@ pub use image::{
 };
 pub use layer::LayerCompression;
 #[cfg(feature = "registry")]
-pub use registry::{ImageReference, RegistryClient};
+pub use registry::{ImageReference, RegistryClient, RegistryScheme};
 pub use unpack::{unpack, verify_digest};
 
 /// Map the Rust `std::env::consts::ARCH` value to the OCI architecture name.

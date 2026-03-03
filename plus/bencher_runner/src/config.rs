@@ -4,6 +4,8 @@ use bencher_json::{Cpu, Disk, GracePeriod, Memory};
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
+use bencher_oci::RegistryScheme;
+
 use crate::cpu::CpuLayout;
 use crate::log_level::FirecrackerLogLevel;
 
@@ -106,6 +108,13 @@ pub struct Config {
     #[serde(default = "default_grace_period")]
     pub grace_period: GracePeriod,
 
+    /// URL scheme for registry requests (HTTP or HTTPS).
+    ///
+    /// Defaults to HTTPS. Set to HTTP for local/insecure registries.
+    /// This field is not serialized.
+    #[serde(skip)]
+    pub registry_scheme: RegistryScheme,
+
     /// CPU layout for isolating benchmark cores from housekeeping tasks.
     ///
     /// When set, the Firecracker process will be pinned to benchmark cores
@@ -190,6 +199,7 @@ impl Config {
             max_file_count: default_max_file_count(),
             max_content_size: default_max_content_size(),
             grace_period: default_grace_period(),
+            registry_scheme: RegistryScheme::default(),
             cpu_layout: None,
             firecracker_log_level: FirecrackerLogLevel::default(),
         }
@@ -221,6 +231,7 @@ impl Config {
             max_file_count: default_max_file_count(),
             max_content_size: default_max_content_size(),
             grace_period: default_grace_period(),
+            registry_scheme: RegistryScheme::default(),
             cpu_layout: None,
             firecracker_log_level: FirecrackerLogLevel::default(),
         }
@@ -360,6 +371,13 @@ impl Config {
     #[must_use]
     pub fn with_grace_period(mut self, grace_period: GracePeriod) -> Self {
         self.grace_period = grace_period;
+        self
+    }
+
+    /// Set the URL scheme for registry requests.
+    #[must_use]
+    pub fn with_registry_scheme(mut self, scheme: RegistryScheme) -> Self {
+        self.registry_scheme = scheme;
         self
     }
 

@@ -1,20 +1,16 @@
 //! OCI Distribution registry client.
 //!
 //! This module implements the OCI Distribution Specification for pulling images
-//! from container registries. It supports Docker-style token authentication.
+//! from container registries. It supports Bearer token authentication.
 //!
 //! See: <https://github.com/opencontainers/distribution-spec/blob/main/spec.md>
 
-use std::collections::HashMap;
 use std::fs;
 
 use crate::digest::DigestHasher;
 use crate::error::OciError;
 use crate::oci_arch;
-use base64::Engine as _;
-use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use camino::{Utf8Path, Utf8PathBuf};
-use serde::Deserialize;
 
 /// Media types for manifests.
 const MANIFEST_MEDIA_TYPES: &[&str] = &[
@@ -25,23 +21,6 @@ const MANIFEST_MEDIA_TYPES: &[&str] = &[
 ];
 
 pub use bencher_valid::ImageReference;
-
-/// Token response from the registry authentication service.
-#[derive(Debug, Deserialize)]
-struct TokenResponse {
-    token: Option<String>,
-    access_token: Option<String>,
-    // expires_in is included in the response but not currently used
-    #[serde(default)]
-    #[expect(dead_code)]
-    expires_in: Option<u64>,
-}
-
-impl TokenResponse {
-    fn token(&self) -> Option<&str> {
-        self.token.as_deref().or(self.access_token.as_deref())
-    }
-}
 
 /// Select the best platform manifest from an index/manifest list.
 ///
@@ -83,11 +62,11 @@ pub struct RegistryClient {
     /// HTTP agent.
     agent: ureq::Agent,
 
+    /// URL scheme for registry requests.
+    scheme: RegistryScheme,
+
     /// Base JWT token for authentication (provided at startup).
     base_token: Option<bencher_valid::Secret>,
-
-    /// Cached bearer tokens per scope.
-    bearer_tokens: HashMap<String, String>,
 }
 
 impl RegistryClient {
@@ -101,12 +80,15 @@ impl RegistryClient {
 
         Ok(Self {
             agent,
+            scheme: RegistryScheme::Https,
             base_token: None,
-            bearer_tokens: HashMap::new(),
         })
     }
 
-    /// Create a new registry client with a JWT token for authentication.
+    /// Create a new registry client with a JWT for authentication.
+    ///
+    /// The token is sent directly as a Bearer token on all requests.
+    /// If the registry rejects it (401), the request fails.
     pub fn with_token(token: &str) -> Result<Self, OciError> {
         let mut client = Self::new()?;
         client.base_token = Some(
@@ -115,6 +97,18 @@ impl RegistryClient {
                 .map_err(|e| OciError::Registry(format!("Invalid token: {e}")))?,
         );
         Ok(client)
+    }
+
+    /// Set the URL scheme for registry requests.
+    #[must_use]
+    pub fn with_scheme(mut self, scheme: RegistryScheme) -> Self {
+        self.scheme = scheme;
+        self
+    }
+
+    /// Build a registry URL for the given path.
+    fn registry_url(&self, registry: &str, path: &str) -> String {
+        format!("{}://{registry}{path}", self.scheme.as_str())
     }
 
     /// Pull an image from a registry and save it in OCI layout format.
@@ -227,16 +221,18 @@ impl RegistryClient {
 
     /// Pull an image manifest.
     fn pull_manifest(&mut self, image_ref: &ImageReference) -> Result<(String, Vec<u8>), OciError> {
-        let url = format!(
-            "https://{}/v2/{}/manifests/{}",
+        let url = self.registry_url(
             image_ref.registry(),
-            image_ref.repository(),
-            image_ref.reference()
+            &format!(
+                "/v2/{}/manifests/{}",
+                image_ref.repository(),
+                image_ref.reference()
+            ),
         );
 
         let accept = MANIFEST_MEDIA_TYPES.join(", ");
 
-        let mut response = self.authenticated_request(&url, image_ref, &accept)?;
+        let mut response = self.authenticated_request(&url, &accept)?;
 
         let content_length = response
             .headers()
@@ -288,13 +284,12 @@ impl RegistryClient {
         image_ref: &ImageReference,
         digest: &str,
     ) -> Result<(String, Vec<u8>), OciError> {
-        let url = format!(
-            "https://{}/v2/{}/blobs/{digest}",
+        let url = self.registry_url(
             image_ref.registry(),
-            image_ref.repository()
+            &format!("/v2/{}/blobs/{digest}", image_ref.repository()),
         );
 
-        let mut response = self.authenticated_request(&url, image_ref, "*/*")?;
+        let mut response = self.authenticated_request(&url, "*/*")?;
 
         let content_length = response
             .headers()
@@ -343,13 +338,12 @@ impl RegistryClient {
     ) -> Result<String, OciError> {
         use std::io::{Read as _, Write as _};
 
-        let url = format!(
-            "https://{}/v2/{}/blobs/{digest}",
+        let url = self.registry_url(
             image_ref.registry(),
-            image_ref.repository()
+            &format!("/v2/{}/blobs/{digest}", image_ref.repository()),
         );
 
-        let mut response = self.authenticated_request(&url, image_ref, "*/*")?;
+        let mut response = self.authenticated_request(&url, "*/*")?;
 
         let content_length = response
             .headers()
@@ -405,59 +399,20 @@ impl RegistryClient {
     fn authenticated_request(
         &mut self,
         url: &str,
-        image_ref: &ImageReference,
         accept: &str,
     ) -> Result<ureq::http::Response<ureq::Body>, OciError> {
-        // Build the scope for this request
-        let scope = format!("repository:{}:pull", image_ref.repository());
-
-        // Build request with cached token if available
         let mut request = self.agent.get(url).header("Accept", accept);
 
-        if let Some(token) = self.bearer_tokens.get(&scope) {
+        if let Some(base_token) = &self.base_token {
             request = request.header(
                 bencher_json::AUTHORIZATION,
-                &bencher_json::bearer_header(token),
+                &bencher_json::bearer_header(base_token.as_ref()),
             );
         }
 
         let response = request
             .call()
             .map_err(|e| OciError::Registry(format!("Request failed: {e}")))?;
-
-        // If unauthorized, get a token and retry
-        if response.status() == 401 {
-            let www_auth = response
-                .headers()
-                .get("www-authenticate")
-                .and_then(|h| h.to_str().ok())
-                .ok_or_else(|| OciError::Registry("Missing WWW-Authenticate header".to_owned()))?
-                .to_owned();
-
-            let token = self.get_token(&www_auth, &scope)?;
-            self.bearer_tokens.insert(scope.clone(), token.clone());
-
-            // Retry with token
-            let response = self
-                .agent
-                .get(url)
-                .header("Accept", accept)
-                .header(
-                    bencher_json::AUTHORIZATION,
-                    &bencher_json::bearer_header(&token),
-                )
-                .call()
-                .map_err(|e| OciError::Registry(format!("Request failed: {e}")))?;
-
-            if !response.status().is_success() {
-                return Err(OciError::Registry(format!(
-                    "Request failed with status: {}",
-                    response.status()
-                )));
-            }
-
-            return Ok(response);
-        }
 
         if !response.status().is_success() {
             return Err(OciError::Registry(format!(
@@ -468,70 +423,24 @@ impl RegistryClient {
 
         Ok(response)
     }
+}
 
-    /// Get a bearer token from the authentication service.
-    fn get_token(&self, www_auth: &str, scope: &str) -> Result<String, OciError> {
-        // Parse WWW-Authenticate header
-        let params = Self::parse_www_authenticate(www_auth);
+/// URL scheme for registry connections.
+#[derive(Debug, Default, Clone, Copy)]
+pub enum RegistryScheme {
+    /// HTTPS (default for production registries).
+    #[default]
+    Https,
+    /// HTTP (for local/insecure registries).
+    Http,
+}
 
-        let realm = params
-            .get("realm")
-            .ok_or_else(|| OciError::Registry("Missing realm in WWW-Authenticate".to_owned()))?;
-
-        let service = params.get("service").map_or("", String::as_str);
-
-        // Build token request URL
-        let token_url = format!("{realm}?service={service}&scope={scope}");
-
-        // Make token request
-        let mut request = self.agent.get(&token_url);
-
-        // If we have a base token, use it as Basic auth password
-        if let Some(base_token) = &self.base_token {
-            let credentials = BASE64_STANDARD.encode(format!("_token:{}", base_token.as_ref()));
-            request = request.header(bencher_json::AUTHORIZATION, &format!("Basic {credentials}"));
+impl RegistryScheme {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Https => "https",
+            Self::Http => "http",
         }
-
-        let response = request
-            .call()
-            .map_err(|e| OciError::Registry(format!("Token request failed: {e}")))?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.into_body().read_to_string().unwrap_or_default();
-            return Err(OciError::Registry(format!(
-                "Token request failed with status {status}: {body}"
-            )));
-        }
-
-        let token_response: TokenResponse = response
-            .into_body()
-            .read_json()
-            .map_err(|e| OciError::Registry(format!("Failed to parse token response: {e}")))?;
-
-        token_response
-            .token()
-            .map(ToOwned::to_owned)
-            .ok_or_else(|| OciError::Registry("No token in response".to_owned()))
-    }
-
-    /// Parse WWW-Authenticate header into key-value pairs.
-    fn parse_www_authenticate(header: &str) -> HashMap<String, String> {
-        let mut params = HashMap::new();
-
-        // Skip "Bearer " prefix
-        let content = header.strip_prefix("Bearer ").unwrap_or(header);
-
-        // Parse key="value" pairs
-        for part in content.split(',') {
-            let part = part.trim();
-            if let Some((key, value)) = part.split_once('=') {
-                let value = value.trim_matches('"');
-                params.insert(key.to_owned(), value.to_owned());
-            }
-        }
-
-        params
     }
 }
 
@@ -588,20 +497,5 @@ mod tests {
         assert_eq!(ref_.repository(), "library/alpine");
         assert_eq!(ref_.reference(), "sha256:abc123");
         assert!(ref_.is_digest());
-    }
-
-    #[test]
-    fn parse_www_authenticate_header() {
-        let header = r#"Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:library/alpine:pull""#;
-        let params = RegistryClient::parse_www_authenticate(header);
-
-        assert_eq!(
-            params.get("realm"),
-            Some(&"https://auth.docker.io/token".to_owned())
-        );
-        assert_eq!(
-            params.get("service"),
-            Some(&"registry.docker.io".to_owned())
-        );
     }
 }

@@ -204,6 +204,7 @@ pub fn run_with_args(_args: &RunArgs) -> Result<(), RunnerError> {
 pub fn resolve_oci_image(
     oci_image: &str,
     token: Option<&str>,
+    scheme: bencher_oci::RegistryScheme,
     pull_dir: &Utf8Path,
 ) -> Result<Utf8PathBuf, RunnerError> {
     let path = Utf8Path::new(oci_image);
@@ -230,10 +231,10 @@ pub fn resolve_oci_image(
 
     let mut client = if let Some(t) = token {
         println!("  Using authenticated client");
-        bencher_oci::RegistryClient::with_token(t)?
+        bencher_oci::RegistryClient::with_token(t)?.with_scheme(scheme)
     } else {
         println!("  Using anonymous client");
-        bencher_oci::RegistryClient::new()?
+        bencher_oci::RegistryClient::new()?.with_scheme(scheme)
     };
 
     client.pull(&image_ref, &image_dir)?;
@@ -296,6 +297,7 @@ pub fn execute(
     let oci_image_path = resolve_oci_image(
         &config.oci_image,
         config.token.as_ref().map(AsRef::as_ref),
+        config.registry_scheme,
         work_dir,
     )?;
 

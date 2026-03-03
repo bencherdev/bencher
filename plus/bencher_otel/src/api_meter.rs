@@ -471,12 +471,24 @@ fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
 pub enum ApiHistogram {
     /// Time a job spent waiting in the queue before being claimed.
     JobQueueDuration(PriorityTier),
+    /// Total time from job creation to completion.
+    JobCompleteDuration(PriorityTier),
+    /// Total wall-clock time for the entire report creation endpoint.
+    ReportCreateDuration,
+    /// Total time to process report results (adapter parsing + all iterations).
+    ReportProcessDuration,
+    /// Time spent in the batched DB write transaction per iteration.
+    ReportWriteDuration,
 }
 
 impl ApiHistogram {
     fn name(&self) -> &str {
         match self {
             Self::JobQueueDuration(_) => "job.queue.duration",
+            Self::JobCompleteDuration(_) => "job.complete.duration",
+            Self::ReportCreateDuration => "report.create.duration",
+            Self::ReportProcessDuration => "report.process.duration",
+            Self::ReportWriteDuration => "report.write.duration",
         }
     }
 
@@ -485,18 +497,35 @@ impl ApiHistogram {
             Self::JobQueueDuration(_) => {
                 "Time a job spent waiting in the queue before being claimed"
             },
+            Self::JobCompleteDuration(_) => "Total time from job creation to completion",
+            Self::ReportCreateDuration => {
+                "Total wall-clock time for the entire report creation endpoint"
+            },
+            Self::ReportProcessDuration => {
+                "Total time to process report results (adapter parsing + all iterations)"
+            },
+            Self::ReportWriteDuration => {
+                "Time spent in the batched DB write transaction per iteration"
+            },
         }
     }
 
     fn unit(&self) -> &str {
         match self {
-            Self::JobQueueDuration(_) => "s",
+            Self::JobQueueDuration(_)
+            | Self::JobCompleteDuration(_)
+            | Self::ReportCreateDuration
+            | Self::ReportProcessDuration
+            | Self::ReportWriteDuration => "s",
         }
     }
 
     fn attributes(self) -> Vec<opentelemetry::KeyValue> {
         match self {
-            Self::JobQueueDuration(tier) => vec![tier.into()],
+            Self::JobQueueDuration(tier) | Self::JobCompleteDuration(tier) => vec![tier.into()],
+            Self::ReportCreateDuration
+            | Self::ReportProcessDuration
+            | Self::ReportWriteDuration => Vec::new(),
         }
     }
 }

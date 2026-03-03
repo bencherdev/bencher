@@ -240,12 +240,7 @@ fn build_claimed_job(
 
         // Record queue duration (time from creation to claim)
         let now = context.clock.now();
-        #[expect(
-            clippy::cast_precision_loss,
-            reason = "queue duration in seconds fits in f64 mantissa"
-        )]
-        let queue_duration_secs =
-            ((now.timestamp() - query_job.created.timestamp()) as f64).max(0.0);
+        let queue_duration_secs = query_job.created.elapsed_secs(now);
         let tier = bencher_otel::PriorityTier::from_priority(query_job.priority.into());
         bencher_otel::ApiMeter::record(
             bencher_otel::ApiHistogram::JobQueueDuration(tier),

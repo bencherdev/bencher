@@ -8,14 +8,14 @@
 //! This unified structure avoids Dropshot router conflicts between literal
 //! and variable path segments while maintaining OCI spec compliance.
 //!
-//! # Streaming Limitations
+//! # Streaming Uploads
 //!
-//! Dropshot does not currently support streaming request bodies, so upload operations
-//! (monolithic PUT to `/v2/{name}/blobs/uploads?digest=...`) buffer the entire request
-//! body into memory via `UntypedBody`. This limits practical upload sizes to available
-//! server memory.
+//! All blob upload endpoints use `StreamingBody` to stream request data directly
+//! to storage without buffering the entire body in memory. Per-endpoint
+//! `request_body_max_bytes` is set to 10 GiB; the cumulative size limit is
+//! enforced by `OciStorage::max_body_size()` at the storage layer.
 //!
-//! For large blobs, clients should use chunked uploads instead:
+//! For large blobs, clients can also use chunked uploads:
 //!
 //! 1. `POST /v2/{name}/blobs/uploads` - Start an upload session
 //! 2. `PATCH /v2/{name}/blobs/uploads/{session_id}` - Upload chunks (repeated)
@@ -28,7 +28,7 @@ use bencher_json::ProjectResourceId;
 use bencher_oci_storage::{Digest, OciError};
 use bencher_schema::context::ApiContext;
 use dropshot::{
-    Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint,
+    Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, StreamingBody, endpoint,
 };
 use http::Response;
 use schemars::JsonSchema;
@@ -381,19 +381,9 @@ pub async fn oci_upload_start(
 
 /// Monolithic upload (PUT to /v2/{name}/blobs/uploads?digest=...)
 ///
-/// Uploads a complete blob in a single request. This is convenient for small blobs but
-/// has memory limitations: Dropshot's `UntypedBody` buffers the entire request into memory.
-/// For large blobs, use the chunked upload flow instead (see `uploads` module).
-///
-/// # Memory Limitation
-///
-/// The entire blob content is buffered in server memory before being stored. This means
-/// practical upload sizes are limited by available server memory. For blobs larger than
-/// a few MB, consider using chunked uploads:
-///
-/// 1. `POST /v2/{name}/blobs/uploads` - Start session
-/// 2. `PATCH /v2/{name}/blobs/uploads/{session_id}` - Upload chunks
-/// 3. `PUT /v2/{name}/blobs/uploads/{session_id}?digest=...` - Complete
+/// Uploads a complete blob in a single request. The request body is streamed
+/// to storage incrementally, so memory usage is bounded by the network chunk size
+/// rather than the total blob size.
 ///
 /// # Authentication
 ///
@@ -404,17 +394,17 @@ pub async fn oci_upload_start(
     method = PUT,
     path = "/v2/{name}/blobs/{ref}",
     tags = ["oci"],
+    request_body_max_bytes = crate::OCI_REQUEST_BODY_MAX_BYTES,
 }]
 pub async fn oci_upload_monolithic(
     rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
     query: Query<MonolithicUploadQuery>,
-    body: UntypedBody,
+    body: StreamingBody,
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
     let path = path.into_inner();
     let query = query.into_inner();
-    let data = body.as_bytes();
 
     // PUT with digest query param is only valid when ref is "uploads"
     if path.reference != UPLOADS_REF {
@@ -430,28 +420,25 @@ pub async fn oci_upload_monolithic(
     let project_slug = &push_access.project.slug;
     let project_uuid = push_access.project.uuid;
 
-    // Get storage and enforce max body size
+    // Get storage
     let storage = context.oci_storage();
-    let max = storage.max_body_size();
-    if data.len() as u64 > max {
-        return Err(crate::error::payload_too_large(data.len() as u64, max));
-    }
 
     // Parse digest
     let expected_digest: Digest = crate::error::parse_digest(&query.digest)?;
 
-    // Start upload, append data, and complete in one operation
+    // Start upload, stream data, and complete in one operation
     let upload_id = storage
         .start_upload(&project_uuid)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
-    // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
+    // Stream body to storage (storage enforces max_body_size incrementally)
     let result = async {
+        crate::uploads::stream_to_storage(body, storage, &upload_id).await?;
         storage
-            .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
-            .await?;
-        storage.complete_upload(&upload_id, &expected_digest).await
+            .complete_upload(&upload_id, &expected_digest)
+            .await
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))
     }
     .await;
 
@@ -459,8 +446,10 @@ pub async fn oci_upload_monolithic(
         Ok(digest) => digest,
         Err(e) => {
             // Best-effort cleanup of the orphaned upload session
-            let _unused = storage.cancel_upload(&upload_id).await;
-            return Err(crate::error::into_http_error(OciError::from(e)));
+            if let Err(cancel_err) = storage.cancel_upload(&upload_id).await {
+                slog::info!(rqctx.log, "Failed to cancel upload session on error"; "upload_id" => %upload_id, "error" => %cancel_err);
+            }
+            return Err(e);
         },
     };
 

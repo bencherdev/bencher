@@ -16,6 +16,7 @@ use crate::{
     parser::{TaskExamples, TaskOci, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
     task::{
         oci::Oci,
+        runner,
         test::{examples::Examples, seed_test::SeedTest},
     },
 };
@@ -224,6 +225,10 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
             let oci = Oci::try_from(TaskOci::for_test(api_url.as_ref(), true))?;
             oci.exec()?;
 
+            // Run runner smoke test (requires Docker + KVM for the runner daemon)
+            #[cfg(feature = "plus")]
+            run_runner_smoke_test(api_url)?;
+
             if examples {
                 let examples = Examples::try_from(TaskExamples {
                     url: Some(api_url.clone()),
@@ -243,4 +248,81 @@ fn kill_child(child: Option<Child>) -> anyhow::Result<()> {
         .expect("Child process is expected for `localhost`")
         .kill()
         .map_err(Into::into)
+}
+
+/// Run the runner smoke test: rotate a runner token, start the runner daemon,
+/// push a Docker image to the API's OCI registry, and submit a job.
+#[cfg(feature = "plus")]
+fn run_runner_smoke_test(api_url: &Url) -> anyhow::Result<()> {
+    use assert_cmd::cargo::CommandCargoExt as _;
+
+    let is_linux = cfg!(target_os = "linux");
+    let has_kvm = is_linux && std::path::Path::new("/dev/kvm").exists();
+
+    if !has_kvm {
+        println!("Skipping runner smoke test: requires Linux + KVM");
+        return Ok(());
+    }
+
+    if !runner::docker_available() {
+        println!("Skipping runner smoke test: Docker not available");
+        return Ok(());
+    }
+
+    println!("=== Runner Smoke Test ===");
+
+    let admin_token = Jwt::test_admin_token();
+    let token = Jwt::test_token();
+    let host = api_url.as_ref();
+
+    // Rotate the runner token to get a fresh one we can use
+    #[expect(deprecated)]
+    let mut cmd = Command::cargo_bin(super::seed_test::BENCHER_CMD)?;
+    cmd.args([
+        "runner",
+        "token",
+        super::seed_test::HOST_ARG,
+        host,
+        super::seed_test::TOKEN_ARG,
+        admin_token.as_ref(),
+        "test-runner",
+    ])
+    .current_dir(super::seed_test::CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "Failed to rotate runner token: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let runner_token: bencher_json::JsonRunnerToken = serde_json::from_slice(&output.stdout)?;
+
+    // Start the runner daemon as a background process
+    println!("Starting runner daemon...");
+    #[expect(deprecated)]
+    let mut runner_child = Command::cargo_bin("runner")?;
+    let mut runner_child = runner_child
+        .args([
+            "up",
+            super::seed_test::HOST_ARG,
+            host,
+            super::seed_test::TOKEN_ARG,
+            runner_token.token.as_ref(),
+            "--runner",
+            "test-runner",
+        ])
+        .spawn()?;
+
+    // Give the runner a moment to connect
+    thread::sleep(Duration::from_secs(5));
+
+    // Run the actual runner test
+    let result = runner::run_runner_test(api_url, &token);
+
+    // Always kill the runner daemon, even if the test failed
+    let _kill = runner_child.kill();
+    let _wait = runner_child.wait();
+
+    result?;
+    println!("=== Runner Smoke Test Passed ===");
+    Ok(())
 }

@@ -2237,3 +2237,57 @@ async fn manifest_put_invalid_json_body() {
         "Invalid JSON body should be rejected"
     );
 }
+
+// Manifest upload within 4 MiB server default succeeds
+#[tokio::test]
+async fn manifest_put_within_server_default() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("ManifestDefault User", "manifestdefault@example.com")
+        .await;
+    let org = server.create_org(&user, "ManifestDefault Org").await;
+    let project = server
+        .create_project(&user, &org, "ManifestDefault Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Upload config and layer blobs
+    let config_data = b"manifest default config";
+    let layer_data = b"manifest default layer";
+    let config_digest = compute_digest(config_data);
+    let layer_digest = compute_digest(layer_data);
+
+    let push_token = server.oci_pull_push_token(&user, &project);
+    server
+        .upload_blob(project_slug, &push_token, config_data)
+        .await;
+    server
+        .upload_blob(project_slug, &push_token, layer_data)
+        .await;
+
+    // Create and upload manifest (typical small size)
+    let manifest = create_test_manifest(&config_digest, &layer_digest);
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::CREATED,
+        "Manifest upload within 4 MiB server default should succeed, got {}",
+        resp.status()
+    );
+    assert!(resp.headers().contains_key("docker-content-digest"));
+}

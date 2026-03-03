@@ -1353,3 +1353,299 @@ async fn chunked_upload_size_not_written_on_reject() {
         "Upload size should still be 60 bytes (rejected data should not be written), got range: {range}"
     );
 }
+
+// =============================================================================
+// StreamingBody / Large Upload Tests
+// =============================================================================
+
+// Large chunked upload chunk exceeds old 1 MB default but succeeds
+#[tokio::test]
+async fn chunked_upload_large_chunk() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("LargeChunk User", "largechunk@example.com")
+        .await;
+    let org = server.create_org(&user, "LargeChunk Org").await;
+    let project = server
+        .create_project(&user, &org, "LargeChunk Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
+        .send()
+        .await
+        .expect("Start upload failed");
+    assert_eq!(start_resp.status(), StatusCode::ACCEPTED);
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header")
+        .to_owned();
+    let session_id = extract_session_id(&location).expect("Invalid location format");
+
+    // PATCH a 2 MiB chunk (exceeds old 1 MB default)
+    let chunk_data = vec![0xEE; 2 * 1024 * 1024];
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(chunk_data.clone())
+        .send()
+        .await
+        .expect("Chunk upload failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::ACCEPTED,
+        "Large chunk should be accepted with per-endpoint limit, got {}",
+        resp.status()
+    );
+
+    // Complete upload with digest
+    let digest = compute_digest(&chunk_data);
+    let complete_resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}?digest={}",
+            project_slug, session_id, digest
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .send()
+        .await
+        .expect("Complete upload failed");
+
+    assert_eq!(
+        complete_resp.status(),
+        StatusCode::CREATED,
+        "Upload completion should succeed"
+    );
+
+    // Verify blob exists via HEAD
+    let pull_token = server.oci_pull_token(&user, &project);
+    let head_resp = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
+        .send()
+        .await
+        .expect("HEAD request failed");
+
+    assert_eq!(head_resp.status(), StatusCode::OK);
+}
+
+// Large final chunk in upload complete succeeds
+#[tokio::test]
+async fn upload_complete_large_final_chunk() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("LargeFinal User", "largefinal@example.com")
+        .await;
+    let org = server.create_org(&user, "LargeFinal Org").await;
+    let project = server
+        .create_project(&user, &org, "LargeFinal Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
+        .send()
+        .await
+        .expect("Start upload failed");
+    assert_eq!(start_resp.status(), StatusCode::ACCEPTED);
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header")
+        .to_owned();
+    let session_id = extract_session_id(&location).expect("Invalid location format");
+
+    // PUT complete with a 2 MiB body + digest query param
+    let blob_data = vec![0xFF; 2 * 1024 * 1024];
+    let digest = compute_digest(&blob_data);
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}?digest={}",
+            project_slug, session_id, digest
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data)
+        .send()
+        .await
+        .expect("Complete upload failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::CREATED,
+        "Large final chunk should succeed with per-endpoint limit, got {}",
+        resp.status()
+    );
+}
+
+// Content-Range validation with streaming - correct range accepted, wrong offset rejected
+#[tokio::test]
+async fn chunked_upload_content_range_validated_with_streaming() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("RangeStream User", "rangestream@example.com")
+        .await;
+    let org = server.create_org(&user, "RangeStream Org").await;
+    let project = server
+        .create_project(&user, &org, "RangeStream Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
+        .send()
+        .await
+        .expect("Start upload failed");
+    assert_eq!(start_resp.status(), StatusCode::ACCEPTED);
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header")
+        .to_owned();
+    let session_id = extract_session_id(&location).expect("Invalid location format");
+
+    // PATCH first 2 MiB chunk with correct Content-Range
+    let chunk1 = vec![0xAA; 2 * 1024 * 1024];
+    let chunk1_len = chunk1.len();
+    let resp1 = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .header("Content-Range", format!("0-{}", chunk1_len - 1))
+        .body(chunk1)
+        .send()
+        .await
+        .expect("Chunk 1 failed");
+
+    assert_eq!(
+        resp1.status(),
+        StatusCode::ACCEPTED,
+        "First chunk with correct Content-Range should be accepted"
+    );
+
+    // PATCH second chunk with wrong start offset
+    let chunk2 = vec![0xBB; 1024];
+    let resp2 = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .header("Content-Range", format!("0-{}", 1023)) // wrong: starts at 0 instead of chunk1_len
+        .body(chunk2)
+        .send()
+        .await
+        .expect("Chunk 2 failed");
+
+    assert_eq!(
+        resp2.status(),
+        StatusCode::RANGE_NOT_SATISFIABLE,
+        "Wrong start offset should be rejected, got {}",
+        resp2.status()
+    );
+}
+
+// Content-Range end mismatch detected post-stream
+#[tokio::test]
+async fn chunked_upload_content_range_end_mismatch() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("EndMismatch User", "endmismatch@example.com")
+        .await;
+    let org = server.create_org(&user, "EndMismatch Org").await;
+    let project = server
+        .create_project(&user, &org, "EndMismatch Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // Start an upload
+    let start_resp = server
+        .client
+        .post(server.api_url(&format!("/v2/{}/blobs/uploads", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
+        .send()
+        .await
+        .expect("Start upload failed");
+    assert_eq!(start_resp.status(), StatusCode::ACCEPTED);
+    let location = start_resp
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header")
+        .to_owned();
+    let session_id = extract_session_id(&location).expect("Invalid location format");
+
+    // PATCH a chunk claiming more bytes than actually sent
+    // Header says 0-9999 (10000 bytes) but body is only 100 bytes
+    let chunk = vec![0xCC; 100];
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v2/{}/blobs/uploads/{}",
+            project_slug, session_id
+        )))
+        .header("Content-Type", "application/octet-stream")
+        .header("Content-Range", "0-9999")
+        .body(chunk)
+        .send()
+        .await
+        .expect("Chunk upload failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::RANGE_NOT_SATISFIABLE,
+        "Content-Range end mismatch should be rejected, got {}",
+        resp.status()
+    );
+}
