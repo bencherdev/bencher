@@ -61,6 +61,7 @@ jobs:
               - 'services/api/openapi.json'
             docker:
               - 'services/api/Dockerfile'
+              - 'services/cli/Dockerfile'
               - 'services/console/Dockerfile'
               - 'docker/**'
             runner:

@@ -1,0 +1,12 @@
+# Ignore all
+*
+
+# Except
+!.cargo/
+!Cargo.toml
+!Cargo.lock
+!lib/
+!plus/
+!services/api/openapi.json
+!services/cli/src/
+!services/cli/Cargo.toml

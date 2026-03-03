@@ -163,6 +163,7 @@ Rust is the single source of truth for types:
 
 ## Docker
 
-When adding a new crate, update both `Dockerfile`s:
+When adding a new crate, update all three `Dockerfile`s:
 - [`services/api/Dockerfile`](./services/api/Dockerfile)
+- [`services/cli/Dockerfile`](./services/cli/Dockerfile)
 - [`services/console/Dockerfile`](./services/console/Dockerfile)
