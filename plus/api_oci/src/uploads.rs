@@ -90,7 +90,8 @@ fn format_upload_range(size: u64) -> String {
 /// Stream request body chunks directly to OCI storage.
 ///
 /// Each network-level chunk is passed to `append_upload`, which stores it
-/// incrementally and enforces `max_body_size`. Returns the total bytes received.
+/// incrementally and enforces `max_body_size`. Returns the cumulative upload
+/// session size (not just the bytes received in this call).
 pub(crate) async fn stream_to_storage(
     body: StreamingBody,
     storage: &bencher_oci_storage::OciStorage,

@@ -9,7 +9,7 @@
 //! as the password, and receive a short-lived JWT for OCI operations.
 //!
 //! Authorization:
-//! - "pull" action requires server admin privileges
+//! - "pull" action requires server admin privileges (downgraded to push-only for non-admins when push is also requested)
 //! - "push" action requires Create permission on the project (for claimed orgs)
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
@@ -107,7 +107,7 @@ pub async fn auth_oci_token_get(
     }
 
     // 3. Parse scope to extract repository and actions
-    let (repository, actions) = if let Some(scope) = &query.scope {
+    let (repository, mut actions) = if let Some(scope) = &query.scope {
         parse_scope(scope)?
     } else {
         // No scope requested - token valid for base endpoint only
@@ -116,6 +116,8 @@ pub async fn auth_oci_token_get(
 
     // 4. Check admin status for pull requests
     // Only server admins can pull OCI images (to prevent abuse of the registry)
+    // Docker always requests "push,pull" scope when pushing, so for non-admin
+    // users we strip the pull action rather than rejecting the request entirely.
     if actions.contains(&OciAction::Pull) {
         let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, &email)
@@ -124,11 +126,17 @@ pub async fn auth_oci_token_get(
             .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
 
         if !auth_user.is_admin(&context.rbac) {
-            return Err(HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::FORBIDDEN,
-                oci_error_body(OCI_ERROR_DENIED, "Only server admins can pull OCI images"),
-            ));
+            if actions.contains(&OciAction::Push) {
+                // Non-admin pushing: downgrade to push-only token
+                actions.retain(|a| a != &OciAction::Pull);
+            } else {
+                // Non-admin pull-only: deny
+                return Err(HttpError::for_client_error(
+                    None,
+                    ClientErrorStatusCode::FORBIDDEN,
+                    oci_error_body(OCI_ERROR_DENIED, "Only server admins can pull OCI images"),
+                ));
+            }
         }
     }
 

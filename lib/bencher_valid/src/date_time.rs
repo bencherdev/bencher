@@ -203,3 +203,36 @@ mod db {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::DateTime;
+    use chrono::Duration;
+
+    #[test]
+    fn elapsed_secs_positive_duration() {
+        let start = DateTime::TEST;
+        let now = start + Duration::seconds(5);
+        assert!((start.elapsed_secs(now) - 5.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn elapsed_secs_zero_duration() {
+        let dt = DateTime::TEST;
+        assert!(dt.elapsed_secs(dt).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn elapsed_secs_negative_clamps_to_zero() {
+        let start = DateTime::TEST + Duration::seconds(5);
+        let now = DateTime::TEST;
+        assert!(start.elapsed_secs(now).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn elapsed_secs_millisecond_precision() {
+        let start = DateTime::TEST;
+        let now = start + Duration::milliseconds(1500);
+        assert!((start.elapsed_secs(now) - 1.5).abs() < f64::EPSILON);
+    }
+}

@@ -7,8 +7,8 @@ use std::{
 };
 
 use bencher_json::{
-    DEV_BENCHER_API_URL, JsonApiVersion, Jwt, LOCALHOST_BENCHER_API_URL, PROD_BENCHER_API_URL,
-    TEST_BENCHER_API_URL, Url,
+    BENCHER_API_PORT, DEV_BENCHER_API_URL, JsonApiVersion, Jwt, LOCALHOST_BENCHER_API_URL,
+    PROD_BENCHER_API_URL, TEST_BENCHER_API_URL, Url,
 };
 
 use crate::{
@@ -125,7 +125,7 @@ fn api_run() -> anyhow::Result<Child> {
         .current_dir("./services/api")
         .spawn()?;
 
-    while TcpStream::connect("localhost:61016").is_err() {
+    while TcpStream::connect(("localhost", BENCHER_API_PORT)).is_err() {
         if let Some(status) = child.try_wait()? {
             anyhow::bail!(
                 "API server process exited before it started listening. Exit status: {status}"
@@ -146,7 +146,7 @@ fn bencher_up() -> anyhow::Result<()> {
         .status()?;
     assert!(status.success(), "{status}");
 
-    while TcpStream::connect("localhost:61016").is_err() {
+    while TcpStream::connect(("localhost", BENCHER_API_PORT)).is_err() {
         thread::sleep(Duration::from_secs(1));
         println!("Waiting for API server to start...");
     }
@@ -316,10 +316,16 @@ fn run_runner_smoke_test(api_url: &Url) -> anyhow::Result<()> {
             "--runner",
             "test-runner",
         ])
+        .stdout(std::process::Stdio::piped())
         .spawn()?;
 
-    // Give the runner a moment to connect
-    thread::sleep(Duration::from_secs(5));
+    // Wait for the runner to be ready instead of sleeping a fixed duration
+    let reader_handle = wait_for_stdout_ready(
+        &mut runner_child,
+        "Polling for jobs",
+        "runner",
+        Duration::from_secs(30),
+    );
 
     // Run the actual runner test
     let result = runner::run_runner_test(api_url, &token);
@@ -327,8 +333,62 @@ fn run_runner_smoke_test(api_url: &Url) -> anyhow::Result<()> {
     // Always kill the runner daemon, even if the test failed
     let _kill = runner_child.kill();
     let _wait = runner_child.wait();
+    let _join = reader_handle.join();
 
     result?;
     println!("=== Runner Smoke Test Passed ===");
     Ok(())
+}
+
+/// Waits for a child process to print a line containing `sentinel` to stdout.
+///
+/// Spawns a reader thread that forwards all stdout lines to the test console
+/// (prefixed with `[{label}]`) and sets a flag when the sentinel is found.
+/// Returns the reader thread handle for cleanup after the test.
+///
+/// Panics if the sentinel is not found within `timeout`.
+#[cfg(feature = "plus")]
+fn wait_for_stdout_ready(
+    child: &mut Child,
+    sentinel: &str,
+    label: &str,
+    timeout: Duration,
+) -> thread::JoinHandle<()> {
+    use std::io::BufRead as _;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::time::Instant;
+
+    let stdout = child
+        .stdout
+        .take()
+        .expect("stdout should be piped for readiness detection");
+    let ready = Arc::new(AtomicBool::new(false));
+    let ready_clone = Arc::clone(&ready);
+    let sentinel = sentinel.to_owned();
+    let label = label.to_owned();
+    let thread_sentinel = sentinel.clone();
+    let thread_label = label.clone();
+
+    let handle = thread::spawn(move || {
+        let reader = std::io::BufReader::new(stdout);
+        for line in reader.lines() {
+            let Ok(line) = line else { break };
+            println!("[{thread_label}] {line}");
+            if line.contains(&thread_sentinel) {
+                ready_clone.store(true, Ordering::SeqCst);
+            }
+        }
+    });
+
+    let start = Instant::now();
+    while !ready.load(Ordering::SeqCst) {
+        assert!(
+            start.elapsed() < timeout,
+            "Timed out waiting for '{sentinel}' from [{label}]"
+        );
+        thread::sleep(Duration::from_millis(100));
+    }
+
+    handle
 }

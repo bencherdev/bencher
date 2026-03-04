@@ -21,6 +21,9 @@ use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
 #[cfg(target_os = "linux")]
 const ACK_TIMEOUT: Duration = Duration::from_secs(5);
 
+#[cfg(target_os = "linux")]
+const LOCALHOST: &str = "localhost";
+
 pub enum JobOutcome {
     Completed {
         exit_code: i32,
@@ -142,7 +145,9 @@ pub fn execute_job(
         .lock()
         .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
     ws_guard.send_message(&msg)?;
-    drop(ws_guard.read_message_timeout(ACK_TIMEOUT));
+    if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
+        eprintln!("Warning: did not receive server ACK: {e}");
+    }
     ws_guard.close();
 
     Ok(JobOutcome::Completed {
@@ -174,7 +179,9 @@ fn send_failed(
         .lock()
         .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
     ws_guard.send_message(&msg)?;
-    drop(ws_guard.read_message_timeout(ACK_TIMEOUT));
+    if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
+        eprintln!("Warning: did not receive server ACK: {e}");
+    }
     ws_guard.close();
     Ok(JobOutcome::Failed { error: error_msg })
 }
@@ -222,22 +229,15 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
     // The API's OCI registry routes use the project UUID/slug as the repository
     // name (e.g., /v2/{project}/manifests/{ref}), so no extra path segments needed.
     // ImageReference::parse() expects Docker-style references (host:port/repo@digest),
-    // not full URLs with schemes, so strip the scheme from the registry URL.
-    let registry_str = config.registry.as_ref().trim_end_matches('/');
-    let (registry_scheme, registry_authority) =
-        if let Some(authority) = registry_str.strip_prefix("http://") {
-            (
-                bencher_oci::RegistryScheme::Http,
-                authority.trim_end_matches('/'),
-            )
-        } else if let Some(authority) = registry_str.strip_prefix("https://") {
-            (
-                bencher_oci::RegistryScheme::Https,
-                authority.trim_end_matches('/'),
-            )
-        } else {
-            (bencher_oci::RegistryScheme::Https, registry_str)
-        };
+    // not full URLs with schemes, so use the parsed URL components directly.
+    let registry_scheme = match config.registry.scheme() {
+        "http" => bencher_oci::RegistryScheme::Http,
+        _ => bencher_oci::RegistryScheme::Https,
+    };
+    let registry_authority = match config.registry.port() {
+        Some(port) => format!("{}:{port}", config.registry.host_str().unwrap_or(LOCALHOST)),
+        None => config.registry.host_str().unwrap_or(LOCALHOST).to_owned(),
+    };
     let oci_image = format!("{registry_authority}/{}@{}", config.project, config.digest);
 
     let mut runner_config = crate::Config::new(oci_image)

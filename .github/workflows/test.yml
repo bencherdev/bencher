@@ -104,6 +104,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Configure Docker for insecure local registry
+        # Port must match bencher_json::BENCHER_API_PORT
         run: |
           echo '{"insecure-registries": ["localhost:61016"]}' | sudo tee /etc/docker/daemon.json
           sudo systemctl restart docker

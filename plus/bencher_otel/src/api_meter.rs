@@ -11,20 +11,28 @@ pub struct ApiMeter;
 impl ApiMeter {
     const NAME: &str = "bencher_api";
 
+    /// Increment a counter by 1.
+    ///
+    /// The `OTel` SDK deduplicates instruments by (name, description, unit),
+    /// so re-building on every call is cheap and returns the same instrument.
     pub fn increment(api_counter: ApiCounter) {
         let counter = METER
-            .u64_counter(api_counter.name().to_owned())
-            .with_description(api_counter.description().to_owned())
+            .u64_counter(api_counter.name())
+            .with_description(api_counter.description())
             .build();
         let attributes = api_counter.attributes();
         counter.add(1, &attributes);
     }
 
+    /// Record a histogram observation.
+    ///
+    /// The `OTel` SDK deduplicates instruments by (name, description, unit),
+    /// so re-building on every call is cheap and returns the same instrument.
     pub fn record(api_histogram: ApiHistogram, value: f64) {
         let histogram = METER
-            .f64_histogram(api_histogram.name().to_owned())
-            .with_description(api_histogram.description().to_owned())
-            .with_unit(api_histogram.unit().to_owned())
+            .f64_histogram(api_histogram.name())
+            .with_description(api_histogram.description())
+            .with_unit(api_histogram.unit())
             .build();
         let attributes = api_histogram.attributes();
         histogram.record(value, &attributes);
@@ -101,7 +109,7 @@ pub enum ApiCounter {
 }
 
 impl ApiCounter {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         match self {
             Self::ServerStartup => "server.startup",
 
@@ -171,7 +179,7 @@ impl ApiCounter {
         }
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         match self {
             Self::ServerStartup => "Counts the number of server startups",
 
@@ -482,7 +490,7 @@ pub enum ApiHistogram {
 }
 
 impl ApiHistogram {
-    fn name(&self) -> &str {
+    fn name(self) -> &'static str {
         match self {
             Self::JobQueueDuration(_) => "job.queue.duration",
             Self::JobCompleteDuration(_) => "job.complete.duration",
@@ -492,7 +500,7 @@ impl ApiHistogram {
         }
     }
 
-    fn description(&self) -> &str {
+    fn description(self) -> &'static str {
         match self {
             Self::JobQueueDuration(_) => {
                 "Time a job spent waiting in the queue before being claimed"
@@ -510,7 +518,7 @@ impl ApiHistogram {
         }
     }
 
-    fn unit(&self) -> &str {
+    fn unit(self) -> &'static str {
         match self {
             Self::JobQueueDuration(_)
             | Self::JobCompleteDuration(_)
