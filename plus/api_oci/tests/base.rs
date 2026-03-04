@@ -6,6 +6,9 @@ use bencher_api_tests::TestServer;
 use bencher_json::RunnerUuid;
 use http::StatusCode;
 
+const EXPECTED_REALM: &str = r#"realm="http://localhost:61016/v0/auth/oci/token""#;
+const EXPECTED_SERVICE: &str = r#"service="localhost""#;
+
 // GET /v2/ - OCI base endpoint (unauthenticated)
 #[tokio::test]
 async fn oci_base_unauthenticated() {
@@ -21,6 +24,14 @@ async fn oci_base_unauthenticated() {
     // Should return 401 with WWW-Authenticate header
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     assert!(resp.headers().contains_key("www-authenticate"));
+    let www_auth = resp
+        .headers()
+        .get("www-authenticate")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(www_auth.contains(EXPECTED_REALM));
+    assert!(www_auth.contains(EXPECTED_SERVICE));
 }
 
 // GET /v2/ - OCI base endpoint (authenticated)
@@ -75,6 +86,14 @@ async fn oci_base_runner_token_rejected() {
     // Runner tokens should be rejected at the base endpoint (user-only)
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     assert!(resp.headers().contains_key("www-authenticate"));
+    let www_auth = resp
+        .headers()
+        .get("www-authenticate")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(www_auth.contains(EXPECTED_REALM));
+    assert!(www_auth.contains(EXPECTED_SERVICE));
 }
 
 // OPTIONS /v2/ - CORS preflight

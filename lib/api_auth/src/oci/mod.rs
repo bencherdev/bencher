@@ -20,7 +20,7 @@ use bencher_json::{Email, Jwt, ProjectResourceId};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::ApiContext,
-    error::unauthorized_error,
+    error::issue_error,
     model::{
         project::QueryProject,
         user::{QueryUser, auth::AuthUser},
@@ -231,28 +231,18 @@ pub fn unauthorized_with_www_authenticate(
 ) -> HttpError {
     use std::fmt::Write as _;
 
-    // Build the realm URL from the request's scheme and host
-    // The token endpoint is at /v0/auth/oci/token
-    let scheme = if rqctx.request.uri().scheme_str() == Some("https") {
-        "https"
-    } else {
-        "http"
-    };
-    let Some(host) = rqctx
-        .request
-        .headers()
-        .get(http::header::HOST)
-        .and_then(|h| h.to_str().ok())
-        .filter(|h| is_valid_host(h))
-    else {
-        return unauthorized_error("Missing or invalid Host header");
-    };
-    let realm = format!("{scheme}://{host}/v0/auth/oci/token");
+    let context = rqctx.context();
+    let registry_url = context.registry_url();
 
-    // The service must match the registry host that Docker is talking to.
-    // Docker sends this same value as the `service` query parameter when requesting tokens.
-    // Strip the port to match Docker's behavior (e.g. "localhost" not "localhost:61016").
-    let service = host.split(':').next().unwrap_or(host);
+    // Use the configured registry URL for the service and realm
+    let Some(service) = registry_url.host_str() else {
+        return issue_error(
+            "Missing registry URL host",
+            "The configured registry_url has no host component",
+            "registry_url.host_str() returned None",
+        );
+    };
+    let realm = format!("{registry_url}v0/auth/oci/token");
 
     let mut www_auth = format!("Bearer realm=\"{realm}\",service=\"{service}\"");
     if let Some(scope) = scope {
@@ -272,14 +262,6 @@ pub fn unauthorized_with_www_authenticate(
     let _ = error.add_header(http::header::WWW_AUTHENTICATE, &www_auth);
 
     error
-}
-
-/// Validates that a host header value contains only safe characters
-fn is_valid_host(host: &str) -> bool {
-    !host.is_empty()
-        && host.chars().all(|c| {
-            c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == ':' || c == '[' || c == ']'
-        })
 }
 
 /// Extract email and API token from Basic auth header
@@ -429,27 +411,6 @@ mod tests {
     fn parse_scope_invalid_action() {
         let result = parse_scope("repository:myrepo:delete");
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn is_valid_host_valid() {
-        assert!(is_valid_host("localhost"));
-        assert!(is_valid_host("example.com"));
-        assert!(is_valid_host("sub.example.com"));
-        assert!(is_valid_host("localhost:8080"));
-        assert!(is_valid_host("[::1]:8080"));
-        assert!(is_valid_host("my-host.example.com"));
-    }
-
-    #[test]
-    fn is_valid_host_invalid() {
-        assert!(!is_valid_host(""));
-        // Header injection attempts
-        assert!(!is_valid_host("evil.com\r\nX-Injected: true"));
-        assert!(!is_valid_host("host\nheader"));
-        assert!(!is_valid_host("host header"));
-        assert!(!is_valid_host("host\"inject"));
-        assert!(!is_valid_host("host'inject"));
     }
 
     #[test]
