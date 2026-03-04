@@ -294,17 +294,15 @@ impl QueryReport {
         #[cfg(feature = "plus")]
         if is_job_run {
             // Job-based run: results will be processed in handle_completed()
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ReportCreate);
-            #[cfg(feature = "otel")]
-            {
-                let duration_secs = create_start.elapsed_secs(context.clock.now());
-                bencher_otel::ApiMeter::record(
-                    bencher_otel::ApiHistogram::ReportCreateDuration,
-                    duration_secs,
-                );
-            }
-            return query_report.into_json(log, public_conn!(context, public_user));
+            return query_report
+                .finish_create(
+                    log,
+                    context,
+                    public_user,
+                    #[cfg(feature = "otel")]
+                    create_start,
+                )
+                .await;
         }
 
         // Process and record the report results
@@ -324,10 +322,28 @@ impl QueryReport {
             )
             .await?;
 
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ReportCreate);
+        // If the report was processed successfully, then return the report with the results
+        query_report
+            .finish_create(
+                log,
+                context,
+                public_user,
+                #[cfg(feature = "otel")]
+                create_start,
+            )
+            .await
+    }
+
+    async fn finish_create(
+        self,
+        log: &Logger,
+        context: &ApiContext,
+        public_user: &PublicUser,
+        #[cfg(feature = "otel")] create_start: DateTime,
+    ) -> Result<JsonReport, HttpError> {
         #[cfg(feature = "otel")]
         {
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ReportCreate);
             let duration_secs = create_start.elapsed_secs(context.clock.now());
             bencher_otel::ApiMeter::record(
                 bencher_otel::ApiHistogram::ReportCreateDuration,
@@ -335,8 +351,7 @@ impl QueryReport {
             );
         }
 
-        // If the report was processed successfully, then return the report with the results
-        query_report.into_json(log, public_conn!(context, public_user))
+        self.into_json(log, public_conn!(context, public_user))
     }
 
     pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, HttpError> {
