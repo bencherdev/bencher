@@ -106,9 +106,12 @@ impl TestServer {
             data_store: None,
         };
 
+        let request_body_max_bytes = max_body_size.map_or(DEFAULT_MAX_BODY_SIZE, |s| {
+            usize::try_from(s).expect("max_body_size exceeds usize")
+        });
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
-            request_body_max_bytes: DEFAULT_MAX_BODY_SIZE,
+            request_body_max_bytes,
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
             rbac,
             messenger: Messenger::default(),
