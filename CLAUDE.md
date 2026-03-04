@@ -110,6 +110,7 @@ The clippy script will install the target automatically and warn if no cross-com
 - Use idiomatic, strong types instead of `String` and `serde_json::Value` where possible
 - Database model fields should use strong validated types (e.g., `ProjectId`, `ProjectUuid`, `ProjectName`, `DateTime`, `VersionNumber`) with Diesel `ToSql`/`FromSql` impls rather than raw primitives (`i32`, `i64`, `String`). All conversion happens inside the Diesel impls, not in the model layer.
 - Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
+- Prefer stream combinators (`try_fold`, `try_for_each`, `try_collect`, etc.) over manual `while let Some(chunk) = stream.next().await` loops when processing streams
 - All time-based tests should be deterministic and use time manipulation not real wall-clock time
 - Use `bencher_json::Clock::Custom` (behind the `test-clock` feature) to inject a fake clock in tests instead of calling `DateTime::now()` directly. `Clock` is available on `ApiContext`.
 - For unit tests without access to `ApiContext`/`Clock`, use `bencher_json::DateTime::TEST` (a fixed deterministic const). Enable `test-clock` in `bencher_json` dev-dependencies to access it.

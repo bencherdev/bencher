@@ -41,7 +41,7 @@ mod uploads;
 /// Maximum request body size for OCI blob upload endpoints (10 GiB).
 /// Per-request Dropshot limit; the total cumulative upload limit is enforced
 /// by `OciStorage::max_body_size()` at the storage layer.
-const OCI_REQUEST_BODY_MAX_BYTES: usize = 10 * 1024 * 1024 * 1024;
+const OCI_REQUEST_BODY_MAX_BYTES: usize = 10 << 30;
 
 use bencher_endpoint::Registrar;
 use bencher_schema::context::ApiContext;

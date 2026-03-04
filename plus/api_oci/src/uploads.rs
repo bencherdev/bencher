@@ -40,7 +40,7 @@ use bencher_schema::context::ApiContext;
 use dropshot::{
     Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, StreamingBody, endpoint,
 };
-use futures::StreamExt as _;
+use futures::TryStreamExt as _;
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -96,21 +96,19 @@ pub(crate) async fn stream_to_storage(
     body: StreamingBody,
     storage: &bencher_oci_storage::OciStorage,
     upload_id: &UploadId,
+    current_size: u64,
 ) -> Result<u64, HttpError> {
-    let stream = body.into_stream();
-    futures::pin_mut!(stream);
-    let mut new_size = 0u64;
-    while let Some(chunk) = stream.next().await {
-        let data = chunk?;
-        if data.is_empty() {
-            continue;
-        }
-        new_size = storage
-            .append_upload(upload_id, data)
-            .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
-    }
-    Ok(new_size)
+    body.into_stream()
+        .try_fold(current_size, |new_size, data| async move {
+            if data.is_empty() {
+                return Ok(new_size);
+            }
+            storage
+                .append_upload(upload_id, data)
+                .await
+                .map_err(|e| crate::error::into_http_error(OciError::from(e)))
+        })
+        .await
 }
 
 /// CORS preflight for upload session operations
@@ -312,7 +310,7 @@ pub async fn oci_upload_chunk(
     };
 
     // Stream body to storage (storage enforces max_body_size incrementally)
-    let new_size = stream_to_storage(body, storage, &upload_id).await?;
+    let new_size = stream_to_storage(body, storage, &upload_id, current_size).await?;
 
     // Post-stream validation: verify bytes received matches Content-Range expected length.
     // Note: Data has already been appended to the upload session at this point.
@@ -400,8 +398,12 @@ pub async fn oci_upload_complete(
 
     // Stream optional final data to storage and complete with digest verification.
     // On error, cancel the upload session to avoid orphaned state.
+    let current_size = storage
+        .get_upload_size(&upload_id)
+        .await
+        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
     let result = async {
-        stream_to_storage(body, storage, &upload_id).await?;
+        stream_to_storage(body, storage, &upload_id, current_size).await?;
         storage
             .complete_upload(&upload_id, &expected_digest)
             .await

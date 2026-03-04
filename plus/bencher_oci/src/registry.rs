@@ -70,7 +70,9 @@ pub struct RegistryClient {
 }
 
 impl RegistryClient {
-    /// Create a new registry client.
+    /// Create a new registry client without authentication.
+    ///
+    /// Requests to registries that require auth will fail with 401.
     pub fn new() -> Result<Self, OciError> {
         let config = ureq::Agent::config_builder()
             .user_agent("bencher-runner/1.0")

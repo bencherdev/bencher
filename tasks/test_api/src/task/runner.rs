@@ -14,8 +14,6 @@ const OCI_USERNAME: &str = "muriel.bagge@nowhere.com";
 #[derive(Debug)]
 pub struct RunnerTest {
     url: Url,
-    #[expect(dead_code)]
-    admin_token: Jwt,
     token: Jwt,
 }
 
@@ -23,14 +21,9 @@ impl TryFrom<TaskRunner> for RunnerTest {
     type Error = anyhow::Error;
 
     fn try_from(runner: TaskRunner) -> Result<Self, Self::Error> {
-        let TaskRunner {
-            url,
-            admin_token,
-            token,
-        } = runner;
+        let TaskRunner { url, token } = runner;
         Ok(Self {
             url: url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into()),
-            admin_token: admin_token.unwrap_or_else(Jwt::test_admin_token),
             token: token.unwrap_or_else(Jwt::test_token),
         })
     }

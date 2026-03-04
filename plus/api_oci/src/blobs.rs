@@ -434,7 +434,7 @@ pub async fn oci_upload_monolithic(
 
     // Stream body to storage (storage enforces max_body_size incrementally)
     let result = async {
-        crate::uploads::stream_to_storage(body, storage, &upload_id).await?;
+        crate::uploads::stream_to_storage(body, storage, &upload_id, 0).await?;
         storage
             .complete_upload(&upload_id, &expected_digest)
             .await

@@ -29,7 +29,7 @@ pub struct Config {
     /// JWT token for registry authentication.
     ///
     /// Required when pulling from authenticated registries.
-    /// This token is exchanged for a short-lived bearer token.
+    /// This short-lived runner OCI token is sent directly as a Bearer token.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token: Option<bencher_valid::Secret>,
 
