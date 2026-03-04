@@ -296,9 +296,35 @@ fn run_runner_smoke_test(api_url: &Url) -> anyhow::Result<()> {
     );
     let runner_token: bencher_json::JsonRunnerToken = serde_json::from_slice(&output.stdout)?;
 
-    // Build the runner binary so cargo_bin can find it
+    // Build bencher-init for the musl target so it can be bundled into the runner binary.
+    let workspace_root = std::env::current_dir()?;
+    let target_triple = musl_target_triple()?;
+
+    println!("Building bencher-init ({target_triple})...");
+    let build_status = Command::new("cargo")
+        .args(["build", "--target", target_triple, "-p", "bencher_init"])
+        .status()?;
+    anyhow::ensure!(build_status.success(), "Failed to build bencher-init");
+
+    let init_path = workspace_root
+        .join("target")
+        .join(target_triple)
+        .join("debug")
+        .join("bencher-init");
+    anyhow::ensure!(
+        init_path.exists(),
+        "bencher-init not found at {}",
+        init_path.display()
+    );
+
+    // Build the runner binary with BENCHER_INIT_PATH so the init binary gets bundled.
+    println!(
+        "Building runner (BENCHER_INIT_PATH={})...",
+        init_path.display()
+    );
     let build_status = Command::new("cargo")
         .args(["build", "--bin", "runner"])
+        .env("BENCHER_INIT_PATH", &init_path)
         .status()?;
     anyhow::ensure!(build_status.success(), "Failed to build runner binary");
 
@@ -338,6 +364,17 @@ fn run_runner_smoke_test(api_url: &Url) -> anyhow::Result<()> {
     result?;
     println!("=== Runner Smoke Test Passed ===");
     Ok(())
+}
+
+/// Map `std::env::consts::ARCH` to Rust target triples for musl builds.
+#[cfg(feature = "plus")]
+fn musl_target_triple() -> anyhow::Result<&'static str> {
+    use std::env::consts::ARCH;
+    match ARCH {
+        "x86_64" => Ok("x86_64-unknown-linux-musl"),
+        "aarch64" => Ok("aarch64-unknown-linux-musl"),
+        arch => anyhow::bail!("Unsupported architecture: {arch}"),
+    }
 }
 
 /// Waits for a child process to print a line containing `sentinel` to stdout.
