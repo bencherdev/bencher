@@ -11,12 +11,13 @@ use bencher_json::{
     PROD_BENCHER_API_URL, TEST_BENCHER_API_URL, Url,
 };
 
+#[cfg(feature = "plus")]
+use crate::task::runner;
 use crate::{
     API_VERSION,
     parser::{TaskExamples, TaskOci, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
     task::{
         oci::Oci,
-        runner,
         test::{examples::Examples, seed_test::SeedTest},
     },
 };
@@ -85,11 +86,23 @@ impl SmokeTest {
 
         match self.environment {
             Environment::Ci => {
-                test(&api_url, MockSetup::SelfHosted { examples: false })?;
+                test(
+                    &api_url,
+                    MockSetup::SelfHosted {
+                        examples: false,
+                        runner: true,
+                    },
+                )?;
                 kill_child(child)?;
             },
             Environment::Localhost => {
-                test(&api_url, MockSetup::SelfHosted { examples: true })?;
+                test(
+                    &api_url,
+                    MockSetup::SelfHosted {
+                        examples: true,
+                        runner: false,
+                    },
+                )?;
                 kill_child(child)?;
             },
             Environment::Docker => bencher_down()?,
@@ -194,7 +207,7 @@ fn test_api_version(api_url: &Url) -> anyhow::Result<()> {
 
 enum MockSetup {
     BencherCloud { admin_token: Jwt, token: Jwt },
-    SelfHosted { examples: bool },
+    SelfHosted { examples: bool, runner: bool },
 }
 
 fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
@@ -211,7 +224,7 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
 
             Ok(())
         },
-        MockSetup::SelfHosted { examples } => {
+        MockSetup::SelfHosted { examples, runner } => {
             let task = TaskSeedTest {
                 url: Some(api_url.clone()),
                 admin_token: None,
@@ -227,7 +240,11 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
 
             // Run runner smoke test (requires Docker + KVM for the runner daemon)
             #[cfg(feature = "plus")]
-            run_runner_smoke_test(api_url)?;
+            if runner {
+                run_runner_smoke_test(api_url)?;
+            }
+            #[cfg(not(feature = "plus"))]
+            let _ = runner;
 
             if examples {
                 let examples = Examples::try_from(TaskExamples {
