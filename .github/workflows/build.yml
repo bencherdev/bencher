@@ -199,28 +199,18 @@ jobs:
       - name: Set cache name
         id: cache-name
         run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
-      - name: Build CLI Docker Image
+      - name: Build & Push CLI Docker Image (multi-platform)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./services/cli/Dockerfile
-          tags: ${{ env.CLI_DOCKER_IMAGE }}
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:${{ github.sha }}
           build-args: |
             MOLD_VERSION=${{ inputs.mold-version }}
           cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
           cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }},mode=max
-          load: true
-          push: false
-      - name: Save CLI Docker Image
-        run: |
-          docker save ${{ env.CLI_DOCKER_IMAGE }} \
-          | gzip > ${{ env.CLI_DOCKER_IMAGE }}.tar.gz
-      - name: Upload CLI Docker Image Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.CLI_DOCKER_IMAGE }}.tar.gz
-          path: ./${{ env.CLI_DOCKER_IMAGE }}.tar.gz
-          if-no-files-found: error
+          push: true
 
   build_console_docker:
     name: Build Console Docker

@@ -1092,6 +1092,84 @@ RUN echo "no command set""#,
                 }
             },
         },
+        Scenario {
+            name: "bencher_cli_mock",
+            description: "Bencher CLI mock on distroless/cc-debian12",
+            // Uses the Bencher CLI image (distroless/cc-debian12 + glibc).
+            // The CLI has ENTRYPOINT ["/usr/bin/bencher"], so we add CMD ["mock"]
+            // to run `bencher mock` which outputs valid benchmark JSON.
+            // This tests that the OCI unpack preserves the dynamic linker,
+            // shared libraries, and ld.so.cache from multi-layer images.
+            dockerfile: r#"FROM ghcr.io/bencherdev/bencher:latest
+CMD ["mock"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "120"],
+            validate: |output| {
+                if output.exit_code == 127 {
+                    bail!(
+                        "Exit code 127 (command not found) — dynamic linker or shared libraries \
+                         likely missing from unpacked rootfs.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                // bencher mock should produce JSON with benchmark results
+                if output.stdout.contains("latency") || output.stdout.contains("bencher::mock") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected benchmark JSON from 'bencher mock' in output.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+            },
+        },
+        Scenario {
+            name: "distroless_glibc_image",
+            description: "Dynamically linked binary on distroless/cc-debian12",
+            // Builds a small dynamically-linked C program on distroless/cc-debian12.
+            // This tests that the OCI unpack preserves the dynamic linker,
+            // shared libraries, and ld.so.cache from multi-layer images.
+            // Builds from source so the binary always matches the host architecture.
+            dockerfile: r#"FROM debian:bookworm-slim AS builder
+RUN apt-get update && apt-get install -y gcc libc6-dev && rm -rf /var/lib/apt/lists/*
+RUN echo '#include <stdio.h>\nint main(){printf("distroless_glibc_ok\\n");return 0;}' > /tmp/hello.c \
+    && gcc -o /tmp/hello /tmp/hello.c
+
+FROM gcr.io/distroless/cc-debian12
+COPY --from=builder /tmp/hello /usr/bin/hello
+CMD ["/usr/bin/hello"]"#,
+            cancel_after_secs: None,
+            extra_args: &["--timeout", "120"],
+            validate: |output| {
+                if output.exit_code == 127 {
+                    bail!(
+                        "Exit code 127 (command not found) — dynamic linker or shared libraries \
+                         likely missing from unpacked rootfs.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                if output.exit_code != 0 {
+                    let combined = format!("{}{}", output.stdout, output.stderr);
+                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
+                }
+                if output.stdout.contains("distroless_glibc_ok") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'distroless_glibc_ok' in output.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+            },
+        },
         // =======================================================================
         // Race condition scenarios
         // =======================================================================

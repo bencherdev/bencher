@@ -67,11 +67,6 @@ jobs:
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
 
-      - name: Download CLI Docker Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.CLI_DOCKER_IMAGE }}.tar.gz
-
       - name: Download Console Docker Artifact
         uses: actions/download-artifact@v4
         with:
@@ -130,8 +125,6 @@ jobs:
       # Load Docker images
       - name: Load API Image
         run: docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
-      - name: Load CLI Image
-        run: docker load < ${{ env.CLI_DOCKER_IMAGE }}.tar.gz
       - name: Load Console Image
         run: docker load < ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
 
@@ -143,6 +136,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Push to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
       - name: Tag & Push API Image
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}
@@ -151,31 +151,6 @@ jobs:
           docker tag ${{ env.API_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${TAG}
           docker push ${GITHUB_IMAGE}:latest
           docker push ${GITHUB_IMAGE}:${TAG}
-
-      - name: Tag & Push CLI Image
-        run: |
-          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}
-          export TAG=${{ github.event.workflow_run.head_branch }}
-          docker tag ${{ env.CLI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
-          docker tag ${{ env.CLI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${TAG}
-          docker push ${GITHUB_IMAGE}:latest
-          docker push ${GITHUB_IMAGE}:${TAG}
-
-      - name: Tag & Push Console Image
-        run: |
-          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}
-          export TAG=${{ github.event.workflow_run.head_branch }}
-          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
-          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${TAG}
-          docker push ${GITHUB_IMAGE}:latest
-          docker push ${GITHUB_IMAGE}:${TAG}
-
-      # Push to Docker Hub
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Tag & Push API Image to Docker Hub
         run: |
@@ -186,14 +161,26 @@ jobs:
           docker push ${DOCKER_HUB_IMAGE}:latest
           docker push ${DOCKER_HUB_IMAGE}:${TAG}
 
-      - name: Tag & Push CLI Image to Docker Hub
+      - name: Retag CLI Image from build to GHCR + Docker Hub
         run: |
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}
           export DOCKER_HUB_IMAGE=${{ env.DOCKER_HUB_ORGANIZATION }}/${{ env.CLI_DOCKER_IMAGE }}
           export TAG=${{ github.event.workflow_run.head_branch }}
-          docker tag ${{ env.CLI_DOCKER_IMAGE }} ${DOCKER_HUB_IMAGE}:latest
-          docker tag ${{ env.CLI_DOCKER_IMAGE }} ${DOCKER_HUB_IMAGE}:${TAG}
-          docker push ${DOCKER_HUB_IMAGE}:latest
-          docker push ${DOCKER_HUB_IMAGE}:${TAG}
+          docker buildx imagetools create \
+            --tag ${GITHUB_IMAGE}:latest \
+            --tag ${GITHUB_IMAGE}:${TAG} \
+            --tag ${DOCKER_HUB_IMAGE}:latest \
+            --tag ${DOCKER_HUB_IMAGE}:${TAG} \
+            ${GITHUB_IMAGE}:${GITHUB_SHA}
+
+      - name: Tag & Push Console Image
+        run: |
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}
+          export TAG=${{ github.event.workflow_run.head_branch }}
+          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
+          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${TAG}
+          docker push ${GITHUB_IMAGE}:latest
+          docker push ${GITHUB_IMAGE}:${TAG}
 
       - name: Tag & Push Console Image to Docker Hub
         run: |
@@ -220,7 +207,6 @@ jobs:
           body_path: release-notes.md
           files: |
             ${{ env.API_DOCKER_IMAGE }}.tar.gz
-            ${{ env.CLI_DOCKER_IMAGE }}.tar.gz
             ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}

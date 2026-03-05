@@ -99,6 +99,8 @@ pub fn run_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
         "120",
         "--poll-interval",
         "2",
+        "--exec",
+        "mock",
     ])
     .current_dir(CLI_DIR);
     let assert = cmd.assert().success();
