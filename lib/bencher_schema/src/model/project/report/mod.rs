@@ -694,12 +694,17 @@ impl InsertReport {
 /// Upsert the metric count summary for a report.
 ///
 /// On first call for a `report_id`, inserts the count.
-/// On subsequent calls, atomically adds `metric_count` to the existing total.
+/// On subsequent calls, atomically adds `metric_count` to the existing total,
+/// clamped to `i32::MAX` to prevent silent overflow. Without the clamp, `SQLite`
+/// would store the sum as i64 but Diesel reads it back via `sqlite3_value_int()`
+/// which silently truncates to 32 bits.
 pub fn upsert_metric_count(
     conn: &mut DbConnection,
     report_id: ReportId,
     metric_count: i32,
 ) -> diesel::QueryResult<()> {
+    use crate::macros::sql::min;
+
     diesel::insert_into(schema::metric_count_by_report::table)
         .values((
             schema::metric_count_by_report::report_id.eq(report_id),
@@ -707,10 +712,10 @@ pub fn upsert_metric_count(
         ))
         .on_conflict(schema::metric_count_by_report::report_id)
         .do_update()
-        .set(
-            schema::metric_count_by_report::metric_count
-                .eq(schema::metric_count_by_report::metric_count + metric_count),
-        )
+        .set(schema::metric_count_by_report::metric_count.eq(min(
+            schema::metric_count_by_report::metric_count + metric_count,
+            i32::MAX,
+        )))
         .execute(conn)?;
     Ok(())
 }
@@ -873,5 +878,78 @@ mod tests {
             .first(&mut conn)
             .expect("Failed to get first report id");
         assert_ne!(rowid, first_id);
+    }
+
+    #[test]
+    fn upsert_metric_count_clamps_at_i32_max() {
+        use super::upsert_metric_count;
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+        let version_id = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            0,
+            None,
+        );
+        create_head_version(&mut conn, branch.head_id, version_id);
+
+        // Insert a report to get a valid ReportId
+        let report_id: ReportId = conn
+            .transaction(|conn| {
+                diesel::insert_into(schema::report::table)
+                    .values((
+                        schema::report::uuid.eq("00000000-0000-0000-0000-000000000050"),
+                        schema::report::project_id.eq(base.project_id),
+                        schema::report::head_id.eq(branch.head_id),
+                        schema::report::version_id.eq(version_id),
+                        schema::report::testbed_id.eq(testbed_id),
+                        schema::report::adapter.eq(0),
+                        schema::report::start_time.eq(DateTime::TEST),
+                        schema::report::end_time.eq(DateTime::TEST),
+                        schema::report::created.eq(DateTime::TEST),
+                    ))
+                    .execute(conn)?;
+
+                diesel::select(last_insert_rowid()).get_result::<ReportId>(conn)
+            })
+            .expect("Failed to insert report");
+
+        // First upsert: set metric_count to i32::MAX
+        upsert_metric_count(&mut conn, report_id, i32::MAX).expect("First upsert failed");
+
+        let count: i32 = schema::metric_count_by_report::table
+            .filter(schema::metric_count_by_report::report_id.eq(report_id))
+            .select(schema::metric_count_by_report::metric_count)
+            .first(&mut conn)
+            .expect("Failed to read metric count");
+        assert_eq!(count, i32::MAX);
+
+        // Second upsert: adding 1 would overflow without the clamp
+        upsert_metric_count(&mut conn, report_id, 1).expect("Second upsert failed");
+
+        let count: i32 = schema::metric_count_by_report::table
+            .filter(schema::metric_count_by_report::report_id.eq(report_id))
+            .select(schema::metric_count_by_report::metric_count)
+            .first(&mut conn)
+            .expect("Failed to read metric count after overflow attempt");
+        // Should be clamped at i32::MAX, not wrapped/truncated
+        assert_eq!(count, i32::MAX);
     }
 }
