@@ -45,8 +45,14 @@ macro_rules! typed_id {
             }
         }
 
-        #[cfg(test)]
         impl $name {
+            /// Convert a raw `i32` (e.g. from a direct DB query in integration tests)
+            /// into a typed ID. Returns `None` if the value is not a valid row ID.
+            pub fn try_from_raw(value: i32) -> Option<Self> {
+                if value > 0 { Some(Self(value)) } else { None }
+            }
+
+            #[cfg(test)]
             pub fn from_raw(value: i32) -> Self {
                 Self(value)
             }

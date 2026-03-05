@@ -1,10 +1,7 @@
 use bencher_json::system::server::{
     JsonCohort, JsonCohortAvg, JsonTopCohort, JsonTopProject, JsonTopProjects,
 };
-use diesel::{
-    AggregateExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
-};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::HttpError;
 
 use crate::{
@@ -76,10 +73,9 @@ fn get_metrics_by_report(
 ) -> Result<Vec<i64>, HttpError> {
     match state {
         ProjectState::All => {
-            let mut query = schema::metric::table
-                .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
-                .group_by(schema::report::id)
-                .select(diesel::dsl::count(schema::metric::id).aggregate_distinct())
+            let mut query = schema::metric_count_by_report::table
+                .inner_join(schema::report::table)
+                .select(schema::metric_count_by_report::metric_count)
                 .into_boxed();
 
             if let Some(since) = since {
@@ -87,18 +83,18 @@ fn get_metrics_by_report(
             }
 
             query
-                .load::<i64>(conn)
+                .load::<i32>(conn)
+                .map(|v| v.into_iter().map(i64::from).collect())
                 .map_err(resource_not_found_err!(Metric))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
-            let mut query = schema::metric::table
-                .inner_join(schema::report_benchmark::table.inner_join(
+            let mut query = schema::metric_count_by_report::table
+                .inner_join(
                     schema::report::table.inner_join(schema::project::table.inner_join(
                         schema::organization::table.left_join(schema::organization_role::table),
                     )),
-                ))
-                .group_by(schema::report::id)
-                .select(diesel::dsl::count(schema::metric::id).aggregate_distinct())
+                )
+                .select(schema::metric_count_by_report::metric_count)
                 .into_boxed();
 
             query = match state {
@@ -116,7 +112,8 @@ fn get_metrics_by_report(
             }
 
             query
-                .load::<i64>(conn)
+                .load::<i32>(conn)
+                .map(|v| v.into_iter().map(i64::from).collect())
                 .map_err(resource_not_found_err!(Metric))
         },
     }
@@ -131,21 +128,14 @@ fn get_top_projects(
     match state {
         ProjectState::All => {
             #[expect(clippy::cast_possible_wrap, reason = "const")]
-            let mut query = schema::metric::table
-                .inner_join(
-                    schema::report_benchmark::table
-                        .inner_join(schema::report::table.inner_join(schema::project::table)),
-                )
+            let mut query = schema::metric_count_by_report::table
+                .inner_join(schema::report::table.inner_join(schema::project::table))
                 .group_by(schema::project::id)
                 .select((
                     QueryProject::as_select(),
-                    diesel::dsl::count(schema::metric::id).aggregate_distinct(),
+                    diesel::dsl::sum(schema::metric_count_by_report::metric_count),
                 ))
-                .order(
-                    diesel::dsl::count(schema::metric::id)
-                        .aggregate_distinct()
-                        .desc(),
-                )
+                .order(diesel::dsl::sum(schema::metric_count_by_report::metric_count).desc())
                 .limit(TOP_PROJECTS as i64)
                 .into_boxed();
 
@@ -154,27 +144,28 @@ fn get_top_projects(
             }
 
             query
-                .load::<(QueryProject, i64)>(conn)
+                .load::<(QueryProject, Option<i64>)>(conn)
+                .map(|v| {
+                    v.into_iter()
+                        .map(|(project, sum)| (project, sum.unwrap_or(0)))
+                        .collect()
+                })
                 .map_err(resource_not_found_err!(Project))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
             #[expect(clippy::cast_possible_wrap, reason = "const")]
-            let mut query = schema::metric::table
-                .inner_join(schema::report_benchmark::table.inner_join(
+            let mut query = schema::metric_count_by_report::table
+                .inner_join(
                     schema::report::table.inner_join(schema::project::table.inner_join(
                         schema::organization::table.left_join(schema::organization_role::table),
                     )),
-                ))
+                )
                 .group_by(schema::project::id)
                 .select((
                     QueryProject::as_select(),
-                    diesel::dsl::count(schema::metric::id).aggregate_distinct(),
+                    diesel::dsl::sum(schema::metric_count_by_report::metric_count),
                 ))
-                .order(
-                    diesel::dsl::count(schema::metric::id)
-                        .aggregate_distinct()
-                        .desc(),
-                )
+                .order(diesel::dsl::sum(schema::metric_count_by_report::metric_count).desc())
                 .limit(TOP_PROJECTS as i64)
                 .into_boxed();
 
@@ -193,7 +184,12 @@ fn get_top_projects(
             }
 
             query
-                .load::<(QueryProject, i64)>(conn)
+                .load::<(QueryProject, Option<i64>)>(conn)
+                .map(|v| {
+                    v.into_iter()
+                        .map(|(project, sum)| (project, sum.unwrap_or(0)))
+                        .collect()
+                })
                 .map_err(resource_not_found_err!(Project))
         },
     }

@@ -246,6 +246,7 @@ async fn into_context(
 
     let database = Database {
         path: json_database.file,
+        busy_timeout,
         public_pool,
         auth_pool,
         connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
@@ -586,6 +587,7 @@ async fn spawn_stats(log: &Logger, context: &ApiContext) -> Result<(), ConfigTxE
         .spawn_stats(
             log.clone(),
             context.database.path.clone(),
+            context.database.busy_timeout,
             context.stats,
             context
                 .is_bencher_cloud

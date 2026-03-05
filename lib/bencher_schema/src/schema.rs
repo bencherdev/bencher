@@ -120,6 +120,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    metric_count_by_report (report_id) {
+        report_id -> Integer,
+        metric_count -> Integer,
+    }
+}
+
+diesel::table! {
     model (id) {
         id -> Integer,
         uuid -> Text,
@@ -410,6 +417,7 @@ diesel::joinable!(job -> spec (spec_id));
 diesel::joinable!(measure -> project (project_id));
 diesel::joinable!(metric -> measure (measure_id));
 diesel::joinable!(metric -> report_benchmark (report_benchmark_id));
+diesel::joinable!(metric_count_by_report -> report (report_id));
 diesel::joinable!(organization_role -> organization (organization_id));
 diesel::joinable!(organization_role -> user (user_id));
 diesel::joinable!(plot -> project (project_id));
@@ -454,6 +462,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     job,
     measure,
     metric,
+    metric_count_by_report,
     model,
     organization,
     organization_role,

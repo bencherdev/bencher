@@ -691,6 +691,30 @@ impl InsertReport {
     }
 }
 
+/// Upsert the metric count summary for a report.
+///
+/// On first call for a `report_id`, inserts the count.
+/// On subsequent calls, atomically adds `metric_count` to the existing total.
+pub fn upsert_metric_count(
+    conn: &mut DbConnection,
+    report_id: ReportId,
+    metric_count: i32,
+) -> diesel::QueryResult<()> {
+    diesel::insert_into(schema::metric_count_by_report::table)
+        .values((
+            schema::metric_count_by_report::report_id.eq(report_id),
+            schema::metric_count_by_report::metric_count.eq(metric_count),
+        ))
+        .on_conflict(schema::metric_count_by_report::report_id)
+        .do_update()
+        .set(
+            schema::metric_count_by_report::metric_count
+                .eq(schema::metric_count_by_report::metric_count + metric_count),
+        )
+        .execute(conn)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
