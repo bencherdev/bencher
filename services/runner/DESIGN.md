@@ -516,7 +516,8 @@ Job output (stdout, stderr, file contents) is stored in the **same OCI storage b
 ### Size Limits
 
 - **WebSocket ingress**: Bounded by `request_body_max_bytes` on the server context (applies to both `max_message_size` and `max_frame_size`)
-- **OCI blob uploads**: Bounded by `max_body_size` (default: 1 GiB, configurable via `plus.registry.max_body_size`)
+- **Server-wide default body size**: 4 MiB (`request_body_max_bytes`); applies to manifests and general API endpoints
+- **OCI blob uploads**: Per-endpoint Dropshot limit of 10 GiB; cumulative size bounded by `max_body_size` (default: 1 GiB, configurable via `plus.registry.max_body_size`) enforced at the storage layer. All blob upload endpoints use `StreamingBody` to avoid buffering the full request in memory.
 
 ## Runner Execution Flow
 

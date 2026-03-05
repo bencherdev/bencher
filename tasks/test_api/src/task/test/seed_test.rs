@@ -6,12 +6,12 @@ use pretty_assertions::assert_eq;
 
 use crate::parser::TaskSeedTest;
 
-const BENCHER_CMD: &str = "bencher";
-const HOST_ARG: &str = "--host";
-const TOKEN_ARG: &str = "--token";
+pub(crate) const BENCHER_CMD: &str = "bencher";
+pub(crate) const HOST_ARG: &str = "--host";
+pub(crate) const TOKEN_ARG: &str = "--token";
 const ORG_SLUG: &str = "muriel-bagge";
 const PROJECT_ARG: &str = "--project";
-const PROJECT_SLUG: &str = "the-computer";
+pub(crate) const PROJECT_SLUG: &str = "the-computer";
 const BRANCH_ARG: &str = "--branch";
 const BRANCH_SLUG: &str = "master";
 const HASH_ARG: &str = "--hash";
@@ -25,7 +25,7 @@ const NO_GIT_NAME: &str = "Project";
 const UNCLAIMED_SLUG: &str = "unclaimed";
 const CLAIMED_SLUG: &str = "claimed";
 
-const CLI_DIR: &str = "./services/cli";
+pub(crate) const CLI_DIR: &str = "./services/cli";
 
 // https://courage.fandom.com/wiki/Perfect#Plot
 const PERFECT_SEED: &str = "6";
@@ -1744,7 +1744,7 @@ impl SeedTest {
         let admin_token = self.admin_token.as_ref();
 
         // Create a spec
-        // cargo run -- spec create --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Test Spec" --architecture x86_64 --cpu 4 --memory 8589934592 --disk 107374182400
+        // cargo run -- spec create --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Test Spec" --architecture x86_64 --cpu 4 --memory 8589934592 --disk 1073741824
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "spec",
@@ -1762,7 +1762,7 @@ impl SeedTest {
             "--memory",
             "8589934592",
             "--disk",
-            "107374182400",
+            "1073741824",
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();

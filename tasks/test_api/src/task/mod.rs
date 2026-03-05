@@ -3,9 +3,11 @@ use clap::Parser as _;
 use crate::parser::{TaskSub, TaskTask};
 
 mod oci;
-mod test;
+pub(crate) mod runner;
+pub(crate) mod test;
 
 use oci::Oci;
+use runner::RunnerTest;
 use test::{examples::Examples, seed_test::SeedTest, smoke_test::SmokeTest};
 
 #[derive(Debug)]
@@ -19,6 +21,7 @@ pub enum Sub {
     Examples(Examples),
     SmokeTest(SmokeTest),
     Oci(Oci),
+    Runner(RunnerTest),
 }
 
 impl TryFrom<TaskTask> for Task {
@@ -40,6 +43,7 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::Examples(examples) => Self::Examples(examples.try_into()?),
             TaskSub::Smoke(smoke_test) => Self::SmokeTest(smoke_test.try_into()?),
             TaskSub::Oci(oci) => Self::Oci(oci.try_into()?),
+            TaskSub::Runner(runner) => Self::Runner(runner.try_into()?),
         })
     }
 }
@@ -61,6 +65,7 @@ impl Sub {
             Self::Examples(examples) => examples.exec(),
             Self::SmokeTest(smoke_test) => smoke_test.exec(),
             Self::Oci(oci) => oci.exec(),
+            Self::Runner(runner) => runner.exec(),
         }
     }
 }

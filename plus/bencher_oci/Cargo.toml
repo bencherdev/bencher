@@ -22,14 +22,12 @@ plus = [
 ]
 registry = [
     "plus",
-    "dep:base64",
     "dep:bencher_json",
     "dep:bencher_valid",
     "dep:ureq",
 ]
 
 [dependencies]
-base64 = { workspace = true, optional = true }
 bencher_json = { workspace = true, optional = true, features = ["plus", "server"] }
 bencher_valid = { workspace = true, optional = true, features = ["plus", "client"] }
 camino = { workspace = true, optional = true }
@@ -45,7 +43,7 @@ zstd = { workspace = true, optional = true }
 
 [dev-dependencies]
 pretty_assertions.workspace = true
-tempfile = { workspace = true }
+tempfile.workspace = true
 
 [lints]
 workspace = true

@@ -142,7 +142,9 @@ pub fn execute_job(
         .lock()
         .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
     ws_guard.send_message(&msg)?;
-    drop(ws_guard.read_message_timeout(ACK_TIMEOUT));
+    if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
+        eprintln!("Warning: did not receive server ACK: {e}");
+    }
     ws_guard.close();
 
     Ok(JobOutcome::Completed {
@@ -174,7 +176,9 @@ fn send_failed(
         .lock()
         .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
     ws_guard.send_message(&msg)?;
-    drop(ws_guard.read_message_timeout(ACK_TIMEOUT));
+    if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
+        eprintln!("Warning: did not receive server ACK: {e}");
+    }
     ws_guard.close();
     Ok(JobOutcome::Failed { error: error_msg })
 }
@@ -218,11 +222,24 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
     let spec = &job.spec;
     let config = &job.config;
 
-    // Build OCI image URL: registry/project/images@digest
+    // Build OCI image reference: host:port/project@digest
+    // The API's OCI registry routes use the project UUID/slug as the repository
+    // name (e.g., /v2/{project}/manifests/{ref}), so no extra path segments needed.
+    // ImageReference::parse() expects Docker-style references (host:port/repo@digest),
+    // not full URLs with schemes, so strip the scheme from the registry URL.
     let registry_str = config.registry.as_ref().trim_end_matches('/');
-    let oci_image = format!("{registry_str}/{}/images@{}", config.project, config.digest);
+    let (registry_scheme, registry_authority) =
+        if let Some(authority) = registry_str.strip_prefix("http://") {
+            (bencher_oci::RegistryScheme::Http, authority)
+        } else if let Some(authority) = registry_str.strip_prefix("https://") {
+            (bencher_oci::RegistryScheme::Https, authority)
+        } else {
+            (bencher_oci::RegistryScheme::Https, registry_str)
+        };
+    let oci_image = format!("{registry_authority}/{}@{}", config.project, config.digest);
 
     let mut runner_config = crate::Config::new(oci_image)
+        .with_registry_scheme(registry_scheme)
         .with_token(job.oci_token.to_string())
         .with_vcpus(spec.cpu)
         .with_memory(spec.memory)
@@ -430,7 +447,43 @@ mod tests {
         let result = build_config_from_job(&up_config, &job);
         assert_eq!(
             result.oci_image,
-            "https://registry.bencher.dev/11111111-2222-3333-4444-555555555555/images@sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+            "registry.bencher.dev/11111111-2222-3333-4444-555555555555@sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+        );
+    }
+
+    #[test]
+    fn builds_oci_image_url_http_scheme() {
+        let up_config = test_up_config();
+        let json = serde_json::json!({
+            "uuid": "550e8400-e29b-41d4-a716-446655440000",
+            "spec": {
+                "uuid": "00000000-0000-0000-0000-000000000001",
+                "name": "test-spec",
+                "slug": "test-spec",
+                "architecture": "x86_64",
+                "cpu": 1,
+                "memory": mib_to_bytes(512),
+                "disk": mib_to_bytes(1024),
+                "network": false,
+                "created": "2025-01-01T00:00:00Z",
+                "modified": "2025-01-01T00:00:00Z"
+            },
+            "config": {
+                "registry": "http://localhost:61016",
+                "project": "11111111-2222-3333-4444-555555555555",
+                "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+                "timeout": 300,
+            },
+            "oci_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
+            "timeout": 300,
+            "created": "2025-01-01T00:00:00Z"
+        });
+        let job: JsonClaimedJob =
+            serde_json::from_value(json).expect("Failed to construct test JsonClaimedJob");
+        let result = build_config_from_job(&up_config, &job);
+        assert_eq!(
+            result.oci_image,
+            "localhost:61016/11111111-2222-3333-4444-555555555555@sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
         );
     }
 

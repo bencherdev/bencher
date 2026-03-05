@@ -32,8 +32,8 @@ const DEFAULT_CONFIG_PATH: &str = "etc/bencher.json";
 const DEFAULT_CONFIG_PATH: &str = "/etc/bencher/bencher.json";
 const DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 
-// 1 megabyte or 1_048_576 bytes
-const DEFAULT_MAX_BODY_SIZE: usize = 1 << 20;
+// 4 mebibytes or 4_194_304 bytes (OCI distribution-spec recommended manifest limit)
+pub const DEFAULT_MAX_BODY_SIZE: usize = 1 << 22;
 #[cfg(debug_assertions)]
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
 #[cfg(not(debug_assertions))]

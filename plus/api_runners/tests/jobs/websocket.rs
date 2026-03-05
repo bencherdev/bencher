@@ -560,17 +560,19 @@ async fn channel_lifecycle_with_full_spec() {
 // Large Message Test
 // =============================================================================
 
-/// Send a message that exceeds the server's `request_body_max_bytes` (1 MB).
-/// The server should close the connection gracefully.
+/// Send a message that exceeds the server's WebSocket `max_message_size`.
+/// Uses a server with a 1 MiB body limit so the 2 MiB payload is rejected
+/// at the protocol level and the connection is closed immediately.
 #[tokio::test]
 #[expect(clippy::panic, clippy::match_wild_err_arm)]
 async fn channel_large_message() {
-    let server = TestServer::new().await;
+    // 1 MiB body limit so the WebSocket max_message_size < our 2 MiB payload
+    let server = TestServer::new_with_limits(30, 1024 * 1024).await;
     let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "largemsg").await;
 
     let request = ws_request(&server, runner_uuid, &runner_token, job_uuid);
 
-    // Use a custom config that allows 3 MB client-side
+    // Use a custom config that allows 3 MiB client-side
     let mut config = WebSocketConfig::default();
     config.max_message_size = Some(3 * 1024 * 1024);
     config.max_frame_size = Some(3 * 1024 * 1024);
@@ -579,7 +581,7 @@ async fn channel_large_message() {
         .await
         .expect("Failed to connect WebSocket");
 
-    // Build a 2 MB text payload (exceeds the server's 1 MB limit)
+    // Build a 2 MiB text payload (exceeds the server's 1 MiB limit)
     let payload = "x".repeat(2 * 1024 * 1024);
     let result = ws.send(Message::Text(payload.into())).await;
 

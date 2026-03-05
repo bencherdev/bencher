@@ -10,6 +10,7 @@ use oci_spec::image::{
 use serde::{Deserialize, Serialize};
 
 use crate::error::OciError;
+use crate::layer::LayerCompression;
 use crate::oci_arch;
 
 /// OCI image layout file content.
@@ -318,21 +319,24 @@ impl OciImage {
     }
 }
 
+/// Docker layer media type (gzip compressed).
+const DOCKER_LAYER_GZIP: &str = "application/vnd.docker.image.rootfs.diff.tar.gzip";
+/// Docker layer media type (uncompressed).
+const DOCKER_LAYER_TAR: &str = "application/vnd.docker.image.rootfs.diff.tar";
+
 /// Detect the media type of a layer.
 #[expect(clippy::wildcard_enum_match_arm)]
-pub fn detect_layer_media_type(
-    media_type: &MediaType,
-) -> Result<super::LayerCompression, OciError> {
+pub fn detect_layer_media_type(media_type: &MediaType) -> Result<LayerCompression, OciError> {
     match media_type {
         MediaType::ImageLayerGzip | MediaType::ImageLayerNonDistributableGzip => {
-            Ok(super::LayerCompression::Gzip)
+            Ok(LayerCompression::Gzip)
         },
         MediaType::ImageLayerZstd | MediaType::ImageLayerNonDistributableZstd => {
-            Ok(super::LayerCompression::Zstd)
+            Ok(LayerCompression::Zstd)
         },
-        MediaType::ImageLayer | MediaType::ImageLayerNonDistributable => {
-            Ok(super::LayerCompression::None)
-        },
+        MediaType::ImageLayer | MediaType::ImageLayerNonDistributable => Ok(LayerCompression::None),
+        MediaType::Other(s) if s == DOCKER_LAYER_GZIP => Ok(LayerCompression::Gzip),
+        MediaType::Other(s) if s == DOCKER_LAYER_TAR => Ok(LayerCompression::None),
         other => Err(OciError::UnsupportedMediaType(format!("{other:?}"))),
     }
 }
@@ -550,5 +554,25 @@ mod tests {
             manifest.manifest.config().digest(),
             first_manifest.config().digest()
         );
+    }
+
+    #[test]
+    fn detect_layer_docker_gzip() {
+        let media_type = MediaType::Other(DOCKER_LAYER_GZIP.to_owned());
+        let compression = detect_layer_media_type(&media_type).unwrap();
+        assert!(matches!(compression, LayerCompression::Gzip));
+    }
+
+    #[test]
+    fn detect_layer_docker_tar() {
+        let media_type = MediaType::Other(DOCKER_LAYER_TAR.to_owned());
+        let compression = detect_layer_media_type(&media_type).unwrap();
+        assert!(matches!(compression, LayerCompression::None));
+    }
+
+    #[test]
+    fn detect_layer_unknown_rejected() {
+        let media_type = MediaType::Other("application/vnd.unknown.layer".to_owned());
+        assert!(detect_layer_media_type(&media_type).is_err());
     }
 }

@@ -108,6 +108,17 @@ impl DateTime {
         self.0.timestamp()
     }
 
+    pub fn timestamp_millis(&self) -> i64 {
+        self.0.timestamp_millis()
+    }
+
+    /// Compute wall-clock duration in fractional seconds from `self` to `now`.
+    /// Uses millisecond precision and clamps to zero.
+    #[expect(clippy::cast_precision_loss)]
+    pub fn elapsed_secs(self, now: Self) -> f64 {
+        ((now.timestamp_millis() - self.timestamp_millis()) as f64 / 1000.0).max(0.0)
+    }
+
     pub fn into_inner(self) -> chrono::DateTime<Utc> {
         self.0
     }
@@ -190,5 +201,38 @@ mod db {
         fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
             i64::from_sql(bytes)?.try_into().map_err(Into::into)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DateTime;
+    use chrono::Duration;
+
+    #[test]
+    fn elapsed_secs_positive_duration() {
+        let start = DateTime::TEST;
+        let now = start + Duration::seconds(5);
+        assert!((start.elapsed_secs(now) - 5.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn elapsed_secs_zero_duration() {
+        let dt = DateTime::TEST;
+        assert!(dt.elapsed_secs(dt).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn elapsed_secs_negative_clamps_to_zero() {
+        let start = DateTime::TEST + Duration::seconds(5);
+        let now = DateTime::TEST;
+        assert!(start.elapsed_secs(now).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn elapsed_secs_millisecond_precision() {
+        let start = DateTime::TEST;
+        let now = start + Duration::milliseconds(1500);
+        assert!((start.elapsed_secs(now) - 1.5).abs() < f64::EPSILON);
     }
 }

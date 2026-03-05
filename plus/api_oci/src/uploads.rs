@@ -38,8 +38,9 @@ use bencher_json::ProjectResourceId;
 use bencher_oci_storage::{Digest, OciError, UploadId};
 use bencher_schema::context::ApiContext;
 use dropshot::{
-    Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, UntypedBody, endpoint,
+    Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, StreamingBody, endpoint,
 };
+use futures::TryStreamExt as _;
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -84,6 +85,30 @@ fn format_upload_range(size: u64) -> String {
     } else {
         "0-0".to_owned()
     }
+}
+
+/// Stream request body chunks directly to OCI storage.
+///
+/// Each network-level chunk is passed to `append_upload`, which stores it
+/// incrementally and enforces `max_body_size`. Returns the cumulative upload
+/// session size (not just the bytes received in this call).
+pub(crate) async fn stream_to_storage(
+    body: StreamingBody,
+    storage: &bencher_oci_storage::OciStorage,
+    upload_id: &UploadId,
+    current_size: u64,
+) -> Result<u64, HttpError> {
+    body.into_stream()
+        .try_fold(current_size, |new_size, data| async move {
+            if data.is_empty() {
+                return Ok(new_size);
+            }
+            storage
+                .append_upload(upload_id, data)
+                .await
+                .map_err(|e| crate::error::into_http_error(OciError::from(e)))
+        })
+        .await
 }
 
 /// CORS preflight for upload session operations
@@ -181,11 +206,12 @@ pub async fn oci_upload_status(
     method = PATCH,
     path = "/v2/{name}/blobs/{ref}/{session_id}",
     tags = ["oci"],
+    request_body_max_bytes = crate::OCI_REQUEST_BODY_MAX_BYTES,
 }]
 pub async fn oci_upload_chunk(
     rqctx: RequestContext<ApiContext>,
     path: Path<UploadSessionPath>,
-    body: UntypedBody,
+    body: StreamingBody,
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
     let path = path.into_inner();
@@ -199,7 +225,6 @@ pub async fn oci_upload_chunk(
     apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
 
     let repository_name = path.name.to_string();
-    let data = body.as_bytes();
 
     // Resolve project UUID for stable storage paths
     let project_uuid = resolve_project_uuid(context, &path.name).await?;
@@ -222,20 +247,12 @@ pub async fn oci_upload_chunk(
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
-    // Enforce max body size on cumulative upload
-    let max = storage.max_body_size();
-    if current_size + data.len() as u64 > max {
-        return Err(crate::error::payload_too_large(
-            current_size + data.len() as u64,
-            max,
-        ));
-    }
-
-    // Validate Content-Range header if present
+    // Parse Content-Range header upfront (before streaming) if present
     // Content-Range format can be:
     // - Standard HTTP: "bytes start-end/total" or "bytes start-end/*"
     // - OCI variant: "start-end" (just the range numbers)
-    if let Some(content_range) = rqctx.request.headers().get(http::header::CONTENT_RANGE)
+    let expected_len = if let Some(content_range) =
+        rqctx.request.headers().get(http::header::CONTENT_RANGE)
         && let Ok(range_str) = content_range.to_str()
     {
         // Parse the range, handling both formats
@@ -256,21 +273,13 @@ pub async fn oci_upload_chunk(
             // Validate start offset matches current upload size
             let start_mismatch = start_ok.is_some_and(|start| start != current_size);
 
-            // Validate end value is consistent with data length:
-            // end - start + 1 should equal the body length
-            let end_mismatch = match (start_ok, end_ok) {
-                (Some(start), Some(end)) => {
-                    if end < start {
-                        true
-                    } else {
-                        let expected_len = end - start + 1;
-                        expected_len != data.len() as u64
-                    }
-                },
+            // Check for inverted range (end < start)
+            let inverted_range = match (start_ok, end_ok) {
+                (Some(start), Some(end)) => end < start,
                 _ => false,
             };
 
-            if partial_parse || neither_parsed || start_mismatch || end_mismatch {
+            if partial_parse || neither_parsed || start_mismatch || inverted_range {
                 // Return 416 with Location and Range headers per OCI spec
                 let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
                 let response = oci_cors_headers(
@@ -287,15 +296,45 @@ pub async fn oci_upload_chunk(
                 })?;
                 return Ok(response);
             }
+
+            // Compute expected length for post-stream validation
+            match (start_ok, end_ok) {
+                (Some(start), Some(end)) => Some(end - start + 1),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    // Stream body to storage (storage enforces max_body_size incrementally)
+    let new_size = stream_to_storage(body, storage, &upload_id, current_size).await?;
+
+    // Post-stream validation: verify bytes received matches Content-Range expected length.
+    // Note: Data has already been appended to the upload session at this point.
+    // This is intentional — the Range header in the 416 response reflects the
+    // actual upload state, allowing the client to resume from the correct offset.
+    // This matches spec-compliant registries (Zot, olareg) per OCI distribution-spec.
+    if let Some(expected) = expected_len {
+        let bytes_received = new_size - current_size;
+        if bytes_received != expected {
+            // Data is in the upload session but length doesn't match Content-Range
+            let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
+            let response = oci_cors_headers(
+                Response::builder()
+                    .status(http::StatusCode::RANGE_NOT_SATISFIABLE)
+                    .header(http::header::LOCATION, location)
+                    .header(http::header::RANGE, format_upload_range(new_size))
+                    .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
+                &[http::Method::PATCH],
+            )
+            .body(Body::empty())
+            .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+            return Ok(response);
         }
     }
-
-    // Append data to upload
-    // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
-    let new_size = storage
-        .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
-        .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
     // Build 202 Accepted response
     let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
@@ -319,12 +358,13 @@ pub async fn oci_upload_chunk(
     method = PUT,
     path = "/v2/{name}/blobs/{ref}/{session_id}",
     tags = ["oci"],
+    request_body_max_bytes = crate::OCI_REQUEST_BODY_MAX_BYTES,
 }]
 pub async fn oci_upload_complete(
     rqctx: RequestContext<ApiContext>,
     path: Path<UploadSessionPath>,
     query: Query<UploadCompleteQuery>,
-    body: UntypedBody,
+    body: StreamingBody,
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
     let path = path.into_inner();
@@ -339,7 +379,6 @@ pub async fn oci_upload_complete(
 
     let query = query.into_inner();
     let repository_name = path.name.to_string();
-    let data = body.as_bytes();
 
     // Resolve project UUID for stable storage paths
     let project_uuid = resolve_project_uuid(context, &path.name).await?;
@@ -357,31 +396,31 @@ pub async fn oci_upload_complete(
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
 
-    // If there's data in the body, check size limit and append
-    // Copy is unavoidable: Dropshot's UntypedBody only provides as_bytes() -> &[u8]
-    if !data.is_empty() {
-        let current_size = storage
-            .get_upload_size(&upload_id)
-            .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
-        let max = storage.max_body_size();
-        if current_size + data.len() as u64 > max {
-            return Err(crate::error::payload_too_large(
-                current_size + data.len() as u64,
-                max,
-            ));
-        }
-        storage
-            .append_upload(&upload_id, bytes::Bytes::copy_from_slice(data))
-            .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
-    }
-
-    // Complete the upload with digest verification
-    let actual_digest = storage
-        .complete_upload(&upload_id, &expected_digest)
+    // Stream optional final data to storage and complete with digest verification.
+    // On error, cancel the upload session to avoid orphaned state.
+    let current_size = storage
+        .get_upload_size(&upload_id)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+    let result = async {
+        stream_to_storage(body, storage, &upload_id, current_size).await?;
+        storage
+            .complete_upload(&upload_id, &expected_digest)
+            .await
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))
+    }
+    .await;
+
+    let actual_digest = match result {
+        Ok(digest) => digest,
+        Err(e) => {
+            // Best-effort cleanup of the orphaned upload session
+            if let Err(cancel_err) = storage.cancel_upload(&upload_id).await {
+                slog::info!(rqctx.log, "Failed to cancel upload session on error"; "upload_id" => %upload_id, "error" => %cancel_err);
+            }
+            return Err(e);
+        },
+    };
 
     // Record metric
     #[cfg(feature = "otel")]

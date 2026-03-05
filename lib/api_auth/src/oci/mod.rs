@@ -9,7 +9,8 @@
 //! as the password, and receive a short-lived JWT for OCI operations.
 //!
 //! Authorization:
-//! - "pull" action requires server admin privileges
+//! - "pull" action alone requires server admin privileges
+//! - "push,pull" keeps both actions since the token is repository-scoped (Docker's push protocol requires pull for HEAD blob checks)
 //! - "push" action requires Create permission on the project (for claimed orgs)
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
@@ -19,6 +20,7 @@ use bencher_json::{Email, Jwt, ProjectResourceId};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::ApiContext,
+    error::issue_error,
     model::{
         project::QueryProject,
         user::{QueryUser, auth::AuthUser},
@@ -114,9 +116,12 @@ pub async fn auth_oci_token_get(
         (None, vec![])
     };
 
-    // 4. Check admin status for pull requests
-    // Only server admins can pull OCI images (to prevent abuse of the registry)
-    if actions.contains(&OciAction::Pull) {
+    // 4. Check admin status for pull-only requests
+    // Only server admins can pull OCI images standalone (to prevent abuse of the registry).
+    // When push is also requested, we keep pull because Docker's push protocol
+    // requires pull access (HEAD blob checks) for the same repository.
+    // The token is already repository-scoped, so pull is constrained to that single repo.
+    if actions.contains(&OciAction::Pull) && !actions.contains(&OciAction::Push) {
         let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, &email)
             .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
@@ -227,27 +232,17 @@ pub fn unauthorized_with_www_authenticate(
     use std::fmt::Write as _;
 
     let context = rqctx.context();
+    let registry_url = context.registry_url();
 
-    // Build the realm URL from the request's scheme and host
-    // The token endpoint is at /v0/auth/oci/token
-    let scheme = if rqctx.request.uri().scheme_str() == Some("https") {
-        "https"
-    } else {
-        "http"
+    // Use the configured registry URL for the service and realm
+    let Some(service) = registry_url.host_str() else {
+        return issue_error(
+            "Missing registry URL host",
+            "The configured registry_url has no host component",
+            "registry_url.host_str() returned None",
+        );
     };
-    let host = rqctx
-        .request
-        .headers()
-        .get(http::header::HOST)
-        .and_then(|h| h.to_str().ok())
-        .filter(|h| is_valid_host(h))
-        .unwrap_or("localhost");
-    let realm = format!("{scheme}://{host}/v0/auth/oci/token");
-
-    let service = context
-        .console_url
-        .host_str()
-        .unwrap_or("registry.bencher.dev");
+    let realm = format!("{registry_url}v0/auth/oci/token");
 
     let mut www_auth = format!("Bearer realm=\"{realm}\",service=\"{service}\"");
     if let Some(scope) = scope {
@@ -267,14 +262,6 @@ pub fn unauthorized_with_www_authenticate(
     let _ = error.add_header(http::header::WWW_AUTHENTICATE, &www_auth);
 
     error
-}
-
-/// Validates that a host header value contains only safe characters
-fn is_valid_host(host: &str) -> bool {
-    !host.is_empty()
-        && host.chars().all(|c| {
-            c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == ':' || c == '[' || c == ']'
-        })
 }
 
 /// Extract email and API token from Basic auth header
@@ -424,27 +411,6 @@ mod tests {
     fn parse_scope_invalid_action() {
         let result = parse_scope("repository:myrepo:delete");
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn is_valid_host_valid() {
-        assert!(is_valid_host("localhost"));
-        assert!(is_valid_host("example.com"));
-        assert!(is_valid_host("sub.example.com"));
-        assert!(is_valid_host("localhost:8080"));
-        assert!(is_valid_host("[::1]:8080"));
-        assert!(is_valid_host("my-host.example.com"));
-    }
-
-    #[test]
-    fn is_valid_host_invalid() {
-        assert!(!is_valid_host(""));
-        // Header injection attempts
-        assert!(!is_valid_host("evil.com\r\nX-Injected: true"));
-        assert!(!is_valid_host("host\nheader"));
-        assert!(!is_valid_host("host header"));
-        assert!(!is_valid_host("host\"inject"));
-        assert!(!is_valid_host("host'inject"));
     }
 
     #[test]

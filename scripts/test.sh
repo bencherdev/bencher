@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [ "${1:-}" != "--linux-only" ]; then
-    RUST_BACKTRACE=1 cargo nextest run --all-features --no-capture --profile ci
+    RUST_BACKTRACE=1 cargo nextest run --all-features --failure-output immediate-final --profile ci
     RUST_BACKTRACE=1 cargo test --doc --all-features
 fi
 

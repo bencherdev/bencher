@@ -94,6 +94,20 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ inputs.go-version }}
+      - name: Install musl toolchain (for runner daemon)
+        run: |
+          sudo apt-get update && sudo apt-get install -y musl-tools
+          rustup target add x86_64-unknown-linux-musl
+      - name: Enable KVM (for runner daemon)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Configure Docker for insecure local registry
+        # Port must match bencher_json::BENCHER_API_PORT
+        run: |
+          echo '{"insecure-registries": ["localhost:61016"]}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker
       - name: Run Smoke Test
         env:
           RUST_BACKTRACE: full

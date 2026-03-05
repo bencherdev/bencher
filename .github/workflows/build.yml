@@ -30,7 +30,6 @@ env:
   CARGO_TERM_COLOR: always
   GITHUB_REGISTRY: ghcr.io
   API_DOCKER_IMAGE: bencher-api
-  CLI_DOCKER_IMAGE: bencher
   CONSOLE_DOCKER_IMAGE: bencher-console
   # Use head_ref for PRs (avoids `/merge` suffix), otherwise use ref_name
   CACHE_NAME: ${{ github.head_ref || github.ref_name }}
@@ -180,48 +179,6 @@ jobs:
           path: ./${{ env.API_DOCKER_IMAGE }}.tar.gz
           if-no-files-found: error
 
-  build_cli_docker:
-    name: Build CLI Docker
-    runs-on: ubuntu-22.04
-    if: ${{ inputs.build-docker }}
-    steps:
-      - uses: actions/checkout@v6
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.GITHUB_REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set cache name
-        id: cache-name
-        run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
-      - name: Build CLI Docker Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./services/cli/Dockerfile
-          tags: ${{ env.CLI_DOCKER_IMAGE }}
-          build-args: |
-            MOLD_VERSION=${{ inputs.mold-version }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }},mode=max
-          load: true
-          push: false
-      - name: Save CLI Docker Image
-        run: |
-          docker save ${{ env.CLI_DOCKER_IMAGE }} \
-          | gzip > ${{ env.CLI_DOCKER_IMAGE }}.tar.gz
-      - name: Upload CLI Docker Image Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.CLI_DOCKER_IMAGE }}.tar.gz
-          path: ./${{ env.CLI_DOCKER_IMAGE }}.tar.gz
-          if-no-files-found: error
-
   build_console_docker:
     name: Build Console Docker
     runs-on: ubuntu-22.04
@@ -263,7 +220,7 @@ jobs:
           if-no-files-found: error
 
   build_bencher_nix:
-    name: Build Bencher Nix Package
+    name: Build `bencher` Nix Package
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
@@ -275,7 +232,7 @@ jobs:
         run: nix build .#bencher
 
   build_api_nix:
-    name: Build Api Nix Package
+    name: Build `api` Nix Package
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6

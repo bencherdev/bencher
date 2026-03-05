@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.91.1-bookworm@sha256:8fed34f697cc63b2c9bb92233b4c078667786834d94dd51880cd0184285eefcf AS builder
+FROM rust:1.91.1-bookworm AS builder
 
 RUN apt-get update \
     && apt-get install -y \
@@ -91,7 +91,7 @@ COPY services/cli/Cargo.toml Cargo.toml
 RUN cargo build --release -p bencher_cli
 
 # https://github.com/GoogleContainerTools/distroless/blob/main/cc/README.md
-FROM gcr.io/distroless/cc-debian12@sha256:0c8eac8ea42a167255d03c3ba6dfad2989c15427ed93d16c53ef9706ea4691df
+FROM gcr.io/distroless/cc-debian12
 
 COPY --from=builder /usr/src/bencher/target/release/bencher /usr/bin/bencher
 

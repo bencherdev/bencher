@@ -10241,7 +10241,7 @@
           "oci"
         ],
         "summary": "Monolithic upload (PUT to /v2/{name}/blobs/uploads?digest=...)",
-        "description": "Uploads a complete blob in a single request. This is convenient for small blobs but has memory limitations: Dropshot's `UntypedBody` buffers the entire request into memory. For large blobs, use the chunked upload flow instead (see `uploads` module).\n\n# Memory Limitation\n\nThe entire blob content is buffered in server memory before being stored. This means practical upload sizes are limited by available server memory. For blobs larger than a few MB, consider using chunked uploads:\n\n1. `POST /v2/{name}/blobs/uploads` - Start session 2. `PATCH /v2/{name}/blobs/uploads/{session_id}` - Upload chunks 3. `PUT /v2/{name}/blobs/uploads/{session_id}?digest=...` - Complete\n\n# Authentication\n\nAuthentication is optional for unclaimed projects. If the project's organization is claimed, valid authentication with Create permission is required. If the project doesn't exist and a slug is used, the project will be created automatically.",
+        "description": "Uploads a complete blob in a single request. The request body is streamed to storage incrementally, so memory usage is bounded by the network chunk size rather than the total blob size.\n\n# Authentication\n\nAuthentication is optional for unclaimed projects. If the project's organization is claimed, valid authentication with Create permission is required. If the project doesn't exist and a slug is used, the project will be created automatically.",
         "operationId": "oci_upload_monolithic",
         "parameters": [
           {

@@ -1229,3 +1229,83 @@ async fn blob_get_runner_oci_token_push_only() {
         "Runner token with only Push action should be rejected for pull"
     );
 }
+
+// =============================================================================
+// StreamingBody / Large Upload Tests
+// =============================================================================
+
+// Monolithic upload with body larger than old 1 MB default succeeds
+#[tokio::test]
+async fn blob_monolithic_upload_large_body() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("LargeMono User", "largemono@example.com")
+        .await;
+    let org = server.create_org(&user, "LargeMono Org").await;
+    let project = server
+        .create_project(&user, &org, "LargeMono Project")
+        .await;
+
+    let oci_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    // 2 MiB blob exceeds the old 1 MB default
+    let blob_data = vec![0xDD; 2 * 1024 * 1024];
+    let digest = compute_digest(&blob_data);
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v2/{}/blobs/uploads?digest={}",
+            project_slug, digest
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&oci_token),
+        )
+        .header("Content-Type", "application/octet-stream")
+        .body(blob_data)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::CREATED,
+        "Large monolithic upload should succeed with per-endpoint limit, got {}",
+        resp.status()
+    );
+    assert!(resp.headers().contains_key("location"));
+    assert!(resp.headers().contains_key("docker-content-digest"));
+
+    // Verify blob exists via HEAD
+    let pull_token = server.oci_pull_token(&user, &project);
+    let head_resp = server
+        .client
+        .head(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
+        .send()
+        .await
+        .expect("HEAD request failed");
+
+    assert_eq!(head_resp.status(), StatusCode::OK);
+
+    // Verify content via GET
+    let get_resp = server
+        .client
+        .get(server.api_url(&format!("/v2/{}/blobs/{}", project_slug, digest)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&pull_token),
+        )
+        .send()
+        .await
+        .expect("GET request failed");
+
+    assert_eq!(get_resp.status(), StatusCode::OK);
+    let body = get_resp.bytes().await.expect("Failed to read body");
+    assert_eq!(body.len(), 2 * 1024 * 1024);
+}
