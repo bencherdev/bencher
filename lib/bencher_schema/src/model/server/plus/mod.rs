@@ -332,7 +332,7 @@ impl Default for InsertServer {
 fn configure_standalone_connection(
     conn: &mut DbConnection,
     busy_timeout: u32,
-) -> Result<(), diesel::result::Error> {
+) -> diesel::QueryResult<()> {
     conn.batch_execute(&format!("PRAGMA busy_timeout = {busy_timeout}"))?;
     conn.batch_execute("PRAGMA synchronous = NORMAL")?;
     Ok(())

@@ -196,19 +196,18 @@ fn get_top_projects(
 }
 
 #[expect(clippy::cast_precision_loss, clippy::cast_sign_loss)]
-fn top_projects(mut project_metrics: Vec<(QueryProject, i64)>, total: i64) -> JsonTopProjects {
-    project_metrics.sort_unstable_by(|a, b| a.1.cmp(&b.1));
-    project_metrics.reverse();
-    if project_metrics.len() > TOP_PROJECTS {
-        project_metrics.truncate(TOP_PROJECTS);
-    }
+fn top_projects(project_metrics: Vec<(QueryProject, i64)>, total: i64) -> JsonTopProjects {
     project_metrics
         .into_iter()
         .map(|(project, metrics)| JsonTopProject {
             name: project.name,
             uuid: project.uuid,
             metrics: metrics as u64,
-            percentage: metrics as f64 / total as f64,
+            percentage: if total > 0 {
+                metrics as f64 / total as f64
+            } else {
+                0.0
+            },
         })
         .collect()
 }
