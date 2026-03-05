@@ -14,8 +14,8 @@ env:
   GITHUB_REGISTRY: ghcr.io
   DOCKER_HUB_ORGANIZATION: bencherdev
   API_DOCKER_IMAGE: bencher-api
-  CLI_DOCKER_IMAGE: bencher
   CONSOLE_DOCKER_IMAGE: bencher-console
+  CLI_DOCKER_IMAGE: bencher
   CLI_BIN_NAME: bencher
   RUNNER_BIN_NAME: runner
 
@@ -143,7 +143,7 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Tag & Push API Image
+      - name: Tag & Push API Image to GHCR
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}
           export TAG=${{ github.event.workflow_run.head_branch }}
@@ -161,19 +161,7 @@ jobs:
           docker push ${DOCKER_HUB_IMAGE}:latest
           docker push ${DOCKER_HUB_IMAGE}:${TAG}
 
-      - name: Retag CLI Image from build to GHCR + Docker Hub
-        run: |
-          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}
-          export DOCKER_HUB_IMAGE=${{ env.DOCKER_HUB_ORGANIZATION }}/${{ env.CLI_DOCKER_IMAGE }}
-          export TAG=${{ github.event.workflow_run.head_branch }}
-          docker buildx imagetools create \
-            --tag ${GITHUB_IMAGE}:latest \
-            --tag ${GITHUB_IMAGE}:${TAG} \
-            --tag ${DOCKER_HUB_IMAGE}:latest \
-            --tag ${DOCKER_HUB_IMAGE}:${TAG} \
-            ${GITHUB_IMAGE}:${GITHUB_SHA}
-
-      - name: Tag & Push Console Image
+      - name: Tag & Push Console Image to GHCR
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}
           export TAG=${{ github.event.workflow_run.head_branch }}
@@ -190,6 +178,18 @@ jobs:
           docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${DOCKER_HUB_IMAGE}:${TAG}
           docker push ${DOCKER_HUB_IMAGE}:latest
           docker push ${DOCKER_HUB_IMAGE}:${TAG}
+
+      - name: Tag & Push CLI Image to GHCR & Docker Hub
+        run: |
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}
+          export DOCKER_HUB_IMAGE=${{ env.DOCKER_HUB_ORGANIZATION }}/${{ env.CLI_DOCKER_IMAGE }}
+          export TAG=${{ github.event.workflow_run.head_branch }}
+          docker buildx imagetools create \
+            --tag ${GITHUB_IMAGE}:latest \
+            --tag ${GITHUB_IMAGE}:${TAG} \
+            --tag ${DOCKER_HUB_IMAGE}:latest \
+            --tag ${DOCKER_HUB_IMAGE}:${TAG} \
+            ${GITHUB_IMAGE}:${GITHUB_SHA}
 
       # Generate release notes and publish
       - uses: rui314/setup-mold@v1
