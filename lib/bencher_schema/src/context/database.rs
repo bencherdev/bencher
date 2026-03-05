@@ -15,6 +15,7 @@ pub type DbConnection = diesel::SqliteConnection;
 
 pub struct Database {
     pub path: PathBuf,
+    pub busy_timeout: u32,
     /// The public database connection pool.
     /// Unauthenticated requests should only use this pool.
     pub public_pool: Pool<ConnectionManager<DbConnection>>,

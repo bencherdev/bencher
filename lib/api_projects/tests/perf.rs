@@ -19,7 +19,10 @@ use bencher_json::{
     VersionUuid,
     project::{alert::AlertStatus, boundary::BoundaryLimit},
 };
-use bencher_schema::schema;
+use bencher_schema::{
+    model::project::report::{ReportId, upsert_metric_count},
+    schema,
+};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
@@ -292,6 +295,10 @@ fn create_perf_data_with_options(
             .execute(&mut conn)
             .expect("insert metric");
     }
+
+    // Keep metric_count_by_report in sync (1 metric inserted)
+    let report_id_typed = ReportId::try_from_raw(report_id).expect("valid report ID");
+    upsert_metric_count(&mut conn, report_id_typed, 1).expect("upsert metric_count_by_report");
 
     PerfTestData {
         branch_uuid,

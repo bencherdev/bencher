@@ -134,20 +134,19 @@ impl ReportResults {
         // Phase 1: Pre-compute all data using read connections.
         // Resolve IDs (get_or_create), fetch historical data, compute boundaries.
         let mut prepared_benchmarks = Vec::with_capacity(results.inner.len());
-        #[cfg(feature = "plus")]
-        let mut metric_count: u32 = 0;
 
         for (benchmark, metrics) in results.inner {
             let prepared = self
                 .prepare_benchmark(log, context, iteration, benchmark, metrics)
                 .await?;
-            #[cfg(feature = "plus")]
-            {
-                metric_count = metric_count
-                    .saturating_add(u32::try_from(prepared.metrics.len()).unwrap_or(u32::MAX));
-            }
             prepared_benchmarks.push(prepared);
         }
+
+        // Compute metric count once before acquiring write lock
+        let iteration_metric_count: i32 = prepared_benchmarks
+            .iter()
+            .map(|p| i32::try_from(p.metrics.len()).unwrap_or(i32::MAX))
+            .fold(0i32, i32::saturating_add);
 
         // Phase 2: Write all data in a single transaction.
         let conn = write_conn!(context);
@@ -178,6 +177,10 @@ impl ReportResults {
                     }
                 }
             }
+
+            // Upsert metric count summary (count computed before acquiring write lock)
+            super::upsert_metric_count(conn, self.report_id, iteration_metric_count)?;
+
             diesel::QueryResult::Ok(())
         })
         .map_err(|e| {
@@ -190,7 +193,8 @@ impl ReportResults {
 
         #[cfg(feature = "plus")]
         {
-            *usage = usage.saturating_add(metric_count);
+            *usage =
+                usage.saturating_add(u32::try_from(iteration_metric_count).unwrap_or(u32::MAX));
         }
 
         Ok(())

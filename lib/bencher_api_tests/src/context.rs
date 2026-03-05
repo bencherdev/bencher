@@ -98,6 +98,7 @@ impl TestServer {
 
         let database = Database {
             path: PathBuf::from(&db_path),
+            busy_timeout: 5_000,
             public_pool,
             auth_pool,
             connection: Arc::new(Mutex::new(conn)),
@@ -181,6 +182,7 @@ impl TestServer {
 
         let database = Database {
             path: PathBuf::from(&db_path),
+            busy_timeout: 5_000,
             public_pool,
             auth_pool,
             connection: Arc::new(Mutex::new(conn)),

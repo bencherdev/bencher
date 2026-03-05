@@ -11,7 +11,7 @@ use bencher_json::{
 };
 use bencher_license::Licensor;
 use chrono::{Duration, Utc};
-use diesel::{Connection as _, RunQueryDsl as _};
+use diesel::{Connection as _, RunQueryDsl as _, connection::SimpleConnection as _};
 use dropshot::HttpError;
 use slog::Logger;
 use url::Url;
@@ -69,11 +69,16 @@ impl QueryServer {
         }
     }
 
-    #[expect(clippy::too_many_lines, reason = "refactor stats handling")]
+    #[expect(
+        clippy::too_many_arguments,
+        clippy::too_many_lines,
+        reason = "refactor stats handling"
+    )]
     pub fn spawn_stats(
         self,
         log: Logger,
         db_path: PathBuf,
+        busy_timeout: u32,
         stats: StatsSettings,
         messenger: Option<Messenger>,
         licensor: Licensor,
@@ -116,6 +121,11 @@ impl QueryServer {
                     slog::error!(log, "Failed to establish database connection");
                     continue;
                 };
+
+                if let Err(e) = configure_standalone_connection(&mut conn, busy_timeout) {
+                    slog::error!(log, "Failed to configure database connection PRAGMAs: {e}");
+                    continue;
+                }
 
                 if enabled {
                     slog::info!(log, "Sending stats at {}", Utc::now());
@@ -187,6 +197,14 @@ impl QueryServer {
                         );
                         continue;
                     };
+
+                    if let Err(e) = configure_standalone_connection(&mut conn, busy_timeout) {
+                        slog::error!(
+                            log,
+                            "Failed to configure database connection PRAGMAs for sending stats: {e}"
+                        );
+                        continue;
+                    }
 
                     if let Err(e) = Self::send_stats_to_backend(
                         &log,
@@ -309,4 +327,13 @@ impl Default for InsertServer {
             created: DateTime::now(),
         }
     }
+}
+
+fn configure_standalone_connection(
+    conn: &mut DbConnection,
+    busy_timeout: u32,
+) -> diesel::QueryResult<()> {
+    conn.batch_execute(&format!("PRAGMA busy_timeout = {busy_timeout}"))?;
+    conn.batch_execute("PRAGMA synchronous = NORMAL")?;
+    Ok(())
 }

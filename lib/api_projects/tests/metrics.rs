@@ -10,7 +10,10 @@ use bencher_api_tests::{
     helpers::{base_timestamp, create_test_report, get_project_id},
 };
 use bencher_json::{BenchmarkUuid, JsonOneMetric, MeasureUuid, MetricUuid, ReportBenchmarkUuid};
-use bencher_schema::schema;
+use bencher_schema::{
+    model::project::report::{ReportId, upsert_metric_count},
+    schema,
+};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
@@ -88,6 +91,10 @@ fn create_test_metric(server: &TestServer, project_id: i32, report_id: i32) -> M
         ))
         .execute(&mut conn)
         .expect("Failed to insert metric");
+
+    // Keep metric_count_by_report in sync (1 metric inserted)
+    let report_id = ReportId::try_from_raw(report_id).expect("valid report ID");
+    upsert_metric_count(&mut conn, report_id, 1).expect("Failed to upsert metric_count_by_report");
 
     metric_uuid
 }
@@ -405,4 +412,40 @@ async fn metrics_get_wrong_project() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// metric_count_by_report upsert correctness
+#[tokio::test]
+async fn metric_count_by_report_upsert() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "metriccount@example.com").await;
+    let org = server.create_org(&user, "Metric Count Org").await;
+    let project = server
+        .create_project(&user, &org, "Metric Count Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+
+    // create_test_metric upserts metric_count_by_report with count=1
+    let _metric_uuid = create_test_metric(&server, project_id, report_id);
+
+    let mut conn = server.db_conn();
+    let count: i32 = schema::metric_count_by_report::table
+        .filter(schema::metric_count_by_report::report_id.eq(report_id))
+        .select(schema::metric_count_by_report::metric_count)
+        .first(&mut conn)
+        .expect("Failed to query metric_count_by_report");
+    assert_eq!(count, 1, "First metric should set count to 1");
+
+    // Simulate a second iteration adding 3 more metrics via upsert
+    let report_id = ReportId::try_from_raw(report_id).expect("valid report ID");
+    upsert_metric_count(&mut conn, report_id, 3).expect("Failed to upsert metric_count_by_report");
+
+    let count: i32 = schema::metric_count_by_report::table
+        .filter(schema::metric_count_by_report::report_id.eq(report_id))
+        .select(schema::metric_count_by_report::metric_count)
+        .first(&mut conn)
+        .expect("Failed to query metric_count_by_report after second upsert");
+    assert_eq!(count, 4, "Upsert should accumulate: 1 + 3 = 4");
 }
