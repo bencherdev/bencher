@@ -1597,6 +1597,7 @@ dependencies = [
  "bencher_runner",
  "camino",
  "clap",
+ "rustls 0.23.35",
  "thiserror 2.0.17",
  "url",
 ]
