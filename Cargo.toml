@@ -168,7 +168,7 @@ tokio = "1.48"
 tokio-rustls = {version =  "0.26", default-features = false, features = ["logging", "tls12", "ring"]}
 tokio-tungstenite = "0.26"
 tokio-util = { version = "0.7", features = ["io"] }
-tungstenite = { version = "0.26", features = ["__rustls-tls"] }
+tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
 typeshare = "1.0"
 ureq = "3.0"
 url = "2.5"
