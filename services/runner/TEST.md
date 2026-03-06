@@ -90,8 +90,8 @@ gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-41131
 2. Run local unit tests: `cargo test -p bencher_oci --features plus`, `cargo test -p bencher_runner --features plus`
 3. Transfer code to VM via patch (see above)
 4. Run scenarios: `cargo test-runner scenarios`
-6. If a specific scenario fails, re-run it individually with `--scenario <name>` to iterate faster
-7. Fix locally, re-patch, re-run
+5. If a specific scenario fails, re-run it individually with `--scenario <name>` to iterate faster
+6. Fix locally, re-patch, re-run
 
 ## Key Crates
 
