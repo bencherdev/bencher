@@ -1,7 +1,7 @@
 use std::process::Command;
 
 use assert_cmd::{assert::OutputAssertExt as _, cargo::CommandCargoExt as _};
-use bencher_json::{DEV_BENCHER_API_URL, Jwt, LOCALHOST_BENCHER_API_URL, Url};
+use bencher_json::{DEV_BENCHER_API_URL_STR, Jwt, LOCALHOST_BENCHER_API_URL, Url};
 use pretty_assertions::assert_eq;
 
 use crate::parser::TaskRunner;
@@ -34,7 +34,7 @@ impl TryFrom<TaskRunner> for RunnerTest {
 
         let is_dev = url
             .as_ref()
-            .is_some_and(|u| u.as_ref() == DEV_BENCHER_API_URL.as_str());
+            .is_some_and(|u| u.as_ref() == DEV_BENCHER_API_URL_STR);
 
         let token = token.unwrap_or_else(|| {
             if is_dev {
