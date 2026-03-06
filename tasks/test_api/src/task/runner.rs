@@ -75,10 +75,8 @@ impl RunnerTest {
 
     #[cfg(feature = "plus")]
     fn exec_with_daemon(&self) -> anyhow::Result<()> {
-        use assert_cmd::cargo::CommandCargoExt as _;
-
         let is_linux = cfg!(target_os = "linux");
-        let has_kvm = is_linux && std::path::Path::new("/dev/kvm").exists();
+        let has_kvm = is_linux && camino::Utf8Path::new("/dev/kvm").exists();
 
         if !has_kvm {
             println!("Skipping runner test: requires Linux + KVM");
@@ -120,7 +118,8 @@ impl RunnerTest {
         let runner_token: bencher_json::JsonRunnerToken = serde_json::from_slice(&output.stdout)?;
 
         // Build bencher-init for the musl target so it can be bundled into the runner binary.
-        let workspace_root = std::env::current_dir()?;
+        let workspace_root = camino::Utf8PathBuf::try_from(std::env::current_dir()?)
+            .expect("workspace root should be valid UTF-8");
         let target_triple = musl_target_triple()?;
 
         println!("Building bencher-init ({target_triple})...");
@@ -134,17 +133,10 @@ impl RunnerTest {
             .join(target_triple)
             .join("debug")
             .join("bencher-init");
-        anyhow::ensure!(
-            init_path.exists(),
-            "bencher-init not found at {}",
-            init_path.display()
-        );
+        anyhow::ensure!(init_path.exists(), "bencher-init not found at {init_path}");
 
         // Build the runner binary with BENCHER_INIT_PATH so the init binary gets bundled.
-        println!(
-            "Building runner (BENCHER_INIT_PATH={})...",
-            init_path.display()
-        );
+        println!("Building runner (BENCHER_INIT_PATH={init_path})...");
         let build_status = Command::new("cargo")
             .args(["build", "--bin", "runner"])
             .env("BENCHER_INIT_PATH", &init_path)
@@ -361,10 +353,8 @@ fn wait_for_stdout_ready(
         .expect("stdout should be piped for readiness detection");
     let ready = Arc::new(AtomicBool::new(false));
     let ready_clone = Arc::clone(&ready);
-    let sentinel = sentinel.to_owned();
-    let label = label.to_owned();
-    let thread_sentinel = sentinel.clone();
-    let thread_label = label.clone();
+    let thread_sentinel = sentinel.to_owned();
+    let thread_label = label.to_owned();
 
     let handle = std::thread::spawn(move || {
         let reader = std::io::BufReader::new(stdout);

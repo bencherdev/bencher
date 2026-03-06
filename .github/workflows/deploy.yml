@@ -102,6 +102,10 @@ jobs:
           else
             echo "No test output found." >> $GITHUB_STEP_SUMMARY
           fi
+      - name: Install musl toolchain (for runner daemon)
+        run: |
+          sudo apt-get update && sudo apt-get install -y musl-tools
+          rustup target add x86_64-unknown-linux-musl
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -109,6 +113,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Run Runner Test
         id: runner-test
+        timeout-minutes: 30
         continue-on-error: true
         env:
           RUST_BACKTRACE: full
