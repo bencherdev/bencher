@@ -11,15 +11,15 @@ use bencher_json::{
     PROD_BENCHER_API_URL, TEST_BENCHER_API_URL, Url,
 };
 
-#[cfg(feature = "plus")]
-use crate::task::runner;
 use crate::{
     API_VERSION,
-    parser::{TaskExamples, TaskOci, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
-    task::{
-        oci::Oci,
-        test::{examples::Examples, seed_test::SeedTest},
-    },
+    parser::{TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
+    task::test::{examples::Examples, seed_test::SeedTest},
+};
+#[cfg(feature = "plus")]
+use crate::{
+    parser::{TaskOci, TaskRunner},
+    task::{oci::Oci, runner},
 };
 
 const DEV_ADMIN_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo2MDYwMDI5NDE0LCJpYXQiOjE3NjUwNjIxMTksImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoiZXVzdGFjZS5iYWdnZUBub3doZXJlLmNvbSIsIm9yZyI6bnVsbCwic3RhdGUiOm51bGx9.jY6749lVWe3pJ53LBXoNSl19b59xifOLdwMwQUNMZ5g";
@@ -234,14 +234,23 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
             };
             SeedTest::try_from(task)?.exec()?;
 
-            // Run OCI conformance tests
-            let oci = Oci::try_from(TaskOci::for_test(api_url.as_ref(), true))?;
-            oci.exec()?;
-
-            // Run runner smoke test (requires Docker + KVM for the runner daemon)
             #[cfg(feature = "plus")]
-            if runner {
-                run_runner_smoke_test(api_url)?;
+            {
+                // Run OCI conformance tests
+                let oci = Oci::try_from(TaskOci::for_test(api_url.as_ref(), true))?;
+                oci.exec()?;
+
+                // Run runner smoke test (requires Docker + KVM for the runner daemon)
+                if runner {
+                    let runner_test = runner::RunnerTest::try_from(TaskRunner {
+                        url: Some(api_url.clone()),
+                        token: Some(Jwt::test_token()),
+                        username: None,
+                        admin_token: Some(Jwt::test_admin_token()),
+                        with_daemon: true,
+                    })?;
+                    runner_test.exec()?;
+                }
             }
             #[cfg(not(feature = "plus"))]
             let _ = runner;
@@ -265,20 +274,4 @@ fn kill_child(child: Option<Child>) -> anyhow::Result<()> {
         .expect("Child process is expected for `localhost`")
         .kill()
         .map_err(Into::into)
-}
-
-/// Run the runner smoke test: rotate a runner token, start the runner daemon,
-/// push a Docker image to the API's OCI registry, and submit a job.
-#[cfg(feature = "plus")]
-fn run_runner_smoke_test(api_url: &Url) -> anyhow::Result<()> {
-    use crate::parser::TaskRunner;
-
-    let runner_test = runner::RunnerTest::try_from(TaskRunner {
-        url: Some(api_url.clone()),
-        token: Some(Jwt::test_token()),
-        username: None,
-        admin_token: Some(Jwt::test_admin_token()),
-        with_daemon: true,
-    })?;
-    runner_test.exec()
 }

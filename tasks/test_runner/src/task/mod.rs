@@ -1,16 +1,9 @@
+mod scenarios;
+
 use clap::Parser as _;
 
-use crate::parser::{TaskSub, TaskTask, TaskTest};
-
-mod clean;
-mod oci;
-mod scenarios;
-mod test;
-
-use clean::Clean;
-use oci::Oci;
+use crate::parser::{TaskSub, TaskTask};
 use scenarios::Scenarios;
-use test::Test;
 
 #[derive(Debug)]
 pub struct Task {
@@ -19,10 +12,7 @@ pub struct Task {
 
 #[derive(Debug)]
 pub enum Sub {
-    Test(Test),
     Scenarios(Scenarios),
-    Oci(Oci),
-    Clean(Clean),
 }
 
 impl TryFrom<TaskTask> for Task {
@@ -30,7 +20,7 @@ impl TryFrom<TaskTask> for Task {
 
     fn try_from(task: TaskTask) -> Result<Self, Self::Error> {
         Ok(Self {
-            sub: task.sub.unwrap_or(TaskSub::Test(TaskTest {})).try_into()?,
+            sub: task.sub.try_into()?,
         })
     }
 }
@@ -40,10 +30,7 @@ impl TryFrom<TaskSub> for Sub {
 
     fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
         Ok(match sub {
-            TaskSub::Test(test) => Self::Test(test.try_into()?),
             TaskSub::Scenarios(scenarios) => Self::Scenarios(scenarios.try_into()?),
-            TaskSub::Oci(oci) => Self::Oci(oci.try_into()?),
-            TaskSub::Clean(clean) => Self::Clean(clean.try_into()?),
         })
     }
 }
@@ -61,10 +48,7 @@ impl Task {
 impl Sub {
     pub fn exec(&self) -> anyhow::Result<()> {
         match self {
-            Self::Test(test) => test.exec(),
             Self::Scenarios(scenarios) => scenarios.exec(),
-            Self::Oci(oci) => oci.exec(),
-            Self::Clean(clean) => clean.exec(),
         }
     }
 }

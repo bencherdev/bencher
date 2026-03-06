@@ -9065,18 +9065,10 @@ name = "test_runner"
 version = "0.5.10"
 dependencies = [
  "anyhow",
- "bencher_oci",
- "bencher_rootfs",
- "bencher_runner",
- "bencher_valid",
  "camino",
  "clap",
- "flate2",
  "libc",
- "reqwest",
  "serde_json",
- "sha2",
- "tar",
 ]
 
 [[package]]
