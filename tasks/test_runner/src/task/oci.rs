@@ -216,15 +216,12 @@ fn extract_busybox_from_docker(busybox_path: &Utf8Path) -> anyhow::Result<()> {
 
 /// Install the bencher CLI.
 ///
-/// Tries to build a statically linked (musl) binary first, then falls back
-/// to the default target (glibc), and finally to a mock shell script.
-/// The binary must be statically linked to run inside the minimal busybox rootfs.
+/// Builds a statically linked (musl) binary for the minimal busybox rootfs.
 fn install_bencher(rootfs: &Utf8Path) -> anyhow::Result<()> {
     let workspace_root = super::workspace_root();
 
     let bencher_dst = rootfs.join("usr/bin/bencher");
 
-    // Try musl (statically linked) first — required for minimal rootfs
     let target_triple = super::musl_target_triple()?;
     println!("Building bencher CLI (musl, {target_triple})...");
     let musl_status = Command::new("cargo")
@@ -237,86 +234,18 @@ fn install_bencher(rootfs: &Utf8Path) -> anyhow::Result<()> {
             "bencher_cli",
         ])
         .current_dir(&workspace_root)
-        .status();
+        .status()
+        .context("Failed to run cargo build for bencher CLI")?;
 
-    if let Ok(status) = musl_status
-        && status.success()
-    {
-        let musl_src = workspace_root.join(format!("target/{target_triple}/release/bencher"));
-        if musl_src.exists() {
-            fs::copy(&musl_src, &bencher_dst)?;
-            fs::set_permissions(&bencher_dst, fs::Permissions::from_mode(0o755))?;
-            println!("Bencher CLI installed (statically linked)");
-            return Ok(());
-        }
-    }
+    anyhow::ensure!(musl_status.success(), "Failed to build bencher CLI (musl, {target_triple})");
 
-    // Musl build failed — fall back to mock script
-    // (a dynamically linked binary won't work in the minimal busybox rootfs)
-    println!("Warning: musl build failed, using mock bencher script");
-    create_mock_bencher(rootfs)?;
+    let musl_src = workspace_root.join(format!("target/{target_triple}/release/bencher"));
+    anyhow::ensure!(musl_src.exists(), "Bencher CLI binary not found at {musl_src}");
 
-    Ok(())
-}
+    fs::copy(&musl_src, &bencher_dst)?;
+    fs::set_permissions(&bencher_dst, fs::Permissions::from_mode(0o755))?;
+    println!("Bencher CLI installed (statically linked)");
 
-/// Create a mock bencher script for testing.
-fn create_mock_bencher(rootfs: &Utf8Path) -> anyhow::Result<()> {
-    // Matches the format of `bencher mock` with 5 results
-    let script = r#"#!/bin/sh
-# Mock bencher script for testing
-case "$1" in
-    mock)
-        cat << 'EOF'
-{
-  "bencher::mock_0": {
-    "latency": {
-      "value": 4.5535649932187034,
-      "lower_value": 4.098208493896833,
-      "upper_value": 5.008921492540574
-    }
-  },
-  "bencher::mock_1": {
-    "latency": {
-      "value": 16.537506086518523,
-      "lower_value": 14.88375547786667,
-      "upper_value": 18.191256695170374
-    }
-  },
-  "bencher::mock_2": {
-    "latency": {
-      "value": 20.221420814607537,
-      "lower_value": 18.199278733146784,
-      "upper_value": 22.24356289606829
-    }
-  },
-  "bencher::mock_3": {
-    "latency": {
-      "value": 34.92859461603261,
-      "lower_value": 31.435735154429352,
-      "upper_value": 38.42145407763587
-    }
-  },
-  "bencher::mock_4": {
-    "latency": {
-      "value": 42.40432493036204,
-      "lower_value": 38.163892437325835,
-      "upper_value": 46.64475742339824
-    }
-  }
-}
-EOF
-        ;;
-    *)
-        echo "Usage: bencher mock"
-        exit 1
-        ;;
-esac
-"#;
-
-    let path = rootfs.join("usr/bin/bencher");
-    let mut file = File::create(&path)?;
-    file.write_all(script.as_bytes())?;
-    fs::set_permissions(&path, fs::Permissions::from_mode(0o755))?;
     Ok(())
 }
 

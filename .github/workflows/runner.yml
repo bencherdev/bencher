@@ -42,7 +42,7 @@ jobs:
       - name: Verify KVM
         run: ls -la /dev/kvm
       - name: Run test-runner
-        run: cargo test-runner test
+        run: sudo cargo test-runner test
         env:
           BENCHER_INIT_PATH: ./target/x86_64-unknown-linux-musl/debug/bencher-init
 
@@ -56,8 +56,16 @@ jobs:
         with:
           mold-version: ${{ inputs.mold-version }}
           cache-key: test-runner-arm
+      - name: Install musl toolchain
+        run: |
+          sudo apt-get update && sudo apt-get install -y musl-tools
+          rustup target add aarch64-unknown-linux-musl
+      - name: Build bencher-init
+        run: cargo build -p bencher_init --target aarch64-unknown-linux-musl
       - name: Run test-runner
-        run: cargo test-runner test
+        run: sudo cargo test-runner test
+        env:
+          BENCHER_INIT_PATH: ./target/aarch64-unknown-linux-musl/debug/bencher-init
 
   test_runner_scenarios:
     name: Test Runner Scenarios
@@ -86,7 +94,7 @@ jobs:
           echo '{"features": {"containerd-snapshotter": true}}' | sudo tee /etc/docker/daemon.json
           sudo systemctl restart docker
       - name: Run scenarios
-        run: cargo test-runner scenarios
+        run: sudo cargo test-runner scenarios
 
   build_runner:
     name: Build Runner (${{ matrix.build }})
