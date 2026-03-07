@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
 use bencher_json::system::config::{JsonProduct, JsonProducts};
-use stripe::{Client as StripeClient, Price as StripePrice, Product as StripeProduct};
+use stripe::Client as StripeClient;
+use stripe_product::{
+    Price as StripePrice, PriceId, Product as StripeProduct, ProductId, price::RetrievePrice,
+    product::RetrieveProduct,
+};
 
 use crate::BillingError;
 
@@ -36,7 +40,8 @@ impl Product {
             licensed,
         } = product;
 
-        let product = StripeProduct::retrieve(client, &id.parse()?, &[]).await?;
+        let product_id: ProductId = id.parse().unwrap();
+        let product = RetrieveProduct::new(product_id).send(client).await?;
         let metered = Self::pricing(client, metered).await?;
         let licensed = Self::pricing(client, licensed).await?;
 
@@ -53,7 +58,8 @@ impl Product {
     ) -> Result<HashMap<String, StripePrice>, BillingError> {
         let mut biller_pricing = HashMap::with_capacity(pricing.len());
         for (price_name, price_id) in pricing {
-            let price = StripePrice::retrieve(client, &price_id.parse()?, &[]).await?;
+            let price_id: PriceId = price_id.parse().unwrap();
+            let price = RetrievePrice::new(price_id).send(client).await?;
             biller_pricing.insert(price_name, price);
         }
         Ok(biller_pricing)
