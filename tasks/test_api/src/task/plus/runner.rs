@@ -60,7 +60,6 @@ impl RunnerTest {
         }
     }
 
-    #[cfg(feature = "plus")]
     fn exec_with_daemon(&self) -> anyhow::Result<()> {
         let is_linux = cfg!(target_os = "linux");
         let has_kvm = is_linux && camino::Utf8Path::new("/dev/kvm").exists();

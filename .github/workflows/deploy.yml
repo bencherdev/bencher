@@ -91,7 +91,7 @@ jobs:
         continue-on-error: true
         run: |
           cargo test-api oci \
-          --api-url https://bencher-api-dev.fly.dev
+          --url https://bencher-api-dev.fly.dev/
       - name: OCI Conformance Test Summary
         if: always()
         run: |

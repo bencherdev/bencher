@@ -19,7 +19,7 @@ use crate::{
 #[cfg(feature = "plus")]
 use crate::{
     parser::{TaskOci, TaskRunner},
-    task::{oci::Oci, runner},
+    task::plus::{oci::Oci, runner},
 };
 
 const DEV_ADMIN_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo2MDYwMDI5NDE0LCJpYXQiOjE3NjUwNjIxMTksImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoiZXVzdGFjZS5iYWdnZUBub3doZXJlLmNvbSIsIm9yZyI6bnVsbCwic3RhdGUiOm51bGx9.jY6749lVWe3pJ53LBXoNSl19b59xifOLdwMwQUNMZ5g";
@@ -215,8 +215,8 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
             };
             SeedTest::try_from(task)?.exec()?;
 
-            #[cfg(feature = "plus")]
             // Run runner smoke test (requires Docker + KVM for the runner daemon)
+            #[cfg(feature = "plus")]
             {
                 let runner_test = runner::RunnerTest::try_from(TaskRunner {
                     url: Some(api_url.clone()),
@@ -225,8 +225,6 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
                 })?;
                 runner_test.exec()?;
             }
-            #[cfg(not(feature = "plus"))]
-            let _ = runner;
 
             Ok(())
         },

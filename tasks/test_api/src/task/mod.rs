@@ -1,4 +1,4 @@
-use bencher_json::{DEV_BENCHER_API_URL_STR, Jwt, LOCALHOST_BENCHER_API_URL, Url};
+use bencher_json::{DEV_BENCHER_API_URL, Jwt, LOCALHOST_BENCHER_API_URL, Url};
 use clap::Parser as _;
 
 use crate::{
@@ -7,15 +7,11 @@ use crate::{
 };
 
 #[cfg(feature = "plus")]
-mod oci;
-#[cfg(feature = "plus")]
-pub(crate) mod runner;
-pub(crate) mod test;
+mod plus;
+mod test;
 
 #[cfg(feature = "plus")]
-use oci::Oci;
-#[cfg(feature = "plus")]
-use runner::RunnerTest;
+use plus::{oci::Oci, runner::RunnerTest};
 use test::{examples::Examples, seed_test::SeedTest, smoke_test::SmokeTest};
 
 #[derive(Debug)]
@@ -85,8 +81,7 @@ impl Sub {
 }
 
 fn is_dev(url: Option<&Url>) -> bool {
-    url.as_ref()
-        .is_some_and(|u| u.as_ref() == DEV_BENCHER_API_URL_STR)
+    url.is_some_and(|u| u.as_ref() == DEV_BENCHER_API_URL.as_ref())
 }
 
 fn unwrap_url(url: Option<Url>) -> Url {
