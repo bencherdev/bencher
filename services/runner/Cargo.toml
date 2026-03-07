@@ -16,6 +16,7 @@ bencher_parser.workspace = true
 bencher_runner.workspace = true
 camino = { workspace = true }
 clap = { workspace = true, features = ["env"] }
+rustls.workspace = true
 thiserror.workspace = true
 url = { workspace = true }
 

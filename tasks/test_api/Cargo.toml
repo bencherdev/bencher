@@ -8,10 +8,11 @@ publish = false
 
 [features]
 default = ["plus"]
-plus = ["bencher_json/plus"]
+plus = ["bencher_json/plus", "dep:camino"]
 
 [dependencies]
 assert_cmd.workspace = true
+camino = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["client"] }
 anyhow.workspace = true
 clap.workspace = true

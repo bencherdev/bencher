@@ -1,10 +1,14 @@
 use clap::{Parser, Subcommand};
 
+#[cfg(feature = "plus")]
 mod oci;
+#[cfg(feature = "plus")]
 mod runner;
 mod test;
 
+#[cfg(feature = "plus")]
 pub use oci::{TEST_ADMIN_API_TOKEN, TEST_ADMIN_USERNAME, TaskOci};
+#[cfg(feature = "plus")]
 pub use runner::TaskRunner;
 pub use test::{TaskExample, TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment};
 
@@ -23,7 +27,9 @@ pub enum TaskSub {
     /// Run smoke test
     Smoke(TaskSmokeTest),
     /// Run OCI Distribution Spec conformance tests
+    #[cfg(feature = "plus")]
     Oci(TaskOci),
     /// Run runner smoke test (docker pull/push + bencher run --image)
+    #[cfg(feature = "plus")]
     Runner(TaskRunner),
 }

@@ -1597,6 +1597,7 @@ dependencies = [
  "bencher_runner",
  "camino",
  "clap",
+ "rustls 0.23.35",
  "thiserror 2.0.17",
  "url",
 ]
@@ -4914,7 +4915,7 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.26.4",
  "tower-service",
- "webpki-roots",
+ "webpki-roots 1.0.4",
 ]
 
 [[package]]
@@ -5688,7 +5689,7 @@ dependencies = [
  "smtp-proto",
  "tokio",
  "tokio-rustls 0.26.4",
- "webpki-roots",
+ "webpki-roots 1.0.4",
 ]
 
 [[package]]
@@ -7659,7 +7660,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-streams",
  "web-sys",
- "webpki-roots",
+ "webpki-roots 1.0.4",
 ]
 
 [[package]]
@@ -9041,6 +9042,7 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "bencher_json",
+ "camino",
  "clap",
  "pretty_assertions",
  "serde_json",
@@ -9065,18 +9067,10 @@ name = "test_runner"
 version = "0.5.10"
 dependencies = [
  "anyhow",
- "bencher_oci",
- "bencher_rootfs",
- "bencher_runner",
- "bencher_valid",
  "camino",
  "clap",
- "flate2",
  "libc",
- "reqwest",
  "serde_json",
- "sha2",
- "tar",
 ]
 
 [[package]]
@@ -9525,6 +9519,7 @@ dependencies = [
  "sha1",
  "thiserror 2.0.17",
  "utf-8",
+ "webpki-roots 0.26.11",
 ]
 
 [[package]]
@@ -9697,7 +9692,7 @@ dependencies = [
  "serde_json",
  "ureq-proto",
  "utf-8",
- "webpki-roots",
+ "webpki-roots 1.0.4",
 ]
 
 [[package]]
@@ -9993,6 +9988,15 @@ dependencies = [
  "js-sys",
  "serde",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "0.26.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "521bc38abb08001b01866da9f51eb7c5d647a19260e00054a8c7fd5f9e57f7a9"
+dependencies = [
+ "webpki-roots 1.0.4",
 ]
 
 [[package]]

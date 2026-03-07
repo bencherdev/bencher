@@ -1,21 +1,22 @@
-#![expect(clippy::expect_used, clippy::print_stdout)]
-// These crates are used behind #[cfg(feature = "plus")] in the task modules.
-#![cfg_attr(
-    not(feature = "plus"),
-    allow(unused_crate_dependencies, unused_imports)
-)]
+#![cfg_attr(feature = "plus", expect(clippy::expect_used, clippy::print_stdout))]
+#![cfg_attr(not(feature = "plus"), allow(unused_crate_dependencies))]
 
-mod docker;
+#[cfg(feature = "plus")]
 mod parser;
+#[cfg(feature = "plus")]
 mod task;
-
-use task::Task;
 
 fn main() -> anyhow::Result<()> {
     exec()
 }
 
+#[cfg(feature = "plus")]
 fn exec() -> anyhow::Result<()> {
-    let task = Task::new()?;
+    let task = task::Task::new()?;
     task.exec()
+}
+
+#[cfg(not(feature = "plus"))]
+fn exec() -> anyhow::Result<()> {
+    anyhow::bail!("Plus feature required")
 }

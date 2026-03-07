@@ -53,15 +53,6 @@ Do NOT use `git push` / `git pull` to transfer code. Always use patches via `gcl
 
 All `cargo test-runner` commands must be run on the VM (they require Linux + KVM).
 
-### Clean test artifacts
-
-```bash
-gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-411313 \
-  --command="export PATH=\$HOME/.cargo/bin:\$PATH && cd bencher && cargo test-runner clean"
-```
-
-Always clean before a fresh run to avoid stale artifacts.
-
 ### Run all scenarios
 
 ```bash
@@ -85,36 +76,22 @@ gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-41131
   --command="export PATH=\$HOME/.cargo/bin:\$PATH && cd bencher && cargo test-runner scenarios --list"
 ```
 
-### Run the full integration test (kernel + OCI image + VM)
-
-```bash
-gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-411313 \
-  --command="export PATH=\$HOME/.cargo/bin:\$PATH && cd bencher && cargo test-runner 2>&1"
-```
-
-This is the default subcommand (`cargo test-runner test`). It downloads a kernel, builds a test OCI image, and runs it in a Firecracker microVM.
-
 ## Subcommands Reference
 
 | Command                                         | Description                                            |
 | ----------------------------------------------- | ------------------------------------------------------ |
-| `cargo test-runner`                             | Full test: kernel + OCI image + benchmark VM (default) |
 | `cargo test-runner scenarios`                   | Run all integration test scenarios                     |
 | `cargo test-runner scenarios --scenario <name>` | Run a single scenario by name                          |
 | `cargo test-runner scenarios --list`            | List all available scenario names                      |
-| `cargo test-runner kernel`                      | Download/cache the Firecracker-compatible kernel only  |
-| `cargo test-runner oci`                         | Build the test OCI image only                          |
-| `cargo test-runner clean`                       | Remove all test artifacts                              |
 
 ## Typical Workflow
 
 1. Make changes locally (to crates under `plus/bencher_runner/`, `plus/bencher_oci/`, `plus/bencher_init/`, `services/runner/`, `tasks/test_runner/`, etc.)
 2. Run local unit tests: `cargo test -p bencher_oci --features plus`, `cargo test -p bencher_runner --features plus`
 3. Transfer code to VM via patch (see above)
-4. Clean: `cargo test-runner clean`
-5. Run scenarios: `cargo test-runner scenarios`
-6. If a specific scenario fails, re-run it individually with `--scenario <name>` to iterate faster
-7. Fix locally, re-patch, re-run
+4. Run scenarios: `cargo test-runner scenarios`
+5. If a specific scenario fails, re-run it individually with `--scenario <name>` to iterate faster
+6. Fix locally, re-patch, re-run
 
 ## Key Crates
 

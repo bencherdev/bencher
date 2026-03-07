@@ -13,8 +13,15 @@ mod parser;
 mod runner;
 
 use runner::Runner;
+use rustls::crypto::ring;
 
 fn main() -> std::process::ExitCode {
+    let crypto_provider = ring::default_provider();
+    #[expect(clippy::use_debug)]
+    if let Err(err) = crypto_provider.install_default() {
+        eprintln!("Failed to install default crypto provider: {err:?}");
+        return std::process::ExitCode::FAILURE;
+    }
     if let Err(e) = exec() {
         eprintln!("Error: {e}");
         std::process::ExitCode::FAILURE

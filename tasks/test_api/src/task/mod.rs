@@ -2,11 +2,15 @@ use clap::Parser as _;
 
 use crate::parser::{TaskSub, TaskTask};
 
+#[cfg(feature = "plus")]
 mod oci;
+#[cfg(feature = "plus")]
 pub(crate) mod runner;
 pub(crate) mod test;
 
+#[cfg(feature = "plus")]
 use oci::Oci;
+#[cfg(feature = "plus")]
 use runner::RunnerTest;
 use test::{examples::Examples, seed_test::SeedTest, smoke_test::SmokeTest};
 
@@ -20,7 +24,9 @@ pub enum Sub {
     SeedTest(SeedTest),
     Examples(Examples),
     SmokeTest(SmokeTest),
+    #[cfg(feature = "plus")]
     Oci(Oci),
+    #[cfg(feature = "plus")]
     Runner(RunnerTest),
 }
 
@@ -42,7 +48,9 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::Seed(seed_test) => Self::SeedTest(seed_test.try_into()?),
             TaskSub::Examples(examples) => Self::Examples(examples.try_into()?),
             TaskSub::Smoke(smoke_test) => Self::SmokeTest(smoke_test.try_into()?),
+            #[cfg(feature = "plus")]
             TaskSub::Oci(oci) => Self::Oci(oci.try_into()?),
+            #[cfg(feature = "plus")]
             TaskSub::Runner(runner) => Self::Runner(runner.try_into()?),
         })
     }
@@ -64,7 +72,9 @@ impl Sub {
             Self::SeedTest(seed_test) => seed_test.exec(),
             Self::Examples(examples) => examples.exec(),
             Self::SmokeTest(smoke_test) => smoke_test.exec(),
+            #[cfg(feature = "plus")]
             Self::Oci(oci) => oci.exec(),
+            #[cfg(feature = "plus")]
             Self::Runner(runner) => runner.exec(),
         }
     }

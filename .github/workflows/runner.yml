@@ -18,47 +18,6 @@ env:
   RUNNER_BIN_NAME: runner
 
 jobs:
-  test_runner_x86:
-    name: Test Runner (x86)
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v6
-      - name: Setup Rust
-        uses: ./.github/actions/setup-rust
-        with:
-          mold-version: ${{ inputs.mold-version }}
-          cache-key: test-runner
-      - name: Install musl toolchain
-        run: |
-          sudo apt-get update && sudo apt-get install -y musl-tools
-          rustup target add x86_64-unknown-linux-musl
-      - name: Build bencher-init
-        run: cargo build -p bencher_init --target x86_64-unknown-linux-musl
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      - name: Verify KVM
-        run: ls -la /dev/kvm
-      - name: Run test-runner
-        run: cargo test-runner test
-        env:
-          BENCHER_INIT_PATH: ./target/x86_64-unknown-linux-musl/debug/bencher-init
-
-  test_runner_arm:
-    name: Test Runner (arm)
-    runs-on: ubuntu-22.04-arm
-    steps:
-      - uses: actions/checkout@v6
-      - name: Setup Rust
-        uses: ./.github/actions/setup-rust
-        with:
-          mold-version: ${{ inputs.mold-version }}
-          cache-key: test-runner-arm
-      - name: Run test-runner
-        run: cargo test-runner test
-
   test_runner_scenarios:
     name: Test Runner Scenarios
     runs-on: ubuntu-22.04
