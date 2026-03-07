@@ -19,9 +19,6 @@ pub enum BillingError {
     #[error("Failed to to find checkout session subscription: {0:?}")]
     NoSubscription(Box<CheckoutSession>),
 
-    #[error("Failed to get customer from subscription")]
-    NoSubscriptionCustomer,
-
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),
     #[error("Failed to send billing request: {0}")]

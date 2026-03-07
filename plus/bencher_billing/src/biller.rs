@@ -486,11 +486,11 @@ impl Biller {
         subscription_id: &SubscriptionId,
         expand: Vec<String>,
     ) -> Result<Subscription, BillingError> {
-        RetrieveSubscription::new(subscription_id.clone())
-            .expand(expand)
-            .send(&self.client)
-            .await
-            .map_err(Into::into)
+        let mut req = RetrieveSubscription::new(subscription_id.clone());
+        if !expand.is_empty() {
+            req = req.expand(expand);
+        }
+        req.send(&self.client).await.map_err(Into::into)
     }
 
     fn get_plan_customer(customer: &Expandable<Customer>) -> Result<JsonCustomer, BillingError> {
@@ -623,11 +623,7 @@ impl Biller {
     ) -> Result<BillingMeterEvent, BillingError> {
         let subscription_id: SubscriptionId = metered_plan_id.as_ref().parse().unwrap();
         let subscription = self.get_subscription(&subscription_id).await?;
-        let customer_id = subscription
-            .customer
-            .as_object()
-            .map(|c| c.id.to_string())
-            .ok_or(BillingError::NoSubscriptionCustomer)?;
+        let customer_id = subscription.customer.id().to_string();
 
         CreateBillingMeterEvent::new(
             METRICS_METER_EVENT_NAME,
@@ -712,7 +708,7 @@ mod tests {
             team: JsonProduct {
                 id: "prod_NKz5B9dGhDiSY1".into(),
                 metered: hmap! {
-                    "default".to_owned() => "price_1McW12Kal5vzTlmhoPltpBAW".to_owned(),
+                    "default".to_owned() => "price_1T8NRdKal5vzTlmhBfL9IdMi".to_owned(),
                 },
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4XlwKal5vzTlmh0n0wtplQ".to_owned(),
@@ -721,7 +717,7 @@ mod tests {
             enterprise: JsonProduct {
                 id: "prod_NLC7fDet2C8Nmk".into(),
                 metered: hmap! {
-                    "default".to_owned() => "price_1McW2eKal5vzTlmhECLIyVQz".to_owned(),
+                    "default".to_owned() => "price_1T8NStKal5vzTlmhPBxy2izR".to_owned(),
                 },
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4Xo1Kal5vzTlmh1KrcEbq0".to_owned(),
