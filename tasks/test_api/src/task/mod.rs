@@ -1,17 +1,17 @@
+use bencher_json::{DEV_BENCHER_API_URL, Jwt, LOCALHOST_BENCHER_API_URL, Url};
 use clap::Parser as _;
 
-use crate::parser::{TaskSub, TaskTask};
+use crate::{
+    parser::{TaskSub, TaskTask},
+    task::test::smoke_test::{DEV_ADMIN_BENCHER_API_TOKEN, DEV_BENCHER_API_TOKEN},
+};
 
 #[cfg(feature = "plus")]
-mod oci;
-#[cfg(feature = "plus")]
-pub(crate) mod runner;
-pub(crate) mod test;
+mod plus;
+mod test;
 
 #[cfg(feature = "plus")]
-use oci::Oci;
-#[cfg(feature = "plus")]
-use runner::RunnerTest;
+use plus::{oci::Oci, runner::RunnerTest};
 use test::{examples::Examples, seed_test::SeedTest, smoke_test::SmokeTest};
 
 #[derive(Debug)]
@@ -78,4 +78,32 @@ impl Sub {
             Self::Runner(runner) => runner.exec(),
         }
     }
+}
+
+fn is_dev(url: Option<&Url>) -> bool {
+    url.is_some_and(|u| u.as_ref() == DEV_BENCHER_API_URL.as_ref())
+}
+
+fn unwrap_url(url: Option<Url>) -> Url {
+    url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into())
+}
+
+fn unwrap_admin_token(admin_token: Option<Jwt>, is_dev: bool) -> Jwt {
+    admin_token.unwrap_or_else(|| {
+        if is_dev {
+            DEV_ADMIN_BENCHER_API_TOKEN.clone()
+        } else {
+            Jwt::test_admin_token()
+        }
+    })
+}
+
+fn unwrap_user_token(user_token: Option<Jwt>, is_dev: bool) -> Jwt {
+    user_token.unwrap_or_else(|| {
+        if is_dev {
+            DEV_BENCHER_API_TOKEN.clone()
+        } else {
+            Jwt::test_token()
+        }
+    })
 }

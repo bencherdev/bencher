@@ -1,10 +1,13 @@
 use std::process::Command;
 
 use assert_cmd::{assert::OutputAssertExt as _, cargo::CommandCargoExt as _};
-use bencher_json::{Jwt, LOCALHOST_BENCHER_API_URL, Url};
+use bencher_json::{Jwt, Url};
 use pretty_assertions::assert_eq;
 
-use crate::parser::TaskSeedTest;
+use crate::{
+    parser::TaskSeedTest,
+    task::{is_dev, unwrap_admin_token, unwrap_url, unwrap_user_token},
+};
 
 pub(crate) const BENCHER_CMD: &str = "bencher";
 pub(crate) const HOST_ARG: &str = "--host";
@@ -19,6 +22,9 @@ const TESTBED_ARG: &str = "--testbed";
 const TESTBED_SLUG: &str = "base";
 const MEASURE_ARG: &str = "--measure";
 const MEASURE_SLUG: &str = "screams";
+
+pub(crate) const ADMIN_EMAIL: &str = "eustace.bagge@nowhere.com";
+pub(crate) const USER_EMAIL: &str = "muriel.bagge@nowhere.com";
 
 const REPO_NAME: &str = "bencher";
 const NO_GIT_NAME: &str = "Project";
@@ -50,10 +56,16 @@ impl TryFrom<TaskSeedTest> for SeedTest {
             is_bencher_cloud,
             no_git,
         } = test;
+
+        let is_dev = is_dev(url.as_ref());
+        let url = unwrap_url(url);
+        let admin_token = unwrap_admin_token(admin_token, is_dev);
+        let token = unwrap_user_token(token, is_dev);
+
         Ok(Self {
-            url: url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into()),
-            admin_token: admin_token.unwrap_or_else(Jwt::test_admin_token),
-            token: token.unwrap_or_else(Jwt::test_token),
+            url,
+            admin_token,
+            token,
             is_bencher_cloud,
             no_git,
         })
@@ -93,7 +105,7 @@ impl SeedTest {
             "--name",
             "Eustace Bagge",
             "--i-agree",
-            "eustace.bagge@nowhere.com",
+            ADMIN_EMAIL,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -110,7 +122,7 @@ impl SeedTest {
             "--name",
             "Muriel Bagge",
             "--i-agree",
-            "muriel.bagge@nowhere.com",
+            USER_EMAIL,
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -119,7 +131,7 @@ impl SeedTest {
 
         // cargo run -- auth login --host http://localhost:61016 muriel.bagge@nowhere.com
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["auth", "login", HOST_ARG, host, "muriel.bagge@nowhere.com"])
+        cmd.args(["auth", "login", HOST_ARG, host, USER_EMAIL])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let _json: bencher_json::JsonAuthAck =

@@ -22,8 +22,6 @@ on:
         type: boolean
         required: true
     secrets:
-      TEST_BENCHER_API_TOKEN_ADMIN:
-        required: true
       FLY_API_TOKEN:
         required: true
       SENTRY_AUTH_TOKEN:
@@ -57,10 +55,20 @@ jobs:
         with:
           cache-key: cli
           mold-version: ${{ inputs.mold-version }}
+      - name: Install musl toolchain (for runner daemon)
+        run: |
+          sudo apt-get update && sudo apt-get install -y musl-tools
+          rustup target add x86_64-unknown-linux-musl
+      - name: Enable KVM (for runner daemon)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
       - name: Setup Go (for OCI conformance tests)
         uses: actions/setup-go@v5
         with:
           go-version: ${{ inputs.go-version }}
+
       - name: Download API Docker Artifact
         uses: actions/download-artifact@v4
         with:
@@ -83,9 +91,7 @@ jobs:
         continue-on-error: true
         run: |
           cargo test-api oci \
-          --api-url https://bencher-api-dev.fly.dev \
-          --username eustace.bagge@nowhere.com \
-          --password "${{ secrets.TEST_BENCHER_API_TOKEN_ADMIN }}"
+          --url https://bencher-api-dev.fly.dev/
       - name: OCI Conformance Test Summary
         if: always()
         run: |
@@ -102,31 +108,8 @@ jobs:
           else
             echo "No test output found." >> $GITHUB_STEP_SUMMARY
           fi
-      - name: Install musl toolchain (for runner daemon)
-        run: |
-          sudo apt-get update && sudo apt-get install -y musl-tools
-          rustup target add x86_64-unknown-linux-musl
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      - name: Run Runner Test
-        id: runner-test
-        timeout-minutes: 30
-        continue-on-error: true
-        env:
-          RUST_BACKTRACE: full
-        run: |
-          cargo test-api runner \
-          --url https://bencher-api-dev.fly.dev \
-          --admin-token "${{ secrets.TEST_BENCHER_API_TOKEN_ADMIN }}" \
-          --with-daemon
       - name: Check Smoke Test Result
         if: steps.smoke-test.outcome == 'failure'
-        run: exit 1
-      - name: Check Runner Test Result
-        if: steps.runner-test.outcome == 'failure'
         run: exit 1
 
   deploy_console_netlify_dev:

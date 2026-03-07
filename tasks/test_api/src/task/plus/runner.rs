@@ -1,22 +1,24 @@
 use std::process::Command;
 
 use assert_cmd::{assert::OutputAssertExt as _, cargo::CommandCargoExt as _};
-use bencher_json::{DEV_BENCHER_API_URL_STR, Jwt, LOCALHOST_BENCHER_API_URL, Url};
+use bencher_json::{Jwt, Url};
 use pretty_assertions::assert_eq;
 
 use crate::parser::TaskRunner;
-use crate::task::test::seed_test::{BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, TOKEN_ARG};
+use crate::task::test::seed_test::{
+    BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, TOKEN_ARG, USER_EMAIL,
+};
+use crate::task::{is_dev, unwrap_admin_token, unwrap_url, unwrap_user_token};
 
 const DOCKER_IMAGE: &str = "ghcr.io/bencherdev/bencher:latest";
 const IMAGE_TAG: &str = "runner-test";
-pub(crate) const OCI_USERNAME: &str = "muriel.bagge@nowhere.com";
 
 #[derive(Debug)]
 pub struct RunnerTest {
     url: Url,
-    token: Jwt,
+    admin_token: Jwt,
     username: String,
-    admin_token: Option<Jwt>,
+    token: Jwt,
     with_daemon: bool,
 }
 
@@ -26,37 +28,24 @@ impl TryFrom<TaskRunner> for RunnerTest {
     fn try_from(runner: TaskRunner) -> Result<Self, Self::Error> {
         let TaskRunner {
             url,
-            token,
-            username,
             admin_token,
+            username,
+            token,
             with_daemon,
         } = runner;
 
-        let is_dev = url
-            .as_ref()
-            .is_some_and(|u| u.as_ref() == DEV_BENCHER_API_URL_STR);
-
-        let token = token.unwrap_or_else(|| {
-            if is_dev {
-                use crate::task::test::smoke_test::DEV_BENCHER_API_TOKEN;
-                DEV_BENCHER_API_TOKEN.clone()
-            } else {
-                Jwt::test_token()
-            }
-        });
-
-        if with_daemon {
-            anyhow::ensure!(
-                admin_token.is_some(),
-                "--admin-token is required when using --with-daemon"
-            );
-        }
+        let is_dev = is_dev(url.as_ref());
+        let url = unwrap_url(url);
+        let admin_token = unwrap_admin_token(admin_token, is_dev);
+        // Run tests as a normal user
+        let username = username.unwrap_or_else(|| USER_EMAIL.to_owned());
+        let token = unwrap_user_token(token, is_dev);
 
         Ok(Self {
-            url: url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into()),
-            token,
-            username: username.unwrap_or_else(|| OCI_USERNAME.to_owned()),
+            url,
             admin_token,
+            username,
+            token,
             with_daemon,
         })
     }
@@ -65,15 +54,12 @@ impl TryFrom<TaskRunner> for RunnerTest {
 impl RunnerTest {
     pub fn exec(&self) -> anyhow::Result<()> {
         if self.with_daemon {
-            #[cfg(feature = "plus")]
-            return self.exec_with_daemon();
-            #[cfg(not(feature = "plus"))]
-            anyhow::bail!("--with-daemon requires the `plus` feature");
+            self.exec_with_daemon()
+        } else {
+            run_runner_test(&self.url, &self.username, &self.token)
         }
-        run_runner_test(&self.url, &self.token, &self.username)
     }
 
-    #[cfg(feature = "plus")]
     fn exec_with_daemon(&self) -> anyhow::Result<()> {
         let is_linux = cfg!(target_os = "linux");
         let has_kvm = is_linux && camino::Utf8Path::new("/dev/kvm").exists();
@@ -90,10 +76,6 @@ impl RunnerTest {
 
         println!("=== Runner Daemon Test ===");
 
-        let admin_token = self
-            .admin_token
-            .as_ref()
-            .expect("admin_token checked in TryFrom");
         let host = self.url.as_ref();
 
         // Rotate the runner token to get a fresh one we can use
@@ -105,7 +87,7 @@ impl RunnerTest {
             HOST_ARG,
             host,
             TOKEN_ARG,
-            admin_token.as_ref(),
+            self.admin_token.as_ref(),
             "test-runner",
         ])
         .current_dir(CLI_DIR);
@@ -169,7 +151,7 @@ impl RunnerTest {
         );
 
         // Run the actual runner test
-        let result = run_runner_test(&self.url, &self.token, &self.username);
+        let result = run_runner_test(&self.url, &self.username, &self.token);
 
         // Always kill the runner daemon, even if the test failed
         let _kill = runner_child.kill();
@@ -194,7 +176,7 @@ pub fn docker_available() -> bool {
 
 /// Run the runner smoke test: pull a prebuilt image, push it to the API's OCI
 /// registry via Docker, then submit a job with `bencher run --image`.
-pub fn run_runner_test(url: &Url, token: &Jwt, username: &str) -> anyhow::Result<()> {
+pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running runner smoke test against: {host}");

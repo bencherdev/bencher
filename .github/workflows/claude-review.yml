@@ -11,7 +11,7 @@ concurrency:
 
 env:
   CLAUDE_MODEL: claude-opus-4-6
-  CLAUDE_MAX_TURNS: 16
+  CLAUDE_MAX_TURNS: 64
 
 jobs:
   claude-review:

@@ -7,7 +7,7 @@ mod runner;
 mod test;
 
 #[cfg(feature = "plus")]
-pub use oci::{TEST_ADMIN_API_TOKEN, TEST_ADMIN_USERNAME, TaskOci};
+pub use oci::TaskOci;
 #[cfg(feature = "plus")]
 pub use runner::TaskRunner;
 pub use test::{TaskExample, TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment};
