@@ -4,7 +4,11 @@ use bencher_json::{
     organization::plan::DEFAULT_PRICE_NAME,
     system::config::{JsonProduct, JsonProducts},
 };
-use stripe::{Client as StripeClient, Price as StripePrice, PriceId, Product as StripeProduct};
+use stripe::Client as StripeClient;
+use stripe_product::{
+    Price as StripePrice, PriceId, Product as StripeProduct, ProductId, price::RetrievePrice,
+    product::RetrieveProduct,
+};
 
 use crate::BillingError;
 
@@ -28,15 +32,15 @@ impl Products {
     // both price IDs under different keys: the currently-active price under
     // "default" and the upcoming price under "metrics".
     //
-    // This method returns only the "default" price IDs so we can filter
-    // subscription items down to the one we should actually bill against.
+    // This method returns only the price IDs for the given `preferred` key,
+    // falling back to "default" if the preferred key is not found.
     // Once the migration cutover is complete and the old subscription items are
     // removed, this filtering becomes a no-op (one item in, one item out).
-    pub fn default_price_ids(&self) -> HashSet<&PriceId> {
+    pub fn preferred_price_ids(&self, preferred: &str) -> HashSet<&PriceId> {
         self.team
-            .default_price_ids()
+            .preferred_price_ids(preferred)
             .into_iter()
-            .chain(self.enterprise.default_price_ids())
+            .chain(self.enterprise.preferred_price_ids(preferred))
             .collect()
     }
 }
@@ -56,7 +60,8 @@ impl Product {
             licensed,
         } = product;
 
-        let product = StripeProduct::retrieve(client, &id.parse()?, &[]).await?;
+        let product_id: ProductId = id.as_str().into();
+        let product = RetrieveProduct::new(product_id).send(client).await?;
         let metered = Self::pricing(client, metered).await?;
         let licensed = Self::pricing(client, licensed).await?;
 
@@ -67,15 +72,21 @@ impl Product {
         })
     }
 
-    // Returns only the price IDs associated with the "default" key for this
-    // product level. See `Products::default_price_ids` for migration context.
-    fn default_price_ids(&self) -> Vec<&PriceId> {
-        self.metered
-            .get(DEFAULT_PRICE_NAME)
-            .into_iter()
-            .chain(self.licensed.get(DEFAULT_PRICE_NAME))
-            .map(|p| &p.id)
-            .collect()
+    // Returns the price IDs for the given `preferred` key, falling back to
+    // "default" if the preferred key is not found.
+    // See `Products::preferred_price_ids` for migration context.
+    fn preferred_price_ids(&self, preferred: &str) -> Vec<&PriceId> {
+        let metered_id = self
+            .metered
+            .get(preferred)
+            .or_else(|| self.metered.get(DEFAULT_PRICE_NAME))
+            .map(|p| &p.id);
+        let licensed_id = self
+            .licensed
+            .get(preferred)
+            .or_else(|| self.licensed.get(DEFAULT_PRICE_NAME))
+            .map(|p| &p.id);
+        metered_id.into_iter().chain(licensed_id).collect()
     }
 
     async fn pricing(
@@ -84,7 +95,8 @@ impl Product {
     ) -> Result<HashMap<String, StripePrice>, BillingError> {
         let mut biller_pricing = HashMap::with_capacity(pricing.len());
         for (price_name, price_id) in pricing {
-            let price = StripePrice::retrieve(client, &price_id.parse()?, &[]).await?;
+            let price_id: PriceId = price_id.as_str().into();
+            let price = RetrievePrice::new(price_id).send(client).await?;
             biller_pricing.insert(price_name, price);
         }
         Ok(biller_pricing)
