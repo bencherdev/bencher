@@ -6,11 +6,18 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use crate::parser::{TEST_ADMIN_API_TOKEN, TEST_ADMIN_USERNAME, TaskOci};
+use bencher_json::Jwt;
+use bencher_json::Url;
+
+use crate::parser::TaskOci;
+use crate::task::is_dev;
+use crate::task::test::seed_test::ADMIN_EMAIL;
+use crate::task::unwrap_admin_token;
+use crate::task::unwrap_url;
 
 #[derive(Debug)]
 pub struct Oci {
-    api_url: String,
+    url: Url,
     namespace: String,
     crossmount_namespace: String,
     pull_only: bool,
@@ -19,43 +26,58 @@ pub struct Oci {
     output_dir: PathBuf,
     spec_dir: PathBuf,
     username: String,
-    password: String,
+    password: Jwt,
 }
 
 impl TryFrom<TaskOci> for Oci {
     type Error = anyhow::Error;
 
     fn try_from(task: TaskOci) -> Result<Self, Self::Error> {
+        let TaskOci {
+            url,
+            namespace,
+            crossmount_namespace,
+            pull_only,
+            skip_build,
+            debug,
+            output_dir,
+            spec_dir,
+            username,
+            password,
+        } = task;
+
+        let is_dev = is_dev(url.as_ref());
+        let url = unwrap_url(url);
+        let namespace = namespace.unwrap_or_else(|| "namespace".to_owned());
+        let crossmount_namespace =
+            crossmount_namespace.unwrap_or_else(|| "crossmount-namespace".to_owned());
+
         // Convert relative paths to absolute paths
         let cwd = env::current_dir()?;
-        let output_dir = if Path::new(&task.output_dir).is_absolute() {
-            PathBuf::from(&task.output_dir)
+        let output_dir_str = output_dir.unwrap_or_else(|| "./oci-conformance-results".to_owned());
+        let output_dir = if Path::new(&output_dir_str).is_absolute() {
+            PathBuf::from(&output_dir_str)
         } else {
-            cwd.join(&task.output_dir)
+            cwd.join(&output_dir_str)
         };
-        let spec_dir = if Path::new(&task.spec_dir).is_absolute() {
-            PathBuf::from(&task.spec_dir)
+        let spec_dir_str = spec_dir.unwrap_or_else(|| "./distribution-spec".to_owned());
+        let spec_dir = if Path::new(&spec_dir_str).is_absolute() {
+            PathBuf::from(&spec_dir_str)
         } else {
-            cwd.join(&task.spec_dir)
+            cwd.join(&spec_dir_str)
         };
 
-        // Use admin credentials when --admin flag is set
-        let (username, password) = if task.admin {
-            (
-                TEST_ADMIN_USERNAME.to_owned(),
-                TEST_ADMIN_API_TOKEN.to_owned(),
-            )
-        } else {
-            (task.username, task.password)
-        };
+        // In order to run pull tests, we need to be an admin
+        let username = username.unwrap_or_else(|| ADMIN_EMAIL.to_owned());
+        let password = unwrap_admin_token(password, is_dev);
 
         Ok(Self {
-            api_url: task.api_url,
-            namespace: task.namespace,
-            crossmount_namespace: task.crossmount_namespace,
-            pull_only: task.pull_only,
-            skip_build: task.skip_build,
-            debug: task.debug,
+            url,
+            namespace,
+            crossmount_namespace,
+            pull_only,
+            skip_build,
+            debug,
             output_dir,
             spec_dir,
             username,
@@ -67,7 +89,7 @@ impl TryFrom<TaskOci> for Oci {
 impl Oci {
     pub fn exec(&self) -> anyhow::Result<()> {
         println!("=== OCI Conformance Test Runner ===");
-        println!("API URL: {}", self.api_url);
+        println!("API URL: {}", self.url);
         println!("Namespace: {}", self.namespace);
         println!("Crossmount Namespace: {}", self.crossmount_namespace);
         println!("Username: {}", self.username);
@@ -107,9 +129,10 @@ impl Oci {
         println!("Checking API connectivity...");
 
         // Parse host and port from URL
-        let is_https = self.api_url.starts_with("https://");
+        let is_https = self.url.as_ref().starts_with("https://");
         let url = self
-            .api_url
+            .url
+            .as_ref()
             .trim_start_matches("http://")
             .trim_start_matches("https://");
         let host = url.split('/').next().unwrap_or("localhost");
@@ -136,7 +159,7 @@ impl Oci {
             "Cannot connect to API at {}\n\
              Please start the Bencher API server first:\n  \
              cargo run -p bencher_api --features plus",
-            self.api_url
+            self.url
         )
     }
 
@@ -258,13 +281,13 @@ impl Oci {
         let mut cmd = Command::new(&conformance_binary);
         cmd.args(["-test.v"])
             .current_dir(&conformance_dir)
-            .env("OCI_ROOT_URL", &self.api_url)
+            .env("OCI_ROOT_URL", self.url.as_ref())
             .env("OCI_NAMESPACE", &self.namespace)
             .env("OCI_CROSSMOUNT_NAMESPACE", &self.crossmount_namespace)
             .env("OCI_DEBUG", if self.debug { "1" } else { "0" })
             .env("OCI_REPORT_DIR", &self.output_dir)
             .env("OCI_USERNAME", &self.username)
-            .env("OCI_PASSWORD", &self.password)
+            .env("OCI_PASSWORD", self.password.as_ref())
             .env("OCI_AUTOMATIC_CROSSMOUNT", "0");
 
         if self.pull_only {

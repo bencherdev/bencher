@@ -106,13 +106,7 @@ impl SmokeTest {
                 kill_child(child)?;
             },
             Environment::Docker => bencher_down()?,
-            Environment::Dev => test(
-                &api_url,
-                MockSetup::BencherCloud {
-                    admin_token: DEV_ADMIN_BENCHER_API_TOKEN.clone(),
-                    token: DEV_BENCHER_API_TOKEN.clone(),
-                },
-            )?,
+            Environment::Dev => test(&api_url, MockSetup::BencherCloud)?,
             Environment::Test | Environment::Prod => {},
         }
 
@@ -205,49 +199,59 @@ fn test_api_version(api_url: &Url) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[derive(Clone, Copy)]
 enum MockSetup {
-    BencherCloud { admin_token: Jwt, token: Jwt },
+    BencherCloud,
     SelfHosted { examples: bool, runner: bool },
 }
 
 fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
     match mock_setup {
-        MockSetup::BencherCloud { admin_token, token } => {
+        MockSetup::BencherCloud => {
             let task = TaskSeedTest {
                 url: Some(api_url.clone()),
-                admin_token: Some(admin_token.clone()),
-                token: Some(token),
                 is_bencher_cloud: true,
-                no_git: false,
+                ..Default::default()
             };
             SeedTest::try_from(task)?.exec()?;
+
+            #[cfg(feature = "plus")]
+            // Run runner smoke test (requires Docker + KVM for the runner daemon)
+            {
+                let runner_test = runner::RunnerTest::try_from(TaskRunner {
+                    url: Some(api_url.clone()),
+                    with_daemon: true,
+                    ..Default::default()
+                })?;
+                runner_test.exec()?;
+            }
+            #[cfg(not(feature = "plus"))]
+            let _ = runner;
 
             Ok(())
         },
         MockSetup::SelfHosted { examples, runner } => {
             let task = TaskSeedTest {
                 url: Some(api_url.clone()),
-                admin_token: None,
-                token: None,
-                is_bencher_cloud: false,
-                no_git: false,
+                ..Default::default()
             };
             SeedTest::try_from(task)?.exec()?;
 
             #[cfg(feature = "plus")]
             {
                 // Run OCI conformance tests
-                let oci = Oci::try_from(TaskOci::for_test(api_url.as_ref(), true))?;
+                let oci = Oci::try_from(TaskOci {
+                    url: Some(api_url.clone()),
+                    ..Default::default()
+                })?;
                 oci.exec()?;
 
                 // Run runner smoke test (requires Docker + KVM for the runner daemon)
                 if runner {
                     let runner_test = runner::RunnerTest::try_from(TaskRunner {
                         url: Some(api_url.clone()),
-                        token: Some(Jwt::test_token()),
-                        username: None,
-                        admin_token: Some(Jwt::test_admin_token()),
                         with_daemon: true,
+                        ..Default::default()
                     })?;
                     runner_test.exec()?;
                 }
@@ -258,8 +262,7 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
             if examples {
                 let examples = Examples::try_from(TaskExamples {
                     url: Some(api_url.clone()),
-                    token: None,
-                    example: None,
+                    ..Default::default()
                 })?;
                 examples.exec()?;
             }

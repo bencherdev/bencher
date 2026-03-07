@@ -1,6 +1,10 @@
+use bencher_json::{DEV_BENCHER_API_URL_STR, Jwt, LOCALHOST_BENCHER_API_URL, Url};
 use clap::Parser as _;
 
-use crate::parser::{TaskSub, TaskTask};
+use crate::{
+    parser::{TaskSub, TaskTask},
+    task::test::smoke_test::{DEV_ADMIN_BENCHER_API_TOKEN, DEV_BENCHER_API_TOKEN},
+};
 
 #[cfg(feature = "plus")]
 mod oci;
@@ -78,4 +82,33 @@ impl Sub {
             Self::Runner(runner) => runner.exec(),
         }
     }
+}
+
+fn is_dev(url: Option<&Url>) -> bool {
+    url.as_ref()
+        .is_some_and(|u| u.as_ref() == DEV_BENCHER_API_URL_STR)
+}
+
+fn unwrap_url(url: Option<Url>) -> Url {
+    url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into())
+}
+
+fn unwrap_admin_token(admin_token: Option<Jwt>, is_dev: bool) -> Jwt {
+    admin_token.unwrap_or_else(|| {
+        if is_dev {
+            DEV_ADMIN_BENCHER_API_TOKEN.clone()
+        } else {
+            Jwt::test_admin_token()
+        }
+    })
+}
+
+fn unwrap_user_token(user_token: Option<Jwt>, is_dev: bool) -> Jwt {
+    user_token.unwrap_or_else(|| {
+        if is_dev {
+            DEV_BENCHER_API_TOKEN.clone()
+        } else {
+            Jwt::test_token()
+        }
+    })
 }

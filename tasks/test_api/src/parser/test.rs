@@ -1,7 +1,7 @@
 use bencher_json::{Jwt, Url};
 use clap::{Parser, ValueEnum};
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Default)]
 pub struct TaskSeedTest {
     /// Test API URL
     #[clap(long)]
@@ -20,7 +20,7 @@ pub struct TaskSeedTest {
     pub no_git: bool,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Default)]
 pub struct TaskExamples {
     /// Test API URL
     #[clap(long)]
