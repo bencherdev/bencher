@@ -278,17 +278,13 @@ impl Run {
         };
 
         let (branch, hash, start_point) = self.branch.clone().into();
-        #[cfg(feature = "plus")]
-        let spec_reset = self.spec_reset.then_some(true);
-        #[cfg(not(feature = "plus"))]
-        let spec_reset = None;
         Ok(Some(JsonNewRun {
             project: self.project.clone().map(Into::into),
             branch,
             hash,
             start_point,
             testbed: self.testbed.clone().map(Into::into),
-            spec_reset,
+            spec_reset: self.spec_reset(),
             thresholds: self.thresholds.clone().into(),
             start_time: start_time.into(),
             end_time: end_time.into(),
@@ -321,7 +317,7 @@ impl Run {
             hash,
             start_point,
             testbed: self.testbed.clone().map(Into::into),
-            spec_reset: None,
+            spec_reset: self.spec_reset(),
             thresholds: self.thresholds.clone().into(),
             start_time: now.into(),
             end_time: now.into(),
@@ -346,6 +342,17 @@ impl Run {
                 allow_failure: self.allow_failure.then_some(true),
                 backdate: self.backdate.map(Into::into),
             }),
+        }
+    }
+
+    fn spec_reset(&self) -> Option<bool> {
+        #[cfg(feature = "plus")]
+        {
+            self.spec_reset.then_some(true)
+        }
+        #[cfg(not(feature = "plus"))]
+        {
+            None
         }
     }
 
