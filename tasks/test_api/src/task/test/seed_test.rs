@@ -1962,6 +1962,82 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(spec.name.as_ref(), "Updated Spec");
 
+        // Assign spec to testbed via testbed update
+        // cargo run -- testbed update --host http://localhost:61016 --token $BENCHER_API_TOKEN --spec test-spec the-computer base
+        let token = self.token.as_ref();
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "testbed",
+            "update",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            "--spec",
+            "test-spec",
+            PROJECT_SLUG,
+            "base",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let testbed: bencher_json::JsonTestbed =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert!(
+            testbed.spec.is_some(),
+            "Expected spec on testbed after assigning"
+        );
+
+        // Run with --spec-reset to clear the spec
+        // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --testbed base --spec-reset --quiet bencher mock
+        let bencher_cmd = Command::cargo_bin(BENCHER_CMD)?
+            .get_program()
+            .to_string_lossy()
+            .to_string();
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            "--testbed",
+            "base",
+            "--spec-reset",
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // Verify testbed spec is cleared
+        // cargo run -- testbed view --host http://localhost:61016 --token $BENCHER_API_TOKEN the-computer base
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "testbed",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_SLUG,
+            "base",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let testbed: bencher_json::JsonTestbed =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert!(
+            testbed.spec.is_none(),
+            "Expected spec to be cleared after --spec-reset"
+        );
+
         Ok(())
     }
 

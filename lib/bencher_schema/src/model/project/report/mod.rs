@@ -53,6 +53,8 @@ pub struct NewRunReport {
     #[cfg(feature = "plus")]
     pub testbed: RunTestbed,
     #[cfg(feature = "plus")]
+    pub spec_reset: bool,
+    #[cfg(feature = "plus")]
     pub job: Option<NewRunJob>,
 }
 
@@ -143,6 +145,8 @@ impl QueryReport {
             #[cfg(feature = "plus")]
                 testbed: run_testbed,
             #[cfg(feature = "plus")]
+            spec_reset,
+            #[cfg(feature = "plus")]
                 job: new_run_job,
         } = new_run_report;
 
@@ -169,6 +173,8 @@ impl QueryReport {
             &json_report.testbed,
             #[cfg(feature = "plus")]
             &run_testbed,
+            #[cfg(feature = "plus")]
+            spec_reset,
             #[cfg(feature = "plus")]
             &run_job,
         )

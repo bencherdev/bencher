@@ -46,6 +46,8 @@ pub struct Run {
     project: Option<ProjectResourceId>,
     branch: Branch,
     testbed: Option<TestbedNameId>,
+    #[cfg(feature = "plus")]
+    spec_reset: bool,
     adapter: Adapter,
     sub_adapter: SubAdapter,
     average: Option<JsonAverage>,
@@ -97,6 +99,8 @@ impl TryFrom<CliRun> for Run {
             project,
             branch,
             testbed,
+            #[cfg(feature = "plus")]
+            spec_reset,
             adapter,
             average,
             iter,
@@ -154,6 +158,8 @@ impl TryFrom<CliRun> for Run {
             project: map_project(project)?,
             branch: branch.try_into().map_err(RunError::Branch)?,
             testbed,
+            #[cfg(feature = "plus")]
+            spec_reset,
             adapter: adapter.into(),
             sub_adapter,
             average: average.map(Into::into),
@@ -278,6 +284,7 @@ impl Run {
             hash,
             start_point,
             testbed: self.testbed.clone().map(Into::into),
+            spec_reset: self.spec_reset(),
             thresholds: self.thresholds.clone().into(),
             start_time: start_time.into(),
             end_time: end_time.into(),
@@ -310,6 +317,7 @@ impl Run {
             hash,
             start_point,
             testbed: self.testbed.clone().map(Into::into),
+            spec_reset: self.spec_reset(),
             thresholds: self.thresholds.clone().into(),
             start_time: now.into(),
             end_time: now.into(),
@@ -334,6 +342,17 @@ impl Run {
                 allow_failure: self.allow_failure.then_some(true),
                 backdate: self.backdate.map(Into::into),
             }),
+        }
+    }
+
+    fn spec_reset(&self) -> Option<bool> {
+        #[cfg(feature = "plus")]
+        {
+            self.spec_reset.then_some(true)
+        }
+        #[cfg(not(feature = "plus"))]
+        {
+            None
         }
     }
 

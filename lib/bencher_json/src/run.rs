@@ -47,6 +47,10 @@ pub struct JsonNewRun {
     /// Testbed UUID, slug, or name.
     /// If the testbed is not provided or does not exist, it will be created.
     pub testbed: Option<TestbedNameId>,
+    /// When set to `true`, clear the hardware spec from the testbed.
+    #[cfg(feature = "plus")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec_reset: Option<bool>,
     /// Thresholds to use for the branch, testbed, and measures in the report.
     /// If a threshold does not exist, it will be created.
     /// If a threshold exists and the model is different, it will be updated with the new model.
@@ -78,6 +82,8 @@ impl From<JsonNewRun> for JsonNewReport {
             hash,
             start_point,
             testbed,
+            #[cfg(feature = "plus")]
+                spec_reset: _,
             thresholds,
             start_time,
             end_time,

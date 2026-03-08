@@ -98,6 +98,7 @@ impl QueryTestbed {
         project_id: ProjectId,
         testbed: &TestbedNameId,
         #[cfg(feature = "plus")] run_testbed: &RunTestbed,
+        #[cfg(feature = "plus")] spec_reset: bool,
         #[cfg(feature = "plus")] run_job: &RunJob<'_>,
     ) -> Result<ResolvedTestbed, HttpError> {
         #[cfg(feature = "plus")]
@@ -106,7 +107,14 @@ impl QueryTestbed {
                 .await;
         }
 
-        let query_testbed = Self::get_or_create_for_report(context, project_id, testbed).await?;
+        let query_testbed = Self::get_or_create_for_report(
+            context,
+            project_id,
+            testbed,
+            #[cfg(feature = "plus")]
+            spec_reset,
+        )
+        .await?;
         Ok(ResolvedTestbed {
             testbed_id: query_testbed.id,
             spec_id: None,
@@ -117,8 +125,9 @@ impl QueryTestbed {
         context: &ApiContext,
         project_id: ProjectId,
         testbed: &TestbedNameId,
+        #[cfg(feature = "plus")] spec_reset: bool,
     ) -> Result<Self, HttpError> {
-        let query_testbed = Self::get_or_create_inner(context, project_id, testbed).await?;
+        let mut query_testbed = Self::get_or_create_inner(context, project_id, testbed).await?;
 
         if query_testbed.archived.is_some() {
             let update_testbed = UpdateTestbed::unarchive(context.clock.now());
@@ -126,6 +135,17 @@ impl QueryTestbed {
                 .set(&update_testbed)
                 .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Testbed, &query_testbed))?;
+            query_testbed.archived = None;
+        }
+
+        #[cfg(feature = "plus")]
+        if spec_reset && query_testbed.spec_id.is_some() {
+            let update_testbed = UpdateTestbed::clear_spec(context.clock.now());
+            diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
+                .set(&update_testbed)
+                .execute(write_conn!(context))
+                .map_err(resource_conflict_err!(Testbed, &query_testbed))?;
+            query_testbed.spec_id = None;
         }
 
         Ok(query_testbed)
@@ -530,6 +550,17 @@ impl UpdateTestbed {
             spec_id: None,
             modified: now,
             archived: Some(None),
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    fn clear_spec(now: DateTime) -> Self {
+        Self {
+            name: None,
+            slug: None,
+            spec_id: Some(None),
+            modified: now,
+            archived: None,
         }
     }
 }

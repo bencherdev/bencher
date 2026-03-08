@@ -149,6 +149,9 @@ async fn post_inner(
     };
 
     #[cfg(feature = "plus")]
+    let spec_reset = json_run.spec_reset.unwrap_or_default();
+
+    #[cfg(feature = "plus")]
     let job = json_run.job.take().map(|run_job| {
         let source_ip = if let Some(ip) = RateLimiting::remote_ip(log, headers) {
             SourceIp::new(ip)
@@ -172,6 +175,8 @@ async fn post_inner(
         report: json_run.into(),
         #[cfg(feature = "plus")]
         testbed,
+        #[cfg(feature = "plus")]
+        spec_reset,
         #[cfg(feature = "plus")]
         job,
     };

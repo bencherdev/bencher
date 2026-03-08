@@ -311,6 +311,8 @@ async fn post_inner(
         #[cfg(feature = "plus")]
         testbed: RunTestbed::Explicit,
         #[cfg(feature = "plus")]
+        spec_reset: false,
+        #[cfg(feature = "plus")]
         job: None,
     };
 

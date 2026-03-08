@@ -62,7 +62,7 @@ impl QueryBenchmark {
         project_id: ProjectId,
         benchmark: &BenchmarkNameId,
     ) -> Result<BenchmarkId, HttpError> {
-        let query_benchmark = Self::get_or_create_inner(context, project_id, benchmark).await?;
+        let mut query_benchmark = Self::get_or_create_inner(context, project_id, benchmark).await?;
 
         if query_benchmark.archived.is_some() {
             let update_benchmark = UpdateBenchmark::unarchive();
@@ -72,6 +72,7 @@ impl QueryBenchmark {
             .set(&update_benchmark)
             .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Benchmark, &query_benchmark))?;
+            query_benchmark.archived = None;
         }
 
         Ok(query_benchmark.id)
