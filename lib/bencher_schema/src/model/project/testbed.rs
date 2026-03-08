@@ -127,7 +127,7 @@ impl QueryTestbed {
         testbed: &TestbedNameId,
         #[cfg(feature = "plus")] spec_reset: bool,
     ) -> Result<Self, HttpError> {
-        let query_testbed = Self::get_or_create_inner(context, project_id, testbed).await?;
+        let mut query_testbed = Self::get_or_create_inner(context, project_id, testbed).await?;
 
         if query_testbed.archived.is_some() {
             let update_testbed = UpdateTestbed::unarchive(context.clock.now());
@@ -135,6 +135,7 @@ impl QueryTestbed {
                 .set(&update_testbed)
                 .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Testbed, &query_testbed))?;
+            query_testbed.archived = None;
         }
 
         #[cfg(feature = "plus")]
@@ -144,6 +145,7 @@ impl QueryTestbed {
                 .set(&update_testbed)
                 .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Testbed, &query_testbed))?;
+            query_testbed.spec_id = None;
         }
 
         Ok(query_testbed)

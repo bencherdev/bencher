@@ -62,7 +62,7 @@ impl QueryMeasure {
         project_id: ProjectId,
         measure: &MeasureNameId,
     ) -> Result<MeasureId, HttpError> {
-        let query_measure = Self::get_or_create_inner(context, project_id, measure).await?;
+        let mut query_measure = Self::get_or_create_inner(context, project_id, measure).await?;
 
         if query_measure.archived.is_some() {
             let update_measure = UpdateMeasure::unarchive();
@@ -70,6 +70,7 @@ impl QueryMeasure {
                 .set(&update_measure)
                 .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Measure, &query_measure))?;
+            query_measure.archived = None;
         }
 
         Ok(query_measure.id)
