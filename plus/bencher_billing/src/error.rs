@@ -1,17 +1,14 @@
-use stripe::{
-    CheckoutSession, Customer, CustomerId, PaymentMethodId, PriceId, ProductId, Subscription,
-    SubscriptionId, SubscriptionItem, SubscriptionItemId,
-};
+use stripe_billing::{Subscription, SubscriptionId, SubscriptionItem, SubscriptionItemId};
+use stripe_checkout::CheckoutSession;
+use stripe_payment::PaymentMethodId;
+use stripe_product::PriceId;
+use stripe_shared::{Customer, CustomerId, ProductId};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum BillingError {
     #[error("Failed to validate: {0}")]
     Valid(#[from] bencher_json::ValidError),
-    #[error("Failed to parse metered plan ID: {0}")]
-    MeteredPlanId(stripe::ParseIdError),
-    #[error("Failed to parse licensed plan ID: {0}")]
-    LicensedPlanId(stripe::ParseIdError),
     #[error("Failed to parse user UUID ({0}): {1}")]
     BadUserUuid(String, uuid::Error),
     #[error("Failed to parse organization UUID ({0}): {1}")]
@@ -19,8 +16,6 @@ pub enum BillingError {
 
     #[error("Failed to get checkout URL: {0:?}")]
     NoCheckoutUrl(Box<CheckoutSession>),
-    #[error("Failed to parse checkout session ID: {0:?}")]
-    CheckoutSessionId(stripe::ParseIdError),
     #[error("Failed to to find checkout session subscription: {0:?}")]
     NoSubscription(Box<CheckoutSession>),
 
@@ -28,8 +23,6 @@ pub enum BillingError {
     IntError(#[from] std::num::TryFromIntError),
     #[error("Failed to send billing request: {0}")]
     Stripe(#[from] stripe::StripeError),
-    #[error("Failed to parse ID: {0}")]
-    StripeId(#[from] stripe::ParseIdError),
     #[error("Email collision: {0:#?} {1:#?}")]
     EmailCollision(Box<Customer>, Vec<Customer>),
     #[error("Failed to find price: {0}")]
@@ -64,10 +57,6 @@ pub enum BillingError {
     NoPrice(SubscriptionItemId),
     #[error("No unit amount for {0}")]
     NoUnitAmount(PriceId),
-    #[error("No product for {0}")]
-    NoProduct(PriceId),
     #[error("No product info for {0}")]
     NoProductInfo(ProductId),
-    #[error("No product name for {0}")]
-    NoProductName(ProductId),
 }
