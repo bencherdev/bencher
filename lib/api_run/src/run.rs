@@ -142,6 +142,9 @@ async fn post_inner(
     }
 
     #[cfg(feature = "plus")]
+    let spec_reset = json_run.spec_reset.unwrap_or_default();
+
+    #[cfg(feature = "plus")]
     let testbed = if json_run.testbed.is_some() {
         RunTestbed::Explicit
     } else {
@@ -170,6 +173,8 @@ async fn post_inner(
 
     let new_run_report = NewRunReport {
         report: json_run.into(),
+        #[cfg(feature = "plus")]
+        spec_reset,
         #[cfg(feature = "plus")]
         testbed,
         #[cfg(feature = "plus")]

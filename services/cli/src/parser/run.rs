@@ -15,6 +15,7 @@ use super::project::report::{
 };
 
 #[derive(Parser, Debug)]
+#[cfg_attr(feature = "plus", expect(clippy::struct_excessive_bools))]
 pub struct CliRun {
     #[clap(flatten)]
     pub project: CliRunProject,
@@ -26,6 +27,11 @@ pub struct CliRun {
     /// If a name or slug is provided, the testbed will be created if it does not exist.
     #[clap(long, env = "BENCHER_TESTBED")]
     pub testbed: Option<TestbedNameId>,
+
+    /// Reset the testbed spec, removing its hardware specification.
+    #[cfg(feature = "plus")]
+    #[clap(long, conflicts_with = "image", requires = "testbed")]
+    pub spec_reset: bool,
 
     /// Benchmark harness adapter
     #[clap(value_enum, long, env = "BENCHER_ADAPTER", default_value = "magic")]
