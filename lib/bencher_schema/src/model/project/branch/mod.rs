@@ -95,7 +95,7 @@ impl QueryBranch {
         branch: &BranchNameId,
         start_point: Option<&JsonUpdateStartPoint>,
     ) -> Result<(BranchId, HeadId), HttpError> {
-        let (query_branch, query_head) =
+        let (mut query_branch, query_head) =
             Self::get_or_create_inner(log, context, project_id, branch, start_point).await?;
 
         if query_branch.archived.is_some() {
@@ -104,6 +104,7 @@ impl QueryBranch {
                 .set(&update_branch)
                 .execute(write_conn!(context))
                 .map_err(resource_conflict_err!(Branch, &query_branch))?;
+            query_branch.archived = None;
         }
 
         Ok((query_branch.id, query_head.id))
