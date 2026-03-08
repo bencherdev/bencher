@@ -1,4 +1,7 @@
-use bencher_json::{DateTime, JsonServerStats};
+use bencher_json::{
+    DateTime, JsonServerStats,
+    system::server::{JsonRunnerStats, JsonRunnerStatsCohort},
+};
 use dropshot::HttpError;
 use slog::Logger;
 
@@ -29,6 +32,7 @@ enum ProjectState {
     All,
     Unclaimed,
     Claimed,
+    Plus,
 }
 
 pub(super) fn get_stats(
@@ -72,25 +76,10 @@ pub(super) fn get_stats(
         MetricsStats::new(conn, this_week, this_month, ProjectState::Claimed)?;
 
     // job duration and median job duration per report
-    let job_stats = JobStats::new(conn, this_week, this_month, job_stats::JobProjectState::All)?;
-    let unclaimed_job_stats = JobStats::new(
-        conn,
-        this_week,
-        this_month,
-        job_stats::JobProjectState::Unclaimed,
-    )?;
-    let claimed_job_stats = JobStats::new(
-        conn,
-        this_week,
-        this_month,
-        job_stats::JobProjectState::Claimed,
-    )?;
-    let plus_job_stats = JobStats::new(
-        conn,
-        this_week,
-        this_month,
-        job_stats::JobProjectState::Plus,
-    )?;
+    let job_stats = JobStats::new(conn, this_week, this_month, ProjectState::All)?;
+    let unclaimed_job_stats = JobStats::new(conn, this_week, this_month, ProjectState::Unclaimed)?;
+    let claimed_job_stats = JobStats::new(conn, this_week, this_month, ProjectState::Claimed)?;
+    let plus_job_stats = JobStats::new(conn, this_week, this_month, ProjectState::Plus)?;
 
     Ok(JsonServerStats {
         server: query_server.into_json(),
@@ -119,18 +108,26 @@ pub(super) fn get_stats(
         top_projects: Some(metrics_stats.top_projects),
         top_projects_unclaimed: Some(unclaimed_metrics_stats.top_projects),
         top_projects_claimed: Some(claimed_metrics_stats.top_projects),
-        job_duration: Some(job_stats.job_duration),
-        job_duration_unclaimed: Some(unclaimed_job_stats.job_duration),
-        job_duration_claimed: Some(claimed_job_stats.job_duration),
-        job_duration_plus: Some(plus_job_stats.job_duration),
-        job_duration_per_report: Some(job_stats.job_duration_per_report),
-        job_duration_per_report_unclaimed: Some(unclaimed_job_stats.job_duration_per_report),
-        job_duration_per_report_claimed: Some(claimed_job_stats.job_duration_per_report),
-        job_duration_per_report_plus: Some(plus_job_stats.job_duration_per_report),
-        top_job_projects: Some(job_stats.top_job_projects),
-        top_job_projects_unclaimed: Some(unclaimed_job_stats.top_job_projects),
-        top_job_projects_claimed: Some(claimed_job_stats.top_job_projects),
-        top_job_projects_plus: Some(plus_job_stats.top_job_projects),
+        runner: Some(JsonRunnerStats {
+            minutes: JsonRunnerStatsCohort {
+                total: job_stats.minutes,
+                unclaimed: unclaimed_job_stats.minutes,
+                claimed: claimed_job_stats.minutes,
+                plus: plus_job_stats.minutes,
+            },
+            minutes_per_report: JsonRunnerStatsCohort {
+                total: job_stats.minutes_per_report,
+                unclaimed: unclaimed_job_stats.minutes_per_report,
+                claimed: claimed_job_stats.minutes_per_report,
+                plus: plus_job_stats.minutes_per_report,
+            },
+            top_projects: JsonRunnerStatsCohort {
+                total: job_stats.top_projects,
+                unclaimed: unclaimed_job_stats.top_projects,
+                claimed: claimed_job_stats.top_projects,
+                plus: plus_job_stats.top_projects,
+            },
+        }),
     })
 }
 

@@ -23,7 +23,7 @@ use crate::{
         organization::{OrganizationId, plan::PlanKind},
         project::{
             QueryProject,
-            report::{self, QueryReport, ReportId},
+            report::{QueryReport, ReportId},
         },
         runner::{QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
@@ -183,7 +183,7 @@ impl QueryJob {
                 if updated == 0 {
                     return Err(diesel::result::Error::NotFound);
                 }
-                report::insert_job_duration(conn, report_id, job_duration)
+                insert_job_duration(conn, report_id, job_duration)
             })
             .map_err(|e| {
                 issue_error(
@@ -455,13 +455,42 @@ fn determine_priority(plan_kind: &PlanKind, is_claimed: bool) -> JobPriority {
     }
 }
 
+/// Insert the job duration summary for a report.
+///
+/// Uses `on_conflict.do_nothing()` for idempotency — the first write wins.
+/// This handles the `reprocess_completed_jobs` path where a report may be
+/// processed more than once.
+fn insert_job_duration(
+    conn: &mut DbConnection,
+    report_id: ReportId,
+    job_duration: i32,
+) -> QueryResult<()> {
+    diesel::insert_into(schema::job_duration_by_report::table)
+        .values((
+            schema::job_duration_by_report::report_id.eq(report_id),
+            schema::job_duration_by_report::job_duration.eq(job_duration),
+        ))
+        .on_conflict(schema::job_duration_by_report::report_id)
+        .do_nothing()
+        .execute(conn)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use bencher_json::{Entitlements, MeteredPlanId};
+    use bencher_json::{DateTime, Entitlements, MeteredPlanId};
+    use diesel::{Connection as _, QueryDsl as _};
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::model::organization::plan::LicenseUsage;
+    use crate::{
+        macros::sql::last_insert_rowid,
+        model::organization::plan::LicenseUsage,
+        test_util::{
+            create_base_entities, create_branch_with_head, create_head_version, create_testbed,
+            create_version, setup_test_db,
+        },
+    };
 
     fn metered_plan() -> PlanKind {
         PlanKind::Metered("test_plan".parse::<MeteredPlanId>().unwrap())
@@ -596,6 +625,90 @@ mod tests {
             determine_priority(&licensed_plan(PlanLevel::Enterprise), true),
             JobPriority::Enterprise
         );
+    }
+
+    // --- insert_job_duration tests ---
+
+    /// Helper to create a report and return its `ReportId` for `job_duration` tests.
+    fn create_report_for_job_duration_test(conn: &mut DbConnection) -> ReportId {
+        let base = create_base_entities(conn);
+        let branch = create_branch_with_head(
+            conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let testbed_id = create_testbed(
+            conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+        let version_id = create_version(
+            conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            0,
+            None,
+        );
+        create_head_version(conn, branch.head_id, version_id);
+
+        conn.transaction(|conn| {
+            diesel::insert_into(schema::report::table)
+                .values((
+                    schema::report::uuid.eq("00000000-0000-0000-0000-000000000050"),
+                    schema::report::project_id.eq(base.project_id),
+                    schema::report::head_id.eq(branch.head_id),
+                    schema::report::version_id.eq(version_id),
+                    schema::report::testbed_id.eq(testbed_id),
+                    schema::report::adapter.eq(0),
+                    schema::report::start_time.eq(DateTime::TEST),
+                    schema::report::end_time.eq(DateTime::TEST),
+                    schema::report::created.eq(DateTime::TEST),
+                ))
+                .execute(conn)?;
+
+            diesel::select(last_insert_rowid()).get_result::<ReportId>(conn)
+        })
+        .expect("Failed to insert report")
+    }
+
+    #[test]
+    fn insert_job_duration_basic() {
+        let mut conn = setup_test_db();
+        let report_id = create_report_for_job_duration_test(&mut conn);
+
+        insert_job_duration(&mut conn, report_id, 42).expect("Insert failed");
+
+        let duration: i32 = schema::job_duration_by_report::table
+            .filter(schema::job_duration_by_report::report_id.eq(report_id))
+            .select(schema::job_duration_by_report::job_duration)
+            .first(&mut conn)
+            .expect("Failed to read job duration");
+        assert_eq!(duration, 42);
+    }
+
+    #[test]
+    fn insert_job_duration_idempotent() {
+        let mut conn = setup_test_db();
+        let report_id = create_report_for_job_duration_test(&mut conn);
+
+        // First insert
+        insert_job_duration(&mut conn, report_id, 100).expect("First insert failed");
+
+        // Second insert with different value — should be ignored (do_nothing)
+        insert_job_duration(&mut conn, report_id, 999).expect("Second insert failed");
+
+        let duration: i32 = schema::job_duration_by_report::table
+            .filter(schema::job_duration_by_report::report_id.eq(report_id))
+            .select(schema::job_duration_by_report::job_duration)
+            .first(&mut conn)
+            .expect("Failed to read job duration");
+        // First write wins
+        assert_eq!(duration, 100);
     }
 }
 

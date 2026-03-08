@@ -15039,6 +15039,173 @@
           }
         }
       },
+      "JsonRunnerStats": {
+        "description": "Runner stats",
+        "type": "object",
+        "properties": {
+          "minutes": {
+            "description": "Total runner minutes",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRunnerStatsCohort_for_JsonCohort"
+              }
+            ]
+          },
+          "minutes_per_report": {
+            "description": "Median runner minutes per report",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRunnerStatsCohort_for_JsonCohortAvg"
+              }
+            ]
+          },
+          "top_projects": {
+            "description": "Top 10 projects by runner minutes",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRunnerStatsCohort_for_JsonTopJobCohort"
+              }
+            ]
+          }
+        },
+        "required": [
+          "minutes",
+          "minutes_per_report",
+          "top_projects"
+        ]
+      },
+      "JsonRunnerStatsCohort_for_JsonCohort": {
+        "description": "Runner stats broken down by project state",
+        "type": "object",
+        "properties": {
+          "claimed": {
+            "description": "Claimed projects only",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "plus": {
+            "description": "Plus (paid plan) projects only",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "total": {
+            "description": "Total (all projects)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "unclaimed": {
+            "description": "Unclaimed projects only",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          }
+        },
+        "required": [
+          "claimed",
+          "plus",
+          "total",
+          "unclaimed"
+        ]
+      },
+      "JsonRunnerStatsCohort_for_JsonCohortAvg": {
+        "description": "Runner stats broken down by project state",
+        "type": "object",
+        "properties": {
+          "claimed": {
+            "description": "Claimed projects only",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          },
+          "plus": {
+            "description": "Plus (paid plan) projects only",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          },
+          "total": {
+            "description": "Total (all projects)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          },
+          "unclaimed": {
+            "description": "Unclaimed projects only",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
+          }
+        },
+        "required": [
+          "claimed",
+          "plus",
+          "total",
+          "unclaimed"
+        ]
+      },
+      "JsonRunnerStatsCohort_for_JsonTopJobCohort": {
+        "description": "Runner stats broken down by project state",
+        "type": "object",
+        "properties": {
+          "claimed": {
+            "description": "Claimed projects only",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonTopJobCohort"
+              }
+            ]
+          },
+          "plus": {
+            "description": "Plus (paid plan) projects only",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonTopJobCohort"
+              }
+            ]
+          },
+          "total": {
+            "description": "Total (all projects)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonTopJobCohort"
+              }
+            ]
+          },
+          "unclaimed": {
+            "description": "Unclaimed projects only",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonTopJobCohort"
+              }
+            ]
+          }
+        },
+        "required": [
+          "claimed",
+          "plus",
+          "total",
+          "unclaimed"
+        ]
+      },
       "JsonRunnerToken": {
         "description": "Runner token response (returned on create or rotate)",
         "type": "object",
@@ -15343,6 +15510,15 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
+          },
+          "runner": {
+            "nullable": true,
+            "description": "Runner stats",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRunnerStats"
               }
             ]
           },
@@ -15959,6 +16135,61 @@
           "month",
           "total",
           "week"
+        ]
+      },
+      "JsonTopJobCohort": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonTopJobProject"
+            }
+          },
+          "total": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonTopJobProject"
+            }
+          },
+          "week": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonTopJobProject"
+            }
+          }
+        },
+        "required": [
+          "month",
+          "total",
+          "week"
+        ]
+      },
+      "JsonTopJobProject": {
+        "type": "object",
+        "properties": {
+          "minutes": {
+            "description": "Total runner minutes",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "name": {
+            "$ref": "#/components/schemas/ResourceName"
+          },
+          "percentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ProjectUuid"
+          }
+        },
+        "required": [
+          "minutes",
+          "name",
+          "percentage",
+          "uuid"
         ]
       },
       "JsonTopProject": {

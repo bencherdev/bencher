@@ -1,7 +1,10 @@
 use bencher_json::system::server::{
     JsonCohort, JsonCohortAvg, JsonTopCohort, JsonTopProject, JsonTopProjects,
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
+use diesel::{
+    BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableHelper as _,
+};
 use dropshot::HttpError;
 
 use crate::{
@@ -90,22 +93,49 @@ fn get_metrics_by_report(
         ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::metric_count_by_report::table
                 .inner_join(
-                    schema::report::table.inner_join(schema::project::table.inner_join(
-                        schema::organization::table.left_join(schema::organization_role::table),
-                    )),
+                    schema::report::table
+                        .inner_join(schema::project::table.inner_join(schema::organization::table)),
                 )
                 .select(schema::metric_count_by_report::metric_count)
                 .into_boxed();
 
-            query = match state {
-                #[expect(
-                    clippy::unreachable,
-                    reason = "match above ensures this is unreachable"
-                )]
-                ProjectState::All => unreachable!(),
-                ProjectState::Unclaimed => query.filter(schema::organization_role::id.is_null()),
-                ProjectState::Claimed => query.filter(schema::organization_role::id.is_not_null()),
+            let is_claimed = matches!(state, ProjectState::Claimed);
+            let org_has_roles = schema::organization_role::table
+                .filter(schema::organization_role::organization_id.eq(schema::organization::id));
+            query = if is_claimed {
+                query.filter(diesel::dsl::exists(org_has_roles))
+            } else {
+                query.filter(diesel::dsl::not(diesel::dsl::exists(org_has_roles)))
             };
+
+            if let Some(since) = since {
+                query = query.filter(schema::report::created.ge(since));
+            }
+
+            query
+                .load::<i32>(conn)
+                .map(|v| v.into_iter().map(i64::from).collect())
+                .map_err(resource_not_found_err!(Metric))
+        },
+        ProjectState::Plus => {
+            let mut query = schema::metric_count_by_report::table
+                .inner_join(
+                    schema::report::table.inner_join(
+                        schema::project::table.inner_join(
+                            schema::organization::table
+                                .inner_join(schema::plan::table.on(
+                                    schema::plan::organization_id.eq(schema::organization::id),
+                                )),
+                        ),
+                    ),
+                )
+                .filter(
+                    schema::plan::metered_plan
+                        .is_not_null()
+                        .or(schema::plan::licensed_plan.is_not_null()),
+                )
+                .select(schema::metric_count_by_report::metric_count)
+                .into_boxed();
 
             if let Some(since) = since {
                 query = query.filter(schema::report::created.ge(since));
@@ -156,9 +186,8 @@ fn get_top_projects(
             #[expect(clippy::cast_possible_wrap, reason = "const")]
             let mut query = schema::metric_count_by_report::table
                 .inner_join(
-                    schema::report::table.inner_join(schema::project::table.inner_join(
-                        schema::organization::table.left_join(schema::organization_role::table),
-                    )),
+                    schema::report::table
+                        .inner_join(schema::project::table.inner_join(schema::organization::table)),
                 )
                 .group_by(schema::project::id)
                 .select((
@@ -169,15 +198,54 @@ fn get_top_projects(
                 .limit(TOP_PROJECTS as i64)
                 .into_boxed();
 
-            query = match state {
-                #[expect(
-                    clippy::unreachable,
-                    reason = "match above ensures this is unreachable"
-                )]
-                ProjectState::All => unreachable!(),
-                ProjectState::Unclaimed => query.filter(schema::organization_role::id.is_null()),
-                ProjectState::Claimed => query.filter(schema::organization_role::id.is_not_null()),
+            let is_claimed = matches!(state, ProjectState::Claimed);
+            let org_has_roles = schema::organization_role::table
+                .filter(schema::organization_role::organization_id.eq(schema::organization::id));
+            query = if is_claimed {
+                query.filter(diesel::dsl::exists(org_has_roles))
+            } else {
+                query.filter(diesel::dsl::not(diesel::dsl::exists(org_has_roles)))
             };
+
+            if let Some(since) = since {
+                query = query.filter(schema::report::created.ge(since));
+            }
+
+            query
+                .load::<(QueryProject, Option<i64>)>(conn)
+                .map(|v| {
+                    v.into_iter()
+                        .map(|(project, sum)| (project, sum.unwrap_or(0)))
+                        .collect()
+                })
+                .map_err(resource_not_found_err!(Project))
+        },
+        ProjectState::Plus => {
+            #[expect(clippy::cast_possible_wrap, reason = "const")]
+            let mut query = schema::metric_count_by_report::table
+                .inner_join(
+                    schema::report::table.inner_join(
+                        schema::project::table.inner_join(
+                            schema::organization::table
+                                .inner_join(schema::plan::table.on(
+                                    schema::plan::organization_id.eq(schema::organization::id),
+                                )),
+                        ),
+                    ),
+                )
+                .filter(
+                    schema::plan::metered_plan
+                        .is_not_null()
+                        .or(schema::plan::licensed_plan.is_not_null()),
+                )
+                .group_by(schema::project::id)
+                .select((
+                    QueryProject::as_select(),
+                    diesel::dsl::sum(schema::metric_count_by_report::metric_count),
+                ))
+                .order(diesel::dsl::sum(schema::metric_count_by_report::metric_count).desc())
+                .limit(TOP_PROJECTS as i64)
+                .into_boxed();
 
             if let Some(since) = since {
                 query = query.filter(schema::report::created.ge(since));

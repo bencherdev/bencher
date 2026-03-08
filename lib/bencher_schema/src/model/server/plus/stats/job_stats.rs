@@ -11,30 +11,25 @@ use crate::{
     context::DbConnection, error::resource_not_found_err, model::project::QueryProject, schema,
 };
 
-use super::{TOP_PROJECTS, median};
-
-/// Which subset of projects to include in job stats.
-#[derive(Debug, Clone, Copy)]
-pub(super) enum JobProjectState {
-    All,
-    Unclaimed,
-    Claimed,
-    Plus,
-}
+use super::{ProjectState, TOP_PROJECTS, median};
 
 pub(super) struct JobStats {
-    pub job_duration: JsonCohort,
-    pub job_duration_per_report: JsonCohortAvg,
-    pub top_job_projects: JsonTopJobCohort,
+    pub minutes: JsonCohort,
+    pub minutes_per_report: JsonCohortAvg,
+    pub top_projects: JsonTopJobCohort,
 }
 
 impl JobStats {
-    #[expect(clippy::cast_sign_loss, reason = "duration is always positive")]
+    #[expect(
+        clippy::cast_sign_loss,
+        clippy::integer_division,
+        reason = "duration is always positive, integer division for seconds to minutes"
+    )]
     pub fn new(
         conn: &mut DbConnection,
         this_week: i64,
         this_month: i64,
-        state: JobProjectState,
+        state: ProjectState,
     ) -> Result<Self, HttpError> {
         let mut weekly_durations = get_durations_by_report(conn, Some(this_week), state)?;
         let weekly_total: i64 = weekly_durations.iter().sum();
@@ -51,28 +46,28 @@ impl JobStats {
         let total_median = median(&mut total_durations);
         let total_top = get_top_job_projects(conn, None, state)?;
 
-        let job_duration = JsonCohort {
-            week: weekly_total as u64,
-            month: monthly_total as u64,
-            total: total_total as u64,
+        let minutes = JsonCohort {
+            week: (weekly_total / 60) as u64,
+            month: (monthly_total / 60) as u64,
+            total: (total_total / 60) as u64,
         };
 
-        let job_duration_per_report = JsonCohortAvg {
-            week: weekly_median,
-            month: monthly_median,
-            total: total_median,
+        let minutes_per_report = JsonCohortAvg {
+            week: weekly_median / 60.0,
+            month: monthly_median / 60.0,
+            total: total_median / 60.0,
         };
 
-        let top_job_projects = JsonTopJobCohort {
+        let top_projects = JsonTopJobCohort {
             week: top_job_projects(weekly_top, weekly_total),
             month: top_job_projects(monthly_top, monthly_total),
             total: top_job_projects(total_top, total_total),
         };
 
         Ok(Self {
-            job_duration,
-            job_duration_per_report,
-            top_job_projects,
+            minutes,
+            minutes_per_report,
+            top_projects,
         })
     }
 }
@@ -81,10 +76,10 @@ impl JobStats {
 fn get_durations_by_report(
     conn: &mut DbConnection,
     since: Option<i64>,
-    state: JobProjectState,
+    state: ProjectState,
 ) -> Result<Vec<i64>, HttpError> {
     match state {
-        JobProjectState::All => {
+        ProjectState::All => {
             let mut query = schema::job_duration_by_report::table
                 .inner_join(schema::report::table)
                 .select(schema::job_duration_by_report::job_duration)
@@ -99,26 +94,22 @@ fn get_durations_by_report(
                 .map(|v| v.into_iter().map(i64::from).collect())
                 .map_err(resource_not_found_err!(Job))
         },
-        JobProjectState::Unclaimed | JobProjectState::Claimed => {
+        ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::job_duration_by_report::table
                 .inner_join(
-                    schema::report::table.inner_join(schema::project::table.inner_join(
-                        schema::organization::table.left_join(schema::organization_role::table),
-                    )),
+                    schema::report::table
+                        .inner_join(schema::project::table.inner_join(schema::organization::table)),
                 )
                 .select(schema::job_duration_by_report::job_duration)
                 .into_boxed();
 
-            query = match state {
-                #[expect(
-                    clippy::unreachable,
-                    reason = "match above ensures this is unreachable"
-                )]
-                JobProjectState::All | JobProjectState::Plus => unreachable!(),
-                JobProjectState::Unclaimed => query.filter(schema::organization_role::id.is_null()),
-                JobProjectState::Claimed => {
-                    query.filter(schema::organization_role::id.is_not_null())
-                },
+            let is_claimed = matches!(state, ProjectState::Claimed);
+            let org_has_roles = schema::organization_role::table
+                .filter(schema::organization_role::organization_id.eq(schema::organization::id));
+            query = if is_claimed {
+                query.filter(diesel::dsl::exists(org_has_roles))
+            } else {
+                query.filter(diesel::dsl::not(diesel::dsl::exists(org_has_roles)))
             };
 
             if let Some(since) = since {
@@ -130,7 +121,7 @@ fn get_durations_by_report(
                 .map(|v| v.into_iter().map(i64::from).collect())
                 .map_err(resource_not_found_err!(Job))
         },
-        JobProjectState::Plus => {
+        ProjectState::Plus => {
             let mut query = schema::job_duration_by_report::table
                 .inner_join(
                     schema::report::table.inner_join(
@@ -163,14 +154,13 @@ fn get_durations_by_report(
 }
 
 // Intentionally includes soft-deleted projects for server admin stats
-#[expect(clippy::too_many_lines, reason = "4-variant match with Diesel queries")]
 fn get_top_job_projects(
     conn: &mut DbConnection,
     since: Option<i64>,
-    state: JobProjectState,
+    state: ProjectState,
 ) -> Result<Vec<(QueryProject, i64)>, HttpError> {
     match state {
-        JobProjectState::All => {
+        ProjectState::All => {
             #[expect(clippy::cast_possible_wrap, reason = "const")]
             let mut query = schema::job_duration_by_report::table
                 .inner_join(schema::report::table.inner_join(schema::project::table))
@@ -196,13 +186,12 @@ fn get_top_job_projects(
                 })
                 .map_err(resource_not_found_err!(Project))
         },
-        JobProjectState::Unclaimed | JobProjectState::Claimed => {
+        ProjectState::Unclaimed | ProjectState::Claimed => {
             #[expect(clippy::cast_possible_wrap, reason = "const")]
             let mut query = schema::job_duration_by_report::table
                 .inner_join(
-                    schema::report::table.inner_join(schema::project::table.inner_join(
-                        schema::organization::table.left_join(schema::organization_role::table),
-                    )),
+                    schema::report::table
+                        .inner_join(schema::project::table.inner_join(schema::organization::table)),
                 )
                 .group_by(schema::project::id)
                 .select((
@@ -213,16 +202,13 @@ fn get_top_job_projects(
                 .limit(TOP_PROJECTS as i64)
                 .into_boxed();
 
-            query = match state {
-                #[expect(
-                    clippy::unreachable,
-                    reason = "match above ensures this is unreachable"
-                )]
-                JobProjectState::All | JobProjectState::Plus => unreachable!(),
-                JobProjectState::Unclaimed => query.filter(schema::organization_role::id.is_null()),
-                JobProjectState::Claimed => {
-                    query.filter(schema::organization_role::id.is_not_null())
-                },
+            let is_claimed = matches!(state, ProjectState::Claimed);
+            let org_has_roles = schema::organization_role::table
+                .filter(schema::organization_role::organization_id.eq(schema::organization::id));
+            query = if is_claimed {
+                query.filter(diesel::dsl::exists(org_has_roles))
+            } else {
+                query.filter(diesel::dsl::not(diesel::dsl::exists(org_has_roles)))
             };
 
             if let Some(since) = since {
@@ -238,7 +224,7 @@ fn get_top_job_projects(
                 })
                 .map_err(resource_not_found_err!(Project))
         },
-        JobProjectState::Plus => {
+        ProjectState::Plus => {
             #[expect(clippy::cast_possible_wrap, reason = "const")]
             let mut query = schema::job_duration_by_report::table
                 .inner_join(
@@ -281,14 +267,18 @@ fn get_top_job_projects(
     }
 }
 
-#[expect(clippy::cast_precision_loss, clippy::cast_sign_loss)]
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::integer_division
+)]
 fn top_job_projects(project_durations: Vec<(QueryProject, i64)>, total: i64) -> JsonTopJobProjects {
     project_durations
         .into_iter()
         .map(|(project, duration)| JsonTopJobProject {
             name: project.name,
             uuid: project.uuid,
-            duration: duration as u64,
+            minutes: (duration / 60) as u64,
             percentage: if total > 0 {
                 duration as f64 / total as f64
             } else {
