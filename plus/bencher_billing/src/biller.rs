@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt;
 
 use bencher_json::{
@@ -596,18 +597,15 @@ impl Biller {
     fn filter_subscription_items(
         subscription_id: &SubscriptionId,
         subscription_items: Vec<SubscriptionItem>,
-        price_ids: &[&PriceId],
+        price_ids: &HashSet<&PriceId>,
     ) -> Result<Vec<SubscriptionItem>, BillingError> {
-        if subscription_items.is_empty() {
-            return Ok(subscription_items);
-        }
         let total = subscription_items.len();
         let filtered: Vec<_> = subscription_items
             .into_iter()
             .filter(|item| {
                 item.price
                     .as_ref()
-                    .is_some_and(|p| price_ids.contains(&&p.id))
+                    .is_some_and(|p| price_ids.contains(&p.id))
             })
             .collect();
         if filtered.is_empty() {
@@ -733,6 +731,7 @@ fn into_payment_card(card: JsonCard) -> PaymentCard {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
 
     use bencher_json::{
         Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
@@ -903,7 +902,8 @@ mod tests {
             make_subscription_item("price_known"),
             make_subscription_item("price_unknown"),
         ];
-        let filtered = Biller::filter_subscription_items(&sub_id, items, &[&known]).unwrap();
+        let price_ids = HashSet::from([&known]);
+        let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered.first().unwrap().price.as_ref().unwrap().id, known);
     }
@@ -916,9 +916,21 @@ mod tests {
             make_subscription_item("price_a"),
             make_subscription_item("price_b"),
         ];
-        let err = Biller::filter_subscription_items(&sub_id, items, &[&known]).unwrap_err();
+        let price_ids = HashSet::from([&known]);
+        let err = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap_err();
         assert!(
             matches!(err, crate::BillingError::NoMatchingSubscriptionItem(id, 2) if id == sub_id)
+        );
+    }
+
+    #[test]
+    fn filter_subscription_items_empty_input() {
+        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
+        let known: stripe::PriceId = "price_known".parse().unwrap();
+        let price_ids = HashSet::from([&known]);
+        let err = Biller::filter_subscription_items(&sub_id, vec![], &price_ids).unwrap_err();
+        assert!(
+            matches!(err, crate::BillingError::NoMatchingSubscriptionItem(id, 0) if id == sub_id)
         );
     }
 
@@ -927,7 +939,8 @@ mod tests {
         let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
         let known: stripe::PriceId = "price_known".parse().unwrap();
         let items = vec![make_subscription_item("price_known")];
-        let filtered = Biller::filter_subscription_items(&sub_id, items, &[&known]).unwrap();
+        let price_ids = HashSet::from([&known]);
+        let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered.first().unwrap().price.as_ref().unwrap().id, known);
     }
@@ -942,8 +955,8 @@ mod tests {
             make_subscription_item("price_b"),
             make_subscription_item("price_c"),
         ];
-        let filtered =
-            Biller::filter_subscription_items(&sub_id, items, &[&known_a, &known_b]).unwrap();
+        let price_ids = HashSet::from([&known_a, &known_b]);
+        let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
         assert_eq!(filtered.len(), 2);
     }
 
@@ -959,7 +972,8 @@ mod tests {
                 ..Default::default()
             },
         ];
-        let filtered = Biller::filter_subscription_items(&sub_id, items, &[&known]).unwrap();
+        let price_ids = HashSet::from([&known]);
+        let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
         assert_eq!(filtered.len(), 1);
     }
 
@@ -971,7 +985,8 @@ mod tests {
             make_subscription_item("price_known"),
             make_subscription_item("price_old_meter"),
         ];
-        let filtered = Biller::filter_subscription_items(&sub_id, items, &[&known]).unwrap();
+        let price_ids = HashSet::from([&known]);
+        let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
         let result = Biller::get_subscription_item(&sub_id, filtered).unwrap();
         assert_eq!(result.price.as_ref().unwrap().id, known);
     }

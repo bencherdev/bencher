@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bencher_json::{
     organization::plan::DEFAULT_PRICE_NAME,
@@ -32,7 +32,7 @@ impl Products {
     // subscription items down to the one we should actually bill against.
     // Once the migration cutover is complete and the old subscription items are
     // removed, this filtering becomes a no-op (one item in, one item out).
-    pub fn default_price_ids(&self) -> Vec<&PriceId> {
+    pub fn default_price_ids(&self) -> HashSet<&PriceId> {
         self.team
             .default_price_ids()
             .into_iter()
@@ -70,14 +70,12 @@ impl Product {
     // Returns only the price IDs associated with the "default" key for this
     // product level. See `Products::default_price_ids` for migration context.
     fn default_price_ids(&self) -> Vec<&PriceId> {
-        let mut ids = Vec::new();
-        if let Some(price) = self.metered.get(DEFAULT_PRICE_NAME) {
-            ids.push(&price.id);
-        }
-        if let Some(price) = self.licensed.get(DEFAULT_PRICE_NAME) {
-            ids.push(&price.id);
-        }
-        ids
+        self.metered
+            .get(DEFAULT_PRICE_NAME)
+            .into_iter()
+            .chain(self.licensed.get(DEFAULT_PRICE_NAME))
+            .map(|p| &p.id)
+            .collect()
     }
 
     async fn pricing(
