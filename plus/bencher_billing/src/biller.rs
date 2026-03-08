@@ -152,8 +152,8 @@ impl From<LicensedPlanId> for PlanId {
 impl From<PlanId> for SubscriptionId {
     fn from(plan_id: PlanId) -> Self {
         match plan_id {
-            PlanId::Metered(metered_plan_id) => metered_plan_id.as_ref().parse().unwrap(),
-            PlanId::Licensed(licensed_plan_id) => licensed_plan_id.as_ref().parse().unwrap(),
+            PlanId::Metered(metered_plan_id) => metered_plan_id.as_ref().into(),
+            PlanId::Licensed(licensed_plan_id) => licensed_plan_id.as_ref().into(),
         }
     }
 }
@@ -247,7 +247,7 @@ impl Biller {
         &self,
         session_id: &str,
     ) -> Result<SubscriptionId, BillingError> {
-        let session_id: CheckoutSessionId = session_id.parse().unwrap();
+        let session_id: CheckoutSessionId = session_id.into();
         let mut checkout_session = RetrieveCheckoutSession::new(session_id)
             .expand(vec!["subscription".into()])
             .send(&self.client)
@@ -395,7 +395,7 @@ impl Biller {
         &self,
         metered_plan_id: &MeteredPlanId,
     ) -> Result<JsonPlan, BillingError> {
-        let subscription_id: SubscriptionId = metered_plan_id.as_ref().parse().unwrap();
+        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
         self.get_plan(&subscription_id).await
     }
 
@@ -403,7 +403,7 @@ impl Biller {
         &self,
         licensed_plan_id: &LicensedPlanId,
     ) -> Result<JsonPlan, BillingError> {
-        let subscription_id: SubscriptionId = licensed_plan_id.as_ref().parse().unwrap();
+        let subscription_id: SubscriptionId = licensed_plan_id.as_ref().into();
         self.get_plan(&subscription_id).await
     }
 
@@ -457,7 +457,7 @@ impl Biller {
             subscription_id,
             subscription.default_payment_method.as_ref(),
         )?;
-        let (level, unit_amount) = Self::get_plan_price(subscription_id, &subscription_item)?;
+        let (level, unit_amount) = Self::get_plan_price(&subscription_item)?;
 
         let status = Self::map_status(&subscription.status);
 
@@ -547,7 +547,6 @@ impl Biller {
     }
 
     fn get_plan_price(
-        _subscription_id: &SubscriptionId,
         subscription_item: &SubscriptionItem,
     ) -> Result<(PlanLevel, u64), BillingError> {
         let price = &subscription_item.price;
@@ -589,7 +588,7 @@ impl Biller {
         &self,
         metered_plan_id: &MeteredPlanId,
     ) -> Result<PlanStatus, BillingError> {
-        let subscription_id: SubscriptionId = metered_plan_id.as_ref().parse().unwrap();
+        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
         let subscription = self.get_subscription(&subscription_id).await?;
         Ok(Self::map_status(&subscription.status))
     }
@@ -598,7 +597,7 @@ impl Biller {
         &self,
         licensed_plan_id: &LicensedPlanId,
     ) -> Result<PlanStatus, BillingError> {
-        let subscription_id: SubscriptionId = licensed_plan_id.as_ref().parse().unwrap();
+        let subscription_id: SubscriptionId = licensed_plan_id.as_ref().into();
         let subscription = self.get_subscription(&subscription_id).await?;
         Ok(Self::map_status(&subscription.status))
     }
@@ -621,7 +620,7 @@ impl Biller {
         metered_plan_id: &MeteredPlanId,
         quantity: u32,
     ) -> Result<BillingMeterEvent, BillingError> {
-        let subscription_id: SubscriptionId = metered_plan_id.as_ref().parse().unwrap();
+        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
         let subscription = self.get_subscription(&subscription_id).await?;
         let customer_id = subscription.customer.id().to_string();
 
@@ -641,7 +640,7 @@ impl Biller {
         &self,
         metered_plan_id: &MeteredPlanId,
     ) -> Result<Subscription, BillingError> {
-        let subscription_id: SubscriptionId = metered_plan_id.as_ref().parse().unwrap();
+        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
         self.cancel_subscription(&subscription_id).await
     }
 
@@ -649,7 +648,7 @@ impl Biller {
         &self,
         licensed_plan_id: &LicensedPlanId,
     ) -> Result<Subscription, BillingError> {
-        let subscription_id: SubscriptionId = licensed_plan_id.as_ref().parse().unwrap();
+        let subscription_id: SubscriptionId = licensed_plan_id.as_ref().into();
         self.cancel_subscription(&subscription_id).await
     }
 

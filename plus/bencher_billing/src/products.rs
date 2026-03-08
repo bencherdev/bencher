@@ -40,7 +40,7 @@ impl Product {
             licensed,
         } = product;
 
-        let product_id: ProductId = id.parse().unwrap();
+        let product_id: ProductId = id.as_str().into();
         let product = RetrieveProduct::new(product_id).send(client).await?;
         let metered = Self::pricing(client, metered).await?;
         let licensed = Self::pricing(client, licensed).await?;
@@ -58,7 +58,7 @@ impl Product {
     ) -> Result<HashMap<String, StripePrice>, BillingError> {
         let mut biller_pricing = HashMap::with_capacity(pricing.len());
         for (price_name, price_id) in pricing {
-            let price_id: PriceId = price_id.parse().unwrap();
+            let price_id: PriceId = price_id.as_str().into();
             let price = RetrievePrice::new(price_id).send(client).await?;
             biller_pricing.insert(price_name, price);
         }
