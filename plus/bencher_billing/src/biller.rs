@@ -447,8 +447,11 @@ impl Biller {
             subscription.default_payment_method.as_ref(),
         )?;
         let default_price_ids = self.products.default_price_ids();
-        let subscription_items =
-            Self::filter_subscription_items(subscription.items.data, &default_price_ids);
+        let subscription_items = Self::filter_subscription_items(
+            subscription_id,
+            subscription.items.data,
+            &default_price_ids,
+        )?;
         let (level, unit_amount) = Self::get_plan_price(subscription_id, subscription_items)?;
 
         let status = Self::map_status(subscription.status);
@@ -591,17 +594,30 @@ impl Biller {
     // Outside of migration, this is a no-op: subscriptions have one item whose
     // price matches a known ID, so the filtered list is identical to the input.
     fn filter_subscription_items(
+        subscription_id: &SubscriptionId,
         subscription_items: Vec<SubscriptionItem>,
         price_ids: &[&PriceId],
-    ) -> Vec<SubscriptionItem> {
-        subscription_items
+    ) -> Result<Vec<SubscriptionItem>, BillingError> {
+        if subscription_items.is_empty() {
+            return Ok(subscription_items);
+        }
+        let total = subscription_items.len();
+        let filtered: Vec<_> = subscription_items
             .into_iter()
             .filter(|item| {
                 item.price
                     .as_ref()
                     .is_some_and(|p| price_ids.contains(&&p.id))
             })
-            .collect()
+            .collect();
+        if filtered.is_empty() {
+            Err(BillingError::NoMatchingSubscriptionItem(
+                subscription_id.clone(),
+                total,
+            ))
+        } else {
+            Ok(filtered)
+        }
     }
 
     pub async fn get_metered_plan_status(
@@ -652,8 +668,11 @@ impl Biller {
             .map_err(BillingError::MeteredPlanId)?;
         let subscription = self.get_subscription(&subscription_id).await?;
         let default_price_ids = self.products.default_price_ids();
-        let subscription_items =
-            Self::filter_subscription_items(subscription.items.data, &default_price_ids);
+        let subscription_items = Self::filter_subscription_items(
+            &subscription_id,
+            subscription.items.data,
+            &default_price_ids,
+        )?;
         let subscription_item = Self::get_subscription_item(&subscription_id, subscription_items)?;
 
         let create_usage_record = CreateUsageRecord {
@@ -878,34 +897,70 @@ mod tests {
 
     #[test]
     fn filter_subscription_items_single_match() {
+        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
         let known: stripe::PriceId = "price_known".parse().unwrap();
         let items = vec![
             make_subscription_item("price_known"),
             make_subscription_item("price_unknown"),
         ];
-        let filtered = Biller::filter_subscription_items(items, &[&known]);
+        let filtered = Biller::filter_subscription_items(&sub_id, items, &[&known]).unwrap();
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered.first().unwrap().price.as_ref().unwrap().id, known);
     }
 
     #[test]
     fn filter_subscription_items_no_match() {
+        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
         let known: stripe::PriceId = "price_known".parse().unwrap();
         let items = vec![
             make_subscription_item("price_a"),
             make_subscription_item("price_b"),
         ];
-        let filtered = Biller::filter_subscription_items(items, &[&known]);
-        assert!(filtered.is_empty());
+        let err = Biller::filter_subscription_items(&sub_id, items, &[&known]).unwrap_err();
+        assert!(
+            matches!(err, crate::BillingError::NoMatchingSubscriptionItem(id, 2) if id == sub_id)
+        );
     }
 
     #[test]
     fn filter_subscription_items_all_match() {
+        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
         let known: stripe::PriceId = "price_known".parse().unwrap();
         let items = vec![make_subscription_item("price_known")];
-        let filtered = Biller::filter_subscription_items(items, &[&known]);
+        let filtered = Biller::filter_subscription_items(&sub_id, items, &[&known]).unwrap();
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered.first().unwrap().price.as_ref().unwrap().id, known);
+    }
+
+    #[test]
+    fn filter_subscription_items_multiple_known_ids() {
+        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
+        let known_a: stripe::PriceId = "price_a".parse().unwrap();
+        let known_b: stripe::PriceId = "price_b".parse().unwrap();
+        let items = vec![
+            make_subscription_item("price_a"),
+            make_subscription_item("price_b"),
+            make_subscription_item("price_c"),
+        ];
+        let filtered =
+            Biller::filter_subscription_items(&sub_id, items, &[&known_a, &known_b]).unwrap();
+        assert_eq!(filtered.len(), 2);
+    }
+
+    #[test]
+    fn filter_subscription_items_none_price() {
+        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
+        let known: stripe::PriceId = "price_known".parse().unwrap();
+        let items = vec![
+            make_subscription_item("price_known"),
+            stripe::SubscriptionItem {
+                id: "si_no_price".parse().unwrap(),
+                price: None,
+                ..Default::default()
+            },
+        ];
+        let filtered = Biller::filter_subscription_items(&sub_id, items, &[&known]).unwrap();
+        assert_eq!(filtered.len(), 1);
     }
 
     #[test]
@@ -916,7 +971,7 @@ mod tests {
             make_subscription_item("price_known"),
             make_subscription_item("price_old_meter"),
         ];
-        let filtered = Biller::filter_subscription_items(items, &[&known]);
+        let filtered = Biller::filter_subscription_items(&sub_id, items, &[&known]).unwrap();
         let result = Biller::get_subscription_item(&sub_id, filtered).unwrap();
         assert_eq!(result.price.as_ref().unwrap().id, known);
     }
