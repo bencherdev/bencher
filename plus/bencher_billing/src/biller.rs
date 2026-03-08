@@ -16,7 +16,7 @@ use stripe::{
     CreateCheckoutSessionPaymentMethodTypes, CreateCheckoutSessionSubscriptionData, CreateCustomer,
     CreatePaymentMethod, CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems,
     CreateUsageRecord, Currency, Customer, CustomerId, Expandable, ListCustomers, PaymentMethod,
-    PaymentMethodId, PaymentMethodTypeFilter, Price, Subscription, SubscriptionId,
+    PaymentMethodId, PaymentMethodTypeFilter, Price, PriceId, Subscription, SubscriptionId,
     SubscriptionItem, SubscriptionStatus, UsageRecord,
 };
 
@@ -446,7 +446,10 @@ impl Biller {
             subscription_id,
             subscription.default_payment_method.as_ref(),
         )?;
-        let (level, unit_amount) = Self::get_plan_price(subscription_id, subscription.items.data)?;
+        let default_price_ids = self.products.default_price_ids();
+        let subscription_items =
+            Self::filter_subscription_items(subscription.items.data, &default_price_ids);
+        let (level, unit_amount) = Self::get_plan_price(subscription_id, subscription_items)?;
 
         let status = Self::map_status(subscription.status);
 
@@ -579,6 +582,28 @@ impl Biller {
         }
     }
 
+    // During the metered billing migration, a Stripe subscription may have
+    // multiple subscription items (old + new metered prices). This function
+    // filters subscription items to only those whose price ID matches one of
+    // the provided known price IDs, so that `get_subscription_item()` can still
+    // enforce its exactly-one invariant against the filtered set.
+    //
+    // Outside of migration, this is a no-op: subscriptions have one item whose
+    // price matches a known ID, so the filtered list is identical to the input.
+    fn filter_subscription_items(
+        subscription_items: Vec<SubscriptionItem>,
+        price_ids: &[&PriceId],
+    ) -> Vec<SubscriptionItem> {
+        subscription_items
+            .into_iter()
+            .filter(|item| {
+                item.price
+                    .as_ref()
+                    .is_some_and(|p| price_ids.contains(&&p.id))
+            })
+            .collect()
+    }
+
     pub async fn get_metered_plan_status(
         &self,
         metered_plan_id: &MeteredPlanId,
@@ -626,8 +651,10 @@ impl Biller {
             .parse()
             .map_err(BillingError::MeteredPlanId)?;
         let subscription = self.get_subscription(&subscription_id).await?;
-        let subscription_item =
-            Self::get_subscription_item(&subscription_id, subscription.items.data)?;
+        let default_price_ids = self.products.default_price_ids();
+        let subscription_items =
+            Self::filter_subscription_items(subscription.items.data, &default_price_ids);
+        let subscription_item = Self::get_subscription_item(&subscription_id, subscription_items)?;
 
         let create_usage_record = CreateUsageRecord {
             quantity: quantity.into(),
@@ -836,6 +863,80 @@ mod tests {
                 .await
                 .unwrap();
         }
+    }
+
+    fn make_subscription_item(price_id: &str) -> stripe::SubscriptionItem {
+        stripe::SubscriptionItem {
+            id: format!("si_test_{price_id}").parse().unwrap(),
+            price: Some(stripe::Price {
+                id: price_id.parse().unwrap(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn filter_subscription_items_single_match() {
+        let known: stripe::PriceId = "price_known".parse().unwrap();
+        let items = vec![
+            make_subscription_item("price_known"),
+            make_subscription_item("price_unknown"),
+        ];
+        let filtered = Biller::filter_subscription_items(items, &[&known]);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered.first().unwrap().price.as_ref().unwrap().id, known);
+    }
+
+    #[test]
+    fn filter_subscription_items_no_match() {
+        let known: stripe::PriceId = "price_known".parse().unwrap();
+        let items = vec![
+            make_subscription_item("price_a"),
+            make_subscription_item("price_b"),
+        ];
+        let filtered = Biller::filter_subscription_items(items, &[&known]);
+        assert!(filtered.is_empty());
+    }
+
+    #[test]
+    fn filter_subscription_items_all_match() {
+        let known: stripe::PriceId = "price_known".parse().unwrap();
+        let items = vec![make_subscription_item("price_known")];
+        let filtered = Biller::filter_subscription_items(items, &[&known]);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered.first().unwrap().price.as_ref().unwrap().id, known);
+    }
+
+    #[test]
+    fn get_subscription_item_after_filter() {
+        let known: stripe::PriceId = "price_known".parse().unwrap();
+        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
+        let items = vec![
+            make_subscription_item("price_known"),
+            make_subscription_item("price_old_meter"),
+        ];
+        let filtered = Biller::filter_subscription_items(items, &[&known]);
+        let result = Biller::get_subscription_item(&sub_id, filtered).unwrap();
+        assert_eq!(result.price.as_ref().unwrap().id, known);
+    }
+
+    #[test]
+    fn get_subscription_item_no_items() {
+        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
+        let result = Biller::get_subscription_item(&sub_id, vec![]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn get_subscription_item_multiple_items() {
+        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
+        let items = vec![
+            make_subscription_item("price_a"),
+            make_subscription_item("price_b"),
+        ];
+        let result = Biller::get_subscription_item(&sub_id, items);
+        assert!(result.is_err());
     }
 
     // Note: To run this test locally run:

@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
-use bencher_json::system::config::{JsonProduct, JsonProducts};
-use stripe::{Client as StripeClient, Price as StripePrice, Product as StripeProduct};
+use bencher_json::{
+    organization::plan::DEFAULT_PRICE_NAME,
+    system::config::{JsonProduct, JsonProducts},
+};
+use stripe::{Client as StripeClient, Price as StripePrice, PriceId, Product as StripeProduct};
 
 use crate::BillingError;
 
@@ -18,6 +21,23 @@ impl Products {
             team: Product::new(client, team).await?,
             enterprise: Product::new(client, enterprise).await?,
         })
+    }
+
+    // During the metered billing migration, a subscription may temporarily have
+    // multiple subscription items (old metered + new metered). The config holds
+    // both price IDs under different keys: the currently-active price under
+    // "default" and the upcoming price under "metrics".
+    //
+    // This method returns only the "default" price IDs so we can filter
+    // subscription items down to the one we should actually bill against.
+    // Once the migration cutover is complete and the old subscription items are
+    // removed, this filtering becomes a no-op (one item in, one item out).
+    pub fn default_price_ids(&self) -> Vec<&PriceId> {
+        self.team
+            .default_price_ids()
+            .into_iter()
+            .chain(self.enterprise.default_price_ids())
+            .collect()
     }
 }
 
@@ -45,6 +65,19 @@ impl Product {
             metered,
             licensed,
         })
+    }
+
+    // Returns only the price IDs associated with the "default" key for this
+    // product level. See `Products::default_price_ids` for migration context.
+    fn default_price_ids(&self) -> Vec<&PriceId> {
+        let mut ids = Vec::new();
+        if let Some(price) = self.metered.get(DEFAULT_PRICE_NAME) {
+            ids.push(&price.id);
+        }
+        if let Some(price) = self.licensed.get(DEFAULT_PRICE_NAME) {
+            ids.push(&price.id);
+        }
+        ids
     }
 
     async fn pricing(
