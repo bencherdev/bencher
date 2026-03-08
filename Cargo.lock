@@ -617,7 +617,6 @@ dependencies = [
  "http-body-util",
  "hyper 1.8.1",
  "hyper-rustls 0.27.7",
- "hyper-tls",
  "hyper-util",
  "miniserde",
  "thiserror 2.0.17",

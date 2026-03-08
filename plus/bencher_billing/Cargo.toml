@@ -25,7 +25,7 @@ plus = [
 ]
 
 [dependencies]
-async-stripe = { workspace = true, optional = true, features = ["rustls-ring"] }
+async-stripe = { workspace = true, optional = true, features = ["rustls-ring", "rustls-tls-webpki-roots"] }
 async-stripe-billing = { workspace = true, optional = true, features = ["billing_meter_event", "subscription", "subscription_item"] }
 async-stripe-checkout = { workspace = true, optional = true, features = ["checkout_session"] }
 async-stripe-core = { workspace = true, optional = true, features = ["customer"] }

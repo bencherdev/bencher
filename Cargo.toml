@@ -76,7 +76,7 @@ backhand = "0.18"
 assert_cmd = "2.0"
 async-compression = "0.4"
 async-openai = "0.27"
-async-stripe = "1.0.0-rc.2"
+async-stripe = { version = "1.0.0-rc.2", default-features = false }
 async-stripe-billing = "1.0.0-rc.2"
 async-stripe-checkout = "1.0.0-rc.2"
 async-stripe-core = "1.0.0-rc.2"
