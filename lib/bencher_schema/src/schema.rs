@@ -94,6 +94,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    job_duration_by_report (report_id) {
+        report_id -> Integer,
+        job_duration -> Integer,
+    }
+}
+
+diesel::table! {
     measure (id) {
         id -> Integer,
         uuid -> Text,
@@ -412,6 +419,7 @@ diesel::joinable!(branch -> project (project_id));
 diesel::joinable!(head_version -> version (version_id));
 diesel::joinable!(job -> organization (organization_id));
 diesel::joinable!(job -> report (report_id));
+diesel::joinable!(job_duration_by_report -> report (report_id));
 diesel::joinable!(job -> runner (runner_id));
 diesel::joinable!(job -> spec (spec_id));
 diesel::joinable!(measure -> project (project_id));
@@ -460,6 +468,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     head,
     head_version,
     job,
+    job_duration_by_report,
     measure,
     metric,
     metric_count_by_report,

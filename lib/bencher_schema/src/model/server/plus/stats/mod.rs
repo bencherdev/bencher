@@ -6,12 +6,14 @@ use crate::context::DbConnection;
 
 use super::QueryServer;
 
+mod job_stats;
 mod metrics_stats;
 mod organization_stats;
 mod projects_stats;
 mod reports_stats;
 mod users_stats;
 
+use job_stats::JobStats;
 use metrics_stats::MetricsStats;
 use organization_stats::OrganizationStats;
 use projects_stats::ProjectsStats;
@@ -69,6 +71,27 @@ pub(super) fn get_stats(
     let claimed_metrics_stats =
         MetricsStats::new(conn, this_week, this_month, ProjectState::Claimed)?;
 
+    // job duration and median job duration per report
+    let job_stats = JobStats::new(conn, this_week, this_month, job_stats::JobProjectState::All)?;
+    let unclaimed_job_stats = JobStats::new(
+        conn,
+        this_week,
+        this_month,
+        job_stats::JobProjectState::Unclaimed,
+    )?;
+    let claimed_job_stats = JobStats::new(
+        conn,
+        this_week,
+        this_month,
+        job_stats::JobProjectState::Claimed,
+    )?;
+    let plus_job_stats = JobStats::new(
+        conn,
+        this_week,
+        this_month,
+        job_stats::JobProjectState::Plus,
+    )?;
+
     Ok(JsonServerStats {
         server: query_server.into_json(),
         timestamp: now,
@@ -96,6 +119,18 @@ pub(super) fn get_stats(
         top_projects: Some(metrics_stats.top_projects),
         top_projects_unclaimed: Some(unclaimed_metrics_stats.top_projects),
         top_projects_claimed: Some(claimed_metrics_stats.top_projects),
+        job_duration: Some(job_stats.job_duration),
+        job_duration_unclaimed: Some(unclaimed_job_stats.job_duration),
+        job_duration_claimed: Some(claimed_job_stats.job_duration),
+        job_duration_plus: Some(plus_job_stats.job_duration),
+        job_duration_per_report: Some(job_stats.job_duration_per_report),
+        job_duration_per_report_unclaimed: Some(unclaimed_job_stats.job_duration_per_report),
+        job_duration_per_report_claimed: Some(claimed_job_stats.job_duration_per_report),
+        job_duration_per_report_plus: Some(plus_job_stats.job_duration_per_report),
+        top_job_projects: Some(job_stats.top_job_projects),
+        top_job_projects_unclaimed: Some(unclaimed_job_stats.top_job_projects),
+        top_job_projects_claimed: Some(claimed_job_stats.top_job_projects),
+        top_job_projects_plus: Some(plus_job_stats.top_job_projects),
     })
 }
 

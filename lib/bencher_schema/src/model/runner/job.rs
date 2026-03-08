@@ -6,8 +6,8 @@ use bencher_json::{
     runner::job::JsonNewRunJob,
 };
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    result::QueryResult,
+    BoolExpressionMethods as _, Connection as _, ExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, result::QueryResult,
 };
 use dropshot::HttpError;
 use tokio::sync::Mutex;
@@ -23,7 +23,7 @@ use crate::{
         organization::{OrganizationId, plan::PlanKind},
         project::{
             QueryProject,
-            report::{QueryReport, ReportId},
+            report::{self, QueryReport, ReportId},
         },
         runner::{QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
@@ -71,6 +71,7 @@ impl QueryJob {
     ///
     /// Looks up the report and branch, parses benchmark output via the adapter,
     /// creates metrics/alerts, checks plan usage, and updates the report timestamps.
+    #[expect(clippy::too_many_lines, reason = "sequential job processing steps")]
     pub async fn process_results(
         &self,
         log: &Logger,
@@ -151,7 +152,7 @@ impl QueryJob {
             )
             .await?;
 
-        // Update report start_time and end_time to reflect actual execution
+        // Compute report times and job duration before acquiring write lock
         let started = self.started.unwrap_or(now);
         let (start_time, end_time) = if let Some(backdate) = self.config.backdate {
             let elapsed = now.into_inner() - started.into_inner();
@@ -159,29 +160,54 @@ impl QueryJob {
         } else {
             (started, now)
         };
-        let updated =
-            diesel::update(schema::report::table.filter(schema::report::id.eq(self.report_id)))
+        let duration_secs = (now.timestamp() - started.timestamp()).max(0);
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "clamped to i32::MAX before cast"
+        )]
+        let job_duration = duration_secs.min(i64::from(i32::MAX)) as i32;
+
+        // Update report times and record job duration atomically
+        let report_id = self.report_id;
+        {
+            let conn = write_conn!(context);
+            conn.transaction(|conn| {
+                let updated = diesel::update(
+                    schema::report::table.filter(schema::report::id.eq(report_id)),
+                )
                 .set((
                     schema::report::start_time.eq(start_time),
                     schema::report::end_time.eq(end_time),
                 ))
-                .execute(write_conn!(context))
-                .map_err(|e| {
-                    issue_error(
-                        "Failed to update report times",
-                        "Failed to update report start_time/end_time after job completion.",
-                        e,
-                    )
-                })?;
-        if updated == 0 {
-            return Err(issue_error(
-                "Failed to update report times",
-                &format!(
-                    "Report {} not found when updating start_time/end_time after job completion.",
-                    self.report_id
-                ),
-                "Zero rows updated",
-            ));
+                .execute(conn)?;
+                if updated == 0 {
+                    return Err(diesel::result::Error::NotFound);
+                }
+                report::insert_job_duration(conn, report_id, job_duration)
+            })
+            .map_err(|e| {
+                issue_error(
+                    "Failed to update report times and insert job duration",
+                    &format!(
+                        "Failed to update report times / insert job duration for report {report_id}.",
+                    ),
+                    e,
+                )
+            })?;
+        }
+
+        #[cfg(feature = "otel")]
+        {
+            let tier = bencher_otel::PriorityTier::from_priority(self.priority.into());
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "duration seconds fits comfortably in f64"
+            )]
+            let duration_f64 = duration_secs as f64;
+            bencher_otel::ApiMeter::record(
+                bencher_otel::ApiHistogram::JobRunDuration(tier),
+                duration_f64,
+            );
         }
 
         Ok(())

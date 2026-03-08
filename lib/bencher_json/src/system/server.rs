@@ -77,6 +77,30 @@ pub struct JsonServerStats {
     pub top_projects_unclaimed: Option<JsonTopCohort>,
     /// Top 10 claimed projects
     pub top_projects_claimed: Option<JsonTopCohort>,
+    /// Total job duration in seconds
+    pub job_duration: Option<JsonCohort>,
+    /// Total unclaimed job duration in seconds
+    pub job_duration_unclaimed: Option<JsonCohort>,
+    /// Total claimed job duration in seconds
+    pub job_duration_claimed: Option<JsonCohort>,
+    /// Total plus job duration in seconds
+    pub job_duration_plus: Option<JsonCohort>,
+    /// Median job duration per report in seconds
+    pub job_duration_per_report: Option<JsonCohortAvg>,
+    /// Median unclaimed job duration per report in seconds
+    pub job_duration_per_report_unclaimed: Option<JsonCohortAvg>,
+    /// Median claimed job duration per report in seconds
+    pub job_duration_per_report_claimed: Option<JsonCohortAvg>,
+    /// Median plus job duration per report in seconds
+    pub job_duration_per_report_plus: Option<JsonCohortAvg>,
+    /// Top 10 projects by job duration
+    pub top_job_projects: Option<JsonTopJobCohort>,
+    /// Top 10 unclaimed projects by job duration
+    pub top_job_projects_unclaimed: Option<JsonTopJobCohort>,
+    /// Top 10 claimed projects by job duration
+    pub top_job_projects_claimed: Option<JsonTopJobCohort>,
+    /// Top 10 plus projects by job duration
+    pub top_job_projects_plus: Option<JsonTopJobCohort>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -111,6 +135,26 @@ pub struct JsonTopProject {
     pub name: ResourceName,
     pub uuid: ProjectUuid,
     pub metrics: u64,
+    pub percentage: f64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonTopJobCohort {
+    pub week: JsonTopJobProjects,
+    pub month: JsonTopJobProjects,
+    pub total: JsonTopJobProjects,
+}
+
+pub type JsonTopJobProjects = Vec<JsonTopJobProject>;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonTopJobProject {
+    pub name: ResourceName,
+    pub uuid: ProjectUuid,
+    /// Total job duration in seconds
+    pub duration: u64,
     pub percentage: f64,
 }
 
