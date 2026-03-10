@@ -15,10 +15,24 @@ plus = [
     "dep:thiserror",
     "dep:uuid",
     "dep:async-stripe",
+    "dep:async-stripe-billing",
+    "dep:async-stripe-checkout",
+    "dep:async-stripe-core",
+    "dep:async-stripe-payment",
+    "dep:async-stripe-product",
+    "dep:async-stripe-shared",
+    "dep:async-stripe-types",
 ]
 
 [dependencies]
-async-stripe = { workspace = true, optional = true, features = ["runtime-tokio-hyper-rustls"] }
+async-stripe = { workspace = true, optional = true, features = ["rustls-ring", "rustls-tls-webpki-roots"] }
+async-stripe-billing = { workspace = true, optional = true, features = ["billing_meter_event", "subscription", "subscription_item"] }
+async-stripe-checkout = { workspace = true, optional = true, features = ["checkout_session"] }
+async-stripe-core = { workspace = true, optional = true, features = ["customer"] }
+async-stripe-payment = { workspace = true, optional = true, features = ["payment_method"] }
+async-stripe-product = { workspace = true, optional = true, features = ["price", "product"] }
+async-stripe-shared = { workspace = true, optional = true }
+async-stripe-types = { workspace = true, optional = true }
 bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
 thiserror = { workspace = true, optional = true }
 uuid = { workspace = true, optional = true }
@@ -28,6 +42,7 @@ chrono.workspace = true
 literally.workspace = true
 pretty_assertions.workspace = true
 rand.workspace = true
+rustls.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
 
 [lints]

@@ -1,31 +1,55 @@
-use std::collections::HashSet;
-use std::fmt;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 
 use bencher_json::{
     Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
-    organization::plan::{JsonCardDetails, JsonPlan},
+    organization::plan::{JsonCardDetails, JsonPlan, METRICS_METER_EVENT_NAME},
     system::{
         config::JsonBilling,
         payment::{JsonCard, JsonCheckout, JsonCustomer},
     },
 };
-use stripe::{
-    AttachPaymentMethod, CancelSubscription, CardDetailsParams as PaymentCard, CheckoutSession,
-    CheckoutSessionMode, CheckoutSessionUiMode, Client as StripeClient, CreateCheckoutSession,
-    CreateCheckoutSessionConsentCollection, CreateCheckoutSessionConsentCollectionTermsOfService,
-    CreateCheckoutSessionLineItems, CreateCheckoutSessionLineItemsAdjustableQuantity,
-    CreateCheckoutSessionPaymentMethodTypes, CreateCheckoutSessionSubscriptionData, CreateCustomer,
-    CreatePaymentMethod, CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems,
-    CreateUsageRecord, Currency, Customer, CustomerId, Expandable, ListCustomers, PaymentMethod,
-    PaymentMethodId, PaymentMethodTypeFilter, Price, PriceId, Subscription, SubscriptionId,
-    SubscriptionItem, SubscriptionStatus, UsageRecord,
+use stripe::Client as StripeClient;
+use stripe_billing::{
+    BillingMeterEvent, Subscription, SubscriptionId, SubscriptionItem, SubscriptionStatus,
+    billing_meter_event::CreateBillingMeterEvent,
+    subscription::{
+        CancelSubscription, CreateSubscription, CreateSubscriptionItems, RetrieveSubscription,
+    },
 };
+use stripe_checkout::{
+    CheckoutSessionId, CheckoutSessionMode, CheckoutSessionUiMode,
+    checkout_session::{
+        CreateCheckoutSession, CreateCheckoutSessionConsentCollection,
+        CreateCheckoutSessionConsentCollectionTermsOfService, CreateCheckoutSessionLineItems,
+        CreateCheckoutSessionLineItemsAdjustableQuantity, CreateCheckoutSessionPaymentMethodTypes,
+        CreateCheckoutSessionSubscriptionData, RetrieveCheckoutSession,
+    },
+};
+use stripe_core::customer::{CreateCustomer, ListCustomer};
+use stripe_payment::{
+    PaymentMethod, PaymentMethodId,
+    payment_method::{
+        AttachPaymentMethod, CreatePaymentMethod, CreatePaymentMethodCard,
+        CreatePaymentMethodCardDetailsParams, CreatePaymentMethodType,
+    },
+};
+use stripe_product::{Price, PriceId};
+use stripe_shared::{Customer, CustomerId};
+use stripe_types::{Currency, Expandable};
 
 use crate::{BillingError, products::Products};
 
 const METADATA_UUID: &str = "uuid";
 const METADATA_ORGANIZATION: &str = "organization";
 const STRIPE_MAX_QUANTITY: u32 = 999_999;
+
+/// Stripe meter event payload key for the customer identifier.
+const METER_CUSTOMER_KEY: &str = "stripe_customer_id";
+/// Stripe meter event payload key for the usage value.
+const METER_VALUE_KEY: &str = "value";
 
 pub struct Biller {
     client: StripeClient,
@@ -128,19 +152,11 @@ impl From<LicensedPlanId> for PlanId {
     }
 }
 
-impl TryFrom<PlanId> for SubscriptionId {
-    type Error = BillingError;
-
-    fn try_from(plan_id: PlanId) -> Result<Self, Self::Error> {
+impl From<PlanId> for SubscriptionId {
+    fn from(plan_id: PlanId) -> Self {
         match plan_id {
-            PlanId::Metered(metered_plan_id) => metered_plan_id
-                .as_ref()
-                .parse()
-                .map_err(BillingError::MeteredPlanId),
-            PlanId::Licensed(licensed_plan_id) => licensed_plan_id
-                .as_ref()
-                .parse()
-                .map_err(BillingError::MeteredPlanId),
+            PlanId::Metered(metered_plan_id) => metered_plan_id.as_ref().into(),
+            PlanId::Licensed(licensed_plan_id) => licensed_plan_id.as_ref().into(),
         }
     }
 }
@@ -184,44 +200,42 @@ impl Biller {
         };
         let (price, entitlements) = product_plan.into_price(&self.products)?;
 
-        let create_checkout_session = CreateCheckoutSession {
-            ui_mode: Some(CheckoutSessionUiMode::Hosted),
-            customer: Some(customer),
-            payment_method_types: Some(vec![CreateCheckoutSessionPaymentMethodTypes::Card]),
-            currency: Some(Currency::USD),
-            mode: Some(CheckoutSessionMode::Subscription),
-            line_items: Some(vec![CreateCheckoutSessionLineItems {
-                price: Some(price.id.to_string()),
-                quantity: entitlements.map(|e| std::cmp::min(e.into(), STRIPE_MAX_QUANTITY.into())),
-                adjustable_quantity: entitlements.and(Some(
-                    CreateCheckoutSessionLineItemsAdjustableQuantity {
-                        enabled: true,
-                        minimum: Some(10_000),
-                        maximum: Some(STRIPE_MAX_QUANTITY.into()),
-                    },
-                )),
-                ..Default::default()
-            }]),
-            consent_collection: Some(CreateCheckoutSessionConsentCollection {
-                // https://bencher.dev/legal/subscription/
-                terms_of_service: Some(
-                    CreateCheckoutSessionConsentCollectionTermsOfService::Required,
-                ),
-                ..Default::default()
-            }),
-            subscription_data: Some(CreateCheckoutSessionSubscriptionData {
-                metadata: Some(
-                    [(METADATA_ORGANIZATION.into(), organization.to_string())]
-                        .into_iter()
-                        .collect(),
-                ),
-                ..Default::default()
-            }),
-            success_url: Some(return_url),
+        let mut line_item = CreateCheckoutSessionLineItems {
+            price: Some(price.id.to_string()),
+            quantity: entitlements.map(|e| std::cmp::min(e.into(), STRIPE_MAX_QUANTITY.into())),
             ..Default::default()
         };
-        let mut checkout_session =
-            CheckoutSession::create(&self.client, create_checkout_session).await?;
+        line_item.adjustable_quantity = entitlements.map(|_| {
+            let mut aq = CreateCheckoutSessionLineItemsAdjustableQuantity::new(true);
+            aq.minimum = Some(10_000);
+            aq.maximum = Some(STRIPE_MAX_QUANTITY.into());
+            aq
+        });
+
+        let mut consent = CreateCheckoutSessionConsentCollection::new();
+        // https://bencher.dev/legal/subscription/
+        consent.terms_of_service =
+            Some(CreateCheckoutSessionConsentCollectionTermsOfService::Required);
+
+        let mut sub_data = CreateCheckoutSessionSubscriptionData::new();
+        sub_data.metadata = Some(
+            [(METADATA_ORGANIZATION.into(), organization.to_string())]
+                .into_iter()
+                .collect(),
+        );
+
+        let mut checkout_session = CreateCheckoutSession::new()
+            .ui_mode(CheckoutSessionUiMode::Hosted)
+            .customer(customer.to_string())
+            .payment_method_types(vec![CreateCheckoutSessionPaymentMethodTypes::Card])
+            .currency(Currency::USD)
+            .mode(CheckoutSessionMode::Subscription)
+            .line_items(vec![line_item])
+            .consent_collection(consent)
+            .subscription_data(sub_data)
+            .success_url(return_url)
+            .send(&self.client)
+            .await?;
 
         Ok(JsonCheckout {
             session: checkout_session.id.to_string(),
@@ -236,16 +250,16 @@ impl Biller {
         &self,
         session_id: &str,
     ) -> Result<SubscriptionId, BillingError> {
-        let session_id = session_id
-            .parse()
-            .map_err(BillingError::CheckoutSessionId)?;
-        let mut checkout_session =
-            CheckoutSession::retrieve(&self.client, &session_id, &["subscription"]).await?;
+        let session_id: CheckoutSessionId = session_id.into();
+        let mut checkout_session = RetrieveCheckoutSession::new(session_id)
+            .expand(vec!["subscription".into()])
+            .send(&self.client)
+            .await?;
         let subscription = checkout_session
             .subscription
             .take()
             .ok_or(BillingError::NoSubscription(Box::new(checkout_session)))?;
-        Ok(subscription.id())
+        Ok(subscription.id().clone())
     }
 
     pub async fn get_or_create_customer(
@@ -260,11 +274,10 @@ impl Biller {
     }
 
     pub async fn get_customer(&self, email: &Email) -> Result<Option<CustomerId>, BillingError> {
-        let list_customers = ListCustomers {
-            email: Some(email.as_ref()),
-            ..Default::default()
-        };
-        let mut customers = Customer::list(&self.client, &list_customers).await?;
+        let mut customers = ListCustomer::new()
+            .email(email.as_ref())
+            .send(&self.client)
+            .await?;
 
         if let Some(customer) = customers.data.pop() {
             if customers.data.is_empty() {
@@ -283,17 +296,15 @@ impl Biller {
     // WARNING: Use caution when calling this directly as multiple users with the same email can be created
     // Use `get_or_create_customer` instead!
     async fn create_customer(&self, customer: &JsonCustomer) -> Result<CustomerId, BillingError> {
-        let create_customer = CreateCustomer {
-            name: Some(customer.name.as_ref()),
-            email: Some(customer.email.as_ref()),
-            metadata: Some(
+        CreateCustomer::new()
+            .name(customer.name.as_ref())
+            .email(customer.email.as_ref())
+            .metadata(
                 [(METADATA_UUID.into(), customer.uuid.to_string())]
                     .into_iter()
-                    .collect(),
-            ),
-            ..Default::default()
-        };
-        Customer::create(&self.client, create_customer)
+                    .collect::<HashMap<String, String>>(),
+            )
+            .send(&self.client)
             .await
             .map(|customer| customer.id)
             .map_err(Into::into)
@@ -305,25 +316,19 @@ impl Biller {
         customer_id: CustomerId,
         json_card: JsonCard,
     ) -> Result<PaymentMethodId, BillingError> {
-        let create_payment_method = CreatePaymentMethod {
-            type_: Some(PaymentMethodTypeFilter::Card),
-            card: Some(CreatePaymentMethodCardUnion::CardDetailsParams(
-                into_payment_card(json_card),
-            )),
-            ..Default::default()
-        };
-        let payment_method = PaymentMethod::create(&self.client, create_payment_method).await?;
+        let card_params = into_payment_card(json_card);
+        let payment_method = CreatePaymentMethod::new()
+            .type_(CreatePaymentMethodType::Card)
+            .card(CreatePaymentMethodCard::CardDetailsParams(card_params))
+            .send(&self.client)
+            .await?;
 
-        PaymentMethod::attach(
-            &self.client,
-            &payment_method.id,
-            AttachPaymentMethod {
-                customer: customer_id,
-            },
-        )
-        .await
-        .map(|payment_method| payment_method.id)
-        .map_err(Into::into)
+        AttachPaymentMethod::new(payment_method.id.clone())
+            .customer(customer_id.to_string())
+            .send(&self.client)
+            .await
+            .map(|payment_method| payment_method.id)
+            .map_err(Into::into)
     }
 
     pub async fn create_metered_subscription(
@@ -369,22 +374,22 @@ impl Biller {
         payment_method_id: PaymentMethodId,
         product_plan: ProductPlan,
     ) -> Result<Subscription, BillingError> {
-        let mut create_subscription = CreateSubscription::new(customer_id);
         let (price, entitlements) = product_plan.into_price(&self.products)?;
 
-        create_subscription.items = Some(vec![CreateSubscriptionItems {
-            price: Some(price.id.to_string()),
-            quantity: entitlements.map(Into::into),
-            ..Default::default()
-        }]);
-        create_subscription.default_payment_method = Some(&payment_method_id);
-        create_subscription.metadata = Some(
-            [(METADATA_ORGANIZATION.to_owned(), organization.to_string())]
-                .into_iter()
-                .collect(),
-        );
+        let mut item = CreateSubscriptionItems::new();
+        item.price = Some(price.id.to_string());
+        item.quantity = entitlements.map(Into::into);
 
-        Subscription::create(&self.client, create_subscription)
+        CreateSubscription::new()
+            .customer(customer_id.to_string())
+            .items(vec![item])
+            .default_payment_method(payment_method_id.to_string())
+            .metadata(
+                [(METADATA_ORGANIZATION.to_owned(), organization.to_string())]
+                    .into_iter()
+                    .collect::<HashMap<String, String>>(),
+            )
+            .send(&self.client)
             .await
             .map_err(Into::into)
     }
@@ -393,10 +398,7 @@ impl Biller {
         &self,
         metered_plan_id: &MeteredPlanId,
     ) -> Result<JsonPlan, BillingError> {
-        let subscription_id = metered_plan_id
-            .as_ref()
-            .parse()
-            .map_err(BillingError::MeteredPlanId)?;
+        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
         self.get_plan(&subscription_id).await
     }
 
@@ -404,10 +406,7 @@ impl Biller {
         &self,
         licensed_plan_id: &LicensedPlanId,
     ) -> Result<JsonPlan, BillingError> {
-        let subscription_id = licensed_plan_id
-            .as_ref()
-            .parse()
-            .map_err(BillingError::LicensedPlanId)?;
+        let subscription_id: SubscriptionId = licensed_plan_id.as_ref().into();
         self.get_plan(&subscription_id).await
     }
 
@@ -415,11 +414,11 @@ impl Biller {
         let subscription = self
             .get_subscription_expand(
                 subscription_id,
-                &[
-                    "customer",
-                    "default_payment_method",
-                    "items",
-                    "items.data.price.product",
+                vec![
+                    "customer".into(),
+                    "default_payment_method".into(),
+                    "items".into(),
+                    "items.data.price.product".into(),
                 ],
             )
             .await?;
@@ -431,31 +430,44 @@ impl Biller {
             .parse()
             .map_err(|e| BillingError::BadOrganizationUuid(organization.clone(), e))?;
 
-        let current_period_start = subscription.current_period_start.try_into().map_err(|e| {
-            BillingError::DateTime(
-                subscription_id.clone(),
-                subscription.current_period_start,
-                e,
-            )
-        })?;
-        let current_period_end = subscription.current_period_end.try_into().map_err(|e| {
-            BillingError::DateTime(subscription_id.clone(), subscription.current_period_end, e)
-        })?;
+        let preferred_price_ids = self.products.preferred_price_ids(METRICS_METER_EVENT_NAME);
+        let subscription_items = Self::filter_subscription_items(
+            subscription_id,
+            subscription.items.data,
+            &preferred_price_ids,
+        )?;
+        let subscription_item = Self::get_subscription_item(subscription_id, subscription_items)?;
+
+        let current_period_start =
+            subscription_item
+                .current_period_start
+                .try_into()
+                .map_err(|e| {
+                    BillingError::DateTime(
+                        subscription_id.clone(),
+                        subscription_item.current_period_start,
+                        e,
+                    )
+                })?;
+        let current_period_end = subscription_item
+            .current_period_end
+            .try_into()
+            .map_err(|e| {
+                BillingError::DateTime(
+                    subscription_id.clone(),
+                    subscription_item.current_period_end,
+                    e,
+                )
+            })?;
 
         let customer = Self::get_plan_customer(&subscription.customer)?;
         let card = Self::get_plan_card(
             subscription_id,
             subscription.default_payment_method.as_ref(),
         )?;
-        let default_price_ids = self.products.default_price_ids();
-        let subscription_items = Self::filter_subscription_items(
-            subscription_id,
-            subscription.items.data,
-            &default_price_ids,
-        )?;
-        let (level, unit_amount) = Self::get_plan_price(subscription_id, subscription_items)?;
+        let (level, unit_amount) = Self::get_plan_price(&subscription_item)?;
 
-        let status = Self::map_status(subscription.status);
+        let status = Self::map_status(&subscription.status);
 
         Ok(JsonPlan {
             organization,
@@ -474,22 +486,24 @@ impl Biller {
         &self,
         subscription_id: &SubscriptionId,
     ) -> Result<Subscription, BillingError> {
-        self.get_subscription_expand(subscription_id, &[]).await
+        self.get_subscription_expand(subscription_id, vec![]).await
     }
 
     pub async fn get_subscription_expand(
         &self,
         subscription_id: &SubscriptionId,
-        expand: &[&str],
+        expand: Vec<String>,
     ) -> Result<Subscription, BillingError> {
-        Subscription::retrieve(&self.client, subscription_id, expand)
-            .await
-            .map_err(Into::into)
+        let mut req = RetrieveSubscription::new(subscription_id.clone());
+        if !expand.is_empty() {
+            req = req.expand(expand);
+        }
+        req.send(&self.client).await.map_err(Into::into)
     }
 
     fn get_plan_customer(customer: &Expandable<Customer>) -> Result<JsonCustomer, BillingError> {
         let Some(customer) = customer.as_object() else {
-            return Err(BillingError::NoCustomerInfo(customer.id()));
+            return Err(BillingError::NoCustomerInfo(customer.id().clone()));
         };
         let Some(uuid) = customer
             .metadata
@@ -524,11 +538,13 @@ impl Biller {
         };
         let Some(default_payment_method_info) = default_payment_method.as_object() else {
             return Err(BillingError::NoDefaultPaymentMethodInfo(
-                default_payment_method.id(),
+                default_payment_method.id().clone(),
             ));
         };
         let Some(card_details) = &default_payment_method_info.card else {
-            return Err(BillingError::NoCardDetails(default_payment_method.id()));
+            return Err(BillingError::NoCardDetails(
+                default_payment_method.id().clone(),
+            ));
         };
         Ok(JsonCardDetails {
             brand: card_details.brand.parse()?,
@@ -539,30 +555,20 @@ impl Biller {
     }
 
     fn get_plan_price(
-        subscription_id: &SubscriptionId,
-        subscription_items: Vec<SubscriptionItem>,
+        subscription_item: &SubscriptionItem,
     ) -> Result<(PlanLevel, u64), BillingError> {
-        let subscription_item = Self::get_subscription_item(subscription_id, subscription_items)?;
-        let Some(price) = subscription_item.price else {
-            return Err(BillingError::NoPrice(subscription_item.id));
-        };
+        let price = &subscription_item.price;
 
         let Some(unit_amount) = price.unit_amount else {
-            return Err(BillingError::NoUnitAmount(price.id));
+            return Err(BillingError::NoUnitAmount(price.id.clone()));
         };
         let unit_amount = u64::try_from(unit_amount)?;
 
-        let Some(product) = price.product else {
-            return Err(BillingError::NoProduct(price.id));
-        };
-        let Some(product_info) = product.as_object() else {
-            return Err(BillingError::NoProductInfo(product.id()));
+        let Some(product_info) = price.product.as_object() else {
+            return Err(BillingError::NoProductInfo(price.product.id().clone()));
         };
         // `Bencher Team` or `Bencher Enterprise`
-        let Some(product_name) = &product_info.name else {
-            return Err(BillingError::NoProductName(product.id()));
-        };
-        let plan_level = product_name.parse()?;
+        let plan_level = product_info.name.parse()?;
 
         Ok((plan_level, unit_amount))
     }
@@ -602,11 +608,7 @@ impl Biller {
         let total = subscription_items.len();
         let filtered: Vec<_> = subscription_items
             .into_iter()
-            .filter(|item| {
-                item.price
-                    .as_ref()
-                    .is_some_and(|p| price_ids.contains(&p.id))
-            })
+            .filter(|item| price_ids.contains(&item.price.id))
             .collect();
         if filtered.is_empty() {
             Err(BillingError::NoMatchingSubscriptionItem(
@@ -622,27 +624,21 @@ impl Biller {
         &self,
         metered_plan_id: &MeteredPlanId,
     ) -> Result<PlanStatus, BillingError> {
-        let subscription_id = metered_plan_id
-            .as_ref()
-            .parse()
-            .map_err(BillingError::MeteredPlanId)?;
+        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
         let subscription = self.get_subscription(&subscription_id).await?;
-        Ok(Self::map_status(subscription.status))
+        Ok(Self::map_status(&subscription.status))
     }
 
     pub async fn get_licensed_plan_status(
         &self,
         licensed_plan_id: &LicensedPlanId,
     ) -> Result<PlanStatus, BillingError> {
-        let subscription_id = licensed_plan_id
-            .as_ref()
-            .parse()
-            .map_err(BillingError::MeteredPlanId)?;
+        let subscription_id: SubscriptionId = licensed_plan_id.as_ref().into();
         let subscription = self.get_subscription(&subscription_id).await?;
-        Ok(Self::map_status(subscription.status))
+        Ok(Self::map_status(&subscription.status))
     }
 
-    fn map_status(status: SubscriptionStatus) -> PlanStatus {
+    fn map_status(status: &SubscriptionStatus) -> PlanStatus {
         match status {
             SubscriptionStatus::Active => PlanStatus::Active,
             SubscriptionStatus::Canceled => PlanStatus::Canceled,
@@ -651,7 +647,7 @@ impl Biller {
             SubscriptionStatus::PastDue => PlanStatus::PastDue,
             SubscriptionStatus::Paused => PlanStatus::Paused,
             SubscriptionStatus::Trialing => PlanStatus::Trialing,
-            SubscriptionStatus::Unpaid => PlanStatus::Unpaid,
+            SubscriptionStatus::Unpaid | SubscriptionStatus::Unknown(_) | _ => PlanStatus::Unpaid,
         }
     }
 
@@ -659,37 +655,28 @@ impl Biller {
         &self,
         metered_plan_id: &MeteredPlanId,
         quantity: u32,
-    ) -> Result<UsageRecord, BillingError> {
-        let subscription_id = metered_plan_id
-            .as_ref()
-            .parse()
-            .map_err(BillingError::MeteredPlanId)?;
+    ) -> Result<BillingMeterEvent, BillingError> {
+        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
         let subscription = self.get_subscription(&subscription_id).await?;
-        let default_price_ids = self.products.default_price_ids();
-        let subscription_items = Self::filter_subscription_items(
-            &subscription_id,
-            subscription.items.data,
-            &default_price_ids,
-        )?;
-        let subscription_item = Self::get_subscription_item(&subscription_id, subscription_items)?;
+        let customer_id = subscription.customer.id().to_string();
 
-        let create_usage_record = CreateUsageRecord {
-            quantity: quantity.into(),
-            ..Default::default()
-        };
-        UsageRecord::create(&self.client, &subscription_item.id, create_usage_record)
-            .await
-            .map_err(Into::into)
+        CreateBillingMeterEvent::new(
+            METRICS_METER_EVENT_NAME,
+            HashMap::from([
+                (METER_CUSTOMER_KEY.to_owned(), customer_id),
+                (METER_VALUE_KEY.to_owned(), quantity.to_string()),
+            ]),
+        )
+        .send(&self.client)
+        .await
+        .map_err(Into::into)
     }
 
     pub async fn cancel_metered_subscription(
         &self,
         metered_plan_id: &MeteredPlanId,
     ) -> Result<Subscription, BillingError> {
-        let subscription_id = metered_plan_id
-            .as_ref()
-            .parse()
-            .map_err(BillingError::MeteredPlanId)?;
+        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
         self.cancel_subscription(&subscription_id).await
     }
 
@@ -697,10 +684,7 @@ impl Biller {
         &self,
         licensed_plan_id: &LicensedPlanId,
     ) -> Result<Subscription, BillingError> {
-        let subscription_id = licensed_plan_id
-            .as_ref()
-            .parse()
-            .map_err(BillingError::LicensedPlanId)?;
+        let subscription_id: SubscriptionId = licensed_plan_id.as_ref().into();
         self.cancel_subscription(&subscription_id).await
     }
 
@@ -708,25 +692,26 @@ impl Biller {
         &self,
         subscription_id: &SubscriptionId,
     ) -> Result<Subscription, BillingError> {
-        Subscription::cancel(&self.client, subscription_id, CancelSubscription::default())
+        CancelSubscription::new(subscription_id.clone())
+            .send(&self.client)
             .await
             .map_err(Into::into)
     }
 }
 
-fn into_payment_card(card: JsonCard) -> PaymentCard {
+fn into_payment_card(card: JsonCard) -> CreatePaymentMethodCardDetailsParams {
     let JsonCard {
         number,
         exp_month,
         exp_year,
         cvc,
     } = card;
-    PaymentCard {
-        number: number.into(),
-        exp_month: exp_month.into(),
-        exp_year: exp_year.into(),
-        cvc: Some(cvc.into()),
-    }
+    let exp_month: i64 = i32::from(exp_month).into();
+    let exp_year: i64 = i32::from(exp_year).into();
+    let number: String = number.into();
+    let mut params = CreatePaymentMethodCardDetailsParams::new(exp_month, exp_year, number);
+    params.cvc = Some(cvc.into());
+    params
 }
 
 #[cfg(test)]
@@ -735,7 +720,7 @@ mod tests {
 
     use bencher_json::{
         Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
-        organization::plan::DEFAULT_PRICE_NAME,
+        organization::plan::{DEFAULT_PRICE_NAME, METRICS_METER_EVENT_NAME},
         system::{
             config::{JsonBilling, JsonProduct, JsonProducts},
             payment::{JsonCard, JsonCustomer},
@@ -744,7 +729,9 @@ mod tests {
     use chrono::{Datelike as _, Utc};
     use literally::hmap;
     use pretty_assertions::assert_eq;
-    use stripe::{CustomerId, PaymentMethodId};
+    use stripe_shared::{CustomerId, PaymentMethodId};
+
+    use rustls::crypto::ring::default_provider;
 
     use crate::Biller;
 
@@ -760,6 +747,7 @@ mod tests {
                 id: "prod_NKz5B9dGhDiSY1".into(),
                 metered: hmap! {
                     "default".to_owned() => "price_1McW12Kal5vzTlmhoPltpBAW".to_owned(),
+                    "metrics".to_owned() => "price_1T8NRdKal5vzTlmhBfL9IdMi".to_owned(),
                 },
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4XlwKal5vzTlmh0n0wtplQ".to_owned(),
@@ -769,6 +757,7 @@ mod tests {
                 id: "prod_NLC7fDet2C8Nmk".into(),
                 metered: hmap! {
                     "default".to_owned() => "price_1McW2eKal5vzTlmhECLIyVQz".to_owned(),
+                    "metrics".to_owned() => "price_1T8NStKal5vzTlmhPBxy2izR".to_owned(),
                 },
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4Xo1Kal5vzTlmh1KrcEbq0".to_owned(),
@@ -883,21 +872,78 @@ mod tests {
         }
     }
 
-    fn make_subscription_item(price_id: &str) -> stripe::SubscriptionItem {
-        stripe::SubscriptionItem {
+    fn make_price(price_id: &str) -> stripe_shared::Price {
+        stripe_shared::Price {
+            active: false,
+            billing_scheme: stripe_shared::PriceBillingScheme::PerUnit,
+            created: 0,
+            currency: stripe_types::Currency::USD,
+            currency_options: None,
+            custom_unit_amount: None,
+            id: price_id.parse().unwrap(),
+            livemode: false,
+            lookup_key: None,
+            metadata: std::collections::HashMap::new(),
+            nickname: None,
+            product: stripe_types::Expandable::Id(
+                "prod_test".parse::<stripe_shared::ProductId>().unwrap(),
+            ),
+            recurring: None,
+            tax_behavior: None,
+            tiers: None,
+            tiers_mode: None,
+            transform_quantity: None,
+            type_: stripe_shared::PriceType::Recurring,
+            unit_amount: None,
+            unit_amount_decimal: None,
+        }
+    }
+
+    fn make_plan() -> stripe_shared::Plan {
+        stripe_shared::Plan {
+            active: false,
+            amount: None,
+            amount_decimal: None,
+            billing_scheme: stripe_shared::PlanBillingScheme::PerUnit,
+            created: 0,
+            currency: stripe_types::Currency::USD,
+            id: "plan_test".parse().unwrap(),
+            interval: stripe_shared::PlanInterval::Month,
+            interval_count: 1,
+            livemode: false,
+            metadata: None,
+            meter: None,
+            nickname: None,
+            product: None,
+            tiers: None,
+            tiers_mode: None,
+            transform_usage: None,
+            trial_period_days: None,
+            usage_type: stripe_shared::PlanUsageType::Metered,
+        }
+    }
+
+    fn make_subscription_item(price_id: &str) -> stripe_billing::SubscriptionItem {
+        stripe_billing::SubscriptionItem {
+            billing_thresholds: None,
+            created: 0,
+            current_period_end: 0,
+            current_period_start: 0,
+            discounts: vec![],
             id: format!("si_test_{price_id}").parse().unwrap(),
-            price: Some(stripe::Price {
-                id: price_id.parse().unwrap(),
-                ..Default::default()
-            }),
-            ..Default::default()
+            metadata: std::collections::HashMap::new(),
+            plan: make_plan(),
+            price: make_price(price_id),
+            quantity: None,
+            subscription: "sub_test".to_owned(),
+            tax_rates: None,
         }
     }
 
     #[test]
     fn filter_subscription_items_single_match() {
-        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
-        let known: stripe::PriceId = "price_known".parse().unwrap();
+        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
+        let known: stripe_product::PriceId = "price_known".parse().unwrap();
         let items = vec![
             make_subscription_item("price_known"),
             make_subscription_item("price_unknown"),
@@ -905,13 +951,13 @@ mod tests {
         let price_ids = HashSet::from([&known]);
         let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
         assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered.first().unwrap().price.as_ref().unwrap().id, known);
+        assert_eq!(filtered.first().unwrap().price.id, known);
     }
 
     #[test]
     fn filter_subscription_items_no_match() {
-        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
-        let known: stripe::PriceId = "price_known".parse().unwrap();
+        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
+        let known: stripe_product::PriceId = "price_known".parse().unwrap();
         let items = vec![
             make_subscription_item("price_a"),
             make_subscription_item("price_b"),
@@ -925,8 +971,8 @@ mod tests {
 
     #[test]
     fn filter_subscription_items_empty_input() {
-        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
-        let known: stripe::PriceId = "price_known".parse().unwrap();
+        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
+        let known: stripe_product::PriceId = "price_known".parse().unwrap();
         let price_ids = HashSet::from([&known]);
         let err = Biller::filter_subscription_items(&sub_id, vec![], &price_ids).unwrap_err();
         assert!(
@@ -936,20 +982,20 @@ mod tests {
 
     #[test]
     fn filter_subscription_items_all_match() {
-        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
-        let known: stripe::PriceId = "price_known".parse().unwrap();
+        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
+        let known: stripe_product::PriceId = "price_known".parse().unwrap();
         let items = vec![make_subscription_item("price_known")];
         let price_ids = HashSet::from([&known]);
         let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
         assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered.first().unwrap().price.as_ref().unwrap().id, known);
+        assert_eq!(filtered.first().unwrap().price.id, known);
     }
 
     #[test]
     fn filter_subscription_items_multiple_known_ids() {
-        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
-        let known_a: stripe::PriceId = "price_a".parse().unwrap();
-        let known_b: stripe::PriceId = "price_b".parse().unwrap();
+        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
+        let known_a: stripe_product::PriceId = "price_a".parse().unwrap();
+        let known_b: stripe_product::PriceId = "price_b".parse().unwrap();
         let items = vec![
             make_subscription_item("price_a"),
             make_subscription_item("price_b"),
@@ -961,26 +1007,9 @@ mod tests {
     }
 
     #[test]
-    fn filter_subscription_items_none_price() {
-        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
-        let known: stripe::PriceId = "price_known".parse().unwrap();
-        let items = vec![
-            make_subscription_item("price_known"),
-            stripe::SubscriptionItem {
-                id: "si_no_price".parse().unwrap(),
-                price: None,
-                ..Default::default()
-            },
-        ];
-        let price_ids = HashSet::from([&known]);
-        let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
-        assert_eq!(filtered.len(), 1);
-    }
-
-    #[test]
     fn get_subscription_item_after_filter() {
-        let known: stripe::PriceId = "price_known".parse().unwrap();
-        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
+        let known: stripe_product::PriceId = "price_known".parse().unwrap();
+        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
         let items = vec![
             make_subscription_item("price_known"),
             make_subscription_item("price_old_meter"),
@@ -988,19 +1017,19 @@ mod tests {
         let price_ids = HashSet::from([&known]);
         let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
         let result = Biller::get_subscription_item(&sub_id, filtered).unwrap();
-        assert_eq!(result.price.as_ref().unwrap().id, known);
+        assert_eq!(result.price.id, known);
     }
 
     #[test]
     fn get_subscription_item_no_items() {
-        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
+        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
         let result = Biller::get_subscription_item(&sub_id, vec![]);
         assert!(result.is_err());
     }
 
     #[test]
     fn get_subscription_item_multiple_items() {
-        let sub_id: stripe::SubscriptionId = "sub_test".parse().unwrap();
+        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
         let items = vec![
             make_subscription_item("price_a"),
             make_subscription_item("price_b"),
@@ -1016,6 +1045,9 @@ mod tests {
         let Some(billing_key) = billing_key() else {
             return;
         };
+        default_provider()
+            .install_default()
+            .expect("Failed to install default crypto provider");
         let json_billing = JsonBilling {
             secret_key: billing_key.parse().unwrap(),
             products: products(),
@@ -1071,7 +1103,7 @@ mod tests {
             customer_id.clone(),
             payment_method_id.clone(),
             PlanLevel::Team,
-            DEFAULT_PRICE_NAME.into(),
+            METRICS_METER_EVENT_NAME.into(),
             10,
         )
         .await;
@@ -1097,7 +1129,7 @@ mod tests {
             customer_id.clone(),
             payment_method_id.clone(),
             PlanLevel::Enterprise,
-            DEFAULT_PRICE_NAME.into(),
+            METRICS_METER_EVENT_NAME.into(),
             25,
         )
         .await;
