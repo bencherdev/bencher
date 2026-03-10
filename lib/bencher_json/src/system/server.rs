@@ -77,6 +77,34 @@ pub struct JsonServerStats {
     pub top_projects_unclaimed: Option<JsonTopCohort>,
     /// Top 10 claimed projects
     pub top_projects_claimed: Option<JsonTopCohort>,
+    /// Runner stats
+    pub runner: Option<JsonRunnerStats>,
+}
+
+/// Runner stats
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonRunnerStats {
+    /// Total runner minutes
+    pub minutes: JsonRunnerStatsCohort<JsonCohort>,
+    /// Median runner minutes per report
+    pub minutes_per_report: JsonRunnerStatsCohort<JsonCohortAvg>,
+    /// Top 10 projects by runner minutes
+    pub top_projects: JsonRunnerStatsCohort<JsonTopJobCohort>,
+}
+
+/// Runner stats broken down by project state
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonRunnerStatsCohort<T> {
+    /// Total (all projects)
+    pub total: T,
+    /// Unclaimed projects only
+    pub unclaimed: T,
+    /// Claimed projects only
+    pub claimed: T,
+    /// Plus (paid plan) projects only
+    pub plus: T,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -111,6 +139,26 @@ pub struct JsonTopProject {
     pub name: ResourceName,
     pub uuid: ProjectUuid,
     pub metrics: u64,
+    pub percentage: f64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonTopJobCohort {
+    pub week: JsonTopJobProjects,
+    pub month: JsonTopJobProjects,
+    pub total: JsonTopJobProjects,
+}
+
+pub type JsonTopJobProjects = Vec<JsonTopJobProject>;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonTopJobProject {
+    pub name: ResourceName,
+    pub uuid: ProjectUuid,
+    /// Total runner minutes
+    pub minutes: u64,
     pub percentage: f64,
 }
 

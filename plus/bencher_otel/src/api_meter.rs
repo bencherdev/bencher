@@ -479,6 +479,8 @@ fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
 pub enum ApiHistogram {
     /// Time a job spent waiting in the queue before being claimed.
     JobQueueDuration(PriorityTier),
+    /// Actual execution time from job started to completion (excludes queue wait).
+    JobRunDuration(PriorityTier),
     /// Total time from job creation to completion.
     JobCompleteDuration(PriorityTier),
     /// Total wall-clock time for the entire report creation endpoint.
@@ -493,6 +495,7 @@ impl ApiHistogram {
     fn name(self) -> &'static str {
         match self {
             Self::JobQueueDuration(_) => "job.queue.duration",
+            Self::JobRunDuration(_) => "job.run.duration",
             Self::JobCompleteDuration(_) => "job.complete.duration",
             Self::ReportCreateDuration => "report.create.duration",
             Self::ReportProcessDuration => "report.process.duration",
@@ -505,6 +508,7 @@ impl ApiHistogram {
             Self::JobQueueDuration(_) => {
                 "Time a job spent waiting in the queue before being claimed"
             },
+            Self::JobRunDuration(_) => "Actual execution time from job started to completion",
             Self::JobCompleteDuration(_) => "Total time from job creation to completion",
             Self::ReportCreateDuration => {
                 "Total wall-clock time for the entire report creation endpoint"
@@ -521,6 +525,7 @@ impl ApiHistogram {
     fn unit(self) -> &'static str {
         match self {
             Self::JobQueueDuration(_)
+            | Self::JobRunDuration(_)
             | Self::JobCompleteDuration(_)
             | Self::ReportCreateDuration
             | Self::ReportProcessDuration
@@ -530,7 +535,9 @@ impl ApiHistogram {
 
     fn attributes(self) -> Vec<opentelemetry::KeyValue> {
         match self {
-            Self::JobQueueDuration(tier) | Self::JobCompleteDuration(tier) => vec![tier.into()],
+            Self::JobQueueDuration(tier)
+            | Self::JobRunDuration(tier)
+            | Self::JobCompleteDuration(tier) => vec![tier.into()],
             Self::ReportCreateDuration
             | Self::ReportProcessDuration
             | Self::ReportWriteDuration => Vec::new(),

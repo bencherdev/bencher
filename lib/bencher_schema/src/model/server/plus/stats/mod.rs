@@ -1,4 +1,7 @@
-use bencher_json::{DateTime, JsonServerStats};
+use bencher_json::{
+    DateTime, JsonServerStats,
+    system::server::{JsonRunnerStats, JsonRunnerStatsCohort},
+};
 use dropshot::HttpError;
 use slog::Logger;
 
@@ -6,12 +9,14 @@ use crate::context::DbConnection;
 
 use super::QueryServer;
 
+mod job_stats;
 mod metrics_stats;
 mod organization_stats;
 mod projects_stats;
 mod reports_stats;
 mod users_stats;
 
+use job_stats::JobStats;
 use metrics_stats::MetricsStats;
 use organization_stats::OrganizationStats;
 use projects_stats::ProjectsStats;
@@ -27,6 +32,7 @@ enum ProjectState {
     All,
     Unclaimed,
     Claimed,
+    Plus,
 }
 
 pub(super) fn get_stats(
@@ -69,6 +75,12 @@ pub(super) fn get_stats(
     let claimed_metrics_stats =
         MetricsStats::new(conn, this_week, this_month, ProjectState::Claimed)?;
 
+    // job duration and median job duration per report
+    let job_stats = JobStats::new(conn, this_week, this_month, ProjectState::All)?;
+    let unclaimed_job_stats = JobStats::new(conn, this_week, this_month, ProjectState::Unclaimed)?;
+    let claimed_job_stats = JobStats::new(conn, this_week, this_month, ProjectState::Claimed)?;
+    let plus_job_stats = JobStats::new(conn, this_week, this_month, ProjectState::Plus)?;
+
     Ok(JsonServerStats {
         server: query_server.into_json(),
         timestamp: now,
@@ -96,6 +108,26 @@ pub(super) fn get_stats(
         top_projects: Some(metrics_stats.top_projects),
         top_projects_unclaimed: Some(unclaimed_metrics_stats.top_projects),
         top_projects_claimed: Some(claimed_metrics_stats.top_projects),
+        runner: Some(JsonRunnerStats {
+            minutes: JsonRunnerStatsCohort {
+                total: job_stats.minutes,
+                unclaimed: unclaimed_job_stats.minutes,
+                claimed: claimed_job_stats.minutes,
+                plus: plus_job_stats.minutes,
+            },
+            minutes_per_report: JsonRunnerStatsCohort {
+                total: job_stats.minutes_per_report,
+                unclaimed: unclaimed_job_stats.minutes_per_report,
+                claimed: claimed_job_stats.minutes_per_report,
+                plus: plus_job_stats.minutes_per_report,
+            },
+            top_projects: JsonRunnerStatsCohort {
+                total: job_stats.top_projects,
+                unclaimed: unclaimed_job_stats.top_projects,
+                claimed: claimed_job_stats.top_projects,
+                plus: plus_job_stats.top_projects,
+            },
+        }),
     })
 }
 

@@ -1,6 +1,7 @@
 use bencher_json::system::server::{JsonCohort, JsonCohortAvg};
 use diesel::{
-    AggregateExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    AggregateExpressionMethods as _, BoolExpressionMethods as _, ExpressionMethods as _,
+    JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _,
 };
 use dropshot::HttpError;
 
@@ -86,22 +87,46 @@ fn get_reports_by_project(
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
             let mut query = schema::report::table
-                .inner_join(schema::project::table.inner_join(
-                    schema::organization::table.left_join(schema::organization_role::table),
-                ))
+                .inner_join(schema::project::table.inner_join(schema::organization::table))
                 .group_by(schema::report::project_id)
-                .select(diesel::dsl::count(schema::report::id).aggregate_distinct())
+                .select(diesel::dsl::count(schema::report::id))
                 .into_boxed();
 
-            query = match state {
-                #[expect(
-                    clippy::unreachable,
-                    reason = "match above ensures this is unreachable"
-                )]
-                ProjectState::All => unreachable!(),
-                ProjectState::Unclaimed => query.filter(schema::organization_role::id.is_null()),
-                ProjectState::Claimed => query.filter(schema::organization_role::id.is_not_null()),
+            let is_claimed = matches!(state, ProjectState::Claimed);
+            let org_has_roles = schema::organization_role::table
+                .filter(schema::organization_role::organization_id.eq(schema::organization::id));
+            query = if is_claimed {
+                query.filter(diesel::dsl::exists(org_has_roles))
+            } else {
+                query.filter(diesel::dsl::not(diesel::dsl::exists(org_has_roles)))
             };
+
+            if let Some(since) = since {
+                query = query.filter(schema::report::created.ge(since));
+            }
+
+            query
+                .load::<i64>(conn)
+                .map_err(resource_not_found_err!(Report))
+        },
+        ProjectState::Plus => {
+            let mut query = schema::report::table
+                .inner_join(
+                    schema::project::table.inner_join(
+                        schema::organization::table.inner_join(
+                            schema::plan::table
+                                .on(schema::plan::organization_id.eq(schema::organization::id)),
+                        ),
+                    ),
+                )
+                .filter(
+                    schema::plan::metered_plan
+                        .is_not_null()
+                        .or(schema::plan::licensed_plan.is_not_null()),
+                )
+                .group_by(schema::report::project_id)
+                .select(diesel::dsl::count(schema::report::id))
+                .into_boxed();
 
             if let Some(since) = since {
                 query = query.filter(schema::report::created.ge(since));

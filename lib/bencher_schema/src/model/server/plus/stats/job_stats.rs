@@ -1,5 +1,5 @@
 use bencher_json::system::server::{
-    JsonCohort, JsonCohortAvg, JsonTopCohort, JsonTopProject, JsonTopProjects,
+    JsonCohort, JsonCohortAvg, JsonTopJobCohort, JsonTopJobProject, JsonTopJobProjects,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _,
@@ -13,72 +13,76 @@ use crate::{
 
 use super::{ProjectState, TOP_PROJECTS, median};
 
-pub(super) struct MetricsStats {
-    pub metrics: JsonCohort,
-    pub metrics_per_report: JsonCohortAvg,
-    pub top_projects: JsonTopCohort,
+pub(super) struct JobStats {
+    pub minutes: JsonCohort,
+    pub minutes_per_report: JsonCohortAvg,
+    pub top_projects: JsonTopJobCohort,
 }
 
-impl MetricsStats {
-    #[expect(clippy::cast_sign_loss, reason = "count is always positive")]
+impl JobStats {
+    #[expect(
+        clippy::cast_sign_loss,
+        clippy::integer_division,
+        reason = "duration is always positive, integer division for seconds to minutes"
+    )]
     pub fn new(
         conn: &mut DbConnection,
         this_week: i64,
         this_month: i64,
         state: ProjectState,
     ) -> Result<Self, HttpError> {
-        let mut weekly_metrics = get_metrics_by_report(conn, Some(this_week), state)?;
-        let weekly_metrics_total: i64 = weekly_metrics.iter().sum();
-        let weekly_metrics_per_project = median(&mut weekly_metrics);
-        let weekly_top_projects = get_top_projects(conn, Some(this_week), state)?;
+        let mut weekly_durations = get_durations_by_report(conn, Some(this_week), state)?;
+        let weekly_total: i64 = weekly_durations.iter().sum();
+        let weekly_median = median(&mut weekly_durations);
+        let weekly_top = get_top_job_projects(conn, Some(this_week), state)?;
 
-        let mut monthly_metrics = get_metrics_by_report(conn, Some(this_month), state)?;
-        let monthly_metrics_total: i64 = monthly_metrics.iter().sum();
-        let monthly_metrics_per_project = median(&mut monthly_metrics);
-        let monthly_top_projects = get_top_projects(conn, Some(this_month), state)?;
+        let mut monthly_durations = get_durations_by_report(conn, Some(this_month), state)?;
+        let monthly_total: i64 = monthly_durations.iter().sum();
+        let monthly_median = median(&mut monthly_durations);
+        let monthly_top = get_top_job_projects(conn, Some(this_month), state)?;
 
-        let mut total_metrics = get_metrics_by_report(conn, None, state)?;
-        let total_metrics_total: i64 = total_metrics.iter().sum();
-        let total_metrics_per_project = median(&mut total_metrics);
-        let total_top_projects = get_top_projects(conn, None, state)?;
+        let mut total_durations = get_durations_by_report(conn, None, state)?;
+        let total_total: i64 = total_durations.iter().sum();
+        let total_median = median(&mut total_durations);
+        let total_top = get_top_job_projects(conn, None, state)?;
 
-        let metrics = JsonCohort {
-            week: weekly_metrics_total as u64,
-            month: monthly_metrics_total as u64,
-            total: total_metrics_total as u64,
+        let minutes = JsonCohort {
+            week: (weekly_total / 60) as u64,
+            month: (monthly_total / 60) as u64,
+            total: (total_total / 60) as u64,
         };
 
-        let metrics_per_report = JsonCohortAvg {
-            week: weekly_metrics_per_project,
-            month: monthly_metrics_per_project,
-            total: total_metrics_per_project,
+        let minutes_per_report = JsonCohortAvg {
+            week: weekly_median / 60.0,
+            month: monthly_median / 60.0,
+            total: total_median / 60.0,
         };
 
-        let top_projects = JsonTopCohort {
-            week: top_projects(weekly_top_projects, weekly_metrics_total),
-            month: top_projects(monthly_top_projects, monthly_metrics_total),
-            total: top_projects(total_top_projects, total_metrics_total),
+        let top_projects = JsonTopJobCohort {
+            week: top_job_projects(weekly_top, weekly_total),
+            month: top_job_projects(monthly_top, monthly_total),
+            total: top_job_projects(total_top, total_total),
         };
 
         Ok(Self {
-            metrics,
-            metrics_per_report,
+            minutes,
+            minutes_per_report,
             top_projects,
         })
     }
 }
 
 // Intentionally includes soft-deleted projects for server admin stats
-fn get_metrics_by_report(
+fn get_durations_by_report(
     conn: &mut DbConnection,
     since: Option<i64>,
     state: ProjectState,
 ) -> Result<Vec<i64>, HttpError> {
     match state {
         ProjectState::All => {
-            let mut query = schema::metric_count_by_report::table
+            let mut query = schema::job_duration_by_report::table
                 .inner_join(schema::report::table)
-                .select(schema::metric_count_by_report::metric_count)
+                .select(schema::job_duration_by_report::job_duration)
                 .into_boxed();
 
             if let Some(since) = since {
@@ -88,15 +92,15 @@ fn get_metrics_by_report(
             query
                 .load::<i32>(conn)
                 .map(|v| v.into_iter().map(i64::from).collect())
-                .map_err(resource_not_found_err!(Metric))
+                .map_err(resource_not_found_err!(Job))
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
-            let mut query = schema::metric_count_by_report::table
+            let mut query = schema::job_duration_by_report::table
                 .inner_join(
                     schema::report::table
                         .inner_join(schema::project::table.inner_join(schema::organization::table)),
                 )
-                .select(schema::metric_count_by_report::metric_count)
+                .select(schema::job_duration_by_report::job_duration)
                 .into_boxed();
 
             let is_claimed = matches!(state, ProjectState::Claimed);
@@ -115,10 +119,10 @@ fn get_metrics_by_report(
             query
                 .load::<i32>(conn)
                 .map(|v| v.into_iter().map(i64::from).collect())
-                .map_err(resource_not_found_err!(Metric))
+                .map_err(resource_not_found_err!(Job))
         },
         ProjectState::Plus => {
-            let mut query = schema::metric_count_by_report::table
+            let mut query = schema::job_duration_by_report::table
                 .inner_join(
                     schema::report::table.inner_join(
                         schema::project::table.inner_join(
@@ -134,7 +138,7 @@ fn get_metrics_by_report(
                         .is_not_null()
                         .or(schema::plan::licensed_plan.is_not_null()),
                 )
-                .select(schema::metric_count_by_report::metric_count)
+                .select(schema::job_duration_by_report::job_duration)
                 .into_boxed();
 
             if let Some(since) = since {
@@ -144,13 +148,13 @@ fn get_metrics_by_report(
             query
                 .load::<i32>(conn)
                 .map(|v| v.into_iter().map(i64::from).collect())
-                .map_err(resource_not_found_err!(Metric))
+                .map_err(resource_not_found_err!(Job))
         },
     }
 }
 
 // Intentionally includes soft-deleted projects for server admin stats
-fn get_top_projects(
+fn get_top_job_projects(
     conn: &mut DbConnection,
     since: Option<i64>,
     state: ProjectState,
@@ -158,14 +162,14 @@ fn get_top_projects(
     match state {
         ProjectState::All => {
             #[expect(clippy::cast_possible_wrap, reason = "const")]
-            let mut query = schema::metric_count_by_report::table
+            let mut query = schema::job_duration_by_report::table
                 .inner_join(schema::report::table.inner_join(schema::project::table))
                 .group_by(schema::project::id)
                 .select((
                     QueryProject::as_select(),
-                    diesel::dsl::sum(schema::metric_count_by_report::metric_count),
+                    diesel::dsl::sum(schema::job_duration_by_report::job_duration),
                 ))
-                .order(diesel::dsl::sum(schema::metric_count_by_report::metric_count).desc())
+                .order(diesel::dsl::sum(schema::job_duration_by_report::job_duration).desc())
                 .limit(TOP_PROJECTS as i64)
                 .into_boxed();
 
@@ -184,7 +188,7 @@ fn get_top_projects(
         },
         ProjectState::Unclaimed | ProjectState::Claimed => {
             #[expect(clippy::cast_possible_wrap, reason = "const")]
-            let mut query = schema::metric_count_by_report::table
+            let mut query = schema::job_duration_by_report::table
                 .inner_join(
                     schema::report::table
                         .inner_join(schema::project::table.inner_join(schema::organization::table)),
@@ -192,9 +196,9 @@ fn get_top_projects(
                 .group_by(schema::project::id)
                 .select((
                     QueryProject::as_select(),
-                    diesel::dsl::sum(schema::metric_count_by_report::metric_count),
+                    diesel::dsl::sum(schema::job_duration_by_report::job_duration),
                 ))
-                .order(diesel::dsl::sum(schema::metric_count_by_report::metric_count).desc())
+                .order(diesel::dsl::sum(schema::job_duration_by_report::job_duration).desc())
                 .limit(TOP_PROJECTS as i64)
                 .into_boxed();
 
@@ -222,7 +226,7 @@ fn get_top_projects(
         },
         ProjectState::Plus => {
             #[expect(clippy::cast_possible_wrap, reason = "const")]
-            let mut query = schema::metric_count_by_report::table
+            let mut query = schema::job_duration_by_report::table
                 .inner_join(
                     schema::report::table.inner_join(
                         schema::project::table.inner_join(
@@ -241,9 +245,9 @@ fn get_top_projects(
                 .group_by(schema::project::id)
                 .select((
                     QueryProject::as_select(),
-                    diesel::dsl::sum(schema::metric_count_by_report::metric_count),
+                    diesel::dsl::sum(schema::job_duration_by_report::job_duration),
                 ))
-                .order(diesel::dsl::sum(schema::metric_count_by_report::metric_count).desc())
+                .order(diesel::dsl::sum(schema::job_duration_by_report::job_duration).desc())
                 .limit(TOP_PROJECTS as i64)
                 .into_boxed();
 
@@ -263,16 +267,20 @@ fn get_top_projects(
     }
 }
 
-#[expect(clippy::cast_precision_loss, clippy::cast_sign_loss)]
-fn top_projects(project_metrics: Vec<(QueryProject, i64)>, total: i64) -> JsonTopProjects {
-    project_metrics
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::integer_division
+)]
+fn top_job_projects(project_durations: Vec<(QueryProject, i64)>, total: i64) -> JsonTopJobProjects {
+    project_durations
         .into_iter()
-        .map(|(project, metrics)| JsonTopProject {
+        .map(|(project, duration)| JsonTopJobProject {
             name: project.name,
             uuid: project.uuid,
-            metrics: metrics as u64,
+            minutes: (duration / 60) as u64,
             percentage: if total > 0 {
-                metrics as f64 / total as f64
+                duration as f64 / total as f64
             } else {
                 0.0
             },
