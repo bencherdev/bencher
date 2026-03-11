@@ -1,14 +1,15 @@
 use std::process::Command;
 
 use camino::Utf8PathBuf;
+use tempfile::TempDir;
 
 const ARTIFACT_NAME: &str = "runner-cloud-linux-x86-64";
 
 /// Download the runner binary from GitHub Actions.
 ///
 /// If `run_id` is `None`, finds the latest successful `cloud` branch run.
-/// Returns the path to the downloaded binary.
-pub fn download(run_id: Option<u64>) -> anyhow::Result<Utf8PathBuf> {
+/// Returns the path to the downloaded binary and the temp directory that owns it.
+pub fn download(run_id: Option<u64>) -> anyhow::Result<(Utf8PathBuf, TempDir)> {
     let run_id = match run_id {
         Some(id) => id,
         None => latest_cloud_run_id()?,
@@ -51,10 +52,7 @@ pub fn download(run_id: Option<u64>) -> anyhow::Result<Utf8PathBuf> {
 
     println!("Downloaded runner binary to {binary_path}");
 
-    // Persist the temp dir so it isn't deleted when this function returns
-    drop(temp_dir.keep());
-
-    Ok(binary_path)
+    Ok((binary_path, temp_dir))
 }
 
 fn latest_cloud_run_id() -> anyhow::Result<u64> {
@@ -71,7 +69,7 @@ fn latest_cloud_run_id() -> anyhow::Result<u64> {
             "--workflow",
             "ci.yml",
             "--status",
-            "completed",
+            "success",
             "--json",
             "databaseId",
             "-L",

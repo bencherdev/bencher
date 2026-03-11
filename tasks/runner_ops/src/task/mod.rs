@@ -43,49 +43,41 @@ struct Logs {
     follow: bool,
 }
 
-impl TryFrom<TaskRunnerOps> for Task {
-    type Error = anyhow::Error;
-
-    fn try_from(task: TaskRunnerOps) -> Result<Self, Self::Error> {
-        Ok(Self {
-            sub: task.sub.try_into()?,
-        })
+impl From<TaskRunnerOps> for Task {
+    fn from(task: TaskRunnerOps) -> Self {
+        Self {
+            sub: task.sub.into(),
+        }
     }
 }
 
-impl TryFrom<TaskSub> for Sub {
-    type Error = anyhow::Error;
-
-    fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
-        Ok(match sub {
-            TaskSub::Provision(provision) => Self::Provision(provision.try_into()?),
-            TaskSub::Deploy(deploy) => Self::Deploy(deploy.try_into()?),
-            TaskSub::Logs(logs) => Self::Logs(logs.try_into()?),
-        })
+impl From<TaskSub> for Sub {
+    fn from(sub: TaskSub) -> Self {
+        match sub {
+            TaskSub::Provision(provision) => Self::Provision(provision.into()),
+            TaskSub::Deploy(deploy) => Self::Deploy(deploy.into()),
+            TaskSub::Logs(logs) => Self::Logs(logs.into()),
+        }
     }
 }
 
-impl TryFrom<TaskProvision> for Provision {
-    type Error = anyhow::Error;
-
-    fn try_from(task: TaskProvision) -> Result<Self, Self::Error> {
+impl From<TaskProvision> for Provision {
+    fn from(task: TaskProvision) -> Self {
         let TaskProvision {
             host,
             key,
             user,
             runner_binary,
         } = task;
-        Ok(Self {
+        Self {
             ssh: Ssh::new(host, key, user),
             runner_binary,
-        })
+        }
     }
 }
 
-impl TryFrom<TaskDeploy> for Deploy {
-    type Error = anyhow::Error;
-
-    fn try_from(task: TaskDeploy) -> Result<Self, Self::Error> {
+impl From<TaskDeploy> for Deploy {
+    fn from(task: TaskDeploy) -> Self {
         let TaskDeploy {
             host,
             key,
@@ -94,19 +86,17 @@ impl TryFrom<TaskDeploy> for Deploy {
             token,
             run_id,
         } = task;
-        Ok(Self {
+        Self {
             ssh: Ssh::new(host, key, user),
             runner,
             token,
             run_id,
-        })
+        }
     }
 }
 
-impl TryFrom<TaskLogs> for Logs {
-    type Error = anyhow::Error;
-
-    fn try_from(task: TaskLogs) -> Result<Self, Self::Error> {
+impl From<TaskLogs> for Logs {
+    fn from(task: TaskLogs) -> Self {
         let TaskLogs {
             host,
             key,
@@ -114,17 +104,17 @@ impl TryFrom<TaskLogs> for Logs {
             lines,
             follow,
         } = task;
-        Ok(Self {
+        Self {
             ssh: Ssh::new(host, key, user),
             lines,
             follow,
-        })
+        }
     }
 }
 
 impl Task {
-    pub fn new() -> anyhow::Result<Self> {
-        TaskRunnerOps::parse().try_into()
+    pub fn new() -> Self {
+        TaskRunnerOps::parse().into()
     }
 
     pub fn exec(self) -> anyhow::Result<()> {
@@ -160,7 +150,7 @@ impl Deploy {
             token,
             run_id,
         } = self;
-        let runner_binary = download::download(run_id)?;
+        let (runner_binary, _temp_dir) = download::download(run_id)?;
         deploy::deploy(&ssh, Some(runner_binary.as_path()))?;
         deploy::start(&ssh, &runner, &token)?;
         Ok(())

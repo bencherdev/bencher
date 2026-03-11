@@ -12,7 +12,7 @@ fn main() -> anyhow::Result<()> {
 
 #[cfg(feature = "plus")]
 fn exec() -> anyhow::Result<()> {
-    let task = task::Task::new()?;
+    let task = task::Task::new();
     task.exec()
 }
 

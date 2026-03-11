@@ -19,7 +19,7 @@ Environment=BENCHER_HOST=https://api.bencher.dev
 WantedBy=multi-user.target";
 
 pub fn deploy(ssh: &Ssh, runner_binary: Option<&Utf8Path>) -> anyhow::Result<()> {
-    // Step 9: System verification
+    // System verification
     println!("Verifying system capabilities...");
 
     let has_kvm = ssh.check("test -c /dev/kvm")?;
@@ -47,7 +47,7 @@ pub fn deploy(ssh: &Ssh, runner_binary: Option<&Utf8Path>) -> anyhow::Result<()>
     ssh.run("timedatectl set-timezone UTC")?;
     println!("  timezone: UTC");
 
-    // Step 10: Deploy runner (only if binary provided)
+    // Deploy runner (only if binary provided)
     let Some(runner_binary) = runner_binary else {
         println!("No --runner-binary provided, skipping deployment");
         return Ok(());

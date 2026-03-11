@@ -19,7 +19,7 @@ const REBOOT_POLL_INTERVAL: Duration = Duration::from_secs(10);
 const REBOOT_TIMEOUT: Duration = Duration::from_secs(300);
 
 pub fn install_os(ssh: &Ssh) -> anyhow::Result<()> {
-    // Step 1: Detect if we're in rescue mode
+    // Detect if we're in rescue mode
     let in_rescue = ssh.check("test -d /root/.oldroot/nfs")?;
     if !in_rescue {
         println!("OS already installed, skipping install_os");
@@ -28,7 +28,7 @@ pub fn install_os(ssh: &Ssh) -> anyhow::Result<()> {
 
     println!("Rescue mode detected, installing OS...");
 
-    // Step 2: Write autosetup config and run installimage
+    // Write autosetup config and run installimage
     ssh.run(&format!(
         "cat > /tmp/autosetup << 'AUTOSETUP_EOF'\n{AUTOSETUP_CONFIG}\nAUTOSETUP_EOF"
     ))?;
