@@ -56,7 +56,7 @@ pub fn execute_job(
     let stop_flag = Arc::new(AtomicBool::new(false));
 
     // Spawn heartbeat thread, pinned to housekeeping cores
-    let ws_heartbeat = Arc::clone(&ws);
+    let ws_heartbeat = Arc::clone(ws);
     let cancel_heartbeat = Arc::clone(&cancel_flag);
     let stop_heartbeat = Arc::clone(&stop_flag);
     let housekeeping_cores = config.cpu_layout.housekeeping.clone();
@@ -98,7 +98,7 @@ pub fn execute_job(
                     results.push(output_to_iteration(output));
                     let error_msg =
                         format!("Benchmark exited with non-zero exit code: {last_exit_code}");
-                    return send_failed(results, error_msg, heartbeat, &stop_flag, &ws);
+                    return send_failed(results, error_msg, heartbeat, &stop_flag, ws);
                 }
                 results.push(output_to_iteration(output));
             },
@@ -110,7 +110,7 @@ pub fn execute_job(
                     );
                     continue;
                 }
-                return send_failed(results, e.to_string(), heartbeat, &stop_flag, &ws);
+                return send_failed(results, e.to_string(), heartbeat, &stop_flag, ws);
             },
         }
     }

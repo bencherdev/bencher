@@ -2031,7 +2031,7 @@ async fn free_tier_blocked_same_org_different_runner() {
     set_job_status(&server, job1, JobStatus::Running);
     set_job_runner_id(&server, job1, runner1_id);
 
-    // Runner2 tries to claim second job -- same org, should be blocked
+    // Runner2 tries to claim second job — same org, should be blocked
     let (_ws, claimed) = claim_via_channel(&server, runner2.uuid, runner2_token, 1).await;
     assert!(
         claimed.is_none(),
@@ -2468,7 +2468,7 @@ async fn claim_job_invalid_config() {
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
-    // Try to claim the job via channel WS -- parse_config should fail
+    // Try to claim the job via channel WS — parse_config should fail
     let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(1).unwrap()),
@@ -2659,7 +2659,7 @@ async fn reprocess_completed_job_no_output() {
     let (_, spec_id) = insert_test_spec(&server);
     let job_uuid = insert_test_job_with_project(&server, report_id, project.uuid, spec_id);
 
-    // Transition job to Completed -- but do NOT store any output
+    // Transition job to Completed — but do NOT store any output
     set_job_status(&server, job_uuid, JobStatus::Completed);
 
     // Call startup recovery
@@ -2685,7 +2685,10 @@ async fn reprocess_completed_job_no_output() {
 // =============================================================================
 
 /// Verify the server respects `poll_timeout`: with no pending jobs and a short
-/// timeout (2s), `NoJob` should arrive *after* a visible delay — not instantly.
+/// timeout (2s), `NoJob` should arrive after the deadline — not instantly.
+///
+/// Uses `tokio::time::pause()` / `advance()` for deterministic timing instead
+/// of wall-clock assertions that would be flaky under CI load.
 #[tokio::test]
 async fn poll_timeout_delays_nojob() {
     let server = TestServer::new().await;
@@ -2703,22 +2706,24 @@ async fn poll_timeout_delays_nojob() {
     };
     send_msg(&mut ws, &ready).await;
 
-    let start = std::time::Instant::now();
-    let resp = recv_msg(&mut ws).await;
-    let elapsed = start.elapsed();
+    // Pause tokio time so all timers use virtual time.
+    tokio::time::pause();
 
+    // The server should NOT respond before the poll_timeout expires.
+    let before_deadline =
+        tokio::time::timeout(std::time::Duration::from_secs(1), recv_msg(&mut ws)).await;
+    assert!(
+        before_deadline.is_err(),
+        "NoJob arrived before poll_timeout expired"
+    );
+
+    // Advance past the 2s poll_timeout so the server's deadline fires.
+    tokio::time::advance(std::time::Duration::from_secs(2)).await;
+    tokio::time::resume();
+
+    let resp = recv_msg(&mut ws).await;
     assert!(
         matches!(resp, ServerMessage::NoJob),
         "Expected NoJob, got: {resp:?}"
-    );
-    // Should NOT arrive instantly (server waits before giving up)
-    assert!(
-        elapsed > std::time::Duration::from_millis(500),
-        "NoJob arrived too quickly ({elapsed:?}), server should poll for ~2s"
-    );
-    // Should arrive within a reasonable grace period
-    assert!(
-        elapsed < std::time::Duration::from_secs(10),
-        "NoJob took too long ({elapsed:?}), expected within ~2s + grace"
     );
 }

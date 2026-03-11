@@ -40,6 +40,16 @@ use crate::runner_token::RunnerToken;
 
 // --- WebSocket message handlers ---
 
+/// Compute the maximum allowed elapsed seconds for a job: timeout + grace period.
+fn job_timeout_limit(timeout: bencher_json::Timeout, grace: Duration) -> i64 {
+    #[expect(
+        clippy::cast_possible_wrap,
+        reason = "timeout max i32::MAX + grace period fits in i64"
+    )]
+    let limit = u64::from(u32::from(timeout)) as i64 + grace.as_secs() as i64;
+    limit
+}
+
 /// Errors from WebSocket channel operations during runner job execution.
 #[derive(Debug, thiserror::Error)]
 enum ChannelError {
@@ -87,12 +97,7 @@ async fn handle_timeout(
 
     let (status, reason) = if let Some(started) = job.started {
         let elapsed = (now.timestamp() - started.timestamp()).max(0);
-        #[expect(
-            clippy::cast_possible_wrap,
-            reason = "timeout max i32::MAX + grace period fits in i64"
-        )]
-        let limit = u64::from(u32::from(job.timeout)) as i64
-            + context.job_timeout_grace_period.as_secs() as i64;
+        let limit = job_timeout_limit(job.timeout, context.job_timeout_grace_period);
         if elapsed > limit {
             (JobStatus::Canceled, CloseReason::JobTimeoutExceeded)
         } else {
@@ -128,7 +133,7 @@ async fn handle_runner_message(
         RunnerMessage::Ready { .. } => {
             slog::warn!(log, "Unexpected Ready message during job execution"; "job_id" => ?job.id);
             // Ack is the only safe response — Cancel would terminate the job.
-            // The heartbeat timer still resets, which is acceptable.
+            // The heartbeat timer is NOT reset for Ready (handled by caller).
         },
         RunnerMessage::Running => {
             slog::info!(log, "Job running"; "job_id" => ?job.id);
@@ -229,12 +234,7 @@ async fn handle_heartbeat(
     // Check if job has exceeded its timeout
     if let Some(started) = job.started {
         let elapsed = (now.timestamp() - started.timestamp()).max(0);
-        #[expect(
-            clippy::cast_possible_wrap,
-            reason = "timeout max i32::MAX + grace period fits in i64"
-        )]
-        let limit = u64::from(u32::from(job.timeout)) as i64
-            + context.job_timeout_grace_period.as_secs() as i64;
+        let limit = job_timeout_limit(job.timeout, context.job_timeout_grace_period);
         if elapsed > limit {
             slog::warn!(log, "Job timeout exceeded during heartbeat"; "job_id" => ?job_id, "elapsed" => elapsed, "limit" => limit);
             let cancel_update = UpdateJob::terminate(JobStatus::Canceled, now);
@@ -728,7 +728,8 @@ pub async fn runner_channel(
     loop {
         // === IDLE STATE ===
         // Wait for Ready message from runner
-        let Ok(poll_timeout) = wait_for_ready(&log, &mut tx, &mut rx).await else {
+        let Ok(poll_timeout) = wait_for_ready(&log, &mut tx, &mut rx, heartbeat_timeout).await
+        else {
             break;
         };
 
@@ -797,18 +798,28 @@ pub async fn runner_channel(
 
 /// Wait for a `RunnerMessage::Ready` message, returning the poll timeout.
 ///
-/// Ignores non-Ready messages with a warning. Returns an error on Close or disconnect.
+/// Ignores non-Ready messages with a warning. Returns an error on Close, disconnect,
+/// or if the runner stays silent longer than `idle_timeout`.
 async fn wait_for_ready<S, R>(
     log: &slog::Logger,
     tx: &mut S,
     rx: &mut R,
+    idle_timeout: Duration,
 ) -> Result<u32, ChannelError>
 where
     S: futures::Sink<Message> + Unpin,
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
     loop {
-        let Some(msg_result) = rx.next().await else {
+        let Some(msg_result) = (match tokio::time::timeout(idle_timeout, rx.next()).await {
+            Ok(msg) => msg,
+            Err(_elapsed) => {
+                slog::warn!(log, "Idle timeout waiting for Ready message");
+                return Err(ChannelError::WebSocket(
+                    tokio_tungstenite::tungstenite::Error::ConnectionClosed,
+                ));
+            },
+        }) else {
             return Err(ChannelError::WebSocket(
                 tokio_tungstenite::tungstenite::Error::ConnectionClosed,
             ));
@@ -954,11 +965,17 @@ where
                     },
                 };
 
+                // Reset heartbeat on valid protocol messages, but NOT on
+                // spurious Ready messages — a misbehaving runner could send
+                // periodic Ready to keep the heartbeat alive indefinitely.
+                let is_ready = matches!(runner_msg, RunnerMessage::Ready { .. });
+
                 let (response, close_reason) =
                     handle_runner_message(log, context, job, runner_msg).await?;
 
-                // Reset heartbeat only on valid protocol messages
-                last_heartbeat = tokio::time::Instant::now();
+                if !is_ready {
+                    last_heartbeat = tokio::time::Instant::now();
+                }
 
                 let response_text = serde_json::to_string(&response)?;
                 tx.send(Message::Text(response_text.into())).await?;

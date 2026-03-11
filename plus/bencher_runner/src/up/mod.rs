@@ -36,8 +36,8 @@ use websocket::JobChannel;
 #[cfg(target_os = "linux")]
 const TRANSIENT_RETRY_DELAY: Duration = Duration::from_secs(5);
 
-/// Margin added to poll_timeout for the WS read timeout, giving the server
-/// time to send NoJob after its own deadline.
+/// Margin added to `poll_timeout` for the WS read timeout, giving the server
+/// time to send `NoJob` after its own deadline.
 #[cfg(target_os = "linux")]
 const POLL_TIMEOUT_MARGIN_SECS: u64 = 30;
 
@@ -185,36 +185,31 @@ fn run_channel_loop(config: &UpConfig, ws: &Arc<Mutex<JobChannel>>) -> Result<()
             ws_guard.wait_for_job(timeout)?
         };
 
-        match job {
-            Some(job) => {
-                let job_uuid = job.uuid;
-                println!("Received job: {job_uuid}");
+        if let Some(job) = job {
+            let job_uuid = job.uuid;
+            println!("Received job: {job_uuid}");
 
-                match execute_job(config, &job, ws) {
-                    Ok(JobOutcome::Completed { exit_code, output }) => {
-                        println!("Job {job_uuid} completed (exit_code={exit_code})");
-                        if let Some(out) = &output {
-                            let preview: String = out.chars().take(200).collect();
-                            println!("  Output: {preview}");
-                        }
-                    },
-                    Ok(JobOutcome::Failed { error, .. }) => {
-                        println!("Job {job_uuid} failed: {error}");
-                    },
-                    Ok(JobOutcome::Canceled) => {
-                        println!("Job {job_uuid} was canceled");
-                    },
-                    Err(e) => {
-                        println!("Job {job_uuid} error: {e}");
-                        return Err(e); // WS likely broken, reconnect
-                    },
-                }
+            match execute_job(config, &job, ws) {
+                Ok(JobOutcome::Completed { exit_code, output }) => {
+                    println!("Job {job_uuid} completed (exit_code={exit_code})");
+                    if let Some(out) = &output {
+                        let preview: String = out.chars().take(200).collect();
+                        println!("  Output: {preview}");
+                    }
+                },
+                Ok(JobOutcome::Failed { error, .. }) => {
+                    println!("Job {job_uuid} failed: {error}");
+                },
+                Ok(JobOutcome::Canceled) => {
+                    println!("Job {job_uuid} was canceled");
+                },
+                Err(e) => {
+                    println!("Job {job_uuid} error: {e}");
+                    return Err(e); // WS likely broken, reconnect
+                },
+            }
 
-                println!("Polling for jobs...");
-            },
-            None => {
-                // No job available, loop back to send Ready
-            },
+            println!("Polling for jobs...");
         }
     }
 }

@@ -23,7 +23,6 @@ plus = [
     "dep:tempfile",
     "dep:thiserror",
     "dep:tungstenite",
-    "dep:ureq",
     "dep:url",
     "dep:uuid",
     "bencher_oci/plus",
@@ -43,7 +42,6 @@ serde_json = { workspace = true, optional = true }
 tempfile = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 tungstenite = { workspace = true, optional = true }
-ureq = { workspace = true, optional = true, features = ["json"] }
 url = { workspace = true, optional = true }
 uuid = { workspace = true, features = ["v4", "serde"], optional = true }
 

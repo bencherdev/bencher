@@ -209,17 +209,6 @@ impl JobChannel {
             )),
         }
     }
-
-    pub fn close(&mut self) {
-        drop(self.ws.close(None));
-        // Drain remaining messages until close is acknowledged
-        loop {
-            match self.ws.read() {
-                Ok(Message::Close(_)) | Err(_) => break,
-                Ok(_) => {},
-            }
-        }
-    }
 }
 
 fn get_tcp_stream(stream: &MaybeTlsStream<TcpStream>) -> Result<&TcpStream, WebSocketError> {
