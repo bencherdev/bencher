@@ -1,9 +1,6 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use bencher_json::{
-    organization::plan::DEFAULT_PRICE_NAME,
-    system::config::{JsonProduct, JsonProducts},
-};
+use bencher_json::system::config::{JsonProduct, JsonProducts};
 use stripe::Client as StripeClient;
 use stripe_product::{
     Price as StripePrice, PriceId, Product as StripeProduct, ProductId, price::RetrievePrice,
@@ -25,23 +22,6 @@ impl Products {
             team: Product::new(client, team).await?,
             enterprise: Product::new(client, enterprise).await?,
         })
-    }
-
-    // During the metered billing migration, a subscription may temporarily have
-    // multiple subscription items (old metered + new metered). The config holds
-    // both price IDs under different keys: the currently-active price under
-    // "default" and the upcoming price under "metrics".
-    //
-    // This method returns only the price IDs for the given `preferred` key,
-    // falling back to "default" if the preferred key is not found.
-    // Once the migration cutover is complete and the old subscription items are
-    // removed, this filtering becomes a no-op (one item in, one item out).
-    pub fn preferred_price_ids(&self, preferred: &str) -> HashSet<&PriceId> {
-        self.team
-            .preferred_price_ids(preferred)
-            .into_iter()
-            .chain(self.enterprise.preferred_price_ids(preferred))
-            .collect()
     }
 }
 
@@ -70,23 +50,6 @@ impl Product {
             metered,
             licensed,
         })
-    }
-
-    // Returns the price IDs for the given `preferred` key, falling back to
-    // "default" if the preferred key is not found.
-    // See `Products::preferred_price_ids` for migration context.
-    fn preferred_price_ids(&self, preferred: &str) -> Vec<&PriceId> {
-        let metered_id = self
-            .metered
-            .get(preferred)
-            .or_else(|| self.metered.get(DEFAULT_PRICE_NAME))
-            .map(|p| &p.id);
-        let licensed_id = self
-            .licensed
-            .get(preferred)
-            .or_else(|| self.licensed.get(DEFAULT_PRICE_NAME))
-            .map(|p| &p.id);
-        metered_id.into_iter().chain(licensed_id).collect()
     }
 
     async fn pricing(

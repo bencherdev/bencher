@@ -35,8 +35,6 @@ pub enum BillingError {
     MultipleSubscriptionItems(SubscriptionId, Box<SubscriptionItem>, Vec<SubscriptionItem>),
     #[error("No subscription item for {0}")]
     NoSubscriptionItem(SubscriptionId),
-    #[error("No matching subscription item for {0} (filtered {1} items)")]
-    NoMatchingSubscriptionItem(SubscriptionId, usize),
     #[error("No organization for {0}")]
     NoOrganization(SubscriptionId),
     #[error("Failed to parse date/time for {0} {1}: {2}")]

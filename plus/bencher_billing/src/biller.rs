@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-};
+use std::{collections::HashMap, fmt};
 
 use bencher_json::{
     Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
@@ -36,7 +33,7 @@ use stripe_payment::{
         CreatePaymentMethodCardDetailsParams, CreatePaymentMethodType,
     },
 };
-use stripe_product::{Price, PriceId};
+use stripe_product::Price;
 use stripe_shared::{Customer, CustomerId};
 use stripe_types::{Currency, Expandable};
 
@@ -430,13 +427,8 @@ impl Biller {
             .parse()
             .map_err(|e| BillingError::BadOrganizationUuid(organization.clone(), e))?;
 
-        let preferred_price_ids = self.products.preferred_price_ids(METRICS_METER_EVENT_NAME);
-        let subscription_items = Self::filter_subscription_items(
-            subscription_id,
-            subscription.items.data,
-            &preferred_price_ids,
-        )?;
-        let subscription_item = Self::get_subscription_item(subscription_id, subscription_items)?;
+        let subscription_item =
+            Self::get_subscription_item(subscription_id, subscription.items.data)?;
 
         let current_period_start =
             subscription_item
@@ -592,34 +584,6 @@ impl Biller {
         }
     }
 
-    // During the metered billing migration, a Stripe subscription may have
-    // multiple subscription items (old + new metered prices). This function
-    // filters subscription items to only those whose price ID matches one of
-    // the provided known price IDs, so that `get_subscription_item()` can still
-    // enforce its exactly-one invariant against the filtered set.
-    //
-    // Outside of migration, this is a no-op: subscriptions have one item whose
-    // price matches a known ID, so the filtered list is identical to the input.
-    fn filter_subscription_items(
-        subscription_id: &SubscriptionId,
-        subscription_items: Vec<SubscriptionItem>,
-        price_ids: &HashSet<&PriceId>,
-    ) -> Result<Vec<SubscriptionItem>, BillingError> {
-        let total = subscription_items.len();
-        let filtered: Vec<_> = subscription_items
-            .into_iter()
-            .filter(|item| price_ids.contains(&item.price.id))
-            .collect();
-        if filtered.is_empty() {
-            Err(BillingError::NoMatchingSubscriptionItem(
-                subscription_id.clone(),
-                total,
-            ))
-        } else {
-            Ok(filtered)
-        }
-    }
-
     pub async fn get_metered_plan_status(
         &self,
         metered_plan_id: &MeteredPlanId,
@@ -716,11 +680,9 @@ fn into_payment_card(card: JsonCard) -> CreatePaymentMethodCardDetailsParams {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use bencher_json::{
         Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
-        organization::plan::{DEFAULT_PRICE_NAME, METRICS_METER_EVENT_NAME},
+        organization::plan::DEFAULT_PRICE_NAME,
         system::{
             config::{JsonBilling, JsonProduct, JsonProducts},
             payment::{JsonCard, JsonCustomer},
@@ -746,8 +708,7 @@ mod tests {
             team: JsonProduct {
                 id: "prod_NKz5B9dGhDiSY1".into(),
                 metered: hmap! {
-                    "default".to_owned() => "price_1McW12Kal5vzTlmhoPltpBAW".to_owned(),
-                    "metrics".to_owned() => "price_1T8NRdKal5vzTlmhBfL9IdMi".to_owned(),
+                    "default".to_owned() => "price_1T8NRdKal5vzTlmhBfL9IdMi".to_owned(),
                 },
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4XlwKal5vzTlmh0n0wtplQ".to_owned(),
@@ -756,8 +717,7 @@ mod tests {
             enterprise: JsonProduct {
                 id: "prod_NLC7fDet2C8Nmk".into(),
                 metered: hmap! {
-                    "default".to_owned() => "price_1McW2eKal5vzTlmhECLIyVQz".to_owned(),
-                    "metrics".to_owned() => "price_1T8NStKal5vzTlmhPBxy2izR".to_owned(),
+                    "default".to_owned() => "price_1T8NStKal5vzTlmhPBxy2izR".to_owned(),
                 },
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4Xo1Kal5vzTlmh1KrcEbq0".to_owned(),
@@ -941,86 +901,6 @@ mod tests {
     }
 
     #[test]
-    fn filter_subscription_items_single_match() {
-        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
-        let known: stripe_product::PriceId = "price_known".parse().unwrap();
-        let items = vec![
-            make_subscription_item("price_known"),
-            make_subscription_item("price_unknown"),
-        ];
-        let price_ids = HashSet::from([&known]);
-        let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered.first().unwrap().price.id, known);
-    }
-
-    #[test]
-    fn filter_subscription_items_no_match() {
-        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
-        let known: stripe_product::PriceId = "price_known".parse().unwrap();
-        let items = vec![
-            make_subscription_item("price_a"),
-            make_subscription_item("price_b"),
-        ];
-        let price_ids = HashSet::from([&known]);
-        let err = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap_err();
-        assert!(
-            matches!(err, crate::BillingError::NoMatchingSubscriptionItem(id, 2) if id == sub_id)
-        );
-    }
-
-    #[test]
-    fn filter_subscription_items_empty_input() {
-        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
-        let known: stripe_product::PriceId = "price_known".parse().unwrap();
-        let price_ids = HashSet::from([&known]);
-        let err = Biller::filter_subscription_items(&sub_id, vec![], &price_ids).unwrap_err();
-        assert!(
-            matches!(err, crate::BillingError::NoMatchingSubscriptionItem(id, 0) if id == sub_id)
-        );
-    }
-
-    #[test]
-    fn filter_subscription_items_all_match() {
-        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
-        let known: stripe_product::PriceId = "price_known".parse().unwrap();
-        let items = vec![make_subscription_item("price_known")];
-        let price_ids = HashSet::from([&known]);
-        let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered.first().unwrap().price.id, known);
-    }
-
-    #[test]
-    fn filter_subscription_items_multiple_known_ids() {
-        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
-        let known_a: stripe_product::PriceId = "price_a".parse().unwrap();
-        let known_b: stripe_product::PriceId = "price_b".parse().unwrap();
-        let items = vec![
-            make_subscription_item("price_a"),
-            make_subscription_item("price_b"),
-            make_subscription_item("price_c"),
-        ];
-        let price_ids = HashSet::from([&known_a, &known_b]);
-        let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
-        assert_eq!(filtered.len(), 2);
-    }
-
-    #[test]
-    fn get_subscription_item_after_filter() {
-        let known: stripe_product::PriceId = "price_known".parse().unwrap();
-        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
-        let items = vec![
-            make_subscription_item("price_known"),
-            make_subscription_item("price_old_meter"),
-        ];
-        let price_ids = HashSet::from([&known]);
-        let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
-        let result = Biller::get_subscription_item(&sub_id, filtered).unwrap();
-        assert_eq!(result.price.id, known);
-    }
-
-    #[test]
     fn get_subscription_item_no_items() {
         let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
         let result = Biller::get_subscription_item(&sub_id, vec![]);
@@ -1103,7 +983,7 @@ mod tests {
             customer_id.clone(),
             payment_method_id.clone(),
             PlanLevel::Team,
-            METRICS_METER_EVENT_NAME.into(),
+            DEFAULT_PRICE_NAME.into(),
             10,
         )
         .await;
@@ -1129,7 +1009,7 @@ mod tests {
             customer_id.clone(),
             payment_method_id.clone(),
             PlanLevel::Enterprise,
-            METRICS_METER_EVENT_NAME.into(),
+            DEFAULT_PRICE_NAME.into(),
             25,
         )
         .await;
