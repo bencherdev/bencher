@@ -82,6 +82,7 @@ RUN cargo init --bin gen_types
 RUN cargo init --bin test_api
 RUN cargo init --bin test_netlify
 RUN cargo init --bin test_runner
+RUN cargo init --bin runner_ops
 
 WORKDIR /usr/src/bencher
 COPY Cargo.toml Cargo.toml
