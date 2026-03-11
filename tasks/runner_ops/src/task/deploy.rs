@@ -67,23 +67,3 @@ pub fn deploy(ssh: &Ssh, runner_binary: Option<&Utf8Path>) -> anyhow::Result<()>
 
     Ok(())
 }
-
-pub fn start(ssh: &Ssh, runner: &str, token: &str) -> anyhow::Result<()> {
-    println!("Configuring runner credentials...");
-    ssh.run("mkdir -p /etc/systemd/system/bencher-runner.service.d")?;
-    ssh.run(&format!(
-        "cat > /etc/systemd/system/bencher-runner.service.d/credentials.conf << 'CRED_EOF'\n\
-         [Service]\n\
-         Environment=BENCHER_RUNNER={runner}\n\
-         Environment=BENCHER_RUNNER_TOKEN={token}\n\
-         CRED_EOF"
-    ))?;
-
-    println!("Starting runner service...");
-    ssh.run("systemctl daemon-reload")?;
-    ssh.run("systemctl restart bencher-runner")?;
-    ssh.run("systemctl status bencher-runner")?;
-
-    println!("Runner is running");
-    Ok(())
-}

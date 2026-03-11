@@ -7,7 +7,9 @@ mod ssh;
 use camino::Utf8PathBuf;
 use clap::Parser as _;
 
-use crate::parser::{TaskDeploy, TaskLogs, TaskProvision, TaskRunnerOps, TaskSub};
+use crate::parser::{
+    TaskDeploy, TaskLogs, TaskProvision, TaskRunnerOps, TaskStart, TaskStop, TaskSub,
+};
 use ssh::Ssh;
 
 #[derive(Debug)]
@@ -19,6 +21,8 @@ pub struct Task {
 enum Sub {
     Provision(Provision),
     Deploy(Deploy),
+    Start(Start),
+    Stop(Stop),
     Logs(Logs),
 }
 
@@ -34,6 +38,18 @@ struct Deploy {
     runner: String,
     token: String,
     run_id: Option<u64>,
+}
+
+#[derive(Debug)]
+struct Start {
+    ssh: Ssh,
+    runner: String,
+    token: String,
+}
+
+#[derive(Debug)]
+struct Stop {
+    ssh: Ssh,
 }
 
 #[derive(Debug)]
@@ -56,6 +72,8 @@ impl From<TaskSub> for Sub {
         match sub {
             TaskSub::Provision(provision) => Self::Provision(provision.into()),
             TaskSub::Deploy(deploy) => Self::Deploy(deploy.into()),
+            TaskSub::Start(start) => Self::Start(start.into()),
+            TaskSub::Stop(stop) => Self::Stop(stop.into()),
             TaskSub::Logs(logs) => Self::Logs(logs.into()),
         }
     }
@@ -95,6 +113,32 @@ impl From<TaskDeploy> for Deploy {
     }
 }
 
+impl From<TaskStart> for Start {
+    fn from(task: TaskStart) -> Self {
+        let TaskStart {
+            host,
+            key,
+            user,
+            runner,
+            token,
+        } = task;
+        Self {
+            ssh: Ssh::new(host, key, user),
+            runner,
+            token,
+        }
+    }
+}
+
+impl From<TaskStop> for Stop {
+    fn from(task: TaskStop) -> Self {
+        let TaskStop { host, key, user } = task;
+        Self {
+            ssh: Ssh::new(host, key, user),
+        }
+    }
+}
+
 impl From<TaskLogs> for Logs {
     fn from(task: TaskLogs) -> Self {
         let TaskLogs {
@@ -127,6 +171,8 @@ impl Sub {
         match self {
             Self::Provision(provision) => provision.exec(),
             Self::Deploy(deploy) => deploy.exec(),
+            Self::Start(start) => start.exec(),
+            Self::Stop(stop) => stop.exec(),
             Self::Logs(logs) => logs.exec(),
         }
     }
@@ -152,7 +198,39 @@ impl Deploy {
         } = self;
         let (runner_binary, _temp_dir) = download::download(run_id)?;
         deploy::deploy(&ssh, Some(runner_binary.as_path()))?;
-        deploy::start(&ssh, &runner, &token)?;
+        let start = Start { ssh, runner, token };
+        start.exec()?;
+        Ok(())
+    }
+}
+
+impl Start {
+    fn exec(self) -> anyhow::Result<()> {
+        let Self { ssh, runner, token } = self;
+        println!("Configuring runner credentials...");
+        ssh.run("mkdir -p /etc/systemd/system/bencher-runner.service.d")?;
+        ssh.run(&format!(
+            "cat > /etc/systemd/system/bencher-runner.service.d/credentials.conf << 'CRED_EOF'\n\
+             [Service]\n\
+             Environment=BENCHER_RUNNER={runner}\n\
+             Environment=BENCHER_RUNNER_TOKEN={token}\n\
+             CRED_EOF"
+        ))?;
+        println!("Starting runner service...");
+        ssh.run("systemctl daemon-reload")?;
+        ssh.run("systemctl restart bencher-runner")?;
+        ssh.run("systemctl status bencher-runner")?;
+        println!("Runner is running");
+        Ok(())
+    }
+}
+
+impl Stop {
+    fn exec(self) -> anyhow::Result<()> {
+        let Self { ssh } = self;
+        println!("Stopping runner service...");
+        ssh.run("systemctl stop bencher-runner")?;
+        println!("Runner service stopped");
         Ok(())
     }
 }

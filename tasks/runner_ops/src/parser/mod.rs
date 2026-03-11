@@ -13,6 +13,10 @@ pub enum TaskSub {
     Provision(TaskProvision),
     /// Download latest runner binary from CI and deploy to server
     Deploy(TaskDeploy),
+    /// Start the runner service
+    Start(TaskStart),
+    /// Stop the runner service
+    Stop(TaskStop),
     /// View runner service logs
     Logs(TaskLogs),
 }
@@ -61,6 +65,44 @@ pub struct TaskDeploy {
     /// GitHub Actions run ID (defaults to latest successful `cloud` run)
     #[clap(long)]
     pub run_id: Option<u64>,
+}
+
+#[derive(Parser, Debug)]
+pub struct TaskStart {
+    /// IP address or hostname of the server
+    #[clap(long)]
+    pub host: String,
+
+    /// Path to SSH private key
+    #[clap(long)]
+    pub key: Utf8PathBuf,
+
+    /// SSH user (default: root)
+    #[clap(long, default_value = "root")]
+    pub user: String,
+
+    /// Runner UUID or slug
+    #[clap(long)]
+    pub runner: String,
+
+    /// Runner authentication token
+    #[clap(long)]
+    pub token: String,
+}
+
+#[derive(Parser, Debug)]
+pub struct TaskStop {
+    /// IP address or hostname of the server
+    #[clap(long)]
+    pub host: String,
+
+    /// Path to SSH private key
+    #[clap(long)]
+    pub key: Utf8PathBuf,
+
+    /// SSH user (default: root)
+    #[clap(long, default_value = "root")]
+    pub user: String,
 }
 
 #[derive(Parser, Debug)]
