@@ -1,0 +1,44 @@
+## `bencher noise`
+
+O subcomando CLI `bencher noise` mede o ruído do ambiente para ajudá-lo a entender quão confiáveis serão seus resultados de benchmark.
+Ele executa uma série de micro-benchmarks e coleta métricas da plataforma para produzir uma pontuação de ruído composta.
+
+As seguintes medições são realizadas:
+
+- **Compute Jitter**: Mede a consistência de cálculo da CPU executando loops aritméticos ajustados e rastreando o coeficiente de variação (CoV) entre iterações.
+- **Cache Jitter**: Mede a consistência do acesso ao cache de memória realizando leituras sequenciais em um buffer dimensionado para o cache L3.
+- **I/O Jitter**: Mede a consistência de E/S do sistema de arquivos escrevendo e lendo arquivos temporários e rastreando a variação de tempo.
+- **CPU Steal**: Em plataformas virtualizadas, detecta quanto tempo de CPU está sendo tomado pelo hipervisor.
+- **Noise Score**: Uma pontuação composta (0–100 dB) combinando todas as medições em um único indicador do nível de ruído do ambiente.
+
+### Uso do `bencher noise`
+
+```
+bencher noise [OPTIONS]
+```
+
+### Opções
+
+#### `--duration <SECONDS>`
+
+Duração total da medição em segundos.
+
+Padrão: `60`
+
+#### `--format <FORMAT>`
+
+Formato de saída para o relatório de ruído.
+
+- `human`: Saída de terminal legível com barras de ruído visuais e conselhos.
+- `json`: Saída JSON no formato BMF (Bencher Metric Format), adequada para canalizar para `bencher run`.
+
+Padrão: `human`
+
+#### `--quiet`
+
+Suprimir a saída de progresso e imprimir apenas o resultado final.
+Útil para scripts e ambientes de CI.
+
+#### `--help`
+
+Imprimir ajuda.

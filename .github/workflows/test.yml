@@ -135,10 +135,37 @@ jobs:
           name: event.json
           path: ${{ github.event_path }}
 
+  bencher_noise:
+    name: Bencher Noise
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-rust
+        if: matrix.os == 'ubuntu-22.04'
+        with:
+          cache-key: noise
+          mold-version: ${{ inputs.mold-version }}
+      - name: Run bencher noise (Unix)
+        if: matrix.os != 'windows-2022'
+        run: cargo run -p bencher_cli -- noise --format json --quiet > noise_results_${{ matrix.os }}.json
+      - name: Run bencher noise (Windows)
+        if: matrix.os == 'windows-2022'
+        run: cargo run -p bencher_cli -- noise --format json --quiet | Out-File -FilePath noise_results_${{ matrix.os }}.json -Encoding utf8
+      - name: Upload Noise Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: noise_results_${{ matrix.os }}
+          path: ./noise_results_${{ matrix.os }}.json
+          if-no-files-found: error
+
   track_benchmarks:
     name: Track Benchmarks
     if: ${{ github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/main' }}
-    needs: cargo_bench
+    needs: [cargo_bench, bencher_noise]
     uses: ./.github/workflows/track_benchmarks.yml
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}

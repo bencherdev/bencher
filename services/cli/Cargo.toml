@@ -35,6 +35,7 @@ serde_json.workspace = true
 tabled.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "process", "rt", "signal"] }
+tempfile.workspace = true
 tokio-rustls.workspace = true
 url.workspace = true
 

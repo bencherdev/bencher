@@ -43,9 +43,9 @@ bencher run --image ghcr.io/org/bench:v1 --adapter json
 3. **`lib/bencher_schema/src/model/runner/job.rs` — `process_results()`** — `TODO: Refactor PlanKind to support auth_conn directly`
    - `PlanKind::new_for_project` requires a `PublicUser` for `public_conn!` routing. In the runner context we're already authenticated, so we use `PublicUser::Public(None)` as a workaround. Refactor `PlanKind` (and its callees like `QueryPlan::get_active_metered_plan`, `LicenseUsage::get`, `QueryOrganization::window_usage`) to accept a `&mut DbConnection` directly instead of requiring `public_conn!`.
 
-## Gap 4: `bencher noise` Subcommand
+## ~~Gap 4: `bencher noise` Subcommand~~ ✅
 
-See [`services/cli/NOISE_PLAN.md`](../cli/NOISE_PLAN.md) for the design of the `bencher noise` subcommand, which will generate synthetic benchmark results for testing the full runner flow without needing real benchmarks or a real adapter.
+~~See `services/cli/NOISE_PLAN.md` for the design of the `bencher noise` subcommand, which will generate synthetic benchmark results for testing the full runner flow without needing real benchmarks or a real adapter.~~
 
 ## Gap 5: Claude Code Skill for Bencher Workflow
 
@@ -56,7 +56,7 @@ See [`services/cli/SKILL_PLAN.md`](../cli/SKILL_PLAN.md) for the design of a Cla
 1. ~~**Gap 1 (job creation)**~~ — Complete.
 2. ~~**Gap 2 (result processing)**~~ — Complete.
 3. ~~**Gap 3 (CLI polling)**~~ — Complete. CLI polls `GET /v0/projects/{project}/jobs/{job}` with configurable interval (default 5s), displays status updates, fetches updated report on completion, and handles failure/cancellation/timeout.
-4. **Gap 4 (`bencher noise`)** — Design complete (`services/cli/NOISE_PLAN.md`), implementation pending.
+4. ~~**Gap 4 (`bencher noise`)**~~ — Complete.
 5. **Gap 5 (Claude Code skill)** — Design complete (`services/cli/SKILL_PLAN.md`), implementation pending.
 
 ## ~~OCI Size Check~~ ✅

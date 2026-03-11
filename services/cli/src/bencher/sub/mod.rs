@@ -2,6 +2,7 @@ use crate::{CliError, parser::CliSub};
 
 mod compose;
 mod mock;
+mod noise;
 mod organization;
 mod project;
 mod run;
@@ -13,6 +14,8 @@ pub use compose::DockerError;
 use compose::{down::Down, logs::Logs, up::Up};
 use mock::Mock;
 pub use mock::MockError;
+use noise::Noise;
+pub use noise::NoiseError;
 use organization::{member::Member, organization::Organization};
 #[cfg(feature = "plus")]
 use project::job::Job;
@@ -45,6 +48,7 @@ use user::{token::Token, user::User};
 pub enum Sub {
     Run(Box<Run>),
     Mock(Mock),
+    Noise(Noise),
     Archive(Archive),
     Up(Up),
     Logs(Logs),
@@ -85,6 +89,7 @@ impl TryFrom<CliSub> for Sub {
         Ok(match sub {
             CliSub::Run(run) => Self::Run(Box::new((*run).try_into()?)),
             CliSub::Mock(mock) => Self::Mock(mock.into()),
+            CliSub::Noise(noise) => Self::Noise(noise.into()),
             CliSub::Archive(archive) => {
                 Self::Archive((archive, ArchiveAction::Archive).try_into()?)
             },
@@ -131,6 +136,7 @@ impl SubCmd for Sub {
         match self {
             Self::Run(run) => run.exec().await,
             Self::Mock(mock) => mock.exec().await,
+            Self::Noise(noise) => noise.exec().await,
             Self::Archive(archive) => archive.exec().await,
             Self::Up(up) => up.exec().await,
             Self::Logs(logs) => logs.exec().await,

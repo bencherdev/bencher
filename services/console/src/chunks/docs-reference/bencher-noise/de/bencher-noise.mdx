@@ -1,0 +1,44 @@
+## `bencher noise`
+
+Der `bencher noise` CLI-Unterbefehl misst die Umgebungsgeräusche, um Ihnen zu helfen zu verstehen, wie zuverlässig Ihre Benchmark-Ergebnisse sein werden.
+Er führt eine Reihe von Mikro-Benchmarks durch und sammelt Plattformmetriken, um einen zusammengesetzten Rausch-Score zu erstellen.
+
+Die folgenden Messungen werden durchgeführt:
+
+- **Compute Jitter**: Misst die CPU-Berechnungskonsistenz durch enge arithmetische Schleifen und verfolgt den Variationskoeffizienten (CoV) über Iterationen.
+- **Cache Jitter**: Misst die Konsistenz des Speicher-Cache-Zugriffs durch sequenzielle Lesevorgänge über einen Puffer in der Größe des L3-Caches.
+- **I/O Jitter**: Misst die Konsistenz der Dateisystem-I/O durch Schreiben und Lesen temporärer Dateien und Verfolgung der Zeitvariation.
+- **CPU Steal**: Auf virtualisierten Plattformen erkennt er, wie viel CPU-Zeit vom Hypervisor beansprucht wird.
+- **Noise Score**: Ein zusammengesetzter Score (0–100 dB), der alle Messungen zu einem einzelnen Indikator für das Umgebungsrauschen kombiniert.
+
+### `bencher noise` Verwendung
+
+```
+bencher noise [OPTIONS]
+```
+
+### Optionen
+
+#### `--duration <SECONDS>`
+
+Gesamte Messdauer in Sekunden.
+
+Standard: `60`
+
+#### `--format <FORMAT>`
+
+Ausgabeformat für den Rauschbericht.
+
+- `human`: Menschenlesbare Terminal-Ausgabe mit visuellen Rauschbalken und Empfehlungen.
+- `json`: BMF (Bencher Metric Format) JSON-Ausgabe, geeignet für die Weiterleitung an `bencher run`.
+
+Standard: `human`
+
+#### `--quiet`
+
+Fortschrittsausgabe unterdrücken und nur das Endergebnis anzeigen.
+Nützlich für Skripting und CI-Umgebungen.
+
+#### `--help`
+
+Hilfe anzeigen.

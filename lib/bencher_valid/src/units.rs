@@ -7,6 +7,8 @@ use crate::ResourceName;
 pub const NANOSECONDS: &str = "nanoseconds (ns)";
 pub const SECONDS: &str = "seconds (s)";
 pub const BYTES: &str = "bytes (B)";
+pub const PERCENTAGE: &str = "percentage (%)";
+pub const DECIBELS: &str = "decibels (dB)";
 
 #[derive(Debug, Clone)]
 pub struct Units {

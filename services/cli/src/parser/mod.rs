@@ -5,6 +5,7 @@ use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 pub mod compose;
 pub mod mock;
+pub mod noise;
 pub mod organization;
 pub mod project;
 pub mod run;
@@ -13,6 +14,7 @@ pub mod user;
 
 use compose::{CliDown, CliLogs, CliUp};
 use mock::CliMock;
+use noise::CliNoise;
 use organization::{CliOrganization, member::CliMember};
 #[cfg(feature = "plus")]
 use project::job::CliJob;
@@ -44,6 +46,8 @@ pub enum CliSub {
     Run(Box<CliRun>),
     /// Generate mock benchmark data
     Mock(CliMock),
+    /// Measure environment noise
+    Noise(CliNoise),
 
     /// Archive a dimension
     Archive(CliArchive),
