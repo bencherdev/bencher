@@ -416,8 +416,8 @@ async fn runners_total_count_header() {
 async fn runner_delete_restricted_by_fk() {
     use bencher_schema::schema;
     use common::{
-        associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
-        insert_test_job, insert_test_spec,
+        associate_runner_spec, claim_via_channel, create_runner, create_test_report,
+        get_project_id, get_runner_id, insert_test_job, insert_test_spec,
     };
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
@@ -438,21 +438,8 @@ async fn runner_delete_restricted_by_fk() {
     let report_id = create_test_report(&server, project_id);
     let _job_uuid = insert_test_job(&server, report_id, spec_id);
 
-    // Claim the job so runner_id is set
-    let body = serde_json::json!({ "poll_timeout": 5 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<bencher_json::JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+    // Claim the job via WS channel so runner_id is set
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
     assert!(claimed.is_some());
 
     // Try to delete the runner directly in the DB — should fail due to ON DELETE RESTRICT

@@ -1,12 +1,9 @@
+pub(crate) mod channel;
 pub(crate) mod websocket;
 
 use std::time::Duration;
 
-use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseOk};
-use bencher_json::{
-    DEFAULT_POLL_TIMEOUT, JobPriority, JobStatus, JsonClaimJob, JsonClaimedJob, JsonSpec,
-    RunnerResourceId,
-};
+use bencher_json::{JobPriority, JobStatus, JsonClaimedJob, JsonSpec};
 use bencher_schema::{
     context::ApiContext,
     error::resource_conflict_err,
@@ -21,9 +18,7 @@ use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
     RunQueryDsl as _, dsl::exists, dsl::not,
 };
-use dropshot::{HttpError, Path, RequestContext, TypedBody, endpoint};
-use schemars::JsonSchema;
-use serde::Deserialize;
+use dropshot::HttpError;
 
 use crate::runner_token::RunnerToken;
 
@@ -39,85 +34,7 @@ const PRIORITY_UNLIMITED: JobPriority = JobPriority::Team;
 const PRIORITY_FREE: JobPriority = JobPriority::Free;
 
 /// Poll interval for long-polling (1 second)
-const POLL_INTERVAL: Duration = Duration::from_secs(1);
-
-#[derive(Deserialize, JsonSchema)]
-pub struct RunnerJobsParams {
-    /// The slug or UUID for a runner.
-    pub runner: RunnerResourceId,
-}
-
-#[endpoint {
-    method = OPTIONS,
-    path = "/v0/runners/{runner}/jobs",
-    tags = ["runners"]
-}]
-pub async fn runner_jobs_options(
-    _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<RunnerJobsParams>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Post.into()]))
-}
-
-/// Claim a job
-///
-/// ➕ Bencher Plus: Long-poll to claim a pending job for execution.
-/// Authenticated via runner token.
-/// Returns a job if one is available, or empty response on timeout.
-#[endpoint {
-    method = POST,
-    path = "/v0/runners/{runner}/jobs",
-    tags = ["runners"]
-}]
-pub async fn runner_jobs_post(
-    rqctx: RequestContext<ApiContext>,
-    path_params: Path<RunnerJobsParams>,
-    body: TypedBody<JsonClaimJob>,
-) -> Result<ResponseOk<Option<JsonClaimedJob>>, HttpError> {
-    let context = rqctx.context();
-    let path_params = path_params.into_inner();
-    let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
-
-    // Per-runner rate limiting
-    #[cfg(feature = "plus")]
-    context
-        .rate_limiting
-        .runner_request(runner_token.runner_uuid)?;
-
-    let log = &rqctx.log;
-    let json = claim_job_inner(log, context, runner_token, body.into_inner()).await?;
-    Ok(Post::auth_response_ok(json))
-}
-
-async fn claim_job_inner(
-    log: &slog::Logger,
-    context: &ApiContext,
-    runner_token: RunnerToken,
-    claim_request: JsonClaimJob,
-) -> Result<Option<JsonClaimedJob>, HttpError> {
-    let poll_timeout = claim_request
-        .poll_timeout
-        .map_or(DEFAULT_POLL_TIMEOUT, u32::from);
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(u64::from(poll_timeout));
-
-    loop {
-        // Try to claim a job (connection is released when function returns)
-        if let Some(json_job) = try_claim_job(context, &runner_token).await? {
-            slog::info!(log, "Job claimed"; "job_uuid" => %json_job.uuid, "runner" => %runner_token.runner_uuid);
-            return Ok(Some(json_job));
-        }
-
-        // Check if we've exceeded the timeout
-        if tokio::time::Instant::now() >= deadline {
-            slog::info!(log, "Job poll timed out"; "runner" => %runner_token.runner_uuid, "poll_timeout" => poll_timeout);
-            return Ok(None);
-        }
-
-        slog::debug!(log, "No pending job, polling"; "runner" => %runner_token.runner_uuid);
-        // Wait before trying again
-        tokio::time::sleep(POLL_INTERVAL).await;
-    }
-}
+pub(crate) const POLL_INTERVAL: Duration = Duration::from_secs(1);
 
 /// Attempt to claim a pending job with tier-based concurrency limits.
 ///
@@ -130,7 +47,7 @@ async fn claim_job_inner(
 /// OCI runner token TTL: 10 minutes (enough for image pull, short enough to limit exposure)
 const OCI_RUNNER_TOKEN_TTL: u32 = 600;
 
-async fn try_claim_job(
+pub(crate) async fn try_claim_job(
     context: &ApiContext,
     runner_token: &RunnerToken,
 ) -> Result<Option<JsonClaimedJob>, HttpError> {

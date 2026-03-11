@@ -1,11 +1,18 @@
+use bencher_valid::PollTimeout;
 use serde::{Deserialize, Serialize};
 
-use super::job::JsonIterationOutput;
+use super::job::{JsonClaimedJob, JsonIterationOutput};
 
 /// Messages sent from the runner to the server over the WebSocket channel.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event", rename_all = "snake_case")]
 pub enum RunnerMessage {
+    /// Runner is idle, requesting a job.
+    Ready {
+        /// Maximum time to wait for a job (long-poll), in seconds (1-900)
+        #[serde(skip_serializing_if = "Option::is_none")]
+        poll_timeout: Option<PollTimeout>,
+    },
     /// Job setup complete, benchmark execution starting.
     Running,
     /// Periodic heartbeat, keeps job alive and triggers billing.
@@ -32,6 +39,10 @@ pub enum RunnerMessage {
 pub enum ServerMessage {
     /// Acknowledge received message.
     Ack,
+    /// Server assigned a job (boxed because it's large).
+    Job(Box<JsonClaimedJob>),
+    /// Poll timeout expired, no job available.
+    NoJob,
     /// Job was canceled, stop execution immediately.
     Cancel,
 }
@@ -67,6 +78,81 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use super::*;
+
+    #[test]
+    fn ready_no_timeout_roundtrip() {
+        let msg = RunnerMessage::Ready { poll_timeout: None };
+        let json = serde_json::to_string(&msg).unwrap();
+        assert_eq!(json, r#"{"event":"ready"}"#);
+        let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            RunnerMessage::Ready { poll_timeout } => assert!(poll_timeout.is_none()),
+            other => panic!("Expected Ready, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ready_with_timeout_roundtrip() {
+        let msg = RunnerMessage::Ready {
+            poll_timeout: Some(PollTimeout::try_from(30).unwrap()),
+        };
+        let json = serde_json::to_string(&msg).unwrap();
+        let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            RunnerMessage::Ready { poll_timeout } => {
+                assert_eq!(u32::from(poll_timeout.unwrap()), 30);
+            },
+            other => panic!("Expected Ready, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn server_job_roundtrip() {
+        // Build a minimal JsonClaimedJob via JSON
+        let job_json = serde_json::json!({
+            "uuid": "550e8400-e29b-41d4-a716-446655440000",
+            "spec": {
+                "uuid": "00000000-0000-0000-0000-000000000001",
+                "name": "test-spec",
+                "slug": "test-spec",
+                "architecture": "x86_64",
+                "cpu": 2,
+                "memory": 0x4000_0000,
+                "disk": 0x2_8000_0000i64,
+                "network": false,
+                "created": "2025-01-01T00:00:00Z",
+                "modified": "2025-01-01T00:00:00Z"
+            },
+            "config": {
+                "registry": "https://registry.bencher.dev",
+                "project": "11111111-2222-3333-4444-555555555555",
+                "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+                "timeout": 300
+            },
+            "oci_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+            "timeout": 300,
+            "created": "2025-01-01T00:00:00Z"
+        });
+        let claimed: JsonClaimedJob = serde_json::from_value(job_json).unwrap();
+        let msg = ServerMessage::Job(Box::new(claimed));
+        let json = serde_json::to_string(&msg).unwrap();
+        let deserialized: ServerMessage = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            ServerMessage::Job(job) => {
+                assert_eq!(job.uuid.to_string(), "550e8400-e29b-41d4-a716-446655440000");
+            },
+            other => panic!("Expected Job, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn server_no_job_roundtrip() {
+        let msg = ServerMessage::NoJob;
+        let json = serde_json::to_string(&msg).unwrap();
+        assert_eq!(json, r#"{"event":"no_job"}"#);
+        let deserialized: ServerMessage = serde_json::from_str(&json).unwrap();
+        assert!(matches!(deserialized, ServerMessage::NoJob));
+    }
 
     #[test]
     fn running_roundtrip() {

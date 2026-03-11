@@ -1,6 +1,7 @@
 use std::net::TcpStream;
 use std::time::Duration;
 
+use bencher_json::JsonClaimedJob;
 use bencher_json::runner::{RunnerMessage, ServerMessage};
 use tungstenite::handshake::client::generate_key;
 use tungstenite::http::Request;
@@ -44,6 +45,64 @@ impl JobChannel {
             .send(Message::Text(json.into()))
             .map_err(|e| WebSocketError::Send(e.to_string()))?;
         Ok(())
+    }
+
+    /// Send a `Ready` message requesting a job with the given poll timeout.
+    pub fn send_ready(&mut self, poll_timeout_secs: u32) -> Result<(), WebSocketError> {
+        let poll_timeout = bencher_valid::PollTimeout::try_from(poll_timeout_secs).ok();
+        let msg = RunnerMessage::Ready { poll_timeout };
+        self.send_message(&msg)
+    }
+
+    /// Block-read until the server sends `Job(..)` or `NoJob`.
+    ///
+    /// Returns `Ok(Some(job))` on `Job`, `Ok(None)` on `NoJob`,
+    /// or an error on timeout/disconnect.
+    pub fn wait_for_job(
+        &mut self,
+        timeout: Duration,
+    ) -> Result<Option<JsonClaimedJob>, WebSocketError> {
+        let stream = self.ws.get_mut();
+        set_read_timeout(stream, Some(timeout))?;
+        let result = self.wait_for_job_inner();
+        let stream = self.ws.get_mut();
+        set_read_timeout(stream, None)?;
+        result
+    }
+
+    fn wait_for_job_inner(&mut self) -> Result<Option<JsonClaimedJob>, WebSocketError> {
+        loop {
+            let msg = self
+                .ws
+                .read()
+                .map_err(|e| WebSocketError::Receive(e.to_string()))?;
+
+            match msg {
+                Message::Text(text) => {
+                    let server_msg: ServerMessage = serde_json::from_str(&text).map_err(|e| {
+                        WebSocketError::UnexpectedMessage(format!(
+                            "Failed to parse server message: {e} (raw: {text})"
+                        ))
+                    })?;
+                    match server_msg {
+                        ServerMessage::Job(job) => return Ok(Some(*job)),
+                        ServerMessage::NoJob => return Ok(None),
+                        ServerMessage::Ack | ServerMessage::Cancel => {
+                            return Err(WebSocketError::Protocol(format!(
+                                "Expected Job or NoJob, got {server_msg:?}"
+                            )));
+                        },
+                    }
+                },
+                Message::Ping(data) => {
+                    self.ws
+                        .send(Message::Pong(data))
+                        .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
+                },
+                Message::Close(frame) => return Self::handle_close_frame(frame).map(|_| None),
+                Message::Binary(_) | Message::Pong(_) | Message::Frame(_) => {},
+            }
+        }
     }
 
     pub fn try_read_message(&mut self) -> Result<Option<ServerMessage>, WebSocketError> {

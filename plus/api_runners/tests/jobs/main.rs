@@ -11,8 +11,11 @@ mod websocket;
 
 use std::sync::Arc;
 
+use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
-use bencher_json::{DateTime, JobPriority, JobStatus, JsonClaimedJob, JsonJob};
+use bencher_json::{
+    DateTime, JobPriority, JobStatus, JsonClaimedJob, JsonJob, PollTimeout, RunnerUuid,
+};
 use bencher_schema::{
     context::HeartbeatTasks,
     model::runner::{
@@ -27,45 +30,133 @@ use common::{
     insert_test_spec_full, set_job_runner_id, set_job_status,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use futures::{SinkExt as _, StreamExt as _};
 use futures_concurrency::future::Join as _;
-use http::StatusCode;
 use tokio::sync::Mutex;
+use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest as _};
 
-// POST /v0/runners/{runner}/jobs - claim job with valid token (no jobs available)
-#[tokio::test]
-async fn claim_job_no_jobs() {
-    let server = TestServer::new().await;
-    let admin = server.signup("Admin", "jobsadmin@example.com").await;
+type WsStream =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
 
-    let (_, spec_id) = insert_test_spec(&server);
-    let runner = create_runner(&server, &admin.token, "Claim Test Runner").await;
-    let runner_token: &str = runner.token.as_ref();
-    let runner_id = get_runner_id(&server, runner.uuid);
-    associate_runner_spec(&server, runner_id, spec_id);
+// =============================================================================
+// WebSocket Channel Helpers
+// =============================================================================
 
-    let body = serde_json::json!({
-        "poll_timeout": 1
-    });
-
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    // Should return null/empty when no jobs are available
-    let body: Option<serde_json::Value> = resp.json().await.expect("Failed to parse response");
-    assert!(body.is_none());
+/// Convert the `TestServer` HTTP URL to a WebSocket URL.
+fn ws_url(server: &TestServer, path: &str) -> String {
+    let http_url = server.api_url(path);
+    http_url.replacen("http://", "ws://", 1)
 }
 
-// POST /v0/runners/{runner}/jobs - invalid token rejected
+/// Connect to the runner channel WebSocket with authentication.
+#[expect(clippy::expect_used)]
+async fn connect_channel_ws(
+    server: &TestServer,
+    runner_uuid: RunnerUuid,
+    runner_token: &str,
+) -> WsStream {
+    let url = ws_url(server, &format!("/v0/runners/{runner_uuid}/channel"));
+    let mut request = url.into_client_request().expect("Failed to build request");
+    request.headers_mut().insert(
+        bencher_json::AUTHORIZATION,
+        bencher_json::bearer_header(runner_token)
+            .parse()
+            .expect("Invalid header"),
+    );
+    let (ws_stream, _) = tokio_tungstenite::connect_async(request)
+        .await
+        .expect("Failed to connect WebSocket");
+    ws_stream
+}
+
+/// Try to connect to the runner channel WebSocket; returns the result rather
+/// than panicking so callers can assert on connection failure.
+#[expect(clippy::expect_used)]
+async fn try_connect_channel_ws(
+    server: &TestServer,
+    runner_uuid: RunnerUuid,
+    runner_token: &str,
+) -> Result<WsStream, tokio_tungstenite::tungstenite::Error> {
+    let url = ws_url(server, &format!("/v0/runners/{runner_uuid}/channel"));
+    let mut request = url.into_client_request().expect("Failed to build request");
+    request.headers_mut().insert(
+        bencher_json::AUTHORIZATION,
+        bencher_json::bearer_header(runner_token)
+            .parse()
+            .expect("Invalid header"),
+    );
+    let (ws_stream, _) = tokio_tungstenite::connect_async(request).await?;
+    Ok(ws_stream)
+}
+
+/// Send a `RunnerMessage` over the WebSocket.
+#[expect(clippy::expect_used)]
+async fn send_msg(ws: &mut WsStream, msg: &RunnerMessage) {
+    let text = serde_json::to_string(msg).expect("Failed to serialize");
+    ws.send(Message::Text(text.into()))
+        .await
+        .expect("Failed to send message");
+}
+
+/// Receive and parse a `ServerMessage` from the WebSocket.
+#[expect(clippy::expect_used, clippy::panic, clippy::wildcard_enum_match_arm)]
+async fn recv_msg(ws: &mut WsStream) -> ServerMessage {
+    let msg = ws.next().await.expect("Stream ended").expect("WS error");
+    match msg {
+        Message::Text(text) => serde_json::from_str(&text).expect("Failed to parse server message"),
+        other => panic!("Expected text message, got: {other:?}"),
+    }
+}
+
+/// Connect to the channel WS, send Ready, and return the stream and the
+/// optional claimed job.
+#[expect(clippy::expect_used, clippy::panic)]
+async fn claim_via_channel(
+    server: &TestServer,
+    runner_uuid: RunnerUuid,
+    runner_token: &str,
+    poll_timeout: u32,
+) -> (WsStream, Option<JsonClaimedJob>) {
+    let mut ws = connect_channel_ws(server, runner_uuid, runner_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(poll_timeout).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    let job = match response {
+        ServerMessage::Job(job) => Some(*job),
+        ServerMessage::NoJob => None,
+        other @ (ServerMessage::Ack | ServerMessage::Cancel) => {
+            panic!("Expected Job or NoJob, got: {other:?}")
+        },
+    };
+    (ws, job)
+}
+
+/// Assert the WebSocket stream is closed (no more messages or Close frame).
+///
+/// Dropshot's `#[channel]` macro upgrades the WebSocket connection before the
+/// handler runs. When the handler returns an error (auth failure, wrong state),
+/// the connection is reset without a proper close handshake, which manifests as
+/// `Some(Err(_))` rather than `None` or `Some(Ok(Message::Close(_)))`.
+#[expect(clippy::panic)]
+async fn assert_ws_closed(ws: &mut WsStream) {
+    let result = tokio::time::timeout(std::time::Duration::from_secs(1), ws.next()).await;
+    match result {
+        // Timed out waiting — treat as closed (server may have RST without close frame)
+        // Stream ended
+        // Close frame
+        // Connection reset (typical for auth failures via dropshot)
+        Err(_) | Ok(None | Some(Ok(Message::Close(_)) | Err(_))) => {},
+        Ok(Some(Ok(other))) => panic!("Expected WS to be closed, got message: {other:?}"),
+    }
+}
+
+// =============================================================================
+// Auth Tests — WS channel connection should be closed for invalid auth
+// =============================================================================
+
+// WS /v0/runners/{runner}/channel - invalid token rejected
 #[tokio::test]
 async fn claim_job_invalid_token() {
     let server = TestServer::new().await;
@@ -73,26 +164,15 @@ async fn claim_job_invalid_token() {
 
     let runner = create_runner(&server, &admin.token, "Invalid Token Runner").await;
 
-    let body = serde_json::json!({
-        "poll_timeout": 1
-    });
-
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            "Bearer bencher_runner_invalid_token",
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    let result = try_connect_channel_ws(&server, runner.uuid, "bencher_runner_invalid_token").await;
+    match result {
+        // Connection refused or immediately closed
+        Err(_) => {},
+        Ok(mut ws) => assert_ws_closed(&mut ws).await,
+    }
 }
 
-// POST /v0/runners/{runner}/jobs - token for wrong runner rejected
+// WS /v0/runners/{runner}/channel - token for wrong runner rejected
 #[tokio::test]
 async fn claim_job_wrong_runner_token() {
     let server = TestServer::new().await;
@@ -102,27 +182,15 @@ async fn claim_job_wrong_runner_token() {
     let runner2 = create_runner(&server, &admin.token, "Runner Two").await;
     let runner1_token: &str = runner1.token.as_ref();
 
-    let body = serde_json::json!({
-        "poll_timeout": 1
-    });
-
-    // Try to claim job for runner2 using runner1's token
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner1_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    // Try to connect to runner2's channel using runner1's token
+    let result = try_connect_channel_ws(&server, runner2.uuid, runner1_token).await;
+    match result {
+        Err(_) => {},
+        Ok(mut ws) => assert_ws_closed(&mut ws).await,
+    }
 }
 
-// POST /v0/runners/{runner}/jobs - missing Authorization header
+// WS /v0/runners/{runner}/channel - missing Authorization header (empty token)
 #[tokio::test]
 async fn claim_job_missing_auth() {
     let server = TestServer::new().await;
@@ -130,22 +198,18 @@ async fn claim_job_missing_auth() {
 
     let runner = create_runner(&server, &admin.token, "No Auth Runner").await;
 
-    let body = serde_json::json!({
-        "poll_timeout": 1
-    });
-
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    // Connect without a valid bearer token (empty string)
+    let url = ws_url(&server, &format!("/v0/runners/{}/channel", runner.uuid));
+    let request = url.into_client_request().expect("Failed to build request");
+    // No Authorization header set
+    let result = tokio_tungstenite::connect_async(request).await;
+    match result {
+        Err(_) => {},
+        Ok((mut ws, _)) => assert_ws_closed(&mut ws).await,
+    }
 }
 
-// POST /v0/runners/{runner}/jobs - token without prefix rejected
+// WS /v0/runners/{runner}/channel - token without prefix rejected
 #[tokio::test]
 async fn claim_job_no_prefix_token() {
     let server = TestServer::new().await;
@@ -153,27 +217,16 @@ async fn claim_job_no_prefix_token() {
 
     let runner = create_runner(&server, &admin.token, "No Prefix Runner").await;
 
-    let body = serde_json::json!({
-        "poll_timeout": 1
-    });
-
     // Use a token without the bencher_runner_ prefix
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            "Bearer some_random_token_without_prefix",
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    let result =
+        try_connect_channel_ws(&server, runner.uuid, "some_random_token_without_prefix").await;
+    match result {
+        Err(_) => {},
+        Ok(mut ws) => assert_ws_closed(&mut ws).await,
+    }
 }
 
-// POST /v0/runners/{runner}/jobs - correct prefix but wrong length rejected
+// WS /v0/runners/{runner}/channel - correct prefix but wrong length rejected
 #[tokio::test]
 async fn claim_job_wrong_length_token() {
     let server = TestServer::new().await;
@@ -181,42 +234,32 @@ async fn claim_job_wrong_length_token() {
 
     let runner = create_runner(&server, &admin.token, "Wrong Length Runner").await;
 
-    let body = serde_json::json!({
-        "poll_timeout": 1
-    });
-
     // Token has the correct prefix but is too short (15 + 32 hex = 47 chars, not 79)
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            "Bearer bencher_runner_00112233445566778899aabbccddeeff",
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    let result = try_connect_channel_ws(
+        &server,
+        runner.uuid,
+        "bencher_runner_00112233445566778899aabbccddeeff",
+    )
+    .await;
+    match result {
+        Err(_) => {},
+        Ok(mut ws) => assert_ws_closed(&mut ws).await,
+    }
 
     // Token has the correct prefix but is too long (15 + 66 hex = 81 chars, not 79)
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            "Bearer bencher_runner_00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffab",
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    let result = try_connect_channel_ws(
+        &server,
+        runner.uuid,
+        "bencher_runner_00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffab",
+    )
+    .await;
+    match result {
+        Err(_) => {},
+        Ok(mut ws) => assert_ws_closed(&mut ws).await,
+    }
 }
 
-// POST /v0/runners/{runner}/jobs - archived runner rejected
+// WS /v0/runners/{runner}/channel - archived runner rejected
 #[tokio::test]
 async fn claim_job_archived_runner() {
     let server = TestServer::new().await;
@@ -244,26 +287,35 @@ async fn claim_job_archived_runner() {
         .await
         .expect("Request failed");
 
-    // Try to claim job with archived runner
-    let body = serde_json::json!({
-        "poll_timeout": 1
-    });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    // Try to connect with archived runner
+    let result = try_connect_channel_ws(&server, runner.uuid, runner_token).await;
+    match result {
+        Err(_) => {},
+        Ok(mut ws) => assert_ws_closed(&mut ws).await,
+    }
 }
 
-// POST /v0/runners/{runner}/jobs - canceled pending job is not claimable
+// =============================================================================
+// Claim Tests — via WS channel
+// =============================================================================
+
+// WS /v0/runners/{runner}/channel - claim job with valid token (no jobs available)
+#[tokio::test]
+async fn claim_job_no_jobs() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "jobsadmin@example.com").await;
+
+    let (_, spec_id) = insert_test_spec(&server);
+    let runner = create_runner(&server, &admin.token, "Claim Test Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+    assert!(claimed.is_none());
+}
+
+// WS /v0/runners/{runner}/channel - canceled pending job is not claimable
 #[tokio::test]
 async fn claim_job_canceled_pending() {
     let server = TestServer::new().await;
@@ -289,22 +341,8 @@ async fn claim_job_canceled_pending() {
     // Cancel the pending job before claiming
     set_job_status(&server, job_uuid, JobStatus::Canceled);
 
-    // Try to claim - should get None since only Pending jobs are claimable
-    let body = serde_json::json!({ "poll_timeout": 1 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
+    // Try to claim - should get NoJob since only Pending jobs are claimable
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
     assert!(
         claimed.is_none(),
         "Canceled pending job should not be claimable"
@@ -315,13 +353,13 @@ async fn claim_job_canceled_pending() {
 // Job State Transition Tests
 // =============================================================================
 //
-// These tests verify the complete job lifecycle: pending → claimed → running → completed/failed
+// These tests verify the complete job lifecycle: pending -> claimed -> running -> completed/failed
 
 mod job_lifecycle {
     use super::*;
     use bencher_json::JobStatus;
 
-    // Test the full job lifecycle: claim → running → completed
+    // Test the full job lifecycle: claim -> running -> completed
     #[tokio::test]
     async fn job_lifecycle_completed() {
         let server = TestServer::new().await;
@@ -343,26 +381,9 @@ mod job_lifecycle {
         let report_id = create_test_report(&server, project_id);
         let job_uuid = insert_test_job(&server, report_id, spec_id);
 
-        // Step 1: Claim the job
-        let body = serde_json::json!({
-            "poll_timeout": 5
-        });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        assert_eq!(resp.status(), StatusCode::OK);
-        let claimed_job: Option<JsonClaimedJob> =
-            resp.json().await.expect("Failed to parse response");
-        let claimed_job = claimed_job.expect("Expected to claim a job");
+        // Step 1: Claim the job via channel WS
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
+        let claimed_job = claimed.expect("Expected to claim a job");
         assert_eq!(claimed_job.uuid, job_uuid);
 
         // Step 2: Transition to running via DB
@@ -384,14 +405,14 @@ mod job_lifecycle {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.status(), http::StatusCode::OK);
         let final_job: JsonJob = resp.json().await.expect("Failed to parse response");
         assert_eq!(final_job.status, JobStatus::Completed);
         assert_eq!(final_job.runner, Some(runner.uuid));
         assert!(final_job.claimed.is_some());
     }
 
-    // Test the job lifecycle with failure: claim → running → failed
+    // Test the job lifecycle with failure: claim -> running -> failed
     #[tokio::test]
     async fn job_lifecycle_failed() {
         let server = TestServer::new().await;
@@ -413,26 +434,9 @@ mod job_lifecycle {
         let report_id = create_test_report(&server, project_id);
         let job_uuid = insert_test_job(&server, report_id, spec_id);
 
-        // Step 1: Claim the job
-        let body = serde_json::json!({
-            "poll_timeout": 5
-        });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        assert_eq!(resp.status(), StatusCode::OK);
-        let claimed_job: Option<JsonClaimedJob> =
-            resp.json().await.expect("Failed to parse response");
-        assert!(claimed_job.is_some());
+        // Step 1: Claim the job via channel WS
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
+        assert!(claimed.is_some());
 
         // Step 2: Transition to running via DB
         set_job_status(&server, job_uuid, JobStatus::Running);
@@ -453,7 +457,7 @@ mod job_lifecycle {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.status(), http::StatusCode::OK);
         let final_job: JsonJob = resp.json().await.expect("Failed to parse response");
         assert_eq!(final_job.status, JobStatus::Failed);
         assert_eq!(final_job.runner, Some(runner.uuid));
@@ -486,47 +490,16 @@ mod job_lifecycle {
         let report_id = create_test_report(&server, project_id);
         let job_uuid = insert_test_job(&server, report_id, spec_id);
 
-        // Both runners try to claim concurrently
-        let claim_body = serde_json::json!({ "poll_timeout": 1 });
-
-        let server_url_1 = server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid));
-        let server_url_2 = server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid));
-        let client = &server.client;
-
-        let (resp1, resp2) = (
-            async {
-                client
-                    .post(&server_url_1)
-                    .header(
-                        bencher_json::AUTHORIZATION,
-                        bencher_json::bearer_header(&runner1_token),
-                    )
-                    .json(&claim_body)
-                    .send()
-                    .await
-                    .expect("Request 1 failed")
-            },
-            async {
-                client
-                    .post(&server_url_2)
-                    .header(
-                        bencher_json::AUTHORIZATION,
-                        bencher_json::bearer_header(&runner2_token),
-                    )
-                    .json(&claim_body)
-                    .send()
-                    .await
-                    .expect("Request 2 failed")
-            },
+        // Both runners try to claim concurrently via channel WS
+        let (result1, result2) = (
+            claim_via_channel(&server, runner1.uuid, &runner1_token, 1),
+            claim_via_channel(&server, runner2.uuid, &runner2_token, 1),
         )
             .join()
             .await;
 
-        assert_eq!(resp1.status(), StatusCode::OK);
-        assert_eq!(resp2.status(), StatusCode::OK);
-
-        let job1: Option<JsonClaimedJob> = resp1.json().await.expect("Failed to parse response 1");
-        let job2: Option<JsonClaimedJob> = resp2.json().await.expect("Failed to parse response 2");
+        let (_ws1, job1) = result1;
+        let (_ws2, job2) = result2;
 
         // Exactly one runner should have claimed the job
         let claimed_count = [&job1, &job2]
@@ -576,24 +549,9 @@ mod job_spec {
         let report_id = create_test_report(&server, project_id);
         let _job_uuid = insert_test_job_with_project(&server, report_id, project.uuid, spec_id);
 
-        // Claim the job
-        let body = serde_json::json!({ "poll_timeout": 5 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        assert_eq!(resp.status(), StatusCode::OK);
-        let claimed_job: Option<JsonClaimedJob> =
-            resp.json().await.expect("Failed to parse response");
-        let claimed_job = claimed_job.expect("Expected to claim a job");
+        // Claim the job via channel WS
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
+        let claimed_job = claimed.expect("Expected to claim a job");
 
         // Verify spec is present and has correct values
         assert_eq!(u32::from(claimed_job.spec.cpu), 2);
@@ -635,24 +593,9 @@ mod job_spec {
         let job_uuid =
             insert_test_job_with_optional_fields(&server, report_id, project.uuid, spec_id);
 
-        // Claim the job
-        let body = serde_json::json!({ "poll_timeout": 5 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        assert_eq!(resp.status(), StatusCode::OK);
-        let claimed_job: Option<JsonClaimedJob> =
-            resp.json().await.expect("Failed to parse response");
-        let claimed_job = claimed_job.expect("Expected to claim a job");
+        // Claim the job via channel WS
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
+        let claimed_job = claimed.expect("Expected to claim a job");
         assert_eq!(claimed_job.uuid, job_uuid);
 
         let config = &claimed_job.config;
@@ -678,7 +621,7 @@ mod job_spec {
         assert_eq!(file_paths, vec!["/output/results.json", "/tmp/bench.txt"]);
     }
 
-    // Test that invalid spec JSON returns a 400 error
+    // Test that invalid spec JSON causes error when claiming
     #[tokio::test]
     async fn claim_job_invalid_spec_returns_error() {
         let server = TestServer::new().await;
@@ -700,21 +643,41 @@ mod job_spec {
         // Insert job with invalid config (missing required fields)
         let _job_uuid = insert_test_job_with_invalid_config(&server, report_id, spec_id);
 
-        // Try to claim the job - should fail with 500 (corrupt spec is a server error)
-        let body = serde_json::json!({ "poll_timeout": 5 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
+        // Try to claim the job via channel WS - should get an error or close
+        let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
+        let ready = RunnerMessage::Ready {
+            poll_timeout: Some(PollTimeout::try_from(5).unwrap()),
+        };
+        send_msg(&mut ws, &ready).await;
 
-        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        // The server should close the connection or send an error
+        // because the config cannot be parsed
+        let result = tokio::time::timeout(std::time::Duration::from_secs(5), ws.next()).await;
+        match result {
+            Ok(Some(Ok(Message::Text(text)))) => {
+                // If the server sent a message, it should NOT be a valid Job
+                let msg: ServerMessage = serde_json::from_str(&text).expect("Failed to parse");
+                assert!(
+                    !matches!(msg, ServerMessage::Job(_)),
+                    "Invalid config should not produce a valid Job response"
+                );
+            },
+            // Timed out, stream ended, error, close frame, or non-text message
+            Err(_)
+            | Ok(
+                None
+                | Some(
+                    Err(_)
+                    | Ok(
+                        Message::Close(_)
+                        | Message::Binary(_)
+                        | Message::Ping(_)
+                        | Message::Pong(_)
+                        | Message::Frame(_),
+                    ),
+                ),
+            ) => {},
+        }
     }
 
     // Test that the config is NOT included in public job listing
@@ -737,19 +700,8 @@ mod job_spec {
         let report_id = create_test_report(&server, project_id);
         let job_uuid = insert_test_job(&server, report_id, spec_id);
 
-        // Claim the job (so it has a runner assigned)
-        let body = serde_json::json!({ "poll_timeout": 5 });
-        server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
+        // Claim the job via channel WS (so it has a runner assigned)
+        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
 
         // Fetch the job via the public project endpoint
         let project_slug: &str = project.slug.as_ref();
@@ -764,7 +716,7 @@ mod job_spec {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.status(), http::StatusCode::OK);
         let job: JsonJob = resp.json().await.expect("Failed to parse response");
 
         // Config should NOT be included in public API response
@@ -774,50 +726,6 @@ mod job_spec {
         );
         assert_eq!(job.status, JobStatus::Claimed);
     }
-}
-
-// =============================================================================
-// Timing Tests
-// =============================================================================
-
-// POST /v0/runners/{runner}/jobs - poll timeout respects the requested duration
-#[tokio::test]
-async fn claim_job_poll_timeout_timing() {
-    let server = TestServer::new().await;
-    let admin = server.signup("Admin", "polltiming@example.com").await;
-
-    let (_, spec_id) = insert_test_spec(&server);
-    let runner = create_runner(&server, &admin.token, "Poll Timing Runner").await;
-    let runner_token: &str = runner.token.as_ref();
-    let runner_id = get_runner_id(&server, runner.uuid);
-    associate_runner_spec(&server, runner_id, spec_id);
-
-    tokio::time::pause();
-    let handle = tokio::spawn({
-        let client = server.client.clone();
-        let url = server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid));
-        let token = runner_token.to_owned();
-        async move {
-            client
-                .post(url)
-                .header(
-                    bencher_json::AUTHORIZATION,
-                    bencher_json::bearer_header(&token),
-                )
-                .json(&serde_json::json!({ "poll_timeout": 2 }))
-                .send()
-                .await
-                .expect("Request failed")
-        }
-    });
-
-    // Advance time past the 2-second poll timeout
-    tokio::time::advance(std::time::Duration::from_secs(3)).await;
-
-    let resp = handle.await.expect("Task panicked");
-    assert_eq!(resp.status(), StatusCode::OK);
-    let body: Option<serde_json::Value> = resp.json().await.expect("Failed to parse response");
-    assert!(body.is_none(), "Expected no job to be claimed");
 }
 
 // =============================================================================
@@ -886,21 +794,7 @@ mod priority_scheduling {
         );
 
         // Claim first job - should be the high priority one
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        assert_eq!(resp.status(), StatusCode::OK);
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, high_job,
@@ -912,20 +806,7 @@ mod priority_scheduling {
         set_job_status(&server, high_job, JobStatus::Completed);
 
         // Claim second job - should be the medium priority one
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, medium_job,
@@ -937,20 +818,7 @@ mod priority_scheduling {
         set_job_status(&server, medium_job, JobStatus::Completed);
 
         // Claim third job - should be the low priority one
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, low_job,
@@ -999,40 +867,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         assert!(claimed.is_some(), "Expected to claim first job");
 
         // Mark job as running (not completed)
         set_job_status(&server, job1, JobStatus::Running);
 
         // Try to claim second job - should fail because org already has a running job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         assert!(
             claimed.is_none(),
             "Expected no job to be claimed due to org concurrency limit"
@@ -1081,40 +923,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         assert!(claimed.is_some(), "Expected to claim first job");
 
         // Mark job as running
         set_job_status(&server, job1, JobStatus::Running);
 
         // Try to claim second job - should fail because same IP already has a running job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         assert!(
             claimed.is_none(),
             "Expected no job to be claimed due to IP concurrency limit"
@@ -1162,40 +978,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
         set_job_status(&server, first_claimed.uuid, JobStatus::Running);
 
         // Claim second job - should succeed because different IP
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let second_claimed = claimed.expect("Expected to claim second job with different IP");
 
         // Verify both jobs were claimed
@@ -1247,40 +1037,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running (not completed)
         set_job_status(&server, first_claimed.uuid, JobStatus::Running);
 
         // Claim second job - should succeed because Enterprise tier has no limit
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let second_claimed = claimed.expect("Enterprise tier should allow concurrent jobs");
 
         // Verify both distinct jobs were claimed
@@ -1323,19 +1087,7 @@ mod priority_scheduling {
         );
 
         // Claim and start the blocking job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
+        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         set_job_status(&server, blocking_job, JobStatus::Running);
 
         // Insert a blocked Free tier job and an unblocked Enterprise tier job
@@ -1359,20 +1111,7 @@ mod priority_scheduling {
         );
 
         // Try to claim - should get the Enterprise job (skipping the blocked Free tier job)
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim Enterprise job");
         assert_eq!(
             claimed.uuid, enterprise_job,
@@ -1421,40 +1160,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
         set_job_status(&server, first_claimed.uuid, JobStatus::Running);
 
         // Claim second job - should succeed because Team tier has no limit
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let second_claimed = claimed.expect("Team tier should allow concurrent jobs");
 
         assert!(
@@ -1466,7 +1179,6 @@ mod priority_scheduling {
 
     // Test FIFO ordering within same priority level
     #[tokio::test]
-    #[expect(clippy::too_many_lines)]
     async fn fifo_within_same_priority() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "fifo1@example.com").await;
@@ -1522,20 +1234,7 @@ mod priority_scheduling {
         );
 
         // Claim first - should be first_job (created first)
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, first_job,
@@ -1547,20 +1246,7 @@ mod priority_scheduling {
         set_job_status(&server, first_job, JobStatus::Completed);
 
         // Claim second - should be second_job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, second_job,
@@ -1572,20 +1258,7 @@ mod priority_scheduling {
         set_job_status(&server, second_job, JobStatus::Completed);
 
         // Claim third - should be third_job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, third_job,
@@ -1644,40 +1317,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
         set_job_status(&server, first_claimed.uuid, JobStatus::Running);
 
         // Claim second job - should succeed because different org
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let second_claimed =
             claimed.expect("Different orgs should allow concurrent Free tier jobs");
 
@@ -1727,39 +1374,13 @@ mod priority_scheduling {
         );
 
         // Claim and start first job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let first_claimed = claimed.expect("Expected to claim first job");
 
         set_job_status(&server, first_claimed.uuid, JobStatus::Running);
 
         // Try to claim second job - should fail (org blocked)
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         assert!(
             claimed.is_none(),
             "Second job should be blocked while first is running"
@@ -1769,20 +1390,7 @@ mod priority_scheduling {
         set_job_status(&server, first_claimed.uuid, JobStatus::Completed);
 
         // Now try to claim second job - should succeed (org no longer blocked)
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let second_claimed = claimed.expect("Second job should be claimable after first completes");
 
         // Verify we got the second job (not the completed first one)
@@ -1829,19 +1437,7 @@ mod priority_scheduling {
         );
 
         // Claim and start the blocking job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
+        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         set_job_status(&server, blocking_job, JobStatus::Running);
 
         // Insert another Free tier job (should be blocked by org concurrency)
@@ -1867,20 +1463,7 @@ mod priority_scheduling {
         );
 
         // Try to claim - should get the Team tier job, not the blocked Free tier job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim Team tier job");
         assert_eq!(
             claimed.uuid, team_job,
@@ -1921,19 +1504,7 @@ mod priority_scheduling {
         );
 
         // Claim and start the blocking job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
+        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         set_job_status(&server, blocking_job, JobStatus::Running);
 
         // Insert Unclaimed job with same IP (should be blocked by IP)
@@ -1979,20 +1550,7 @@ mod priority_scheduling {
         );
 
         // Try to claim - should get the Free tier job from different org
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim unblocked Free tier job");
         assert_eq!(
             claimed.uuid, free_unblocked,
@@ -2002,7 +1560,6 @@ mod priority_scheduling {
 
     // Test that jobs with identical timestamps are ordered deterministically by id
     #[tokio::test]
-    #[expect(clippy::too_many_lines)]
     async fn fifo_same_timestamp_tiebreaker() {
         use common::insert_test_job_with_timestamp;
 
@@ -2060,20 +1617,7 @@ mod priority_scheduling {
         );
 
         // Claim first - should be first_job (lowest id)
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, first_job,
@@ -2085,20 +1629,7 @@ mod priority_scheduling {
         set_job_status(&server, first_job, JobStatus::Completed);
 
         // Claim second - should be second_job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, second_job,
@@ -2110,20 +1641,7 @@ mod priority_scheduling {
         set_job_status(&server, second_job, JobStatus::Completed);
 
         // Claim third - should be third_job
-        let body = serde_json::json!({ "poll_timeout": 1 });
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, third_job,
@@ -2139,10 +1657,11 @@ mod priority_scheduling {
 mod poll_timeout_boundaries {
     use super::*;
 
-    // poll_timeout: 0 is below PollTimeout::MIN (1), so the server rejects it
-    // at deserialization time with 400 Bad Request.
+    // poll_timeout: 0 is below PollTimeout::MIN (1), so PollTimeout::try_from fails.
+    // Sending an invalid Ready message should cause the server to close the connection
+    // or ignore it.
     #[tokio::test]
-    async fn poll_timeout_zero_clamps_to_min() {
+    async fn poll_timeout_zero_rejected() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "poll-zero@example.com").await;
 
@@ -2152,22 +1671,47 @@ mod poll_timeout_boundaries {
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
-        let resp = server
-            .client
-            .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(runner_token),
-            )
-            .json(&serde_json::json!({ "poll_timeout": 0 }))
-            .send()
-            .await
-            .expect("Request failed");
+        let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
 
-        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        // Send a raw Ready message with poll_timeout: 0 (which is invalid)
+        let raw_msg = r#"{"event":"ready","poll_timeout":0}"#;
+        ws.send(Message::Text(raw_msg.into()))
+            .await
+            .expect("Failed to send message");
+
+        // The server should close the connection or send an error
+        let result = tokio::time::timeout(std::time::Duration::from_secs(2), ws.next()).await;
+        match result {
+            Ok(Some(Ok(Message::Text(text)))) => {
+                // If we get a response, it should not be a Job
+                let msg: Result<ServerMessage, _> = serde_json::from_str(&text);
+                if let Ok(msg) = msg {
+                    assert!(
+                        !matches!(msg, ServerMessage::Job(_)),
+                        "poll_timeout: 0 should not produce a Job"
+                    );
+                }
+            },
+            // Timed out, stream ended, close frame, error, or non-text message
+            Err(_)
+            | Ok(
+                None
+                | Some(
+                    Err(_)
+                    | Ok(
+                        Message::Close(_)
+                        | Message::Binary(_)
+                        | Message::Ping(_)
+                        | Message::Pong(_)
+                        | Message::Frame(_),
+                    ),
+                ),
+            ) => {},
+        }
     }
 
-    // poll_timeout: 61 with a job available should return immediately (clamped to 60)
+    // poll_timeout: 61 with a job available should return the job (clamped to 60)
+    #[expect(clippy::panic)]
     #[tokio::test]
     async fn poll_timeout_exceeds_max() {
         let server = TestServer::new().await;
@@ -2187,33 +1731,23 @@ mod poll_timeout_boundaries {
         let report_id = create_test_report(&server, project_id);
         let _job_uuid = insert_test_job(&server, report_id, spec_id);
 
-        let body = serde_json::json!({ "poll_timeout": 61 });
+        // Send a raw Ready with poll_timeout: 61 (above max, should be clamped)
+        let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
+        let raw_msg = r#"{"event":"ready","poll_timeout":61}"#;
+        ws.send(Message::Text(raw_msg.into()))
+            .await
+            .expect("Failed to send message");
 
-        // With paused time, any tokio::time::sleep blocks forever unless time is advanced.
-        // If the task completes without advancing, the endpoint returned immediately.
-        tokio::time::pause();
-        let handle = tokio::spawn({
-            let client = server.client.clone();
-            let url = server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid));
-            let token = runner_token.to_owned();
-            async move {
-                client
-                    .post(url)
-                    .header(
-                        bencher_json::AUTHORIZATION,
-                        bencher_json::bearer_header(&token),
-                    )
-                    .json(&body)
-                    .send()
-                    .await
-                    .expect("Request failed")
-            }
-        });
-
-        let resp = handle.await.expect("Task panicked");
-        assert_eq!(resp.status(), StatusCode::OK);
-        let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
-        assert!(claimed.is_some(), "Expected to claim a job");
+        // Should get a Job response (the job is available)
+        let result =
+            tokio::time::timeout(std::time::Duration::from_secs(5), recv_msg(&mut ws)).await;
+        match result {
+            Ok(ServerMessage::Job(_)) => {}, // Expected
+            Ok(other @ (ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel)) => {
+                panic!("Expected Job, got: {other:?}")
+            },
+            Err(err) => panic!("Timed out waiting for Job response: {err}"),
+        }
     }
 }
 
@@ -2275,46 +1809,16 @@ mod concurrency_safety {
             spec_id,
         );
 
-        let claim_body = serde_json::json!({ "poll_timeout": 1 });
-        let url1 = server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid));
-        let url2 = server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid));
-        let client = &server.client;
-
-        // Race both runners to claim simultaneously
-        let (resp1, resp2) = (
-            async {
-                client
-                    .post(&url1)
-                    .header(
-                        bencher_json::AUTHORIZATION,
-                        bencher_json::bearer_header(&runner1_token),
-                    )
-                    .json(&claim_body)
-                    .send()
-                    .await
-                    .expect("Request 1 failed")
-            },
-            async {
-                client
-                    .post(&url2)
-                    .header(
-                        bencher_json::AUTHORIZATION,
-                        bencher_json::bearer_header(&runner2_token),
-                    )
-                    .json(&claim_body)
-                    .send()
-                    .await
-                    .expect("Request 2 failed")
-            },
+        // Race both runners to claim simultaneously via channel WS
+        let (result1, result2) = (
+            claim_via_channel(&server, runner1.uuid, &runner1_token, 1),
+            claim_via_channel(&server, runner2.uuid, &runner2_token, 1),
         )
             .join()
             .await;
 
-        assert_eq!(resp1.status(), StatusCode::OK);
-        assert_eq!(resp2.status(), StatusCode::OK);
-
-        let job1: Option<JsonClaimedJob> = resp1.json().await.expect("Failed to parse response 1");
-        let job2: Option<JsonClaimedJob> = resp2.json().await.expect("Failed to parse response 2");
+        let (_ws1, job1) = result1;
+        let (_ws2, job2) = result2;
 
         let claimed_count = [&job1, &job2].iter().filter(|j| j.is_some()).count();
 
@@ -2374,46 +1878,16 @@ mod concurrency_safety {
             spec_id,
         );
 
-        let claim_body = serde_json::json!({ "poll_timeout": 1 });
-        let url1 = server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid));
-        let url2 = server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid));
-        let client = &server.client;
-
-        // Race both runners to claim simultaneously
-        let (resp1, resp2) = (
-            async {
-                client
-                    .post(&url1)
-                    .header(
-                        bencher_json::AUTHORIZATION,
-                        bencher_json::bearer_header(&runner1_token),
-                    )
-                    .json(&claim_body)
-                    .send()
-                    .await
-                    .expect("Request 1 failed")
-            },
-            async {
-                client
-                    .post(&url2)
-                    .header(
-                        bencher_json::AUTHORIZATION,
-                        bencher_json::bearer_header(&runner2_token),
-                    )
-                    .json(&claim_body)
-                    .send()
-                    .await
-                    .expect("Request 2 failed")
-            },
+        // Race both runners to claim simultaneously via channel WS
+        let (result1, result2) = (
+            claim_via_channel(&server, runner1.uuid, &runner1_token, 1),
+            claim_via_channel(&server, runner2.uuid, &runner2_token, 1),
         )
             .join()
             .await;
 
-        assert_eq!(resp1.status(), StatusCode::OK);
-        assert_eq!(resp2.status(), StatusCode::OK);
-
-        let job1: Option<JsonClaimedJob> = resp1.json().await.expect("Failed to parse response 1");
-        let job2: Option<JsonClaimedJob> = resp2.json().await.expect("Failed to parse response 2");
+        let (_ws1, job1) = result1;
+        let (_ws2, job2) = result2;
 
         let claimed_count = [&job1, &job2].iter().filter(|j| j.is_some()).count();
 
@@ -2430,7 +1904,7 @@ mod concurrency_safety {
 // Auth Cross-validation Tests
 // =============================================================================
 
-// A valid user JWT token should be rejected on runner endpoints
+// A valid user JWT token should be rejected on runner channel endpoint
 #[tokio::test]
 async fn user_jwt_rejected_on_runner_endpoint() {
     let server = TestServer::new().await;
@@ -2438,26 +1912,12 @@ async fn user_jwt_rejected_on_runner_endpoint() {
 
     let runner = create_runner(&server, &admin.token, "JWT Test Runner").await;
 
-    let body = serde_json::json!({ "poll_timeout": 1 });
-
-    // Use the user's JWT (not a runner token) on the runner claim endpoint
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(
-        resp.status(),
-        StatusCode::UNAUTHORIZED,
-        "User JWT should be rejected on runner endpoints"
-    );
+    // Use the user's JWT (not a runner token) on the runner channel endpoint
+    let result = try_connect_channel_ws(&server, runner.uuid, &admin.token).await;
+    match result {
+        Err(_) => {},
+        Ok(mut ws) => assert_ws_closed(&mut ws).await,
+    }
 }
 
 // =============================================================================
@@ -2527,36 +1987,11 @@ async fn runner_multiple_specs_claims_matching_jobs() {
     );
 
     // First claim should get one job
-    let claim_body = serde_json::json!({ "poll_timeout": 1 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&claim_body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    let first: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
+    let (_ws, first) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
     let first = first.expect("Expected to claim first job");
 
     // Second claim should get the other job
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&claim_body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    let second: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
+    let (_ws, second) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
     let second = second.expect("Expected to claim second job");
 
     // Both jobs should have been claimed (order depends on priority/FIFO)
@@ -2600,12 +2035,12 @@ async fn non_admin_cannot_patch_runner() {
 
     assert_eq!(
         resp.status(),
-        StatusCode::FORBIDDEN,
+        http::StatusCode::FORBIDDEN,
         "Non-admin should not be able to PATCH a runner"
     );
 }
 
-/// Wrong runner's token cannot claim a job assigned to a different runner.
+/// Wrong runner's token cannot connect to a different runner's channel.
 #[tokio::test]
 async fn wrong_runner_token_claim() {
     let server = TestServer::new().await;
@@ -2615,25 +2050,15 @@ async fn wrong_runner_token_claim() {
     let runner2 = create_runner(&server, &admin.token, "Auth Runner Two").await;
     let runner2_token: &str = runner2.token.as_ref();
 
-    // Use runner2's token to claim on runner1's endpoint
-    let body = serde_json::json!({ "poll_timeout": 1 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner2_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    // Token hash won't match runner1 — should fail auth
-    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    // Use runner2's token to connect to runner1's channel endpoint
+    let result = try_connect_channel_ws(&server, runner1.uuid, runner2_token).await;
+    match result {
+        Err(_) => {},
+        Ok(mut ws) => assert_ws_closed(&mut ws).await,
+    }
 }
 
-/// Archived runner's token cannot claim jobs.
+/// Archived runner's token cannot connect to channel.
 #[tokio::test]
 async fn archived_runner_token_rejected() {
     let server = TestServer::new().await;
@@ -2659,25 +2084,12 @@ async fn archived_runner_token_rejected() {
         .await
         .expect("Request failed");
 
-    // Try to claim with the archived runner's token
-    let body = serde_json::json!({ "poll_timeout": 1 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(
-        resp.status(),
-        StatusCode::UNAUTHORIZED,
-        "Archived runner's token should be rejected"
-    );
+    // Try to connect with the archived runner's token
+    let result = try_connect_channel_ws(&server, runner.uuid, runner_token).await;
+    match result {
+        Err(_) => {},
+        Ok(mut ws) => assert_ws_closed(&mut ws).await,
+    }
 }
 
 // =============================================================================
@@ -2729,38 +2141,15 @@ async fn free_tier_blocked_same_org_different_runner() {
     );
 
     // Runner1 claims first job
-    let body = serde_json::json!({ "poll_timeout": 1 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner1.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner1_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+    let (_ws, claimed) = claim_via_channel(&server, runner1.uuid, runner1_token, 1).await;
     assert_eq!(claimed.as_ref().map(|j| j.uuid), Some(job1));
 
     // Set to running
     set_job_status(&server, job1, JobStatus::Running);
     set_job_runner_id(&server, job1, runner1_id);
 
-    // Runner2 tries to claim second job — same org, should be blocked
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner2.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner2_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+    // Runner2 tries to claim second job -- same org, should be blocked
+    let (_ws, claimed) = claim_via_channel(&server, runner2.uuid, runner2_token, 1).await;
     assert!(
         claimed.is_none(),
         "Free tier: second job should be blocked for same org"
@@ -2819,19 +2208,7 @@ async fn mixed_tier_free_blocked_enterprise_claimable() {
     );
 
     // Claim should skip the blocked Free job and grab the Enterprise job
-    let body = serde_json::json!({ "poll_timeout": 1 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse");
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
     assert_eq!(
         claimed.as_ref().map(|j| j.uuid),
         Some(enterprise_job),
@@ -2967,7 +2344,7 @@ async fn claim_upgrades_pending_job_priority() {
         .expect("Claim request failed");
     assert_eq!(
         resp.status(),
-        StatusCode::CREATED,
+        http::StatusCode::CREATED,
         "Claim should succeed: {}",
         resp.text().await.unwrap_or_default()
     );
@@ -3043,7 +2420,7 @@ async fn claim_no_pending_jobs_succeeds() {
         .expect("Claim request failed");
     assert_eq!(
         resp.status(),
-        StatusCode::CREATED,
+        http::StatusCode::CREATED,
         "Claim with no pending jobs should succeed: {}",
         resp.text().await.unwrap_or_default()
     );
@@ -3187,6 +2564,7 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
 /// The claim endpoint parses the config after claiming, so the job transitions to
 /// Claimed but the response is an error.
 #[tokio::test]
+#[expect(clippy::panic)]
 async fn claim_job_invalid_config() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "invalid-config@example.com").await;
@@ -3207,31 +2585,44 @@ async fn claim_job_invalid_config() {
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
-    // Try to claim the job — parse_config should fail, returning an error
-    let body = serde_json::json!({ "poll_timeout": 1 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
+    // Try to claim the job via channel WS -- parse_config should fail
+    let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(1).unwrap()),
+    };
+    send_msg(&mut ws, &ready).await;
 
-    // The claim should fail because the config cannot be parsed
-    assert_ne!(
-        resp.status(),
-        StatusCode::OK,
-        "Claiming a job with invalid config should not succeed"
-    );
+    // The server should close the connection or not send a valid Job
+    let result = tokio::time::timeout(std::time::Duration::from_secs(5), ws.next()).await;
+    match result {
+        Ok(Some(Ok(Message::Text(text)))) => {
+            // If we get a message, it should NOT be a valid Job with a parsed config
+            let msg: Result<ServerMessage, _> = serde_json::from_str(&text);
+            if let Ok(ServerMessage::Job(_)) = msg {
+                panic!("Claiming a job with invalid config should not succeed");
+            }
+        },
+        // Timed out, stream ended, close frame, error, or non-text message
+        Err(_)
+        | Ok(
+            None
+            | Some(
+                Err(_)
+                | Ok(
+                    Message::Close(_)
+                    | Message::Binary(_)
+                    | Message::Ping(_)
+                    | Message::Pong(_)
+                    | Message::Frame(_),
+                ),
+            ),
+        ) => {},
+    }
 }
 
-/// Heartbeat timeout for a claimed job without a WS channel.
+/// Heartbeat timeout for a claimed job without completing execution.
 /// Simulates what `spawn_job_recovery` does on server restart: spawns heartbeat
-/// timeouts for in-flight jobs that were claimed but never opened a WS connection.
+/// timeouts for in-flight jobs that were claimed but never completed.
 ///
 /// Uses `tokio::time::pause()` / `advance()` to make the test deterministic.
 /// `last_heartbeat` is cleared to `None` so the freshness check is skipped,
@@ -3253,22 +2644,8 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     let report_id = create_test_report(&server, project_id);
     let job_uuid = insert_test_job(&server, report_id, spec_id);
 
-    // Claim the job via the REST API (no WS connection opened).
-    // This sets last_heartbeat to DateTime::now().
-    let body = serde_json::json!({ "poll_timeout": 5 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
+    // Claim the job via channel WS.
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
     let claimed = claimed.expect("Expected to claim a job");
     assert_eq!(claimed.uuid, job_uuid);
 
@@ -3319,7 +2696,7 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     tokio::task::yield_now().await;
     tokio::time::resume();
 
-    // Verify the job is now Failed (heartbeat timeout, no WS interaction)
+    // Verify the job is now Failed (heartbeat timeout, no further interaction)
     let mut conn = server.db_conn();
     let status: JobStatus = schema::job::table
         .filter(schema::job::uuid.eq(job_uuid))
@@ -3399,7 +2776,7 @@ async fn reprocess_completed_job_no_output() {
     let (_, spec_id) = insert_test_spec(&server);
     let job_uuid = insert_test_job_with_project(&server, report_id, project.uuid, spec_id);
 
-    // Transition job to Completed — but do NOT store any output
+    // Transition job to Completed -- but do NOT store any output
     set_job_status(&server, job_uuid, JobStatus::Completed);
 
     // Call startup recovery

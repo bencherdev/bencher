@@ -4,10 +4,10 @@
 mod common;
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonClaimedJob, JsonRunnerToken};
+use bencher_json::JsonRunnerToken;
 use common::{
-    associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
-    insert_test_job, insert_test_spec,
+    assert_ws_closed, associate_runner_spec, claim_via_channel, create_runner, create_test_report,
+    get_project_id, get_runner_id, insert_test_job, insert_test_spec, try_connect_channel_ws,
 };
 use futures_concurrency::future::Join as _;
 use http::StatusCode;
@@ -276,42 +276,19 @@ async fn old_token_rejected_after_rotation() {
     let new: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
     let new_token: String = new.token.as_ref().to_owned();
 
-    // Old token should be rejected on the claim endpoint
-    let claim_body = serde_json::json!({ "poll_timeout": 1 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", original.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&original_token),
-        )
-        .json(&claim_body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(
-        resp.status(),
-        StatusCode::UNAUTHORIZED,
-        "Old token should be rejected after rotation"
-    );
+    // Old token should be rejected on the WS channel endpoint
+    let result = try_connect_channel_ws(&server, original.uuid, &original_token).await;
+    match result {
+        Err(_) => {}, // Connection refused — old token rejected
+        Ok(mut ws) => {
+            // Dropshot upgrades before auth, so connection may succeed but
+            // immediately close
+            assert_ws_closed(&mut ws).await;
+        },
+    }
 
-    // New token should work
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", original.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&new_token),
-        )
-        .json(&claim_body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(
-        resp.status(),
-        StatusCode::OK,
-        "New token should authenticate successfully"
-    );
+    // New token should work on the WS channel endpoint
+    let (_ws, _) = claim_via_channel(&server, original.uuid, &new_token, 1).await;
 }
 
 // Rotating a token on an archived runner should fail.
@@ -391,21 +368,8 @@ async fn token_rotate_with_inflight_jobs() {
     let report_id = create_test_report(&server, project_id);
     let _job_uuid = insert_test_job(&server, report_id, spec_id);
 
-    // Claim the job
-    let claim_body = serde_json::json!({ "poll_timeout": 5 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&original_token),
-        )
-        .json(&claim_body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
+    // Claim the job via WS channel
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, &original_token, 5).await;
     assert!(claimed.is_some(), "Should claim a job");
 
     // Rotate token while job is in-flight (Claimed status)
@@ -427,39 +391,15 @@ async fn token_rotate_with_inflight_jobs() {
     let new: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
     let new_token: String = new.token.as_ref().to_owned();
 
-    // Old token should be rejected
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&original_token),
-        )
-        .json(&claim_body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(
-        resp.status(),
-        StatusCode::UNAUTHORIZED,
-        "Old token should be rejected after rotation"
-    );
+    // Old token should be rejected on the WS channel endpoint
+    let result = try_connect_channel_ws(&server, runner.uuid, &original_token).await;
+    match result {
+        Err(_) => {}, // Connection refused — old token rejected
+        Ok(mut ws) => {
+            assert_ws_closed(&mut ws).await;
+        },
+    }
 
-    // New token should authenticate
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&new_token),
-        )
-        .json(&claim_body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(
-        resp.status(),
-        StatusCode::OK,
-        "New token should authenticate after rotation"
-    );
+    // New token should authenticate on the WS channel endpoint
+    let (_ws, _) = claim_via_channel(&server, runner.uuid, &new_token, 1).await;
 }

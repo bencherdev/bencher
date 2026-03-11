@@ -4,10 +4,10 @@
 mod common;
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonClaimedJob, JsonSpec, JsonSpecs};
+use bencher_json::{JsonSpec, JsonSpecs};
 use common::{
-    associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
-    insert_test_job, insert_test_spec, insert_test_spec_full,
+    associate_runner_spec, claim_via_channel, create_runner, create_test_report, get_project_id,
+    get_runner_id, insert_test_job, insert_test_spec, insert_test_spec_full,
 };
 use http::StatusCode;
 
@@ -335,22 +335,8 @@ async fn claim_job_no_specs() {
     let report_id = create_test_report(&server, project_id);
     let _job_uuid = insert_test_job(&server, report_id, spec_id);
 
-    // Runner tries to claim - should get None (no specs associated)
-    let claim_body = serde_json::json!({"poll_timeout": 1});
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&claim_body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
+    // Runner tries to claim via WS channel - should get NoJob (no specs associated)
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
     assert!(
         claimed.is_none(),
         "Runner with no specs should not claim any job"
@@ -398,22 +384,8 @@ async fn claim_job_spec_mismatch() {
     let report_id = create_test_report(&server, project_id);
     let _job_uuid = insert_test_job(&server, report_id, spec_arm_id);
 
-    // Runner tries to claim - should get None (no matching job for its specs)
-    let claim_body = serde_json::json!({"poll_timeout": 1});
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&claim_body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
+    // Runner tries to claim via WS channel - should get NoJob (no matching spec)
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
     assert!(
         claimed.is_none(),
         "Runner should not claim job with mismatched spec"
@@ -423,20 +395,7 @@ async fn claim_job_spec_mismatch() {
     associate_runner_spec(&server, runner_id, spec_arm_id);
 
     // Runner tries to claim again - should get the job
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{}/jobs", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&claim_body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
     assert!(
         claimed.is_some(),
         "Runner should claim job after spec association"

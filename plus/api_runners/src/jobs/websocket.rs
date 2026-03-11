@@ -1,33 +1,21 @@
-//! WebSocket channel for runner job execution.
+//! WebSocket message handlers for runner job execution.
 //!
-//! Provides a persistent connection for heartbeat and status updates during job execution.
+//! Provides handler functions for job lifecycle messages (Running, Heartbeat,
+//! Completed, Failed, Canceled). Used by the channel endpoint.
 
 use bencher_json::{
-    JobStatus, JobUuid, RunnerResourceId,
+    JobStatus,
     runner::{CloseReason, JsonIterationOutput, RunnerMessage, ServerMessage},
 };
 use bencher_oci_storage::OciStorageError;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{conflict_error, forbidden_error, resource_not_found_err},
-    model::runner::{JobId, QueryJob, UpdateJob, job::spawn_heartbeat_timeout},
+    error::resource_not_found_err,
+    model::runner::{JobId, QueryJob, UpdateJob},
     schema, write_conn,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
-use dropshot::WebsocketConnectionRaw;
-use dropshot::{Path, RequestContext, WebsocketChannelResult, WebsocketConnection, channel};
-use futures::{SinkExt as _, StreamExt as _};
-use schemars::JsonSchema;
-use serde::Deserialize;
-use std::time::Duration;
-
-use tokio_tungstenite::tungstenite::{
-    Message,
-    protocol::{CloseFrame, Role, WebSocketConfig, frame::coding::CloseCode},
-};
-
-use crate::runner_token::RunnerToken;
 
 /// Errors from WebSocket channel operations during runner job execution.
 #[derive(Debug, thiserror::Error)]
@@ -53,198 +41,12 @@ pub(crate) enum ChannelError {
     },
 }
 
-/// Path parameters for the job WebSocket endpoint.
-#[derive(Deserialize, JsonSchema)]
-pub struct RunnerJobParams {
-    /// The slug or UUID for a runner.
-    pub runner: RunnerResourceId,
-    /// The UUID for a job.
-    pub job: JobUuid,
-}
-
-/// WebSocket channel for job execution
-///
-/// ➕ Bencher Plus: Establishes a persistent connection for heartbeat and status updates.
-/// Authentication is via runner token in the Authorization header.
-#[channel {
-    protocol = WEBSOCKETS,
-    path = "/v0/runners/{runner}/jobs/{job}",
-    tags = ["runners"]
-}]
-pub async fn runner_job_channel(
-    rqctx: RequestContext<ApiContext>,
-    path_params: Path<RunnerJobParams>,
-    conn: WebsocketConnection,
-) -> WebsocketChannelResult {
-    let context = rqctx.context();
-    let log = rqctx.log.clone();
-    let path_params = path_params.into_inner();
-
-    // Validate runner token from Authorization header
-    let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
-
-    // Per-runner rate limiting
-    #[cfg(feature = "plus")]
-    context
-        .rate_limiting
-        .runner_request(runner_token.runner_uuid)?;
-
-    // Verify job exists and is claimed by this runner
-    let job = QueryJob::from_uuid(auth_conn!(context), path_params.job)?;
-
-    if job.runner_id != Some(runner_token.runner_id) {
-        return Err(forbidden_error("Job is not assigned to this runner").into());
-    }
-
-    // Only allow channel for claimed or running jobs (running allows reconnection)
-    if !matches!(job.status, JobStatus::Claimed | JobStatus::Running) {
-        return Err(conflict_error(format!(
-            "Cannot open channel for job in {:?} status, expected Claimed or Running",
-            job.status
-        ))
-        .into());
-    }
-
-    // Upgrade to WebSocket and handle messages
-    let mut ws_config = WebSocketConfig::default();
-    ws_config.max_message_size = Some(context.request_body_max_bytes);
-    ws_config.max_frame_size = Some(context.request_body_max_bytes);
-    let ws_stream = tokio_tungstenite::WebSocketStream::from_raw_socket(
-        conn.into_inner(),
-        Role::Server,
-        Some(ws_config),
-    )
-    .await;
-
-    let heartbeat_timeout = context.heartbeat_timeout;
-
-    handle_websocket(&log, context, &job, ws_stream, heartbeat_timeout).await?;
-
-    // After WS disconnect, check if job is still in-flight and spawn a timeout task
-    let job = QueryJob::get(auth_conn!(context), job.id)?;
-    if !job.status.has_run() {
-        slog::info!(log, "WS disconnected for in-flight job, spawning heartbeat timeout"; "job_id" => ?job.id);
-        spawn_heartbeat_timeout(
-            log,
-            heartbeat_timeout,
-            context.database.connection.clone(),
-            job.id,
-            &context.heartbeat_tasks,
-            context.job_timeout_grace_period,
-            context.clock.clone(),
-        );
-    }
-
-    Ok(())
-}
-
-/// Handle WebSocket messages for a job.
-///
-/// The heartbeat timeout only resets on valid protocol messages from the runner
-/// (Running, Heartbeat, Completed, Failed, Canceled). Ping/Pong frames, invalid
-/// JSON, and other non-protocol messages do NOT reset the timeout.
-async fn handle_websocket(
-    log: &slog::Logger,
-    context: &ApiContext,
-    job: &QueryJob,
-    ws_stream: tokio_tungstenite::WebSocketStream<WebsocketConnectionRaw>,
-    heartbeat_timeout: Duration,
-) -> Result<(), ChannelError> {
-    let (mut tx, mut rx) = ws_stream.split();
-    let mut last_heartbeat = tokio::time::Instant::now();
-
-    loop {
-        let remaining = heartbeat_timeout
-            .checked_sub(last_heartbeat.elapsed())
-            .unwrap_or(Duration::ZERO);
-
-        let msg_result = match tokio::time::timeout(remaining, rx.next()).await {
-            Ok(Some(msg_result)) => msg_result,
-            Ok(None) => {
-                // Stream ended (client disconnected cleanly)
-                break;
-            },
-            Err(_elapsed) => {
-                let reason = handle_timeout(log, context, job.id).await?;
-                if let Err(e) = tx
-                    .send(Message::Close(Some(CloseFrame {
-                        code: CloseCode::Policy,
-                        reason: serde_json::to_string(&reason)?.into(),
-                    })))
-                    .await
-                {
-                    slog::debug!(log, "Failed to send close frame"; "error" => %e);
-                }
-                break;
-            },
-        };
-
-        let msg = match msg_result {
-            Ok(msg) => msg,
-            Err(e) => {
-                slog::warn!(log, "WebSocket error"; "error" => %e);
-                break;
-            },
-        };
-
-        match msg {
-            Message::Text(text) => {
-                let runner_msg: RunnerMessage = match serde_json::from_str(&text) {
-                    Ok(msg) => msg,
-                    Err(e) => {
-                        slog::warn!(log, "Invalid message"; "error" => %e, "text" => text.to_string());
-                        // Do NOT reset heartbeat for invalid JSON
-                        continue;
-                    },
-                };
-
-                let (response, close_reason) =
-                    handle_runner_message(log, context, job, runner_msg).await?;
-
-                // Reset heartbeat only on valid protocol messages
-                last_heartbeat = tokio::time::Instant::now();
-
-                let response_text = serde_json::to_string(&response)?;
-                tx.send(Message::Text(response_text.into())).await?;
-
-                // Close the connection on terminal messages
-                if let Some(reason) = close_reason {
-                    if let Err(e) = tx
-                        .send(Message::Close(Some(CloseFrame {
-                            code: CloseCode::Normal,
-                            reason: serde_json::to_string(&reason)?.into(),
-                        })))
-                        .await
-                    {
-                        slog::debug!(log, "Failed to send close frame"; "error" => %e);
-                    }
-                    break;
-                }
-            },
-            Message::Close(_) => {
-                slog::info!(log, "WebSocket closed by client");
-                break;
-            },
-            Message::Ping(data) => {
-                // Respond to Ping but do NOT reset heartbeat timeout
-                tx.send(Message::Pong(data)).await?;
-            },
-            Message::Binary(_) | Message::Pong(_) | Message::Frame(_) => {
-                // Ignore binary messages, pong responses, and raw frames
-                // Do NOT reset heartbeat timeout
-            },
-        }
-    }
-
-    Ok(())
-}
-
 /// Handle a heartbeat timeout by reading the job and deciding the right status.
 ///
 /// If the job has exceeded its configured timeout + grace period, it is marked `Canceled`
 /// (ran too long). Otherwise it is marked `Failed` (lost contact with runner).
 /// Returns the [`CloseReason`] for the WebSocket close frame.
-async fn handle_timeout(
+pub(crate) async fn handle_timeout(
     log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,
@@ -293,13 +95,17 @@ async fn handle_timeout(
 
 /// Handle a message from the runner and return the appropriate response
 /// along with an optional [`CloseReason`] for terminal messages.
-async fn handle_runner_message(
+pub(crate) async fn handle_runner_message(
     log: &slog::Logger,
     context: &ApiContext,
     job: &QueryJob,
     msg: RunnerMessage,
 ) -> Result<(ServerMessage, Option<CloseReason>), ChannelError> {
     match msg {
+        RunnerMessage::Ready { .. } => {
+            slog::warn!(log, "Unexpected Ready message during job execution"; "job_id" => ?job.id);
+            // Ignore Ready during execution — runner should not send it here
+        },
         RunnerMessage::Running => {
             slog::info!(log, "Job running"; "job_id" => ?job.id);
             if let Some(cancel) = handle_running(log, context, job.id).await? {

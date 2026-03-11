@@ -52,4 +52,7 @@ pub enum WebSocketError {
 
     #[error("Unexpected WebSocket message: {0}")]
     UnexpectedMessage(String),
+
+    #[error("Protocol error: {0}")]
+    Protocol(String),
 }

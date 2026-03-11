@@ -59,10 +59,12 @@ bencher_json = { workspace = true, features = ["server", "schema", "db", "test-c
 bencher_schema.workspace = true
 camino.workspace = true
 diesel.workspace = true
+futures.workspace = true
 futures-concurrency.workspace = true
 http.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util"] }
+tokio-tungstenite.workspace = true
 
 [lints]
 workspace = true

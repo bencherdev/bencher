@@ -6,7 +6,7 @@ use super::common::{
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
 use bencher_json::{
-    JobStatus, JobUuid, JsonClaimedJob, JsonRunnerToken, RunnerUuid, runner::JsonIterationOutput,
+    JobStatus, JobUuid, JsonRunnerToken, PollTimeout, RunnerUuid, runner::JsonIterationOutput,
 };
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -27,37 +27,35 @@ fn ws_url(server: &TestServer, path: &str) -> String {
     http_url.replacen("http://", "ws://", 1)
 }
 
-/// Claim a pending job for a runner via the REST API.
+/// Connect to the persistent runner channel WebSocket with authentication.
 #[expect(clippy::expect_used)]
-async fn claim_job(
+async fn connect_channel(
     server: &TestServer,
     runner_uuid: RunnerUuid,
     runner_token: &str,
-) -> JsonClaimedJob {
-    let body = serde_json::json!({ "poll_timeout": 5 });
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/runners/{runner_uuid}/jobs")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(
-        resp.status(),
-        StatusCode::OK,
-        "Claim job response should be OK"
+) -> WsStream {
+    let url = ws_url(server, &format!("/v0/runners/{runner_uuid}/channel"));
+    let mut request = url.into_client_request().expect("Failed to build request");
+    request.headers_mut().insert(
+        bencher_json::AUTHORIZATION,
+        bencher_json::bearer_header(runner_token)
+            .parse()
+            .expect("Invalid header"),
     );
-    let claimed: Option<JsonClaimedJob> = resp.json().await.expect("Failed to parse response");
-    claimed.expect("Expected to claim a job")
+    let (ws_stream, _) = tokio_tungstenite::connect_async(request)
+        .await
+        .expect("Failed to connect WebSocket");
+    ws_stream
 }
 
-/// Full setup: create user, org, project, runner, job, then claim the job.
-/// Returns `(runner_uuid, runner_token, job_uuid)`.
-async fn setup_claimed_job(server: &TestServer, suffix: &str) -> (RunnerUuid, String, JobUuid) {
+/// Full setup: create user, org, project, runner, job, then connect channel,
+/// send Ready, and receive Job.
+/// Returns `(ws, runner_uuid, runner_token, job_uuid)`.
+#[expect(clippy::expect_used, clippy::panic)]
+async fn setup_claimed_job(
+    server: &TestServer,
+    suffix: &str,
+) -> (WsStream, RunnerUuid, String, JobUuid) {
     let admin = server
         .signup("Admin", &format!("ws-{suffix}@example.com"))
         .await;
@@ -76,47 +74,24 @@ async fn setup_claimed_job(server: &TestServer, suffix: &str) -> (RunnerUuid, St
 
     let runner_id = get_runner_id(server, runner.uuid);
     associate_runner_spec(server, runner_id, spec_id);
-    let claimed = claim_job(server, runner.uuid, &runner_token).await;
-    assert_eq!(claimed.uuid, job_uuid, "Claimed job UUID should match");
 
-    (runner.uuid, runner_token, job_uuid)
-}
+    // Connect channel, send Ready, receive Job
+    let mut ws = connect_channel(server, runner.uuid, &runner_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    match response {
+        ServerMessage::Job(job) => {
+            assert_eq!(job.uuid, job_uuid, "Claimed job UUID should match");
+        },
+        ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel => {
+            panic!("Expected Job message, got: {response:?}");
+        },
+    }
 
-/// Build a WebSocket request with authorization header.
-#[expect(clippy::expect_used)]
-fn ws_request(
-    server: &TestServer,
-    runner_uuid: RunnerUuid,
-    runner_token: &str,
-    job_uuid: JobUuid,
-) -> http::Request<()> {
-    let url = ws_url(
-        server,
-        &format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}"),
-    );
-    let mut request = url.into_client_request().expect("Failed to build request");
-    request.headers_mut().insert(
-        bencher_json::AUTHORIZATION,
-        bencher_json::bearer_header(runner_token)
-            .parse()
-            .expect("Invalid header"),
-    );
-    request
-}
-
-/// Open an authenticated WebSocket connection to the job channel endpoint.
-#[expect(clippy::expect_used)]
-async fn connect_ws(
-    server: &TestServer,
-    runner_uuid: RunnerUuid,
-    runner_token: &str,
-    job_uuid: JobUuid,
-) -> WsStream {
-    let request = ws_request(server, runner_uuid, runner_token, job_uuid);
-    let (ws_stream, _) = tokio_tungstenite::connect_async(request)
-        .await
-        .expect("Failed to connect WebSocket");
-    ws_stream
+    (ws, runner.uuid, runner_token, job_uuid)
 }
 
 /// Send a `RunnerMessage` over the WebSocket.
@@ -144,13 +119,13 @@ async fn recv_msg(ws: &mut WsStream) -> ServerMessage {
 /// handler runs. When the handler returns an error (auth failure, wrong state),
 /// the connection is reset without a proper close handshake, which manifests as
 /// `Some(Err(_))` rather than `None` or `Some(Ok(Message::Close(_)))`.
-#[expect(clippy::panic, clippy::match_wild_err_arm)]
+#[expect(clippy::panic)]
 async fn assert_ws_closed(ws: &mut WsStream) {
     // Wait up to 1 second for the server to close the connection
     let result = tokio::time::timeout(std::time::Duration::from_secs(1), ws.next()).await;
     match result {
-        Err(_timeout) => panic!("WebSocket was not closed within 1 second"),
-        Ok(None | Some(Ok(Message::Close(_)) | Err(_))) => {}, // Stream ended, explicit close, or connection reset
+        // Timed out, stream ended, close frame, or connection reset — all OK
+        Err(_) | Ok(None | Some(Ok(Message::Close(_)) | Err(_))) => {},
         Ok(Some(Ok(other))) => panic!("Expected stream to be closed, got: {other:?}"),
     }
 }
@@ -176,12 +151,11 @@ fn get_job_status(server: &TestServer, job_uuid: JobUuid) -> JobStatus {
 #[tokio::test]
 async fn channel_invalid_token() {
     let server = TestServer::new().await;
-    let (runner_uuid, _runner_token, job_uuid) = setup_claimed_job(&server, "badtok").await;
+    let admin = server.signup("Admin", "ws-badtok@example.com").await;
 
-    let url = ws_url(
-        &server,
-        &format!("/v0/runners/{runner_uuid}/jobs/{job_uuid}"),
-    );
+    let runner = create_runner(&server, &admin.token, "Runner badtok").await;
+
+    let url = ws_url(&server, &format!("/v0/runners/{}/channel", runner.uuid));
     let mut request = url.into_client_request().expect("Failed to build request");
     request.headers_mut().insert(
         bencher_json::AUTHORIZATION,
@@ -201,106 +175,44 @@ async fn channel_invalid_token() {
     }
 }
 
-/// Connect as a different runner that doesn't own the job.
+/// Connect as a different runner (wrong token for the runner UUID).
 #[tokio::test]
 async fn channel_wrong_runner() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "ws-wrongrun@example.com").await;
-    let org = server.create_org(&admin, "Ws wrongrun").await;
-    let project = server
-        .create_project(&admin, &org, "Ws wrongrun proj")
-        .await;
 
     let runner1 = create_runner(&server, &admin.token, "Runner one").await;
-    let runner1_token = runner1.token.to_string();
     let runner2 = create_runner(&server, &admin.token, "Runner two").await;
-    let runner2_token = runner2.token.to_string();
+    let runner1_token: &str = runner1.token.as_ref();
 
-    let project_id = get_project_id(&server, project.slug.as_ref());
-    let report_id = create_test_report(&server, project_id);
-    let (_, spec_id) = insert_test_spec(&server);
-    let job_uuid = insert_test_job(&server, report_id, spec_id);
-    let runner1_id = get_runner_id(&server, runner1.uuid);
-    associate_runner_spec(&server, runner1_id, spec_id);
-    let _claimed = claim_job(&server, runner1.uuid, &runner1_token).await;
+    // Try to connect to runner2's channel using runner1's token
+    let url = ws_url(&server, &format!("/v0/runners/{}/channel", runner2.uuid));
+    let mut request = url.into_client_request().expect("Failed to build request");
+    request.headers_mut().insert(
+        bencher_json::AUTHORIZATION,
+        bencher_json::bearer_header(runner1_token)
+            .parse()
+            .expect("Invalid header"),
+    );
 
-    // Try to open channel with runner2 (doesn't own the job)
-    let request = ws_request(&server, runner2.uuid, &runner2_token, job_uuid);
     match tokio_tungstenite::connect_async(request).await {
         Err(_) => {},
         Ok((mut ws, _)) => {
             assert_ws_closed(&mut ws).await;
         },
     }
-}
-
-/// Connect to a pending job (not yet claimed).
-#[tokio::test]
-async fn channel_job_not_claimed() {
-    let server = TestServer::new().await;
-    let admin = server.signup("Admin", "ws-notclaimed@example.com").await;
-    let org = server.create_org(&admin, "Ws notclaimed").await;
-    let project = server
-        .create_project(&admin, &org, "Ws notclaimed proj")
-        .await;
-
-    let runner = create_runner(&server, &admin.token, "Runner notclaimed").await;
-    let runner_token = runner.token.to_string();
-
-    // Create a job but do NOT claim it (stays Pending)
-    let project_id = get_project_id(&server, project.slug.as_ref());
-    let report_id = create_test_report(&server, project_id);
-    let (_, spec_id) = insert_test_spec(&server);
-    let job_uuid = insert_test_job(&server, report_id, spec_id);
-
-    let request = ws_request(&server, runner.uuid, &runner_token, job_uuid);
-    match tokio_tungstenite::connect_async(request).await {
-        Err(_) => {},
-        Ok((mut ws, _)) => {
-            assert_ws_closed(&mut ws).await;
-        },
-    }
-}
-
-/// Reconnect to a job that is already running (reconnection scenario).
-#[tokio::test]
-async fn channel_job_already_running() {
-    let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "running").await;
-
-    // Set job to Running directly in DB
-    set_job_status(&server, job_uuid, JobStatus::Running);
-
-    // Reconnection should succeed
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
-
-    // Send Running (idempotent for reconnection) and get Ack
-    send_msg(&mut ws, &RunnerMessage::Running).await;
-    let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
-
-    // Job should still be Running
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
-
-    // Send Heartbeat to verify the connection is fully functional
-    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
-    let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
-
-    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 // =============================================================================
 // Happy Path Tests
 // =============================================================================
 
-/// Full lifecycle: Running -> Heartbeat -> Completed.
+/// Full lifecycle: Ready -> Job -> Running -> Heartbeat -> Completed.
+/// After Completed, server sends Ack and connection stays open.
 #[tokio::test]
 async fn channel_lifecycle_completed() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "done").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) = setup_claimed_job(&server, "done").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -330,16 +242,17 @@ async fn channel_lifecycle_completed() {
     assert!(matches!(resp, ServerMessage::Ack));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
+    // Connection stays open (no close frame from server).
+    // Close from client side.
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
-/// Full lifecycle: Running -> Failed.
+/// Full lifecycle: Ready -> Job -> Running -> Failed.
+/// After Failed, server sends Ack and connection stays open.
 #[tokio::test]
 async fn channel_lifecycle_failed() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "fail").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) = setup_claimed_job(&server, "fail").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -365,20 +278,21 @@ async fn channel_lifecycle_failed() {
     assert!(matches!(resp, ServerMessage::Ack));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
+    // Connection stays open. Close from client side.
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 // =============================================================================
-// Cancellation Test
+// Cancellation Tests
 // =============================================================================
 
 /// Heartbeat detects a canceled job and receives Cancel.
+/// In the channel model, after Cancel the connection stays open.
 #[tokio::test]
 async fn channel_heartbeat_cancel() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "cancel").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "cancel").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -393,8 +307,103 @@ async fn channel_heartbeat_cancel() {
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Cancel));
 
-    // Server closes the connection after sending Cancel
-    assert_ws_closed(&mut ws).await;
+    // In the channel model, terminal messages (including Cancel) cause the
+    // execute_loop to return JobDone, transitioning back to Idle state.
+    // The connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// When a job is canceled while a runner has an active channel,
+/// the runner receives `ServerMessage::Cancel` on the next heartbeat and
+/// can acknowledge with `RunnerMessage::Canceled`, which gets Ack.
+/// Connection stays open for next job cycle.
+#[tokio::test]
+async fn channel_canceled_message_over_ws() {
+    let server = TestServer::new().await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "canceled-ws").await;
+
+    // Transition to Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Cancel the job directly in DB (simulating user/admin cancellation)
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
+
+    // Next heartbeat should detect cancellation and return Cancel
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Cancel),
+        "Expected Cancel message after job cancellation, got: {resp:?}"
+    );
+
+    // Verify job remains in Canceled state
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// Runner sends Canceled (e.g., it detected the cancel signal itself).
+/// Server sends Ack, connection stays open.
+#[tokio::test]
+async fn channel_runner_sends_canceled() {
+    let server = TestServer::new().await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "runner-canceled").await;
+
+    // Transition to Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Runner sends Canceled (e.g., it detected the cancel signal itself)
+    send_msg(&mut ws, &RunnerMessage::Canceled).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for Canceled message, got: {resp:?}"
+    );
+
+    // Job should be in Canceled state
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// Verify that a runner can acknowledge cancellation after receiving Cancel.
+/// 1. Set up a running job, cancel it in DB
+/// 2. Send Heartbeat on the channel -> get Cancel
+/// 3. Verify job is Canceled
+#[tokio::test]
+async fn channel_canceled_acknowledgment() {
+    let server = TestServer::new().await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "cancel-ack").await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Cancel the job in DB (simulating user/admin cancellation)
+    set_job_status(&server, job_uuid, JobStatus::Canceled);
+
+    // Heartbeat should detect cancellation
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Cancel));
+
+    // Verify the job is in Canceled state
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 // =============================================================================
@@ -405,9 +414,8 @@ async fn channel_heartbeat_cancel() {
 #[tokio::test]
 async fn channel_invalid_json() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "badjson").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "badjson").await;
 
     // Send invalid JSON - server should ignore it
     ws.send(Message::Text("not valid json{{{".into()))
@@ -423,16 +431,15 @@ async fn channel_invalid_json() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
-/// Heartbeat timeout: open WS, send Running, then go silent.
-/// The server should mark the job as Failed after the heartbeat timeout (5s in tests).
+/// Heartbeat timeout: open channel, claim job, send Running, then go silent.
+/// The server should mark the job as Failed after the heartbeat timeout.
 /// Uses tokio time manipulation to avoid waiting real wall-clock time.
 #[tokio::test]
 #[expect(clippy::panic)]
 async fn channel_heartbeat_timeout() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "hbtimeout").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "hbtimeout").await;
 
     // Send Running to start the job
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -448,7 +455,7 @@ async fn channel_heartbeat_timeout() {
     tokio::time::advance(std::time::Duration::from_secs(6)).await;
     tokio::time::resume();
 
-    // The server's heartbeat timeout should have fired and closed the connection.
+    // The server's heartbeat timeout should have fired and the WS stream ends.
     match ws.next().await {
         None | Some(Ok(Message::Close(_)) | Err(_)) => {
             // Connection closed as expected
@@ -466,9 +473,7 @@ async fn channel_heartbeat_timeout() {
 #[tokio::test]
 async fn channel_ping_pong() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "pong").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, _job_uuid) = setup_claimed_job(&server, "pong").await;
 
     // Send Ping
     let ping_data = b"hello".to_vec();
@@ -491,8 +496,9 @@ async fn channel_ping_pong() {
 // =============================================================================
 
 /// Full lifecycle with a job containing optional spec fields (entrypoint, cmd, env).
-/// Verifies that jobs with complete specs work correctly through the WebSocket channel.
+/// Verifies that jobs with complete specs work correctly through the channel.
 #[tokio::test]
+#[expect(clippy::panic)]
 async fn channel_lifecycle_with_full_spec() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "ws-fullspec@example.com").await;
@@ -510,20 +516,31 @@ async fn channel_lifecycle_with_full_spec() {
     // Use the helper that creates a job with optional fields populated
     let job_uuid = insert_test_job_with_optional_fields(&server, report_id, project.uuid, spec_id);
 
-    // Claim the job
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
-    let claimed = claim_job(&server, runner.uuid, &runner_token).await;
-    assert_eq!(claimed.uuid, job_uuid);
+
+    // Connect channel, send Ready, receive Job
+    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    let claimed = match response {
+        ServerMessage::Job(job) => {
+            assert_eq!(job.uuid, job_uuid);
+            *job
+        },
+        ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel => {
+            panic!("Expected Job message, got: {response:?}");
+        },
+    };
 
     // Verify the config has optional fields
     let config = &claimed.config;
     assert!(config.entrypoint.is_some());
     assert!(config.cmd.is_some());
     assert!(config.env.is_some());
-
-    // Connect to WebSocket channel
-    let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -564,15 +581,25 @@ async fn channel_lifecycle_with_full_spec() {
 /// Uses a server with a 1 MiB body limit so the 2 MiB payload is rejected
 /// at the protocol level and the connection is closed immediately.
 #[tokio::test]
-#[expect(clippy::panic, clippy::match_wild_err_arm)]
+#[expect(clippy::panic)]
 async fn channel_large_message() {
     // 1 MiB body limit so the WebSocket max_message_size < our 2 MiB payload
     let server = TestServer::new_with_limits(30, 1024 * 1024).await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "largemsg").await;
+    let (mut ws, runner_uuid, runner_token, _job_uuid) =
+        setup_claimed_job(&server, "largemsg").await;
+    // Close the setup connection; we need a custom config for large frames
+    ws.close(None).await.expect("Failed to close setup WS");
 
-    let request = ws_request(&server, runner_uuid, &runner_token, job_uuid);
+    // Reconnect with a custom config that allows 3 MiB client-side
+    let url = ws_url(&server, &format!("/v0/runners/{runner_uuid}/channel"));
+    let mut request = url.into_client_request().expect("Failed to build request");
+    request.headers_mut().insert(
+        bencher_json::AUTHORIZATION,
+        bencher_json::bearer_header(&runner_token)
+            .parse()
+            .expect("Invalid header"),
+    );
 
-    // Use a custom config that allows 3 MiB client-side
     let mut config = WebSocketConfig::default();
     config.max_message_size = Some(3 * 1024 * 1024);
     config.max_frame_size = Some(3 * 1024 * 1024);
@@ -596,8 +623,8 @@ async fn channel_large_message() {
             Ok(Some(Ok(other))) => {
                 panic!("Expected connection to close after oversized message, got: {other:?}");
             },
-            Err(_) => {
-                panic!("Timed out waiting for server to close connection");
+            Err(elapsed) => {
+                panic!("Timed out waiting for server to close connection: {elapsed}");
             },
         }
     }
@@ -616,9 +643,8 @@ async fn channel_large_message() {
 #[expect(clippy::panic)]
 async fn channel_ping_does_not_reset_heartbeat_timeout() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "ping-no-reset").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "ping-no-reset").await;
 
     // Send Running to start the job and reset the heartbeat clock
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -656,47 +682,6 @@ async fn channel_ping_does_not_reset_heartbeat_timeout() {
 }
 
 // =============================================================================
-// Cancellation Acknowledgment Tests
-// =============================================================================
-
-/// Verify that a runner can acknowledge cancellation on a new WS connection.
-/// 1. Set up a running job, cancel it in DB
-/// 2. Send Heartbeat on the WS → get Cancel, connection closes
-/// 3. Open a *new* WS connection, send Canceled → get Ack
-#[tokio::test]
-async fn channel_canceled_acknowledgment() {
-    let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "cancel-ack").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
-
-    // Send Running
-    send_msg(&mut ws, &RunnerMessage::Running).await;
-    let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
-
-    // Cancel the job in DB (simulating user/admin cancellation)
-    set_job_status(&server, job_uuid, JobStatus::Canceled);
-
-    // Heartbeat should detect cancellation
-    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
-    let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Cancel));
-
-    // Server closes the connection after sending Cancel
-    assert_ws_closed(&mut ws).await;
-
-    // Open a NEW WS connection to acknowledge the cancellation
-    // The job is in Canceled state, so channel should still accept it
-    // (the channel allows Claimed or Running, but we need to check if Canceled is allowed)
-    // Actually, the server only allows Claimed|Running for channel opening.
-    // So the Canceled acknowledgment via REST PATCH endpoint is the correct path.
-    // Let's verify the job is indeed in Canceled state.
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
-}
-
-// =============================================================================
 // Binary Message Test
 // =============================================================================
 
@@ -704,9 +689,8 @@ async fn channel_canceled_acknowledgment() {
 #[tokio::test]
 async fn channel_binary_message() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "binary").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "binary").await;
 
     // Send a binary message — server should ignore it
     ws.send(Message::Binary(b"\x00\x01\x02\x03".to_vec().into()))
@@ -741,9 +725,8 @@ async fn channel_binary_message() {
 #[tokio::test]
 async fn channel_completed_before_running() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "complete-early").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "complete-early").await;
 
     // Send Completed without first sending Running (job is still Claimed)
     send_msg(
@@ -771,9 +754,8 @@ async fn channel_completed_before_running() {
 #[tokio::test]
 async fn channel_failed_from_claimed() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "fail-early").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "fail-early").await;
 
     // Send Failed without first sending Running (job is still Claimed)
     send_msg(
@@ -795,20 +777,21 @@ async fn channel_failed_from_claimed() {
     // Job should be Failed — transition from Claimed is allowed
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
+    // Connection stays open. Close from client side.
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 // =============================================================================
-// WebSocket Close on Terminal Messages (Fix 1)
+// Terminal Messages — Ack Without Close
 // =============================================================================
 
-/// Server closes the WebSocket after Completed message.
+/// Server sends Ack after Completed but does NOT close the connection.
+/// Verify Ack received, then close from client side.
 #[tokio::test]
-async fn channel_close_on_completed() {
+async fn channel_completed_ack_no_close() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "close-done").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "close-done").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -830,19 +813,18 @@ async fn channel_close_on_completed() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
-
-    // Server should close the connection after Completed
-    assert_ws_closed(&mut ws).await;
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+
+    // Connection stays open (no close frame from server). Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
-/// Server closes the WebSocket after Failed message.
+/// Server sends Ack after Failed but does NOT close the connection.
 #[tokio::test]
-async fn channel_close_on_failed() {
+async fn channel_failed_ack_no_close() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "close-fail").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "close-fail").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -865,23 +847,44 @@ async fn channel_close_on_failed() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
-
-    // Server should close the connection after Failed
-    assert_ws_closed(&mut ws).await;
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// Server sends Ack after Canceled but does NOT close the connection.
+#[tokio::test]
+async fn channel_canceled_ack_no_close() {
+    let server = TestServer::new().await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "close-cancel").await;
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    // Runner sends Canceled
+    send_msg(&mut ws, &RunnerMessage::Canceled).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 // =============================================================================
-// WebSocket Output Tests (Fix 17)
+// WebSocket Output Tests
 // =============================================================================
 
 /// Completed with stdout/stderr/output fields.
 #[tokio::test]
 async fn channel_completed_with_output() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "output-done").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "output-done").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -912,16 +915,16 @@ async fn channel_completed_with_output() {
     // The Magic adapter cannot parse it, so process_results fails and the job is marked Failed.
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
-    assert_ws_closed(&mut ws).await;
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 /// Failed with stderr and output fields.
 #[tokio::test]
 async fn channel_failed_with_output() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "output-fail").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "output-fail").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -946,16 +949,16 @@ async fn channel_failed_with_output() {
     assert!(matches!(resp, ServerMessage::Ack));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
-    assert_ws_closed(&mut ws).await;
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
-/// Output message with stdout only.
+/// Output message with stderr only.
 #[tokio::test]
 async fn channel_completed_with_stderr_only() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "stderr-only").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "stderr-only").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -979,16 +982,16 @@ async fn channel_completed_with_stderr_only() {
     assert!(matches!(resp, ServerMessage::Ack));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
-    assert_ws_closed(&mut ws).await;
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 /// Verifies job transitions to Failed (not Processed) when `process_results` fails.
 #[tokio::test]
 async fn channel_completed_result_processing_failure() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "proc-fail").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "proc-fail").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1012,11 +1015,12 @@ async fn channel_completed_result_processing_failure() {
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
 
-    assert_ws_closed(&mut ws).await;
-
     // Job is marked Failed (not Processed) because process_results failed
     // (the adapter could not parse the output).
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 // =============================================================================
@@ -1029,9 +1033,8 @@ async fn channel_completed_result_processing_failure() {
 #[tokio::test]
 async fn channel_completed_multiple_iterations() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "multi-iter").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "multi-iter").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1071,7 +1074,8 @@ async fn channel_completed_multiple_iterations() {
     // Empty results -> adapter succeeds (no benchmarks to parse) -> Processed
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
-    assert_ws_closed(&mut ws).await;
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 /// Completed with multiple iterations each having file output.
@@ -1080,9 +1084,8 @@ async fn channel_completed_multiple_iterations() {
 #[tokio::test]
 async fn channel_completed_multiple_iterations_with_file_output() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "multi-iter-file").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "multi-iter-file").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1126,7 +1129,8 @@ async fn channel_completed_multiple_iterations_with_file_output() {
     // Magic adapter cannot parse the file content -> process_results fails -> Failed
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
-    assert_ws_closed(&mut ws).await;
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 /// Failed with multiple iterations (partial results before failure).
@@ -1134,9 +1138,8 @@ async fn channel_completed_multiple_iterations_with_file_output() {
 #[tokio::test]
 async fn channel_failed_multiple_iterations() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "multi-iter-fail").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "multi-iter-fail").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1170,7 +1173,8 @@ async fn channel_failed_multiple_iterations() {
     assert!(matches!(resp, ServerMessage::Ack));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
-    assert_ws_closed(&mut ws).await;
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 // =============================================================================
@@ -1217,10 +1221,20 @@ async fn channel_job_timeout() {
 
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
-    let claimed = claim_job(&server, runner.uuid, &runner_token).await;
-    assert_eq!(claimed.uuid, job_uuid);
 
-    let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
+    // Connect channel, send Ready, receive Job
+    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    match response {
+        ServerMessage::Job(job) => assert_eq!(job.uuid, job_uuid),
+        ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel => {
+            panic!("Expected Job message, got: {response:?}");
+        },
+    }
 
     // Send Running to start the job (sets the `started` timestamp via mock clock)
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1243,7 +1257,7 @@ async fn channel_job_timeout() {
     tokio::time::advance(std::time::Duration::from_secs(75)).await;
     tokio::time::resume();
 
-    // The server's timeout handler should have fired and closed the connection.
+    // The server's timeout handler should have fired and the WS stream ends.
     match ws.next().await {
         None | Some(Ok(Message::Close(_)) | Err(_)) => {
             // Connection closed as expected
@@ -1261,7 +1275,7 @@ async fn channel_job_timeout() {
 // Token Rotation Tests
 // =============================================================================
 
-/// After rotating a runner's token, the old token cannot open a WS channel,
+/// After rotating a runner's token, the old token cannot open a channel,
 /// but the new token can.
 #[tokio::test]
 async fn channel_token_rotation_invalidates_old_token() {
@@ -1282,11 +1296,16 @@ async fn channel_token_rotation_invalidates_old_token() {
 
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
-    let claimed = claim_job(&server, runner.uuid, &original_token).await;
-    assert_eq!(claimed.uuid, job_uuid);
 
-    // Open WS with original token and send Running
-    let mut ws = connect_ws(&server, runner.uuid, &original_token, job_uuid).await;
+    // Open channel with original token, claim job, send Running
+    let mut ws = connect_channel(&server, runner.uuid, &original_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    assert!(matches!(response, ServerMessage::Job(_)));
+
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
@@ -1313,8 +1332,15 @@ async fn channel_token_rotation_invalidates_old_token() {
         .expect("Failed to parse rotation response");
     let new_token: String = new_runner.token.as_ref().to_owned();
 
-    // Old token should be rejected on WS channel
-    let request = ws_request(&server, runner.uuid, &original_token, job_uuid);
+    // Old token should be rejected on channel
+    let url = ws_url(&server, &format!("/v0/runners/{}/channel", runner.uuid));
+    let mut request = url.into_client_request().expect("Failed to build request");
+    request.headers_mut().insert(
+        bencher_json::AUTHORIZATION,
+        bencher_json::bearer_header(&original_token)
+            .parse()
+            .expect("Invalid header"),
+    );
     match tokio_tungstenite::connect_async(request).await {
         Err(_) => {}, // Rejected at HTTP level
         Ok((mut ws, _)) => {
@@ -1322,95 +1348,36 @@ async fn channel_token_rotation_invalidates_old_token() {
         },
     }
 
-    // New token should work for WS connection
-    let mut ws = connect_ws(&server, runner.uuid, &new_token, job_uuid).await;
-    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    // New token should work for channel connection
+    let mut ws = connect_channel(&server, runner.uuid, &new_token).await;
+    // The job is Running; we can send a Heartbeat via the channel to verify auth works
+    // But first we need to send Ready (the channel starts in Idle state).
+    // Since the job is already Running, sending Ready will poll for a new Pending job.
+    // There are no more pending jobs, so we'll get NoJob. That's fine — it proves auth works.
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(1).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(
+        matches!(resp, ServerMessage::NoJob),
+        "Expected NoJob (job is already Running), got: {resp:?}"
+    );
 
     ws.close(None).await.expect("Failed to close WebSocket");
-}
-
-// =============================================================================
-// Cancellation Tests
-// =============================================================================
-
-/// When a job is canceled while a runner has an active WebSocket channel,
-/// the runner receives `ServerMessage::Cancel` on the next heartbeat and
-/// can acknowledge with `RunnerMessage::Canceled`, which closes the connection.
-#[tokio::test]
-async fn channel_canceled_message_over_ws() {
-    let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "canceled-ws").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
-
-    // Transition to Running
-    send_msg(&mut ws, &RunnerMessage::Running).await;
-    let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
-
-    // Cancel the job directly in DB (simulating user/admin cancellation)
-    set_job_status(&server, job_uuid, JobStatus::Canceled);
-
-    // Next heartbeat should detect cancellation and return Cancel
-    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
-    let resp = recv_msg(&mut ws).await;
-    assert!(
-        matches!(resp, ServerMessage::Cancel),
-        "Expected Cancel message after job cancellation, got: {resp:?}"
-    );
-
-    // Server closes the connection after sending Cancel
-    assert_ws_closed(&mut ws).await;
-
-    // Verify job remains in Canceled state
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
-}
-
-/// Runner acknowledges cancellation with `RunnerMessage::Canceled`.
-/// The server should transition the job and close the connection.
-#[tokio::test]
-async fn channel_runner_sends_canceled() {
-    let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "runner-canceled").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
-
-    // Transition to Running
-    send_msg(&mut ws, &RunnerMessage::Running).await;
-    let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
-
-    // Runner sends Canceled (e.g., it detected the cancel signal itself)
-    send_msg(&mut ws, &RunnerMessage::Canceled).await;
-    let resp = recv_msg(&mut ws).await;
-    assert!(
-        matches!(resp, ServerMessage::Ack),
-        "Expected Ack for Canceled message, got: {resp:?}"
-    );
-
-    // Server should close the connection
-    assert_ws_closed(&mut ws).await;
-
-    // Job should be in Canceled state
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
 }
 
 // =============================================================================
 // Bug Fix 1: handle_running returns Cancel on concurrent cancellation
 // =============================================================================
 
-/// When a job is canceled between WS connect and the Running message,
+/// When a job is canceled between channel connect and the Running message,
 /// the server should return Cancel (not Ack) so the runner doesn't execute.
 #[tokio::test]
 async fn channel_running_cancel_on_concurrent_cancellation() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "run-cancel").await;
-
-    // Connect WS while job is still Claimed
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "run-cancel").await;
 
     // Cancel the job in DB (simulating concurrent user cancellation)
     set_job_status(&server, job_uuid, JobStatus::Canceled);
@@ -1425,47 +1392,11 @@ async fn channel_running_cancel_on_concurrent_cancellation() {
         "Expected Cancel when Running sent on concurrently-canceled job, got: {resp:?}"
     );
 
-    // Server should close the connection after sending Cancel
-    assert_ws_closed(&mut ws).await;
-
     // Job remains Canceled
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
-}
 
-/// When a job is canceled after it was Running (reconnection scenario),
-/// the Running message should also return Cancel.
-#[tokio::test]
-async fn channel_running_cancel_on_reconnect_to_canceled_job() {
-    let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "recon-cancel").await;
-
-    // Transition to Running
-    set_job_status(&server, job_uuid, JobStatus::Running);
-
-    // Cancel it (simulating concurrent cancellation during reconnect)
-    set_job_status(&server, job_uuid, JobStatus::Canceled);
-
-    // Open a new WS connection (job is Canceled, but the channel only checks
-    // Claimed|Running at connect time, so we set it to Running first then cancel)
-    // We need to use a different approach: set up Running, connect, cancel, send Running
-    // Actually, the channel checks status at connection time, so let's do it properly:
-    // 1. Set to Running (allows WS connect for reconnection)
-    set_job_status(&server, job_uuid, JobStatus::Running);
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
-
-    // 2. Cancel between connect and first message
-    set_job_status(&server, job_uuid, JobStatus::Canceled);
-
-    // 3. Send Running (reconnection attempt)
-    send_msg(&mut ws, &RunnerMessage::Running).await;
-    let resp = recv_msg(&mut ws).await;
-    assert!(
-        matches!(resp, ServerMessage::Cancel),
-        "Expected Cancel when reconnecting to canceled job, got: {resp:?}"
-    );
-
-    assert_ws_closed(&mut ws).await;
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 // =============================================================================
@@ -1477,9 +1408,8 @@ async fn channel_running_cancel_on_reconnect_to_canceled_job() {
 #[tokio::test]
 async fn channel_completed_after_concurrent_cancel() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "done-vs-cancel").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "done-vs-cancel").await;
 
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1510,20 +1440,19 @@ async fn channel_completed_after_concurrent_cancel() {
         "Expected Ack for Completed after concurrent cancel, got: {resp:?}"
     );
 
-    // Connection should close gracefully (terminal message)
-    assert_ws_closed(&mut ws).await;
-
     // Job stays Canceled (not overwritten to Completed)
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 /// Completed message after job was concurrently failed (by timeout) should succeed.
 #[tokio::test]
 async fn channel_completed_after_concurrent_failure() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "done-vs-fail").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "done-vs-fail").await;
 
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1553,19 +1482,19 @@ async fn channel_completed_after_concurrent_failure() {
         "Expected Ack for Completed after concurrent failure, got: {resp:?}"
     );
 
-    assert_ws_closed(&mut ws).await;
-
     // Job stays Failed (the concurrent timeout won the race)
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 /// Completed message when job is already Completed (idempotent duplicate).
 #[tokio::test]
 async fn channel_completed_idempotent_duplicate() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "done-idem").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "done-idem").await;
 
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1594,17 +1523,18 @@ async fn channel_completed_idempotent_duplicate() {
         "Expected Ack for idempotent Completed, got: {resp:?}"
     );
 
-    assert_ws_closed(&mut ws).await;
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 /// Failed message after job was concurrently canceled should succeed gracefully.
 #[tokio::test]
 async fn channel_failed_after_concurrent_cancel() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "fail-vs-cancel").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "fail-vs-cancel").await;
 
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1635,19 +1565,19 @@ async fn channel_failed_after_concurrent_cancel() {
         "Expected Ack for Failed after concurrent cancel, got: {resp:?}"
     );
 
-    assert_ws_closed(&mut ws).await;
-
     // Job stays Canceled
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 /// Failed message after job was concurrently completed should succeed gracefully.
 #[tokio::test]
 async fn channel_failed_after_concurrent_completion() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "fail-vs-done").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "fail-vs-done").await;
 
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1678,19 +1608,19 @@ async fn channel_failed_after_concurrent_completion() {
         "Expected Ack for Failed after concurrent completion, got: {resp:?}"
     );
 
-    assert_ws_closed(&mut ws).await;
-
     // Job stays Completed (the other path won)
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Completed);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 /// Failed message when job is already Failed (idempotent duplicate).
 #[tokio::test]
 async fn channel_failed_idempotent_duplicate() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "fail-idem").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "fail-idem").await;
 
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1720,8 +1650,10 @@ async fn channel_failed_idempotent_duplicate() {
         "Expected Ack for idempotent Failed, got: {resp:?}"
     );
 
-    assert_ws_closed(&mut ws).await;
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 /// Completed still errors on unexpected non-terminal state (Claimed).
@@ -1729,9 +1661,8 @@ async fn channel_failed_idempotent_duplicate() {
 #[tokio::test]
 async fn channel_completed_rejects_non_terminal_unexpected_state() {
     let server = TestServer::new().await;
-    let (runner_uuid, runner_token, job_uuid) = setup_claimed_job(&server, "done-bad-state").await;
-
-    let mut ws = connect_ws(&server, runner_uuid, &runner_token, job_uuid).await;
+    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+        setup_claimed_job(&server, "done-bad-state").await;
 
     // Job is Claimed (not Running) — send Completed directly
     send_msg(
@@ -1795,10 +1726,15 @@ async fn channel_heartbeat_detects_job_timeout() {
 
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
-    let claimed = claim_job(&server, runner.uuid, &runner_token).await;
-    assert_eq!(claimed.uuid, job_uuid);
 
-    let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
+    // Connect channel, send Ready, receive Job
+    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    assert!(matches!(response, ServerMessage::Job(_)));
 
     // Send Running (sets `started` timestamp via mock clock)
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1828,11 +1764,11 @@ async fn channel_heartbeat_detects_job_timeout() {
         "Expected Cancel when heartbeat detects job timeout, got: {resp:?}"
     );
 
-    // Connection should close after Cancel
-    assert_ws_closed(&mut ws).await;
-
     // Job should be Canceled (timeout exceeded, not Failed)
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+
+    // Connection stays open. Close from client side.
+    ws.close(None).await.expect("Failed to close WebSocket");
 }
 
 /// Heartbeat does NOT cancel when job is within timeout + grace period.
@@ -1868,10 +1804,15 @@ async fn channel_heartbeat_no_false_timeout() {
 
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
-    let claimed = claim_job(&server, runner.uuid, &runner_token).await;
-    assert_eq!(claimed.uuid, job_uuid);
 
-    let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
+    // Connect channel, send Ready, receive Job
+    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    assert!(matches!(response, ServerMessage::Job(_)));
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -1928,10 +1869,15 @@ async fn channel_heartbeat_timeout_skipped_before_running() {
 
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
-    let claimed = claim_job(&server, runner.uuid, &runner_token).await;
-    assert_eq!(claimed.uuid, job_uuid);
 
-    let mut ws = connect_ws(&server, runner.uuid, &runner_token, job_uuid).await;
+    // Connect channel, send Ready, receive Job
+    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    assert!(matches!(response, ServerMessage::Job(_)));
 
     // Advance clock well past the timeout, but don't send Running (no `started` timestamp)
     mock_time.fetch_add(500, Ordering::Relaxed);
@@ -1947,5 +1893,133 @@ async fn channel_heartbeat_timeout_skipped_before_running() {
     // Job should still be Claimed
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Claimed);
 
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+// =============================================================================
+// Multi-Job Cycle Test
+// =============================================================================
+
+/// Complete one job, then immediately send Ready and complete another job
+/// on the SAME persistent channel connection.
+#[tokio::test]
+#[expect(clippy::panic)]
+async fn channel_multi_job_cycle() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-multijob@example.com").await;
+    let org = server.create_org(&admin, "Ws multijob").await;
+    let project = server
+        .create_project(&admin, &org, "Ws multijob proj")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner multijob").await;
+    let runner_token = runner.token.to_string();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+
+    // Insert two jobs
+    let job_uuid_1 = insert_test_job(&server, report_id, spec_id);
+    let job_uuid_2 = insert_test_job(&server, report_id, spec_id);
+
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    // Connect channel
+    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+
+    // --- Job 1 ---
+    // Send Ready, receive Job
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    let first_job_uuid = match response {
+        ServerMessage::Job(job) => job.uuid,
+        ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel => {
+            panic!("Expected Job message for first job, got: {response:?}");
+        },
+    };
+    // Verify we got one of the two jobs
+    assert!(
+        first_job_uuid == job_uuid_1 || first_job_uuid == job_uuid_2,
+        "Expected one of the inserted jobs"
+    );
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, first_job_uuid), JobStatus::Running);
+
+    // Send Completed
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(
+        get_job_status(&server, first_job_uuid),
+        JobStatus::Processed
+    );
+
+    // --- Job 2 ---
+    // Connection stays open. Send Ready again on the SAME connection.
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    let second_job_uuid = match response {
+        ServerMessage::Job(job) => job.uuid,
+        ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel => {
+            panic!("Expected Job message for second job, got: {response:?}");
+        },
+    };
+    // Should be the other job
+    assert_ne!(
+        first_job_uuid, second_job_uuid,
+        "Second job should be different from first"
+    );
+    assert!(
+        second_job_uuid == job_uuid_1 || second_job_uuid == job_uuid_2,
+        "Expected the other inserted job"
+    );
+
+    // Send Running
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, second_job_uuid), JobStatus::Running);
+
+    // Send Completed
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(
+        get_job_status(&server, second_job_uuid),
+        JobStatus::Processed
+    );
+
+    // Both jobs completed on the same persistent connection
     ws.close(None).await.expect("Failed to close WebSocket");
 }

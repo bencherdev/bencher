@@ -37,12 +37,8 @@ pub enum JobOutcome {
 pub fn execute_job(
     config: &UpConfig,
     job: &JsonClaimedJob,
-    ws_url: &url::Url,
+    ws: &Arc<Mutex<JobChannel>>,
 ) -> Result<JobOutcome, UpError> {
-    println!("Connecting WebSocket for job {}...", job.uuid);
-    let ws = JobChannel::connect(ws_url, config.token.as_ref())?;
-    let ws = Arc::new(Mutex::new(ws));
-
     // Build runner Config from claimed job spec (all values from job spec, no defaults)
     let job_config = build_config_from_job(config, job);
     let iter_count = job.config.iter.map_or(1, bencher_json::Iteration::as_usize);
@@ -132,7 +128,10 @@ pub fn execute_job(
             .lock()
             .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
         drop(ws_guard.send_message(&RunnerMessage::Canceled));
-        ws_guard.close();
+        // Wait for Ack but don't close — connection stays open for next job
+        if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
+            eprintln!("Warning: did not receive server ACK: {e}");
+        }
         return Ok(JobOutcome::Canceled);
     }
 
@@ -142,10 +141,10 @@ pub fn execute_job(
         .lock()
         .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
     ws_guard.send_message(&msg)?;
+    // Wait for Ack but don't close — connection stays open for next job
     if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
         eprintln!("Warning: did not receive server ACK: {e}");
     }
-    ws_guard.close();
 
     Ok(JobOutcome::Completed {
         exit_code: last_exit_code,
@@ -176,10 +175,10 @@ fn send_failed(
         .lock()
         .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
     ws_guard.send_message(&msg)?;
+    // Wait for Ack but don't close — connection stays open for next job
     if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
         eprintln!("Warning: did not receive server ACK: {e}");
     }
-    ws_guard.close();
     Ok(JobOutcome::Failed { error: error_msg })
 }
 
@@ -301,7 +300,8 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
                 cancel_flag.store(true, Ordering::SeqCst);
                 break;
             },
-            Ok(_) => {},
+            Ok(None | Some(ServerMessage::Ack | ServerMessage::Job(_) | ServerMessage::NoJob)) => {
+            },
             Err(_) => break,
         }
     }

@@ -21,16 +21,25 @@ mod websocket;
 pub use error::UpError;
 
 #[cfg(target_os = "linux")]
-use api_client::{ClaimRequest, RunnerApiClient};
+use api_client::RunnerApiClient;
 #[cfg(target_os = "linux")]
-use error::ApiClientError;
+use error::{ApiClientError, WebSocketError};
 #[cfg(target_os = "linux")]
 use job::{JobOutcome, execute_job};
 #[cfg(target_os = "linux")]
+use std::sync::{Arc, Mutex};
+#[cfg(target_os = "linux")]
 use std::time::Duration;
+#[cfg(target_os = "linux")]
+use websocket::JobChannel;
 
 #[cfg(target_os = "linux")]
 const TRANSIENT_RETRY_DELAY: Duration = Duration::from_secs(5);
+
+/// Margin added to poll_timeout for the WS read timeout, giving the server
+/// time to send NoJob after its own deadline.
+#[cfg(target_os = "linux")]
+const POLL_TIMEOUT_MARGIN_SECS: u64 = 30;
 
 /// Global shutdown flag set by signal handler.
 /// Async-signal-safe: only uses `AtomicBool::store`.
@@ -96,57 +105,45 @@ impl Up {
             self.config.runner.clone(),
         )?;
 
-        let claim_request = ClaimRequest {
-            poll_timeout: self.config.poll_timeout_secs,
-        };
+        let channel_url = client.channel_url()?;
 
-        println!("Polling for jobs...");
+        println!("Connecting to channel...");
 
+        // Outer loop: connection management with reconnect
         loop {
-            // Check shutdown flag
             if SHUTDOWN.load(Ordering::SeqCst) {
                 println!("Shutdown signal received, exiting...");
                 return Err(UpError::Shutdown);
             }
 
-            // Claim a job (long-poll, blocks up to poll_timeout_secs)
-            match client.claim_job(&claim_request) {
-                Ok(Some(job)) => {
-                    let job_uuid = job.uuid;
-                    println!("Claimed job: {job_uuid}");
-
-                    let ws_url = client.websocket_url(job_uuid.as_ref())?;
-                    match execute_job(&self.config, &job, &ws_url) {
-                        Ok(JobOutcome::Completed { exit_code, output }) => {
-                            println!("Job {job_uuid} completed (exit_code={exit_code})");
-                            if let Some(out) = &output {
-                                let preview: String = out.chars().take(200).collect();
-                                println!("  Output: {preview}");
-                            }
-                        },
-                        Ok(JobOutcome::Failed { error, .. }) => {
-                            println!("Job {job_uuid} failed: {error}");
-                        },
-                        Ok(JobOutcome::Canceled) => {
-                            println!("Job {job_uuid} was canceled");
-                        },
-                        Err(e) => {
-                            println!("Job {job_uuid} error: {e}");
-                        },
-                    }
-
-                    println!("Polling for jobs...");
+            // Connect to persistent WebSocket channel
+            let ws = match JobChannel::connect(&channel_url, client.token()) {
+                Ok(ws) => ws,
+                Err(e) => {
+                    println!("WebSocket connection failed: {e}");
+                    println!("Retrying in {} seconds...", TRANSIENT_RETRY_DELAY.as_secs());
+                    std::thread::sleep(TRANSIENT_RETRY_DELAY);
+                    continue;
                 },
-                Ok(None) => {
-                    // No job available, loop back to poll
-                },
-                Err(ApiClientError::Unauthorized | ApiClientError::InvalidToken) => {
+            };
+            let ws = Arc::new(Mutex::new(ws));
+
+            println!("Channel connected. Polling for jobs...");
+
+            match run_channel_loop(&self.config, &ws) {
+                Ok(()) => return Ok(()), // Clean shutdown
+                Err(UpError::ApiClient(
+                    ApiClientError::Unauthorized | ApiClientError::InvalidToken,
+                )) => {
                     println!("Authentication failed. Check runner token.");
-                    return Err(ApiClientError::Unauthorized.into());
+                    return Err(UpError::ApiClient(ApiClientError::Unauthorized));
                 },
                 Err(e) => {
-                    println!("Error claiming job: {e}");
-                    println!("Retrying in {} seconds...", TRANSIENT_RETRY_DELAY.as_secs());
+                    println!("Channel error: {e}");
+                    println!(
+                        "Reconnecting in {} seconds...",
+                        TRANSIENT_RETRY_DELAY.as_secs()
+                    );
                     std::thread::sleep(TRANSIENT_RETRY_DELAY);
                 },
             }
@@ -156,6 +153,69 @@ impl Up {
     #[cfg(not(target_os = "linux"))]
     pub fn run(self) -> Result<(), UpError> {
         Err(UpError::Config("Runner requires Linux".to_owned()))
+    }
+}
+
+/// Inner loop: send Ready, wait for Job/NoJob, execute, repeat.
+///
+/// Returns `Ok(())` on clean shutdown, `Err` on WS or auth errors.
+#[cfg(target_os = "linux")]
+#[expect(clippy::print_stdout)]
+fn run_channel_loop(config: &UpConfig, ws: &Arc<Mutex<JobChannel>>) -> Result<(), UpError> {
+    loop {
+        if SHUTDOWN.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+
+        // Send Ready to request a job
+        {
+            let mut ws_guard = ws
+                .lock()
+                .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
+            ws_guard.send_ready(config.poll_timeout_secs)?;
+        }
+
+        // Wait for Job or NoJob from server
+        let timeout =
+            Duration::from_secs(u64::from(config.poll_timeout_secs) + POLL_TIMEOUT_MARGIN_SECS);
+        let job = {
+            let mut ws_guard = ws
+                .lock()
+                .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
+            ws_guard.wait_for_job(timeout)?
+        };
+
+        match job {
+            Some(job) => {
+                let job_uuid = job.uuid;
+                println!("Received job: {job_uuid}");
+
+                match execute_job(config, &job, ws) {
+                    Ok(JobOutcome::Completed { exit_code, output }) => {
+                        println!("Job {job_uuid} completed (exit_code={exit_code})");
+                        if let Some(out) = &output {
+                            let preview: String = out.chars().take(200).collect();
+                            println!("  Output: {preview}");
+                        }
+                    },
+                    Ok(JobOutcome::Failed { error, .. }) => {
+                        println!("Job {job_uuid} failed: {error}");
+                    },
+                    Ok(JobOutcome::Canceled) => {
+                        println!("Job {job_uuid} was canceled");
+                    },
+                    Err(e) => {
+                        println!("Job {job_uuid} error: {e}");
+                        return Err(e); // WS likely broken, reconnect
+                    },
+                }
+
+                println!("Polling for jobs...");
+            },
+            None => {
+                // No job available, loop back to send Ready
+            },
+        }
     }
 }
 
