@@ -307,8 +307,7 @@ Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
 
 | Method    | Endpoint                          | Description                                            |
 | --------- | --------------------------------- | ------------------------------------------------------ |
-| POST      | `/v0/runners/{runner}/jobs`       | Long-poll to claim a job; returns `Option<JsonClaimedJob>` |
-| WebSocket | `/v0/runners/{runner}/jobs/{job}` | Heartbeat and status updates during job execution      |
+| WebSocket | `/v0/runners/{runner}/channel`    | Persistent channel for job assignment and execution    |
 
 ## Claim Endpoint Behavior
 
@@ -522,13 +521,12 @@ Job output (stdout, stderr, file contents) is stored in the **same OCI storage b
 ## Runner Execution Flow
 
 ```
-1. Idle: Long-poll POST /v0/runners/{runner}/jobs
+1. Idle: Connect to WebSocket /v0/runners/{runner}/channel, send Ready
                 │
-                ▼ (JsonClaimedJob received with config, OCI token, and full spec)
-2. Job "claimed" implicitly via claim response
+                ▼ (Server sends Job with JsonClaimedJob containing config, OCI token, and full spec)
+2. Job claimed by server during channel polling
                 │
                 ▼
-3. Open WebSocket: /v0/runners/{runner}/jobs/{job}
                 │
                 ▼
 4. Authenticate to OCI registry using short-lived project-scoped OCI token
@@ -639,7 +637,7 @@ Authorization: Bearer bencher_runner_<token>
 ```
 
 This token is scoped to:
-- Only the runner agent endpoints (`/v0/runners/{runner}/jobs[/{job}]`)
+- Only the runner agent endpoints (`/v0/runners/{runner}/channel`)
 - Can claim jobs from any project on the server
 - Can only perform operations on jobs claimed by this runner
 
