@@ -13,9 +13,7 @@ use std::sync::Arc;
 
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
-use bencher_json::{
-    DateTime, JobPriority, JobStatus, JsonClaimedJob, JsonJob, PollTimeout, RunnerUuid,
-};
+use bencher_json::{DateTime, JobPriority, JobStatus, JsonJob, PollTimeout};
 use bencher_schema::{
     context::HeartbeatTasks,
     model::runner::{
@@ -24,133 +22,18 @@ use bencher_schema::{
     schema,
 };
 use common::{
-    associate_runner_spec, base_timestamp, create_runner, create_test_report, get_job_priority,
-    get_project_id, get_runner_id, insert_test_job, insert_test_job_full,
-    insert_test_job_with_invalid_config, insert_test_job_with_project, insert_test_spec,
-    insert_test_spec_full, set_job_runner_id, set_job_status,
+    assert_ws_closed, associate_runner_spec, base_timestamp, claim_via_channel, connect_channel_ws,
+    create_runner, create_test_report, get_job_priority, get_project_id, get_runner_id,
+    insert_test_job, insert_test_job_full, insert_test_job_with_invalid_config,
+    insert_test_job_with_project, insert_test_spec, insert_test_spec_full,
+    recv_server_msg as recv_msg, send_runner_msg as send_msg, set_job_runner_id, set_job_status,
+    try_connect_channel_ws, ws_url,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
 use futures_concurrency::future::Join as _;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest as _};
-
-type WsStream =
-    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
-
-// =============================================================================
-// WebSocket Channel Helpers
-// =============================================================================
-
-/// Convert the `TestServer` HTTP URL to a WebSocket URL.
-fn ws_url(server: &TestServer, path: &str) -> String {
-    let http_url = server.api_url(path);
-    http_url.replacen("http://", "ws://", 1)
-}
-
-/// Connect to the runner channel WebSocket with authentication.
-#[expect(clippy::expect_used)]
-async fn connect_channel_ws(
-    server: &TestServer,
-    runner_uuid: RunnerUuid,
-    runner_token: &str,
-) -> WsStream {
-    let url = ws_url(server, &format!("/v0/runners/{runner_uuid}/channel"));
-    let mut request = url.into_client_request().expect("Failed to build request");
-    request.headers_mut().insert(
-        bencher_json::AUTHORIZATION,
-        bencher_json::bearer_header(runner_token)
-            .parse()
-            .expect("Invalid header"),
-    );
-    let (ws_stream, _) = tokio_tungstenite::connect_async(request)
-        .await
-        .expect("Failed to connect WebSocket");
-    ws_stream
-}
-
-/// Try to connect to the runner channel WebSocket; returns the result rather
-/// than panicking so callers can assert on connection failure.
-#[expect(clippy::expect_used)]
-async fn try_connect_channel_ws(
-    server: &TestServer,
-    runner_uuid: RunnerUuid,
-    runner_token: &str,
-) -> Result<WsStream, tokio_tungstenite::tungstenite::Error> {
-    let url = ws_url(server, &format!("/v0/runners/{runner_uuid}/channel"));
-    let mut request = url.into_client_request().expect("Failed to build request");
-    request.headers_mut().insert(
-        bencher_json::AUTHORIZATION,
-        bencher_json::bearer_header(runner_token)
-            .parse()
-            .expect("Invalid header"),
-    );
-    let (ws_stream, _) = tokio_tungstenite::connect_async(request).await?;
-    Ok(ws_stream)
-}
-
-/// Send a `RunnerMessage` over the WebSocket.
-#[expect(clippy::expect_used)]
-async fn send_msg(ws: &mut WsStream, msg: &RunnerMessage) {
-    let text = serde_json::to_string(msg).expect("Failed to serialize");
-    ws.send(Message::Text(text.into()))
-        .await
-        .expect("Failed to send message");
-}
-
-/// Receive and parse a `ServerMessage` from the WebSocket.
-#[expect(clippy::expect_used, clippy::panic, clippy::wildcard_enum_match_arm)]
-async fn recv_msg(ws: &mut WsStream) -> ServerMessage {
-    let msg = ws.next().await.expect("Stream ended").expect("WS error");
-    match msg {
-        Message::Text(text) => serde_json::from_str(&text).expect("Failed to parse server message"),
-        other => panic!("Expected text message, got: {other:?}"),
-    }
-}
-
-/// Connect to the channel WS, send Ready, and return the stream and the
-/// optional claimed job.
-#[expect(clippy::expect_used, clippy::panic)]
-async fn claim_via_channel(
-    server: &TestServer,
-    runner_uuid: RunnerUuid,
-    runner_token: &str,
-    poll_timeout: u32,
-) -> (WsStream, Option<JsonClaimedJob>) {
-    let mut ws = connect_channel_ws(server, runner_uuid, runner_token).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(poll_timeout).expect("Invalid poll timeout")),
-    };
-    send_msg(&mut ws, &ready).await;
-    let response = recv_msg(&mut ws).await;
-    let job = match response {
-        ServerMessage::Job(job) => Some(*job),
-        ServerMessage::NoJob => None,
-        other @ (ServerMessage::Ack | ServerMessage::Cancel) => {
-            panic!("Expected Job or NoJob, got: {other:?}")
-        },
-    };
-    (ws, job)
-}
-
-/// Assert the WebSocket stream is closed (no more messages or Close frame).
-///
-/// Dropshot's `#[channel]` macro upgrades the WebSocket connection before the
-/// handler runs. When the handler returns an error (auth failure, wrong state),
-/// the connection is reset without a proper close handshake, which manifests as
-/// `Some(Err(_))` rather than `None` or `Some(Ok(Message::Close(_)))`.
-#[expect(clippy::panic)]
-async fn assert_ws_closed(ws: &mut WsStream) {
-    let result = tokio::time::timeout(std::time::Duration::from_secs(1), ws.next()).await;
-    match result {
-        // Timed out waiting — treat as closed (server may have RST without close frame)
-        // Stream ended
-        // Close frame
-        // Connection reset (typical for auth failures via dropshot)
-        Err(_) | Ok(None | Some(Ok(Message::Close(_)) | Err(_))) => {},
-        Ok(Some(Ok(other))) => panic!("Expected WS to be closed, got message: {other:?}"),
-    }
-}
 
 // =============================================================================
 // Auth Tests — WS channel connection should be closed for invalid auth
@@ -2794,5 +2677,48 @@ async fn reprocess_completed_job_no_output() {
         status,
         JobStatus::Failed,
         "Completed job without stored output should be marked as Failed"
+    );
+}
+
+// =============================================================================
+// Poll Timeout Timing Test
+// =============================================================================
+
+/// Verify the server respects `poll_timeout`: with no pending jobs and a short
+/// timeout (2s), `NoJob` should arrive *after* a visible delay — not instantly.
+#[tokio::test]
+async fn poll_timeout_delays_nojob() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "poll-timeout@example.com").await;
+
+    let (_, spec_id) = insert_test_spec(&server);
+    let runner = create_runner(&server, &admin.token, "Poll Timeout Runner").await;
+    let runner_token: &str = runner.token.as_ref();
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(2).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
+
+    let start = std::time::Instant::now();
+    let resp = recv_msg(&mut ws).await;
+    let elapsed = start.elapsed();
+
+    assert!(
+        matches!(resp, ServerMessage::NoJob),
+        "Expected NoJob, got: {resp:?}"
+    );
+    // Should NOT arrive instantly (server waits before giving up)
+    assert!(
+        elapsed > std::time::Duration::from_millis(500),
+        "NoJob arrived too quickly ({elapsed:?}), server should poll for ~2s"
+    );
+    // Should arrive within a reasonable grace period
+    assert!(
+        elapsed < std::time::Duration::from_secs(10),
+        "NoJob took too long ({elapsed:?}), expected within ~2s + grace"
     );
 }

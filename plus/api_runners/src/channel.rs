@@ -127,7 +127,8 @@ async fn handle_runner_message(
     match msg {
         RunnerMessage::Ready { .. } => {
             slog::warn!(log, "Unexpected Ready message during job execution"; "job_id" => ?job.id);
-            // Ignore Ready during execution — runner should not send it here
+            // Ack is the only safe response — Cancel would terminate the job.
+            // The heartbeat timer still resets, which is acceptable.
         },
         RunnerMessage::Running => {
             slog::info!(log, "Job running"; "job_id" => ?job.id);
@@ -740,7 +741,8 @@ pub async fn runner_channel(
         match claimed_job {
             Ok(Some(job)) => {
                 // Send Job to runner
-                let job_msg = ServerMessage::Job(Box::new(job.clone()));
+                let job_uuid = job.uuid;
+                let job_msg = ServerMessage::Job(Box::new(job));
                 let text = serde_json::to_string(&job_msg)
                     .map_err(|e| HttpError::for_internal_error(e.to_string()))?;
                 if tx.send(Message::Text(text.into())).await.is_err() {
@@ -748,7 +750,7 @@ pub async fn runner_channel(
                 }
 
                 // === EXECUTING STATE ===
-                let job_db = QueryJob::from_uuid(auth_conn!(context), job.uuid)?;
+                let job_db = QueryJob::from_uuid(auth_conn!(context), job_uuid)?;
 
                 match execute_loop(&log, context, &job_db, &mut tx, &mut rx, heartbeat_timeout)
                     .await
@@ -886,10 +888,13 @@ where
                 drop(tx.send(Message::Pong(data)).await);
             },
             Ok(Some(Err(e))) => return Err(ChannelError::WebSocket(e)),
-            Ok(Some(Ok(
-                Message::Text(_) | Message::Binary(_) | Message::Pong(_) | Message::Frame(_),
-            )))
-            | Err(_) => {},
+            Ok(Some(Ok(Message::Text(text)))) => {
+                slog::warn!(log, "Unexpected text message during polling"; "text" => %text);
+            },
+            Ok(Some(Ok(Message::Binary(data)))) => {
+                slog::warn!(log, "Unexpected binary message during polling"; "len" => data.len());
+            },
+            Ok(Some(Ok(Message::Pong(_) | Message::Frame(_)))) | Err(_) => {},
         }
     }
 }

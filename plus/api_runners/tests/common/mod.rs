@@ -520,7 +520,7 @@ pub async fn recv_server_msg(ws: &mut WsStream) -> ServerMessage {
 
 /// Connect to the channel WS, send Ready, and return the stream and the
 /// optional claimed job.
-#[expect(clippy::expect_used, clippy::panic, clippy::wildcard_enum_match_arm)]
+#[expect(clippy::expect_used, clippy::panic)]
 pub async fn claim_via_channel(
     server: &TestServer,
     runner_uuid: RunnerUuid,
@@ -536,7 +536,9 @@ pub async fn claim_via_channel(
     let job = match response {
         ServerMessage::Job(job) => Some(*job),
         ServerMessage::NoJob => None,
-        other => panic!("Expected Job or NoJob, got: {other:?}"),
+        other @ (ServerMessage::Ack | ServerMessage::Cancel) => {
+            panic!("Expected Job or NoJob, got: {other:?}")
+        },
     };
     (ws, job)
 }

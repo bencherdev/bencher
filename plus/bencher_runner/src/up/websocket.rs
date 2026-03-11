@@ -48,8 +48,17 @@ impl JobChannel {
     }
 
     /// Send a `Ready` message requesting a job with the given poll timeout.
+    #[expect(clippy::print_stderr)]
     pub fn send_ready(&mut self, poll_timeout_secs: u32) -> Result<(), WebSocketError> {
-        let poll_timeout = bencher_valid::PollTimeout::try_from(poll_timeout_secs).ok();
+        let poll_timeout = match bencher_valid::PollTimeout::try_from(poll_timeout_secs) {
+            Ok(pt) => Some(pt),
+            Err(e) => {
+                eprintln!(
+                    "Warning: invalid poll_timeout {poll_timeout_secs}: {e}, using server default"
+                );
+                None
+            },
+        };
         let msg = RunnerMessage::Ready { poll_timeout };
         self.send_message(&msg)
     }
@@ -87,7 +96,12 @@ impl JobChannel {
                     match server_msg {
                         ServerMessage::Job(job) => return Ok(Some(*job)),
                         ServerMessage::NoJob => return Ok(None),
-                        ServerMessage::Ack | ServerMessage::Cancel => {
+                        ServerMessage::Ack => {
+                            // Stale Ack from the previous job completion — safe to ignore.
+                            // This happens when the server's Ack arrives after the runner
+                            // has already moved on to requesting the next job.
+                        },
+                        ServerMessage::Cancel => {
                             return Err(WebSocketError::Protocol(format!(
                                 "Expected Job or NoJob, got {server_msg:?}"
                             )));

@@ -1,7 +1,8 @@
 use super::common::{
-    associate_runner_spec, create_runner, create_test_report, get_project_id, get_runner_id,
-    insert_test_job, insert_test_job_with_optional_fields, insert_test_job_with_timeout,
-    insert_test_spec, set_job_status,
+    WsStream, assert_ws_closed, associate_runner_spec, connect_channel_ws as connect_channel,
+    create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job,
+    insert_test_job_with_optional_fields, insert_test_job_with_timeout, insert_test_spec,
+    recv_server_msg as recv_msg, send_runner_msg as send_msg, set_job_status, ws_url,
 };
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
@@ -15,38 +16,6 @@ use http::StatusCode;
 use tokio_tungstenite::tungstenite::{
     Message, client::IntoClientRequest as _, protocol::WebSocketConfig,
 };
-
-type WsStream =
-    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
-
-// ---- Helper functions ----
-
-/// Convert the `TestServer` HTTP URL to a WebSocket URL.
-fn ws_url(server: &TestServer, path: &str) -> String {
-    let http_url = server.api_url(path);
-    http_url.replacen("http://", "ws://", 1)
-}
-
-/// Connect to the persistent runner channel WebSocket with authentication.
-#[expect(clippy::expect_used)]
-async fn connect_channel(
-    server: &TestServer,
-    runner_uuid: RunnerUuid,
-    runner_token: &str,
-) -> WsStream {
-    let url = ws_url(server, &format!("/v0/runners/{runner_uuid}/channel"));
-    let mut request = url.into_client_request().expect("Failed to build request");
-    request.headers_mut().insert(
-        bencher_json::AUTHORIZATION,
-        bencher_json::bearer_header(runner_token)
-            .parse()
-            .expect("Invalid header"),
-    );
-    let (ws_stream, _) = tokio_tungstenite::connect_async(request)
-        .await
-        .expect("Failed to connect WebSocket");
-    ws_stream
-}
 
 /// Full setup: create user, org, project, runner, job, then connect channel,
 /// send Ready, and receive Job.
@@ -92,42 +61,6 @@ async fn setup_claimed_job(
     }
 
     (ws, runner.uuid, runner_token, job_uuid)
-}
-
-/// Send a `RunnerMessage` over the WebSocket.
-#[expect(clippy::expect_used)]
-async fn send_msg(ws: &mut WsStream, msg: &RunnerMessage) {
-    let text = serde_json::to_string(msg).expect("Failed to serialize");
-    ws.send(Message::Text(text.into()))
-        .await
-        .expect("Failed to send message");
-}
-
-/// Receive and parse a `ServerMessage` from the WebSocket.
-#[expect(clippy::expect_used, clippy::panic, clippy::wildcard_enum_match_arm)]
-async fn recv_msg(ws: &mut WsStream) -> ServerMessage {
-    let msg = ws.next().await.expect("Stream ended").expect("WS error");
-    match msg {
-        Message::Text(text) => serde_json::from_str(&text).expect("Failed to parse server message"),
-        other => panic!("Expected text message, got: {other:?}"),
-    }
-}
-
-/// Assert the WebSocket stream is closed (no more messages or Close frame).
-///
-/// Dropshot's `#[channel]` macro upgrades the WebSocket connection before the
-/// handler runs. When the handler returns an error (auth failure, wrong state),
-/// the connection is reset without a proper close handshake, which manifests as
-/// `Some(Err(_))` rather than `None` or `Some(Ok(Message::Close(_)))`.
-#[expect(clippy::panic)]
-async fn assert_ws_closed(ws: &mut WsStream) {
-    // Wait up to 1 second for the server to close the connection
-    let result = tokio::time::timeout(std::time::Duration::from_secs(1), ws.next()).await;
-    match result {
-        // Timed out, stream ended, close frame, or connection reset — all OK
-        Err(_) | Ok(None | Some(Ok(Message::Close(_)) | Err(_))) => {},
-        Ok(Some(Ok(other))) => panic!("Expected stream to be closed, got: {other:?}"),
-    }
 }
 
 /// Read the job status directly from the database.
