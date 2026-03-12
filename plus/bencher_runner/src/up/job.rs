@@ -150,7 +150,19 @@ pub fn execute_job(
         drop(ws_guard.send_message(&msg));
         // Wait for Ack but don't close — connection stays open for next job
         let acked = match ws_guard.read_message_timeout(ACK_TIMEOUT) {
-            Ok(Some(_)) => true,
+            Ok(Some(ServerMessage::Ack { job: ack_job })) => {
+                if ack_job.as_ref() != Some(&job.uuid) {
+                    eprintln!(
+                        "Warning: ACK job UUID mismatch: expected {}, got {ack_job:?}",
+                        job.uuid
+                    );
+                }
+                true
+            },
+            Ok(Some(other)) => {
+                eprintln!("Warning: expected ACK, got {other:?}");
+                false
+            },
             Ok(None) => false,
             Err(e) => {
                 eprintln!("Warning: error waiting for server ACK: {e}");
@@ -174,7 +186,19 @@ pub fn execute_job(
     ws_guard.send_message(&msg)?;
     // Wait for Ack but don't close — connection stays open for next job
     let acked = match ws_guard.read_message_timeout(ACK_TIMEOUT) {
-        Ok(Some(_)) => true,
+        Ok(Some(ServerMessage::Ack { job: ack_job })) => {
+            if ack_job.as_ref() != Some(&job.uuid) {
+                eprintln!(
+                    "Warning: ACK job UUID mismatch: expected {}, got {ack_job:?}",
+                    job.uuid
+                );
+            }
+            true
+        },
+        Ok(Some(other)) => {
+            eprintln!("Warning: expected ACK, got {other:?}");
+            false
+        },
         Ok(None) => false,
         Err(e) => {
             eprintln!("Warning: error waiting for server ACK: {e}");
@@ -220,7 +244,16 @@ fn send_failed(
     ws_guard.send_message(&msg)?;
     // Wait for Ack but don't close — connection stays open for next job
     let acked = match ws_guard.read_message_timeout(ACK_TIMEOUT) {
-        Ok(Some(_)) => true,
+        Ok(Some(ServerMessage::Ack { job: ack_job })) => {
+            if ack_job.as_ref() != Some(&job_uuid) {
+                eprintln!("Warning: ACK job UUID mismatch: expected {job_uuid}, got {ack_job:?}");
+            }
+            true
+        },
+        Ok(Some(other)) => {
+            eprintln!("Warning: expected ACK, got {other:?}");
+            false
+        },
         Ok(None) => false,
         Err(e) => {
             eprintln!("Warning: error waiting for server ACK: {e}");
@@ -334,7 +367,7 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
 }
 
 #[cfg(target_os = "linux")]
-#[expect(clippy::print_stderr)]
+#[expect(clippy::print_stderr, clippy::use_debug)]
 fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_flag: &AtomicBool) {
     loop {
         std::thread::sleep(Duration::from_secs(1));
@@ -362,10 +395,10 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
                 cancel_flag.store(true, Ordering::SeqCst);
                 break;
             },
-            Ok(
-                None
-                | Some(ServerMessage::Ack { .. } | ServerMessage::Job(_) | ServerMessage::NoJob),
-            ) => {},
+            Ok(None | Some(ServerMessage::Ack { .. })) => {},
+            Ok(Some(msg @ (ServerMessage::Job(_) | ServerMessage::NoJob))) => {
+                eprintln!("Warning: unexpected {msg:?} during job execution heartbeat");
+            },
             Err(_) => break,
         }
     }

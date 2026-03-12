@@ -43,12 +43,10 @@ use crate::runner_token::RunnerToken;
 
 /// Compute the maximum allowed elapsed seconds for a job: timeout + grace period.
 fn job_timeout_limit(timeout: bencher_json::Timeout, grace: Duration) -> i64 {
-    #[expect(
-        clippy::cast_possible_wrap,
-        reason = "timeout max i32::MAX + grace period fits in i64"
-    )]
-    let limit = u64::from(u32::from(timeout)) as i64 + grace.as_secs() as i64;
-    limit
+    let timeout_secs = i64::from(u32::from(timeout));
+    #[expect(clippy::cast_possible_wrap, reason = "grace period seconds fit in i64")]
+    let grace_secs = grace.as_secs() as i64;
+    timeout_secs.saturating_add(grace_secs)
 }
 
 /// Errors from WebSocket channel operations during runner job execution.
@@ -950,7 +948,9 @@ where
                 ));
             },
             Message::Ping(data) => {
-                drop(tx.send(Message::Pong(data)).await);
+                if let Err(e) = tx.send(Message::Pong(data)).await {
+                    slog::warn!(log, "Failed to send pong"; "error" => %e);
+                }
             },
             Message::Binary(_) | Message::Pong(_) | Message::Frame(_) => {},
         }
@@ -1023,7 +1023,9 @@ where
                 ));
             },
             Ok(Some(Ok(Message::Ping(data)))) => {
-                drop(tx.send(Message::Pong(data)).await);
+                if tx.send(Message::Pong(data)).await.is_err() {
+                    slog::warn!(log, "Failed to send pong during polling");
+                }
             },
             Ok(Some(Err(e))) => return Err(ChannelError::WebSocket(e)),
             Ok(Some(Ok(Message::Text(text)))) => {

@@ -67,24 +67,30 @@ impl JobChannel {
     ///
     /// Returns `Ok(Some(job))` on `Job`, `Ok(None)` on `NoJob`,
     /// or an error on timeout/disconnect.
+    ///
+    /// Uses an `Instant`-based deadline so that Ping frames (which reset the OS
+    /// read timeout) cannot extend the wait beyond the original `timeout`.
     pub fn wait_for_job(
         &mut self,
         timeout: Duration,
     ) -> Result<Option<JsonClaimedJob>, WebSocketError> {
-        let stream = self.ws.get_mut();
-        set_read_timeout(stream, Some(timeout))?;
-        let result = self.wait_for_job_inner();
-        let stream = self.ws.get_mut();
-        set_read_timeout(stream, None)?;
-        result
-    }
-
-    fn wait_for_job_inner(&mut self) -> Result<Option<JsonClaimedJob>, WebSocketError> {
+        let deadline = std::time::Instant::now() + timeout;
         loop {
+            let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+            if remaining.is_zero() {
+                return Err(WebSocketError::Receive(
+                    "Timed out waiting for job".to_owned(),
+                ));
+            }
+
+            let stream = self.ws.get_mut();
+            set_read_timeout(stream, Some(remaining))?;
             let msg = self
                 .ws
                 .read()
                 .map_err(|e| WebSocketError::Receive(e.to_string()))?;
+            let stream = self.ws.get_mut();
+            set_read_timeout(stream, None)?;
 
             match msg {
                 Message::Text(text) => {
@@ -166,36 +172,46 @@ impl JobChannel {
         &mut self,
         timeout: Duration,
     ) -> Result<Option<ServerMessage>, WebSocketError> {
-        let stream = self.ws.get_mut();
-        set_read_timeout(stream, Some(timeout))?;
-        let result = self.ws.read();
-        let stream = self.ws.get_mut();
-        set_read_timeout(stream, None)?;
+        let deadline = std::time::Instant::now() + timeout;
+        loop {
+            let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+            if remaining.is_zero() {
+                return Ok(None);
+            }
 
-        match result {
-            Ok(Message::Text(text)) => {
-                let msg: ServerMessage = serde_json::from_str(&text).map_err(|e| {
-                    WebSocketError::UnexpectedMessage(format!(
-                        "Failed to parse server message: {e} (raw: {text})"
-                    ))
-                })?;
-                Ok(Some(msg))
-            },
-            Ok(Message::Ping(data)) => {
-                self.ws
-                    .send(Message::Pong(data))
-                    .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
-                Ok(None)
-            },
-            Ok(Message::Close(frame)) => Self::handle_close_frame(frame),
-            Ok(_) => Ok(None),
-            Err(tungstenite::Error::Io(e))
-                if e.kind() == std::io::ErrorKind::WouldBlock
-                    || e.kind() == std::io::ErrorKind::TimedOut =>
-            {
-                Ok(None)
-            },
-            Err(e) => Err(WebSocketError::Receive(e.to_string())),
+            let stream = self.ws.get_mut();
+            set_read_timeout(stream, Some(remaining))?;
+            let result = self.ws.read();
+            let stream = self.ws.get_mut();
+            set_read_timeout(stream, None)?;
+
+            match result {
+                Ok(Message::Text(text)) => {
+                    let msg: ServerMessage = serde_json::from_str(&text).map_err(|e| {
+                        WebSocketError::UnexpectedMessage(format!(
+                            "Failed to parse server message: {e} (raw: {text})"
+                        ))
+                    })?;
+                    return Ok(Some(msg));
+                },
+                Ok(Message::Ping(data)) => {
+                    self.ws
+                        .send(Message::Pong(data))
+                        .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
+                    // Continue looping with reduced remaining time
+                },
+                Ok(Message::Close(frame)) => return Self::handle_close_frame(frame),
+                Ok(_) => {
+                    // Continue looping past non-text frames
+                },
+                Err(tungstenite::Error::Io(e))
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        || e.kind() == std::io::ErrorKind::TimedOut =>
+                {
+                    return Ok(None);
+                },
+                Err(e) => return Err(WebSocketError::Receive(e.to_string())),
+            }
         }
     }
 

@@ -36,7 +36,16 @@ use std::time::Duration;
 use websocket::JobChannel;
 
 #[cfg(target_os = "linux")]
-const TRANSIENT_RETRY_DELAY: Duration = Duration::from_secs(5);
+const TRANSIENT_RETRY_BASE: Duration = Duration::from_secs(5);
+#[cfg(target_os = "linux")]
+const TRANSIENT_RETRY_JITTER: u64 = 5;
+
+#[cfg(target_os = "linux")]
+fn transient_retry_delay() -> Duration {
+    use rand::Rng as _;
+    let jitter = rand::rng().random_range(0..=TRANSIENT_RETRY_JITTER);
+    TRANSIENT_RETRY_BASE + Duration::from_secs(jitter)
+}
 
 /// Margin added to `poll_timeout` for the WS read timeout, giving the server
 /// time to send `NoJob` after its own deadline.
@@ -125,9 +134,10 @@ impl Up {
             let ws = match JobChannel::connect(&channel_url, client.token()) {
                 Ok(ws) => ws,
                 Err(e) => {
+                    let delay = transient_retry_delay();
                     println!("WebSocket connection failed: {e}");
-                    println!("Retrying in {} seconds...", TRANSIENT_RETRY_DELAY.as_secs());
-                    std::thread::sleep(TRANSIENT_RETRY_DELAY);
+                    println!("Retrying in {} seconds...", delay.as_secs());
+                    std::thread::sleep(delay);
                     continue;
                 },
             };
@@ -148,12 +158,10 @@ impl Up {
                     if let Ok(mut ws_guard) = ws.lock() {
                         ws_guard.close();
                     }
+                    let delay = transient_retry_delay();
                     println!("Channel error: {e}");
-                    println!(
-                        "Reconnecting in {} seconds...",
-                        TRANSIENT_RETRY_DELAY.as_secs()
-                    );
-                    std::thread::sleep(TRANSIENT_RETRY_DELAY);
+                    println!("Reconnecting in {} seconds...", delay.as_secs());
+                    std::thread::sleep(delay);
                 },
             }
         }
@@ -190,8 +198,16 @@ fn run_channel_loop(
             ws_guard.send_message(&msg)?;
             let timeout = Duration::from_secs(5);
             match ws_guard.read_message_timeout(timeout) {
-                Ok(_) => {
+                Ok(Some(_)) => {
                     println!("Pending result ACKed by server");
+                },
+                Ok(None) => {
+                    // Timeout without receiving ACK — store back and return error to reconnect
+                    eprintln!("Warning: retry ACK timed out");
+                    *pending_result = Some(msg);
+                    return Err(UpError::WebSocket(WebSocketError::Receive(
+                        "ACK timeout".to_owned(),
+                    )));
                 },
                 Err(e) => {
                     // ACK not received again — store back and return error to reconnect

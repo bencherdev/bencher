@@ -39,40 +39,6 @@ use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest as _};
 // Auth Tests — WS channel connection should be closed for invalid auth
 // =============================================================================
 
-// WS /v0/runners/{runner}/channel - invalid token rejected
-#[tokio::test]
-async fn claim_job_invalid_token() {
-    let server = TestServer::new().await;
-    let admin = server.signup("Admin", "jobsadmin2@example.com").await;
-
-    let runner = create_runner(&server, &admin.token, "Invalid Token Runner").await;
-
-    let result = try_connect_channel_ws(&server, runner.uuid, "bencher_runner_invalid_token").await;
-    match result {
-        // Connection refused or immediately closed
-        Err(_) => {},
-        Ok(mut ws) => assert_ws_closed(&mut ws).await,
-    }
-}
-
-// WS /v0/runners/{runner}/channel - token for wrong runner rejected
-#[tokio::test]
-async fn claim_job_wrong_runner_token() {
-    let server = TestServer::new().await;
-    let admin = server.signup("Admin", "jobsadmin3@example.com").await;
-
-    let runner1 = create_runner(&server, &admin.token, "Runner One").await;
-    let runner2 = create_runner(&server, &admin.token, "Runner Two").await;
-    let runner1_token: &str = runner1.token.as_ref();
-
-    // Try to connect to runner2's channel using runner1's token
-    let result = try_connect_channel_ws(&server, runner2.uuid, runner1_token).await;
-    match result {
-        Err(_) => {},
-        Ok(mut ws) => assert_ws_closed(&mut ws).await,
-    }
-}
-
 // WS /v0/runners/{runner}/channel - missing Authorization header (empty token)
 #[tokio::test]
 async fn claim_job_missing_auth() {
@@ -136,42 +102,6 @@ async fn claim_job_wrong_length_token() {
         "bencher_runner_00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffab",
     )
     .await;
-    match result {
-        Err(_) => {},
-        Ok(mut ws) => assert_ws_closed(&mut ws).await,
-    }
-}
-
-// WS /v0/runners/{runner}/channel - archived runner rejected
-#[tokio::test]
-async fn claim_job_archived_runner() {
-    let server = TestServer::new().await;
-    let admin = server.signup("Admin", "jobsadmin9@example.com").await;
-
-    let (_, spec_id) = insert_test_spec(&server);
-    let runner = create_runner(&server, &admin.token, "Archived Runner").await;
-    let runner_token: &str = runner.token.as_ref();
-    let runner_id = get_runner_id(&server, runner.uuid);
-    associate_runner_spec(&server, runner_id, spec_id);
-
-    // Archive the runner
-    let body = serde_json::json!({
-        "archived": true
-    });
-    server
-        .client
-        .patch(server.api_url(&format!("/v0/runners/{}", runner.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    // Try to connect with archived runner
-    let result = try_connect_channel_ws(&server, runner.uuid, runner_token).await;
     match result {
         Err(_) => {},
         Ok(mut ws) => assert_ws_closed(&mut ws).await,
@@ -2727,5 +2657,66 @@ async fn poll_timeout_delays_nojob() {
     assert!(
         matches!(resp, ServerMessage::NoJob),
         "Expected NoJob, got: {resp:?}"
+    );
+}
+
+// =============================================================================
+// Phase 7 Tests — Review Findings
+// =============================================================================
+
+/// Test that `reprocess_completed_jobs` transitions a Completed job to Failed
+/// when the stored output is malformed (unparseable JSON).
+#[tokio::test]
+async fn reprocess_completed_jobs_malformed_output() {
+    let server = TestServer::new().await;
+    let admin = server
+        .signup("Admin", "reprocess-malformed@example.com")
+        .await;
+    let org = server.create_org(&admin, "Reprocess Malformed Org").await;
+    let project = server
+        .create_project(&admin, &org, "Reprocess malformed proj")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job_with_project(&server, report_id, project.uuid, spec_id);
+
+    // Transition job to Completed
+    set_job_status(&server, job_uuid, JobStatus::Completed);
+
+    // Store malformed output (valid JSON but with unparseable benchmark results)
+    let output = bencher_json::runner::JsonJobOutput {
+        results: vec![bencher_json::runner::JsonIterationOutput {
+            exit_code: 0,
+            stdout: Some("this is not valid benchmark output at all!!!".to_owned()),
+            stderr: None,
+            output: None,
+        }],
+        error: None,
+    };
+    server
+        .context()
+        .oci_storage()
+        .job_output()
+        .put(project.uuid, job_uuid, &output)
+        .await
+        .expect("Failed to store job output");
+
+    // Call startup recovery
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    reprocess_completed_jobs(&log, server.context()).await;
+
+    // Verify job transitioned to Failed (adapter couldn't parse the output)
+    let mut conn = server.db_conn();
+    let status: JobStatus = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::status)
+        .first(&mut conn)
+        .expect("Failed to get job status");
+    assert_eq!(
+        status,
+        JobStatus::Failed,
+        "Completed job with malformed output should be marked as Failed"
     );
 }

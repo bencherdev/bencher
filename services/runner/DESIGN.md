@@ -309,7 +309,7 @@ Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
 | --------- | --------------------------------- | ------------------------------------------------------ |
 | WebSocket | `/v0/runners/{runner}/channel`    | Persistent channel for job assignment and execution    |
 
-## Claim Endpoint Behavior
+## Job Claim Behavior
 
 1. Applies per-runner rate limiting to prevent abuse of long-polling
 2. Filters pending jobs to only those whose `spec_id` matches one of the runner's associated specs
@@ -317,7 +317,7 @@ Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
 4. Uses a single write lock (`write_conn!`) to atomically:
    - Update job status to `Claimed`
    - Set `runner_id`, `claimed` timestamp, and `last_heartbeat`
-5. If no matching jobs, polls every 1 second until `poll_timeout` (default 30s, max 600s) or job arrives
+5. If no matching jobs, polls every 1 second until `poll_timeout` (default 30s, max 900s) or job arrives
 6. Generates a short-lived, project-scoped OCI pull token (see [OCI Authentication for Runners](#oci-authentication-for-runners))
 7. Returns `Option<JsonClaimedJob>` — claimed job with config, OCI token, and full spec if claimed, `None` on timeout
 8. Records OTel metrics: queue duration histogram and claim counter
@@ -361,7 +361,7 @@ Single persistent WebSocket connection for the entire runner lifecycle. Handles 
 
 | Event    | Description                              | Payload                                         |
 | -------- | ---------------------------------------- | ----------------------------------------------- |
-| `ack`    | Acknowledge received message             | —                                               |
+| `ack`    | Acknowledge received message             | `job` (optional `JobUuid`)                      |
 | `job`    | Job assigned to runner                   | `JsonClaimedJob` (spec, config, OCI token)      |
 | `no_job` | Poll timeout expired, no job available   | —                                               |
 | `cancel` | Job was canceled, stop execution         | —                                               |
