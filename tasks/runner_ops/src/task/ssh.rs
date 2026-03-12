@@ -4,18 +4,18 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 #[derive(Debug)]
 pub struct Ssh {
-    host: String,
+    server: String,
     key: Utf8PathBuf,
     user: String,
 }
 
 impl Ssh {
-    pub fn new(host: String, key: Utf8PathBuf, user: String) -> Self {
-        Self { host, key, user }
+    pub fn new(server: String, key: Utf8PathBuf, user: String) -> Self {
+        Self { server, key, user }
     }
 
     fn destination(&self) -> String {
-        format!("{}@{}", self.user, self.host)
+        format!("{}@{}", self.user, self.server)
     }
 
     fn ssh_options(&self) -> Vec<String> {
@@ -98,10 +98,10 @@ impl Ssh {
 
     /// Remove the `known_hosts` entry for this host (used after OS reinstall changes host key).
     pub fn remove_known_host(&self) -> anyhow::Result<()> {
-        println!("Removing known_hosts entry for {}", self.host);
+        println!("Removing known_hosts entry for {}", self.server);
         let status = Command::new("ssh-keygen")
             .arg("-R")
-            .arg(&self.host)
+            .arg(&self.server)
             .status()?;
 
         if status.success() {

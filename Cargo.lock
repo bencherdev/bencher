@@ -7804,6 +7804,7 @@ dependencies = [
  "camino",
  "clap",
  "tempfile",
+ "url",
 ]
 
 [[package]]

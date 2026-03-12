@@ -35,6 +35,7 @@ struct Provision {
 #[derive(Debug)]
 struct Deploy {
     ssh: Ssh,
+    host: url::Url,
     runner: String,
     token: String,
     run_id: Option<u64>,
@@ -43,6 +44,7 @@ struct Deploy {
 #[derive(Debug)]
 struct Start {
     ssh: Ssh,
+    host: url::Url,
     runner: String,
     token: String,
 }
@@ -82,13 +84,13 @@ impl From<TaskSub> for Sub {
 impl From<TaskProvision> for Provision {
     fn from(task: TaskProvision) -> Self {
         let TaskProvision {
-            host,
+            server,
             key,
             user,
             runner_binary,
         } = task;
         Self {
-            ssh: Ssh::new(host, key, user),
+            ssh: Ssh::new(server, key, user),
             runner_binary,
         }
     }
@@ -97,15 +99,17 @@ impl From<TaskProvision> for Provision {
 impl From<TaskDeploy> for Deploy {
     fn from(task: TaskDeploy) -> Self {
         let TaskDeploy {
-            host,
+            server,
             key,
             user,
             runner,
             token,
+            host,
             run_id,
         } = task;
         Self {
-            ssh: Ssh::new(host, key, user),
+            ssh: Ssh::new(server, key, user),
+            host,
             runner,
             token,
             run_id,
@@ -116,14 +120,16 @@ impl From<TaskDeploy> for Deploy {
 impl From<TaskStart> for Start {
     fn from(task: TaskStart) -> Self {
         let TaskStart {
-            host,
+            server,
             key,
             user,
             runner,
             token,
+            host,
         } = task;
         Self {
-            ssh: Ssh::new(host, key, user),
+            ssh: Ssh::new(server, key, user),
+            host,
             runner,
             token,
         }
@@ -132,9 +138,9 @@ impl From<TaskStart> for Start {
 
 impl From<TaskStop> for Stop {
     fn from(task: TaskStop) -> Self {
-        let TaskStop { host, key, user } = task;
+        let TaskStop { server, key, user } = task;
         Self {
-            ssh: Ssh::new(host, key, user),
+            ssh: Ssh::new(server, key, user),
         }
     }
 }
@@ -142,14 +148,14 @@ impl From<TaskStop> for Stop {
 impl From<TaskLogs> for Logs {
     fn from(task: TaskLogs) -> Self {
         let TaskLogs {
-            host,
+            server,
             key,
             user,
             lines,
             follow,
         } = task;
         Self {
-            ssh: Ssh::new(host, key, user),
+            ssh: Ssh::new(server, key, user),
             lines,
             follow,
         }
@@ -192,13 +198,19 @@ impl Deploy {
     fn exec(self) -> anyhow::Result<()> {
         let Self {
             ssh,
+            host,
             runner,
             token,
             run_id,
         } = self;
         let (runner_binary, _temp_dir) = download::download(run_id)?;
         deploy::deploy(&ssh, Some(runner_binary.as_path()))?;
-        let start = Start { ssh, runner, token };
+        let start = Start {
+            ssh,
+            host,
+            runner,
+            token,
+        };
         start.exec()?;
         Ok(())
     }
@@ -206,12 +218,18 @@ impl Deploy {
 
 impl Start {
     fn exec(self) -> anyhow::Result<()> {
-        let Self { ssh, runner, token } = self;
+        let Self {
+            ssh,
+            host,
+            runner,
+            token,
+        } = self;
         println!("Configuring runner credentials...");
         ssh.run("mkdir -p /etc/systemd/system/bencher-runner.service.d")?;
         ssh.run(&format!(
             "cat > /etc/systemd/system/bencher-runner.service.d/credentials.conf << 'CRED_EOF'\n\
              [Service]\n\
+             Environment=BENCHER_HOST={host}\n\
              Environment=BENCHER_RUNNER={runner}\n\
              Environment=BENCHER_RUNNER_TOKEN={token}\n\
              CRED_EOF"

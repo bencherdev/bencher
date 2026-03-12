@@ -13,7 +13,6 @@ Type=simple
 ExecStart=/usr/local/bin/runner up
 Restart=always
 RestartSec=5
-Environment=BENCHER_HOST=https://api.bencher.dev
 
 [Install]
 WantedBy=multi-user.target";

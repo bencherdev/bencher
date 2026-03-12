@@ -25,7 +25,7 @@ pub enum TaskSub {
 pub struct TaskProvision {
     /// IP address or hostname of the server
     #[clap(long)]
-    pub host: String,
+    pub server: String,
 
     /// Path to SSH private key
     #[clap(long)]
@@ -44,7 +44,7 @@ pub struct TaskProvision {
 pub struct TaskDeploy {
     /// IP address or hostname of the server
     #[clap(long)]
-    pub host: String,
+    pub server: String,
 
     /// Path to SSH private key
     #[clap(long)]
@@ -61,6 +61,10 @@ pub struct TaskDeploy {
     /// Runner authentication token
     #[clap(long)]
     pub token: String,
+
+    /// Bencher API host URL
+    #[clap(long, default_value = "https://api.bencher.dev")]
+    pub host: url::Url,
 
     /// GitHub Actions run ID (defaults to latest successful `cloud` run)
     #[clap(long)]
@@ -71,7 +75,7 @@ pub struct TaskDeploy {
 pub struct TaskStart {
     /// IP address or hostname of the server
     #[clap(long)]
-    pub host: String,
+    pub server: String,
 
     /// Path to SSH private key
     #[clap(long)]
@@ -88,13 +92,17 @@ pub struct TaskStart {
     /// Runner authentication token
     #[clap(long)]
     pub token: String,
+
+    /// Bencher API host URL
+    #[clap(long, default_value = "https://api.bencher.dev")]
+    pub host: url::Url,
 }
 
 #[derive(Parser, Debug)]
 pub struct TaskStop {
     /// IP address or hostname of the server
     #[clap(long)]
-    pub host: String,
+    pub server: String,
 
     /// Path to SSH private key
     #[clap(long)]
@@ -109,7 +117,7 @@ pub struct TaskStop {
 pub struct TaskLogs {
     /// IP address or hostname of the server
     #[clap(long)]
-    pub host: String,
+    pub server: String,
 
     /// Path to SSH private key
     #[clap(long)]
