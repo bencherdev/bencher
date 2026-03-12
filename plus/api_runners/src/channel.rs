@@ -302,7 +302,12 @@ async fn handle_completed(
 
     let update = UpdateJob::terminate(JobStatus::Completed, now);
 
-    let updated = update.execute_if_status(write_conn!(context), job.id, JobStatus::Running)?;
+    let updated = update.execute_if_either_status(
+        write_conn!(context),
+        job.id,
+        JobStatus::Running,
+        JobStatus::Failed,
+    )?;
 
     if updated == 0 {
         // Re-read the job to determine what happened
@@ -318,8 +323,8 @@ async fn handle_completed(
             slog::debug!(log, "Job already completed (idempotent duplicate)"; "job_id" => ?job.id);
             return Ok(());
         }
-        if current_job.status.has_run() {
-            slog::warn!(log, "Job already in terminal state, completion report lost"; "job_id" => ?job.id, "current_status" => ?current_job.status);
+        if current_job.status == JobStatus::Canceled {
+            slog::warn!(log, "Job already canceled, completion report lost"; "job_id" => ?job.id);
             return Ok(());
         }
         return Err(ChannelError::InvalidStateTransition {

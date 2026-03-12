@@ -124,7 +124,7 @@ pub fn execute_job(
                     );
                     continue;
                 }
-                return send_failed(results, e.to_string(), heartbeat, &stop_flag, ws);
+                return send_failed(job.uuid, results, e.to_string(), heartbeat, &stop_flag, ws);
             },
         }
     }

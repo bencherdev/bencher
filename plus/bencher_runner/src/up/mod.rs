@@ -165,7 +165,7 @@ impl Up {
 ///
 /// Returns `Ok(())` on clean shutdown, `Err` on WS or auth errors.
 #[cfg(target_os = "linux")]
-#[expect(clippy::print_stdout)]
+#[expect(clippy::print_stdout, clippy::print_stderr)]
 fn run_channel_loop(
     config: &UpConfig,
     ws: &Arc<Mutex<JobChannel>>,

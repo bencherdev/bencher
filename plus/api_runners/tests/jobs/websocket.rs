@@ -861,6 +861,69 @@ async fn channel_completed_with_output() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
+/// Completed overrides a heartbeat-timeout-induced Failed status.
+///
+/// Race scenario:
+/// 1. Runner finishes benchmark, sends Completed
+/// 2. Connection drops before ACK
+/// 3. Server heartbeat timeout fires → marks job Failed
+/// 4. Runner reconnects, resends Completed with actual results
+/// 5. Results should win over the heartbeat-timeout-induced Failed
+#[tokio::test]
+async fn channel_completed_overrides_failed() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-comp-override@example.com").await;
+    let org = server.create_org(&admin, "Ws comp-override").await;
+    let project = server
+        .create_project(&admin, &org, "Ws comp-override proj")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner comp-override").await;
+    let runner_token = runner.token.to_string();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    // Simulate: job was Running but heartbeat timeout marked it Failed
+    set_job_status(&server, job_uuid, JobStatus::Running);
+    set_job_runner_id(&server, job_uuid, runner_id);
+    set_job_status(&server, job_uuid, JobStatus::Failed);
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+
+    // Runner reconnects and resends Completed during Idle (retry after reconnect)
+    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+
+    // Send Completed before Ready (terminal message retry during Idle)
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            job: job_uuid,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for retried Completed, got: {resp:?}"
+    );
+
+    // Results should have been processed — job transitions to Processed
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
 /// Failed with stderr and output fields.
 #[tokio::test]
 async fn channel_failed_with_output() {
@@ -1396,7 +1459,8 @@ async fn channel_completed_after_concurrent_cancel() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
-/// Completed message after job was concurrently failed (by timeout) should succeed.
+/// Completed message after job was concurrently failed (by timeout) should override
+/// the Failed status — actual results from the runner win over heartbeat-timeout-induced failure.
 #[tokio::test]
 async fn channel_completed_after_concurrent_failure() {
     let server = TestServer::new().await;
@@ -1412,7 +1476,7 @@ async fn channel_completed_after_concurrent_failure() {
     // Mark job Failed in DB (simulating heartbeat timeout on a different connection)
     set_job_status(&server, job_uuid, JobStatus::Failed);
 
-    // Send Completed — should gracefully handle the race
+    // Send Completed — should override the heartbeat-timeout-induced Failed status
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
@@ -1432,8 +1496,8 @@ async fn channel_completed_after_concurrent_failure() {
         "Expected Ack for Completed after concurrent failure, got: {resp:?}"
     );
 
-    // Job stays Failed (the concurrent timeout won the race)
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+    // Results win: job transitions through Completed to Processed
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
     // Connection stays open. Close from client side.
     ws.close(None).await.expect("Failed to close WebSocket");
