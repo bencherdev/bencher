@@ -60,7 +60,7 @@ pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;
 pub use search::Search;
 pub use secret::Secret;
-pub use units::{BYTES, NANOSECONDS, SECONDS, Units};
+pub use units::{BYTES, DECIBELS, NANOSECONDS, PERCENTAGE, SECONDS, Units};
 pub use user_name::UserName;
 
 const MAX_LEN: usize = 64;

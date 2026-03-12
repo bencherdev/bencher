@@ -1,0 +1,44 @@
+## `bencher noise`
+
+La sous-commande CLI `bencher noise` mesure le bruit de l'environnement pour vous aider à comprendre la fiabilité de vos résultats de benchmark.
+Elle exécute une série de micro-benchmarks et collecte des métriques de plateforme pour produire un score de bruit composite.
+
+Les mesures suivantes sont effectuées :
+
+- **Compute Jitter** : Mesure la consistance des calculs CPU en exécutant des boucles arithmétiques serrées et en suivant le coefficient de variation (CoV) entre les itérations.
+- **Cache Jitter** : Mesure la consistance de l'accès au cache mémoire en effectuant des lectures séquentielles sur un tampon dimensionné au cache L3.
+- **I/O Jitter** : Mesure la consistance des E/S du système de fichiers en écrivant et lisant des fichiers temporaires et en suivant la variation temporelle.
+- **CPU Steal** : Sur les plateformes virtualisées, détecte combien de temps CPU est pris par l'hyperviseur.
+- **Noise Score** : Un score composite (0–100 dB) combinant toutes les mesures en un seul indicateur du niveau de bruit de l'environnement.
+
+### Utilisation de `bencher noise`
+
+```
+bencher noise [OPTIONS]
+```
+
+### Options
+
+#### `--duration <SECONDS>`
+
+Durée totale de mesure en secondes.
+
+Par défaut : `60`
+
+#### `--format <FORMAT>`
+
+Format de sortie pour le rapport de bruit.
+
+- `human` : Sortie terminal lisible avec des barres de bruit visuelles et des conseils.
+- `json` : Sortie JSON au format BMF (Bencher Metric Format), adaptée pour être transmise à `bencher run`.
+
+Par défaut : `human`
+
+#### `--quiet`
+
+Supprimer la sortie de progression et n'afficher que le résultat final.
+Utile pour les scripts et les environnements CI.
+
+#### `--help`
+
+Afficher l'aide.

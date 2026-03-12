@@ -94,6 +94,21 @@ pub mod iai {
     );
 }
 
+pub mod noise {
+    use bencher_valid::{DECIBELS, PERCENTAGE};
+
+    create_measure!(
+        ComputeJitter,
+        "Compute Jitter",
+        "compute-jitter",
+        PERCENTAGE
+    );
+    create_measure!(CacheJitter, "Cache Jitter", "cache-jitter", PERCENTAGE);
+    create_measure!(IoJitter, "I/O Jitter", "io-jitter", PERCENTAGE);
+    create_measure!(CpuSteal, "CPU Steal", "cpu-steal", PERCENTAGE);
+    create_measure!(NoiseScore, "Noise Score", "noise-score", DECIBELS);
+}
+
 pub mod gungraun {
     use bencher_valid::BYTES;
 

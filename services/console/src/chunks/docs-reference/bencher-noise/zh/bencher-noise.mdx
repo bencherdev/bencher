@@ -1,0 +1,44 @@
+## `bencher noise`
+
+`bencher noise` CLI 子命令测量环境噪声，帮助您了解基准测试结果的可靠性。
+它运行一系列微基准测试并收集平台指标，以生成综合噪声评分。
+
+执行以下测量：
+
+- **Compute Jitter**：通过运行紧凑的算术循环并跟踪迭代间的变异系数（CoV），测量 CPU 计算一致性。
+- **Cache Jitter**：通过对 L3 缓存大小的缓冲区执行顺序读取，测量内存缓存访问一致性。
+- **I/O Jitter**：通过写入和读取临时文件并跟踪时间变化，测量文件系统 I/O 一致性。
+- **CPU Steal**：在虚拟化平台上，检测虚拟机管理程序占用了多少 CPU 时间。
+- **Noise Score**：将所有测量组合为环境噪声级别单一指标的综合评分（0–100 dB）。
+
+### `bencher noise` 用法
+
+```
+bencher noise [OPTIONS]
+```
+
+### 选项
+
+#### `--duration <SECONDS>`
+
+总测量持续时间（秒）。
+
+默认值：`60`
+
+#### `--format <FORMAT>`
+
+噪声报告的输出格式。
+
+- `human`：带有可视噪声条和建议的人类可读终端输出。
+- `json`：BMF（Bencher Metric Format）JSON 输出，适合通过管道传递给 `bencher run`。
+
+默认值：`human`
+
+#### `--quiet`
+
+抑制进度输出，仅打印最终结果。
+适用于脚本和 CI 环境。
+
+#### `--help`
+
+打印帮助信息。

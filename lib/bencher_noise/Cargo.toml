@@ -1,0 +1,18 @@
+[package]
+name = "bencher_noise"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[dependencies]
+bencher_adapter.workspace = true
+bencher_json = { workspace = true, features = ["client"] }
+camino.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

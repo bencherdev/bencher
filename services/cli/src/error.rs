@@ -15,6 +15,8 @@ pub enum CliError {
     #[error("{0}")]
     Mock(#[from] crate::bencher::sub::MockError),
     #[error("{0}")]
+    Noise(#[from] crate::bencher::sub::NoiseError),
+    #[error("{0}")]
     Docker(#[from] crate::bencher::sub::DockerError),
 
     #[error("Failed to serialize config: {0}")]

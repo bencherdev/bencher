@@ -101,6 +101,12 @@ impl QueryMeasure {
             .or_else(|| built_in::iai::L2Accesses::from_str(measure_str))
             .or_else(|| built_in::iai::RamAccesses::from_str(measure_str))
             .or_else(|| built_in::iai::EstimatedCycles::from_str(measure_str))
+            // noise
+            .or_else(|| built_in::noise::ComputeJitter::from_str(measure_str))
+            .or_else(|| built_in::noise::CacheJitter::from_str(measure_str))
+            .or_else(|| built_in::noise::IoJitter::from_str(measure_str))
+            .or_else(|| built_in::noise::CpuSteal::from_str(measure_str))
+            .or_else(|| built_in::noise::NoiseScore::from_str(measure_str))
             // Gungraun:
             // callgrind/cachegrind
             .or_else(|| built_in::gungraun::Instructions::from_str(measure_str))

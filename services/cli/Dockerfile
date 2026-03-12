@@ -38,6 +38,7 @@ COPY lib/bencher_adapter bencher_adapter
 COPY lib/bencher_client bencher_client
 COPY lib/bencher_comment bencher_comment
 COPY lib/bencher_context bencher_context
+COPY lib/bencher_noise bencher_noise
 COPY lib/bencher_json bencher_json
 COPY lib/bencher_parser bencher_parser
 COPY lib/bencher_valid bencher_valid

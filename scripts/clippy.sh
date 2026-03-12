@@ -7,7 +7,7 @@ cargo clippy --no-deps --all-targets --all-features -- -Dwarnings
 # cfg(target_os = "linux") gated code that would otherwise be skipped.
 if [ "$(uname -s)" != "Linux" ]; then
     LINUX_TARGET="x86_64-unknown-linux-gnu"
-    LINUX_PACKAGES=(-p bencher_init -p bencher_rootfs -p bencher_runner -p bencher_runner_cli)
+    LINUX_PACKAGES=(-p bencher_init -p bencher_rootfs -p bencher_runner -p bencher_runner_cli -p bencher_noise)
 
     # A C cross-compiler is needed for transitive native dependencies (e.g. ring).
     CROSS_CC=""
