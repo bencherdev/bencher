@@ -111,8 +111,8 @@ pub fn benchmark_cov_level(cov_percent: f64) -> NoiseLevel {
 }
 
 /// Classify the noise level for a CPU steal percentage.
-pub fn cov_level(cov_percent: f64) -> NoiseLevel {
-    match cov_percent {
+pub fn cpu_steal_level(steal_percent: f64) -> NoiseLevel {
+    match steal_percent {
         c if c <= 1.0 => NoiseLevel::Quiet,
         c if c <= 5.0 => NoiseLevel::Moderate,
         c if c <= 15.0 => NoiseLevel::Noisy,
@@ -131,8 +131,6 @@ mod tests {
             mean_ns: 1000.0,
             stddev_ns: cov_percent * 10.0,
             cov_percent,
-            min_ns: 500.0,
-            max_ns: 2000.0,
             p99_ns: 1800.0,
         }
     }
@@ -220,11 +218,11 @@ mod tests {
     }
 
     #[test]
-    fn cov_level_classification() {
-        assert_eq!(cov_level(0.5), NoiseLevel::Quiet);
-        assert_eq!(cov_level(3.0), NoiseLevel::Moderate);
-        assert_eq!(cov_level(10.0), NoiseLevel::Noisy);
-        assert_eq!(cov_level(20.0), NoiseLevel::VeryNoisy);
+    fn cpu_steal_level_classification() {
+        assert_eq!(cpu_steal_level(0.5), NoiseLevel::Quiet);
+        assert_eq!(cpu_steal_level(3.0), NoiseLevel::Moderate);
+        assert_eq!(cpu_steal_level(10.0), NoiseLevel::Noisy);
+        assert_eq!(cpu_steal_level(20.0), NoiseLevel::VeryNoisy);
     }
 
     #[test]

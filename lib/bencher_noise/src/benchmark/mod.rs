@@ -9,8 +9,6 @@ pub struct BenchmarkResult {
     pub mean_ns: f64,
     pub stddev_ns: f64,
     pub cov_percent: f64,
-    pub min_ns: f64,
-    pub max_ns: f64,
     pub p99_ns: f64,
 }
 
@@ -29,8 +27,6 @@ impl BenchmarkResult {
                 mean_ns: 0.0,
                 stddev_ns: 0.0,
                 cov_percent: 0.0,
-                min_ns: 0.0,
-                max_ns: 0.0,
                 p99_ns: 0.0,
             };
         }
@@ -43,8 +39,6 @@ impl BenchmarkResult {
         } else {
             0.0
         };
-        let min_ns = samples.iter().copied().reduce(f64::min).unwrap_or_default();
-        let max_ns = samples.iter().copied().reduce(f64::max).unwrap_or_default();
         let p99_ns = percentile(&mut samples, 99.0);
 
         Self {
@@ -52,8 +46,6 @@ impl BenchmarkResult {
             mean_ns,
             stddev_ns,
             cov_percent,
-            min_ns,
-            max_ns,
             p99_ns,
         }
     }

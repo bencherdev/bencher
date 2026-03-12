@@ -3,6 +3,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+use camino::Utf8Path;
+
 use super::BenchmarkResult;
 
 const IO_BUFFER_SIZE: usize = 4096;
@@ -11,8 +13,10 @@ const IO_BUFFER_SIZE: usize = 4096;
 /// Sensitive to scheduler latency, I/O virtualization overhead, and shared storage contention.
 pub fn run_io_benchmark(duration: Duration) -> Result<BenchmarkResult, IoError> {
     let dir = tempfile::tempdir().map_err(IoError::CreateTempDir)?;
-    let file_path = dir.path().join("noise_io_test");
+    let dir_path = Utf8Path::from_path(dir.path()).ok_or(IoError::NonUtf8Path)?;
+    let file_path = dir_path.join("noise_io_test");
     let buf: Vec<u8> = vec![0xAB; IO_BUFFER_SIZE];
+    let mut read_buf = vec![0u8; IO_BUFFER_SIZE];
 
     let mut samples = Vec::new();
     let start = Instant::now();
@@ -30,7 +34,6 @@ pub fn run_io_benchmark(duration: Duration) -> Result<BenchmarkResult, IoError> 
         // Read
         {
             let mut file = std::fs::File::open(&file_path).map_err(IoError::OpenFile)?;
-            let mut read_buf = vec![0u8; IO_BUFFER_SIZE];
             file.read_exact(&mut read_buf).map_err(IoError::ReadFile)?;
         }
 
@@ -45,6 +48,8 @@ pub fn run_io_benchmark(duration: Duration) -> Result<BenchmarkResult, IoError> 
 pub enum IoError {
     #[error("Failed to create temp directory: {0}")]
     CreateTempDir(std::io::Error),
+    #[error("Temp directory path is not valid UTF-8")]
+    NonUtf8Path,
     #[error("Failed to create temp file: {0}")]
     CreateFile(std::io::Error),
     #[error("Failed to write to temp file: {0}")]

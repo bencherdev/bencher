@@ -3,7 +3,7 @@ use std::fmt::Write as _;
 use super::{
     benchmark::BenchmarkResult,
     platform::PlatformMetrics,
-    score::{NoiseLevel, benchmark_cov_level, cov_level},
+    score::{NoiseLevel, benchmark_cov_level, cpu_steal_level},
 };
 
 /// Format a human-readable noise report.
@@ -50,7 +50,7 @@ pub fn format_report(
 
     // CPU steal
     if let Some(steal) = platform.cpu_steal_percent {
-        let steal_level = cov_level(steal);
+        let steal_level = cpu_steal_level(steal);
         let bar = noise_bar(steal, 50.0);
         let label = steal_level.label();
         let _ = write!(report, "  CPU Steal:         {steal:.1}%  {bar}  {label}");
@@ -147,8 +147,6 @@ mod tests {
             mean_ns: 1000.0,
             stddev_ns: cov * 10.0,
             cov_percent: cov,
-            min_ns: 500.0,
-            max_ns: 2000.0,
             p99_ns: 1800.0,
         }
     }

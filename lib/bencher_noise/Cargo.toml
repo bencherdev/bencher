@@ -9,6 +9,7 @@ publish = false
 [dependencies]
 bencher_adapter.workspace = true
 bencher_json = { workspace = true, features = ["client"] }
+camino.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true

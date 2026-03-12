@@ -80,8 +80,8 @@ fn insert_measure(
 ) -> Result<(), NoiseError> {
     let metric = JsonNewMetric {
         value: bench_result.cov_percent.into(),
-        lower_value: Some(bench_result.min_ns.into()),
-        upper_value: Some(bench_result.max_ns.into()),
+        lower_value: None,
+        upper_value: None,
     };
     let measure_id: MeasureNameId = measure_slug.parse().map_err(NoiseError::ParseMeasureName)?;
     let benchmark_id: BenchmarkNameId = benchmark_name
@@ -104,8 +104,6 @@ mod tests {
             mean_ns: 1000.0,
             stddev_ns: cov * 10.0,
             cov_percent: cov,
-            min_ns: 500.0,
-            max_ns: 2000.0,
             p99_ns: 1800.0,
         }
     }
