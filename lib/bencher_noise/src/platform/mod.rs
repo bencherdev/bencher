@@ -12,8 +12,37 @@ pub struct PlatformMetrics {
     pub cpu_steal_percent: Option<f64>,
     pub context_switch_rate: Option<f64>,
     pub is_virtualized: Option<bool>,
-    pub virtualization_type: Option<String>,
+    pub virtualization_type: Option<VirtualizationType>,
     pub cache_sizes: CacheSizes,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[expect(
+    dead_code,
+    reason = "Variants are constructed in platform-specific cfg modules (linux, macos, windows)"
+)]
+pub enum VirtualizationType {
+    Docker,
+    Container,
+    Hypervisor,
+    Kvm,
+    Vmm,
+    Vmware,
+    Other,
+}
+
+impl VirtualizationType {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Docker => "Docker",
+            Self::Container => "Container",
+            Self::Hypervisor => "Hypervisor",
+            Self::Kvm => "KVM",
+            Self::Vmm => "VMM",
+            Self::Vmware => "VMware",
+            Self::Other => "Other",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]

@@ -85,7 +85,7 @@ cargo check --no-default-features
 
 ## Linux Cross-Compilation Checks
 
-When modifying `target_os = "linux"` crates (`bencher_init`, `bencher_rootfs`, `bencher_runner`, `bencher_runner_cli`),
+When modifying `target_os = "linux"` crates (`bencher_init`, `bencher_noise`, `bencher_rootfs`, `bencher_runner`, `bencher_runner_cli`),
 also run the cross-compilation checks locally:
 
 ```bash

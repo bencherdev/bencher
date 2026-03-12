@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{CacheSizes, PlatformMetrics};
+use super::{CacheSizes, PlatformMetrics, VirtualizationType};
 
 pub fn detect_cache_sizes() -> CacheSizes {
     // On Windows, we could use GetLogicalProcessorInformation but that requires
@@ -26,14 +26,14 @@ pub fn collect_metrics(duration: Duration) -> PlatformMetrics {
     }
 }
 
-fn detect_virtualization() -> (Option<bool>, Option<String>) {
+fn detect_virtualization() -> (Option<bool>, Option<VirtualizationType>) {
     // Check common VM indicators via environment or system info
     // On Windows, WMI queries would be ideal but require COM initialization.
     // For now, check the PROCESSOR_IDENTIFIER environment variable for common VM strings.
     if let Ok(model) = std::env::var("COMPUTERNAME") {
         let model_lower = model.to_lowercase();
         if model_lower.contains("virtual") || model_lower.contains("vmware") {
-            return (Some(true), Some(model));
+            return (Some(true), Some(VirtualizationType::Other));
         }
     }
 

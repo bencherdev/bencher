@@ -207,6 +207,13 @@ mod tests {
     }
 
     #[test]
+    fn log_scale_sub_one_percent_clamped_to_zero() {
+        // CoV < 1% produces a negative raw log value, which should be clamped to 0.0
+        let score = log_scale(0.5);
+        assert!((score - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
     fn noise_level_thresholds() {
         assert_eq!(NoiseLevel::from_score(0.0), NoiseLevel::Quiet);
         assert_eq!(NoiseLevel::from_score(40.0), NoiseLevel::Quiet);

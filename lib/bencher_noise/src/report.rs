@@ -2,7 +2,7 @@ use std::fmt::Write as _;
 
 use super::{
     benchmark::BenchmarkResult,
-    platform::PlatformMetrics,
+    platform::{PlatformMetrics, VirtualizationType},
     score::{NoiseLevel, benchmark_cov_level, cpu_steal_level},
 };
 
@@ -23,7 +23,9 @@ pub fn format_report(
 
     // Platform info
     if let Some(true) = platform.is_virtualized {
-        let vtype = platform.virtualization_type.as_deref().unwrap_or("Unknown");
+        let vtype = platform
+            .virtualization_type
+            .map_or("Unknown", VirtualizationType::label);
         let _ = write!(report, "  Platform:          VM ({vtype})");
     } else {
         report.push_str("  Platform:          Native");
@@ -178,6 +180,22 @@ mod tests {
         assert!(report.contains("CPU Steal"));
         assert!(report.contains("5000/s"));
         assert!(report.contains("45 dB"));
+    }
+
+    #[test]
+    fn format_report_virtualized_docker() {
+        let compute = make_result(3.0);
+        let cache = make_result(5.0);
+        let io = make_result(2.0);
+        let platform = PlatformMetrics {
+            cpu_steal_percent: None,
+            context_switch_rate: None,
+            is_virtualized: Some(true),
+            virtualization_type: Some(VirtualizationType::Docker),
+            cache_sizes: CacheSizes::default(),
+        };
+        let report = format_report(30, &compute, &cache, &io, &platform, 25.0);
+        assert!(report.contains("VM (Docker)"));
     }
 
     #[test]

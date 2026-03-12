@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{CacheSizes, PlatformMetrics};
+use super::{CacheSizes, PlatformMetrics, VirtualizationType};
 
 pub fn detect_cache_sizes() -> CacheSizes {
     CacheSizes {
@@ -37,10 +37,10 @@ pub fn collect_metrics(duration: Duration) -> PlatformMetrics {
     }
 }
 
-fn detect_virtualization() -> (Option<bool>, Option<String>) {
+fn detect_virtualization() -> (Option<bool>, Option<VirtualizationType>) {
     // Check kern.hv_vmm_present (Hypervisor.framework)
     if sysctl_usize("kern.hv_vmm_present") == Some(1) {
-        return (Some(true), Some("Hypervisor".to_owned()));
+        return (Some(true), Some(VirtualizationType::Hypervisor));
     }
 
     // Check for VM in sysctl machdep.cpu.features
@@ -51,7 +51,7 @@ fn detect_virtualization() -> (Option<bool>, Option<String>) {
         && output.status.success()
         && String::from_utf8_lossy(&output.stdout).contains("VMM")
     {
-        return (Some(true), Some("VMM".to_owned()));
+        return (Some(true), Some(VirtualizationType::Vmm));
     }
 
     (Some(false), None)

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{CacheSizes, PlatformMetrics};
+use super::{CacheSizes, PlatformMetrics, VirtualizationType};
 
 pub fn detect_cache_sizes() -> CacheSizes {
     CacheSizes {
@@ -117,20 +117,26 @@ pub fn parse_proc_vmstat_ctxt(content: &str) -> Option<u64> {
     None
 }
 
-fn detect_virtualization() -> (Option<bool>, Option<String>) {
+fn detect_virtualization() -> (Option<bool>, Option<VirtualizationType>) {
     // Check for Docker/container
     if std::fs::metadata("/.dockerenv").is_ok() {
-        return (Some(true), Some("Docker".to_owned()));
+        return (Some(true), Some(VirtualizationType::Docker));
     }
     if std::fs::metadata("/run/.containerenv").is_ok() {
-        return (Some(true), Some("Container".to_owned()));
+        return (Some(true), Some(VirtualizationType::Container));
     }
 
     // Check DMI product name
     if let Ok(product) = std::fs::read_to_string("/sys/class/dmi/id/product_name") {
         let product = product.trim().to_lowercase();
-        if product.contains("virtual") || product.contains("kvm") || product.contains("vmware") {
-            return (Some(true), Some(product));
+        if product.contains("kvm") {
+            return (Some(true), Some(VirtualizationType::Kvm));
+        }
+        if product.contains("vmware") {
+            return (Some(true), Some(VirtualizationType::Vmware));
+        }
+        if product.contains("virtual") {
+            return (Some(true), Some(VirtualizationType::Other));
         }
     }
 
@@ -138,7 +144,7 @@ fn detect_virtualization() -> (Option<bool>, Option<String>) {
     if let Ok(cpuinfo) = std::fs::read_to_string("/proc/cpuinfo") {
         for line in cpuinfo.lines() {
             if line.starts_with("flags") && line.contains("hypervisor") {
-                return (Some(true), Some("Hypervisor".to_owned()));
+                return (Some(true), Some(VirtualizationType::Hypervisor));
             }
         }
     }
