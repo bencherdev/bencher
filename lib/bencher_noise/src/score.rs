@@ -21,9 +21,9 @@ pub enum NoiseLevel {
 impl NoiseLevel {
     pub fn from_score(score: f64) -> Self {
         match score {
-            s if s <= 20.0 => Self::Quiet,
-            s if s <= 50.0 => Self::Moderate,
-            s if s <= 75.0 => Self::Noisy,
+            s if s <= 40.0 => Self::Quiet,
+            s if s <= 55.0 => Self::Moderate,
+            s if s <= 70.0 => Self::Noisy,
             _ => Self::VeryNoisy,
         }
     }
@@ -40,7 +40,8 @@ impl NoiseLevel {
 
 /// Calculate the composite noise score (0-100 dB scale).
 ///
-/// Uses a logarithmic mapping of weighted `CoV` values to a 0-100 range.
+/// Uses `33 * log10(weighted_cov)` to map weighted `CoV` values to a 0-100 range,
+/// producing scores that align with real-world sound perception (e.g. 5% `CoV` ≈ 23 dB whisper).
 /// When CPU steal is unavailable, its weight is redistributed proportionally.
 pub fn calculate_noise_score(
     compute: &BenchmarkResult,
@@ -75,26 +76,41 @@ pub fn calculate_noise_score(
 /// Map a weighted `CoV` value to the 0-100 dB scale using a logarithmic curve.
 ///
 /// - `CoV` of 0% maps to score 0
-/// - `CoV` of ~0.1% maps to score ~10
-/// - `CoV` of ~1% maps to score ~35
-/// - `CoV` of ~10% maps to score ~70
-/// - `CoV` of ~50%+ maps to score ~95-100
+/// - `CoV` of ~5% maps to score ~23 (whisper)
+/// - `CoV` of ~10% maps to score ~33 (quiet library)
+/// - `CoV` of ~25% maps to score ~46 (quiet room)
+/// - `CoV` of ~50% maps to score ~56 (normal conversation)
+/// - `CoV` of ~100% maps to score ~66 (busy office)
 fn log_scale(weighted_cov: f64) -> f64 {
     if weighted_cov <= 0.0 {
         return 0.0;
     }
-    // log10(cov * 100) maps:
-    //   0.01% -> log10(1) = 0
-    //   0.1%  -> log10(10) = 1
-    //   1%    -> log10(100) = 2
-    //   10%   -> log10(1000) = 3
-    //   100%  -> log10(10000) = 4
-    // Scale to 0-100 range: score = 25 * log10(cov * 100)
-    let raw = 25.0 * (weighted_cov * 100.0).log10();
+    // log10(cov) maps:
+    //   1%    -> log10(1) = 0
+    //   5%    -> log10(5) = 0.699
+    //   10%   -> log10(10) = 1
+    //   50%   -> log10(50) = 1.699
+    //   100%  -> log10(100) = 2
+    //   1000% -> log10(1000) = 3
+    // Scale to 0-100 range: score = 33 * log10(cov)
+    let raw = 33.0 * weighted_cov.log10();
     raw.clamp(0.0, 100.0)
 }
 
-/// Classify the noise level for a single `CoV` percentage.
+/// Classify the noise level for a benchmark `CoV` percentage.
+///
+/// Benchmark `CoV` has wider thresholds than CPU steal because even
+/// dedicated bare metal servers typically show 5-20% `CoV` for I/O workloads.
+pub fn benchmark_cov_level(cov_percent: f64) -> NoiseLevel {
+    match cov_percent {
+        c if c <= 25.0 => NoiseLevel::Quiet,
+        c if c <= 50.0 => NoiseLevel::Moderate,
+        c if c <= 100.0 => NoiseLevel::Noisy,
+        _ => NoiseLevel::VeryNoisy,
+    }
+}
+
+/// Classify the noise level for a CPU steal percentage.
 pub fn cov_level(cov_percent: f64) -> NoiseLevel {
     match cov_percent {
         c if c <= 1.0 => NoiseLevel::Quiet,
@@ -150,7 +166,7 @@ mod tests {
             cache_sizes: CacheSizes::default(),
         };
         let score = calculate_noise_score(&compute, &cache, &io, &platform);
-        assert!(score > 20.0);
+        assert!(score > 0.0);
         assert!(score < 80.0);
     }
 
@@ -167,7 +183,7 @@ mod tests {
             cache_sizes: CacheSizes::default(),
         };
         let score = calculate_noise_score(&compute, &cache, &io, &platform);
-        assert!(score > 60.0);
+        assert!(score > 40.0);
     }
 
     #[test]
@@ -195,12 +211,12 @@ mod tests {
     #[test]
     fn noise_level_thresholds() {
         assert_eq!(NoiseLevel::from_score(0.0), NoiseLevel::Quiet);
-        assert_eq!(NoiseLevel::from_score(20.0), NoiseLevel::Quiet);
-        assert_eq!(NoiseLevel::from_score(21.0), NoiseLevel::Moderate);
-        assert_eq!(NoiseLevel::from_score(50.0), NoiseLevel::Moderate);
-        assert_eq!(NoiseLevel::from_score(51.0), NoiseLevel::Noisy);
-        assert_eq!(NoiseLevel::from_score(75.0), NoiseLevel::Noisy);
-        assert_eq!(NoiseLevel::from_score(76.0), NoiseLevel::VeryNoisy);
+        assert_eq!(NoiseLevel::from_score(40.0), NoiseLevel::Quiet);
+        assert_eq!(NoiseLevel::from_score(41.0), NoiseLevel::Moderate);
+        assert_eq!(NoiseLevel::from_score(55.0), NoiseLevel::Moderate);
+        assert_eq!(NoiseLevel::from_score(56.0), NoiseLevel::Noisy);
+        assert_eq!(NoiseLevel::from_score(70.0), NoiseLevel::Noisy);
+        assert_eq!(NoiseLevel::from_score(71.0), NoiseLevel::VeryNoisy);
     }
 
     #[test]
@@ -209,5 +225,17 @@ mod tests {
         assert_eq!(cov_level(3.0), NoiseLevel::Moderate);
         assert_eq!(cov_level(10.0), NoiseLevel::Noisy);
         assert_eq!(cov_level(20.0), NoiseLevel::VeryNoisy);
+    }
+
+    #[test]
+    fn benchmark_cov_level_classification() {
+        assert_eq!(benchmark_cov_level(5.0), NoiseLevel::Quiet);
+        assert_eq!(benchmark_cov_level(18.0), NoiseLevel::Quiet);
+        assert_eq!(benchmark_cov_level(25.0), NoiseLevel::Quiet);
+        assert_eq!(benchmark_cov_level(30.0), NoiseLevel::Moderate);
+        assert_eq!(benchmark_cov_level(50.0), NoiseLevel::Moderate);
+        assert_eq!(benchmark_cov_level(75.0), NoiseLevel::Noisy);
+        assert_eq!(benchmark_cov_level(100.0), NoiseLevel::Noisy);
+        assert_eq!(benchmark_cov_level(150.0), NoiseLevel::VeryNoisy);
     }
 }

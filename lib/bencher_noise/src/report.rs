@@ -3,7 +3,7 @@ use std::fmt::Write as _;
 use super::{
     benchmark::BenchmarkResult,
     platform::PlatformMetrics,
-    score::{NoiseLevel, cov_level},
+    score::{NoiseLevel, benchmark_cov_level, cov_level},
 };
 
 /// Format a human-readable noise report.
@@ -98,11 +98,11 @@ pub fn format_report(
 }
 
 fn format_benchmark_line(report: &mut String, label: &str, result: &BenchmarkResult) {
-    let level = cov_level(result.cov_percent);
+    let level = benchmark_cov_level(result.cov_percent);
     let mean_us = result.mean_ns / 1000.0;
     let stddev_us = result.stddev_ns / 1000.0;
     let p99_us = result.p99_ns / 1000.0;
-    let bar = noise_bar(result.cov_percent, 30.0);
+    let bar = noise_bar(result.cov_percent, 150.0);
     let level_label = level.label();
     let cov = result.cov_percent;
     let iters = result.iterations;
