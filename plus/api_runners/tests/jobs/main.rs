@@ -1626,7 +1626,9 @@ mod poll_timeout_boundaries {
             tokio::time::timeout(std::time::Duration::from_secs(5), recv_msg(&mut ws)).await;
         match result {
             Ok(ServerMessage::Job(_)) => {}, // Expected
-            Ok(other @ (ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel)) => {
+            Ok(
+                other @ (ServerMessage::Ack { .. } | ServerMessage::NoJob | ServerMessage::Cancel),
+            ) => {
                 panic!("Expected Job, got: {other:?}")
             },
             Err(err) => panic!("Timed out waiting for Job response: {err}"),

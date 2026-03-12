@@ -144,6 +144,10 @@ impl Up {
                     return Err(UpError::ApiClient(ApiClientError::Unauthorized));
                 },
                 Err(e) => {
+                    // Send close frame so the server knows we disconnected intentionally
+                    if let Ok(mut ws_guard) = ws.lock() {
+                        ws_guard.close();
+                    }
                     println!("Channel error: {e}");
                     println!(
                         "Reconnecting in {} seconds...",

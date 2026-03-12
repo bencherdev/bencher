@@ -157,7 +157,12 @@ async fn handle_runner_message(
             }
             slog::info!(log, "Job completed"; "job_id" => ?job.id, "iterations" => results.len());
             handle_completed(log, context, job, results).await?;
-            return Ok((ServerMessage::Ack, Some(CloseReason::JobCompleted)));
+            return Ok((
+                ServerMessage::Ack {
+                    job: Some(job.uuid),
+                },
+                Some(CloseReason::JobCompleted),
+            ));
         },
         RunnerMessage::Failed {
             job: msg_job_uuid,
@@ -169,7 +174,12 @@ async fn handle_runner_message(
             }
             slog::warn!(log, "Job failed"; "job_id" => ?job.id, "error" => &error);
             handle_failed(log, context, job, results, error).await?;
-            return Ok((ServerMessage::Ack, Some(CloseReason::JobFailed)));
+            return Ok((
+                ServerMessage::Ack {
+                    job: Some(job.uuid),
+                },
+                Some(CloseReason::JobFailed),
+            ));
         },
         RunnerMessage::Canceled { job: msg_job_uuid } => {
             if msg_job_uuid != job.uuid {
@@ -177,11 +187,21 @@ async fn handle_runner_message(
             }
             slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job.id);
             handle_canceled(log, context, job.id).await?;
-            return Ok((ServerMessage::Ack, Some(CloseReason::JobCanceledByRunner)));
+            return Ok((
+                ServerMessage::Ack {
+                    job: Some(job.uuid),
+                },
+                Some(CloseReason::JobCanceledByRunner),
+            ));
         },
     }
 
-    Ok((ServerMessage::Ack, None))
+    Ok((
+        ServerMessage::Ack {
+            job: Some(job.uuid),
+        },
+        None,
+    ))
 }
 
 /// Handle a Running message: transition job from Claimed to Running,
@@ -302,6 +322,10 @@ async fn handle_completed(
 
     let update = UpdateJob::terminate(JobStatus::Completed, now);
 
+    // Allow Failed → Completed: a runner that finishes successfully after the
+    // server marked the job Failed (e.g., heartbeat timeout fired while the
+    // runner was still completing) should be permitted to override the status.
+    // The runner is the authority on whether the benchmark actually succeeded.
     let updated = update.execute_if_either_status(
         write_conn!(context),
         job.id,
@@ -542,7 +566,7 @@ const OCI_RUNNER_TOKEN_TTL: u32 = 600;
 async fn try_claim_job(
     context: &ApiContext,
     runner_token: &RunnerToken,
-) -> Result<Option<JsonClaimedJob>, HttpError> {
+) -> Result<Option<(QueryJob, JsonClaimedJob)>, HttpError> {
     use schema::job::dsl::{created, id, organization_id, priority, source_ip, status};
 
     // Tier 1: Enterprise/Team (priority >= 200) - no concurrency limit
@@ -628,12 +652,8 @@ async fn try_claim_job(
     };
 
     if let Some(json_spec) = json_spec {
-        Ok(Some(build_claimed_job(
-            context,
-            query_job,
-            runner_token,
-            json_spec,
-        )?))
+        let claimed_job = build_claimed_job(context, query_job.clone(), runner_token, json_spec)?;
+        Ok(Some((query_job, claimed_job)))
     } else {
         // Defensive: the UPDATE matched 0 rows despite SELECT finding a pending job.
         // Under the current single-writer lock this should not happen, but we
@@ -770,10 +790,9 @@ pub async fn runner_channel(
             poll_for_job(&log, context, &runner_token, deadline, &mut tx, &mut rx).await;
 
         match claimed_job {
-            Ok(Some(job)) => {
+            Ok(Some((query_job, claimed_job))) => {
                 // Send Job to runner
-                let job_uuid = job.uuid;
-                let job_msg = ServerMessage::Job(Box::new(job));
+                let job_msg = ServerMessage::Job(Box::new(claimed_job));
                 let text = serde_json::to_string(&job_msg)
                     .map_err(|e| HttpError::for_internal_error(e.to_string()))?;
                 if tx.send(Message::Text(text.into())).await.is_err() {
@@ -781,17 +800,23 @@ pub async fn runner_channel(
                 }
 
                 // === EXECUTING STATE ===
-                let job_db = QueryJob::from_uuid(auth_conn!(context), job_uuid)?;
 
-                match execute_loop(&log, context, &job_db, &mut tx, &mut rx, heartbeat_timeout)
-                    .await
+                match execute_loop(
+                    &log,
+                    context,
+                    &query_job,
+                    &mut tx,
+                    &mut rx,
+                    heartbeat_timeout,
+                )
+                .await
                 {
                     Ok(ExecuteResult::JobDone) => {
                         // Transition back to Idle
                     },
                     Ok(ExecuteResult::Disconnected) | Err(_) => {
                         // Spawn heartbeat timeout for in-flight jobs
-                        let job = QueryJob::get(auth_conn!(context), job_db.id)?;
+                        let job = QueryJob::get(auth_conn!(context), query_job.id)?;
                         if !job.status.has_run() {
                             slog::info!(log, "Channel disconnected for in-flight job, spawning heartbeat timeout"; "job_id" => ?job.id);
                             spawn_heartbeat_timeout(
@@ -845,21 +870,22 @@ where
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
     loop {
-        let Some(msg_result) = (match tokio::time::timeout(idle_timeout, rx.next()).await {
-            Ok(msg) => msg,
+        let msg = match tokio::time::timeout(idle_timeout, rx.next()).await {
+            Ok(Some(msg)) => msg,
+            Ok(None) => {
+                return Err(ChannelError::WebSocket(
+                    tokio_tungstenite::tungstenite::Error::ConnectionClosed,
+                ));
+            },
             Err(_elapsed) => {
                 slog::warn!(log, "Idle timeout waiting for Ready message");
                 return Err(ChannelError::WebSocket(
                     tokio_tungstenite::tungstenite::Error::ConnectionClosed,
                 ));
             },
-        }) else {
-            return Err(ChannelError::WebSocket(
-                tokio_tungstenite::tungstenite::Error::ConnectionClosed,
-            ));
         };
 
-        let msg = msg_result?;
+        let msg = msg?;
 
         match msg {
             Message::Text(text) => {
@@ -879,7 +905,9 @@ where
                         {
                             handle_completed(log, context, &job, results).await?;
                         }
-                        let ack = serde_json::to_string(&ServerMessage::Ack)?;
+                        let ack = serde_json::to_string(&ServerMessage::Ack {
+                            job: Some(job_uuid),
+                        })?;
                         tx.send(Message::Text(ack.into())).await?;
                     },
                     RunnerMessage::Failed {
@@ -893,7 +921,9 @@ where
                         {
                             handle_failed(log, context, &job, results, error).await?;
                         }
-                        let ack = serde_json::to_string(&ServerMessage::Ack)?;
+                        let ack = serde_json::to_string(&ServerMessage::Ack {
+                            job: Some(job_uuid),
+                        })?;
                         tx.send(Message::Text(ack.into())).await?;
                     },
                     RunnerMessage::Canceled { job: job_uuid } => {
@@ -903,7 +933,9 @@ where
                         {
                             handle_canceled(log, context, job.id).await?;
                         }
-                        let ack = serde_json::to_string(&ServerMessage::Ack)?;
+                        let ack = serde_json::to_string(&ServerMessage::Ack {
+                            job: Some(job_uuid),
+                        })?;
                         tx.send(Message::Text(ack.into())).await?;
                     },
                     RunnerMessage::Running | RunnerMessage::Heartbeat => {
@@ -964,7 +996,7 @@ async fn poll_for_job<S, R>(
     deadline: tokio::time::Instant,
     tx: &mut S,
     rx: &mut R,
-) -> Result<Option<JsonClaimedJob>, ChannelError>
+) -> Result<Option<(QueryJob, JsonClaimedJob)>, ChannelError>
 where
     S: futures::Sink<Message> + Unpin,
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,

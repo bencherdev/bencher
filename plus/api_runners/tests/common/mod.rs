@@ -536,7 +536,7 @@ pub async fn claim_via_channel(
     let job = match response {
         ServerMessage::Job(job) => Some(*job),
         ServerMessage::NoJob => None,
-        other @ (ServerMessage::Ack | ServerMessage::Cancel) => {
+        other @ (ServerMessage::Ack { .. } | ServerMessage::Cancel) => {
             panic!("Expected Job or NoJob, got: {other:?}")
         },
     };

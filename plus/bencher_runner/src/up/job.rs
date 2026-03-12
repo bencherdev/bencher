@@ -47,7 +47,12 @@ pub enum JobOutcome {
 }
 
 #[cfg(target_os = "linux")]
-#[expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    clippy::too_many_lines,
+    clippy::use_debug
+)]
 pub fn execute_job(
     config: &UpConfig,
     job: &JsonClaimedJob,
@@ -144,7 +149,14 @@ pub fn execute_job(
             .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
         drop(ws_guard.send_message(&msg));
         // Wait for Ack but don't close — connection stays open for next job
-        let acked = ws_guard.read_message_timeout(ACK_TIMEOUT).is_ok();
+        let acked = match ws_guard.read_message_timeout(ACK_TIMEOUT) {
+            Ok(Some(_)) => true,
+            Ok(None) => false,
+            Err(e) => {
+                eprintln!("Warning: error waiting for server ACK: {e}");
+                false
+            },
+        };
         if !acked {
             eprintln!("Warning: did not receive server ACK for Canceled");
         }
@@ -161,7 +173,14 @@ pub fn execute_job(
         .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
     ws_guard.send_message(&msg)?;
     // Wait for Ack but don't close — connection stays open for next job
-    let acked = ws_guard.read_message_timeout(ACK_TIMEOUT).is_ok();
+    let acked = match ws_guard.read_message_timeout(ACK_TIMEOUT) {
+        Ok(Some(_)) => true,
+        Ok(None) => false,
+        Err(e) => {
+            eprintln!("Warning: error waiting for server ACK: {e}");
+            false
+        },
+    };
     if !acked {
         eprintln!("Warning: did not receive server ACK for Completed");
     }
@@ -200,7 +219,14 @@ fn send_failed(
         .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
     ws_guard.send_message(&msg)?;
     // Wait for Ack but don't close — connection stays open for next job
-    let acked = ws_guard.read_message_timeout(ACK_TIMEOUT).is_ok();
+    let acked = match ws_guard.read_message_timeout(ACK_TIMEOUT) {
+        Ok(Some(_)) => true,
+        Ok(None) => false,
+        Err(e) => {
+            eprintln!("Warning: error waiting for server ACK: {e}");
+            false
+        },
+    };
     if !acked {
         eprintln!("Warning: did not receive server ACK for Failed");
     }
@@ -308,6 +334,7 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
 }
 
 #[cfg(target_os = "linux")]
+#[expect(clippy::print_stderr)]
 fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_flag: &AtomicBool) {
     loop {
         std::thread::sleep(Duration::from_secs(1));
@@ -316,7 +343,13 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
             break;
         }
 
-        let Ok(mut ws_guard) = ws.lock() else { break };
+        let mut ws_guard = match ws.lock() {
+            Ok(guard) => guard,
+            Err(e) => {
+                eprintln!("ERROR: heartbeat lock poisoned: {e}");
+                break;
+            },
+        };
 
         // Send heartbeat, ignoring errors (main thread handles fatal WS errors)
         if ws_guard.send_message(&RunnerMessage::Heartbeat).is_err() {
@@ -329,8 +362,10 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
                 cancel_flag.store(true, Ordering::SeqCst);
                 break;
             },
-            Ok(None | Some(ServerMessage::Ack | ServerMessage::Job(_) | ServerMessage::NoJob)) => {
-            },
+            Ok(
+                None
+                | Some(ServerMessage::Ack { .. } | ServerMessage::Job(_) | ServerMessage::NoJob),
+            ) => {},
             Err(_) => break,
         }
     }

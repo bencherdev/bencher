@@ -45,7 +45,11 @@ pub enum RunnerMessage {
 #[serde(tag = "event", rename_all = "snake_case")]
 pub enum ServerMessage {
     /// Acknowledge received message.
-    Ack,
+    Ack {
+        /// The job this acknowledgement is for (None for non-job messages like Ready)
+        #[serde(skip_serializing_if = "Option::is_none")]
+        job: Option<JobUuid>,
+    },
     /// Server assigned a job (boxed because it's large).
     Job(Box<JsonClaimedJob>),
     /// Poll timeout expired, no job available.
@@ -294,11 +298,26 @@ mod tests {
     }
 
     #[test]
-    fn server_ack_roundtrip() {
-        let msg = ServerMessage::Ack;
+    fn server_ack_no_job_roundtrip() {
+        let msg = ServerMessage::Ack { job: None };
+        let json = serde_json::to_string(&msg).unwrap();
+        assert_eq!(json, r#"{"event":"ack"}"#);
+        let deserialized: ServerMessage = serde_json::from_str(&json).unwrap();
+        assert!(matches!(deserialized, ServerMessage::Ack { job: None }));
+    }
+
+    #[test]
+    fn server_ack_with_job_roundtrip() {
+        let job_uuid = test_job_uuid();
+        let msg = ServerMessage::Ack {
+            job: Some(job_uuid),
+        };
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: ServerMessage = serde_json::from_str(&json).unwrap();
-        assert!(matches!(deserialized, ServerMessage::Ack));
+        match deserialized {
+            ServerMessage::Ack { job } => assert_eq!(job, Some(job_uuid)),
+            other => panic!("Expected Ack, got {other:?}"),
+        }
     }
 
     #[test]

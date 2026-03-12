@@ -96,7 +96,7 @@ impl JobChannel {
                     match server_msg {
                         ServerMessage::Job(job) => return Ok(Some(*job)),
                         ServerMessage::NoJob => return Ok(None),
-                        ServerMessage::Ack => {
+                        ServerMessage::Ack { .. } => {
                             // Stale Ack from the previous job completion — safe to ignore.
                             // This happens when the server's Ack arrives after the runner
                             // has already moved on to requesting the next job.
@@ -117,6 +117,11 @@ impl JobChannel {
                 Message::Binary(_) | Message::Pong(_) | Message::Frame(_) => {},
             }
         }
+    }
+
+    /// Send a WebSocket close frame (best-effort).
+    pub fn close(&mut self) {
+        drop(self.ws.close(None));
     }
 
     pub fn try_read_message(&mut self) -> Result<Option<ServerMessage>, WebSocketError> {
@@ -365,7 +370,14 @@ mod tests {
     #[test]
     fn ack_deserializes() {
         let msg: ServerMessage = serde_json::from_str(r#"{"event":"ack"}"#).unwrap();
-        assert!(matches!(msg, ServerMessage::Ack));
+        assert!(matches!(msg, ServerMessage::Ack { job: None }));
+    }
+
+    #[test]
+    fn ack_with_job_deserializes() {
+        let json = format!(r#"{{"event":"ack","job":"{}"}}"#, test_job_uuid());
+        let msg: ServerMessage = serde_json::from_str(&json).unwrap();
+        assert!(matches!(msg, ServerMessage::Ack { job: Some(_) }));
     }
 
     #[test]

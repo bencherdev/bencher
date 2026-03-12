@@ -56,7 +56,7 @@ async fn setup_claimed_job(
         ServerMessage::Job(job) => {
             assert_eq!(job.uuid, job_uuid, "Claimed job UUID should match");
         },
-        ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel => {
+        ServerMessage::Ack { .. } | ServerMessage::NoJob | ServerMessage::Cancel => {
             panic!("Expected Job message, got: {response:?}");
         },
     }
@@ -151,13 +151,13 @@ async fn channel_lifecycle_completed() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Send Heartbeat
     send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Send Completed
     send_msg(
@@ -174,7 +174,7 @@ async fn channel_lifecycle_completed() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
     // Connection stays open (no close frame from server).
@@ -192,7 +192,7 @@ async fn channel_lifecycle_failed() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Send Failed
@@ -211,7 +211,7 @@ async fn channel_lifecycle_failed() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
     // Connection stays open. Close from client side.
@@ -233,7 +233,7 @@ async fn channel_heartbeat_cancel() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Cancel the job directly in DB (simulating user cancellation)
     set_job_status(&server, job_uuid, JobStatus::Canceled);
@@ -262,7 +262,7 @@ async fn channel_canceled_message_over_ws() {
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Cancel the job directly in DB (simulating user/admin cancellation)
@@ -294,13 +294,13 @@ async fn channel_runner_sends_canceled() {
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Runner sends Canceled (e.g., it detected the cancel signal itself)
     send_msg(&mut ws, &RunnerMessage::Canceled { job: job_uuid }).await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for Canceled message, got: {resp:?}"
     );
 
@@ -324,7 +324,7 @@ async fn channel_canceled_acknowledgment() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Cancel the job in DB (simulating user/admin cancellation)
@@ -361,7 +361,7 @@ async fn channel_invalid_json() {
     // Connection should still be open; send a valid Running message
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     ws.close(None).await.expect("Failed to close WebSocket");
@@ -380,7 +380,7 @@ async fn channel_heartbeat_timeout() {
     // Send Running to start the job
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Pause tokio time and advance past the heartbeat timeout (5s in tests).
@@ -467,7 +467,7 @@ async fn channel_lifecycle_with_full_spec() {
             assert_eq!(job.uuid, job_uuid);
             *job
         },
-        ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel => {
+        ServerMessage::Ack { .. } | ServerMessage::NoJob | ServerMessage::Cancel => {
             panic!("Expected Job message, got: {response:?}");
         },
     };
@@ -481,13 +481,13 @@ async fn channel_lifecycle_with_full_spec() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Send Heartbeat
     send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Send Completed
     send_msg(
@@ -504,7 +504,7 @@ async fn channel_lifecycle_with_full_spec() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
     ws.close(None).await.expect("Failed to close WebSocket");
@@ -586,7 +586,7 @@ async fn channel_ping_does_not_reset_heartbeat_timeout() {
     // Send Running to start the job and reset the heartbeat clock
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Send a Ping frame — should NOT reset heartbeat timeout
@@ -637,7 +637,7 @@ async fn channel_binary_message() {
     // Connection should still be open; send a valid Running message
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Send another binary message to be sure
@@ -648,7 +648,7 @@ async fn channel_binary_message() {
     // Send a Heartbeat to verify connection is still functional
     send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }
@@ -711,7 +711,7 @@ async fn channel_failed_from_claimed() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Job should be Failed — transition from Claimed is allowed
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
@@ -735,7 +735,7 @@ async fn channel_completed_ack_no_close() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Send Completed
     send_msg(
@@ -752,7 +752,7 @@ async fn channel_completed_ack_no_close() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
     // Connection stays open (no close frame from server). Close from client side.
@@ -769,7 +769,7 @@ async fn channel_failed_ack_no_close() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Send Failed
     send_msg(
@@ -787,7 +787,7 @@ async fn channel_failed_ack_no_close() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
     // Connection stays open. Close from client side.
@@ -804,12 +804,12 @@ async fn channel_canceled_ack_no_close() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Runner sends Canceled
     send_msg(&mut ws, &RunnerMessage::Canceled { job: job_uuid }).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
 
     // Connection stays open. Close from client side.
@@ -830,7 +830,7 @@ async fn channel_completed_with_output() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Send Completed with stdout and output
     let mut output = std::collections::BTreeMap::new();
@@ -852,7 +852,7 @@ async fn channel_completed_with_output() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     // File output ("final results") is now passed to the adapter (no longer silently dropped).
     // The Magic adapter cannot parse it, so process_results fails and the job is marked Failed.
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
@@ -914,7 +914,7 @@ async fn channel_completed_overrides_failed() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for retried Completed, got: {resp:?}"
     );
 
@@ -934,7 +934,7 @@ async fn channel_failed_with_output() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Send Failed with stderr
     send_msg(
@@ -952,7 +952,7 @@ async fn channel_failed_with_output() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
     // Connection stays open. Close from client side.
@@ -969,7 +969,7 @@ async fn channel_completed_with_stderr_only() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Send Completed with only stderr (e.g., benchmark wrote to stderr)
     send_msg(
@@ -986,7 +986,7 @@ async fn channel_completed_with_stderr_only() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
     // Connection stays open. Close from client side.
@@ -1003,7 +1003,7 @@ async fn channel_completed_result_processing_failure() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Send Completed with stdout that the adapter cannot parse.
     // The Magic adapter will fail to convert this invalid benchmark output.
@@ -1021,7 +1021,7 @@ async fn channel_completed_result_processing_failure() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Job is marked Failed (not Processed) because process_results failed
     // (the adapter could not parse the output).
@@ -1047,7 +1047,7 @@ async fn channel_completed_multiple_iterations() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Send Completed with 3 iterations, all empty
@@ -1079,7 +1079,7 @@ async fn channel_completed_multiple_iterations() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     // Empty results -> adapter succeeds (no benchmarks to parse) -> Processed
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
@@ -1099,7 +1099,7 @@ async fn channel_completed_multiple_iterations_with_file_output() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Send Completed with 2 iterations, each having file output
@@ -1135,7 +1135,7 @@ async fn channel_completed_multiple_iterations_with_file_output() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     // Magic adapter cannot parse the file content -> process_results fails -> Failed
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
@@ -1154,7 +1154,7 @@ async fn channel_failed_multiple_iterations() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Send Failed with 2 iterations (partial results before failure)
@@ -1181,7 +1181,7 @@ async fn channel_failed_multiple_iterations() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
     // Connection stays open. Close from client side.
@@ -1242,7 +1242,7 @@ async fn channel_job_timeout() {
     let response = recv_msg(&mut ws).await;
     match response {
         ServerMessage::Job(job) => assert_eq!(job.uuid, job_uuid),
-        ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel => {
+        ServerMessage::Ack { .. } | ServerMessage::NoJob | ServerMessage::Cancel => {
             panic!("Expected Job message, got: {response:?}");
         },
     }
@@ -1250,13 +1250,13 @@ async fn channel_job_timeout() {
     // Send Running to start the job (sets the `started` timestamp via mock clock)
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Send Heartbeat to confirm job is active
     send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Advance mock clock past job timeout (10s) + grace period (60s) = 70s.
     mock_time.fetch_add(75, Ordering::Relaxed);
@@ -1319,7 +1319,7 @@ async fn channel_token_rotation_invalidates_old_token() {
 
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Close the WebSocket
@@ -1425,7 +1425,7 @@ async fn channel_completed_after_concurrent_cancel() {
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Cancel the job in DB (simulating timeout task or admin action)
@@ -1448,7 +1448,7 @@ async fn channel_completed_after_concurrent_cancel() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for Completed after concurrent cancel, got: {resp:?}"
     );
 
@@ -1470,7 +1470,7 @@ async fn channel_completed_after_concurrent_failure() {
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Mark job Failed in DB (simulating heartbeat timeout on a different connection)
@@ -1492,7 +1492,7 @@ async fn channel_completed_after_concurrent_failure() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for Completed after concurrent failure, got: {resp:?}"
     );
 
@@ -1513,7 +1513,7 @@ async fn channel_completed_idempotent_duplicate() {
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Set job to Completed directly in DB (simulating a concurrent completion)
     set_job_status(&server, job_uuid, JobStatus::Completed);
@@ -1534,7 +1534,7 @@ async fn channel_completed_idempotent_duplicate() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for idempotent Completed, got: {resp:?}"
     );
 
@@ -1554,7 +1554,7 @@ async fn channel_failed_after_concurrent_cancel() {
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Cancel the job in DB
@@ -1577,7 +1577,7 @@ async fn channel_failed_after_concurrent_cancel() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for Failed after concurrent cancel, got: {resp:?}"
     );
 
@@ -1598,7 +1598,7 @@ async fn channel_failed_after_concurrent_completion() {
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Set job to Completed in DB (simulating a race)
@@ -1621,7 +1621,7 @@ async fn channel_failed_after_concurrent_completion() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for Failed after concurrent completion, got: {resp:?}"
     );
 
@@ -1642,7 +1642,7 @@ async fn channel_failed_idempotent_duplicate() {
     // Transition to Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Set job to Failed directly in DB
     set_job_status(&server, job_uuid, JobStatus::Failed);
@@ -1664,7 +1664,7 @@ async fn channel_failed_idempotent_duplicate() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for idempotent Failed, got: {resp:?}"
     );
 
@@ -1758,7 +1758,7 @@ async fn channel_heartbeat_detects_job_timeout() {
     // Send Running (sets `started` timestamp via mock clock)
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
     // Heartbeat while within timeout should return Ack
@@ -1766,7 +1766,7 @@ async fn channel_heartbeat_detects_job_timeout() {
     send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for heartbeat within timeout, got: {resp:?}"
     );
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
@@ -1836,7 +1836,7 @@ async fn channel_heartbeat_no_false_timeout() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     // Advance to just under the limit (69s, limit is 70s)
     mock_time.fetch_add(69, Ordering::Relaxed);
@@ -1845,7 +1845,7 @@ async fn channel_heartbeat_no_false_timeout() {
     send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack when within timeout+grace, got: {resp:?}"
     );
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
@@ -1905,7 +1905,7 @@ async fn channel_heartbeat_timeout_skipped_before_running() {
     send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack when job has no started timestamp, got: {resp:?}"
     );
 
@@ -1957,7 +1957,7 @@ async fn channel_multi_job_cycle() {
     let response = recv_msg(&mut ws).await;
     let first_job_uuid = match response {
         ServerMessage::Job(job) => job.uuid,
-        ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel => {
+        ServerMessage::Ack { .. } | ServerMessage::NoJob | ServerMessage::Cancel => {
             panic!("Expected Job message for first job, got: {response:?}");
         },
     };
@@ -1970,7 +1970,7 @@ async fn channel_multi_job_cycle() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, first_job_uuid), JobStatus::Running);
 
     // Send Completed
@@ -1988,7 +1988,7 @@ async fn channel_multi_job_cycle() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(
         get_job_status(&server, first_job_uuid),
         JobStatus::Processed
@@ -2000,7 +2000,7 @@ async fn channel_multi_job_cycle() {
     let response = recv_msg(&mut ws).await;
     let second_job_uuid = match response {
         ServerMessage::Job(job) => job.uuid,
-        ServerMessage::Ack | ServerMessage::NoJob | ServerMessage::Cancel => {
+        ServerMessage::Ack { .. } | ServerMessage::NoJob | ServerMessage::Cancel => {
             panic!("Expected Job message for second job, got: {response:?}");
         },
     };
@@ -2017,7 +2017,7 @@ async fn channel_multi_job_cycle() {
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, second_job_uuid), JobStatus::Running);
 
     // Send Completed
@@ -2035,7 +2035,7 @@ async fn channel_multi_job_cycle() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(
         get_job_status(&server, second_job_uuid),
         JobStatus::Processed
@@ -2094,7 +2094,7 @@ async fn channel_completed_during_idle() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for Completed during Idle, got: {resp:?}"
     );
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
@@ -2113,7 +2113,7 @@ async fn channel_completed_during_idle_idempotent() {
     // Complete the job normally
     send_msg(&mut ws, &RunnerMessage::Running).await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
 
     send_msg(
         &mut ws,
@@ -2129,7 +2129,7 @@ async fn channel_completed_during_idle_idempotent() {
     )
     .await;
     let resp = recv_msg(&mut ws).await;
-    assert!(matches!(resp, ServerMessage::Ack));
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
 
     // Close and reconnect
@@ -2153,7 +2153,7 @@ async fn channel_completed_during_idle_idempotent() {
     .await;
     let resp = recv_msg(&mut ws2).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for idempotent Completed, got: {resp:?}"
     );
     // Job should still be Processed
@@ -2208,7 +2208,7 @@ async fn channel_failed_during_idle() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack),
+        matches!(resp, ServerMessage::Ack { .. }),
         "Expected Ack for Failed during Idle, got: {resp:?}"
     );
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
