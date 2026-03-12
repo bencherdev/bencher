@@ -96,7 +96,7 @@ fn insert_measure(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bencher::sub::noise::platform::CacheSizes;
+    use crate::platform::CacheSizes;
 
     fn make_result(cov: f64) -> BenchmarkResult {
         BenchmarkResult {

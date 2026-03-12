@@ -107,7 +107,7 @@ pub fn cov_level(cov_percent: f64) -> NoiseLevel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bencher::sub::noise::platform::CacheSizes;
+    use crate::platform::CacheSizes;
 
     fn make_result(cov_percent: f64) -> BenchmarkResult {
         BenchmarkResult {

@@ -1332,6 +1332,7 @@ dependencies = [
  "bencher_client",
  "bencher_comment",
  "bencher_json",
+ "bencher_noise",
  "bencher_parser",
  "bollard",
  "camino",
@@ -1345,7 +1346,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tabled",
- "tempfile",
  "thiserror 2.0.17",
  "tokio",
  "tokio-rustls 0.26.4",
@@ -1527,6 +1527,17 @@ version = "0.5.10"
 dependencies = [
  "slog",
  "slog-term",
+]
+
+[[package]]
+name = "bencher_noise"
+version = "0.5.10"
+dependencies = [
+ "bencher_adapter",
+ "bencher_json",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.17",
 ]
 
 [[package]]

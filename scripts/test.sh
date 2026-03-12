@@ -11,7 +11,7 @@ fi
 # The binaries cannot run on a non-Linux host, so we only build them (--no-run).
 if [ "$(uname -s)" != "Linux" ]; then
     LINUX_TARGET="x86_64-unknown-linux-gnu"
-    LINUX_PACKAGES=(-p bencher_init -p bencher_rootfs -p bencher_runner -p bencher_runner_cli)
+    LINUX_PACKAGES=(-p bencher_init -p bencher_rootfs -p bencher_runner -p bencher_runner_cli -p bencher_noise)
 
     # A C cross-compiler is needed for transitive native dependencies (e.g. ring).
     CROSS_CC=""

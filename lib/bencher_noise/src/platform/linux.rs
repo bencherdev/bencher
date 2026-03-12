@@ -41,22 +41,30 @@ pub fn collect_metrics(duration: Duration) -> PlatformMetrics {
 
     let cpu_steal_percent = match (steal_start, steal_end) {
         (Some((steal_s, total_s)), Some((steal_e, total_e))) => {
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "CPU tick counts fit well within f64 precision for percentage calculation"
+            )]
             let delta_steal = steal_e.saturating_sub(steal_s) as f64;
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "CPU tick counts fit well within f64 precision for percentage calculation"
+            )]
             let delta_total = total_e.saturating_sub(total_s) as f64;
-            if delta_total > 0.0 {
-                Some((delta_steal / delta_total) * 100.0)
-            } else {
-                None
-            }
+            (delta_total > 0.0).then(|| (delta_steal / delta_total) * 100.0)
         },
         _ => None,
     };
 
     let context_switch_rate = match (ctxt_start, ctxt_end) {
         (Some(start), Some(end)) => {
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "context switch delta fits well within f64 precision for rate calculation"
+            )]
             let delta = end.saturating_sub(start) as f64;
             let secs = duration.as_secs_f64();
-            if secs > 0.0 { Some(delta / secs) } else { None }
+            (secs > 0.0).then(|| delta / secs)
         },
         _ => None,
     };
@@ -72,8 +80,8 @@ pub fn collect_metrics(duration: Duration) -> PlatformMetrics {
     }
 }
 
-/// Parse /proc/stat to extract steal time.
-/// Returns (steal_ticks, total_ticks) for the aggregate CPU line.
+/// Parse `/proc/stat` to extract steal time.
+/// Returns (`steal_ticks`, `total_ticks`) for the aggregate CPU line.
 fn read_steal_time() -> Option<(u64, u64)> {
     let content = std::fs::read_to_string("/proc/stat").ok()?;
     parse_proc_stat(&content)
@@ -87,11 +95,9 @@ pub fn parse_proc_stat(content: &str) -> Option<(u64, u64)> {
                 .filter_map(|f| f.parse().ok())
                 .collect();
             // Fields: user, nice, system, idle, iowait, irq, softirq, steal, ...
-            if fields.len() >= 8 {
-                let steal = fields[7];
-                let total: u64 = fields.iter().sum();
-                return Some((steal, total));
-            }
+            let steal = fields.get(7).copied()?;
+            let total: u64 = fields.iter().sum();
+            return Some((steal, total));
         }
     }
     None
@@ -145,40 +151,40 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_proc_stat() {
+    fn parses_proc_stat() {
         let content = "cpu  10132153 290696 3084719 46828483 16683 0 25195 5765 0 0\n\
                         cpu0 1393280 32966 572056 13343292 6130 0 17875 2093 0 0\n";
         let (steal, total) = parse_proc_stat(content).unwrap();
-        assert_eq!(steal, 5765);
+        assert_eq!(steal, 5_765);
         assert_eq!(
             total,
-            10132153 + 290696 + 3084719 + 46828483 + 16683 + 0 + 25195 + 5765 + 0 + 0
+            10_132_153 + 290_696 + 3_084_719 + 46_828_483 + 16_683 + 25_195 + 5_765
         );
     }
 
     #[test]
-    fn test_parse_proc_stat_insufficient_fields() {
+    fn parse_proc_stat_insufficient_fields() {
         let content = "cpu  100 200 300\n";
         assert!(parse_proc_stat(content).is_none());
     }
 
     #[test]
-    fn test_parse_proc_vmstat_ctxt() {
+    fn parses_proc_vmstat_ctxt() {
         let content = "nr_free_pages 12345\nctxt 987654321\nnr_inactive_anon 100\n";
-        assert_eq!(parse_proc_vmstat_ctxt(content), Some(987654321));
+        assert_eq!(parse_proc_vmstat_ctxt(content), Some(987_654_321));
     }
 
     #[test]
-    fn test_parse_proc_vmstat_ctxt_missing() {
+    fn parse_proc_vmstat_ctxt_missing() {
         let content = "nr_free_pages 12345\n";
         assert!(parse_proc_vmstat_ctxt(content).is_none());
     }
 
     #[test]
-    fn test_parse_cache_size_str() {
+    fn parses_cache_size_str() {
         assert_eq!(parse_cache_size_str("32K"), Some(32 * 1024));
         assert_eq!(parse_cache_size_str("8M"), Some(8 * 1024 * 1024));
-        assert_eq!(parse_cache_size_str("65536"), Some(65536));
+        assert_eq!(parse_cache_size_str("65536"), Some(0x1_0000));
         assert_eq!(parse_cache_size_str("invalid"), None);
     }
 }

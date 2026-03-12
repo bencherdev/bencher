@@ -20,6 +20,7 @@ bencher_adapter.workspace = true
 bencher_client = { workspace = true, features = ["client", "rustls-tls"] }
 bencher_comment.workspace = true
 bencher_json = { workspace = true, features = ["client", "table"] }
+bencher_noise.workspace = true
 bencher_parser.workspace = true
 bollard.workspace = true
 camino.workspace = true
@@ -35,7 +36,6 @@ serde_json.workspace = true
 tabled.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "process", "rt", "signal"] }
-tempfile.workspace = true
 tokio-rustls.workspace = true
 url.workspace = true
 
