@@ -1523,16 +1523,12 @@ mod poll_timeout_boundaries {
         }
     }
 
-    // poll_timeout: 61 with a job available should return the job (clamped to 60)
-    #[expect(clippy::panic)]
+    // poll_timeout: 901 is above PollTimeout::MAX (900), so serde deserialization
+    // fails on the server. The server closes the connection due to invalid message.
     #[tokio::test]
     async fn poll_timeout_exceeds_max() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "poll-max@example.com").await;
-        let org = server.create_org(&admin, "Poll Max Org").await;
-        let project = server
-            .create_project(&admin, &org, "Poll Max Project")
-            .await;
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Poll Max Runner").await;
@@ -1540,29 +1536,15 @@ mod poll_timeout_boundaries {
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
-        let project_id = get_project_id(&server, project.slug.as_ref());
-        let report_id = create_test_report(&server, project_id);
-        let _job_uuid = insert_test_job(&server, report_id, spec_id);
-
-        // Send a raw Ready with poll_timeout: 61 (above max, should be clamped)
+        // Send a raw Ready with poll_timeout: 901 (above max 900, server closes connection)
         let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
-        let raw_msg = r#"{"event":"ready","poll_timeout":61}"#;
+        let raw_msg = r#"{"event":"ready","poll_timeout":901}"#;
         ws.send(Message::Text(raw_msg.into()))
             .await
             .expect("Failed to send message");
 
-        // Should get a Job response (the job is available)
-        let result =
-            tokio::time::timeout(std::time::Duration::from_secs(5), recv_msg(&mut ws)).await;
-        match result {
-            Ok(ServerMessage::Job(_)) => {}, // Expected
-            Ok(
-                other @ (ServerMessage::Ack { .. } | ServerMessage::NoJob | ServerMessage::Cancel),
-            ) => {
-                panic!("Expected Job, got: {other:?}")
-            },
-            Err(err) => panic!("Timed out waiting for Job response: {err}"),
-        }
+        // Server should close the connection due to invalid message
+        assert_ws_closed(&mut ws).await;
     }
 }
 

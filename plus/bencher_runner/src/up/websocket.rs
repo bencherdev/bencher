@@ -28,7 +28,15 @@ impl JobChannel {
             .header("Connection", "Upgrade")
             .header("Upgrade", "websocket")
             .header("Sec-WebSocket-Key", generate_key())
-            .header("Host", ws_url.host_str().unwrap_or("localhost"))
+            .header(
+                "Host",
+                match ws_url.port() {
+                    Some(port) => {
+                        format!("{}:{port}", ws_url.host_str().unwrap_or("localhost"))
+                    },
+                    None => ws_url.host_str().unwrap_or("localhost").to_owned(),
+                },
+            )
             .body(())
             .map_err(|e| WebSocketError::Connection(format!("Failed to build request: {e}")))?;
 
@@ -418,5 +426,27 @@ mod tests {
     fn empty_json_fails() {
         let result = serde_json::from_str::<ServerMessage>("{}");
         assert!(result.is_err());
+    }
+
+    // --- Host header construction ---
+
+    #[test]
+    fn host_header_includes_port_when_present() {
+        let url: Url = "ws://localhost:8080/channel".parse().unwrap();
+        let host = match url.port() {
+            Some(port) => format!("{}:{port}", url.host_str().unwrap_or("localhost")),
+            None => url.host_str().unwrap_or("localhost").to_owned(),
+        };
+        assert_eq!(host, "localhost:8080");
+    }
+
+    #[test]
+    fn host_header_omits_port_when_absent() {
+        let url: Url = "ws://example.com/channel".parse().unwrap();
+        let host = match url.port() {
+            Some(port) => format!("{}:{port}", url.host_str().unwrap_or("localhost")),
+            None => url.host_str().unwrap_or("localhost").to_owned(),
+        };
+        assert_eq!(host, "example.com");
     }
 }

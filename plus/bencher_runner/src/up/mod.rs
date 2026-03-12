@@ -23,7 +23,7 @@ pub use error::UpError;
 #[cfg(target_os = "linux")]
 use api_client::RunnerApiClient;
 #[cfg(target_os = "linux")]
-use bencher_json::runner::RunnerMessage;
+use bencher_json::runner::{RunnerMessage, ServerMessage};
 #[cfg(target_os = "linux")]
 use error::{ApiClientError, WebSocketError};
 #[cfg(target_os = "linux")]
@@ -198,8 +198,15 @@ fn run_channel_loop(
             ws_guard.send_message(&msg)?;
             let timeout = Duration::from_secs(5);
             match ws_guard.read_message_timeout(timeout) {
-                Ok(Some(_)) => {
+                Ok(Some(ServerMessage::Ack { .. })) => {
                     println!("Pending result ACKed by server");
+                },
+                Ok(Some(other)) => {
+                    eprintln!("Warning: expected ACK for pending result, got {other:?}");
+                    *pending_result = Some(msg);
+                    return Err(UpError::WebSocket(WebSocketError::Receive(format!(
+                        "Expected ACK, got {other:?}"
+                    ))));
                 },
                 Ok(None) => {
                     // Timeout without receiving ACK — store back and return error to reconnect
