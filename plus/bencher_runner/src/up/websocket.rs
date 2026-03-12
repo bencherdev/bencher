@@ -244,10 +244,14 @@ fn set_read_timeout(
 mod tests {
     use std::collections::BTreeMap;
 
-    use bencher_json::runner::JsonIterationOutput;
+    use bencher_json::{JobUuid, runner::JsonIterationOutput};
     use camino::Utf8PathBuf;
 
     use super::*;
+
+    fn test_job_uuid() -> JobUuid {
+        "550e8400-e29b-41d4-a716-446655440000".parse().unwrap()
+    }
 
     // --- RunnerMessage serialization ---
 
@@ -271,6 +275,7 @@ mod tests {
             "benchmark results here".to_owned(),
         );
         let msg = RunnerMessage::Completed {
+            job: test_job_uuid(),
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: Some("stdout output".to_owned()),
@@ -280,6 +285,7 @@ mod tests {
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "completed");
+        assert_eq!(json["job"], test_job_uuid().to_string());
         assert_eq!(json["results"][0]["exit_code"], 0);
         assert_eq!(json["results"][0]["stdout"], "stdout output");
         assert_eq!(json["results"][0]["stderr"], "stderr output");
@@ -292,6 +298,7 @@ mod tests {
     #[test]
     fn completed_serializes_minimal() {
         let msg = RunnerMessage::Completed {
+            job: test_job_uuid(),
             results: vec![JsonIterationOutput {
                 exit_code: 1,
                 stdout: None,
@@ -301,6 +308,7 @@ mod tests {
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "completed");
+        assert_eq!(json["job"], test_job_uuid().to_string());
         assert_eq!(json["results"][0]["exit_code"], 1);
         assert!(json["results"][0].get("stdout").is_none());
         assert!(json["results"][0].get("stderr").is_none());
@@ -310,6 +318,7 @@ mod tests {
     #[test]
     fn failed_serializes_with_all_fields() {
         let msg = RunnerMessage::Failed {
+            job: test_job_uuid(),
             results: vec![JsonIterationOutput {
                 exit_code: 137,
                 stdout: Some("partial stdout".to_owned()),
@@ -320,6 +329,7 @@ mod tests {
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "failed");
+        assert_eq!(json["job"], test_job_uuid().to_string());
         assert_eq!(json["results"][0]["exit_code"], 137);
         assert_eq!(json["error"], "OOM killed");
         assert_eq!(json["results"][0]["stdout"], "partial stdout");
@@ -329,19 +339,25 @@ mod tests {
     #[test]
     fn failed_serializes_minimal() {
         let msg = RunnerMessage::Failed {
+            job: test_job_uuid(),
             results: Vec::new(),
             error: "timeout".to_owned(),
         };
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "failed");
+        assert_eq!(json["job"], test_job_uuid().to_string());
         assert!(json["results"].as_array().unwrap().is_empty());
         assert_eq!(json["error"], "timeout");
     }
 
     #[test]
     fn canceled_serializes() {
-        let json = serde_json::to_string(&RunnerMessage::Canceled).unwrap();
-        assert_eq!(json, r#"{"event":"canceled"}"#);
+        let msg = RunnerMessage::Canceled {
+            job: test_job_uuid(),
+        };
+        let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
+        assert_eq!(json["event"], "canceled");
+        assert_eq!(json["job"], test_job_uuid().to_string());
     }
 
     // --- ServerMessage deserialization ---

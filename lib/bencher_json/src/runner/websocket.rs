@@ -1,7 +1,7 @@
 use bencher_valid::PollTimeout;
 use serde::{Deserialize, Serialize};
 
-use super::job::{JsonClaimedJob, JsonIterationOutput};
+use super::job::{JobUuid, JsonClaimedJob, JsonIterationOutput};
 
 /// Messages sent from the runner to the server over the WebSocket channel.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,18 +19,25 @@ pub enum RunnerMessage {
     Heartbeat,
     /// Benchmark completed successfully.
     Completed {
+        /// The job this result belongs to (enables retry on reconnect)
+        job: JobUuid,
         /// Per-iteration results
         results: Vec<JsonIterationOutput>,
     },
     /// Benchmark failed.
     Failed {
+        /// The job this result belongs to (enables retry on reconnect)
+        job: JobUuid,
         /// Per-iteration results collected before failure
         results: Vec<JsonIterationOutput>,
         /// Error description
         error: String,
     },
     /// Acknowledge cancellation from server.
-    Canceled,
+    Canceled {
+        /// The job this cancellation belongs to (enables retry on reconnect)
+        job: JobUuid,
+    },
 }
 
 /// Messages sent from the server to the runner over the WebSocket channel.
@@ -78,6 +85,10 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use super::*;
+
+    fn test_job_uuid() -> JobUuid {
+        "550e8400-e29b-41d4-a716-446655440000".parse().unwrap()
+    }
 
     #[test]
     fn ready_no_timeout_roundtrip() {
@@ -172,7 +183,9 @@ mod tests {
 
     #[test]
     fn completed_roundtrip() {
+        let job_uuid = test_job_uuid();
         let msg = RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: Some("hello".into()),
@@ -183,7 +196,8 @@ mod tests {
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Completed { results } => {
+            RunnerMessage::Completed { job, results } => {
+                assert_eq!(job, job_uuid);
                 assert_eq!(results.len(), 1);
                 assert_eq!(results[0].exit_code, 0);
                 assert_eq!(results[0].stdout.as_deref(), Some("hello"));
@@ -195,13 +209,16 @@ mod tests {
 
     #[test]
     fn completed_minimal_roundtrip() {
+        let job_uuid = test_job_uuid();
         let msg = RunnerMessage::Completed {
+            job: job_uuid,
             results: Vec::new(),
         };
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Completed { results } => {
+            RunnerMessage::Completed { job, results } => {
+                assert_eq!(job, job_uuid);
                 assert!(results.is_empty());
             },
             other => panic!("Expected Completed, got {other:?}"),
@@ -210,7 +227,9 @@ mod tests {
 
     #[test]
     fn failed_roundtrip() {
+        let job_uuid = test_job_uuid();
         let msg = RunnerMessage::Failed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 1,
                 stdout: Some("out".into()),
@@ -222,7 +241,12 @@ mod tests {
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Failed { results, error } => {
+            RunnerMessage::Failed {
+                job,
+                results,
+                error,
+            } => {
+                assert_eq!(job, job_uuid);
                 assert_eq!(results.len(), 1);
                 assert_eq!(results[0].exit_code, 1);
                 assert_eq!(error, "something broke");
@@ -233,14 +257,21 @@ mod tests {
 
     #[test]
     fn failed_no_results_roundtrip() {
+        let job_uuid = test_job_uuid();
         let msg = RunnerMessage::Failed {
+            job: job_uuid,
             results: Vec::new(),
             error: "startup failure".into(),
         };
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Failed { results, error } => {
+            RunnerMessage::Failed {
+                job,
+                results,
+                error,
+            } => {
+                assert_eq!(job, job_uuid);
                 assert!(results.is_empty());
                 assert_eq!(error, "startup failure");
             },
@@ -250,10 +281,16 @@ mod tests {
 
     #[test]
     fn canceled_roundtrip() {
-        let msg = RunnerMessage::Canceled;
+        let job_uuid = test_job_uuid();
+        let msg = RunnerMessage::Canceled { job: job_uuid };
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
-        assert!(matches!(deserialized, RunnerMessage::Canceled));
+        match deserialized {
+            RunnerMessage::Canceled { job } => {
+                assert_eq!(job, job_uuid);
+            },
+            other => panic!("Expected Canceled, got {other:?}"),
+        }
     }
 
     #[test]
@@ -305,12 +342,14 @@ mod tests {
 
     #[test]
     fn completed_with_file_output_roundtrip() {
+        let job_uuid = test_job_uuid();
         let mut output = BTreeMap::new();
         output.insert(
             Utf8PathBuf::from("/tmp/results.json"),
             r#"{"metric": 42}"#.to_owned(),
         );
         let msg = RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -321,7 +360,8 @@ mod tests {
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Completed { results } => {
+            RunnerMessage::Completed { job, results } => {
+                assert_eq!(job, job_uuid);
                 assert_eq!(results.len(), 1);
                 let output = results[0].output.as_ref().unwrap();
                 assert_eq!(

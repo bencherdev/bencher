@@ -338,9 +338,9 @@ The claim response includes a **short-lived, project-scoped OCI pull token** in 
 - Short-lived — limits the window of exposure if a token is leaked
 - `RunnerUuid` subject allows audit trail linking OCI pulls back to the specific runner
 
-## WebSocket Job Execution Channel
+## WebSocket Channel
 
-WebSocket connection for heartbeat and job status updates. Established after claiming a job, before benchmark execution begins.
+Single persistent WebSocket connection for the entire runner lifecycle. Handles both job assignment (Ready/Job/NoJob polling) and execution (Running/Heartbeat/Completed/Failed/Canceled). The connection is established once and stays open across multiple job cycles.
 
 **Authentication:** Runner token via `Authorization: Bearer bencher_runner_<token>` header.
 
@@ -350,39 +350,50 @@ WebSocket connection for heartbeat and job status updates. Established after cla
 
 | Event       | Description                                 | Payload                            |
 | ----------- | ------------------------------------------- | ---------------------------------- |
+| `ready`     | Runner is idle, requesting a job            | Optional `poll_timeout` (1-900 seconds) |
 | `running`   | Job setup complete, benchmark starting      | —                                  |
 | `heartbeat` | Periodic liveness signal (~1/sec)           | —                                  |
-| `completed` | Benchmark completed successfully            | `exit_code`, optional `stdout`, `stderr`, `output` (file path → contents map) |
-| `failed`    | Benchmark failed                            | `error` (required), optional `exit_code`, `stdout`, `stderr` |
-| `canceled`  | Acknowledge cancellation from server        | —                                  |
+| `completed` | Benchmark completed successfully            | `job` (JobUuid), `results` (per-iteration output) |
+| `failed`    | Benchmark failed                            | `job` (JobUuid), `results`, `error` |
+| `canceled`  | Acknowledge cancellation from server        | `job` (JobUuid)                    |
 
 ### Server to Runner Messages
 
-| Event    | Description                              |
-| -------- | ---------------------------------------- |
-| `ack`    | Acknowledge received message             |
-| `cancel` | Job was canceled, stop execution         |
+| Event    | Description                              | Payload                                         |
+| -------- | ---------------------------------------- | ----------------------------------------------- |
+| `ack`    | Acknowledge received message             | —                                               |
+| `job`    | Job assigned to runner                   | `JsonClaimedJob` (spec, config, OCI token)      |
+| `no_job` | Poll timeout expired, no job available   | —                                               |
+| `cancel` | Job was canceled, stop execution         | —                                               |
 
 ### Connection Flow
 
 ```
 Runner                              Server
   │                                    │
-  ├──[WS] Connect with runner token ──►│  Validate token, verify job ownership
-  │◄─────────────── Connected ─────────┤  (only Claimed or Running jobs accepted)
+  ├──[WS] Connect with runner token ──►│  Validate token
+  │◄─────────────── Connected ─────────┤
   │                                    │
-  ├──── { "event": "running" } ────────►│  Mark job running, start billing clock
-  │◄──── { "event": "ack" } ────────────┤
+  │  ┌─── IDLE / POLLING LOOP ────┐    │
+  ├──┤ { "event": "ready" } ──────────►│  Poll for eligible pending job (1s intervals)
+  │  │                            │    │
+  │◄─┤ { "event": "job", ... } ───────┤  Claimed job with config, spec, OCI token
+  │  │  OR                        │    │
+  │◄─┤ { "event": "no_job" } ─────────┤  Poll timeout expired, back to Ready
+  │  └────────────────────────────┘    │
+  │                                    │
+  ├──── { "event": "running" } ───────►│  Mark job running, start billing clock
+  │◄──── { "event": "ack" } ──────────┤
   │                                    │
   │  ┌─── benchmark executes ───┐      │
-  ├──┼─ { "event": "heartbeat" } ──────►│  Update last_heartbeat, check timeout, bill if minute elapsed
-  │◄─┼── { "event": "ack" } ───────────┤  (or { "event": "cancel" } if user canceled or timeout exceeded)
+  ├──┼─ { "event": "heartbeat" } ─────►│  Update last_heartbeat, check timeout
+  │◄─┼── { "event": "ack" } ──────────┤  (or { "event": "cancel" } if canceled/timeout)
   │  └──────────────────────────┘      │
   │                                    │
-  ├──── { "event": "completed", ... } ─►│  Mark job completed, store output in OCI storage
-  │◄──── { "event": "ack" } ────────────┤
+  ├──── { "event": "completed", ... } ►│  Store output, run adapter, mark Processed
+  │◄──── { "event": "ack" } ──────────┤
   │                                    │
-  ├──[WS Close] ──────────────────────►│
+  │  (connection stays open, back to Ready)
 ```
 
 ### Cancellation Flow
@@ -398,15 +409,17 @@ Runner                              Server
   ├──── { "event": "canceled" } ───────►│  Mark job canceled (if not already)
   │◄──── { "event": "ack" } ────────────┤
   │                                    │
-  ├──[WS Close] ──────────────────────►│
+  │  (connection stays open, back to Ready)
 ```
 
 **Advantages over REST polling:**
+- Single connection for entire runner lifetime (no reconnect per job)
+- Server-side job assignment (runner just says "Ready")
+- Connection stays open between jobs (no handshake overhead)
 - ~20x less network overhead per heartbeat (~50 bytes vs ~700 bytes)
 - Immediate cancellation notification (server push)
 - Connection loss triggers per-job timeout recovery (no periodic reaper needed)
-- Reconnection supported: runner can reconnect to a `Running` job after a transient disconnect
-- Billing based on connection duration, not polling
+- Reconnection supported: runner can reconnect after a transient disconnect
 
 ## Timeout & Recovery
 
@@ -453,6 +466,15 @@ On server startup (`spawn_job_recovery`):
 ### WebSocket Reconnection
 
 If a runner disconnects and reconnects to a `Running` job, the WebSocket channel accepts the connection. Sending a `Running` message on a job that is already `Running` is idempotent — it updates `last_heartbeat` without changing the status or `started` timestamp. This cancels any pending disconnect-timeout task via the `last_heartbeat` freshness check.
+
+### Result Delivery Reliability
+
+Terminal messages (`Completed`, `Failed`, `Canceled`) include a `job` field (JobUuid) and receive an ACK from the server. If the connection drops before the ACK is received:
+
+1. **Runner side:** The unacknowledged terminal message is stored as a pending result. On the next connection (after reconnect), the runner resends the terminal message before sending Ready.
+2. **Server side:** The `wait_for_ready` handler accepts terminal messages during the Idle state. It looks up the job by UUID, verifies it belongs to the runner, and delegates to the existing handler (`handle_completed`, `handle_failed`, or `handle_canceled`).
+3. **Idempotency:** All handlers already handle duplicate terminal messages safely. Sending Completed for an already-Processed job is a no-op. Sending Failed for an already-Failed job is a no-op. This means retries are always safe.
+4. **Connection stays open:** After the server ACKs the retried terminal message, the runner continues with Ready on the same connection.
 
 ## Job State Machine
 
@@ -527,36 +549,36 @@ Job output (stdout, stderr, file contents) is stored in the **same OCI storage b
 2. Job claimed by server during channel polling
                 │
                 ▼
-                │
-                ▼
-4. Authenticate to OCI registry using short-lived project-scoped OCI token
+3. Authenticate to OCI registry using short-lived project-scoped OCI token
    Pull image from registry at digest specified in config
                 │
                 ▼
-5. Create Firecracker microVM with spec constraints
+4. Create Firecracker microVM with spec constraints
    (architecture, cpu, memory, disk, network from spec)
    Load OCI image rootfs into VM
                 │
                 ▼
-6. Send { "event": "running" } over WebSocket
+5. Send { "event": "running" } over WebSocket
    - Heartbeat thread starts (pinned to separate CPU core)
    - Main benchmark cores isolated
                 │
                 ▼
-7. Execute image (with optional entrypoint/cmd/env overrides)
+6. Execute image (with optional entrypoint/cmd/env overrides)
    - Heartbeat messages sent ~1/sec over WebSocket
    - Server may send { "event": "cancel" } at any time
-   - On cancel: stop execution, send { "event": "canceled" }, close
+   - On cancel: stop execution, send { "event": "canceled" }
    - Read file_paths from VM after execution completes
                 │
                 ▼
-8. Send { "event": "completed", ... } or { "event": "failed", ... }
+7. Send { "event": "completed", ... } or { "event": "failed", ... }
    - Server stores output in OCI storage
    - Server runs adapter to parse results into the Report
                 │
                 ▼
-9. Destroy VM, close WebSocket, return to idle
+8. Destroy VM, return to Ready (connection stays open for next job)
 ```
+
+**Note:** The WebSocket connection is reused across job cycles. After each job completes, the runner sends Ready to request the next job on the same connection.
 
 ## Job Scheduling & Priority
 

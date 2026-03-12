@@ -23,6 +23,8 @@ pub use error::UpError;
 #[cfg(target_os = "linux")]
 use api_client::RunnerApiClient;
 #[cfg(target_os = "linux")]
+use bencher_json::runner::RunnerMessage;
+#[cfg(target_os = "linux")]
 use error::{ApiClientError, WebSocketError};
 #[cfg(target_os = "linux")]
 use job::{JobOutcome, execute_job};
@@ -109,6 +111,9 @@ impl Up {
 
         println!("Connecting to channel...");
 
+        // Track pending terminal messages that weren't ACKed across reconnections
+        let mut pending_result: Option<RunnerMessage> = None;
+
         // Outer loop: connection management with reconnect
         loop {
             if SHUTDOWN.load(Ordering::SeqCst) {
@@ -130,7 +135,7 @@ impl Up {
 
             println!("Channel connected. Polling for jobs...");
 
-            match run_channel_loop(&self.config, &ws) {
+            match run_channel_loop(&self.config, &ws, &mut pending_result) {
                 Ok(()) => return Ok(()), // Clean shutdown
                 Err(UpError::ApiClient(
                     ApiClientError::Unauthorized | ApiClientError::InvalidToken,
@@ -161,10 +166,36 @@ impl Up {
 /// Returns `Ok(())` on clean shutdown, `Err` on WS or auth errors.
 #[cfg(target_os = "linux")]
 #[expect(clippy::print_stdout)]
-fn run_channel_loop(config: &UpConfig, ws: &Arc<Mutex<JobChannel>>) -> Result<(), UpError> {
+fn run_channel_loop(
+    config: &UpConfig,
+    ws: &Arc<Mutex<JobChannel>>,
+    pending_result: &mut Option<RunnerMessage>,
+) -> Result<(), UpError> {
     loop {
         if SHUTDOWN.load(Ordering::SeqCst) {
             return Ok(());
+        }
+
+        // If we have a pending result from a previous job (ACK was not received),
+        // resend it before requesting a new job.
+        if let Some(msg) = pending_result.take() {
+            println!("Resending unACKed terminal message...");
+            let mut ws_guard = ws
+                .lock()
+                .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
+            ws_guard.send_message(&msg)?;
+            let timeout = Duration::from_secs(5);
+            match ws_guard.read_message_timeout(timeout) {
+                Ok(_) => {
+                    println!("Pending result ACKed by server");
+                },
+                Err(e) => {
+                    // ACK not received again — store back and return error to reconnect
+                    eprintln!("Warning: retry ACK not received: {e}");
+                    *pending_result = Some(msg);
+                    return Err(UpError::WebSocket(WebSocketError::Receive(e.to_string())));
+                },
+            }
         }
 
         // Send Ready to request a job
@@ -190,18 +221,32 @@ fn run_channel_loop(config: &UpConfig, ws: &Arc<Mutex<JobChannel>>) -> Result<()
             println!("Received job: {job_uuid}");
 
             match execute_job(config, &job, ws) {
-                Ok(JobOutcome::Completed { exit_code, output }) => {
+                Ok(JobOutcome::Completed {
+                    exit_code,
+                    output,
+                    acked,
+                    msg,
+                }) => {
                     println!("Job {job_uuid} completed (exit_code={exit_code})");
                     if let Some(out) = &output {
                         let preview: String = out.chars().take(200).collect();
                         println!("  Output: {preview}");
                     }
+                    if !acked {
+                        *pending_result = Some(msg);
+                    }
                 },
-                Ok(JobOutcome::Failed { error, .. }) => {
+                Ok(JobOutcome::Failed { error, acked, msg }) => {
                     println!("Job {job_uuid} failed: {error}");
+                    if !acked {
+                        *pending_result = Some(msg);
+                    }
                 },
-                Ok(JobOutcome::Canceled) => {
+                Ok(JobOutcome::Canceled { acked, msg }) => {
                     println!("Job {job_uuid} was canceled");
+                    if !acked {
+                        *pending_result = Some(msg);
+                    }
                 },
                 Err(e) => {
                     println!("Job {job_uuid} error: {e}");

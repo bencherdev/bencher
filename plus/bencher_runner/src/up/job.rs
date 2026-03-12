@@ -7,6 +7,7 @@ use std::time::Duration;
 
 #[cfg(target_os = "linux")]
 use bencher_json::JsonClaimedJob;
+use bencher_json::runner::RunnerMessage;
 
 #[cfg(target_os = "linux")]
 use super::UpConfig;
@@ -15,7 +16,7 @@ use super::error::{UpError, WebSocketError};
 #[cfg(target_os = "linux")]
 use super::websocket::JobChannel;
 #[cfg(target_os = "linux")]
-use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
+use bencher_json::runner::{JsonIterationOutput, ServerMessage};
 
 /// Timeout for waiting for server Ack after sending Completed/Failed.
 #[cfg(target_os = "linux")]
@@ -25,11 +26,24 @@ pub enum JobOutcome {
     Completed {
         exit_code: i32,
         output: Option<String>,
+        /// Whether the server acknowledged the terminal message.
+        acked: bool,
+        /// The terminal message sent, for retry on reconnect.
+        msg: RunnerMessage,
     },
     Failed {
         error: String,
+        /// Whether the server acknowledged the terminal message.
+        acked: bool,
+        /// The terminal message sent, for retry on reconnect.
+        msg: RunnerMessage,
     },
-    Canceled,
+    Canceled {
+        /// Whether the server acknowledged the terminal message.
+        acked: bool,
+        /// The terminal message sent, for retry on reconnect.
+        msg: RunnerMessage,
+    },
 }
 
 #[cfg(target_os = "linux")]
@@ -98,7 +112,7 @@ pub fn execute_job(
                     results.push(output_to_iteration(output));
                     let error_msg =
                         format!("Benchmark exited with non-zero exit code: {last_exit_code}");
-                    return send_failed(results, error_msg, heartbeat, &stop_flag, ws);
+                    return send_failed(job.uuid, results, error_msg, heartbeat, &stop_flag, ws);
                 }
                 results.push(output_to_iteration(output));
             },
@@ -124,31 +138,39 @@ pub fn execute_job(
     // Check if canceled
     if cancel_flag.load(Ordering::SeqCst) {
         println!("Job {} was canceled by server", job.uuid);
+        let msg = RunnerMessage::Canceled { job: job.uuid };
         let mut ws_guard = ws
             .lock()
             .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-        drop(ws_guard.send_message(&RunnerMessage::Canceled));
+        drop(ws_guard.send_message(&msg));
         // Wait for Ack but don't close — connection stays open for next job
-        if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
-            eprintln!("Warning: did not receive server ACK: {e}");
+        let acked = ws_guard.read_message_timeout(ACK_TIMEOUT).is_ok();
+        if !acked {
+            eprintln!("Warning: did not receive server ACK for Canceled");
         }
-        return Ok(JobOutcome::Canceled);
+        return Ok(JobOutcome::Canceled { acked, msg });
     }
 
     // Send completed with all iteration results
-    let msg = RunnerMessage::Completed { results };
+    let msg = RunnerMessage::Completed {
+        job: job.uuid,
+        results,
+    };
     let mut ws_guard = ws
         .lock()
         .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
     ws_guard.send_message(&msg)?;
     // Wait for Ack but don't close — connection stays open for next job
-    if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
-        eprintln!("Warning: did not receive server ACK: {e}");
+    let acked = ws_guard.read_message_timeout(ACK_TIMEOUT).is_ok();
+    if !acked {
+        eprintln!("Warning: did not receive server ACK for Completed");
     }
 
     Ok(JobOutcome::Completed {
         exit_code: last_exit_code,
         output: last_stdout_preview,
+        acked,
+        msg,
     })
 }
 
@@ -157,6 +179,7 @@ pub fn execute_job(
 #[cfg(target_os = "linux")]
 #[expect(clippy::print_stderr, clippy::use_debug)]
 fn send_failed(
+    job_uuid: bencher_json::JobUuid,
     results: Vec<JsonIterationOutput>,
     error_msg: String,
     heartbeat: std::thread::JoinHandle<()>,
@@ -168,6 +191,7 @@ fn send_failed(
         eprintln!("Warning: heartbeat thread panicked: {panic:?}");
     }
     let msg = RunnerMessage::Failed {
+        job: job_uuid,
         results,
         error: error_msg.clone(),
     };
@@ -176,10 +200,15 @@ fn send_failed(
         .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
     ws_guard.send_message(&msg)?;
     // Wait for Ack but don't close — connection stays open for next job
-    if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
-        eprintln!("Warning: did not receive server ACK: {e}");
+    let acked = ws_guard.read_message_timeout(ACK_TIMEOUT).is_ok();
+    if !acked {
+        eprintln!("Warning: did not receive server ACK for Failed");
     }
-    Ok(JobOutcome::Failed { error: error_msg })
+    Ok(JobOutcome::Failed {
+        error: error_msg,
+        acked,
+        msg,
+    })
 }
 
 /// Convert a [`RunOutput`](crate::RunOutput) into a [`JsonIterationOutput`].

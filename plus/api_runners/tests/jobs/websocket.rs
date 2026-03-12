@@ -2,7 +2,8 @@ use super::common::{
     WsStream, assert_ws_closed, associate_runner_spec, connect_channel_ws as connect_channel,
     create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job,
     insert_test_job_with_optional_fields, insert_test_job_with_timeout, insert_test_spec,
-    recv_server_msg as recv_msg, send_runner_msg as send_msg, set_job_status, ws_url,
+    recv_server_msg as recv_msg, send_runner_msg as send_msg, set_job_runner_id, set_job_status,
+    ws_url,
 };
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
@@ -162,6 +163,7 @@ async fn channel_lifecycle_completed() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -197,6 +199,7 @@ async fn channel_lifecycle_failed() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 1,
                 stdout: None,
@@ -294,7 +297,7 @@ async fn channel_runner_sends_canceled() {
     assert!(matches!(resp, ServerMessage::Ack));
 
     // Runner sends Canceled (e.g., it detected the cancel signal itself)
-    send_msg(&mut ws, &RunnerMessage::Canceled).await;
+    send_msg(&mut ws, &RunnerMessage::Canceled { job: job_uuid }).await;
     let resp = recv_msg(&mut ws).await;
     assert!(
         matches!(resp, ServerMessage::Ack),
@@ -490,6 +493,7 @@ async fn channel_lifecycle_with_full_spec() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -665,6 +669,7 @@ async fn channel_completed_before_running() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -694,6 +699,7 @@ async fn channel_failed_from_claimed() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 127,
                 stdout: None,
@@ -735,6 +741,7 @@ async fn channel_completed_ack_no_close() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -768,6 +775,7 @@ async fn channel_failed_ack_no_close() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 1,
                 stdout: None,
@@ -799,7 +807,7 @@ async fn channel_canceled_ack_no_close() {
     assert!(matches!(resp, ServerMessage::Ack));
 
     // Runner sends Canceled
-    send_msg(&mut ws, &RunnerMessage::Canceled).await;
+    send_msg(&mut ws, &RunnerMessage::Canceled { job: job_uuid }).await;
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
@@ -833,6 +841,7 @@ async fn channel_completed_with_output() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: Some("line of output\n".into()),
@@ -868,6 +877,7 @@ async fn channel_failed_with_output() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 1,
                 stdout: Some("partial output\n".into()),
@@ -902,6 +912,7 @@ async fn channel_completed_with_stderr_only() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -936,6 +947,7 @@ async fn channel_completed_result_processing_failure() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: Some("this is not valid benchmark output".into()),
@@ -979,6 +991,7 @@ async fn channel_completed_multiple_iterations() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![
                 JsonIterationOutput {
                     exit_code: 0,
@@ -1040,6 +1053,7 @@ async fn channel_completed_multiple_iterations_with_file_output() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![
                 JsonIterationOutput {
                     exit_code: 0,
@@ -1084,6 +1098,7 @@ async fn channel_failed_multiple_iterations() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
+            job: job_uuid,
             results: vec![
                 JsonIterationOutput {
                     exit_code: 0,
@@ -1358,6 +1373,7 @@ async fn channel_completed_after_concurrent_cancel() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: Some("benchmark results\n".into()),
@@ -1400,6 +1416,7 @@ async fn channel_completed_after_concurrent_failure() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -1441,6 +1458,7 @@ async fn channel_completed_idempotent_duplicate() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -1482,6 +1500,7 @@ async fn channel_failed_after_concurrent_cancel() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 1,
                 stdout: None,
@@ -1525,6 +1544,7 @@ async fn channel_failed_after_concurrent_completion() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 137,
                 stdout: None,
@@ -1567,6 +1587,7 @@ async fn channel_failed_idempotent_duplicate() {
     send_msg(
         &mut ws,
         &RunnerMessage::Failed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 1,
                 stdout: None,
@@ -1601,6 +1622,7 @@ async fn channel_completed_rejects_non_terminal_unexpected_state() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -1891,6 +1913,7 @@ async fn channel_multi_job_cycle() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: first_job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -1937,6 +1960,7 @@ async fn channel_multi_job_cycle() {
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
+            job: second_job_uuid,
             results: vec![JsonIterationOutput {
                 exit_code: 0,
                 stdout: None,
@@ -1954,5 +1978,176 @@ async fn channel_multi_job_cycle() {
     );
 
     // Both jobs completed on the same persistent connection
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+// =============================================================================
+// Result Retry Tests — terminal messages during Idle state (reconnect retry)
+// =============================================================================
+
+/// Runner sends Completed during Idle state (simulating reconnect with pending result).
+/// Server looks up job by UUID, processes results, sends Ack.
+#[tokio::test]
+async fn channel_completed_during_idle() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-idle-complete@example.com").await;
+    let org = server.create_org(&admin, "Ws idle complete").await;
+    let project = server
+        .create_project(&admin, &org, "Ws idle complete proj")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner idle-complete").await;
+    let runner_token = runner.token.to_string();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    // Set job to Running with this runner (simulating a previously running job)
+    set_job_runner_id(&server, job_uuid, runner_id);
+    set_job_status(&server, job_uuid, JobStatus::Running);
+
+    // Connect a fresh channel (simulating reconnect)
+    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+
+    // Send Completed during Idle state (before sending Ready)
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            job: job_uuid,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for Completed during Idle, got: {resp:?}"
+    );
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// Runner sends Completed for an already-Processed job during Idle (idempotent).
+/// Server should Ack without error.
+#[tokio::test]
+async fn channel_completed_during_idle_idempotent() {
+    let server = TestServer::new().await;
+    let (mut ws, runner_uuid, runner_token, job_uuid) =
+        setup_claimed_job(&server, "idle-idem").await;
+
+    // Complete the job normally
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            job: job_uuid,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+
+    // Close and reconnect
+    ws.close(None).await.expect("Failed to close WebSocket");
+
+    let mut ws2 = connect_channel(&server, runner_uuid, &runner_token).await;
+
+    // Send Completed again during Idle (idempotent duplicate)
+    send_msg(
+        &mut ws2,
+        &RunnerMessage::Completed {
+            job: job_uuid,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws2).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for idempotent Completed, got: {resp:?}"
+    );
+    // Job should still be Processed
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+
+    ws2.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// Runner sends Failed during Idle state (simulating reconnect with pending failure).
+/// Server looks up job by UUID, marks it Failed, sends Ack.
+#[tokio::test]
+async fn channel_failed_during_idle() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-idle-fail@example.com").await;
+    let org = server.create_org(&admin, "Ws idle fail").await;
+    let project = server
+        .create_project(&admin, &org, "Ws idle fail proj")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner idle-fail").await;
+    let runner_token = runner.token.to_string();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    // Set job to Running with this runner
+    set_job_runner_id(&server, job_uuid, runner_id);
+    set_job_status(&server, job_uuid, JobStatus::Running);
+
+    // Connect a fresh channel (simulating reconnect)
+    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+
+    // Send Failed during Idle state
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Failed {
+            job: job_uuid,
+            results: vec![JsonIterationOutput {
+                exit_code: 1,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+            error: "segfault on reconnect".to_owned(),
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack),
+        "Expected Ack for Failed during Idle, got: {resp:?}"
+    );
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+
     ws.close(None).await.expect("Failed to close WebSocket");
 }

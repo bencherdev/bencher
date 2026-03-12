@@ -6,7 +6,8 @@
 use std::time::Duration;
 
 use bencher_json::{
-    DEFAULT_POLL_TIMEOUT, JobPriority, JobStatus, JsonClaimedJob, JsonSpec, RunnerResourceId,
+    DEFAULT_POLL_TIMEOUT, JobPriority, JobStatus, JobUuid, JsonClaimedJob, JsonSpec,
+    RunnerResourceId,
     runner::{CloseReason, JsonIterationOutput, RunnerMessage, ServerMessage},
 };
 use bencher_oci_storage::OciStorageError;
@@ -15,7 +16,7 @@ use bencher_schema::{
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
-        runner::{JobId, QueryJob, UpdateJob, job::spawn_heartbeat_timeout},
+        runner::{JobId, QueryJob, RunnerId, UpdateJob, job::spawn_heartbeat_timeout},
         spec::QuerySpec,
     },
     schema, write_conn,
@@ -147,17 +148,33 @@ async fn handle_runner_message(
                 return Ok((cancel, Some(CloseReason::JobCanceled)));
             }
         },
-        RunnerMessage::Completed { results } => {
+        RunnerMessage::Completed {
+            job: msg_job_uuid,
+            results,
+        } => {
+            if msg_job_uuid != job.uuid {
+                slog::warn!(log, "Completed message job UUID mismatch"; "expected" => %job.uuid, "got" => %msg_job_uuid);
+            }
             slog::info!(log, "Job completed"; "job_id" => ?job.id, "iterations" => results.len());
             handle_completed(log, context, job, results).await?;
             return Ok((ServerMessage::Ack, Some(CloseReason::JobCompleted)));
         },
-        RunnerMessage::Failed { results, error } => {
+        RunnerMessage::Failed {
+            job: msg_job_uuid,
+            results,
+            error,
+        } => {
+            if msg_job_uuid != job.uuid {
+                slog::warn!(log, "Failed message job UUID mismatch"; "expected" => %job.uuid, "got" => %msg_job_uuid);
+            }
             slog::warn!(log, "Job failed"; "job_id" => ?job.id, "error" => &error);
             handle_failed(log, context, job, results, error).await?;
             return Ok((ServerMessage::Ack, Some(CloseReason::JobFailed)));
         },
-        RunnerMessage::Canceled => {
+        RunnerMessage::Canceled { job: msg_job_uuid } => {
+            if msg_job_uuid != job.uuid {
+                slog::warn!(log, "Canceled message job UUID mismatch"; "expected" => %job.uuid, "got" => %msg_job_uuid);
+            }
             slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job.id);
             handle_canceled(log, context, job.id).await?;
             return Ok((ServerMessage::Ack, Some(CloseReason::JobCanceledByRunner)));
@@ -727,8 +744,16 @@ pub async fn runner_channel(
     // State machine: Idle -> Executing -> Idle -> ...
     loop {
         // === IDLE STATE ===
-        // Wait for Ready message from runner
-        let Ok(poll_timeout) = wait_for_ready(&log, &mut tx, &mut rx, heartbeat_timeout).await
+        // Wait for Ready message from runner (also handles terminal message retries)
+        let Ok(poll_timeout) = wait_for_ready(
+            &log,
+            context,
+            runner_token.runner_id,
+            &mut tx,
+            &mut rx,
+            heartbeat_timeout,
+        )
+        .await
         else {
             break;
         };
@@ -798,16 +823,20 @@ pub async fn runner_channel(
 
 /// Wait for a `RunnerMessage::Ready` message, returning the poll timeout.
 ///
-/// Ignores non-Ready messages with a warning. Returns an error on Close, disconnect,
-/// or if the runner stays silent longer than `idle_timeout`.
+/// Also handles terminal messages (Completed/Failed/Canceled) during Idle state,
+/// which occur when a runner reconnects with a pending result that wasn't acknowledged.
+/// Returns an error on Close, disconnect, or if the runner stays silent longer
+/// than `idle_timeout`.
 async fn wait_for_ready<S, R>(
     log: &slog::Logger,
+    context: &ApiContext,
+    runner_id: RunnerId,
     tx: &mut S,
     rx: &mut R,
     idle_timeout: Duration,
 ) -> Result<u32, ChannelError>
 where
-    S: futures::Sink<Message> + Unpin,
+    S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
     loop {
@@ -835,11 +864,44 @@ where
                         let timeout = poll_timeout.map_or(DEFAULT_POLL_TIMEOUT, u32::from);
                         return Ok(timeout);
                     },
-                    RunnerMessage::Running
-                    | RunnerMessage::Heartbeat
-                    | RunnerMessage::Completed { .. }
-                    | RunnerMessage::Failed { .. }
-                    | RunnerMessage::Canceled => {
+                    RunnerMessage::Completed {
+                        job: job_uuid,
+                        results,
+                    } => {
+                        slog::info!(log, "Received Completed during Idle (retry after reconnect)"; "job_uuid" => %job_uuid);
+                        if let Some(job) =
+                            lookup_runner_job(log, context, runner_id, job_uuid).await?
+                        {
+                            handle_completed(log, context, &job, results).await?;
+                        }
+                        let ack = serde_json::to_string(&ServerMessage::Ack)?;
+                        tx.send(Message::Text(ack.into())).await?;
+                    },
+                    RunnerMessage::Failed {
+                        job: job_uuid,
+                        results,
+                        error,
+                    } => {
+                        slog::info!(log, "Received Failed during Idle (retry after reconnect)"; "job_uuid" => %job_uuid, "error" => &error);
+                        if let Some(job) =
+                            lookup_runner_job(log, context, runner_id, job_uuid).await?
+                        {
+                            handle_failed(log, context, &job, results, error).await?;
+                        }
+                        let ack = serde_json::to_string(&ServerMessage::Ack)?;
+                        tx.send(Message::Text(ack.into())).await?;
+                    },
+                    RunnerMessage::Canceled { job: job_uuid } => {
+                        slog::info!(log, "Received Canceled during Idle (retry after reconnect)"; "job_uuid" => %job_uuid);
+                        if let Some(job) =
+                            lookup_runner_job(log, context, runner_id, job_uuid).await?
+                        {
+                            handle_canceled(log, context, job.id).await?;
+                        }
+                        let ack = serde_json::to_string(&ServerMessage::Ack)?;
+                        tx.send(Message::Text(ack.into())).await?;
+                    },
+                    RunnerMessage::Running | RunnerMessage::Heartbeat => {
                         slog::warn!(log, "Unexpected message in Idle state, expected Ready"; "msg" => ?runner_msg);
                     },
                 }
@@ -856,6 +918,34 @@ where
             Message::Binary(_) | Message::Pong(_) | Message::Frame(_) => {},
         }
     }
+}
+
+/// Look up a job by UUID and verify it belongs to the given runner.
+///
+/// Returns `Ok(Some(job))` if found and owned by this runner,
+/// `Ok(None)` if not found or owned by a different runner (with a warning log).
+async fn lookup_runner_job(
+    log: &slog::Logger,
+    context: &ApiContext,
+    runner_id: RunnerId,
+    job_uuid: JobUuid,
+) -> Result<Option<QueryJob>, ChannelError> {
+    let job: Option<QueryJob> = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .first(auth_conn!(context))
+        .optional()?;
+
+    let Some(job) = job else {
+        slog::warn!(log, "Terminal message for unknown job during Idle"; "job_uuid" => %job_uuid);
+        return Ok(None);
+    };
+
+    if job.runner_id != Some(runner_id) {
+        slog::warn!(log, "Terminal message for job not owned by this runner"; "job_uuid" => %job_uuid);
+        return Ok(None);
+    }
+
+    Ok(Some(job))
 }
 
 /// Poll for a job, checking for WS disconnect between polls.
