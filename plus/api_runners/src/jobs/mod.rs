@@ -84,11 +84,13 @@ pub async fn runner_jobs_post(
         .rate_limiting
         .runner_request(runner_token.runner_uuid)?;
 
-    let json = claim_job_inner(context, runner_token, body.into_inner()).await?;
+    let log = &rqctx.log;
+    let json = claim_job_inner(log, context, runner_token, body.into_inner()).await?;
     Ok(Post::auth_response_ok(json))
 }
 
 async fn claim_job_inner(
+    log: &slog::Logger,
     context: &ApiContext,
     runner_token: RunnerToken,
     claim_request: JsonClaimJob,
@@ -101,14 +103,17 @@ async fn claim_job_inner(
     loop {
         // Try to claim a job (connection is released when function returns)
         if let Some(json_job) = try_claim_job(context, &runner_token).await? {
+            slog::info!(log, "Job claimed"; "job_uuid" => %json_job.uuid, "runner" => %runner_token.runner_uuid);
             return Ok(Some(json_job));
         }
 
         // Check if we've exceeded the timeout
         if tokio::time::Instant::now() >= deadline {
+            slog::info!(log, "Job poll timed out"; "runner" => %runner_token.runner_uuid, "poll_timeout" => poll_timeout);
             return Ok(None);
         }
 
+        slog::debug!(log, "No pending job, polling"; "runner" => %runner_token.runner_uuid);
         // Wait before trying again
         tokio::time::sleep(POLL_INTERVAL).await;
     }

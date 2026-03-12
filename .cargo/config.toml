@@ -11,6 +11,7 @@ gen-types = "run --manifest-path ./tasks/gen_types/Cargo.toml -- types"
 test-api = "run --manifest-path ./tasks/test_api/Cargo.toml --"
 test-netlify = "run --manifest-path ./tasks/test_netlify/Cargo.toml --"
 test-runner = "run --manifest-path ./tasks/test_runner/Cargo.toml --"
+runner-ops = "run --manifest-path ./tasks/runner_ops/Cargo.toml --"
 
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
