@@ -161,6 +161,7 @@ impl ChannelStateMachine {
         }
     }
 
+    #[cfg(test)]
     pub fn state(&self) -> &ChannelState {
         &self.state
     }

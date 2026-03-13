@@ -55,22 +55,6 @@ impl JobChannel {
         Ok(())
     }
 
-    /// Send a `Ready` message requesting a job with the given poll timeout.
-    #[expect(clippy::print_stderr)]
-    pub fn send_ready(&mut self, poll_timeout_secs: u32) -> Result<(), WebSocketError> {
-        let poll_timeout = match bencher_valid::PollTimeout::try_from(poll_timeout_secs) {
-            Ok(pt) => Some(pt),
-            Err(e) => {
-                eprintln!(
-                    "Warning: invalid poll_timeout {poll_timeout_secs}: {e}, using server default"
-                );
-                None
-            },
-        };
-        let msg = RunnerMessage::Ready { poll_timeout };
-        self.send_message(&msg)
-    }
-
     /// Block-read until the server sends `Job(..)` or `NoJob`.
     ///
     /// Returns `Ok(Some(job))` on `Job`, `Ok(None)` on `NoJob`,

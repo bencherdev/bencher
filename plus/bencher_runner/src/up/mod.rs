@@ -133,7 +133,7 @@ impl Up {
 /// Effect-driven protocol loop. The state machine decides what to do; this
 /// function executes effects and feeds I/O results back.
 #[cfg(target_os = "linux")]
-#[expect(clippy::print_stdout, clippy::print_stderr)]
+#[expect(clippy::print_stdout)]
 fn run_driver(config: &UpConfig, channel_url: &Url, token: &str) -> Result<(), UpError> {
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs);
     let mut effects: VecDeque<Effect> =
@@ -197,17 +197,22 @@ fn execute_effect(
                 EffectResult::Input(Input::ConnectionFailed)
             },
         },
-        Effect::Send(msg) => match try_send(ws, &msg) {
+        Effect::Send(msg) => match try_send(ws.as_ref(), &msg) {
             Ok(()) => EffectResult::Continue,
             Err(e) => {
                 eprintln!("Send failed: {e}");
                 EffectResult::Input(Input::ConnectionFailed)
             },
         },
-        Effect::Receive(timeout) => EffectResult::Input(receive_input(ws, timeout)),
-        Effect::WaitForJob(timeout) => EffectResult::Input(wait_for_job_input(ws, timeout)),
+        Effect::Receive(timeout) => EffectResult::Input(receive_input(ws.as_ref(), timeout)),
+        Effect::WaitForJob(timeout) => {
+            EffectResult::Input(wait_for_job_input(ws.as_ref(), timeout))
+        },
         Effect::ExecuteJob(job) => {
-            let ws_ref = ws.as_ref().expect("WS must exist during job execution");
+            let Some(ws_ref) = ws.as_ref() else {
+                eprintln!("Error: WS not connected during job execution");
+                return EffectResult::Input(Input::ConnectionFailed);
+            };
             let result = execute_job(config, &job, ws_ref);
             EffectResult::Input(Input::JobFinished(result))
         },
@@ -218,10 +223,10 @@ fn execute_effect(
             EffectResult::Continue
         },
         Effect::Close => {
-            if let Some(ws_ref) = ws.as_ref() {
-                if let Ok(mut ws_guard) = ws_ref.lock() {
-                    ws_guard.close();
-                }
+            if let Some(ws_ref) = ws.as_ref()
+                && let Ok(mut ws_guard) = ws_ref.lock()
+            {
+                ws_guard.close();
             }
             *ws = None;
             EffectResult::Continue
@@ -240,12 +245,10 @@ fn execute_effect(
 
 #[cfg(target_os = "linux")]
 fn try_send(
-    ws: &Option<Arc<Mutex<JobChannel>>>,
+    ws: Option<&Arc<Mutex<JobChannel>>>,
     msg: &RunnerMessage,
 ) -> Result<(), WebSocketError> {
-    let ws_ref = ws
-        .as_ref()
-        .ok_or_else(|| WebSocketError::Send("Not connected".to_owned()))?;
+    let ws_ref = ws.ok_or_else(|| WebSocketError::Send("Not connected".to_owned()))?;
     let mut ws_guard = ws_ref
         .lock()
         .map_err(|e| WebSocketError::Send(format!("Lock failed: {e}")))?;
@@ -253,13 +256,12 @@ fn try_send(
 }
 
 #[cfg(target_os = "linux")]
-fn receive_input(ws: &Option<Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
-    let Some(ws_ref) = ws.as_ref() else {
+fn receive_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
+    let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
     };
-    let mut ws_guard = match ws_ref.lock() {
-        Ok(g) => g,
-        Err(_) => return Input::ConnectionFailed,
+    let Ok(mut ws_guard) = ws_ref.lock() else {
+        return Input::ConnectionFailed;
     };
     match ws_guard.read_message_timeout(timeout) {
         Ok(Some(msg)) => Input::Message(msg),
@@ -269,13 +271,12 @@ fn receive_input(ws: &Option<Arc<Mutex<JobChannel>>>, timeout: Duration) -> Inpu
 }
 
 #[cfg(target_os = "linux")]
-fn wait_for_job_input(ws: &Option<Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
-    let Some(ws_ref) = ws.as_ref() else {
+fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
+    let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
     };
-    let mut ws_guard = match ws_ref.lock() {
-        Ok(g) => g,
-        Err(_) => return Input::ConnectionFailed,
+    let Ok(mut ws_guard) = ws_ref.lock() else {
+        return Input::ConnectionFailed;
     };
     match ws_guard.wait_for_job(timeout) {
         Ok(Some(job)) => Input::Message(ServerMessage::Job(Box::new(job))),
