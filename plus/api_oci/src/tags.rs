@@ -11,7 +11,7 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::auth::{require_pull_access, resolve_project_uuid};
+use crate::auth::{require_pull_access, resolve_project};
 use crate::response::{APPLICATION_JSON, oci_cors_headers};
 
 /// Path parameters for tags list
@@ -82,8 +82,9 @@ pub async fn oci_tags_list(
     let name_str = path.name.to_string();
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
 
     // Get storage
     let storage = context.oci_storage();

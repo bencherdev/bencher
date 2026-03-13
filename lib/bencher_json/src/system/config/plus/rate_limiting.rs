@@ -11,6 +11,7 @@ pub struct JsonRateLimiting {
     pub public: Option<JsonPublicRateLimiter>,
     pub user: Option<JsonUserRateLimiter>,
     pub runner: Option<JsonRunnerRateLimiter>,
+    pub oci_bandwidth: Option<JsonOciBandwidth>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -44,4 +45,15 @@ pub struct JsonRateLimits {
     pub minute: Option<usize>,
     pub hour: Option<usize>,
     pub day: Option<usize>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonOciBandwidth {
+    /// Bytes per day for unclaimed organizations (0 members)
+    pub unclaimed: Option<u64>,
+    /// Bytes per day for free (claimed, no paid plan) organizations
+    pub free: Option<u64>,
+    /// Bytes per day for Plus (Team/Enterprise) organizations
+    pub plus: Option<u64>,
 }

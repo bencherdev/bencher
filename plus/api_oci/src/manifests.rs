@@ -16,8 +16,10 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+#[cfg(feature = "plus")]
+use crate::auth::{check_oci_bandwidth, record_oci_bandwidth};
 use crate::auth::{
-    require_pull_access, require_push_access, resolve_project_uuid, validate_push_access,
+    require_pull_access, require_push_access, resolve_project, validate_push_access,
 };
 use crate::response::{DOCKER_CONTENT_DIGEST, OCI_SUBJECT, oci_cors_headers};
 
@@ -108,8 +110,9 @@ pub async fn oci_manifest_exists(
     let name_str = path.name.to_string();
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
 
     // Parse reference (pull operation: unparseable → 404 MANIFEST_UNKNOWN)
     let reference = parse_reference_for_pull(&path.reference)?;
@@ -164,8 +167,13 @@ pub async fn oci_manifest_get(
     let name_str = path.name.to_string();
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
+
+    // Check bandwidth limit before transfer
+    #[cfg(feature = "plus")]
+    let org_id = check_oci_bandwidth(context, &project).await?;
 
     // Parse reference (pull operation: unparseable → 404 MANIFEST_UNKNOWN)
     let reference = parse_reference_for_pull(&path.reference)?;
@@ -181,6 +189,10 @@ pub async fn oci_manifest_get(
         .get_manifest_by_digest(&project_uuid, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
+    // Record bandwidth usage
+    #[cfg(feature = "plus")]
+    record_oci_bandwidth(context, org_id, manifest.len() as u64);
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -230,6 +242,10 @@ pub async fn oci_manifest_put(
     let push_access = validate_push_access(&rqctx.log, &rqctx, &path.name).await?;
     let project_slug = &push_access.project.slug;
     let project_uuid = push_access.project.uuid;
+
+    // Check bandwidth limit before transfer
+    #[cfg(feature = "plus")]
+    let org_id = check_oci_bandwidth(context, &push_access.project).await?;
 
     // Parse reference
     let reference = parse_reference(&path.reference)?;
@@ -299,6 +315,10 @@ pub async fn oci_manifest_put(
         )
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
+    // Record bandwidth usage
+    #[cfg(feature = "plus")]
+    record_oci_bandwidth(context, org_id, body_bytes.len() as u64);
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -406,8 +426,9 @@ pub async fn oci_manifest_delete(
     let name_str = path.name.to_string();
     let _access = require_push_access(&rqctx, &name_str).await?;
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
 
     // Get storage
     let storage = context.oci_storage();

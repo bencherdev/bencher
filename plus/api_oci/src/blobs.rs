@@ -37,8 +37,10 @@ use serde::Deserialize;
 /// Path segment distinguishing upload endpoints from blob digest endpoints.
 pub const UPLOADS_REF: &str = "uploads";
 
+#[cfg(feature = "plus")]
+use crate::auth::{check_oci_bandwidth, record_oci_bandwidth};
 use crate::auth::{
-    require_pull_access, require_push_access, resolve_project_uuid, validate_push_access,
+    require_pull_access, require_push_access, resolve_project, validate_push_access,
 };
 use crate::response::{
     APPLICATION_OCTET_STREAM, DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers,
@@ -115,8 +117,9 @@ pub async fn oci_blob_exists(
     let name_str = path.name.to_string();
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
 
     // Parse digest
     let digest: Digest = crate::error::parse_digest(&path.reference)?;
@@ -174,8 +177,13 @@ pub async fn oci_blob_get(
     let name_str = path.name.to_string();
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
+
+    // Check bandwidth limit before transfer
+    #[cfg(feature = "plus")]
+    let org_id = check_oci_bandwidth(context, &project).await?;
 
     // Parse digest
     let digest: Digest = crate::error::parse_digest(&path.reference)?;
@@ -188,6 +196,10 @@ pub async fn oci_blob_get(
         .get_blob_stream(&project_uuid, &digest)
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+
+    // Record bandwidth usage
+    #[cfg(feature = "plus")]
+    record_oci_bandwidth(context, org_id, size);
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -234,8 +246,9 @@ pub async fn oci_blob_delete(
     let name_str = path.name.to_string();
     let _access = require_push_access(&rqctx, &name_str).await?;
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
 
     // Parse digest
     let digest: Digest = crate::error::parse_digest(&path.reference)?;
@@ -322,11 +335,14 @@ pub async fn oci_upload_start(
         let from_repo_str = from_repo.to_string();
         let pull_result = require_pull_access(&rqctx, &from_repo_str).await;
         if pull_result.is_ok() {
-            // Resolve source repository UUID — fall through on failure
+            // Resolve source repository — fall through on failure
             // to avoid revealing whether the source repository exists.
-            if let Ok(from_uuid) = resolve_project_uuid(context, &from_repo).await {
+            if let Ok(from_project) = resolve_project(context, &from_repo).await {
                 // Try to mount the blob — fall through on failure
-                if let Ok(true) = storage.mount_blob(&from_uuid, &project_uuid, &digest).await {
+                if let Ok(true) = storage
+                    .mount_blob(&from_project.uuid, &project_uuid, &digest)
+                    .await
+                {
                     // Mount successful - return 201 Created
                     let location = format!("/v2/{project_slug}/blobs/{digest}");
                     let response = oci_cors_headers(
@@ -420,6 +436,10 @@ pub async fn oci_upload_monolithic(
     let project_slug = &push_access.project.slug;
     let project_uuid = push_access.project.uuid;
 
+    // Check bandwidth limit before transfer
+    #[cfg(feature = "plus")]
+    let org_id = check_oci_bandwidth(context, &push_access.project).await?;
+
     // Get storage
     let storage = context.oci_storage();
 
@@ -434,16 +454,17 @@ pub async fn oci_upload_monolithic(
 
     // Stream body to storage (storage enforces max_body_size incrementally)
     let result = async {
-        crate::uploads::stream_to_storage(body, storage, &upload_id, 0).await?;
-        storage
+        let final_size = crate::uploads::stream_to_storage(body, storage, &upload_id, 0).await?;
+        let digest = storage
             .complete_upload(&upload_id, &expected_digest)
             .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        Ok::<(Digest, u64), HttpError>((digest, final_size))
     }
     .await;
 
-    let actual_digest = match result {
-        Ok(digest) => digest,
+    let (actual_digest, final_size) = match result {
+        Ok(result) => result,
         Err(e) => {
             // Best-effort cleanup of the orphaned upload session
             if let Err(cancel_err) = storage.cancel_upload(&upload_id).await {
@@ -452,6 +473,10 @@ pub async fn oci_upload_monolithic(
             return Err(e);
         },
     };
+
+    // Record bandwidth usage
+    #[cfg(feature = "plus")]
+    record_oci_bandwidth(context, org_id, final_size);
 
     // Record metric
     #[cfg(feature = "otel")]

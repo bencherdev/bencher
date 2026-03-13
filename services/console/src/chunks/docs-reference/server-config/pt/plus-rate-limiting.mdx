@@ -7,10 +7,14 @@ Se não especificado, os valores padrão listados serão usados.
 Para evitar que [projetos `unclaimed`][unclaimed projects] sejam criados,
 defina `unclaimed_limit` como `0`.
 
-|      Nome       | Exemplo | Padrão | Obrigatório |                                                                       Descrição                                                                       |
-| :-------------: | :-----: | :----: | :---------: | :---------------------------------------------------------------------------------------------------------------------------------------------------: |
-|     window      |  86400  | 86400  |     Não     |                                     Especifica o limite de taxa em segundos. Configurado por padrão para um dia.                                      |
-| unclaimed_limit |   255   |  255   |     Não     | Controla o limite de taxa para [projetos `unclaimed`][unclaimed projects]. Para evitar a criação de projetos `unclaimed`, defina este valor para `0`. |
-|  claimed_limit  |  65536  | 65536  |     Não     |                                                  Controla o limite de taxa para projetos `claimed`.                                                   |
+|          Nome          |   Exemplo    |    Padrão    | Obrigatório |                                                                       Descrição                                                                       |
+| :--------------------: | :----------: | :----------: | :---------: | :---------------------------------------------------------------------------------------------------------------------------------------------------: |
+|         window         |    86400     |    86400     |     Não     |                                     Especifica o limite de taxa em segundos. Configurado por padrão para um dia.                                      |
+|    unclaimed_limit     |     255      |     255      |     Não     | Controla o limite de taxa para [projetos `unclaimed`][unclaimed projects]. Para evitar a criação de projetos `unclaimed`, defina este valor para `0`. |
+|     claimed_limit      |    65536     |    65536     |     Não     |                                                  Controla o limite de taxa para projetos `claimed`.                                                   |
+|     oci_bandwidth      |  \{ ... \}   |     ---      |     Não     |                              Especifica os limites diários de largura de banda do registro OCI por nível de organização.                               |
+| oci_bandwidth.unclaimed | 1073741824  | 1073741824   |     Não     |                          Bytes máximos por dia para organizações não reivindicadas (0 membros). Padrão de 1 GiB.                                      |
+|   oci_bandwidth.free   | 10737418240  | 10737418240  |     Não     |                          Bytes máximos por dia para organizações gratuitas (reivindicadas, sem plano pago). Padrão de 10 GiB.                         |
+|   oci_bandwidth.plus   | 107374182400 | 107374182400 |     Não     |                          Bytes máximos por dia para organizações Plus (Team/Enterprise). Padrão de 100 GiB.                                           |
 
 [unclaimed projects]: /pt/docs/how-to/claim/#unclaimed-projects

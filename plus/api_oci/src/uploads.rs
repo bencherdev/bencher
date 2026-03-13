@@ -28,9 +28,9 @@
 //! are unguessable UUIDs. This matches OCI spec behavior and is required
 //! for conformance test compatibility.
 
+use crate::auth::resolve_project;
 #[cfg(feature = "plus")]
-use crate::auth::apply_public_rate_limit;
-use crate::auth::resolve_project_uuid;
+use crate::auth::{apply_public_rate_limit, check_oci_bandwidth, record_oci_bandwidth};
 use crate::blobs::UPLOADS_REF;
 use crate::response::{DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers};
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
@@ -153,8 +153,9 @@ pub async fn oci_upload_status(
 
     let repository_name = path.name.to_string();
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
 
     // Parse upload ID
     let upload_id: UploadId = crate::error::parse_upload_id(&path.session_id)?;
@@ -226,8 +227,13 @@ pub async fn oci_upload_chunk(
 
     let repository_name = path.name.to_string();
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
+
+    // Check bandwidth limit before transfer
+    #[cfg(feature = "plus")]
+    let org_id = check_oci_bandwidth(context, &project).await?;
 
     // Parse upload ID
     let upload_id: UploadId = crate::error::parse_upload_id(&path.session_id)?;
@@ -312,6 +318,10 @@ pub async fn oci_upload_chunk(
     // Stream body to storage (storage enforces max_body_size incrementally)
     let new_size = stream_to_storage(body, storage, &upload_id, current_size).await?;
 
+    // Record bandwidth usage for this chunk
+    #[cfg(feature = "plus")]
+    record_oci_bandwidth(context, org_id, new_size - current_size);
+
     // Post-stream validation: verify bytes received matches Content-Range expected length.
     // Note: Data has already been appended to the upload session at this point.
     // This is intentional — the Range header in the 416 response reflects the
@@ -380,8 +390,13 @@ pub async fn oci_upload_complete(
     let query = query.into_inner();
     let repository_name = path.name.to_string();
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
+
+    // Check bandwidth limit before transfer
+    #[cfg(feature = "plus")]
+    let org_id = check_oci_bandwidth(context, &project).await?;
 
     // Parse upload ID and expected digest
     let upload_id: UploadId = crate::error::parse_upload_id(&path.session_id)?;
@@ -403,16 +418,17 @@ pub async fn oci_upload_complete(
         .await
         .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
     let result = async {
-        stream_to_storage(body, storage, &upload_id, current_size).await?;
-        storage
+        let final_size = stream_to_storage(body, storage, &upload_id, current_size).await?;
+        let digest = storage
             .complete_upload(&upload_id, &expected_digest)
             .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        Ok::<(Digest, u64), HttpError>((digest, final_size))
     }
     .await;
 
-    let actual_digest = match result {
-        Ok(digest) => digest,
+    let (actual_digest, final_size) = match result {
+        Ok(result) => result,
         Err(e) => {
             // Best-effort cleanup of the orphaned upload session
             if let Err(cancel_err) = storage.cancel_upload(&upload_id).await {
@@ -421,6 +437,10 @@ pub async fn oci_upload_complete(
             return Err(e);
         },
     };
+
+    // Record bandwidth usage for the final chunk
+    #[cfg(feature = "plus")]
+    record_oci_bandwidth(context, org_id, final_size - current_size);
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -463,8 +483,9 @@ pub async fn oci_upload_cancel(
     #[cfg(feature = "plus")]
     apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
 
     // Parse upload ID
     let upload_id: UploadId = crate::error::parse_upload_id(&path.session_id)?;
