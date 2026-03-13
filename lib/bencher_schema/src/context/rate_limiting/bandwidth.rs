@@ -101,11 +101,12 @@ impl BandwidthRateLimiter {
             !events.is_empty()
         });
 
-        // Sum bytes in the current 24h window
-        let total_bytes: u64 = self
-            .event_map
-            .get(&org_id)
-            .map_or(0, |events| events.iter().map(|(_, bytes)| bytes).sum());
+        // Sum bytes in the current 24h window (saturating to avoid overflow)
+        let total_bytes: u64 = self.event_map.get(&org_id).map_or(0, |events| {
+            events
+                .iter()
+                .fold(0u64, |acc, (_, bytes)| acc.saturating_add(*bytes))
+        });
 
         if total_bytes >= limit {
             Err(too_many_requests(RateLimitingError::OciBandwidth {

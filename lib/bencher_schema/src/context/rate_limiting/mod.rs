@@ -33,13 +33,6 @@ use super::DbConnection;
 
 pub(super) const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
-#[derive(Debug, Clone, Copy)]
-pub enum OciBandwidthTier {
-    Unclaimed,
-    Free,
-    Plus,
-}
-
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
 
@@ -349,6 +342,13 @@ impl RateLimiting {
     pub fn remote_ip(log: &Logger, headers: &HeaderMap) -> Option<IpAddr> {
         remote_ip::remote_ip(log, headers)
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum OciBandwidthTier {
+    Unclaimed,
+    Free,
+    Plus,
 }
 
 macro_rules! extract_rate_limits {

@@ -13524,6 +13524,32 @@
           "user"
         ]
       },
+      "JsonOciBandwidth": {
+        "type": "object",
+        "properties": {
+          "free": {
+            "nullable": true,
+            "description": "Bytes per day for free (claimed, no paid plan) organizations",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "plus": {
+            "nullable": true,
+            "description": "Bytes per day for Plus (Team/Enterprise) organizations",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "unclaimed": {
+            "nullable": true,
+            "description": "Bytes per day for unclaimed organizations (0 members)",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          }
+        }
+      },
       "JsonOneMetric": {
         "type": "object",
         "properties": {
@@ -14387,6 +14413,14 @@
             "type": "integer",
             "format": "uint32",
             "minimum": 0
+          },
+          "oci_bandwidth": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonOciBandwidth"
+              }
+            ]
           },
           "public": {
             "nullable": true,

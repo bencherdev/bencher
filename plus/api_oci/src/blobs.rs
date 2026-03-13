@@ -320,6 +320,10 @@ pub async fn oci_upload_start(
     // Get storage
     let storage = context.oci_storage();
 
+    // Check bandwidth limit before any potential data transfer (mount)
+    #[cfg(feature = "plus")]
+    let org_id = check_oci_bandwidth(context, &push_access.project).await?;
+
     // Handle cross-repository mount if requested
     if let (Some(digest_str), Some(from_name)) = (&query.digest, &query.from) {
         let digest: Digest = crate::error::parse_digest(digest_str)?;
@@ -343,6 +347,12 @@ pub async fn oci_upload_start(
                     .mount_blob(&from_project.uuid, &project_uuid, &digest)
                     .await
                 {
+                    // Record bandwidth for the mounted blob
+                    #[cfg(feature = "plus")]
+                    if let Ok(size) = storage.get_blob_size(&project_uuid, &digest).await {
+                        record_oci_bandwidth(context, org_id, size);
+                    }
+
                     // Mount successful - return 201 Created
                     let location = format!("/v2/{project_slug}/blobs/{digest}");
                     let response = oci_cors_headers(
