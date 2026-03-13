@@ -1,0 +1,15 @@
+import CliDocker from "../cli-docker.mdx";
+import CliDockerVersion from "../cli-docker-version.mdx";
+
+## Docker
+
+使用 [Docker](https://docs.docker.com/engine/install/) 容器运行 Bencher CLI。
+
+<CliDocker />
+
+有一个可选的版本标签来指定使用的 Bencher CLI 的确切版本。
+否则，它将默认使用最新的 CLI 版本。
+仅当使用 Bencher *Self-Hosted* 时才指定确切的版本。
+如果使用 Bencher *Cloud*，则__不要__指定确切的版本，因为仍然偶尔会出现破坏性的更改。
+
+<CliDockerVersion />
