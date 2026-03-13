@@ -11,9 +11,9 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
-		"@tsconfig/node22": "^22",
-		"@types/node": "^22",
+		"@tsconfig/node24": "^24",
+		"@types/node": "^24",
 		"@vercel/ncc": "^0.38.3",
-		"typescript": "^5.7.3"
+		"typescript": "^5.9.3"
 	}
 }
