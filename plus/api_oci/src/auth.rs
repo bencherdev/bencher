@@ -11,12 +11,12 @@ use bencher_json::oci::{
     OCI_ERROR_DENIED, OCI_ERROR_NAME_UNKNOWN, OCI_ERROR_UNAUTHORIZED, OCI_ERROR_UNSUPPORTED,
     oci_error_body,
 };
-use bencher_json::{Jwt, ProjectResourceId, ProjectUuid, ResourceName};
+use bencher_json::{Jwt, ProjectResourceId, ResourceName};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::{ApiContext, RateLimiting},
     model::{
-        organization::QueryOrganization,
+        organization::{OrganizationId, QueryOrganization},
         project::QueryProject,
         user::{QueryUser, auth::AuthUser, public::PublicUser},
     },
@@ -547,17 +547,17 @@ pub fn apply_public_rate_limit(
     Ok(())
 }
 
-/// Resolve a `ProjectResourceId` (UUID or slug) to a `ProjectUuid`
+/// Resolve a `ProjectResourceId` (UUID or slug) to a `QueryProject`
 ///
-/// This performs a database lookup to find the project and return its canonical UUID.
-/// Used by pull endpoints and upload session endpoints to pass a stable identifier
-/// to the storage layer.
-pub async fn resolve_project_uuid(
+/// This performs a database lookup to find the project and return it.
+/// Used by pull endpoints and upload session endpoints to get the project
+/// for storage paths and bandwidth tracking.
+pub async fn resolve_project(
     context: &ApiContext,
     resource_id: &ProjectResourceId,
-) -> Result<ProjectUuid, HttpError> {
+) -> Result<QueryProject, HttpError> {
     let conn = public_conn!(context);
-    let project = QueryProject::from_resource_id(conn, resource_id).map_err(|_e| {
+    QueryProject::from_resource_id(conn, resource_id).map_err(|_e| {
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::NOT_FOUND,
@@ -566,8 +566,7 @@ pub async fn resolve_project_uuid(
                 &format!("Repository not found: {resource_id}"),
             ),
         )
-    })?;
-    Ok(project.uuid)
+    })
 }
 
 /// Build a `PublicUser` from OCI authentication
@@ -616,4 +615,27 @@ async fn build_public_user(
         slog::debug!(log, "OCI push without authentication (public user)"; "remote_ip" => ?remote_ip);
         Ok((PublicUser::Public(remote_ip), None))
     }
+}
+
+/// Check bandwidth limit for a project's organization. Call BEFORE data transfer.
+///
+/// Returns the organization ID for use in `record_oci_bandwidth` without a second DB lookup.
+#[cfg(feature = "plus")]
+pub(crate) async fn check_oci_bandwidth(
+    context: &ApiContext,
+    project: &QueryProject,
+) -> Result<OrganizationId, HttpError> {
+    let conn = public_conn!(context);
+    let organization = project.organization(conn)?;
+    let tier = organization.oci_bandwidth_tier(conn, &context.licensor)?;
+    context
+        .rate_limiting
+        .check_oci_bandwidth(organization.id, tier, &organization)?;
+    Ok(organization.id)
+}
+
+/// Record bytes transferred. Call AFTER successful data transfer.
+#[cfg(feature = "plus")]
+pub(crate) fn record_oci_bandwidth(context: &ApiContext, org_id: OrganizationId, bytes: u64) {
+    context.rate_limiting.record_oci_bandwidth(org_id, bytes);
 }

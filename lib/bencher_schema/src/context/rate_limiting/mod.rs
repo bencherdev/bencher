@@ -11,17 +11,19 @@ use slog::Logger;
 use crate::{
     error::{BencherResource, too_many_requests},
     model::{
-        organization::{QueryOrganization, plan::LicenseUsage},
+        organization::{OrganizationId, QueryOrganization, plan::LicenseUsage},
         project::{QueryProject, branch::QueryBranch, threshold::QueryThreshold},
     },
 };
 
+mod bandwidth;
 mod public;
 mod rate_limiter;
 mod remote_ip;
 mod runner;
 mod user;
 
+use bandwidth::BandwidthRateLimiter;
 use public::PublicRateLimiter;
 use rate_limiter::{RateLimiter, RateLimits};
 use runner::RunnerRateLimiter;
@@ -29,7 +31,7 @@ use user::UserRateLimiter;
 
 use super::DbConnection;
 
-const DAY: Duration = Duration::from_secs(60 * 60 * 24);
+pub(super) const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
@@ -43,6 +45,7 @@ pub struct RateLimiting {
     public: PublicRateLimiter,
     user: UserRateLimiter,
     runner: RunnerRateLimiter,
+    bandwidth: BandwidthRateLimiter,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -88,6 +91,12 @@ pub enum RateLimitingError {
         rate_limit: u32,
     },
 
+    #[error("Organization ({uuid}) has exceeded the daily OCI bandwidth limit ({limit_gib} GiB). Please reduce usage or upgrade: https://bencher.dev/pricing", uuid = organization.uuid)]
+    OciBandwidth {
+        organization: QueryOrganization,
+        limit_gib: u64,
+    },
+
     #[error("Too many requests for runner. Please, try again later.")]
     RunnerRequests,
 
@@ -121,6 +130,7 @@ impl Default for RateLimiting {
             public: PublicRateLimiter::default(),
             user: UserRateLimiter::default(),
             runner: RunnerRateLimiter::default(),
+            bandwidth: BandwidthRateLimiter::default(),
         }
     }
 }
@@ -134,6 +144,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             public,
             user,
             runner,
+            oci_bandwidth,
         } = json;
         Self {
             window: window.map(u64::from).map_or(DAY, Duration::from_secs),
@@ -142,6 +153,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             public: public.map_or_else(PublicRateLimiter::default, Into::into),
             user: user.map_or_else(UserRateLimiter::default, Into::into),
             runner: runner.map_or_else(RunnerRateLimiter::default, Into::into),
+            bandwidth: oci_bandwidth.map_or_else(BandwidthRateLimiter::default, Into::into),
         }
     }
 }
@@ -197,6 +209,7 @@ impl RateLimiting {
             public: PublicRateLimiter::max(),
             user: UserRateLimiter::max(),
             runner: RunnerRateLimiter::max(),
+            bandwidth: BandwidthRateLimiter::max(),
         }
     }
 
@@ -313,9 +326,29 @@ impl RateLimiting {
         self.runner.check_request(runner_uuid)
     }
 
+    pub fn check_oci_bandwidth(
+        &self,
+        org_id: OrganizationId,
+        tier: OciBandwidthTier,
+        organization: &QueryOrganization,
+    ) -> Result<(), HttpError> {
+        self.bandwidth.check(org_id, tier, organization)
+    }
+
+    pub fn record_oci_bandwidth(&self, org_id: OrganizationId, bytes: u64) {
+        self.bandwidth.record(org_id, bytes);
+    }
+
     pub fn remote_ip(log: &Logger, headers: &HeaderMap) -> Option<IpAddr> {
         remote_ip::remote_ip(log, headers)
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum OciBandwidthTier {
+    Unclaimed,
+    Free,
+    Plus,
 }
 
 macro_rules! extract_rate_limits {

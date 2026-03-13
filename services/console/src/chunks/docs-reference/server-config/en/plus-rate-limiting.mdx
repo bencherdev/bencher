@@ -7,10 +7,14 @@ If not specified, the listed default values will be used.
 To prevent [`unclaimed` projects][unclaimed projects] from being created,
 set the `unclaimed_limit` to `0`.
 
-|      Name       | Example | Default | Required |                                                                      Description                                                                      |
-| :-------------: | :-----: | :-----: | :------: | :---------------------------------------------------------------------------------------------------------------------------------------------------: |
-|     window      |  86400  |  86400  |    No    |                                       Specifies the rate limiting window in seconds. Set to one day by default.                                       |
-| unclaimed_limit |   255   |   255   |    No    | Controls the rate limiting for [`unclaimed` projects][unclaimed projects]. To prevent `unclaimed` projects from being created, set this value to `0`. |
-|  claimed_limit  |  65536  |  65536  |    No    |                                                  Controls the rate limiting for `claimed` projects.                                                   |
+|          Name          |   Example    |   Default    | Required |                                                                      Description                                                                      |
+| :--------------------: | :----------: | :----------: | :------: | :---------------------------------------------------------------------------------------------------------------------------------------------------: |
+|         window         |    86400     |    86400     |    No    |                                       Specifies the rate limiting window in seconds. Set to one day by default.                                       |
+|    unclaimed_limit     |     255      |     255      |    No    | Controls the rate limiting for [`unclaimed` projects][unclaimed projects]. To prevent `unclaimed` projects from being created, set this value to `0`. |
+|     claimed_limit      |    65536     |    65536     |    No    |                                                  Controls the rate limiting for `claimed` projects.                                                   |
+|     oci_bandwidth      |  \{ ... \}   |     ---      |    No    |                                   Specifies daily OCI registry bandwidth limits per organization tier.                                                |
+| oci_bandwidth.unclaimed | 1073741824  | 1073741824   |    No    |                          Maximum bytes per day for unclaimed organizations (0 members). Defaults to 1 GiB.                                            |
+|   oci_bandwidth.free   | 10737418240  | 10737418240  |    No    |                          Maximum bytes per day for free (claimed, no paid plan) organizations. Defaults to 10 GiB.                                    |
+|   oci_bandwidth.plus   | 107374182400 | 107374182400 |    No    |                          Maximum bytes per day for Plus (Team/Enterprise) organizations. Defaults to 100 GiB.                                         |
 
 [unclaimed projects]: /docs/how-to/claim/#unclaimed-projects

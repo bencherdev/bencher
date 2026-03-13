@@ -453,6 +453,36 @@ impl QueryOrganization {
         Ok(())
     }
 
+    #[cfg(feature = "plus")]
+    pub fn oci_bandwidth_tier(
+        &self,
+        conn: &mut DbConnection,
+        licensor: &bencher_license::Licensor,
+    ) -> Result<crate::context::OciBandwidthTier, HttpError> {
+        use crate::context::OciBandwidthTier;
+        use diesel::{BelongingToDsl as _, RunQueryDsl as _};
+
+        if !self.is_claimed(conn)? {
+            return Ok(OciBandwidthTier::Unclaimed);
+        }
+
+        // Check for a plan row (metered or licensed)
+        if let Ok(query_plan) = plan::QueryPlan::belonging_to(self).first::<plan::QueryPlan>(conn)
+            && (query_plan.metered_plan.is_some() || query_plan.licensed_plan.is_some())
+        {
+            return Ok(OciBandwidthTier::Plus);
+        }
+
+        // Check organization-level license
+        if let Some(license) = &self.license
+            && licensor.validate_organization(license, self.uuid).is_ok()
+        {
+            return Ok(OciBandwidthTier::Plus);
+        }
+
+        Ok(OciBandwidthTier::Free)
+    }
+
     pub fn into_json_full(self, conn: &mut DbConnection) -> Result<JsonOrganization, HttpError> {
         #[cfg(feature = "plus")]
         let sso = self.sso(conn)?;

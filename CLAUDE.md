@@ -126,6 +126,7 @@ The clippy script will install the target automatically and warn if no cross-com
   - The `clap` struct definitions should live in a separate `parser` module
   - The subcommand handler logic should live in a separate module named after the binary for production code (ie `bencher`) or a module named `task` for `tasks/*` crates
   - Do **NOT** use `num_args` on flags in `bencher run` — it uses `trailing_var_arg = true` to match `docker run` semantics, and `num_args` conflicts with trailing vararg parsing. Validate collection sizes at the type/deserialization layer instead (e.g., `TryFrom` impls in `bencher_json`).
+- Within a module, order definitions top-down by scope: primary struct first, then its error type, then `impl` blocks, then supporting/child types (enums, helpers) used by the primary type. Readers should encounter the "what" before the "how".
 - Prefer destructuring a struct (`let Self { field1, field2, .. } = self;` or `let Foo { .. } = foo;`) over individual field access (`.field1`, `.field2`) when consuming or converting all fields. This ensures the compiler flags a build error when a field is added, preventing silent omissions.
 - Use macros for database connection access. All of these macros have a single-use and expanded closure-like form for use multiple times in the same scope.
   - `public_conn!()` - For read-only public access

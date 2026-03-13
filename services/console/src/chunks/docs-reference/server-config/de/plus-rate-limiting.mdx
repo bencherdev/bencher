@@ -4,10 +4,14 @@ Dieser Abschnitt spezifiziert die Ratenbegrenzung für den API-Server. Der gesam
 
 Um zu verhindern, dass [`unclaimed` Projekte][unclaimed projects] erstellt werden, setzen Sie `unclaimed_limit` auf `0`.
 
-|      Name       | Beispiel | Standard | Erforderlich |                                                                                 Beschreibung                                                                                  |
-| :-------------: | :------: | :------: | :----------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-|     window      |  86400   |  86400   |     Nein     |                                      Spezifiziert das Fenster für die Ratenbegrenzung in Sekunden. Standardmäßig auf einen Tag gesetzt.                                       |
-| unclaimed_limit |   255    |   255    |     Nein     | Kontrolliert die Ratenbegrenzung für [`unclaimed` Projekte][unclaimed projects]. Um zu verhindern, dass `unclaimed` Projekte erstellt werden, setzen Sie diesen Wert auf `0`. |
-|  claimed_limit  |  65536   |  65536   |     Nein     |                                                           Kontrolliert die Ratenbegrenzung für `claimed` Projekte.                                                            |
+|          Name          |   Beispiel   |   Standard   | Erforderlich |                                                                                 Beschreibung                                                                                  |
+| :--------------------: | :----------: | :----------: | :----------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|         window         |    86400     |    86400     |     Nein     |                                      Spezifiziert das Fenster für die Ratenbegrenzung in Sekunden. Standardmäßig auf einen Tag gesetzt.                                       |
+|    unclaimed_limit     |     255      |     255      |     Nein     | Kontrolliert die Ratenbegrenzung für [`unclaimed` Projekte][unclaimed projects]. Um zu verhindern, dass `unclaimed` Projekte erstellt werden, setzen Sie diesen Wert auf `0`. |
+|     claimed_limit      |    65536     |    65536     |     Nein     |                                                           Kontrolliert die Ratenbegrenzung für `claimed` Projekte.                                                            |
+|     oci_bandwidth      |  \{ ... \}   |     ---      |     Nein     |                                   Gibt tägliche OCI-Registry-Bandbreitenlimits pro Organisationsstufe an.                                                                     |
+| oci_bandwidth.unclaimed | 1073741824  | 1073741824   |     Nein     |                          Maximale Bytes pro Tag für nicht beanspruchte Organisationen (0 Mitglieder). Standardmäßig 1 GiB.                                                    |
+|   oci_bandwidth.free   | 10737418240  | 10737418240  |     Nein     |                          Maximale Bytes pro Tag für kostenlose (beansprucht, ohne bezahlten Plan) Organisationen. Standardmäßig 10 GiB.                                       |
+|   oci_bandwidth.plus   | 107374182400 | 107374182400 |     Nein     |                          Maximale Bytes pro Tag für Plus (Team/Enterprise) Organisationen. Standardmäßig 100 GiB.                                                             |
 
 [unclaimed projects]: /de/docs/how-to/claim/#unclaimed-projects

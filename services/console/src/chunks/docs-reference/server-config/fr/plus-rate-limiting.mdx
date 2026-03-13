@@ -6,10 +6,14 @@ Si elle n'est pas spécifiée, les valeurs par défaut énumérées seront utili
 
 Pour empêcher la création de projets [`unclaimed`][unclaimed projects], définissez la `unclaimed_limit` à `0`.
 
-|       Nom       | Exemple | Défaut | Requis |                                                                             Description                                                                              |
-| :-------------: | :-----: | :----: | :----: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-|     window      |  86400  | 86400  |  Non   |                                       Spécifie la période de limitation de débit en secondes. Défini par défaut à une journée.                                       |
-| unclaimed_limit |   255   |  255   |  Non   | Contrôle la limitation de débit pour les projets [`unclaimed`][unclaimed projects]. Pour empêcher la création de projets `unclaimed`, définissez cette valeur à `0`. |
-|  claimed_limit  |  65536  | 65536  |  Non   |                                                     Contrôle la limitation de débit pour les projets `claimed`.                                                      |
+|          Nom           |   Exemple    |    Défaut    | Requis |                                                                             Description                                                                              |
+| :--------------------: | :----------: | :----------: | :----: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|         window         |    86400     |    86400     |  Non   |                                       Spécifie la période de limitation de débit en secondes. Défini par défaut à une journée.                                       |
+|    unclaimed_limit     |     255      |     255      |  Non   | Contrôle la limitation de débit pour les projets [`unclaimed`][unclaimed projects]. Pour empêcher la création de projets `unclaimed`, définissez cette valeur à `0`. |
+|     claimed_limit      |    65536     |    65536     |  Non   |                                                     Contrôle la limitation de débit pour les projets `claimed`.                                                      |
+|     oci_bandwidth      |  \{ ... \}   |     ---      |  Non   |                            Spécifie les limites quotidiennes de bande passante du registre OCI par niveau d'organisation.                                            |
+| oci_bandwidth.unclaimed | 1073741824  | 1073741824   |  Non   |                          Octets maximum par jour pour les organisations non réclamées (0 membres). Par défaut 1 Gio.                                                 |
+|   oci_bandwidth.free   | 10737418240  | 10737418240  |  Non   |                          Octets maximum par jour pour les organisations gratuites (réclamées, sans plan payant). Par défaut 10 Gio.                                  |
+|   oci_bandwidth.plus   | 107374182400 | 107374182400 |  Non   |                          Octets maximum par jour pour les organisations Plus (Team/Enterprise). Par défaut 100 Gio.                                                  |
 
 [unclaimed projects]: /fr/docs/how-to/claim/#unclaimed-projects

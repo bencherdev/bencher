@@ -15,7 +15,7 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::auth::{require_pull_access, resolve_project_uuid};
+use crate::auth::{require_pull_access, resolve_project};
 use crate::response::{OCI_FILTERS_APPLIED, oci_cors_headers};
 
 /// Path parameters for referrers endpoint
@@ -71,8 +71,9 @@ pub async fn oci_referrers_list(
     let name_str = path.name.to_string();
     let _access = require_pull_access(&rqctx, &name_str).await?;
 
-    // Resolve project UUID for stable storage paths
-    let project_uuid = resolve_project_uuid(context, &path.name).await?;
+    // Resolve project for stable storage paths
+    let project = resolve_project(context, &path.name).await?;
+    let project_uuid = project.uuid;
 
     // Parse digest
     let digest: Digest = crate::error::parse_digest(&path.digest)?;
