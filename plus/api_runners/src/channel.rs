@@ -49,6 +49,18 @@ fn job_timeout_limit(timeout: bencher_json::Timeout, grace: Duration) -> i64 {
     timeout_secs.saturating_add(grace_secs)
 }
 
+/// Decide job status and close reason when a heartbeat times out.
+///
+/// If the job has run longer than its timeout limit, it is canceled (timeout exceeded).
+/// Otherwise it is failed (lost contact with runner).
+fn timeout_decision(elapsed_secs: i64, limit_secs: i64) -> (JobStatus, CloseReason) {
+    if elapsed_secs > limit_secs {
+        (JobStatus::Canceled, CloseReason::JobTimeoutExceeded)
+    } else {
+        (JobStatus::Failed, CloseReason::HeartbeatTimeout)
+    }
+}
+
 /// Errors from WebSocket channel operations during runner job execution.
 #[derive(Debug, thiserror::Error)]
 enum ChannelError {
@@ -97,11 +109,7 @@ async fn handle_timeout(
     let (status, reason) = if let Some(started) = job.started {
         let elapsed = (now.timestamp() - started.timestamp()).max(0);
         let limit = job_timeout_limit(job.timeout, context.job_timeout_grace_period);
-        if elapsed > limit {
-            (JobStatus::Canceled, CloseReason::JobTimeoutExceeded)
-        } else {
-            (JobStatus::Failed, CloseReason::HeartbeatTimeout)
-        }
+        timeout_decision(elapsed, limit)
     } else {
         (JobStatus::Failed, CloseReason::HeartbeatTimeout)
     };
@@ -270,7 +278,8 @@ async fn handle_heartbeat(
     if let Some(started) = job.started {
         let elapsed = (now.timestamp() - started.timestamp()).max(0);
         let limit = job_timeout_limit(job.timeout, context.job_timeout_grace_period);
-        if elapsed > limit {
+        let (status, _reason) = timeout_decision(elapsed, limit);
+        if status == JobStatus::Canceled {
             slog::warn!(log, "Job timeout exceeded during heartbeat"; "job_id" => ?job_id, "elapsed" => elapsed, "limit" => limit);
             let cancel_update = UpdateJob::terminate(JobStatus::Canceled, now);
             let updated = cancel_update.execute_if_either_status(
@@ -1152,5 +1161,31 @@ where
                 // Ignore; do NOT reset heartbeat timeout
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn timeout_exceeded_cancels_job() {
+        let (status, reason) = timeout_decision(301, 300);
+        assert_eq!(status, JobStatus::Canceled);
+        assert_eq!(reason, CloseReason::JobTimeoutExceeded);
+    }
+
+    #[test]
+    fn within_timeout_fails_job() {
+        let (status, reason) = timeout_decision(100, 300);
+        assert_eq!(status, JobStatus::Failed);
+        assert_eq!(reason, CloseReason::HeartbeatTimeout);
+    }
+
+    #[test]
+    fn exactly_at_limit_fails_job() {
+        let (status, reason) = timeout_decision(300, 300);
+        assert_eq!(status, JobStatus::Failed);
+        assert_eq!(reason, CloseReason::HeartbeatTimeout);
     }
 }
