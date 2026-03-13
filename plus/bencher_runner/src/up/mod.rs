@@ -52,6 +52,10 @@ fn transient_retry_delay() -> Duration {
 #[cfg(target_os = "linux")]
 const POLL_TIMEOUT_MARGIN_SECS: u64 = 30;
 
+/// Maximum number of times to retry sending a pending result before dropping it.
+#[cfg(target_os = "linux")]
+const MAX_PENDING_RESULT_RETRIES: u32 = 3;
+
 /// Global shutdown flag set by signal handler.
 /// Async-signal-safe: only uses `AtomicBool::store`.
 static SHUTDOWN: AtomicBool = AtomicBool::new(false);
@@ -122,6 +126,7 @@ impl Up {
 
         // Track pending terminal messages that weren't ACKed across reconnections
         let mut pending_result: Option<RunnerMessage> = None;
+        let mut pending_retry_count: u32 = 0;
 
         // Outer loop: connection management with reconnect
         loop {
@@ -145,7 +150,12 @@ impl Up {
 
             println!("Channel connected. Polling for jobs...");
 
-            match run_channel_loop(&self.config, &ws, &mut pending_result) {
+            match run_channel_loop(
+                &self.config,
+                &ws,
+                &mut pending_result,
+                &mut pending_retry_count,
+            ) {
                 Ok(()) => return Ok(()), // Clean shutdown
                 Err(UpError::ApiClient(
                     ApiClientError::Unauthorized | ApiClientError::InvalidToken,
@@ -177,11 +187,12 @@ impl Up {
 ///
 /// Returns `Ok(())` on clean shutdown, `Err` on WS or auth errors.
 #[cfg(target_os = "linux")]
-#[expect(clippy::print_stdout, clippy::print_stderr)]
+#[expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
 fn run_channel_loop(
     config: &UpConfig,
     ws: &Arc<Mutex<JobChannel>>,
     pending_result: &mut Option<RunnerMessage>,
+    pending_retry_count: &mut u32,
 ) -> Result<(), UpError> {
     loop {
         if SHUTDOWN.load(Ordering::SeqCst) {
@@ -191,37 +202,49 @@ fn run_channel_loop(
         // If we have a pending result from a previous job (ACK was not received),
         // resend it before requesting a new job.
         if let Some(msg) = pending_result.take() {
-            println!("Resending unACKed terminal message...");
-            let mut ws_guard = ws
-                .lock()
-                .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-            ws_guard.send_message(&msg)?;
-            let timeout = Duration::from_secs(5);
-            match ws_guard.read_message_timeout(timeout) {
-                Ok(Some(ServerMessage::Ack { .. })) => {
-                    println!("Pending result ACKed by server");
-                },
-                Ok(Some(other)) => {
-                    eprintln!("Warning: expected ACK for pending result, got {other:?}");
-                    *pending_result = Some(msg);
-                    return Err(UpError::WebSocket(WebSocketError::Receive(format!(
-                        "Expected ACK, got {other:?}"
-                    ))));
-                },
-                Ok(None) => {
-                    // Timeout without receiving ACK — store back and return error to reconnect
-                    eprintln!("Warning: retry ACK timed out");
-                    *pending_result = Some(msg);
-                    return Err(UpError::WebSocket(WebSocketError::Receive(
-                        "ACK timeout".to_owned(),
-                    )));
-                },
-                Err(e) => {
-                    // ACK not received again — store back and return error to reconnect
-                    eprintln!("Warning: retry ACK not received: {e}");
-                    *pending_result = Some(msg);
-                    return Err(UpError::WebSocket(WebSocketError::Receive(e.to_string())));
-                },
+            *pending_retry_count += 1;
+            if *pending_retry_count > MAX_PENDING_RESULT_RETRIES {
+                eprintln!(
+                    "Error: exceeded {MAX_PENDING_RESULT_RETRIES} retries for pending result, dropping message"
+                );
+                *pending_retry_count = 0;
+            } else {
+                println!(
+                    "Resending unACKed terminal message (attempt {}/{MAX_PENDING_RESULT_RETRIES})...",
+                    pending_retry_count
+                );
+                let mut ws_guard = ws
+                    .lock()
+                    .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
+                ws_guard.send_message(&msg)?;
+                let timeout = Duration::from_secs(5);
+                match ws_guard.read_message_timeout(timeout) {
+                    Ok(Some(ServerMessage::Ack { .. })) => {
+                        println!("Pending result ACKed by server");
+                        *pending_retry_count = 0;
+                    },
+                    Ok(Some(other)) => {
+                        eprintln!("Warning: expected ACK for pending result, got {other:?}");
+                        *pending_result = Some(msg);
+                        return Err(UpError::WebSocket(WebSocketError::Receive(format!(
+                            "Expected ACK, got {other:?}"
+                        ))));
+                    },
+                    Ok(None) => {
+                        // Timeout without receiving ACK — store back and return error to reconnect
+                        eprintln!("Warning: retry ACK timed out");
+                        *pending_result = Some(msg);
+                        return Err(UpError::WebSocket(WebSocketError::Receive(
+                            "ACK timeout".to_owned(),
+                        )));
+                    },
+                    Err(e) => {
+                        // ACK not received again — store back and return error to reconnect
+                        eprintln!("Warning: retry ACK not received: {e}");
+                        *pending_result = Some(msg);
+                        return Err(UpError::WebSocket(WebSocketError::Receive(e.to_string())));
+                    },
+                }
             }
         }
 

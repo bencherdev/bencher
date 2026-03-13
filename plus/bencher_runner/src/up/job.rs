@@ -144,28 +144,39 @@ pub fn execute_job(
     if cancel_flag.load(Ordering::SeqCst) {
         println!("Job {} was canceled by server", job.uuid);
         let msg = RunnerMessage::Canceled { job: job.uuid };
-        let mut ws_guard = ws
-            .lock()
-            .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-        drop(ws_guard.send_message(&msg));
-        // Wait for Ack but don't close — connection stays open for next job
-        let acked = match ws_guard.read_message_timeout(ACK_TIMEOUT) {
-            Ok(Some(ServerMessage::Ack { job: ack_job })) => {
-                if ack_job.as_ref() != Some(&job.uuid) {
-                    eprintln!(
-                        "Warning: ACK job UUID mismatch: expected {}, got {ack_job:?}",
-                        job.uuid
-                    );
+        let acked = match ws.lock() {
+            Ok(mut ws_guard) => {
+                if let Err(e) = ws_guard.send_message(&msg) {
+                    eprintln!("Warning: failed to send Canceled message: {e}");
+                    false
+                } else {
+                    // Wait for Ack but don't close — connection stays open for next job
+                    match ws_guard.read_message_timeout(ACK_TIMEOUT) {
+                        Ok(Some(ServerMessage::Ack { job: ack_job })) => {
+                            if ack_job.as_ref() == Some(&job.uuid) {
+                                true
+                            } else {
+                                eprintln!(
+                                    "Warning: ACK job UUID mismatch: expected {}, got {ack_job:?}",
+                                    job.uuid
+                                );
+                                false
+                            }
+                        },
+                        Ok(Some(other)) => {
+                            eprintln!("Warning: expected ACK, got {other:?}");
+                            false
+                        },
+                        Ok(None) => false,
+                        Err(e) => {
+                            eprintln!("Warning: error waiting for server ACK: {e}");
+                            false
+                        },
+                    }
                 }
-                true
             },
-            Ok(Some(other)) => {
-                eprintln!("Warning: expected ACK, got {other:?}");
-                false
-            },
-            Ok(None) => false,
             Err(e) => {
-                eprintln!("Warning: error waiting for server ACK: {e}");
+                eprintln!("Warning: failed to lock WebSocket for Canceled message: {e}");
                 false
             },
         };
@@ -180,28 +191,39 @@ pub fn execute_job(
         job: job.uuid,
         results,
     };
-    let mut ws_guard = ws
-        .lock()
-        .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-    ws_guard.send_message(&msg)?;
-    // Wait for Ack but don't close — connection stays open for next job
-    let acked = match ws_guard.read_message_timeout(ACK_TIMEOUT) {
-        Ok(Some(ServerMessage::Ack { job: ack_job })) => {
-            if ack_job.as_ref() != Some(&job.uuid) {
-                eprintln!(
-                    "Warning: ACK job UUID mismatch: expected {}, got {ack_job:?}",
-                    job.uuid
-                );
+    let acked = match ws.lock() {
+        Ok(mut ws_guard) => {
+            if let Err(e) = ws_guard.send_message(&msg) {
+                eprintln!("Warning: failed to send Completed message: {e}");
+                false
+            } else {
+                // Wait for Ack but don't close — connection stays open for next job
+                match ws_guard.read_message_timeout(ACK_TIMEOUT) {
+                    Ok(Some(ServerMessage::Ack { job: ack_job })) => {
+                        if ack_job.as_ref() == Some(&job.uuid) {
+                            true
+                        } else {
+                            eprintln!(
+                                "Warning: ACK job UUID mismatch: expected {}, got {ack_job:?}",
+                                job.uuid
+                            );
+                            false
+                        }
+                    },
+                    Ok(Some(other)) => {
+                        eprintln!("Warning: expected ACK, got {other:?}");
+                        false
+                    },
+                    Ok(None) => false,
+                    Err(e) => {
+                        eprintln!("Warning: error waiting for server ACK: {e}");
+                        false
+                    },
+                }
             }
-            true
         },
-        Ok(Some(other)) => {
-            eprintln!("Warning: expected ACK, got {other:?}");
-            false
-        },
-        Ok(None) => false,
         Err(e) => {
-            eprintln!("Warning: error waiting for server ACK: {e}");
+            eprintln!("Warning: failed to lock WebSocket for Completed message: {e}");
             false
         },
     };
@@ -238,25 +260,38 @@ fn send_failed(
         results,
         error: error_msg.clone(),
     };
-    let mut ws_guard = ws
-        .lock()
-        .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-    ws_guard.send_message(&msg)?;
-    // Wait for Ack but don't close — connection stays open for next job
-    let acked = match ws_guard.read_message_timeout(ACK_TIMEOUT) {
-        Ok(Some(ServerMessage::Ack { job: ack_job })) => {
-            if ack_job.as_ref() != Some(&job_uuid) {
-                eprintln!("Warning: ACK job UUID mismatch: expected {job_uuid}, got {ack_job:?}");
+    let acked = match ws.lock() {
+        Ok(mut ws_guard) => {
+            if let Err(e) = ws_guard.send_message(&msg) {
+                eprintln!("Warning: failed to send Failed message: {e}");
+                false
+            } else {
+                // Wait for Ack but don't close — connection stays open for next job
+                match ws_guard.read_message_timeout(ACK_TIMEOUT) {
+                    Ok(Some(ServerMessage::Ack { job: ack_job })) => {
+                        if ack_job.as_ref() == Some(&job_uuid) {
+                            true
+                        } else {
+                            eprintln!(
+                                "Warning: ACK job UUID mismatch: expected {job_uuid}, got {ack_job:?}"
+                            );
+                            false
+                        }
+                    },
+                    Ok(Some(other)) => {
+                        eprintln!("Warning: expected ACK, got {other:?}");
+                        false
+                    },
+                    Ok(None) => false,
+                    Err(e) => {
+                        eprintln!("Warning: error waiting for server ACK: {e}");
+                        false
+                    },
+                }
             }
-            true
         },
-        Ok(Some(other)) => {
-            eprintln!("Warning: expected ACK, got {other:?}");
-            false
-        },
-        Ok(None) => false,
         Err(e) => {
-            eprintln!("Warning: error waiting for server ACK: {e}");
+            eprintln!("Warning: failed to lock WebSocket for Failed message: {e}");
             false
         },
     };

@@ -47,6 +47,8 @@ impl FromStr for PollTimeout {
 impl PollTimeout {
     pub const MIN: Self = Self(MIN_POLL_TIMEOUT);
     pub const MAX: Self = Self(MAX_POLL_TIMEOUT);
+    pub const MIN_VALUE: u32 = MIN_POLL_TIMEOUT;
+    pub const MAX_VALUE: u32 = MAX_POLL_TIMEOUT;
 }
 
 impl<'de> Deserialize<'de> for PollTimeout {

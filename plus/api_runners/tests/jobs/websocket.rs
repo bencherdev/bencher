@@ -1206,7 +1206,7 @@ async fn channel_job_timeout() {
     // Use a mock clock so that `context.clock.now()` returns controllable time.
     // Without this, `DateTime::now()` returns real wall-clock time which doesn't
     // advance with `tokio::time::advance()`.
-    let base_time = bencher_json::DateTime::now().timestamp();
+    let base_time = bencher_json::DateTime::TEST.timestamp();
     let mock_time = Arc::new(AtomicI64::new(base_time));
     let time_ref = mock_time.clone();
     let clock = bencher_json::Clock::Custom(Arc::new(move || {
@@ -1719,7 +1719,7 @@ async fn channel_heartbeat_detects_job_timeout() {
         atomic::{AtomicI64, Ordering},
     };
 
-    let base_time = bencher_json::DateTime::now().timestamp();
+    let base_time = bencher_json::DateTime::TEST.timestamp();
     let mock_time = Arc::new(AtomicI64::new(base_time));
     let time_ref = mock_time.clone();
     let clock = bencher_json::Clock::Custom(Arc::new(move || {
@@ -1799,7 +1799,7 @@ async fn channel_heartbeat_no_false_timeout() {
         atomic::{AtomicI64, Ordering},
     };
 
-    let base_time = bencher_json::DateTime::now().timestamp();
+    let base_time = bencher_json::DateTime::TEST.timestamp();
     let mock_time = Arc::new(AtomicI64::new(base_time));
     let time_ref = mock_time.clone();
     let clock = bencher_json::Clock::Custom(Arc::new(move || {
@@ -1862,7 +1862,7 @@ async fn channel_heartbeat_timeout_skipped_before_running() {
         atomic::{AtomicI64, Ordering},
     };
 
-    let base_time = bencher_json::DateTime::now().timestamp();
+    let base_time = bencher_json::DateTime::TEST.timestamp();
     let mock_time = Arc::new(AtomicI64::new(base_time));
     let time_ref = mock_time.clone();
     let clock = bencher_json::Clock::Custom(Arc::new(move || {

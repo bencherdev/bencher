@@ -34,7 +34,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use tokio_tungstenite::tungstenite::{
     Message,
-    protocol::{Role, WebSocketConfig},
+    protocol::{CloseFrame, Role, WebSocketConfig, frame::coding::CloseCode},
 };
 
 use crate::runner_token::RunnerToken;
@@ -732,6 +732,7 @@ pub struct RunnerChannelParams {
     path = "/v0/runners/{runner}/channel",
     tags = ["runners"]
 }]
+#[expect(clippy::too_many_lines)]
 pub async fn runner_channel(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<RunnerChannelParams>,
@@ -812,11 +813,29 @@ pub async fn runner_channel(
                     Ok(ExecuteResult::JobDone) => {
                         // Transition back to Idle
                     },
-                    Ok(ExecuteResult::Disconnected) | Err(_) => {
+                    Ok(ExecuteResult::Disconnected) => {
                         // Spawn heartbeat timeout for in-flight jobs
                         let job = QueryJob::get(auth_conn!(context), query_job.id)?;
                         if !job.status.has_run() {
                             slog::info!(log, "Channel disconnected for in-flight job, spawning heartbeat timeout"; "job_id" => ?job.id);
+                            spawn_heartbeat_timeout(
+                                log,
+                                heartbeat_timeout,
+                                context.database.connection.clone(),
+                                job.id,
+                                &context.heartbeat_tasks,
+                                context.job_timeout_grace_period,
+                                context.clock.clone(),
+                            );
+                        }
+                        break;
+                    },
+                    Err(e) => {
+                        slog::error!(log, "Execute loop error"; "error" => %e, "job_id" => ?query_job.id);
+                        // Spawn heartbeat timeout for in-flight jobs
+                        let job = QueryJob::get(auth_conn!(context), query_job.id)?;
+                        if !job.status.has_run() {
+                            slog::info!(log, "Channel error for in-flight job, spawning heartbeat timeout"; "job_id" => ?job.id);
                             spawn_heartbeat_timeout(
                                 log,
                                 heartbeat_timeout,
@@ -1069,8 +1088,14 @@ where
                 return Ok(ExecuteResult::Disconnected);
             },
             Err(_elapsed) => {
-                // Heartbeat timeout — mark job and disconnect
-                let _reason = handle_timeout(log, context, job.id).await?;
+                // Heartbeat timeout — mark job and send close frame before disconnecting
+                let reason = handle_timeout(log, context, job.id).await?;
+                let reason_json = serde_json::to_string(&reason)?;
+                let close_frame = CloseFrame {
+                    code: CloseCode::Normal,
+                    reason: reason_json.into(),
+                };
+                drop(tx.send(Message::Close(Some(close_frame))).await);
                 return Ok(ExecuteResult::Disconnected);
             },
         };
