@@ -41,6 +41,15 @@ pub enum IaiMeasure {
     EstimatedCycles(JsonNewMetric),
 }
 
+#[derive(Debug, Clone)]
+pub enum DotNetMeasure {
+    Latency(JsonNewMetric),
+    Gen0Collects(JsonNewMetric),
+    Gen1Collects(JsonNewMetric),
+    Gen2Collects(JsonNewMetric),
+    Allocated(JsonNewMetric),
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GungraunMeasure {
     /*
@@ -207,6 +216,21 @@ impl AdapterResults {
                 };
                 metrics_value.inner.insert(resource_id, metric);
             }
+        }
+
+        Some(results_map.into())
+    }
+    
+    pub fn new_dotnet(benchmark_metrics: Vec<(BenchmarkName, DotNetMeasure)>) -> Option<Self> {
+        if (benchmark_metrics.is_empty()) {
+            return None;
+        }
+
+        let mut results_map = HashMap::new();
+        for (benchmark_name, measure) in benchmark_metrics {
+            let measure = measure;
+
+            // TODO
         }
 
         Some(results_map.into())

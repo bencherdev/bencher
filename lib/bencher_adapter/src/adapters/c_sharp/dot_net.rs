@@ -8,6 +8,7 @@ use crate::{
     adapters::util::{Units, latency_as_nanos},
     results::adapter_results::AdapterResults,
 };
+use crate::results::adapter_results::{DotNetMeasure};
 
 pub struct AdapterCSharpDotNet;
 
@@ -36,6 +37,7 @@ pub struct Benchmark {
     pub namespace: Option<BenchmarkName>,
     pub method: BenchmarkName,
     pub statistics: Statistics,
+    pub memory: Option<Memory>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -51,6 +53,12 @@ pub struct Statistics {
     pub interquartile_range: Decimal,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct Memory {
+    pub bytes_allocated_per_operation: u64,
+}
+
 impl DotNet {
     fn convert(self, settings: Settings) -> Result<Option<AdapterResults>, AdapterError> {
         let benchmarks = self.benchmarks.0;
@@ -60,7 +68,9 @@ impl DotNet {
                 namespace,
                 method,
                 statistics,
+                memory,
             } = benchmark;
+
             let Statistics {
                 mean,
                 standard_deviation,
@@ -86,16 +96,18 @@ impl DotNet {
             };
             let value = latency_as_nanos(average, units);
             let spread = latency_as_nanos(spread, units);
-            let json_metric = JsonNewMetric {
+            let json_latency_metric = JsonNewMetric {
                 value,
                 lower_value: Some(value - spread),
                 upper_value: Some(value + spread),
             };
 
-            benchmark_metrics.push((benchmark_name, json_metric));
+            let latency_measure = DotNetMeasure::Latency(json_latency_metric);
+
+            benchmark_metrics.push((benchmark_name, latency_measure));
         }
 
-        Ok(AdapterResults::new_latency(benchmark_metrics))
+        Ok(AdapterResults::new_dotnet(benchmark_metrics))
     }
 }
 
