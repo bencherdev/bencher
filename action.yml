@@ -5,7 +5,7 @@ branding:
   icon: bar-chart
   color: orange
 runs:
-  using: node20
+  using: node22
   main: ./services/action/dist/index.js
 inputs:
   version:
