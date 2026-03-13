@@ -1,0 +1,15 @@
+import CliDocker from "../cli-docker.mdx";
+import CliDockerVersion from "../cli-docker-version.mdx";
+
+## Docker
+
+Ejecute el CLI de Bencher usando un contenedor [Docker](https://docs.docker.com/engine/install/).
+
+<CliDocker />
+
+Existe una etiqueta de versión opcional para especificar una versión exacta del CLI de Bencher a utilizar.
+De lo contrario, se usará la última versión del CLI por defecto.
+Especifica una versión exacta sólo y únicamente si estás utilizando Bencher *Autolocalizado*.
+No especifiques una versión exacta si estás utilizando Bencher *Cloud* ya que aún existen cambios ocasionales que rompen la compatibilidad.
+
+<CliDockerVersion />
