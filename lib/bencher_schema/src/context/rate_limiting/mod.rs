@@ -31,7 +31,7 @@ use user::UserRateLimiter;
 
 use super::DbConnection;
 
-const DAY: Duration = Duration::from_secs(60 * 60 * 24);
+pub(super) const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
 #[derive(Debug, Clone, Copy)]
 pub enum OciBandwidthTier {

@@ -1,7 +1,4 @@
-use std::{
-    collections::VecDeque,
-    time::{Duration, SystemTime},
-};
+use std::{collections::VecDeque, time::SystemTime};
 
 use bencher_json::system::config::JsonOciBandwidth;
 use dashmap::DashMap;
@@ -13,9 +10,7 @@ use crate::{
     model::organization::{OrganizationId, QueryOrganization},
 };
 
-use super::OciBandwidthTier;
-
-const DAY: Duration = Duration::from_secs(60 * 60 * 24);
+use super::{DAY, OciBandwidthTier};
 
 /// 1 GiB in bytes
 const DEFAULT_UNCLAIMED_BANDWIDTH: u64 = 1 << 30;
@@ -85,8 +80,17 @@ impl BandwidthRateLimiter {
         tier: OciBandwidthTier,
         organization: &QueryOrganization,
     ) -> Result<(), HttpError> {
+        self.check_at(org_id, tier, organization, SystemTime::now())
+    }
+
+    fn check_at(
+        &self,
+        org_id: OrganizationId,
+        tier: OciBandwidthTier,
+        organization: &QueryOrganization,
+        now: SystemTime,
+    ) -> Result<(), HttpError> {
         let limit = self.limit_for_tier(tier);
-        let now = SystemTime::now();
         let cutoff = now - DAY;
 
         // Clean up old entries across all orgs
@@ -114,10 +118,13 @@ impl BandwidthRateLimiter {
     }
 
     pub fn record(&self, org_id: OrganizationId, bytes: u64) {
+        self.record_at(org_id, bytes, SystemTime::now());
+    }
+
+    fn record_at(&self, org_id: OrganizationId, bytes: u64, now: SystemTime) {
         if bytes == 0 {
             return;
         }
-        let now = SystemTime::now();
         self.event_map
             .entry(org_id)
             .or_default()
@@ -130,6 +137,10 @@ mod tests {
     use std::time::{Duration, SystemTime};
 
     use super::*;
+
+    fn test_now() -> SystemTime {
+        SystemTime::UNIX_EPOCH + Duration::from_secs(100_000)
+    }
 
     fn org_id() -> OrganizationId {
         OrganizationId::from_raw(1)
@@ -158,23 +169,24 @@ mod tests {
             plus_limit: 100_000,
         };
 
+        let now = test_now();
         let org_id = org_id();
         let org = org();
 
         // Should be under limit
         limiter
-            .check(org_id, OciBandwidthTier::Unclaimed, &org)
+            .check_at(org_id, OciBandwidthTier::Unclaimed, &org, now)
             .unwrap();
 
         // Record some bytes
-        limiter.record(org_id, 500);
+        limiter.record_at(org_id, 500, now);
         limiter
-            .check(org_id, OciBandwidthTier::Unclaimed, &org)
+            .check_at(org_id, OciBandwidthTier::Unclaimed, &org, now)
             .unwrap();
 
         // Record more to exceed limit
-        limiter.record(org_id, 600);
-        let result = limiter.check(org_id, OciBandwidthTier::Unclaimed, &org);
+        limiter.record_at(org_id, 600, now);
+        let result = limiter.check_at(org_id, OciBandwidthTier::Unclaimed, &org, now);
         assert!(result.is_err());
     }
 
@@ -187,19 +199,28 @@ mod tests {
             plus_limit: 10_000,
         };
 
+        let now = test_now();
         let org_id = org_id();
         let org = org();
 
         // Record 500 bytes - over unclaimed, under free and plus
-        limiter.record(org_id, 500);
+        limiter.record_at(org_id, 500, now);
 
         assert!(
             limiter
-                .check(org_id, OciBandwidthTier::Unclaimed, &org)
+                .check_at(org_id, OciBandwidthTier::Unclaimed, &org, now)
                 .is_err()
         );
-        assert!(limiter.check(org_id, OciBandwidthTier::Free, &org).is_ok());
-        assert!(limiter.check(org_id, OciBandwidthTier::Plus, &org).is_ok());
+        assert!(
+            limiter
+                .check_at(org_id, OciBandwidthTier::Free, &org, now)
+                .is_ok()
+        );
+        assert!(
+            limiter
+                .check_at(org_id, OciBandwidthTier::Plus, &org, now)
+                .is_ok()
+        );
     }
 
     #[test]
@@ -211,11 +232,12 @@ mod tests {
             plus_limit: 10_000,
         };
 
+        let now = test_now();
         let org_id = org_id();
         let org = org();
 
-        // Manually insert an old entry (more than 24h ago)
-        let old_time = SystemTime::now() - Duration::from_secs(25 * 60 * 60);
+        // Insert an old entry (more than 24h ago)
+        let old_time = now - Duration::from_secs(25 * 60 * 60);
         limiter
             .event_map
             .entry(org_id)
@@ -224,29 +246,31 @@ mod tests {
 
         // Should be under limit because old entries get cleaned up
         limiter
-            .check(org_id, OciBandwidthTier::Unclaimed, &org)
+            .check_at(org_id, OciBandwidthTier::Unclaimed, &org, now)
             .unwrap();
     }
 
     #[test]
     fn max_mode() {
         let limiter = BandwidthRateLimiter::max();
+        let now = test_now();
         let org_id = org_id();
         let org = org();
 
         // Even huge amounts should be under limit
-        limiter.record(org_id, u64::MAX.saturating_div(2));
+        limiter.record_at(org_id, u64::MAX.saturating_div(2), now);
         limiter
-            .check(org_id, OciBandwidthTier::Unclaimed, &org)
+            .check_at(org_id, OciBandwidthTier::Unclaimed, &org, now)
             .unwrap();
     }
 
     #[test]
     fn zero_bytes_not_recorded() {
         let limiter = BandwidthRateLimiter::default();
+        let now = test_now();
         let org_id = org_id();
 
-        limiter.record(org_id, 0);
+        limiter.record_at(org_id, 0, now);
         assert!(!limiter.event_map.contains_key(&org_id));
     }
 }
