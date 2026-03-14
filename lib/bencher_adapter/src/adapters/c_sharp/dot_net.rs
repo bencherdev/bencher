@@ -8,6 +8,7 @@ use crate::{
     adapters::util::{Units, latency_as_nanos},
     results::adapter_results::AdapterResults,
 };
+use crate::results::adapter_results::DotNetMeasure;
 
 pub struct AdapterCSharpDotNet;
 
@@ -36,6 +37,7 @@ pub struct Benchmark {
     pub namespace: Option<BenchmarkName>,
     pub method: BenchmarkName,
     pub statistics: Statistics,
+    pub memory: Option<Memory>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -51,6 +53,16 @@ pub struct Statistics {
     pub interquartile_range: Decimal,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct Memory {
+    pub gen0_collections: u32,
+    pub gen1_collections: u32,
+    pub gen2_collections: u32,
+    pub total_operations: u32,
+    pub bytes_allocated_per_operation: u32,
+}
+
 impl DotNet {
     fn convert(self, settings: Settings) -> Result<Option<AdapterResults>, AdapterError> {
         let benchmarks = self.benchmarks.0;
@@ -60,7 +72,9 @@ impl DotNet {
                 namespace,
                 method,
                 statistics,
+                memory,
             } = benchmark;
+
             let Statistics {
                 mean,
                 standard_deviation,
@@ -84,23 +98,40 @@ impl DotNet {
                 JsonAverage::Mean => (mean, standard_deviation),
                 JsonAverage::Median => (median, interquartile_range),
             };
-            let value = latency_as_nanos(average, units);
+            let latency_value = latency_as_nanos(average, units);
             let spread = latency_as_nanos(spread, units);
-            let json_metric = JsonNewMetric {
-                value,
-                lower_value: Some(value - spread),
-                upper_value: Some(value + spread),
+            let json_latency_metric = JsonNewMetric {
+                value: latency_value,
+                lower_value: Some(latency_value - spread),
+                upper_value: Some(latency_value + spread),
             };
 
-            benchmark_metrics.push((benchmark_name, json_metric));
+            let latency_measure = DotNetMeasure::Latency(json_latency_metric);
+
+            let mut measures = vec![latency_measure];
+
+            if memory.is_some() {
+                let json_allocated_metric = JsonNewMetric {
+                    value: memory.unwrap().bytes_allocated_per_operation.into(),
+                    lower_value: None,
+                    upper_value: None,
+                };
+
+                let allocated_measure = DotNetMeasure::Allocated(json_allocated_metric);
+
+                measures.push(allocated_measure);
+            }
+
+            benchmark_metrics.push((benchmark_name, measures));
         }
 
-        Ok(AdapterResults::new_latency(benchmark_metrics))
+        Ok(AdapterResults::new_dotnet(benchmark_metrics))
     }
 }
 
 #[cfg(test)]
 pub(crate) mod test_c_sharp_dot_net {
+    use ordered_float::OrderedFloat;
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
@@ -240,6 +271,16 @@ pub(crate) mod test_c_sharp_dot_net {
             Some(50.729_707_813_342_635),
             Some(52.310_455_217_648_546),
         );
+    }
+
+    #[test]
+    fn adapter_c_sharp_dot_net_memory() {
+        let results = convert_c_sharp_dot_net("memory");
+        assert_eq!(results.inner.len(), 3);
+
+        let metrics = results.get("StepLang.Benchmarks.Tokenize").unwrap();
+        let metric = metrics.get("allocated").unwrap();
+        assert_eq!(metric.value, OrderedFloat::from(672));
     }
 
     #[test]
