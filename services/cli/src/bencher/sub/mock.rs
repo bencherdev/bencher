@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bencher_adapter::{AdapterResults, results::adapter_metrics::AdapterMetrics};
 use bencher_json::{JsonNewMetric, MeasureNameId};
 use rand::{
-    Rng as _, SeedableRng as _,
+    RngExt as _, SeedableRng as _,
     distr::{Distribution as _, Uniform},
     rngs::StdRng,
 };
@@ -92,7 +92,7 @@ impl Mock {
         let mut std_rng = if let Some(seed) = self.seed {
             StdRng::seed_from_u64(seed)
         } else {
-            StdRng::from_os_rng()
+            rand::make_rng()
         };
         for c in 0..count {
             let mut measures_map = HashMap::with_capacity(self.measures.len());

@@ -110,7 +110,7 @@ impl Slug {
     #[cfg(feature = "server")]
     fn rand_suffix() -> String {
         use chrono::Utc;
-        use rand::Rng as _;
+        use rand::RngExt as _;
 
         const BASE: u64 = 36;
         const CHARSET: &[u8] = BASE_36.as_bytes();

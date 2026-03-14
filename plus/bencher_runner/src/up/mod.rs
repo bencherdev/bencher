@@ -48,7 +48,7 @@ const TRANSIENT_RETRY_JITTER: u64 = 5;
 
 #[cfg(target_os = "linux")]
 fn transient_retry_delay() -> Duration {
-    use rand::Rng as _;
+    use rand::RngExt as _;
     let jitter = rand::rng().random_range(0..=TRANSIENT_RETRY_JITTER);
     TRANSIENT_RETRY_BASE + Duration::from_secs(jitter)
 }
