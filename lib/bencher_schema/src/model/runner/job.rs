@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, PlanLevel, PriorityTier,
+    DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, PlanLevel, Priority,
     Timeout, project::report::JsonReportSettings, runner::JsonIterationOutput,
     runner::job::JsonNewRunJob,
 };
@@ -49,7 +49,7 @@ pub struct QueryJob {
     pub spec_id: SpecId,
     pub config: JsonJobConfig,
     pub timeout: Timeout,
-    pub priority: PriorityTier,
+    pub priority: Priority,
     pub status: JobStatus,
     pub runner_id: Option<RunnerId>,
     pub claimed: Option<DateTime>,
@@ -248,7 +248,7 @@ pub struct InsertJob {
     pub spec_id: SpecId,
     pub config: JsonJobConfig,
     pub timeout: Timeout,
-    pub priority: PriorityTier,
+    pub priority: Priority,
     pub status: JobStatus,
     pub created: DateTime,
     pub modified: DateTime,
@@ -266,7 +266,7 @@ impl InsertJob {
         spec_id: SpecId,
         config: JsonJobConfig,
         timeout: Timeout,
-        priority: PriorityTier,
+        priority: Priority,
         now: DateTime,
     ) -> Self {
         Self {
@@ -296,7 +296,7 @@ pub struct PendingInsertJob {
     spec_id: SpecId,
     config: JsonJobConfig,
     timeout: Timeout,
-    priority: PriorityTier,
+    priority: Priority,
 }
 
 impl PendingInsertJob {
@@ -438,16 +438,16 @@ fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed:
     }
 }
 
-fn determine_priority(plan_kind: &PlanKind, is_claimed: bool) -> PriorityTier {
+fn determine_priority(plan_kind: &PlanKind, is_claimed: bool) -> Priority {
     if !is_claimed {
-        return PriorityTier::Unclaimed;
+        return Priority::Unclaimed;
     }
     match plan_kind {
-        PlanKind::None => PriorityTier::Free,
-        PlanKind::Metered(_) => PriorityTier::Plus,
+        PlanKind::None => Priority::Free,
+        PlanKind::Metered(_) => Priority::Plus,
         PlanKind::Licensed(license_usage) => match license_usage.level {
-            PlanLevel::Free => PriorityTier::Free,
-            PlanLevel::Team | PlanLevel::Enterprise => PriorityTier::Plus,
+            PlanLevel::Free => Priority::Free,
+            PlanLevel::Team | PlanLevel::Enterprise => Priority::Plus,
         },
     }
 }
@@ -577,7 +577,7 @@ mod tests {
     fn priority_unclaimed() {
         assert_eq!(
             determine_priority(&PlanKind::None, false),
-            PriorityTier::Unclaimed
+            Priority::Unclaimed
         );
     }
 
@@ -586,31 +586,25 @@ mod tests {
         // Even with a paid plan, unclaimed is always Unclaimed
         assert_eq!(
             determine_priority(&metered_plan(), false),
-            PriorityTier::Unclaimed
+            Priority::Unclaimed
         );
     }
 
     #[test]
     fn priority_free() {
-        assert_eq!(
-            determine_priority(&PlanKind::None, true),
-            PriorityTier::Free
-        );
+        assert_eq!(determine_priority(&PlanKind::None, true), Priority::Free);
     }
 
     #[test]
     fn priority_metered() {
-        assert_eq!(
-            determine_priority(&metered_plan(), true),
-            PriorityTier::Plus
-        );
+        assert_eq!(determine_priority(&metered_plan(), true), Priority::Plus);
     }
 
     #[test]
     fn priority_licensed_free() {
         assert_eq!(
             determine_priority(&licensed_plan(PlanLevel::Free), true),
-            PriorityTier::Free
+            Priority::Free
         );
     }
 
@@ -618,7 +612,7 @@ mod tests {
     fn priority_licensed_team() {
         assert_eq!(
             determine_priority(&licensed_plan(PlanLevel::Team), true),
-            PriorityTier::Plus
+            Priority::Plus
         );
     }
 
@@ -626,7 +620,7 @@ mod tests {
     fn priority_licensed_enterprise() {
         assert_eq!(
             determine_priority(&licensed_plan(PlanLevel::Enterprise), true),
-            PriorityTier::Plus
+            Priority::Plus
         );
     }
 

@@ -120,7 +120,7 @@ Represents a benchmark execution request linked to a report.
 | spec_id            | `SpecId`            | FK to spec (RESTRICT on delete)                      |
 | config             | `JsonJobConfig`     | Execution details (JSON serialized in TEXT column)   |
 | timeout            | `Timeout`           | Maximum execution time in seconds (u32, default: 3600) |
-| priority           | `PriorityTier`      | Scheduling priority (0/100/200)                      |
+| priority           | `Priority`      | Scheduling priority (0/100/200)                      |
 | status             | `JobStatus`         | Job lifecycle state (integer enum 0-6)               |
 | runner_id          | `Option<RunnerId>`  | FK to runner (RESTRICT), set on claim                |
 | claimed            | `Option<DateTime>`  | When runner claimed the job                          |

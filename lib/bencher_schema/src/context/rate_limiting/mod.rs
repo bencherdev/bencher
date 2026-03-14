@@ -329,10 +329,10 @@ impl RateLimiting {
     pub fn check_oci_bandwidth(
         &self,
         org_id: OrganizationId,
-        tier: bencher_json::PriorityTier,
+        priority: bencher_json::Priority,
         organization: &QueryOrganization,
     ) -> Result<(), HttpError> {
-        self.bandwidth.check(org_id, tier, organization)
+        self.bandwidth.check(org_id, priority, organization)
     }
 
     pub fn record_oci_bandwidth(&self, org_id: OrganizationId, bytes: u64) {

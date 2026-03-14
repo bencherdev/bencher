@@ -478,11 +478,11 @@ fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
 #[derive(Debug, Clone, Copy)]
 pub enum ApiHistogram {
     /// Time a job spent waiting in the queue before being claimed.
-    JobQueueDuration(PriorityTier),
+    JobQueueDuration(Priority),
     /// Actual execution time from job started to completion (excludes queue wait).
-    JobRunDuration(PriorityTier),
+    JobRunDuration(Priority),
     /// Total time from job creation to completion.
-    JobCompleteDuration(PriorityTier),
+    JobCompleteDuration(Priority),
     /// Total wall-clock time for the entire report creation endpoint.
     ReportCreateDuration,
     /// Total time to process report results (adapter parsing + all iterations).
@@ -535,9 +535,9 @@ impl ApiHistogram {
 
     fn attributes(self) -> Vec<opentelemetry::KeyValue> {
         match self {
-            Self::JobQueueDuration(tier)
-            | Self::JobRunDuration(tier)
-            | Self::JobCompleteDuration(tier) => vec![priority_tier_attribute(tier)],
+            Self::JobQueueDuration(priority)
+            | Self::JobRunDuration(priority)
+            | Self::JobCompleteDuration(priority) => vec![priority_attribute(priority)],
             Self::ReportCreateDuration
             | Self::ReportProcessDuration
             | Self::ReportWriteDuration => Vec::new(),
@@ -545,14 +545,8 @@ impl ApiHistogram {
     }
 }
 
-pub use bencher_json::PriorityTier;
+pub use bencher_json::Priority;
 
-fn priority_tier_attribute(tier: PriorityTier) -> opentelemetry::KeyValue {
-    const KEY: &str = "job.priority.tier";
-    let label = match tier {
-        PriorityTier::Unclaimed => "unclaimed",
-        PriorityTier::Free => "free",
-        PriorityTier::Plus => "plus",
-    };
-    opentelemetry::KeyValue::new(KEY, label)
+fn priority_attribute(priority: Priority) -> opentelemetry::KeyValue {
+    opentelemetry::KeyValue::new("job.priority", priority.to_string())
 }

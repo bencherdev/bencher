@@ -27,7 +27,7 @@ pub mod oci;
 pub mod organization;
 pub mod pagination;
 #[cfg(feature = "plus")]
-pub mod priority_tier;
+pub mod priority;
 pub mod project;
 pub mod run;
 #[cfg(feature = "plus")]
@@ -59,7 +59,7 @@ pub use organization::{
 };
 pub use pagination::{JsonDirection, JsonPagination};
 #[cfg(feature = "plus")]
-pub use priority_tier::PriorityTier;
+pub use priority::Priority;
 pub use project::{
     JsonNewProject, JsonProject, JsonProjects, ProjectResourceId, ProjectSlug, ProjectUuid,
     alert::{AlertUuid, JsonAlert, JsonAlerts},

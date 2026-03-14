@@ -318,7 +318,7 @@ fn insert_test_job(
     project_uuid: bencher_json::ProjectUuid,
     created: bencher_json::DateTime,
 ) -> bencher_json::JobUuid {
-    use bencher_json::{JobStatus, JobUuid, PriorityTier, SpecUuid};
+    use bencher_json::{JobStatus, JobUuid, Priority, SpecUuid};
     use bencher_schema::schema;
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
@@ -378,7 +378,7 @@ fn insert_test_job(
             schema::job::spec_id.eq(spec_id),
             schema::job::config.eq(config.to_string()),
             schema::job::timeout.eq(3600),
-            schema::job::priority.eq(PriorityTier::default()),
+            schema::job::priority.eq(Priority::Unclaimed),
             schema::job::created.eq(&created),
             schema::job::modified.eq(&created),
         ))

@@ -15,7 +15,7 @@ use bencher_api_tests::{
 };
 use bencher_json::{
     AlertUuid, BenchmarkUuid, BoundaryUuid, BranchUuid, HeadUuid, JobStatus, JobUuid, JsonPerf,
-    MeasureUuid, MetricUuid, PriorityTier, ReportBenchmarkUuid, ReportUuid, SpecUuid, TestbedUuid,
+    MeasureUuid, MetricUuid, Priority, ReportBenchmarkUuid, ReportUuid, SpecUuid, TestbedUuid,
     VersionUuid,
     project::{alert::AlertStatus, boundary::BoundaryLimit},
 };
@@ -419,7 +419,7 @@ fn create_job(server: &TestServer, report_id: i32, spec_id: i32, project_id: i32
             schema::job::spec_id.eq(spec_id),
             schema::job::config.eq(config.to_string()),
             schema::job::timeout.eq(300),
-            schema::job::priority.eq(PriorityTier::default()),
+            schema::job::priority.eq(Priority::Unclaimed),
             schema::job::created.eq(&now),
             schema::job::modified.eq(&now),
         ))

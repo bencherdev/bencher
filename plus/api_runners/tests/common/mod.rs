@@ -13,7 +13,7 @@ pub use bencher_api_tests::helpers::{
     base_timestamp, create_test_report, get_project_id, set_job_status,
 };
 use bencher_json::{
-    DateTime, JobStatus, JobUuid, JsonClaimedJob, JsonRunnerToken, PollTimeout, PriorityTier,
+    DateTime, JobStatus, JobUuid, JsonClaimedJob, JsonRunnerToken, PollTimeout, Priority,
     RunnerUuid, SpecUuid,
 };
 use bencher_schema::schema;
@@ -117,7 +117,7 @@ pub fn insert_test_job(server: &TestServer, report_id: i32, spec_id: i32) -> Job
         bencher_json::ProjectUuid::new(),
         organization_id,
         TEST_SOURCE_IP,
-        PriorityTier::default(),
+        Priority::Unclaimed,
         spec_id,
     )
 }
@@ -137,7 +137,7 @@ pub fn insert_test_job_with_project(
         project_uuid,
         organization_id,
         TEST_SOURCE_IP,
-        PriorityTier::default(),
+        Priority::Unclaimed,
         spec_id,
     )
 }
@@ -174,7 +174,7 @@ pub fn insert_test_job_with_timeout(
             schema::job::spec_id.eq(spec_id),
             schema::job::config.eq(config.to_string()),
             schema::job::timeout.eq(timeout_secs),
-            schema::job::priority.eq(PriorityTier::default()),
+            schema::job::priority.eq(Priority::Unclaimed),
             schema::job::created.eq(&now),
             schema::job::modified.eq(&now),
         ))
@@ -198,7 +198,7 @@ pub fn insert_test_job_full(
     project_uuid: bencher_json::ProjectUuid,
     organization_id: i32,
     source_ip: &str,
-    priority: PriorityTier,
+    priority: Priority,
     spec_id: i32,
 ) -> JobUuid {
     let mut conn = server.db_conn();
@@ -278,7 +278,7 @@ pub fn insert_test_job_with_optional_fields(
             schema::job::spec_id.eq(spec_id),
             schema::job::config.eq(config.to_string()),
             schema::job::timeout.eq(7200),
-            schema::job::priority.eq(PriorityTier::default()),
+            schema::job::priority.eq(Priority::Unclaimed),
             schema::job::created.eq(&now),
             schema::job::modified.eq(&now),
         ))
@@ -322,7 +322,7 @@ pub fn insert_test_job_with_invalid_config(
             schema::job::spec_id.eq(spec_id),
             schema::job::config.eq(config.to_string()),
             schema::job::timeout.eq(3600),
-            schema::job::priority.eq(PriorityTier::default()),
+            schema::job::priority.eq(Priority::Unclaimed),
             schema::job::created.eq(&now),
             schema::job::modified.eq(&now),
         ))
@@ -383,7 +383,7 @@ pub fn insert_test_job_with_timestamp(
     project_uuid: bencher_json::ProjectUuid,
     organization_id: i32,
     source_ip: &str,
-    priority: PriorityTier,
+    priority: Priority,
     created: DateTime,
     spec_id: i32,
 ) -> JobUuid {
@@ -425,7 +425,7 @@ pub fn insert_test_job_with_timestamp(
 
 /// Get the priority of a job directly from the database.
 #[expect(clippy::expect_used)]
-pub fn get_job_priority(server: &TestServer, job_uuid: JobUuid) -> PriorityTier {
+pub fn get_job_priority(server: &TestServer, job_uuid: JobUuid) -> Priority {
     let mut conn = server.db_conn();
     schema::job::table
         .filter(schema::job::uuid.eq(job_uuid))

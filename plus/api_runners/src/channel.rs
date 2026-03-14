@@ -6,8 +6,7 @@
 use std::time::Duration;
 
 use bencher_json::{
-    DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimedJob, JsonSpec, PriorityTier,
-    RunnerResourceId,
+    DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimedJob, JsonSpec, Priority, RunnerResourceId,
     runner::{CloseReason, JsonIterationOutput, RunnerMessage, ServerMessage},
 };
 use bencher_oci_storage::OciStorageError;
@@ -571,13 +570,13 @@ async fn try_claim_job(
     use schema::job::dsl::{created, id, organization_id, priority, source_ip, status};
 
     // Tier 1: Plus (priority >= 200) - no concurrency limit
-    let tier_unlimited = priority.ge(PriorityTier::Plus);
+    let tier_unlimited = priority.ge(Priority::Plus);
 
     // Tier 2: Free (priority 100-199) - one concurrent job per organization
     // Block if the same org already has a Claimed or Running job
     let tier_free_eligible = priority
-        .ge(PriorityTier::Free)
-        .and(priority.lt(PriorityTier::Plus))
+        .ge(Priority::Free)
+        .and(priority.lt(Priority::Plus))
         .and(not(exists(
             job_org
                 .filter(
@@ -591,7 +590,7 @@ async fn try_claim_job(
 
     // Tier 3: Unclaimed (priority < 100) - one concurrent job per source IP
     // Block if the same source_ip already has a Claimed or Running job
-    let tier_unclaimed_eligible = priority.lt(PriorityTier::Free).and(not(exists(
+    let tier_unclaimed_eligible = priority.lt(Priority::Free).and(not(exists(
         job_ip
             .filter(
                 job_ip
