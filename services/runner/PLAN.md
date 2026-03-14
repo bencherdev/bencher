@@ -5,7 +5,7 @@
 1. **`lib/bencher_schema/src/model/runner/job.rs`** — `TODO: Check metered plan level to distinguish Team vs Enterprise`
    - Currently all `PlanKind::Metered` maps to `JobPriority::Team`; should distinguish Enterprise tier
 
-2. **`plus/api_runners/src/jobs/websocket.rs`** — `TODO: Billing logic - check elapsed minutes and bill to Stripe`
+2. **`plus/api_runners/src/channel.rs`** — `TODO: Billing logic - check elapsed minutes and bill to Stripe`
    - Billing for runner usage not yet implemented
 
 3. **`lib/bencher_schema/src/model/runner/job.rs` — `process_results()`** — `TODO: Refactor PlanKind to support auth_conn directly`

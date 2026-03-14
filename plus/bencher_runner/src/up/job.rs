@@ -7,60 +7,33 @@ use std::time::Duration;
 
 #[cfg(target_os = "linux")]
 use bencher_json::JsonClaimedJob;
+#[cfg(target_os = "linux")]
+use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
 
 #[cfg(target_os = "linux")]
 use super::UpConfig;
 #[cfg(target_os = "linux")]
-use super::error::{UpError, WebSocketError};
+use super::state_machine::JobFinishResult;
 #[cfg(target_os = "linux")]
 use super::websocket::JobChannel;
-#[cfg(target_os = "linux")]
-use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
-
-/// Timeout for waiting for server Ack after sending Completed/Failed.
-#[cfg(target_os = "linux")]
-const ACK_TIMEOUT: Duration = Duration::from_secs(5);
-
-pub enum JobOutcome {
-    Completed {
-        exit_code: i32,
-        output: Option<String>,
-    },
-    Failed {
-        error: String,
-    },
-    Canceled,
-}
 
 #[cfg(target_os = "linux")]
 #[expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
 pub fn execute_job(
     config: &UpConfig,
     job: &JsonClaimedJob,
-    ws_url: &url::Url,
-) -> Result<JobOutcome, UpError> {
-    println!("Connecting WebSocket for job {}...", job.uuid);
-    let ws = JobChannel::connect(ws_url, config.token.as_ref())?;
-    let ws = Arc::new(Mutex::new(ws));
-
+    ws: &Arc<Mutex<JobChannel>>,
+) -> JobFinishResult {
     // Build runner Config from claimed job spec (all values from job spec, no defaults)
     let job_config = build_config_from_job(config, job);
     let iter_count = job.config.iter.map_or(1, bencher_json::Iteration::as_usize);
     let allow_failure = job.config.allow_failure.unwrap_or_default();
 
-    // Send Running status
-    {
-        let mut ws_guard = ws
-            .lock()
-            .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-        ws_guard.send_message(&RunnerMessage::Running)?;
-    }
-
     let cancel_flag = Arc::new(AtomicBool::new(false));
     let stop_flag = Arc::new(AtomicBool::new(false));
 
     // Spawn heartbeat thread, pinned to housekeeping cores
-    let ws_heartbeat = Arc::clone(&ws);
+    let ws_heartbeat = Arc::clone(ws);
     let cancel_heartbeat = Arc::clone(&cancel_flag);
     let stop_heartbeat = Arc::clone(&stop_flag);
     let housekeeping_cores = config.cpu_layout.housekeeping.clone();
@@ -77,6 +50,7 @@ pub fn execute_job(
     let mut results = Vec::with_capacity(iter_count);
     let mut last_exit_code = 0;
     let mut last_stdout_preview = None;
+    let mut failed_error = None;
 
     for iteration in 0..iter_count {
         // Check cancel before each iteration for responsive cancellation
@@ -100,9 +74,10 @@ pub fn execute_job(
                 if output.exit_code != 0 && !allow_failure {
                     // Non-zero exit code fails the job (matches CLI behavior)
                     results.push(output_to_iteration(output));
-                    let error_msg =
-                        format!("Benchmark exited with non-zero exit code: {last_exit_code}");
-                    return send_failed(results, error_msg, heartbeat, &stop_flag, &ws);
+                    failed_error = Some(format!(
+                        "Benchmark exited with non-zero exit code: {last_exit_code}"
+                    ));
+                    break;
                 }
                 results.push(output_to_iteration(output));
             },
@@ -114,7 +89,8 @@ pub fn execute_job(
                     );
                     continue;
                 }
-                return send_failed(results, e.to_string(), heartbeat, &stop_flag, &ws);
+                failed_error = Some(e.to_string());
+                break;
             },
         }
     }
@@ -125,62 +101,23 @@ pub fn execute_job(
         eprintln!("Warning: heartbeat thread panicked: {panic:?}");
     }
 
+    // Failure takes priority over cancellation (matches original behavior:
+    // if the benchmark failed *and* a cancel arrived, we report failure).
+    if let Some(error) = failed_error {
+        return JobFinishResult::Failed { error, results };
+    }
+
     // Check if canceled
     if cancel_flag.load(Ordering::SeqCst) {
         println!("Job {} was canceled by server", job.uuid);
-        let mut ws_guard = ws
-            .lock()
-            .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-        drop(ws_guard.send_message(&RunnerMessage::Canceled));
-        ws_guard.close();
-        return Ok(JobOutcome::Canceled);
+        return JobFinishResult::Canceled;
     }
 
-    // Send completed with all iteration results
-    let msg = RunnerMessage::Completed { results };
-    let mut ws_guard = ws
-        .lock()
-        .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-    ws_guard.send_message(&msg)?;
-    if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
-        eprintln!("Warning: did not receive server ACK: {e}");
-    }
-    ws_guard.close();
-
-    Ok(JobOutcome::Completed {
+    JobFinishResult::Completed {
         exit_code: last_exit_code,
         output: last_stdout_preview,
-    })
-}
-
-/// Stop the heartbeat thread, send a `Failed` message over the WebSocket,
-/// and return a [`JobOutcome::Failed`].
-#[cfg(target_os = "linux")]
-#[expect(clippy::print_stderr, clippy::use_debug)]
-fn send_failed(
-    results: Vec<JsonIterationOutput>,
-    error_msg: String,
-    heartbeat: std::thread::JoinHandle<()>,
-    stop_flag: &Arc<AtomicBool>,
-    ws: &Arc<Mutex<JobChannel>>,
-) -> Result<JobOutcome, UpError> {
-    stop_flag.store(true, Ordering::SeqCst);
-    if let Err(panic) = heartbeat.join() {
-        eprintln!("Warning: heartbeat thread panicked: {panic:?}");
-    }
-    let msg = RunnerMessage::Failed {
         results,
-        error: error_msg.clone(),
-    };
-    let mut ws_guard = ws
-        .lock()
-        .map_err(|e| WebSocketError::Send(format!("Failed to lock WebSocket: {e}")))?;
-    ws_guard.send_message(&msg)?;
-    if let Err(e) = ws_guard.read_message_timeout(ACK_TIMEOUT) {
-        eprintln!("Warning: did not receive server ACK: {e}");
     }
-    ws_guard.close();
-    Ok(JobOutcome::Failed { error: error_msg })
 }
 
 /// Convert a [`RunOutput`](crate::RunOutput) into a [`JsonIterationOutput`].
@@ -280,6 +217,7 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
 }
 
 #[cfg(target_os = "linux")]
+#[expect(clippy::print_stderr, clippy::use_debug)]
 fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_flag: &AtomicBool) {
     loop {
         std::thread::sleep(Duration::from_secs(1));
@@ -288,7 +226,13 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
             break;
         }
 
-        let Ok(mut ws_guard) = ws.lock() else { break };
+        let mut ws_guard = match ws.lock() {
+            Ok(guard) => guard,
+            Err(e) => {
+                eprintln!("ERROR: heartbeat lock poisoned: {e}");
+                break;
+            },
+        };
 
         // Send heartbeat, ignoring errors (main thread handles fatal WS errors)
         if ws_guard.send_message(&RunnerMessage::Heartbeat).is_err() {
@@ -301,7 +245,10 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
                 cancel_flag.store(true, Ordering::SeqCst);
                 break;
             },
-            Ok(_) => {},
+            Ok(None | Some(ServerMessage::Ack { .. })) => {},
+            Ok(Some(msg @ (ServerMessage::Job(_) | ServerMessage::NoJob))) => {
+                eprintln!("Warning: unexpected {msg:?} during job execution heartbeat");
+            },
             Err(_) => break,
         }
     }

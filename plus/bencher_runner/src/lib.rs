@@ -9,8 +9,10 @@
 //! - Result collection via vsock
 
 // Suppress unused crate warnings on non-Linux or without plus
-#![cfg_attr(not(target_os = "linux"), allow(unused_crate_dependencies))]
-#![cfg_attr(not(feature = "plus"), allow(unused_crate_dependencies))]
+#![cfg_attr(
+    any(not(target_os = "linux"), not(feature = "plus")),
+    allow(unused_crate_dependencies)
+)]
 
 // tempfile is only used on Linux in the execute function
 #[cfg(all(feature = "plus", target_os = "linux"))]

@@ -7906,110 +7906,15 @@
         }
       }
     },
-    "/v0/runners/{runner}/jobs": {
-      "post": {
-        "tags": [
-          "runners"
-        ],
-        "summary": "Claim a job",
-        "description": "➕ Bencher Plus: Long-poll to claim a pending job for execution. Authenticated via runner token. Returns a job if one is available, or empty response on timeout.",
-        "operationId": "runner_jobs_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "runner",
-            "description": "The slug or UUID for a runner.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonClaimJob"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonClaimedJob"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
-    "/v0/runners/{runner}/jobs/{job}": {
+    "/v0/runners/{runner}/channel": {
       "get": {
         "tags": [
           "runners"
         ],
-        "summary": "WebSocket channel for job execution",
-        "description": "➕ Bencher Plus: Establishes a persistent connection for heartbeat and status updates. Authentication is via runner token in the Authorization header.",
-        "operationId": "runner_job_channel",
+        "summary": "Persistent WebSocket channel for runner lifecycle",
+        "description": "➕ Bencher Plus: Single persistent WebSocket connection for job assignment and execution. Runner sends `Ready` to request a job, server pushes `Job` or `NoJob`. During execution, handles `Running`, `Heartbeat`, `Completed`, `Failed`, and `Canceled` messages. Authentication is via runner token in the Authorization header.",
+        "operationId": "runner_channel",
         "parameters": [
-          {
-            "in": "path",
-            "name": "job",
-            "description": "The UUID for a job.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/JobUuid"
-            }
-          },
           {
             "in": "path",
             "name": "runner",
@@ -11512,78 +11417,6 @@
         "required": [
           "session",
           "url"
-        ]
-      },
-      "JsonClaimJob": {
-        "description": "Request to claim a job (runner agent endpoint)",
-        "type": "object",
-        "properties": {
-          "poll_timeout": {
-            "nullable": true,
-            "description": "Maximum time to wait for a job (long-poll), in seconds (1-900)",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PollTimeout"
-              }
-            ]
-          }
-        }
-      },
-      "JsonClaimedJob": {
-        "description": "A claimed job returned to the runner agent.\n\nStandalone type containing everything a runner needs to execute a job. Config and OCI token are always present (not Optional) since they are guaranteed at claim time.",
-        "type": "object",
-        "properties": {
-          "config": {
-            "description": "Execution config — always present for claimed jobs",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonJobConfig"
-              }
-            ]
-          },
-          "created": {
-            "description": "Job creation timestamp",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DateTime"
-              }
-            ]
-          },
-          "oci_token": {
-            "description": "Short-lived, project-scoped OCI pull token",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Jwt"
-              }
-            ]
-          },
-          "spec": {
-            "description": "Full spec details (architecture, cpu, memory, etc.)",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonSpec"
-              }
-            ]
-          },
-          "timeout": {
-            "description": "Maximum execution time in seconds",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Timeout"
-              }
-            ]
-          },
-          "uuid": {
-            "$ref": "#/components/schemas/JobUuid"
-          }
-        },
-        "required": [
-          "config",
-          "created",
-          "oci_token",
-          "spec",
-          "timeout",
-          "uuid"
         ]
       },
       "JsonCloud": {
@@ -17041,11 +16874,6 @@
       "PlotUuid": {
         "type": "string",
         "format": "uuid"
-      },
-      "PollTimeout": {
-        "type": "integer",
-        "format": "uint32",
-        "minimum": 0
       },
       "ProjectSlug": {
         "$ref": "#/components/schemas/Slug"

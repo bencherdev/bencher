@@ -7,13 +7,19 @@
 //! `base_timestamp`) are re-exported from `bencher_api_tests::helpers`.
 //! Runner-specific helpers live here.
 
+use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
 pub use bencher_api_tests::helpers::{
     base_timestamp, create_test_report, get_project_id, set_job_status,
 };
-use bencher_json::{DateTime, JobPriority, JobStatus, JobUuid, JsonRunnerToken, SpecUuid};
+use bencher_json::{
+    DateTime, JobPriority, JobStatus, JobUuid, JsonClaimedJob, JsonRunnerToken, PollTimeout,
+    RunnerUuid, SpecUuid,
+};
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use futures::{SinkExt as _, StreamExt as _};
+use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest as _};
 
 /// Create a runner via the REST API.
 #[expect(clippy::expect_used)]
@@ -430,11 +436,120 @@ pub fn get_job_priority(server: &TestServer, job_uuid: JobUuid) -> JobPriority {
 
 /// Get `runner_id` (as i32) from runner UUID.
 #[expect(clippy::expect_used)]
-pub fn get_runner_id(server: &TestServer, runner_uuid: bencher_json::RunnerUuid) -> i32 {
+pub fn get_runner_id(server: &TestServer, runner_uuid: RunnerUuid) -> i32 {
     let mut conn = server.db_conn();
     schema::runner::table
         .filter(schema::runner::uuid.eq(runner_uuid))
         .select(schema::runner::id)
         .first(&mut conn)
         .expect("Failed to get runner ID")
+}
+
+// =============================================================================
+// WebSocket Channel Helpers
+// =============================================================================
+
+pub type WsStream =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+
+/// Convert the `TestServer` HTTP URL to a WebSocket URL.
+pub fn ws_url(server: &TestServer, path: &str) -> String {
+    let http_url = server.api_url(path);
+    http_url.replacen("http://", "ws://", 1)
+}
+
+/// Connect to the runner channel WebSocket with authentication.
+#[expect(clippy::expect_used)]
+pub async fn connect_channel_ws(
+    server: &TestServer,
+    runner_uuid: RunnerUuid,
+    runner_token: &str,
+) -> WsStream {
+    let url = ws_url(server, &format!("/v0/runners/{runner_uuid}/channel"));
+    let mut request = url.into_client_request().expect("Failed to build request");
+    request.headers_mut().insert(
+        bencher_json::AUTHORIZATION,
+        bencher_json::bearer_header(runner_token)
+            .parse()
+            .expect("Invalid header"),
+    );
+    let (ws_stream, _) = tokio_tungstenite::connect_async(request)
+        .await
+        .expect("Failed to connect WebSocket");
+    ws_stream
+}
+
+/// Try to connect to the runner channel WebSocket; returns the result rather
+/// than panicking so callers can assert on connection failure.
+#[expect(clippy::expect_used)]
+pub async fn try_connect_channel_ws(
+    server: &TestServer,
+    runner_uuid: RunnerUuid,
+    runner_token: &str,
+) -> Result<WsStream, tokio_tungstenite::tungstenite::Error> {
+    let url = ws_url(server, &format!("/v0/runners/{runner_uuid}/channel"));
+    let mut request = url.into_client_request().expect("Failed to build request");
+    request.headers_mut().insert(
+        bencher_json::AUTHORIZATION,
+        bencher_json::bearer_header(runner_token)
+            .parse()
+            .expect("Invalid header"),
+    );
+    let (ws_stream, _) = tokio_tungstenite::connect_async(request).await?;
+    Ok(ws_stream)
+}
+
+/// Send a `RunnerMessage` over the WebSocket.
+#[expect(clippy::expect_used)]
+pub async fn send_runner_msg(ws: &mut WsStream, msg: &RunnerMessage) {
+    let text = serde_json::to_string(msg).expect("Failed to serialize");
+    ws.send(Message::Text(text.into()))
+        .await
+        .expect("Failed to send message");
+}
+
+/// Receive and parse a `ServerMessage` from the WebSocket.
+#[expect(clippy::expect_used, clippy::panic, clippy::wildcard_enum_match_arm)]
+pub async fn recv_server_msg(ws: &mut WsStream) -> ServerMessage {
+    let msg = ws.next().await.expect("Stream ended").expect("WS error");
+    match msg {
+        Message::Text(text) => serde_json::from_str(&text).expect("Failed to parse server message"),
+        other => panic!("Expected text message, got: {other:?}"),
+    }
+}
+
+/// Connect to the channel WS, send Ready, and return the stream and the
+/// optional claimed job.
+#[expect(clippy::expect_used, clippy::panic)]
+pub async fn claim_via_channel(
+    server: &TestServer,
+    runner_uuid: RunnerUuid,
+    runner_token: &str,
+    poll_timeout: u32,
+) -> (WsStream, Option<JsonClaimedJob>) {
+    let mut ws = connect_channel_ws(server, runner_uuid, runner_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(poll_timeout).expect("Invalid poll timeout")),
+    };
+    send_runner_msg(&mut ws, &ready).await;
+    let response = recv_server_msg(&mut ws).await;
+    let job = match response {
+        ServerMessage::Job(job) => Some(*job),
+        ServerMessage::NoJob => None,
+        other @ (ServerMessage::Ack { .. } | ServerMessage::Cancel) => {
+            panic!("Expected Job or NoJob, got: {other:?}")
+        },
+    };
+    (ws, job)
+}
+
+/// Assert the WebSocket stream is closed (no more messages or Close frame).
+#[expect(clippy::panic)]
+pub async fn assert_ws_closed(ws: &mut WsStream) {
+    let result = tokio::time::timeout(std::time::Duration::from_secs(1), ws.next()).await;
+    match result {
+        // Timed out, stream ended, close frame, or connection reset — all OK
+        Err(_) | Ok(None | Some(Ok(Message::Close(_)) | Err(_))) => {},
+        Ok(Some(Ok(other))) => panic!("Expected WS to be closed, got message: {other:?}"),
+    }
 }

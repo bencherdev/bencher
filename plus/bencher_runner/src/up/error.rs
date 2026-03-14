@@ -28,12 +28,6 @@ pub enum ApiClientError {
 
     #[error("Unauthorized: invalid or expired token")]
     Unauthorized,
-
-    #[error("Runner is locked by another session")]
-    RunnerLocked,
-
-    #[error("Unexpected HTTP status {status}: {body}")]
-    UnexpectedStatus { status: u16, body: String },
 }
 
 #[derive(Debug, Error)]
@@ -47,9 +41,9 @@ pub enum WebSocketError {
     #[error("WebSocket receive failed: {0}")]
     Receive(String),
 
-    #[error("Job was canceled by server")]
-    Canceled,
-
     #[error("Unexpected WebSocket message: {0}")]
     UnexpectedMessage(String),
+
+    #[error("Protocol error: {0}")]
+    Protocol(String),
 }

@@ -18,12 +18,12 @@ plus = [
     "dep:bencher_valid",
     "bencher_valid/server",
     "dep:camino",
+    "dep:rand",
     "dep:serde",
     "dep:serde_json",
     "dep:tempfile",
     "dep:thiserror",
     "dep:tungstenite",
-    "dep:ureq",
     "dep:url",
     "dep:uuid",
     "bencher_oci/plus",
@@ -38,12 +38,12 @@ bencher_oci = { workspace = true, optional = true }
 bencher_rootfs = { workspace = true, optional = true }
 bencher_valid = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
+rand = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 tempfile = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 tungstenite = { workspace = true, optional = true }
-ureq = { workspace = true, optional = true, features = ["json"] }
 url = { workspace = true, optional = true }
 uuid = { workspace = true, features = ["v4", "serde"], optional = true }
 

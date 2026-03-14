@@ -186,9 +186,9 @@ pub struct JsonNewRunJob {
 /// Default poll timeout in seconds for job claiming long-poll.
 pub const DEFAULT_POLL_TIMEOUT: u32 = 30;
 /// Minimum poll timeout in seconds.
-pub const MIN_POLL_TIMEOUT: u32 = 1;
+pub const MIN_POLL_TIMEOUT: u32 = PollTimeout::MIN_VALUE;
 /// Maximum poll timeout in seconds.
-pub const MAX_POLL_TIMEOUT: u32 = 900;
+pub const MAX_POLL_TIMEOUT: u32 = PollTimeout::MAX_VALUE;
 
 pub use crate::{MAX_CMD_LEN, MAX_ENTRYPOINT_LEN, MAX_ENV_LEN, MAX_FILE_PATHS_LEN};
 
