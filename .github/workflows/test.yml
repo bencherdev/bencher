@@ -20,6 +20,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_AUDIT_VERSION: 0.22.1
 
 jobs:
   cargo_test:
@@ -181,6 +182,7 @@ jobs:
         with:
           cache-key: audit
           mold-version: ${{ inputs.mold-version }}
+      - run: cargo install cargo-audit --version ${{ env.CARGO_AUDIT_VERSION }} --locked
       - run: cargo audit
 
   cargo_udeps:

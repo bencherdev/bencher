@@ -19,8 +19,8 @@ targets = [
 # output a note when they are encountered.
 # rustsec advisory exemptions
 ignore = [
-    # https://rustsec.org/advisories/RUSTSEC-2024-0384.html
-    "RUSTSEC-2024-0384",
+    # https://rustsec.org/advisories/RUSTSEC-2023-0071.html
+    "RUSTSEC-2023-0071",
 ]
 
 [bans]
