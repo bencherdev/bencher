@@ -131,6 +131,7 @@ impl DotNet {
 
 #[cfg(test)]
 pub(crate) mod test_c_sharp_dot_net {
+    use ordered_float::OrderedFloat;
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
@@ -270,6 +271,16 @@ pub(crate) mod test_c_sharp_dot_net {
             Some(50.729_707_813_342_635),
             Some(52.310_455_217_648_546),
         );
+    }
+
+    #[test]
+    fn adapter_c_sharp_dot_net_memory() {
+        let results = convert_c_sharp_dot_net("memory");
+        assert_eq!(results.inner.len(), 3);
+
+        let metrics = results.get("StepLang.Benchmarks.Tokenize").unwrap();
+        let metric = metrics.get("allocated").unwrap();
+        assert_eq!(metric.value, OrderedFloat::from(672));
     }
 
     #[test]
