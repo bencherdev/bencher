@@ -12,6 +12,7 @@ plus = [
     "bencher_billing/plus",
     "bencher_endpoint/plus",
     "bencher_json/plus",
+    "bencher_otel?/plus",
     "bencher_schema/plus",
 ]
 sentry = ["dep:sentry", "bencher_schema/sentry"]

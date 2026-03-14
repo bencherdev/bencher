@@ -12,6 +12,7 @@ plus = [
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_oci_storage",
+    "bencher_otel?/plus",
     "bencher_schema/plus",
     "bencher_token/plus",
     "dep:bencher_token",
