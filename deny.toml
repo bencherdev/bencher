@@ -21,6 +21,10 @@ targets = [
 ignore = [
     # https://rustsec.org/advisories/RUSTSEC-2023-0071.html
     "RUSTSEC-2023-0071",
+    # https://rustsec.org/advisories/RUSTSEC-2024-0436.html
+    "RUSTSEC-2024-0436",
+    # https://rustsec.org/advisories/RUSTSEC-2025-0134.html
+    "RUSTSEC-2025-0134",
 ]
 
 [bans]
@@ -57,19 +61,12 @@ allow = [
     "MPL-2.0",
     "Unicode-3.0",
     "Zlib",
-    "LicenseRef-ring",
+    "bzip2-1.0.6",
+    "CDLA-Permissive-2.0",
 ]
 
 [licenses.private]
 ignore = true
-
-# ring has a rather complicated LICENSE file due to reasons spelled out
-# in said LICENSE file, but is basically OpenSSL for older parts, and ISC
-# for newer parts
-[[licenses.clarify]]
-name = "ring"
-expression = "LicenseRef-ring"
-license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 
 [sources]
 # Lint level for what to happen when a crate from a crate registry that is not
