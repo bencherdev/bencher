@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    DateTime, ImageDigest, JobPriority, JobStatus, JobUuid, JsonJob, JsonJobConfig, PlanLevel,
+    DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, PlanLevel, Priority,
     Timeout, project::report::JsonReportSettings, runner::JsonIterationOutput,
     runner::job::JsonNewRunJob,
 };
@@ -49,7 +49,7 @@ pub struct QueryJob {
     pub spec_id: SpecId,
     pub config: JsonJobConfig,
     pub timeout: Timeout,
-    pub priority: JobPriority,
+    pub priority: Priority,
     pub status: JobStatus,
     pub runner_id: Option<RunnerId>,
     pub claimed: Option<DateTime>,
@@ -198,14 +198,13 @@ impl QueryJob {
 
         #[cfg(feature = "otel")]
         {
-            let tier = bencher_otel::PriorityTier::from_priority(self.priority.into());
             #[expect(
                 clippy::cast_precision_loss,
                 reason = "duration seconds fits comfortably in f64"
             )]
             let duration_f64 = duration_secs as f64;
             bencher_otel::ApiMeter::record(
-                bencher_otel::ApiHistogram::JobRunDuration(tier),
+                bencher_otel::ApiHistogram::JobRunDuration(self.priority),
                 duration_f64,
             );
         }
@@ -249,7 +248,7 @@ pub struct InsertJob {
     pub spec_id: SpecId,
     pub config: JsonJobConfig,
     pub timeout: Timeout,
-    pub priority: JobPriority,
+    pub priority: Priority,
     pub status: JobStatus,
     pub created: DateTime,
     pub modified: DateTime,
@@ -267,7 +266,7 @@ impl InsertJob {
         spec_id: SpecId,
         config: JsonJobConfig,
         timeout: Timeout,
-        priority: JobPriority,
+        priority: Priority,
         now: DateTime,
     ) -> Self {
         Self {
@@ -297,7 +296,7 @@ pub struct PendingInsertJob {
     spec_id: SpecId,
     config: JsonJobConfig,
     timeout: Timeout,
-    priority: JobPriority,
+    priority: Priority,
 }
 
 impl PendingInsertJob {
@@ -439,18 +438,16 @@ fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed:
     }
 }
 
-fn determine_priority(plan_kind: &PlanKind, is_claimed: bool) -> JobPriority {
+fn determine_priority(plan_kind: &PlanKind, is_claimed: bool) -> Priority {
     if !is_claimed {
-        return JobPriority::Unclaimed;
+        return Priority::Unclaimed;
     }
     match plan_kind {
-        PlanKind::None => JobPriority::Free,
-        // TODO: Check metered plan level to distinguish Team vs Enterprise
-        PlanKind::Metered(_) => JobPriority::Team,
+        PlanKind::None => Priority::Free,
+        PlanKind::Metered(_) => Priority::Plus,
         PlanKind::Licensed(license_usage) => match license_usage.level {
-            PlanLevel::Free => JobPriority::Free,
-            PlanLevel::Team => JobPriority::Team,
-            PlanLevel::Enterprise => JobPriority::Enterprise,
+            PlanLevel::Free => Priority::Free,
+            PlanLevel::Team | PlanLevel::Enterprise => Priority::Plus,
         },
     }
 }
@@ -580,7 +577,7 @@ mod tests {
     fn priority_unclaimed() {
         assert_eq!(
             determine_priority(&PlanKind::None, false),
-            JobPriority::Unclaimed
+            Priority::Unclaimed
         );
     }
 
@@ -589,25 +586,25 @@ mod tests {
         // Even with a paid plan, unclaimed is always Unclaimed
         assert_eq!(
             determine_priority(&metered_plan(), false),
-            JobPriority::Unclaimed
+            Priority::Unclaimed
         );
     }
 
     #[test]
     fn priority_free() {
-        assert_eq!(determine_priority(&PlanKind::None, true), JobPriority::Free);
+        assert_eq!(determine_priority(&PlanKind::None, true), Priority::Free);
     }
 
     #[test]
     fn priority_metered() {
-        assert_eq!(determine_priority(&metered_plan(), true), JobPriority::Team);
+        assert_eq!(determine_priority(&metered_plan(), true), Priority::Plus);
     }
 
     #[test]
     fn priority_licensed_free() {
         assert_eq!(
             determine_priority(&licensed_plan(PlanLevel::Free), true),
-            JobPriority::Free
+            Priority::Free
         );
     }
 
@@ -615,7 +612,7 @@ mod tests {
     fn priority_licensed_team() {
         assert_eq!(
             determine_priority(&licensed_plan(PlanLevel::Team), true),
-            JobPriority::Team
+            Priority::Plus
         );
     }
 
@@ -623,7 +620,7 @@ mod tests {
     fn priority_licensed_enterprise() {
         assert_eq!(
             determine_priority(&licensed_plan(PlanLevel::Enterprise), true),
-            JobPriority::Enterprise
+            Priority::Plus
         );
     }
 

@@ -1548,13 +1548,13 @@ async fn run_post_with_job_priority_free() {
         use bencher_schema::schema;
         use diesel::{QueryDsl as _, RunQueryDsl as _};
         let mut conn = server.db_conn();
-        let stored_priority: bencher_json::JobPriority = schema::job::table
+        let stored_priority: bencher_json::Priority = schema::job::table
             .select(schema::job::priority)
             .first(&mut conn)
             .expect("Failed to query job priority");
         assert_eq!(
             stored_priority,
-            bencher_json::JobPriority::Free,
+            bencher_json::Priority::Free,
             "Priority should be Free for a claimed org with no billing plan"
         );
     }

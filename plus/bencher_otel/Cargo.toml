@@ -6,9 +6,16 @@ edition.workspace = true
 license-file.workspace = true
 publish = false
 
+[features]
+default = []
+# Required due to feature unification
+# https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
+plus = ["bencher_json/plus", "dep:opentelemetry", "dep:uuid"]
+
 [dependencies]
-opentelemetry.workspace = true
-uuid.workspace = true
+bencher_json = { workspace = true, optional = true }
+opentelemetry = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
 
 [lints]
 workspace = true

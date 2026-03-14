@@ -10,7 +10,9 @@ use crate::{
     model::organization::{OrganizationId, QueryOrganization},
 };
 
-use super::{DAY, OciBandwidthTier};
+use bencher_json::Priority;
+
+use super::DAY;
 
 /// 1 GiB in bytes
 const DEFAULT_UNCLAIMED_BANDWIDTH: u64 = 1 << 30;
@@ -66,31 +68,31 @@ impl BandwidthRateLimiter {
         }
     }
 
-    fn limit_for_tier(&self, tier: OciBandwidthTier) -> u64 {
-        match tier {
-            OciBandwidthTier::Unclaimed => self.unclaimed_limit,
-            OciBandwidthTier::Free => self.free_limit,
-            OciBandwidthTier::Plus => self.plus_limit,
+    fn limit_for_priority(&self, priority: Priority) -> u64 {
+        match priority {
+            Priority::Unclaimed => self.unclaimed_limit,
+            Priority::Free => self.free_limit,
+            Priority::Plus => self.plus_limit,
         }
     }
 
     pub fn check(
         &self,
         org_id: OrganizationId,
-        tier: OciBandwidthTier,
+        priority: Priority,
         organization: &QueryOrganization,
     ) -> Result<(), HttpError> {
-        self.check_at(org_id, tier, organization, SystemTime::now())
+        self.check_at(org_id, priority, organization, SystemTime::now())
     }
 
     fn check_at(
         &self,
         org_id: OrganizationId,
-        tier: OciBandwidthTier,
+        priority: Priority,
         organization: &QueryOrganization,
         now: SystemTime,
     ) -> Result<(), HttpError> {
-        let limit = self.limit_for_tier(tier);
+        let limit = self.limit_for_priority(priority);
         let cutoff = now - DAY;
 
         // Clean up old entries across all orgs
@@ -176,18 +178,18 @@ mod tests {
 
         // Should be under limit
         limiter
-            .check_at(org_id, OciBandwidthTier::Unclaimed, &org, now)
+            .check_at(org_id, Priority::Unclaimed, &org, now)
             .unwrap();
 
         // Record some bytes
         limiter.record_at(org_id, 500, now);
         limiter
-            .check_at(org_id, OciBandwidthTier::Unclaimed, &org, now)
+            .check_at(org_id, Priority::Unclaimed, &org, now)
             .unwrap();
 
         // Record more to exceed limit
         limiter.record_at(org_id, 600, now);
-        let result = limiter.check_at(org_id, OciBandwidthTier::Unclaimed, &org, now);
+        let result = limiter.check_at(org_id, Priority::Unclaimed, &org, now);
         assert!(result.is_err());
     }
 
@@ -209,19 +211,11 @@ mod tests {
 
         assert!(
             limiter
-                .check_at(org_id, OciBandwidthTier::Unclaimed, &org, now)
+                .check_at(org_id, Priority::Unclaimed, &org, now)
                 .is_err()
         );
-        assert!(
-            limiter
-                .check_at(org_id, OciBandwidthTier::Free, &org, now)
-                .is_ok()
-        );
-        assert!(
-            limiter
-                .check_at(org_id, OciBandwidthTier::Plus, &org, now)
-                .is_ok()
-        );
+        assert!(limiter.check_at(org_id, Priority::Free, &org, now).is_ok());
+        assert!(limiter.check_at(org_id, Priority::Plus, &org, now).is_ok());
     }
 
     #[test]
@@ -247,7 +241,7 @@ mod tests {
 
         // Should be under limit because old entries get cleaned up
         limiter
-            .check_at(org_id, OciBandwidthTier::Unclaimed, &org, now)
+            .check_at(org_id, Priority::Unclaimed, &org, now)
             .unwrap();
     }
 
@@ -261,7 +255,7 @@ mod tests {
         // Even huge amounts should be under limit
         limiter.record_at(org_id, u64::MAX.saturating_div(2), now);
         limiter
-            .check_at(org_id, OciBandwidthTier::Unclaimed, &org, now)
+            .check_at(org_id, Priority::Unclaimed, &org, now)
             .unwrap();
     }
 

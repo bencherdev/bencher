@@ -627,10 +627,10 @@ pub(crate) async fn check_oci_bandwidth(
 ) -> Result<OrganizationId, HttpError> {
     let conn = public_conn!(context);
     let organization = project.organization(conn)?;
-    let tier = organization.oci_bandwidth_tier(conn, &context.licensor)?;
+    let priority = organization.oci_bandwidth_priority(conn, &context.licensor)?;
     context
         .rate_limiting
-        .check_oci_bandwidth(organization.id, tier, &organization)?;
+        .check_oci_bandwidth(organization.id, priority, &organization)?;
     Ok(organization.id)
 }
 

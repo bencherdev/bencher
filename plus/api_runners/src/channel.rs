@@ -6,8 +6,7 @@
 use std::time::Duration;
 
 use bencher_json::{
-    DEFAULT_POLL_TIMEOUT, JobPriority, JobStatus, JobUuid, JsonClaimedJob, JsonSpec,
-    RunnerResourceId,
+    DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimedJob, JsonSpec, Priority, RunnerResourceId,
     runner::{CloseReason, JsonIterationOutput, RunnerMessage, ServerMessage},
 };
 use bencher_oci_storage::OciStorageError;
@@ -372,9 +371,8 @@ async fn handle_completed(
         ));
 
         let duration_secs = job.created.elapsed_secs(now);
-        let tier = bencher_otel::PriorityTier::from_priority(job.priority.into());
         bencher_otel::ApiMeter::record(
-            bencher_otel::ApiHistogram::JobCompleteDuration(tier),
+            bencher_otel::ApiHistogram::JobCompleteDuration(job.priority),
             duration_secs,
         );
     }
@@ -551,18 +549,13 @@ async fn handle_canceled(
 diesel::alias!(schema::job as job_org: JobOrg);
 diesel::alias!(schema::job as job_ip: JobIp);
 
-/// Priority threshold for Enterprise/Team tiers (unlimited concurrency)
-const PRIORITY_UNLIMITED: JobPriority = JobPriority::Team;
-/// Priority threshold for Free tier (1 per org concurrency)
-const PRIORITY_FREE: JobPriority = JobPriority::Free;
-
 /// Poll interval for long-polling (1 second)
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
 
 /// Attempt to claim a pending job with tier-based concurrency limits.
 ///
 /// Priority tiers:
-/// - Enterprise / Team: Unlimited concurrent jobs
+/// - Plus: Unlimited concurrent jobs
 /// - Free: 1 concurrent job per organization
 /// - Unclaimed: 1 concurrent job per source IP
 ///
@@ -576,14 +569,14 @@ async fn try_claim_job(
 ) -> Result<Option<(QueryJob, JsonClaimedJob)>, HttpError> {
     use schema::job::dsl::{created, id, organization_id, priority, source_ip, status};
 
-    // Tier 1: Enterprise/Team (priority >= 200) - no concurrency limit
-    let tier_unlimited = priority.ge(PRIORITY_UNLIMITED);
+    // Tier 1: Plus (priority >= 200) - no concurrency limit
+    let tier_unlimited = priority.ge(Priority::Plus);
 
     // Tier 2: Free (priority 100-199) - one concurrent job per organization
     // Block if the same org already has a Claimed or Running job
     let tier_free_eligible = priority
-        .ge(PRIORITY_FREE)
-        .and(priority.lt(PRIORITY_UNLIMITED))
+        .ge(Priority::Free)
+        .and(priority.lt(Priority::Plus))
         .and(not(exists(
             job_org
                 .filter(
@@ -597,7 +590,7 @@ async fn try_claim_job(
 
     // Tier 3: Unclaimed (priority < 100) - one concurrent job per source IP
     // Block if the same source_ip already has a Claimed or Running job
-    let tier_unclaimed_eligible = priority.lt(PRIORITY_FREE).and(not(exists(
+    let tier_unclaimed_eligible = priority.lt(Priority::Free).and(not(exists(
         job_ip
             .filter(
                 job_ip
@@ -682,9 +675,8 @@ fn build_claimed_job(
         // Record queue duration (time from creation to claim)
         let now = context.clock.now();
         let queue_duration_secs = query_job.created.elapsed_secs(now);
-        let tier = bencher_otel::PriorityTier::from_priority(query_job.priority.into());
         bencher_otel::ApiMeter::record(
-            bencher_otel::ApiHistogram::JobQueueDuration(tier),
+            bencher_otel::ApiHistogram::JobQueueDuration(query_job.priority),
             queue_duration_secs,
         );
     }

@@ -329,10 +329,10 @@ impl RateLimiting {
     pub fn check_oci_bandwidth(
         &self,
         org_id: OrganizationId,
-        tier: OciBandwidthTier,
+        priority: bencher_json::Priority,
         organization: &QueryOrganization,
     ) -> Result<(), HttpError> {
-        self.bandwidth.check(org_id, tier, organization)
+        self.bandwidth.check(org_id, priority, organization)
     }
 
     pub fn record_oci_bandwidth(&self, org_id: OrganizationId, bytes: u64) {
@@ -342,13 +342,6 @@ impl RateLimiting {
     pub fn remote_ip(log: &Logger, headers: &HeaderMap) -> Option<IpAddr> {
         remote_ip::remote_ip(log, headers)
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum OciBandwidthTier {
-    Unclaimed,
-    Free,
-    Plus,
 }
 
 macro_rules! extract_rate_limits {

@@ -478,11 +478,11 @@ fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
 #[derive(Debug, Clone, Copy)]
 pub enum ApiHistogram {
     /// Time a job spent waiting in the queue before being claimed.
-    JobQueueDuration(PriorityTier),
+    JobQueueDuration(Priority),
     /// Actual execution time from job started to completion (excludes queue wait).
-    JobRunDuration(PriorityTier),
+    JobRunDuration(Priority),
     /// Total time from job creation to completion.
-    JobCompleteDuration(PriorityTier),
+    JobCompleteDuration(Priority),
     /// Total wall-clock time for the entire report creation endpoint.
     ReportCreateDuration,
     /// Total time to process report results (adapter parsing + all iterations).
@@ -535,9 +535,9 @@ impl ApiHistogram {
 
     fn attributes(self) -> Vec<opentelemetry::KeyValue> {
         match self {
-            Self::JobQueueDuration(tier)
-            | Self::JobRunDuration(tier)
-            | Self::JobCompleteDuration(tier) => vec![tier.into()],
+            Self::JobQueueDuration(priority)
+            | Self::JobRunDuration(priority)
+            | Self::JobCompleteDuration(priority) => vec![priority_attribute(priority)],
             Self::ReportCreateDuration
             | Self::ReportProcessDuration
             | Self::ReportWriteDuration => Vec::new(),
@@ -545,50 +545,8 @@ impl ApiHistogram {
     }
 }
 
-/// Priority tier for job scheduling.
-#[derive(Debug, Clone, Copy)]
-pub enum PriorityTier {
-    /// Enterprise tier (priority >= 300) - unlimited concurrency
-    Enterprise,
-    /// Team tier (priority 200-299) - unlimited concurrency
-    Team,
-    /// Free tier (priority 100-199) - 1 concurrent job per organization
-    Free,
-    /// Unclaimed tier (priority < 100) - 1 concurrent job per source IP
-    Unclaimed,
-}
+pub use bencher_json::Priority;
 
-impl fmt::Display for PriorityTier {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Enterprise => write!(f, "enterprise"),
-            Self::Team => write!(f, "team"),
-            Self::Free => write!(f, "free"),
-            Self::Unclaimed => write!(f, "unclaimed"),
-        }
-    }
-}
-
-impl From<PriorityTier> for opentelemetry::KeyValue {
-    fn from(tier: PriorityTier) -> Self {
-        opentelemetry::KeyValue::new(PriorityTier::KEY, tier.to_string())
-    }
-}
-
-impl PriorityTier {
-    const KEY: &str = "job.priority.tier";
-
-    /// Determine the priority tier from a priority value.
-    #[must_use]
-    pub fn from_priority(priority: i32) -> Self {
-        if priority >= 300 {
-            Self::Enterprise
-        } else if priority >= 200 {
-            Self::Team
-        } else if priority >= 100 {
-            Self::Free
-        } else {
-            Self::Unclaimed
-        }
-    }
+fn priority_attribute(priority: Priority) -> opentelemetry::KeyValue {
+    opentelemetry::KeyValue::new("job.priority", priority.to_string())
 }
