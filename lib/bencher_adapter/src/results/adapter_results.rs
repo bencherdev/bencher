@@ -41,7 +41,7 @@ pub enum IaiMeasure {
     EstimatedCycles(JsonNewMetric),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DotNetMeasure {
     Latency(JsonNewMetric),
     Gen0Collects(JsonNewMetric),
@@ -221,16 +221,36 @@ impl AdapterResults {
         Some(results_map.into())
     }
     
-    pub fn new_dotnet(benchmark_metrics: Vec<(BenchmarkName, DotNetMeasure)>) -> Option<Self> {
-        if (benchmark_metrics.is_empty()) {
+    pub fn new_dotnet(benchmark_metrics: Vec<(BenchmarkName, Vec<DotNetMeasure>)>) -> Option<Self> {
+        if benchmark_metrics.is_empty() {
             return None;
         }
 
         let mut results_map = HashMap::new();
         for (benchmark_name, measure) in benchmark_metrics {
-            let measure = measure;
-
-            // TODO
+            let metrics_value = results_map
+                .entry(BenchmarkNameId::new_name(benchmark_name))
+                .or_insert_with(AdapterMetrics::default);
+            for metric in measure {
+                let (resource_id, metric) = match metric {
+                    DotNetMeasure::Latency(json_metric) => {
+                        (built_in::dotnet::Latency::name_id(), json_metric)
+                    },
+                    DotNetMeasure::Allocated(json_metric) => {
+                        (built_in::dotnet::Allocated::name_id(), json_metric)
+                    },
+                    DotNetMeasure::Gen0Collects(json_metric) => {
+                        (built_in::dotnet::Gen0Collects::name_id(), json_metric)
+                    },
+                    DotNetMeasure::Gen1Collects(json_metric) => {
+                        (built_in::dotnet::Gen1Collects::name_id(), json_metric)
+                    },
+                    DotNetMeasure::Gen2Collects(json_metric) => {
+                        (built_in::dotnet::Gen2Collects::name_id(), json_metric)
+                    },
+                };
+                metrics_value.inner.insert(resource_id, metric);
+            }
         }
 
         Some(results_map.into())

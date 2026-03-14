@@ -8,7 +8,7 @@ use crate::{
     adapters::util::{Units, latency_as_nanos},
     results::adapter_results::AdapterResults,
 };
-use crate::results::adapter_results::{DotNetMeasure};
+use crate::results::adapter_results::DotNetMeasure;
 
 pub struct AdapterCSharpDotNet;
 
@@ -56,7 +56,11 @@ pub struct Statistics {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Memory {
-    pub bytes_allocated_per_operation: u64,
+    pub gen0_collections: u32,
+    pub gen1_collections: u32,
+    pub gen2_collections: u32,
+    pub total_operations: u32,
+    pub bytes_allocated_per_operation: u32,
 }
 
 impl DotNet {
@@ -94,17 +98,31 @@ impl DotNet {
                 JsonAverage::Mean => (mean, standard_deviation),
                 JsonAverage::Median => (median, interquartile_range),
             };
-            let value = latency_as_nanos(average, units);
+            let latency_value = latency_as_nanos(average, units);
             let spread = latency_as_nanos(spread, units);
             let json_latency_metric = JsonNewMetric {
-                value,
-                lower_value: Some(value - spread),
-                upper_value: Some(value + spread),
+                value: latency_value,
+                lower_value: Some(latency_value - spread),
+                upper_value: Some(latency_value + spread),
             };
 
             let latency_measure = DotNetMeasure::Latency(json_latency_metric);
 
-            benchmark_metrics.push((benchmark_name, latency_measure));
+            let mut measures = vec![latency_measure];
+
+            if memory.is_some() {
+                let json_allocated_metric = JsonNewMetric {
+                    value: memory.unwrap().bytes_allocated_per_operation.into(),
+                    lower_value: None,
+                    upper_value: None,
+                };
+
+                let allocated_measure = DotNetMeasure::Allocated(json_allocated_metric);
+
+                measures.push(allocated_measure);
+            }
+
+            benchmark_metrics.push((benchmark_name, measures));
         }
 
         Ok(AdapterResults::new_dotnet(benchmark_metrics))
