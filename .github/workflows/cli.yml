@@ -316,6 +316,8 @@ jobs:
           tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:${{ github.sha }}
           build-args: |
             MOLD_VERSION=${{ inputs.mold-version }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
+          cache-from: |
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-devel
           cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }},mode=max
           push: true
