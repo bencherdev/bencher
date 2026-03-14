@@ -106,7 +106,7 @@ fn attach_job_with_spec(
     report_id: i32,
     project_uuid: bencher_json::ProjectUuid,
 ) -> String {
-    use bencher_json::{JobPriority, JobStatus, JobUuid, SpecUuid};
+    use bencher_json::{JobStatus, JobUuid, PriorityTier, SpecUuid};
 
     let mut conn = server.db_conn();
     let now = base_timestamp();
@@ -166,7 +166,7 @@ fn attach_job_with_spec(
             schema::job::spec_id.eq(spec_id),
             schema::job::config.eq(config.to_string()),
             schema::job::timeout.eq(3600),
-            schema::job::priority.eq(JobPriority::default()),
+            schema::job::priority.eq(PriorityTier::default()),
             schema::job::created.eq(&now),
             schema::job::modified.eq(&now),
         ))

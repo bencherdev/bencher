@@ -1060,22 +1060,6 @@ export interface JsonUsage {
 	usage?: number;
 }
 
-/**
- * Job priority — determines scheduling order and concurrency limits.
- * 
- * Priority tiers:
- * - Enterprise (300): Unlimited concurrent jobs
- * - Team (200): Unlimited concurrent jobs
- * - Free (100): 1 concurrent job per organization
- * - Unclaimed (0): 1 concurrent job per source IP
- */
-export enum JobPriority {
-	Unclaimed = "unclaimed",
-	Free = "free",
-	Team = "team",
-	Enterprise = "enterprise",
-}
-
 export enum OrganizationPermission {
 	View = "view",
 	Create = "create",

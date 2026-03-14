@@ -26,6 +26,8 @@ pub mod clock;
 pub mod oci;
 pub mod organization;
 pub mod pagination;
+#[cfg(feature = "plus")]
+pub mod priority_tier;
 pub mod project;
 pub mod run;
 #[cfg(feature = "plus")]
@@ -56,6 +58,8 @@ pub use organization::{
     usage::JsonUsage,
 };
 pub use pagination::{JsonDirection, JsonPagination};
+#[cfg(feature = "plus")]
+pub use priority_tier::PriorityTier;
 pub use project::{
     JsonNewProject, JsonProject, JsonProjects, ProjectResourceId, ProjectSlug, ProjectUuid,
     alert::{AlertUuid, JsonAlert, JsonAlerts},
@@ -89,10 +93,9 @@ pub use project::{
 pub use run::JsonNewRun;
 #[cfg(feature = "plus")]
 pub use runner::{
-    DEFAULT_POLL_TIMEOUT, JobPriority, JobStatus, JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob,
-    JsonJobConfig, JsonJobs, JsonNewRunJob, JsonNewRunner, JsonRunner, JsonRunnerToken,
-    JsonRunners, JsonUpdateRunner, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, RunnerResourceId,
-    RunnerSlug, RunnerUuid,
+    DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob, JsonJobConfig,
+    JsonJobs, JsonNewRunJob, JsonNewRunner, JsonRunner, JsonRunnerToken, JsonRunners,
+    JsonUpdateRunner, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, RunnerResourceId, RunnerSlug, RunnerUuid,
 };
 #[cfg(feature = "plus")]
 pub use spec::{

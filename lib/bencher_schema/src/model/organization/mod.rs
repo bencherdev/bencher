@@ -303,16 +303,16 @@ impl QueryOrganization {
         log: &slog::Logger,
         context: &ApiContext,
     ) -> Result<(), HttpError> {
-        use bencher_json::{JobPriority, JobStatus};
+        use bencher_json::{JobStatus, PriorityTier};
 
         let count = diesel::update(
             schema::job::table
                 .filter(schema::job::organization_id.eq(self.id))
                 .filter(schema::job::status.eq(JobStatus::Pending))
-                .filter(schema::job::priority.eq(JobPriority::Unclaimed)),
+                .filter(schema::job::priority.eq(PriorityTier::Unclaimed)),
         )
         .set((
-            schema::job::priority.eq(JobPriority::Free),
+            schema::job::priority.eq(PriorityTier::Free),
             schema::job::modified.eq(DateTime::now()),
         ))
         .execute(write_conn!(context))
@@ -458,29 +458,29 @@ impl QueryOrganization {
         &self,
         conn: &mut DbConnection,
         licensor: &bencher_license::Licensor,
-    ) -> Result<crate::context::OciBandwidthTier, HttpError> {
-        use crate::context::OciBandwidthTier;
+    ) -> Result<bencher_json::PriorityTier, HttpError> {
+        use bencher_json::PriorityTier;
         use diesel::{BelongingToDsl as _, RunQueryDsl as _};
 
         if !self.is_claimed(conn)? {
-            return Ok(OciBandwidthTier::Unclaimed);
+            return Ok(PriorityTier::Unclaimed);
         }
 
         // Check for a plan row (metered or licensed)
         if let Ok(query_plan) = plan::QueryPlan::belonging_to(self).first::<plan::QueryPlan>(conn)
             && (query_plan.metered_plan.is_some() || query_plan.licensed_plan.is_some())
         {
-            return Ok(OciBandwidthTier::Plus);
+            return Ok(PriorityTier::Plus);
         }
 
         // Check organization-level license
         if let Some(license) = &self.license
             && licensor.validate_organization(license, self.uuid).is_ok()
         {
-            return Ok(OciBandwidthTier::Plus);
+            return Ok(PriorityTier::Plus);
         }
 
-        Ok(OciBandwidthTier::Free)
+        Ok(PriorityTier::Free)
     }
 
     pub fn into_json_full(self, conn: &mut DbConnection) -> Result<JsonOrganization, HttpError> {

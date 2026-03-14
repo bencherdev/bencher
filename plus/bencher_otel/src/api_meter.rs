@@ -537,7 +537,7 @@ impl ApiHistogram {
         match self {
             Self::JobQueueDuration(tier)
             | Self::JobRunDuration(tier)
-            | Self::JobCompleteDuration(tier) => vec![tier.into()],
+            | Self::JobCompleteDuration(tier) => vec![priority_tier_attribute(tier)],
             Self::ReportCreateDuration
             | Self::ReportProcessDuration
             | Self::ReportWriteDuration => Vec::new(),
@@ -545,50 +545,14 @@ impl ApiHistogram {
     }
 }
 
-/// Priority tier for job scheduling.
-#[derive(Debug, Clone, Copy)]
-pub enum PriorityTier {
-    /// Enterprise tier (priority >= 300) - unlimited concurrency
-    Enterprise,
-    /// Team tier (priority 200-299) - unlimited concurrency
-    Team,
-    /// Free tier (priority 100-199) - 1 concurrent job per organization
-    Free,
-    /// Unclaimed tier (priority < 100) - 1 concurrent job per source IP
-    Unclaimed,
-}
+pub use bencher_json::PriorityTier;
 
-impl fmt::Display for PriorityTier {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Enterprise => write!(f, "enterprise"),
-            Self::Team => write!(f, "team"),
-            Self::Free => write!(f, "free"),
-            Self::Unclaimed => write!(f, "unclaimed"),
-        }
-    }
-}
-
-impl From<PriorityTier> for opentelemetry::KeyValue {
-    fn from(tier: PriorityTier) -> Self {
-        opentelemetry::KeyValue::new(PriorityTier::KEY, tier.to_string())
-    }
-}
-
-impl PriorityTier {
+fn priority_tier_attribute(tier: PriorityTier) -> opentelemetry::KeyValue {
     const KEY: &str = "job.priority.tier";
-
-    /// Determine the priority tier from a priority value.
-    #[must_use]
-    pub fn from_priority(priority: i32) -> Self {
-        if priority >= 300 {
-            Self::Enterprise
-        } else if priority >= 200 {
-            Self::Team
-        } else if priority >= 100 {
-            Self::Free
-        } else {
-            Self::Unclaimed
-        }
-    }
+    let label = match tier {
+        PriorityTier::Unclaimed => "unclaimed",
+        PriorityTier::Free => "free",
+        PriorityTier::Plus => "plus",
+    };
+    opentelemetry::KeyValue::new(KEY, label)
 }

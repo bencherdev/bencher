@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
-use bencher_json::{DateTime, JobPriority, JobStatus, JsonJob, PollTimeout};
+use bencher_json::{DateTime, JobStatus, JsonJob, PollTimeout, PriorityTier};
 use bencher_schema::{
     context::HeartbeatTasks,
     model::runner::{
@@ -552,7 +552,7 @@ mod job_spec {
 
 mod priority_scheduling {
     use super::*;
-    use bencher_json::{DateTime, JobPriority, JobStatus};
+    use bencher_json::{DateTime, JobStatus, PriorityTier};
     use common::{
         base_timestamp, get_organization_id, insert_test_job_full, insert_test_job_with_timestamp,
     };
@@ -584,7 +584,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Unclaimed,
+            PriorityTier::Unclaimed,
             spec_id,
         );
         let high_job = insert_test_job_full(
@@ -593,7 +593,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.2",
-            JobPriority::Enterprise,
+            PriorityTier::Plus,
             spec_id,
         );
         let medium_job = insert_test_job_full(
@@ -602,7 +602,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.3",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
 
@@ -666,7 +666,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
         let _job2 = insert_test_job_full(
@@ -675,7 +675,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.2",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
 
@@ -722,7 +722,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             same_ip,
-            JobPriority::Unclaimed,
+            PriorityTier::Unclaimed,
             spec_id,
         );
         let _job2 = insert_test_job_full(
@@ -731,7 +731,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             same_ip,
-            JobPriority::Unclaimed,
+            PriorityTier::Unclaimed,
             spec_id,
         );
 
@@ -777,7 +777,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Unclaimed,
+            PriorityTier::Unclaimed,
             spec_id,
         );
         let job2 = insert_test_job_full(
@@ -786,7 +786,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.2",
-            JobPriority::Unclaimed,
+            PriorityTier::Unclaimed,
             spec_id,
         );
 
@@ -836,7 +836,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Enterprise,
+            PriorityTier::Plus,
             spec_id,
         );
         let job2 = insert_test_job_full(
@@ -845,7 +845,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Enterprise,
+            PriorityTier::Plus,
             spec_id,
         );
 
@@ -895,7 +895,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
 
@@ -910,7 +910,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.2",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
         let enterprise_job = insert_test_job_full(
@@ -919,7 +919,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.3",
-            JobPriority::Enterprise,
+            PriorityTier::Plus,
             spec_id,
         );
 
@@ -959,7 +959,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Team,
+            PriorityTier::Plus,
             spec_id,
         );
         let job2 = insert_test_job_full(
@@ -968,7 +968,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Team,
+            PriorityTier::Plus,
             spec_id,
         );
 
@@ -1021,7 +1021,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Enterprise,
+            PriorityTier::Plus,
             ts1,
             spec_id,
         );
@@ -1031,7 +1031,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.2",
-            JobPriority::Enterprise,
+            PriorityTier::Plus,
             ts2,
             spec_id,
         );
@@ -1041,7 +1041,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.3",
-            JobPriority::Enterprise,
+            PriorityTier::Plus,
             ts3,
             spec_id,
         );
@@ -1116,7 +1116,7 @@ mod priority_scheduling {
             project1.uuid,
             org1_id,
             "10.0.0.1",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
         let job2 = insert_test_job_full(
@@ -1125,7 +1125,7 @@ mod priority_scheduling {
             project2.uuid,
             org2_id,
             "10.0.0.2",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
 
@@ -1173,7 +1173,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
         let job2 = insert_test_job_full(
@@ -1182,7 +1182,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.2",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
 
@@ -1245,7 +1245,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
 
@@ -1260,7 +1260,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.2",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
 
@@ -1271,7 +1271,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.3",
-            JobPriority::Team,
+            PriorityTier::Plus,
             spec_id,
         );
 
@@ -1312,7 +1312,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             same_ip,
-            JobPriority::Unclaimed,
+            PriorityTier::Unclaimed,
             spec_id,
         );
 
@@ -1327,7 +1327,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             same_ip,
-            JobPriority::Unclaimed,
+            PriorityTier::Unclaimed,
             spec_id,
         );
 
@@ -1339,7 +1339,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             same_ip,
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
 
@@ -1358,7 +1358,7 @@ mod priority_scheduling {
             project2.uuid,
             second_org_id,
             "10.0.0.99",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
 
@@ -1404,7 +1404,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Enterprise,
+            PriorityTier::Plus,
             fixed_ts,
             spec_id,
         );
@@ -1414,7 +1414,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.2",
-            JobPriority::Enterprise,
+            PriorityTier::Plus,
             fixed_ts,
             spec_id,
         );
@@ -1424,7 +1424,7 @@ mod priority_scheduling {
             project.uuid,
             org_id,
             "10.0.0.3",
-            JobPriority::Enterprise,
+            PriorityTier::Plus,
             fixed_ts,
             spec_id,
         );
@@ -1557,7 +1557,7 @@ mod poll_timeout_boundaries {
 
 mod concurrency_safety {
     use super::*;
-    use bencher_json::JobPriority;
+    use bencher_json::PriorityTier;
     use common::{get_organization_id, insert_test_job_full};
 
     // Two runners race to claim Free-tier jobs for the same org.
@@ -1593,7 +1593,7 @@ mod concurrency_safety {
             project.uuid,
             org_id,
             "10.0.0.1",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
         let _job2 = insert_test_job_full(
@@ -1602,7 +1602,7 @@ mod concurrency_safety {
             project.uuid,
             org_id,
             "10.0.0.2",
-            JobPriority::Free,
+            PriorityTier::Free,
             spec_id,
         );
 
@@ -1662,7 +1662,7 @@ mod concurrency_safety {
             project.uuid,
             org_id,
             same_ip,
-            JobPriority::Unclaimed,
+            PriorityTier::Unclaimed,
             spec_id,
         );
         let _job2 = insert_test_job_full(
@@ -1671,7 +1671,7 @@ mod concurrency_safety {
             project.uuid,
             org_id,
             same_ip,
-            JobPriority::Unclaimed,
+            PriorityTier::Unclaimed,
             spec_id,
         );
 
@@ -1725,7 +1725,7 @@ async fn user_jwt_rejected_on_runner_endpoint() {
 /// Uses Team priority to avoid per-IP concurrency limits on the unclaimed tier.
 #[tokio::test]
 async fn runner_multiple_specs_claims_matching_jobs() {
-    use bencher_json::JobPriority;
+    use bencher_json::PriorityTier;
     use common::insert_test_job_full;
 
     let server = TestServer::new().await;
@@ -1770,7 +1770,7 @@ async fn runner_multiple_specs_claims_matching_jobs() {
         project.uuid,
         org_id,
         common::TEST_SOURCE_IP,
-        JobPriority::Team,
+        PriorityTier::Plus,
         spec_x86_id,
     );
     let job_b = insert_test_job_full(
@@ -1779,7 +1779,7 @@ async fn runner_multiple_specs_claims_matching_jobs() {
         project.uuid,
         org_id,
         common::TEST_SOURCE_IP,
-        JobPriority::Team,
+        PriorityTier::Plus,
         spec_arm_id,
     );
 
@@ -1924,7 +1924,7 @@ async fn free_tier_blocked_same_org_different_runner() {
         project.uuid,
         org_id,
         "10.0.0.1",
-        JobPriority::Free,
+        PriorityTier::Free,
         spec_id,
     );
     let _job2 = insert_test_job_full(
@@ -1933,7 +1933,7 @@ async fn free_tier_blocked_same_org_different_runner() {
         project.uuid,
         org_id,
         "10.0.0.2",
-        JobPriority::Free,
+        PriorityTier::Free,
         spec_id,
     );
 
@@ -1978,7 +1978,7 @@ async fn mixed_tier_free_blocked_enterprise_claimable() {
         project.uuid,
         org_id,
         "10.0.0.1",
-        JobPriority::Free,
+        PriorityTier::Free,
         spec_id,
     );
     set_job_status(&server, blocking_job, JobStatus::Running);
@@ -1991,7 +1991,7 @@ async fn mixed_tier_free_blocked_enterprise_claimable() {
         project.uuid,
         org_id,
         "10.0.0.2",
-        JobPriority::Free,
+        PriorityTier::Free,
         spec_id,
     );
     let enterprise_job = insert_test_job_full(
@@ -2000,7 +2000,7 @@ async fn mixed_tier_free_blocked_enterprise_claimable() {
         project.uuid,
         org_id,
         "10.0.0.3",
-        JobPriority::Enterprise,
+        PriorityTier::Plus,
         spec_id,
     );
 
@@ -2084,7 +2084,7 @@ async fn claim_upgrades_pending_job_priority() {
         project_uuid,
         unclaimed_org_id,
         "10.0.0.1",
-        JobPriority::Unclaimed,
+        PriorityTier::Unclaimed,
         spec_id,
     );
     let pending_job_2 = insert_test_job_full(
@@ -2093,7 +2093,7 @@ async fn claim_upgrades_pending_job_priority() {
         project_uuid,
         unclaimed_org_id,
         "10.0.0.2",
-        JobPriority::Unclaimed,
+        PriorityTier::Unclaimed,
         spec_id,
     );
 
@@ -2104,7 +2104,7 @@ async fn claim_upgrades_pending_job_priority() {
         project_uuid,
         unclaimed_org_id,
         "10.0.0.3",
-        JobPriority::Unclaimed,
+        PriorityTier::Unclaimed,
         spec_id,
     );
     set_job_status(&server, running_job, JobStatus::Running);
@@ -2123,7 +2123,7 @@ async fn claim_upgrades_pending_job_priority() {
         other_project.uuid,
         other_org_id,
         "10.0.0.4",
-        JobPriority::Unclaimed,
+        PriorityTier::Unclaimed,
         spec_id,
     );
 
@@ -2149,26 +2149,26 @@ async fn claim_upgrades_pending_job_priority() {
     // --- Assert: pending jobs for the claimed org now have Free priority ---
     assert_eq!(
         get_job_priority(&server, pending_job_1),
-        JobPriority::Free,
+        PriorityTier::Free,
         "Pending job 1 should be upgraded to Free"
     );
     assert_eq!(
         get_job_priority(&server, pending_job_2),
-        JobPriority::Free,
+        PriorityTier::Free,
         "Pending job 2 should be upgraded to Free"
     );
 
     // --- Assert: Running job still has Unclaimed priority ---
     assert_eq!(
         get_job_priority(&server, running_job),
-        JobPriority::Unclaimed,
+        PriorityTier::Unclaimed,
         "Running job should NOT be upgraded"
     );
 
     // --- Assert: other org's job still has Unclaimed priority ---
     assert_eq!(
         get_job_priority(&server, other_job),
-        JobPriority::Unclaimed,
+        PriorityTier::Unclaimed,
         "Other org's job should NOT be upgraded"
     );
 }

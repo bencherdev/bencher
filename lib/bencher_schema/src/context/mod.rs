@@ -40,7 +40,7 @@ pub use indexer::{IndexError, Indexer};
 pub use messenger::ServerStatsBody;
 pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
 #[cfg(feature = "plus")]
-pub use rate_limiting::{HeaderMap, OciBandwidthTier, RateLimiting, RateLimitingError};
+pub use rate_limiting::{HeaderMap, RateLimiting, RateLimitingError};
 pub use rbac::{Rbac, RbacError};
 #[cfg(feature = "plus")]
 pub use stats::StatsSettings;
