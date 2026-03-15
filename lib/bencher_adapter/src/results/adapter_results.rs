@@ -33,21 +33,21 @@ pub enum AdapterMeasure {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum IaiMeasure {
-    Instructions(JsonNewMetric),
-    L1Accesses(JsonNewMetric),
-    L2Accesses(JsonNewMetric),
-    RamAccesses(JsonNewMetric),
-    EstimatedCycles(JsonNewMetric),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DotNetMeasure {
     Latency(JsonNewMetric),
     Gen0Collects(JsonNewMetric),
     Gen1Collects(JsonNewMetric),
     Gen2Collects(JsonNewMetric),
     Allocated(JsonNewMetric),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IaiMeasure {
+    Instructions(JsonNewMetric),
+    L1Accesses(JsonNewMetric),
+    L2Accesses(JsonNewMetric),
+    RamAccesses(JsonNewMetric),
+    EstimatedCycles(JsonNewMetric),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
