@@ -100,6 +100,8 @@ pub enum ApiCounter {
     RunnerTokenRotate,
     RunnerJobClaim,
     RunnerJobUpdate(JobStatusKind),
+    RunnerMinutesBilled,
+    RunnerMinutesBillingFailed,
     RunnerHeartbeatTimeout,
     RunnerJobTimeout,
 
@@ -170,6 +172,8 @@ impl ApiCounter {
             Self::RunnerTokenRotate => "runner.token.rotate",
             Self::RunnerJobClaim => "runner.job.claim",
             Self::RunnerJobUpdate(_) => "runner.job.update",
+            Self::RunnerMinutesBilled => "runner.minutes.billed",
+            Self::RunnerMinutesBillingFailed => "runner.minutes.billing_failed",
             Self::RunnerHeartbeatTimeout => "runner.heartbeat.timeout",
             Self::RunnerJobTimeout => "runner.job.timeout",
 
@@ -244,6 +248,10 @@ impl ApiCounter {
             Self::RunnerTokenRotate => "Counts the number of runner token rotations",
             Self::RunnerJobClaim => "Counts the number of runner job claims",
             Self::RunnerJobUpdate(_) => "Counts the number of runner job status updates",
+            Self::RunnerMinutesBilled => "Counts the number of runner minutes successfully billed",
+            Self::RunnerMinutesBillingFailed => {
+                "Counts the number of runner minutes billing failures"
+            },
             Self::RunnerHeartbeatTimeout => {
                 "Counts the number of jobs failed due to heartbeat timeout"
             },
@@ -285,6 +293,8 @@ impl ApiCounter {
             | Self::RunnerUpdate
             | Self::RunnerTokenRotate
             | Self::RunnerJobClaim
+            | Self::RunnerMinutesBilled
+            | Self::RunnerMinutesBillingFailed
             | Self::RunnerHeartbeatTimeout
             | Self::RunnerJobTimeout => Vec::new(),
             Self::UserSignup(auth_method)
