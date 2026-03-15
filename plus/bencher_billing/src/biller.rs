@@ -658,20 +658,8 @@ impl Biller {
         metered_plan_id: &MeteredPlanId,
         quantity: u32,
     ) -> Result<BillingMeterEvent, BillingError> {
-        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
-        let subscription = self.get_subscription(&subscription_id).await?;
-        let customer_id = subscription.customer.id().to_string();
-
-        CreateBillingMeterEvent::new(
-            METRICS_METER_NAME,
-            HashMap::from([
-                (METER_CUSTOMER_KEY.to_owned(), customer_id),
-                (METER_VALUE_KEY.to_owned(), quantity.to_string()),
-            ]),
-        )
-        .send(&self.client)
-        .await
-        .map_err(Into::into)
+        self.record_metered_usage(METRICS_METER_NAME, metered_plan_id, quantity)
+            .await
     }
 
     pub async fn record_runner_usage(
@@ -679,15 +667,25 @@ impl Biller {
         metered_plan_id: &MeteredPlanId,
         minutes: u32,
     ) -> Result<BillingMeterEvent, BillingError> {
+        self.record_metered_usage(RUNNER_MINUTES_METER_NAME, metered_plan_id, minutes)
+            .await
+    }
+
+    async fn record_metered_usage(
+        &self,
+        meter_name: &str,
+        metered_plan_id: &MeteredPlanId,
+        quantity: u32,
+    ) -> Result<BillingMeterEvent, BillingError> {
         let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
         let subscription = self.get_subscription(&subscription_id).await?;
         let customer_id = subscription.customer.id().to_string();
 
         CreateBillingMeterEvent::new(
-            RUNNER_MINUTES_METER_NAME,
+            meter_name,
             HashMap::from([
                 (METER_CUSTOMER_KEY.to_owned(), customer_id),
-                (METER_VALUE_KEY.to_owned(), minutes.to_string()),
+                (METER_VALUE_KEY.to_owned(), quantity.to_string()),
             ]),
         )
         .send(&self.client)

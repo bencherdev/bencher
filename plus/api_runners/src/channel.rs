@@ -16,6 +16,7 @@ use bencher_schema::{
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
+        organization::OrganizationId,
         runner::{JobId, QueryJob, RunnerId, UpdateJob, job::spawn_heartbeat_timeout},
         spec::QuerySpec,
     },
@@ -135,7 +136,7 @@ async fn handle_runner_message(
     context: &ApiContext,
     job: &QueryJob,
     msg: RunnerMessage,
-    billing_tracker: &mut BillingFailureTracker,
+    billing_state: &mut BillingState,
 ) -> Result<(ServerMessage, Option<CloseReason>), ChannelError> {
     match msg {
         RunnerMessage::Ready { .. } => {
@@ -151,7 +152,7 @@ async fn handle_runner_message(
         },
         RunnerMessage::Heartbeat => {
             slog::debug!(log, "Job heartbeat"; "job_id" => ?job.id);
-            if let Some(cancel) = handle_heartbeat(log, context, job.id, billing_tracker).await? {
+            if let Some(cancel) = handle_heartbeat(log, context, job.id, billing_state).await? {
                 return Ok((cancel, Some(CloseReason::JobCanceled)));
             }
         },
@@ -164,6 +165,7 @@ async fn handle_runner_message(
             }
             slog::info!(log, "Job completed"; "job_id" => ?job.id, "iterations" => results.len());
             handle_completed(log, context, job, results).await?;
+            bill_final_minutes(log, context, job.id, billing_state).await?;
             return Ok((
                 ServerMessage::Ack {
                     job: Some(job.uuid),
@@ -181,6 +183,7 @@ async fn handle_runner_message(
             }
             slog::warn!(log, "Job failed"; "job_id" => ?job.id, "error" => &error);
             handle_failed(log, context, job, results, error).await?;
+            bill_final_minutes(log, context, job.id, billing_state).await?;
             return Ok((
                 ServerMessage::Ack {
                     job: Some(job.uuid),
@@ -194,6 +197,7 @@ async fn handle_runner_message(
             }
             slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job.id);
             handle_canceled(log, context, job.id).await?;
+            bill_final_minutes(log, context, job.id, billing_state).await?;
             return Ok((
                 ServerMessage::Ack {
                     job: Some(job.uuid),
@@ -262,7 +266,7 @@ async fn handle_heartbeat(
     log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,
-    billing_tracker: &mut BillingFailureTracker,
+    billing_state: &mut BillingState,
 ) -> Result<Option<ServerMessage>, ChannelError> {
     let now = context.clock.now();
 
@@ -301,7 +305,7 @@ async fn handle_heartbeat(
     }
 
     // Determine whether new minutes need billing and build the appropriate update.
-    let update = match bill_elapsed_minutes(log, context, &job, now, billing_tracker).await? {
+    let update = match bill_elapsed_minutes(log, context, &job, now, billing_state).await? {
         Some(billed_minute) => UpdateJob::heartbeat_with_billing(now, billed_minute),
         None => UpdateJob::heartbeat(now),
     };
@@ -318,8 +322,9 @@ async fn handle_heartbeat(
 }
 
 /// Calculate elapsed minutes using ceiling division (bill as soon as any part of a minute starts).
-/// Returns 0 for 0 elapsed seconds.
+/// Negative input is clamped to zero. Returns 0 for 0 elapsed seconds.
 fn elapsed_minutes(elapsed_secs: i64) -> i32 {
+    let clamped = elapsed_secs.max(0);
     #[expect(
         clippy::cast_possible_truncation,
         reason = "clamped to i32::MAX before cast"
@@ -328,25 +333,62 @@ fn elapsed_minutes(elapsed_secs: i64) -> i32 {
         clippy::integer_division,
         reason = "intentional ceiling division for minute billing"
     )]
-    let minutes = ((elapsed_secs + 59) / 60).min(i64::from(i32::MAX)) as i32;
+    let minutes = ((clamped + 59) / 60).min(i64::from(i32::MAX)) as i32;
     minutes
 }
 
-/// Tracks whether a billing failure has already been reported to Sentry for a job.
+/// Cached result of the metered plan lookup for an organization.
+///
+/// Avoids querying `schema::plan::table` on every heartbeat, since the plan
+/// will not change mid-job.
+enum CachedMeteredPlan {
+    /// Not yet looked up.
+    Unknown,
+    /// Looked up and no metered plan exists for the organization.
+    None,
+    /// Looked up and found a metered plan.
+    Some(MeteredPlanId),
+}
+
+/// Per-job billing state: caches the metered plan lookup and tracks Sentry
+/// reporting so only the first billing failure per job is sent.
 ///
 /// Created at the start of each job execution and dropped when the job finishes.
-/// This ensures only the first billing failure per job is sent to Sentry,
-/// while subsequent failures are still logged via slog and counted via OTEL.
-struct BillingFailureTracker {
+struct BillingState {
+    metered_plan: CachedMeteredPlan,
     #[cfg(feature = "sentry")]
     reported: bool,
 }
 
-impl BillingFailureTracker {
+impl BillingState {
     fn new() -> Self {
         Self {
+            metered_plan: CachedMeteredPlan::Unknown,
             #[cfg(feature = "sentry")]
             reported: false,
+        }
+    }
+
+    /// Return the cached metered plan ID, querying the DB on first call.
+    async fn metered_plan_id(
+        &mut self,
+        context: &ApiContext,
+        organization_id: OrganizationId,
+    ) -> Result<Option<&MeteredPlanId>, ChannelError> {
+        if let CachedMeteredPlan::Unknown = self.metered_plan {
+            let plan_id: Option<Option<MeteredPlanId>> = schema::plan::table
+                .filter(schema::plan::organization_id.eq(organization_id))
+                .select(schema::plan::metered_plan)
+                .first(auth_conn!(context))
+                .optional()?;
+            self.metered_plan = match plan_id.flatten() {
+                Some(id) => CachedMeteredPlan::Some(id),
+                None => CachedMeteredPlan::None,
+            };
+        }
+        match &self.metered_plan {
+            CachedMeteredPlan::Some(id) => Ok(Some(id)),
+            CachedMeteredPlan::None | CachedMeteredPlan::Unknown => Ok(None),
         }
     }
 
@@ -362,19 +404,20 @@ impl BillingFailureTracker {
 
 /// Check if new minutes need billing and, if so, report usage to Stripe.
 ///
-/// Returns `Ok(Some(billed_minute))` if billing was recorded (or should be recorded
-/// in the DB even if the Stripe call failed), or `Ok(None)` if no billing is due.
+/// Returns `Ok(Some(billed_minute))` only when the Stripe call succeeds,
+/// so `last_billed_minute` advances in the DB. On failure, returns `Ok(None)`
+/// so the unbilled minutes will be retried on the next heartbeat.
 async fn bill_elapsed_minutes(
     log: &slog::Logger,
     context: &ApiContext,
     job: &QueryJob,
     now: bencher_json::DateTime,
-    billing_tracker: &mut BillingFailureTracker,
+    billing_state: &mut BillingState,
 ) -> Result<Option<i32>, ChannelError> {
     let Some(started) = job.started else {
         return Ok(None);
     };
-    let elapsed_secs = (now.timestamp() - started.timestamp()).max(0);
+    let elapsed_secs = now.timestamp() - started.timestamp();
     let minutes = elapsed_minutes(elapsed_secs);
     let last_billed = job.last_billed_minute.unwrap_or(0);
 
@@ -382,14 +425,10 @@ async fn bill_elapsed_minutes(
         return Ok(None);
     }
 
-    // Look up the organization's metered plan directly from the plan table
-    let metered_plan_id: Option<Option<MeteredPlanId>> = schema::plan::table
-        .filter(schema::plan::organization_id.eq(job.organization_id))
-        .select(schema::plan::metered_plan)
-        .first(auth_conn!(context))
-        .optional()?;
-
-    let Some(metered_plan_id) = metered_plan_id.flatten() else {
+    let Some(metered_plan_id) = billing_state
+        .metered_plan_id(context, job.organization_id)
+        .await?
+    else {
         return Ok(None);
     };
 
@@ -402,18 +441,48 @@ async fn bill_elapsed_minutes(
         reason = "delta is always positive (minutes > last_billed)"
     )]
     let delta = (minutes - last_billed) as u32;
-    if let Err(e) = biller.record_runner_usage(&metered_plan_id, delta).await {
+    if let Err(e) = biller.record_runner_usage(metered_plan_id, delta).await {
         slog::warn!(log, "Failed to record runner billing"; "job_id" => ?job.id, "minutes" => minutes, "error" => %e);
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBillingFailed);
         #[cfg(feature = "sentry")]
-        billing_tracker.report(&e);
-    } else {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBilled);
+        billing_state.report(&e);
+        // Don't advance last_billed_minute so we retry on the next heartbeat
+        return Ok(None);
     }
 
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBilled);
+
     Ok(Some(minutes))
+}
+
+/// Final billing call for terminal job states.
+///
+/// Re-reads the job from the database to get the latest `last_billed_minute`
+/// (which may have been updated by prior heartbeats), bills any remaining
+/// partial-minute delta, and persists the new `last_billed_minute`.
+///
+/// This ensures that if a job completes mid-minute (e.g., at 90 seconds),
+/// the final partial minute is billed even when no heartbeat fires between
+/// the last billed minute and completion.
+async fn bill_final_minutes(
+    log: &slog::Logger,
+    context: &ApiContext,
+    job_id: JobId,
+    billing_state: &mut BillingState,
+) -> Result<(), ChannelError> {
+    let now = context.clock.now();
+    let job: QueryJob = schema::job::table
+        .filter(schema::job::id.eq(job_id))
+        .first(auth_conn!(context))
+        .map_err(resource_not_found_err!(Job, job_id))?;
+    if let Some(minutes) = bill_elapsed_minutes(log, context, &job, now, billing_state).await? {
+        diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+            .set(schema::job::last_billed_minute.eq(Some(minutes)))
+            .execute(write_conn!(context))?;
+    }
+    Ok(())
 }
 
 /// Handle a Completed message: transition job from Running to Completed,
@@ -1178,7 +1247,7 @@ where
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
     let mut last_heartbeat = tokio::time::Instant::now();
-    let mut billing_tracker = BillingFailureTracker::new();
+    let mut billing_state = BillingState::new();
 
     loop {
         let remaining = heartbeat_timeout
@@ -1188,11 +1257,13 @@ where
         let msg_result = match tokio::time::timeout(remaining, rx.next()).await {
             Ok(Some(msg_result)) => msg_result,
             Ok(None) => {
-                // Stream ended (client disconnected)
+                // Stream ended (client disconnected) — bill any remaining partial minute
+                bill_final_minutes(log, context, job.id, &mut billing_state).await?;
                 return Ok(ExecuteResult::Disconnected);
             },
             Err(_elapsed) => {
-                // Heartbeat timeout — mark job and send close frame before disconnecting
+                // Heartbeat timeout — bill any remaining partial minute before marking job
+                bill_final_minutes(log, context, job.id, &mut billing_state).await?;
                 let reason = handle_timeout(log, context, job.id).await?;
                 let reason_json = serde_json::to_string(&reason)?;
                 let close_frame = CloseFrame {
@@ -1208,6 +1279,7 @@ where
             Ok(msg) => msg,
             Err(e) => {
                 slog::warn!(log, "WebSocket error during execution"; "error" => %e);
+                bill_final_minutes(log, context, job.id, &mut billing_state).await?;
                 return Ok(ExecuteResult::Disconnected);
             },
         };
@@ -1229,7 +1301,7 @@ where
                 let is_ready = matches!(runner_msg, RunnerMessage::Ready { .. });
 
                 let (response, close_reason) =
-                    handle_runner_message(log, context, job, runner_msg, &mut billing_tracker)
+                    handle_runner_message(log, context, job, runner_msg, &mut billing_state)
                         .await?;
 
                 if !is_ready {
@@ -1247,6 +1319,7 @@ where
             },
             Message::Close(_) => {
                 slog::info!(log, "Channel closed by client during execution");
+                bill_final_minutes(log, context, job.id, &mut billing_state).await?;
                 return Ok(ExecuteResult::Disconnected);
             },
             Message::Ping(data) => {
@@ -1318,5 +1391,11 @@ mod tests {
     #[test]
     fn elapsed_minutes_two_full_minutes() {
         assert_eq!(elapsed_minutes(120), 2);
+    }
+
+    #[test]
+    fn elapsed_minutes_negative_seconds() {
+        assert_eq!(elapsed_minutes(-1), 0);
+        assert_eq!(elapsed_minutes(-100), 0);
     }
 }
