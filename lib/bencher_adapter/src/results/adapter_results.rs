@@ -220,7 +220,7 @@ impl AdapterResults {
 
         Some(results_map.into())
     }
-    
+
     pub fn new_dotnet(benchmark_metrics: Vec<(BenchmarkName, Vec<DotNetMeasure>)>) -> Option<Self> {
         if benchmark_metrics.is_empty() {
             return None;
@@ -234,7 +234,7 @@ impl AdapterResults {
             for metric in measure {
                 let (resource_id, metric) = match metric {
                     DotNetMeasure::Latency(json_metric) => {
-                        (built_in::dotnet::Latency::name_id(), json_metric)
+                        (built_in::default::Latency::name_id(), json_metric)
                     },
                     DotNetMeasure::Allocated(json_metric) => {
                         (built_in::dotnet::Allocated::name_id(), json_metric)

@@ -75,9 +75,8 @@ pub mod default {
 }
 
 pub mod dotnet {
-    use bencher_valid::{BYTES, NANOSECONDS};
+    use bencher_valid::BYTES;
 
-    create_measure!(Latency, "Latency", "latency", NANOSECONDS);
     create_measure!(Allocated, "Allocated", "allocated", BYTES);
     create_measure!(Gen0Collects, "Gen0 Collects", "gen0-collects", "collects");
     create_measure!(Gen1Collects, "Gen1 Collects", "gen1-collects", "collects");
