@@ -12,6 +12,7 @@ use crate::{BigInt, OrganizationUuid, system::payment::JsonCustomer};
 
 pub const DEFAULT_PRICE_NAME: &str = "default";
 pub const METRICS_METER_EVENT_NAME: &str = "metrics";
+pub const RUNNER_METER_EVENT_NAME: &str = "runner_minutes";
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
