@@ -755,6 +755,16 @@ impl UpdateJob {
         }
     }
 
+    /// Update heartbeat timestamp and billing minute together.
+    pub fn heartbeat_with_billing(now: DateTime, billed_minute: i32) -> Self {
+        Self {
+            last_heartbeat: Some(Some(now)),
+            last_billed_minute: Some(Some(billed_minute)),
+            modified: Some(now),
+            ..Default::default()
+        }
+    }
+
     /// Transition to Running (Claimed -> Running).
     pub fn start(now: DateTime) -> Self {
         Self {
