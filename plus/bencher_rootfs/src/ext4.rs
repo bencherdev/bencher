@@ -119,15 +119,13 @@ fn create_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
 /// On other platforms, this is a no-op (ext4 creation only works on Linux anyway).
 #[cfg(target_os = "linux")]
 fn allocate_file(path: &Utf8Path, size_mib: u64) -> Result<(), RootfsError> {
-    use std::os::fd::AsRawFd as _;
-
     use nix::fcntl::{FallocateFlags, fallocate};
 
     let file = File::options().write(true).open(path)?;
     let size_bytes = size_mib * 1024 * 1024;
     #[expect(clippy::cast_possible_wrap, reason = "Practical disk sizes fit in i64")]
     let size_i64 = size_bytes as i64;
-    fallocate(file.as_raw_fd(), FallocateFlags::empty(), 0, size_i64)
+    fallocate(&file, FallocateFlags::empty(), 0, size_i64)
         .map_err(|e| RootfsError::Ext4(format!("fallocate failed: {e}")))?;
     Ok(())
 }

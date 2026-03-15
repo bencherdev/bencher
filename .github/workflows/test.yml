@@ -20,6 +20,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_AUDIT_VERSION: 0.22.1
 
 jobs:
   cargo_test:
@@ -174,13 +175,13 @@ jobs:
     name: Cargo Audit
     runs-on: ubuntu-22.04
     if: ${{ !inputs.is-fork }}
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: audit
           mold-version: ${{ inputs.mold-version }}
+      - run: cargo install cargo-audit --version ${{ env.CARGO_AUDIT_VERSION }} --locked
       - run: cargo audit
 
   cargo_udeps:

@@ -1,4 +1,4 @@
-#![expect(clippy::print_stdout, clippy::unwrap_used, clippy::use_debug)]
+#![expect(clippy::print_stdout, clippy::use_debug)]
 
 mod parser;
 mod task;

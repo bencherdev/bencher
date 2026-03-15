@@ -9,7 +9,6 @@ pub use plus::{
     email_list::TaskEmailList,
     index::{TaskIndex, TaskIndexDelete, TaskIndexUpdate, TaskSearchEngine},
     license::{TaskBillingCycle, TaskLicense, TaskLicenseGenerate, TaskLicenseValidate},
-    prompt::{TaskImage, TaskLanguage, TaskPrompt, TaskTranslate},
     stats::TaskStats,
 };
 
@@ -30,15 +29,6 @@ pub enum TaskSub {
     #[cfg(feature = "plus")]
     /// Send stats to bencher.dev
     Stats(TaskStats),
-    #[cfg(feature = "plus")]
-    /// Prompt LLM
-    Prompt(TaskPrompt),
-    #[cfg(feature = "plus")]
-    /// Prompt LLM to translate
-    Translate(TaskTranslate),
-    #[cfg(feature = "plus")]
-    /// Prompt to generate image
-    Image(TaskImage),
     #[cfg(feature = "plus")]
     #[clap(subcommand)]
     /// License management

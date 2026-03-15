@@ -1,9 +1,8 @@
 use bollard::{
     Docker,
-    container::{Config, CreateContainerOptions, StartContainerOptions},
     errors::Error as BollardError,
-    image::CreateImageOptions,
-    service::{HostConfig, PortBinding},
+    models::{ContainerCreateBody, HostConfig, PortBinding},
+    query_parameters::{CreateContainerOptions, CreateImageOptions, StartContainerOptions},
 };
 use futures_util::TryStreamExt as _;
 
@@ -150,7 +149,7 @@ async fn pull_image(
 
     cli_println!("Pulling `{image}` image...");
     let options = Some(CreateImageOptions {
-        from_image: image.as_str(),
+        from_image: Some(image.clone()),
         ..Default::default()
     });
     docker
@@ -183,8 +182,8 @@ async fn start_container(
 
     cli_println!("Creating `{container}` container...");
     let options = Some(CreateContainerOptions {
-        name: container.as_ref(),
-        platform: None,
+        name: Some(container.as_ref().to_owned()),
+        ..Default::default()
     });
     let host_config = Some(HostConfig {
         port_bindings: Some(literally::hmap! {
@@ -198,13 +197,11 @@ async fn start_container(
         ..Default::default()
     });
 
-    let config = Config {
+    let config = ContainerCreateBody {
         image: Some(container.image(tag)),
         host_config,
         env,
-        exposed_ports: Some(literally::hmap! {
-            tcp_port.as_str() => literally::hmap! {}
-        }),
+        exposed_ports: Some(vec![tcp_port.clone()]),
         ..Default::default()
     };
     docker
@@ -214,7 +211,7 @@ async fn start_container(
 
     cli_println!("Starting `{container}` container...");
     docker
-        .start_container(container.as_ref(), None::<StartContainerOptions<String>>)
+        .start_container(container.as_ref(), None::<StartContainerOptions>)
         .await
         .map_err(|err| DockerError::StartContainer { container, err })?;
 

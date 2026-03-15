@@ -72,7 +72,6 @@ impl TryFrom<TaskSeedTest> for SeedTest {
     }
 }
 
-#[expect(deprecated)]
 impl SeedTest {
     fn project_name(&self) -> &str {
         if self.no_git { NO_GIT_NAME } else { REPO_NAME }

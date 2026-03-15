@@ -79,7 +79,6 @@ impl RunnerTest {
         let host = self.url.as_ref();
 
         // Rotate the runner token to get a fresh one we can use
-        #[expect(deprecated)]
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "runner",
@@ -127,7 +126,6 @@ impl RunnerTest {
 
         // Start the runner daemon as a background process
         println!("Starting runner daemon...");
-        #[expect(deprecated)]
         let mut runner_child = Command::cargo_bin("runner")?;
         let mut runner_child = runner_child
             .args([
@@ -203,7 +201,6 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result
 
     // Step 5: Submit a job via `bencher run --image`
     println!("Step 5: Submitting job via bencher run --image...");
-    #[expect(deprecated)]
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "run",
