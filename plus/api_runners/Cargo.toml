@@ -30,10 +30,11 @@ plus = [
     "dep:tokio-tungstenite",
     "dep:uuid",
 ]
-sentry = ["bencher_schema/sentry"]
+sentry = ["bencher_schema/sentry", "dep:bencher_billing", "dep:sentry"]
 otel = ["bencher_endpoint/otel", "bencher_schema/otel", "dep:bencher_otel"]
 
 [dependencies]
+bencher_billing = { workspace = true, optional = true }
 bencher_endpoint = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"], optional = true }
 bencher_oci_storage = { workspace = true, optional = true }
@@ -48,6 +49,7 @@ rand = { workspace = true, optional = true }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
+sentry = { workspace = true, optional = true }
 slog = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["time"], optional = true }
