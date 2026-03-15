@@ -5,7 +5,7 @@ use crate::{
 };
 use bollard::{
     Docker,
-    container::{RemoveContainerOptions, StopContainerOptions},
+    query_parameters::{RemoveContainerOptions, StopContainerOptions},
 };
 
 use crate::cli_println;
@@ -60,7 +60,10 @@ pub(super) async fn stop_container(
         .is_ok()
     {
         cli_println!("Stopping existing `{container}` container...");
-        let options = Some(StopContainerOptions { t: 5 });
+        let options = Some(StopContainerOptions {
+            t: Some(5),
+            ..Default::default()
+        });
         docker
             .stop_container(container.as_ref(), options)
             .await

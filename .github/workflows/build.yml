@@ -18,6 +18,9 @@ on:
       build-docker:
         type: boolean
         required: true
+      deploy-only:
+        type: boolean
+        required: true
     secrets:
       LYCHEE_USER_AGENT:
         required: true
@@ -39,7 +42,7 @@ env:
 jobs:
   build_github_action:
     name: Build GitHub Action
-    if: ${{ inputs.build-action }}
+    if: ${{ inputs.build-action && !inputs.deploy-only }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
@@ -83,6 +86,7 @@ jobs:
 
   test_wasm:
     name: Test `bencher_valid` WASM
+    if: ${{ !inputs.deploy-only }}
     runs-on: ubuntu-22.04
     needs: build_wasm
     steps:
@@ -97,6 +101,7 @@ jobs:
 
   vitest:
     name: vitest
+    if: ${{ !inputs.deploy-only }}
     runs-on: ubuntu-22.04
     needs: build_wasm
     steps:
@@ -116,7 +121,7 @@ jobs:
     name: Build Console UI
     runs-on: ubuntu-22.04
     needs: build_wasm
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ !startsWith(github.ref, 'refs/tags/') && !inputs.deploy-only }}
     steps:
       - uses: actions/checkout@v6
       - name: Download `bencher_valid` Artifact
@@ -164,7 +169,9 @@ jobs:
             MOLD_VERSION=${{ inputs.mold-version }}
             LITESTREAM_VERSION=${{ inputs.litestream-version }}
             LITESTREAM_ARCH=${{ env.LITESTREAM_ARCH }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
+          cache-from: |
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-devel
           cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }},mode=max
           load: true
           push: false
@@ -182,7 +189,7 @@ jobs:
   build_console_docker:
     name: Build Console Docker
     runs-on: ubuntu-22.04
-    if: ${{ inputs.build-docker }}
+    if: ${{ inputs.build-docker && !inputs.deploy-only }}
     steps:
       - uses: actions/checkout@v6
       - name: Set up QEMU
@@ -204,7 +211,9 @@ jobs:
           context: .
           file: ./services/console/Dockerfile
           tags: ${{ env.CONSOLE_DOCKER_IMAGE }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
+          cache-from: |
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-devel
           cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }},mode=max
           load: true
           push: false
@@ -221,6 +230,7 @@ jobs:
 
   build_bencher_nix:
     name: Build `bencher` Nix Package
+    if: ${{ !inputs.deploy-only }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
@@ -233,6 +243,7 @@ jobs:
 
   build_api_nix:
     name: Build `api` Nix Package
+    if: ${{ !inputs.deploy-only }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6

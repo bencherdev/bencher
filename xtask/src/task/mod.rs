@@ -7,10 +7,7 @@ mod plus;
 
 use live::Live;
 #[cfg(feature = "plus")]
-use plus::{
-    email_list::EmailList, image::Image, index::Index, license::License, prompt::Prompt,
-    stats::Stats, translate::Translate,
-};
+use plus::{email_list::EmailList, index::Index, license::License, stats::Stats};
 
 #[derive(Debug)]
 pub struct Task {
@@ -25,12 +22,6 @@ pub enum Sub {
     Index(Index),
     #[cfg(feature = "plus")]
     Stats(Stats),
-    #[cfg(feature = "plus")]
-    Prompt(Prompt),
-    #[cfg(feature = "plus")]
-    Translate(Translate),
-    #[cfg(feature = "plus")]
-    Image(Image),
     #[cfg(feature = "plus")]
     License(License),
     #[cfg(feature = "plus")]
@@ -58,12 +49,6 @@ impl TryFrom<TaskSub> for Sub {
             #[cfg(feature = "plus")]
             TaskSub::Stats(stats) => Self::Stats(stats.try_into()?),
             #[cfg(feature = "plus")]
-            TaskSub::Prompt(prompt) => Self::Prompt(prompt.try_into()?),
-            #[cfg(feature = "plus")]
-            TaskSub::Translate(translate) => Self::Translate(translate.try_into()?),
-            #[cfg(feature = "plus")]
-            TaskSub::Image(image) => Self::Image(image.try_into()?),
-            #[cfg(feature = "plus")]
             TaskSub::License(license) => Self::License(license.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::EmailList(email_list) => Self::EmailList(email_list.try_into()?),
@@ -89,12 +74,6 @@ impl Sub {
             Self::Index(index) => index.exec().await,
             #[cfg(feature = "plus")]
             Self::Stats(stats) => stats.exec().await,
-            #[cfg(feature = "plus")]
-            Self::Prompt(prompt) => prompt.exec().await,
-            #[cfg(feature = "plus")]
-            Self::Translate(translate) => translate.exec().await,
-            #[cfg(feature = "plus")]
-            Self::Image(image) => image.exec().await,
             #[cfg(feature = "plus")]
             Self::License(license) => license.exec(),
             #[cfg(feature = "plus")]

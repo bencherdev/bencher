@@ -3,10 +3,7 @@ use crate::{
     bencher::sub::SubCmd,
     parser::compose::{CliLogs, CliService},
 };
-use bollard::{
-    Docker,
-    container::{LogOutput, LogsOptions},
-};
+use bollard::{Docker, container::LogOutput, query_parameters::LogsOptions};
 use futures_util::stream::StreamExt as _;
 
 use crate::{cli_eprintln, cli_println};

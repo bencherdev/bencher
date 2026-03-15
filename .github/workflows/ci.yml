@@ -75,6 +75,7 @@ jobs:
 
   lint:
     name: Lint
+    if: github.ref != 'refs/heads/cloud'
     uses: ./.github/workflows/lint.yml
     with:
       mold-version: "2.34.1"
@@ -83,6 +84,7 @@ jobs:
   cli:
     name: CLI
     needs: changes
+    if: github.ref != 'refs/heads/cloud'
     uses: ./.github/workflows/cli.yml
     with:
       bencher-version: "0.5.10"
@@ -92,8 +94,8 @@ jobs:
       # Use minimum supported glibc version for Rust Tier 1
       # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
       glibc-version: "2.17"
-      check-cli: ${{ needs.changes.outputs.cli == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' }}
-      build-cli: ${{ needs.changes.outputs.cli == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
+      check-cli: ${{ needs.changes.outputs.cli == 'true' || github.ref == 'refs/heads/devel' }}
+      build-cli: ${{ needs.changes.outputs.cli == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') }}
       build-docker: ${{ startsWith(github.ref, 'refs/tags/') }}
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
@@ -101,7 +103,7 @@ jobs:
   runner:
     name: Runner
     needs: changes
-    if: ${{ needs.changes.outputs.runner == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ github.ref != 'refs/heads/cloud' && (needs.changes.outputs.runner == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/')) }}
     uses: ./.github/workflows/runner.yml
     with:
       mold-version: "2.34.1"
@@ -111,7 +113,7 @@ jobs:
   test:
     name: Test
     needs: changes
-    if: ${{ needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ github.ref != 'refs/heads/cloud' && (needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/')) }}
     uses: ./.github/workflows/test.yml
     with:
       mold-version: "2.34.1"
@@ -131,13 +133,14 @@ jobs:
       litestream-version: "0.3.13"
       build-action: ${{ needs.changes.outputs.action == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
       build-docker: ${{ needs.changes.outputs.docker == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy')) }}
+      deploy-only: ${{ github.ref == 'refs/heads/cloud' }}
     secrets:
       LYCHEE_USER_AGENT: ${{ secrets.LYCHEE_USER_AGENT }}
 
   deploy:
     name: Deploy
     needs: [lint, cli, test, build]
-    if: ${{ github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy')) }}
+    if: ${{ !failure() && !cancelled() && (github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))) }}
     uses: ./.github/workflows/deploy.yml
     with:
       mold-version: "2.34.1"
@@ -155,7 +158,7 @@ jobs:
 
   release:
     name: Release
-    if: ${{ needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') }}
     needs: [changes, lint, cli, runner, test, build]
     uses: ./.github/workflows/release.yml
     with:
@@ -170,7 +173,7 @@ jobs:
     steps:
       - name: Check all jobs passed
         run: |
-          if [[ "${{ needs.lint.result }}" != "success" ]]; then
+          if [[ "${{ needs.lint.result }}" != "success" && "${{ needs.lint.result }}" != "skipped" ]]; then
             echo "Lint failed"
             exit 1
           fi
