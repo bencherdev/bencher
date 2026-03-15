@@ -385,7 +385,7 @@ impl PlanKind {
                     ));
                 };
                 biller
-                    .record_metered_usage(&metered_plan_id, usage)
+                    .record_metrics_usage(&metered_plan_id, usage)
                     .await
                     .map_err(|e| {
                         issue_error(

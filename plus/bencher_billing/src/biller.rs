@@ -5,7 +5,9 @@ use std::{
 
 use bencher_json::{
     Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
-    organization::plan::{JsonCardDetails, JsonPlan, METRICS_METER_EVENT_NAME},
+    organization::plan::{
+        JsonCardDetails, JsonPlan, METRICS_METER_NAME, RUNNER_MINUTES_METER_NAME,
+    },
     system::{
         config::JsonBilling,
         payment::{JsonCard, JsonCheckout, JsonCustomer},
@@ -430,7 +432,7 @@ impl Biller {
             .parse()
             .map_err(|e| BillingError::BadOrganizationUuid(organization.clone(), e))?;
 
-        let preferred_price_ids = self.products.preferred_price_ids(METRICS_METER_EVENT_NAME);
+        let preferred_price_ids = self.products.preferred_price_ids(METRICS_METER_NAME);
         let subscription_items = Self::filter_subscription_items(
             subscription_id,
             subscription.items.data,
@@ -651,7 +653,7 @@ impl Biller {
         }
     }
 
-    pub async fn record_metered_usage(
+    pub async fn record_metrics_usage(
         &self,
         metered_plan_id: &MeteredPlanId,
         quantity: u32,
@@ -661,10 +663,31 @@ impl Biller {
         let customer_id = subscription.customer.id().to_string();
 
         CreateBillingMeterEvent::new(
-            METRICS_METER_EVENT_NAME,
+            METRICS_METER_NAME,
             HashMap::from([
                 (METER_CUSTOMER_KEY.to_owned(), customer_id),
                 (METER_VALUE_KEY.to_owned(), quantity.to_string()),
+            ]),
+        )
+        .send(&self.client)
+        .await
+        .map_err(Into::into)
+    }
+
+    pub async fn record_runner_usage(
+        &self,
+        metered_plan_id: &MeteredPlanId,
+        minutes: u32,
+    ) -> Result<BillingMeterEvent, BillingError> {
+        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
+        let subscription = self.get_subscription(&subscription_id).await?;
+        let customer_id = subscription.customer.id().to_string();
+
+        CreateBillingMeterEvent::new(
+            RUNNER_MINUTES_METER_NAME,
+            HashMap::from([
+                (METER_CUSTOMER_KEY.to_owned(), customer_id),
+                (METER_VALUE_KEY.to_owned(), minutes.to_string()),
             ]),
         )
         .send(&self.client)
@@ -720,7 +743,7 @@ mod tests {
 
     use bencher_json::{
         Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
-        organization::plan::{DEFAULT_PRICE_NAME, METRICS_METER_EVENT_NAME},
+        organization::plan::{DEFAULT_PRICE_NAME, METRICS_METER_NAME},
         system::{
             config::{JsonBilling, JsonProduct, JsonProducts},
             payment::{JsonCard, JsonCustomer},
@@ -799,7 +822,7 @@ mod tests {
             .unwrap();
         assert_eq!(plan_status, PlanStatus::Active);
 
-        record_metered_usage(biller, metered_plan_id, usage_count).await;
+        record_metrics_usage(biller, metered_plan_id, usage_count).await;
 
         biller
             .cancel_metered_subscription(&subscription_id.parse().unwrap())
@@ -858,7 +881,7 @@ mod tests {
         assert_eq!(plan_status, PlanStatus::Canceled);
     }
 
-    async fn record_metered_usage(
+    async fn record_metrics_usage(
         biller: &Biller,
         metered_plan_id: &MeteredPlanId,
         usage_count: usize,
@@ -866,7 +889,7 @@ mod tests {
         for _ in 0..usage_count {
             let quantity = u32::from(rand::random::<u8>());
             biller
-                .record_metered_usage(metered_plan_id, quantity)
+                .record_metrics_usage(metered_plan_id, quantity)
                 .await
                 .unwrap();
         }
@@ -1103,7 +1126,7 @@ mod tests {
             customer_id.clone(),
             payment_method_id.clone(),
             PlanLevel::Team,
-            METRICS_METER_EVENT_NAME.into(),
+            METRICS_METER_NAME.into(),
             10,
         )
         .await;
@@ -1129,7 +1152,7 @@ mod tests {
             customer_id.clone(),
             payment_method_id.clone(),
             PlanLevel::Enterprise,
-            METRICS_METER_EVENT_NAME.into(),
+            METRICS_METER_NAME.into(),
             25,
         )
         .await;
