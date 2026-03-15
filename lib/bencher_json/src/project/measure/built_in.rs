@@ -74,6 +74,13 @@ pub mod default {
     );
 }
 
+pub mod json {
+    use bencher_valid::{BYTES, SECONDS};
+
+    create_measure!(BuildTime, "Build Time", "build-time", SECONDS);
+    create_measure!(FileSize, "File Size", "file-size", BYTES);
+}
+
 pub mod dotnet {
     use bencher_valid::BYTES;
 
@@ -81,13 +88,6 @@ pub mod dotnet {
     create_measure!(Gen0Collects, "Gen0 Collects", "gen0-collects", "collects / 1000 operations");
     create_measure!(Gen1Collects, "Gen1 Collects", "gen1-collects", "collects / 1000 operations");
     create_measure!(Gen2Collects, "Gen2 Collects", "gen2-collects", "collects / 1000 operations");
-}
-
-pub mod json {
-    use bencher_valid::{BYTES, SECONDS};
-
-    create_measure!(BuildTime, "Build Time", "build-time", SECONDS);
-    create_measure!(FileSize, "File Size", "file-size", BYTES);
 }
 
 pub mod iai {
