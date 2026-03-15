@@ -276,11 +276,11 @@ pub(crate) mod test_c_sharp_dot_net {
     #[test]
     fn adapter_c_sharp_dot_net_memory() {
         let results = convert_c_sharp_dot_net("memory");
-        assert_eq!(results.inner.len(), 3);
+        assert_eq!(results.inner.len(), 2);
 
-        let metrics = results.get("StepLang.Benchmarks.Tokenize").unwrap();
+        let metrics = results.get("BenchmarkDotNet.Samples.AllocEmptyList").unwrap();
         let metric = metrics.get("allocated").unwrap();
-        assert_eq!(metric.value, OrderedFloat::from(672));
+        assert_eq!(metric.value, OrderedFloat::from(368));
     }
 
     #[test]
