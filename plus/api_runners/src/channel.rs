@@ -6,7 +6,8 @@
 use std::time::Duration;
 
 use bencher_json::{
-    DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimedJob, JsonSpec, Priority, RunnerResourceId,
+    DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimedJob, JsonSpec, MeteredPlanId, Priority,
+    RunnerResourceId,
     runner::{CloseReason, JsonIterationOutput, RunnerMessage, ServerMessage},
 };
 use bencher_oci_storage::OciStorageError;
@@ -134,6 +135,7 @@ async fn handle_runner_message(
     context: &ApiContext,
     job: &QueryJob,
     msg: RunnerMessage,
+    billing_tracker: &mut BillingFailureTracker,
 ) -> Result<(ServerMessage, Option<CloseReason>), ChannelError> {
     match msg {
         RunnerMessage::Ready { .. } => {
@@ -149,7 +151,7 @@ async fn handle_runner_message(
         },
         RunnerMessage::Heartbeat => {
             slog::debug!(log, "Job heartbeat"; "job_id" => ?job.id);
-            if let Some(cancel) = handle_heartbeat(log, context, job.id).await? {
+            if let Some(cancel) = handle_heartbeat(log, context, job.id, billing_tracker).await? {
                 return Ok((cancel, Some(CloseReason::JobCanceled)));
             }
         },
@@ -260,6 +262,7 @@ async fn handle_heartbeat(
     log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,
+    billing_tracker: &mut BillingFailureTracker,
 ) -> Result<Option<ServerMessage>, ChannelError> {
     let now = context.clock.now();
 
@@ -297,10 +300,12 @@ async fn handle_heartbeat(
         }
     }
 
-    let update = UpdateJob::heartbeat(now);
+    // Determine whether new minutes need billing and build the appropriate update.
+    let update = match bill_elapsed_minutes(log, context, &job, now, billing_tracker).await? {
+        Some(billed_minute) => UpdateJob::heartbeat_with_billing(now, billed_minute),
+        None => UpdateJob::heartbeat(now),
+    };
 
-    // It is okay to wait until here to get the write lock
-    // Worst case, we add an extra write if the job was canceled between reads
     // Use status filter to avoid overwriting a concurrent cancellation
     update.execute_if_either_status(
         write_conn!(context),
@@ -309,9 +314,106 @@ async fn handle_heartbeat(
         JobStatus::Running,
     )?;
 
-    // TODO: Billing logic - check elapsed minutes and bill to Stripe
-
     Ok(None)
+}
+
+/// Calculate elapsed minutes using ceiling division (bill as soon as any part of a minute starts).
+/// Returns 0 for 0 elapsed seconds.
+fn elapsed_minutes(elapsed_secs: i64) -> i32 {
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "clamped to i32::MAX before cast"
+    )]
+    #[expect(
+        clippy::integer_division,
+        reason = "intentional ceiling division for minute billing"
+    )]
+    let minutes = ((elapsed_secs + 59) / 60).min(i64::from(i32::MAX)) as i32;
+    minutes
+}
+
+/// Tracks whether a billing failure has already been reported to Sentry for a job.
+///
+/// Created at the start of each job execution and dropped when the job finishes.
+/// This ensures only the first billing failure per job is sent to Sentry,
+/// while subsequent failures are still logged via slog and counted via OTEL.
+struct BillingFailureTracker {
+    #[cfg(feature = "sentry")]
+    reported: bool,
+}
+
+impl BillingFailureTracker {
+    fn new() -> Self {
+        Self {
+            #[cfg(feature = "sentry")]
+            reported: false,
+        }
+    }
+
+    /// Report a billing failure to Sentry (first failure only).
+    #[cfg(feature = "sentry")]
+    fn report(&mut self, error: &bencher_billing::BillingError) {
+        if !self.reported {
+            self.reported = true;
+            sentry::capture_error(error);
+        }
+    }
+}
+
+/// Check if new minutes need billing and, if so, report usage to Stripe.
+///
+/// Returns `Ok(Some(billed_minute))` if billing was recorded (or should be recorded
+/// in the DB even if the Stripe call failed), or `Ok(None)` if no billing is due.
+async fn bill_elapsed_minutes(
+    log: &slog::Logger,
+    context: &ApiContext,
+    job: &QueryJob,
+    now: bencher_json::DateTime,
+    billing_tracker: &mut BillingFailureTracker,
+) -> Result<Option<i32>, ChannelError> {
+    let Some(started) = job.started else {
+        return Ok(None);
+    };
+    let elapsed_secs = (now.timestamp() - started.timestamp()).max(0);
+    let minutes = elapsed_minutes(elapsed_secs);
+    let last_billed = job.last_billed_minute.unwrap_or(0);
+
+    if minutes <= last_billed {
+        return Ok(None);
+    }
+
+    // Look up the organization's metered plan directly from the plan table
+    let metered_plan_id: Option<Option<MeteredPlanId>> = schema::plan::table
+        .filter(schema::plan::organization_id.eq(job.organization_id))
+        .select(schema::plan::metered_plan)
+        .first(auth_conn!(context))
+        .optional()?;
+
+    let Some(metered_plan_id) = metered_plan_id.flatten() else {
+        return Ok(None);
+    };
+
+    let Some(biller) = context.biller.as_ref() else {
+        return Ok(None);
+    };
+
+    #[expect(
+        clippy::cast_sign_loss,
+        reason = "delta is always positive (minutes > last_billed)"
+    )]
+    let delta = (minutes - last_billed) as u32;
+    if let Err(e) = biller.record_runner_usage(&metered_plan_id, delta).await {
+        slog::warn!(log, "Failed to record runner billing"; "job_id" => ?job.id, "minutes" => minutes, "error" => %e);
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBillingFailed);
+        #[cfg(feature = "sentry")]
+        billing_tracker.report(&e);
+    } else {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBilled);
+    }
+
+    Ok(Some(minutes))
 }
 
 /// Handle a Completed message: transition job from Running to Completed,
@@ -1076,6 +1178,7 @@ where
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
     let mut last_heartbeat = tokio::time::Instant::now();
+    let mut billing_tracker = BillingFailureTracker::new();
 
     loop {
         let remaining = heartbeat_timeout
@@ -1126,7 +1229,8 @@ where
                 let is_ready = matches!(runner_msg, RunnerMessage::Ready { .. });
 
                 let (response, close_reason) =
-                    handle_runner_message(log, context, job, runner_msg).await?;
+                    handle_runner_message(log, context, job, runner_msg, &mut billing_tracker)
+                        .await?;
 
                 if !is_ready {
                     last_heartbeat = tokio::time::Instant::now();
@@ -1179,5 +1283,40 @@ mod tests {
         let (status, reason) = timeout_decision(300, 300);
         assert_eq!(status, JobStatus::Failed);
         assert_eq!(reason, CloseReason::HeartbeatTimeout);
+    }
+
+    // --- elapsed_minutes tests (ceil division) ---
+
+    #[test]
+    fn elapsed_minutes_zero_seconds() {
+        assert_eq!(elapsed_minutes(0), 0);
+    }
+
+    #[test]
+    fn elapsed_minutes_one_second() {
+        // Ceil: 1 second into a minute still counts as 1 minute
+        assert_eq!(elapsed_minutes(1), 1);
+    }
+
+    #[test]
+    fn elapsed_minutes_fifty_nine_seconds() {
+        assert_eq!(elapsed_minutes(59), 1);
+    }
+
+    #[test]
+    fn elapsed_minutes_sixty_seconds() {
+        // Exactly 1 minute
+        assert_eq!(elapsed_minutes(60), 1);
+    }
+
+    #[test]
+    fn elapsed_minutes_sixty_one_seconds() {
+        // 1 second into the second minute
+        assert_eq!(elapsed_minutes(61), 2);
+    }
+
+    #[test]
+    fn elapsed_minutes_two_full_minutes() {
+        assert_eq!(elapsed_minutes(120), 2);
     }
 }

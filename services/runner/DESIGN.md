@@ -617,15 +617,14 @@ Additional counters: `RunnerJobClaim` (job claimed), `RunnerJobUpdate` (state tr
 Usage is tracked per-minute via Stripe's usage-based pricing. Heartbeats serve double duty:
 
 1. **Liveness check** — Confirms runner is still executing the job
-2. **Billing increment** — Reports usage to Stripe (TODO: billing integration)
+2. **Billing increment** — Reports usage to Stripe via the `runner_minutes` meter
 
 The API tracks which minutes have been billed via `last_billed_minute` on the job to avoid double-counting if heartbeats arrive early.
 
 On each heartbeat:
-1. Update `last_heartbeat` on job
-2. Calculate `elapsed_minutes = (now - started) / 60`
-3. If `elapsed_minutes > last_billed_minute`, bill the difference to Stripe
-4. Update `last_billed_minute = elapsed_minutes`
+1. Calculate `elapsed_minutes = ceil((now - started) / 60)`
+2. If `elapsed_minutes > last_billed_minute`, bill the difference to Stripe via `record_runner_usage`
+3. Update `last_heartbeat` and `last_billed_minute` atomically (single UPDATE)
 
 ## Retry Policy
 

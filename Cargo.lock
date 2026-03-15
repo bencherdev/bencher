@@ -278,6 +278,7 @@ name = "api_runners"
 version = "0.5.10"
 dependencies = [
  "bencher_api_tests",
+ "bencher_billing",
  "bencher_endpoint",
  "bencher_json",
  "bencher_oci_storage",
@@ -293,6 +294,7 @@ dependencies = [
  "http 1.4.0",
  "rand 0.9.2",
  "schemars 0.8.22",
+ "sentry",
  "serde",
  "serde_json",
  "slog",
