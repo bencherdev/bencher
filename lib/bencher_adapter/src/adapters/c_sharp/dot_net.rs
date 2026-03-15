@@ -111,15 +111,57 @@ impl DotNet {
             let mut measures = vec![latency_measure];
 
             if memory.is_some() {
-                let json_allocated_metric = JsonNewMetric {
-                    value: memory.unwrap().bytes_allocated_per_operation.into(),
+                let m = memory.unwrap();
+
+                let allocated_json = JsonNewMetric {
+                    value: m.bytes_allocated_per_operation.into(),
                     lower_value: None,
                     upper_value: None,
                 };
 
-                let allocated_measure = DotNetMeasure::Allocated(json_allocated_metric);
+                let allocated_measure = DotNetMeasure::Allocated(allocated_json);
 
                 measures.push(allocated_measure);
+
+                let gen0_collects_json = JsonNewMetric {
+                    value: m.gen0_collections.into(),
+                    lower_value: None,
+                    upper_value: None,
+                };
+
+                let gen0_measure = DotNetMeasure::Gen0Collects(gen0_collects_json);
+
+                measures.push(gen0_measure);
+
+                let gen1_collects_json = JsonNewMetric {
+                    value: m.gen1_collections.into(),
+                    lower_value: None,
+                    upper_value: None,
+                };
+
+                let gen1_measure = DotNetMeasure::Gen1Collects(gen1_collects_json);
+
+                measures.push(gen1_measure);
+
+                let gen2_collects_json = JsonNewMetric {
+                    value: m.gen2_collections.into(),
+                    lower_value: None,
+                    upper_value: None,
+                };
+
+                let gen2_measure = DotNetMeasure::Gen2Collects(gen2_collects_json);
+
+                measures.push(gen2_measure);
+
+                let total_operations_json = JsonNewMetric {
+                    value: m.total_operations.into(),
+                    lower_value: None,
+                    upper_value: None,
+                };
+
+                let total_operations_measure = DotNetMeasure::TotalOperations(total_operations_json);
+
+                measures.push(total_operations_measure);
             }
 
             benchmark_metrics.push((benchmark_name, measures));
@@ -279,8 +321,21 @@ pub(crate) mod test_c_sharp_dot_net {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("BenchmarkDotNet.Samples.AllocEmptyList").unwrap();
-        let metric = metrics.get("allocated").unwrap();
-        assert_eq!(metric.value, OrderedFloat::from(368));
+
+        let allocated = metrics.get("allocated").unwrap();
+        assert_eq!(allocated.value, OrderedFloat::from(368));
+
+        let gen0collects = metrics.get("gen0-collects").unwrap();
+        assert_eq!(gen0collects.value, OrderedFloat::from(184));
+
+        let gen1collects = metrics.get("gen1-collects").unwrap();
+        assert_eq!(gen1collects.value, OrderedFloat::from(0));
+
+        let gen2collects = metrics.get("gen2-collects").unwrap();
+        assert_eq!(gen2collects.value, OrderedFloat::from(0));
+
+        let total_operations = metrics.get("total-operations").unwrap();
+        assert_eq!(total_operations.value, OrderedFloat::from(8388608));
     }
 
     #[test]

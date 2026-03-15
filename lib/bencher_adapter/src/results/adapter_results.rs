@@ -38,6 +38,7 @@ pub enum DotNetMeasure {
     Gen0Collects(JsonNewMetric),
     Gen1Collects(JsonNewMetric),
     Gen2Collects(JsonNewMetric),
+    TotalOperations(JsonNewMetric),
     Allocated(JsonNewMetric),
 }
 
@@ -247,6 +248,9 @@ impl AdapterResults {
                     },
                     DotNetMeasure::Gen2Collects(json_metric) => {
                         (built_in::dotnet::Gen2Collects::name_id(), json_metric)
+                    },
+                    DotNetMeasure::TotalOperations(json_metric) => {
+                        (built_in::dotnet::TotalOperations::name_id(), json_metric)
                     },
                 };
                 metrics_value.inner.insert(resource_id, metric);
