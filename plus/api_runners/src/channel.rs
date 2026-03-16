@@ -262,6 +262,10 @@ async fn handle_running(
 }
 
 /// Handle a Heartbeat message: update `last_heartbeat` and check for cancellation and timeout.
+///
+/// Reads the job via `write_conn!` (not `auth_conn!`) so that `last_billed_minute`
+/// is guaranteed to reflect the most recent heartbeat write.  With `SQLite` WAL mode
+/// the read-pool connection could serve a slightly stale snapshot.
 async fn handle_heartbeat(
     log: &slog::Logger,
     context: &ApiContext,
@@ -272,7 +276,7 @@ async fn handle_heartbeat(
 
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
-        .first(auth_conn!(context))
+        .first(write_conn!(context))
         .map_err(resource_not_found_err!(Job, job_id))?;
 
     // Check if job was canceled
@@ -322,7 +326,8 @@ async fn handle_heartbeat(
 }
 
 /// Calculate elapsed minutes using ceiling division (bill as soon as any part of a minute starts).
-/// Negative input is clamped to zero. Returns 0 for 0 elapsed seconds.
+/// Negative input is clamped to zero. Always returns at least 1 minute for non-negative input,
+/// so that a job is billed for a minimum of 1 minute even if it completes in under a second.
 fn elapsed_minutes(elapsed_secs: i64) -> i32 {
     let clamped = elapsed_secs.max(0);
     #[expect(
@@ -334,7 +339,8 @@ fn elapsed_minutes(elapsed_secs: i64) -> i32 {
         reason = "intentional ceiling division for minute billing"
     )]
     let minutes = ((clamped + 59) / 60).min(i64::from(i32::MAX)) as i32;
-    minutes
+    // Always bill at least 1 minute for any job that ran (including 0 elapsed seconds).
+    minutes.max(1)
 }
 
 /// Cached result of the metered plan lookup for an organization.
@@ -473,9 +479,10 @@ async fn bill_final_minutes(
     billing_state: &mut BillingState,
 ) -> Result<(), ChannelError> {
     let now = context.clock.now();
+    // Read via write_conn! to see the latest `last_billed_minute` from prior heartbeats.
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
-        .first(auth_conn!(context))
+        .first(write_conn!(context))
         .map_err(resource_not_found_err!(Job, job_id))?;
     if let Some(minutes) = bill_elapsed_minutes(log, context, &job, now, billing_state).await? {
         diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
@@ -483,6 +490,23 @@ async fn bill_final_minutes(
             .execute(write_conn!(context))?;
     }
     Ok(())
+}
+
+/// Best-effort final billing for disconnect and timeout paths.
+///
+/// Logs and ignores errors so that a transient DB or billing failure
+/// does not change the `ExecuteResult` from `Disconnected` to an error.
+async fn bill_final_minutes_best_effort(
+    log: &slog::Logger,
+    context: &ApiContext,
+    job_id: JobId,
+    billing_state: &mut BillingState,
+) {
+    if let Err(e) = bill_final_minutes(log, context, job_id, billing_state).await {
+        slog::error!(log, "Best-effort final billing failed"; "job_id" => ?job_id, "error" => %e);
+        #[cfg(feature = "sentry")]
+        sentry::capture_error(&e);
+    }
 }
 
 /// Handle a Completed message: transition job from Running to Completed,
@@ -1257,13 +1281,13 @@ where
         let msg_result = match tokio::time::timeout(remaining, rx.next()).await {
             Ok(Some(msg_result)) => msg_result,
             Ok(None) => {
-                // Stream ended (client disconnected) — bill any remaining partial minute
-                bill_final_minutes(log, context, job.id, &mut billing_state).await?;
+                // Stream ended (client disconnected) — best-effort bill any remaining partial minute
+                bill_final_minutes_best_effort(log, context, job.id, &mut billing_state).await;
                 return Ok(ExecuteResult::Disconnected);
             },
             Err(_elapsed) => {
-                // Heartbeat timeout — bill any remaining partial minute before marking job
-                bill_final_minutes(log, context, job.id, &mut billing_state).await?;
+                // Heartbeat timeout — best-effort bill any remaining partial minute before marking job
+                bill_final_minutes_best_effort(log, context, job.id, &mut billing_state).await;
                 let reason = handle_timeout(log, context, job.id).await?;
                 let reason_json = serde_json::to_string(&reason)?;
                 let close_frame = CloseFrame {
@@ -1279,7 +1303,7 @@ where
             Ok(msg) => msg,
             Err(e) => {
                 slog::warn!(log, "WebSocket error during execution"; "error" => %e);
-                bill_final_minutes(log, context, job.id, &mut billing_state).await?;
+                bill_final_minutes_best_effort(log, context, job.id, &mut billing_state).await;
                 return Ok(ExecuteResult::Disconnected);
             },
         };
@@ -1319,7 +1343,7 @@ where
             },
             Message::Close(_) => {
                 slog::info!(log, "Channel closed by client during execution");
-                bill_final_minutes(log, context, job.id, &mut billing_state).await?;
+                bill_final_minutes_best_effort(log, context, job.id, &mut billing_state).await;
                 return Ok(ExecuteResult::Disconnected);
             },
             Message::Ping(data) => {
@@ -1362,7 +1386,8 @@ mod tests {
 
     #[test]
     fn elapsed_minutes_zero_seconds() {
-        assert_eq!(elapsed_minutes(0), 0);
+        // Always bill at least 1 minute, even for a zero-second job
+        assert_eq!(elapsed_minutes(0), 1);
     }
 
     #[test]
@@ -1395,7 +1420,8 @@ mod tests {
 
     #[test]
     fn elapsed_minutes_negative_seconds() {
-        assert_eq!(elapsed_minutes(-1), 0);
-        assert_eq!(elapsed_minutes(-100), 0);
+        // Negative input is clamped to zero, then the 1-minute minimum applies
+        assert_eq!(elapsed_minutes(-1), 1);
+        assert_eq!(elapsed_minutes(-100), 1);
     }
 }
