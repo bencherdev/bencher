@@ -262,10 +262,6 @@ async fn handle_running(
 }
 
 /// Handle a Heartbeat message: update `last_heartbeat` and check for cancellation and timeout.
-///
-/// Reads the job via `write_conn!` (not `auth_conn!`) so that `last_billed_minute`
-/// is guaranteed to reflect the most recent heartbeat write.  With `SQLite` WAL mode
-/// the read-pool connection could serve a slightly stale snapshot.
 async fn handle_heartbeat(
     log: &slog::Logger,
     context: &ApiContext,
@@ -276,7 +272,7 @@ async fn handle_heartbeat(
 
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
-        .first(write_conn!(context))
+        .first(auth_conn!(context))
         .map_err(resource_not_found_err!(Job, job_id))?;
 
     // Check if job was canceled
@@ -479,10 +475,9 @@ async fn bill_final_minutes(
     billing_state: &mut BillingState,
 ) -> Result<(), ChannelError> {
     let now = context.clock.now();
-    // Read via write_conn! to see the latest `last_billed_minute` from prior heartbeats.
     let job: QueryJob = schema::job::table
         .filter(schema::job::id.eq(job_id))
-        .first(write_conn!(context))
+        .first(auth_conn!(context))
         .map_err(resource_not_found_err!(Job, job_id))?;
     if let Some(minutes) = bill_elapsed_minutes(log, context, &job, now, billing_state).await? {
         diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
