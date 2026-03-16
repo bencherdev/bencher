@@ -18,6 +18,8 @@ Bencher is a continuous benchmarking platform that detects and prevents performa
 
 Version control uses Jujutsu (`jj`) with Git.
 
+- Do **NOT** add `Co-Authored-By` lines to commit messages
+
 ## Development Methodology
 
 - Practice test-driven development (TDD)

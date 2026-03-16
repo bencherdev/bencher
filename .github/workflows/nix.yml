@@ -1,0 +1,91 @@
+name: Nix
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [devel, cloud]
+    tags: [v**]
+  pull_request:
+    branches: [main, cloud, devel]
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect Changes
+    if: github.ref != 'refs/heads/cloud'
+    runs-on: ubuntu-22.04
+    outputs:
+      nix: ${{ steps.filter.outputs.nix }}
+      cli: ${{ steps.filter.outputs.cli }}
+      api: ${{ steps.filter.outputs.api }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            nix:
+              - 'flake.nix'
+              - 'flake.lock'
+              - '.github/workflows/nix.yml'
+            cli:
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'lib/**'
+              - 'services/cli/**'
+            api:
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'lib/**'
+              - 'plus/**'
+              - 'services/api/**'
+
+  nix_lints:
+    name: Check nix code
+    needs: changes
+    if: ${{ needs.changes.outputs.nix == 'true' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-25.11
+      - name: Check nix formatting
+        run: nix develop .#ci --command alejandra --check .
+      - name: Check nix lints
+        run: nix develop .#ci --command statix check
+      - name: Check for dead nix code
+        run: nix develop .#ci --command deadnix
+
+  build_bencher_nix:
+    name: Build `bencher` Nix Package
+    needs: changes
+    if: ${{ needs.changes.outputs.nix == 'true' || needs.changes.outputs.cli == 'true' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-25.11
+      - name: Nix build
+        run: nix build .#bencher
+
+  build_api_nix:
+    name: Build `api` Nix Package
+    needs: changes
+    if: ${{ needs.changes.outputs.nix == 'true' || needs.changes.outputs.api == 'true' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-25.11
+      - name: Nix build
+        run: nix build .#api
