@@ -262,6 +262,9 @@ async fn handle_running(
 }
 
 /// Handle a Heartbeat message: update `last_heartbeat` and check for cancellation and timeout.
+///
+/// Uses atomic read+write under `write_conn!` to prevent TOCTOU billing races.
+/// Stripe is called best-effort after releasing the write lock.
 async fn handle_heartbeat(
     log: &slog::Logger,
     context: &ApiContext,
@@ -304,19 +307,29 @@ async fn handle_heartbeat(
         }
     }
 
-    // Determine whether new minutes need billing and build the appropriate update.
-    let update = match bill_elapsed_minutes(log, context, &job, now, billing_state).await? {
-        Some(billed_minute) => UpdateJob::heartbeat_with_billing(now, billed_minute),
-        None => UpdateJob::heartbeat(now),
-    };
+    // Hold the write lock for both read and write to prevent a concurrent
+    // call from advancing last_billed_minute between our read and write.
+    let bill_info = {
+        let conn = write_conn!(context);
+        let job = QueryJob::get(conn, job_id)?;
 
-    // Use status filter to avoid overwriting a concurrent cancellation
-    update.execute_if_either_status(
-        write_conn!(context),
-        job_id,
-        JobStatus::Claimed,
-        JobStatus::Running,
-    )?;
+        let billing = billing_delta(&job, now);
+
+        let update = match billing {
+            Some((_, minutes, _)) => UpdateJob::heartbeat_with_billing(now, minutes),
+            None => UpdateJob::heartbeat(now),
+        };
+
+        update.execute_if_either_status(conn, job_id, JobStatus::Claimed, JobStatus::Running)?;
+
+        billing.map(|(delta, _, org_id)| (delta, org_id))
+    };
+    // write lock released here
+
+    // Bill Stripe best-effort — the delta is already claimed in the DB.
+    if let Some((delta, organization_id)) = bill_info {
+        bill_stripe_best_effort(log, context, job_id, delta, organization_id, billing_state).await;
+    }
 
     Ok(None)
 }
@@ -337,6 +350,65 @@ fn elapsed_minutes(elapsed_secs: i64) -> i32 {
     let minutes = ((clamped + 59) / 60).min(i64::from(i32::MAX)) as i32;
     // Always bill at least 1 minute for any job that ran (including 0 elapsed seconds).
     minutes.max(1)
+}
+
+/// Calculate the billing delta between elapsed minutes and last billed minute.
+fn billing_delta(
+    job: &QueryJob,
+    now: bencher_json::DateTime,
+) -> Option<(u32, i32, OrganizationId)> {
+    let started = job.started?;
+    let elapsed_secs = now.timestamp() - started.timestamp();
+    let minutes = elapsed_minutes(elapsed_secs);
+    let last_billed = job.last_billed_minute.unwrap_or(0);
+    if minutes <= last_billed {
+        return None;
+    }
+    #[expect(
+        clippy::cast_sign_loss,
+        reason = "delta is always positive (minutes > last_billed)"
+    )]
+    let delta = (minutes - last_billed) as u32;
+    Some((delta, minutes, job.organization_id))
+}
+
+/// Report runner usage to Stripe best-effort. Errors are logged but not propagated.
+async fn bill_stripe_best_effort(
+    log: &slog::Logger,
+    context: &ApiContext,
+    job_id: JobId,
+    delta: u32,
+    organization_id: OrganizationId,
+    billing_state: &mut BillingState,
+) {
+    let metered_plan_id = match billing_state
+        .metered_plan_id(context, organization_id)
+        .await
+    {
+        Ok(Some(id)) => id,
+        Ok(None) => return,
+        Err(e) => {
+            slog::warn!(log, "Failed to look up metered plan for billing"; "job_id" => ?job_id, "error" => %e);
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&e);
+            return;
+        },
+    };
+
+    let Some(biller) = context.biller.as_ref() else {
+        return;
+    };
+
+    if let Err(e) = biller.record_runner_usage(&metered_plan_id, delta).await {
+        slog::warn!(log, "Failed to record runner billing"; "job_id" => ?job_id, "delta" => delta, "error" => %e);
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBillingFailed);
+        #[cfg(feature = "sentry")]
+        billing_state.report_err(&e);
+    } else {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBilled);
+    }
 }
 
 /// Cached result of the metered plan lookup for an organization.
@@ -407,68 +479,6 @@ impl BillingState {
     }
 }
 
-/// Check if new minutes need billing and, if so, report usage to Stripe.
-///
-/// Returns `Ok(Some(billed_minute))` only when the Stripe call succeeds,
-/// so `last_billed_minute` advances in the DB. On failure, returns `Ok(None)`
-/// so the unbilled minutes will be retried on the next heartbeat.
-async fn bill_elapsed_minutes(
-    log: &slog::Logger,
-    context: &ApiContext,
-    job: &QueryJob,
-    now: bencher_json::DateTime,
-    billing_state: &mut BillingState,
-) -> Result<Option<i32>, ChannelError> {
-    let Some(started) = job.started else {
-        return Ok(None);
-    };
-    let elapsed_secs = now.timestamp() - started.timestamp();
-    let minutes = elapsed_minutes(elapsed_secs);
-    let last_billed = job.last_billed_minute.unwrap_or(0);
-
-    if minutes <= last_billed {
-        return Ok(None);
-    }
-
-    let metered_plan_id = match billing_state
-        .metered_plan_id(context, job.organization_id)
-        .await
-    {
-        Ok(Some(id)) => id,
-        Ok(None) => return Ok(None),
-        Err(e) => {
-            slog::warn!(log, "Failed to look up metered plan for billing"; "job_id" => ?job.id, "error" => %e);
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(&e);
-            return Ok(None);
-        },
-    };
-
-    let Some(biller) = context.biller.as_ref() else {
-        return Ok(None);
-    };
-
-    #[expect(
-        clippy::cast_sign_loss,
-        reason = "delta is always positive (minutes > last_billed)"
-    )]
-    let delta = (minutes - last_billed) as u32;
-    if let Err(e) = biller.record_runner_usage(&metered_plan_id, delta).await {
-        slog::warn!(log, "Failed to record runner billing"; "job_id" => ?job.id, "minutes" => minutes, "error" => %e);
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBillingFailed);
-        #[cfg(feature = "sentry")]
-        billing_state.report_err(&e);
-        // Don't advance last_billed_minute so we retry on the next heartbeat
-        return Ok(None);
-    }
-
-    #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBilled);
-
-    Ok(Some(minutes))
-}
-
 /// Final billing call for terminal job states.
 ///
 /// Re-reads the job from the database to get the latest `last_billed_minute`
@@ -508,22 +518,9 @@ async fn bill_final_minutes_inner(
         let conn = write_conn!(context);
         let job = QueryJob::get(conn, job_id)?;
 
-        let Some(started) = job.started else {
+        let Some((delta, minutes, _)) = billing_delta(&job, now) else {
             return Ok(());
         };
-        let elapsed_secs = now.timestamp() - started.timestamp();
-        let minutes = elapsed_minutes(elapsed_secs);
-        let last_billed = job.last_billed_minute.unwrap_or(0);
-
-        if minutes <= last_billed {
-            return Ok(());
-        }
-
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "delta is always positive (minutes > last_billed)"
-        )]
-        let delta = (minutes - last_billed) as u32;
 
         diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
             .set(schema::job::last_billed_minute.eq(Some(minutes)))
@@ -538,34 +535,7 @@ async fn bill_final_minutes_inner(
         return Ok(());
     };
 
-    let metered_plan_id = match billing_state
-        .metered_plan_id(context, organization_id)
-        .await
-    {
-        Ok(Some(id)) => id,
-        Ok(None) => return Ok(()),
-        Err(e) => {
-            slog::warn!(log, "Failed to look up metered plan for final billing"; "job_id" => ?job_id, "error" => %e);
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(&e);
-            return Ok(());
-        },
-    };
-
-    let Some(biller) = context.biller.as_ref() else {
-        return Ok(());
-    };
-
-    if let Err(e) = biller.record_runner_usage(&metered_plan_id, delta).await {
-        slog::warn!(log, "Failed to record final runner billing"; "job_id" => ?job_id, "delta" => delta, "error" => %e);
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBillingFailed);
-        #[cfg(feature = "sentry")]
-        billing_state.report_err(&e);
-    } else {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBilled);
-    }
+    bill_stripe_best_effort(log, context, job_id, delta, organization_id, billing_state).await;
 
     Ok(())
 }
@@ -1420,7 +1390,41 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::net::{IpAddr, Ipv4Addr};
+
+    use bencher_json::{DateTime, Timeout};
+    use bencher_schema::model::{project::report::ReportId, runner::SourceIp, spec::SpecId};
+
     use super::*;
+
+    fn test_job() -> QueryJob {
+        QueryJob {
+            id: JobId::try_from_raw(1).unwrap(),
+            uuid: JobUuid::default(),
+            report_id: ReportId::try_from_raw(1).unwrap(),
+            organization_id: OrganizationId::try_from_raw(1).unwrap(),
+            source_ip: SourceIp::new(IpAddr::V4(Ipv4Addr::LOCALHOST)),
+            spec_id: SpecId::try_from_raw(1).unwrap(),
+            config: serde_json::from_value(serde_json::json!({
+                "registry": "https://registry.example.com",
+                "project": "00000000-0000-0000-0000-000000000000",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                "timeout": 300
+            }))
+            .unwrap(),
+            timeout: Timeout::MIN,
+            priority: Priority::Plus,
+            status: JobStatus::Running,
+            runner_id: Some(RunnerId::try_from_raw(1).unwrap()),
+            claimed: Some(DateTime::TEST),
+            started: Some(DateTime::TEST),
+            completed: None,
+            last_heartbeat: Some(DateTime::TEST),
+            last_billed_minute: None,
+            created: DateTime::TEST,
+            modified: DateTime::TEST,
+        }
+    }
 
     #[test]
     fn timeout_exceeded_cancels_job() {
@@ -1484,5 +1488,95 @@ mod tests {
         // Negative input is clamped to zero, then the 1-minute minimum applies
         assert_eq!(elapsed_minutes(-1), 1);
         assert_eq!(elapsed_minutes(-100), 1);
+    }
+
+    // --- billing_delta tests ---
+
+    #[test]
+    fn billing_delta_not_started() {
+        let mut job = test_job();
+        job.started = None;
+        assert_eq!(billing_delta(&job, DateTime::TEST), None);
+    }
+
+    #[test]
+    fn billing_delta_first_minute() {
+        // 0 elapsed seconds → 1 minute (ceiling), no last_billed → delta = 1
+        let job = test_job();
+        assert_eq!(
+            billing_delta(&job, DateTime::TEST),
+            Some((1, 1, job.organization_id)),
+        );
+    }
+
+    #[test]
+    fn billing_delta_already_billed() {
+        // Already billed minute 1, still in minute 1 → None
+        let mut job = test_job();
+        job.last_billed_minute = Some(1);
+        assert_eq!(billing_delta(&job, DateTime::TEST), None);
+    }
+
+    #[test]
+    fn billing_delta_exactly_one_minute() {
+        // 60 seconds → minute 1, last_billed = None (0) → delta = 1
+        let job = test_job();
+        let now = DateTime::TEST + chrono::Duration::seconds(60);
+        assert_eq!(billing_delta(&job, now), Some((1, 1, job.organization_id)),);
+    }
+
+    #[test]
+    fn billing_delta_into_second_minute() {
+        // 61 seconds → minute 2, last_billed = None (0) → delta = 2
+        let job = test_job();
+        let now = DateTime::TEST + chrono::Duration::seconds(61);
+        assert_eq!(billing_delta(&job, now), Some((2, 2, job.organization_id)),);
+    }
+
+    #[test]
+    fn billing_delta_partial_catch_up() {
+        // 180 seconds → minute 3, last_billed = 1 → delta = 2
+        let mut job = test_job();
+        job.last_billed_minute = Some(1);
+        let now = DateTime::TEST + chrono::Duration::seconds(180);
+        assert_eq!(billing_delta(&job, now), Some((2, 3, job.organization_id)),);
+    }
+
+    #[test]
+    fn billing_delta_last_billed_equals_minutes() {
+        // 120 seconds → minute 2, last_billed = 2 → None
+        let mut job = test_job();
+        job.last_billed_minute = Some(2);
+        let now = DateTime::TEST + chrono::Duration::seconds(120);
+        assert_eq!(billing_delta(&job, now), None);
+    }
+
+    #[test]
+    fn billing_delta_last_billed_exceeds_minutes() {
+        // 120 seconds → minute 2, last_billed = 5 → None
+        // (can happen if clock skew or final billing already ran)
+        let mut job = test_job();
+        job.last_billed_minute = Some(5);
+        let now = DateTime::TEST + chrono::Duration::seconds(120);
+        assert_eq!(billing_delta(&job, now), None);
+    }
+
+    #[test]
+    fn billing_delta_preserves_organization_id() {
+        let mut job = test_job();
+        job.organization_id = OrganizationId::try_from_raw(42).unwrap();
+        assert_eq!(
+            billing_delta(&job, DateTime::TEST),
+            Some((1, 1, OrganizationId::try_from_raw(42).unwrap())),
+        );
+    }
+
+    #[test]
+    fn billing_delta_large_elapsed() {
+        // 1 hour = 3600 seconds → minute 60, last_billed = 58 → delta = 2
+        let mut job = test_job();
+        job.last_billed_minute = Some(58);
+        let now = DateTime::TEST + chrono::Duration::seconds(3600);
+        assert_eq!(billing_delta(&job, now), Some((2, 60, job.organization_id)),);
     }
 }
