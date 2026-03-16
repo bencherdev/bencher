@@ -427,11 +427,18 @@ async fn bill_elapsed_minutes(
         return Ok(None);
     }
 
-    let Some(metered_plan_id) = billing_state
+    let metered_plan_id = match billing_state
         .metered_plan_id(context, job.organization_id)
-        .await?
-    else {
-        return Ok(None);
+        .await
+    {
+        Ok(Some(id)) => id,
+        Ok(None) => return Ok(None),
+        Err(e) => {
+            slog::warn!(log, "Failed to look up metered plan for billing"; "job_id" => ?job.id, "error" => %e);
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&e);
+            return Ok(None);
+        },
     };
 
     let Some(biller) = context.biller.as_ref() else {
