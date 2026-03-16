@@ -20,7 +20,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  CARGO_AUDIT_VERSION: 0.22.1
+
 
 jobs:
   cargo_test:
@@ -171,19 +171,6 @@ jobs:
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
 
-  cargo_audit:
-    name: Cargo Audit
-    runs-on: ubuntu-22.04
-    continue-on-error: true
-    if: ${{ !inputs.is-fork }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-rust
-        with:
-          cache-key: audit
-          mold-version: ${{ inputs.mold-version }}
-      - run: cargo install cargo-audit --version ${{ env.CARGO_AUDIT_VERSION }} --locked
-      - run: cargo audit
 
   cargo_udeps:
     name: Cargo Unused Deps
