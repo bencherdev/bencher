@@ -501,15 +501,72 @@ async fn bill_final_minutes_inner(
     billing_state: &mut BillingState,
 ) -> Result<(), ChannelError> {
     let now = context.clock.now();
-    let job: QueryJob = schema::job::table
-        .filter(schema::job::id.eq(job_id))
-        .first(auth_conn!(context))
-        .map_err(resource_not_found_err!(Job, job_id))?;
-    if let Some(minutes) = bill_elapsed_minutes(log, context, &job, now, billing_state).await? {
+
+    // Hold the write lock for both read and write to prevent a concurrent
+    // heartbeat from advancing last_billed_minute between our read and write.
+    let bill_info = {
+        let conn = write_conn!(context);
+        let job = QueryJob::get(conn, job_id)?;
+
+        let Some(started) = job.started else {
+            return Ok(());
+        };
+        let elapsed_secs = now.timestamp() - started.timestamp();
+        let minutes = elapsed_minutes(elapsed_secs);
+        let last_billed = job.last_billed_minute.unwrap_or(0);
+
+        if minutes <= last_billed {
+            return Ok(());
+        }
+
+        #[expect(
+            clippy::cast_sign_loss,
+            reason = "delta is always positive (minutes > last_billed)"
+        )]
+        let delta = (minutes - last_billed) as u32;
+
         diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
             .set(schema::job::last_billed_minute.eq(Some(minutes)))
-            .execute(write_conn!(context))?;
+            .execute(conn)?;
+
+        Some((delta, job.organization_id))
+    };
+    // write lock released here
+
+    // Bill Stripe best-effort — the delta is already claimed in the DB.
+    let Some((delta, organization_id)) = bill_info else {
+        return Ok(());
+    };
+
+    let metered_plan_id = match billing_state
+        .metered_plan_id(context, organization_id)
+        .await
+    {
+        Ok(Some(id)) => id,
+        Ok(None) => return Ok(()),
+        Err(e) => {
+            slog::warn!(log, "Failed to look up metered plan for final billing"; "job_id" => ?job_id, "error" => %e);
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&e);
+            return Ok(());
+        },
+    };
+
+    let Some(biller) = context.biller.as_ref() else {
+        return Ok(());
+    };
+
+    if let Err(e) = biller.record_runner_usage(&metered_plan_id, delta).await {
+        slog::warn!(log, "Failed to record final runner billing"; "job_id" => ?job_id, "delta" => delta, "error" => %e);
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBillingFailed);
+        #[cfg(feature = "sentry")]
+        billing_state.report_err(&e);
+    } else {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBilled);
     }
+
     Ok(())
 }
 
