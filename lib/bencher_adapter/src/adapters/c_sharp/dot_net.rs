@@ -110,9 +110,7 @@ impl DotNet {
 
             let mut measures = vec![latency_measure];
 
-            if memory.is_some() {
-                let m = memory.unwrap();
-
+            if let Some(m) = memory {
                 let allocated_json = JsonNewMetric {
                     value: m.bytes_allocated_per_operation.into(),
                     lower_value: None,
