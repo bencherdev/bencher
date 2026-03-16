@@ -396,7 +396,7 @@ impl BillingState {
 
     /// Report a billing failure to Sentry (first failure only).
     #[cfg(feature = "sentry")]
-    fn report(&mut self, error: &bencher_billing::BillingError) {
+    fn report_err(&mut self, error: &bencher_billing::BillingError) {
         if !self.reported {
             self.reported = true;
             sentry::capture_error(error);
@@ -455,7 +455,7 @@ async fn bill_elapsed_minutes(
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBillingFailed);
         #[cfg(feature = "sentry")]
-        billing_state.report(&e);
+        billing_state.report_err(&e);
         // Don't advance last_billed_minute so we retry on the next heartbeat
         return Ok(None);
     }
