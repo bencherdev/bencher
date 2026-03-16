@@ -295,7 +295,6 @@ dependencies = [
  "bencher_schema",
  "bencher_token",
  "camino",
- "chrono",
  "diesel",
  "dropshot",
  "futures",

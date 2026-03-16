@@ -58,7 +58,6 @@ uuid = { workspace = true, features = ["v4"], optional = true }
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
-chrono.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db", "test-clock"] }
 bencher_schema.workspace = true
 camino.workspace = true

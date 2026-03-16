@@ -522,8 +522,9 @@ async fn bill_final_minutes_inner(
             return Ok(());
         };
 
+        let update_job = UpdateJob::final_billing(minutes, now);
         diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-            .set(schema::job::last_billed_minute.eq(Some(minutes)))
+            .set(&update_job)
             .execute(conn)?;
 
         Some((delta, job.organization_id))
@@ -1521,7 +1522,7 @@ mod tests {
     fn billing_delta_exactly_one_minute() {
         // 60 seconds → minute 1, last_billed = None (0) → delta = 1
         let job = test_job();
-        let now = DateTime::TEST + chrono::Duration::seconds(60);
+        let now = DateTime::try_from(DateTime::TEST.timestamp() + 60).unwrap();
         assert_eq!(billing_delta(&job, now), Some((1, 1, job.organization_id)),);
     }
 
@@ -1529,7 +1530,7 @@ mod tests {
     fn billing_delta_into_second_minute() {
         // 61 seconds → minute 2, last_billed = None (0) → delta = 2
         let job = test_job();
-        let now = DateTime::TEST + chrono::Duration::seconds(61);
+        let now = DateTime::try_from(DateTime::TEST.timestamp() + 61).unwrap();
         assert_eq!(billing_delta(&job, now), Some((2, 2, job.organization_id)),);
     }
 
@@ -1538,7 +1539,7 @@ mod tests {
         // 180 seconds → minute 3, last_billed = 1 → delta = 2
         let mut job = test_job();
         job.last_billed_minute = Some(1);
-        let now = DateTime::TEST + chrono::Duration::seconds(180);
+        let now = DateTime::try_from(DateTime::TEST.timestamp() + 180).unwrap();
         assert_eq!(billing_delta(&job, now), Some((2, 3, job.organization_id)),);
     }
 
@@ -1547,7 +1548,7 @@ mod tests {
         // 120 seconds → minute 2, last_billed = 2 → None
         let mut job = test_job();
         job.last_billed_minute = Some(2);
-        let now = DateTime::TEST + chrono::Duration::seconds(120);
+        let now = DateTime::try_from(DateTime::TEST.timestamp() + 120).unwrap();
         assert_eq!(billing_delta(&job, now), None);
     }
 
@@ -1557,7 +1558,7 @@ mod tests {
         // (can happen if clock skew or final billing already ran)
         let mut job = test_job();
         job.last_billed_minute = Some(5);
-        let now = DateTime::TEST + chrono::Duration::seconds(120);
+        let now = DateTime::try_from(DateTime::TEST.timestamp() + 120).unwrap();
         assert_eq!(billing_delta(&job, now), None);
     }
 
@@ -1576,7 +1577,7 @@ mod tests {
         // 1 hour = 3600 seconds → minute 60, last_billed = 58 → delta = 2
         let mut job = test_job();
         job.last_billed_minute = Some(58);
-        let now = DateTime::TEST + chrono::Duration::seconds(3600);
+        let now = DateTime::try_from(DateTime::TEST.timestamp() + 3600).unwrap();
         assert_eq!(billing_delta(&job, now), Some((2, 60, job.organization_id)),);
     }
 }

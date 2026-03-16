@@ -765,6 +765,17 @@ impl UpdateJob {
         }
     }
 
+    /// Update billing minute only (no heartbeat timestamp).
+    ///
+    /// Used by final billing when the job is already in a terminal state.
+    pub fn final_billing(billed_minute: i32, now: DateTime) -> Self {
+        Self {
+            last_billed_minute: Some(Some(billed_minute)),
+            modified: Some(now),
+            ..Default::default()
+        }
+    }
+
     /// Transition to Running (Claimed -> Running).
     pub fn start(now: DateTime) -> Self {
         Self {
