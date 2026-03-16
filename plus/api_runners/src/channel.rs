@@ -165,7 +165,7 @@ async fn handle_runner_message(
             }
             slog::info!(log, "Job completed"; "job_id" => ?job.id, "iterations" => results.len());
             handle_completed(log, context, job, results).await?;
-            bill_final_minutes(log, context, job.id, billing_state).await?;
+            bill_final_minutes(log, context, job.id, billing_state).await;
             return Ok((
                 ServerMessage::Ack {
                     job: Some(job.uuid),
@@ -183,7 +183,7 @@ async fn handle_runner_message(
             }
             slog::warn!(log, "Job failed"; "job_id" => ?job.id, "error" => &error);
             handle_failed(log, context, job, results, error).await?;
-            bill_final_minutes(log, context, job.id, billing_state).await?;
+            bill_final_minutes(log, context, job.id, billing_state).await;
             return Ok((
                 ServerMessage::Ack {
                     job: Some(job.uuid),
@@ -197,7 +197,7 @@ async fn handle_runner_message(
             }
             slog::info!(log, "Job cancellation acknowledged"; "job_id" => ?job.id);
             handle_canceled(log, context, job.id).await?;
-            bill_final_minutes(log, context, job.id, billing_state).await?;
+            bill_final_minutes(log, context, job.id, billing_state).await;
             return Ok((
                 ServerMessage::Ack {
                     job: Some(job.uuid),
@@ -376,21 +376,24 @@ impl BillingState {
         &mut self,
         context: &ApiContext,
         organization_id: OrganizationId,
-    ) -> Result<Option<&MeteredPlanId>, ChannelError> {
-        if let CachedMeteredPlan::Unknown = self.metered_plan {
-            let plan_id: Option<Option<MeteredPlanId>> = schema::plan::table
-                .filter(schema::plan::organization_id.eq(organization_id))
-                .select(schema::plan::metered_plan)
-                .first(auth_conn!(context))
-                .optional()?;
-            self.metered_plan = match plan_id.flatten() {
-                Some(id) => CachedMeteredPlan::Some(id),
-                None => CachedMeteredPlan::None,
-            };
-        }
+    ) -> Result<Option<MeteredPlanId>, ChannelError> {
         match &self.metered_plan {
-            CachedMeteredPlan::Some(id) => Ok(Some(id)),
-            CachedMeteredPlan::None | CachedMeteredPlan::Unknown => Ok(None),
+            CachedMeteredPlan::Unknown => {
+                let plan_id: Option<Option<MeteredPlanId>> = schema::plan::table
+                    .filter(schema::plan::organization_id.eq(organization_id))
+                    .select(schema::plan::metered_plan)
+                    .first(auth_conn!(context))
+                    .optional()?;
+                if let Some(id) = plan_id.flatten() {
+                    self.metered_plan = CachedMeteredPlan::Some(id.clone());
+                    Ok(Some(id))
+                } else {
+                    self.metered_plan = CachedMeteredPlan::None;
+                    Ok(None)
+                }
+            },
+            CachedMeteredPlan::None => Ok(None),
+            CachedMeteredPlan::Some(id) => Ok(Some(id.clone())),
         }
     }
 
@@ -450,7 +453,7 @@ async fn bill_elapsed_minutes(
         reason = "delta is always positive (minutes > last_billed)"
     )]
     let delta = (minutes - last_billed) as u32;
-    if let Err(e) = biller.record_runner_usage(metered_plan_id, delta).await {
+    if let Err(e) = biller.record_runner_usage(&metered_plan_id, delta).await {
         slog::warn!(log, "Failed to record runner billing"; "job_id" => ?job.id, "minutes" => minutes, "error" => %e);
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBillingFailed);
@@ -475,7 +478,23 @@ async fn bill_elapsed_minutes(
 /// This ensures that if a job completes mid-minute (e.g., at 90 seconds),
 /// the final partial minute is billed even when no heartbeat fires between
 /// the last billed minute and completion.
+///
+/// Logs and ignores errors so that a transient DB or billing failure
+/// does not prevent job completion.
 async fn bill_final_minutes(
+    log: &slog::Logger,
+    context: &ApiContext,
+    job_id: JobId,
+    billing_state: &mut BillingState,
+) {
+    if let Err(e) = bill_final_minutes_inner(log, context, job_id, billing_state).await {
+        slog::error!(log, "Final billing failed"; "job_id" => ?job_id, "error" => %e);
+        #[cfg(feature = "sentry")]
+        sentry::capture_error(&e);
+    }
+}
+
+async fn bill_final_minutes_inner(
     log: &slog::Logger,
     context: &ApiContext,
     job_id: JobId,
@@ -492,23 +511,6 @@ async fn bill_final_minutes(
             .execute(write_conn!(context))?;
     }
     Ok(())
-}
-
-/// Best-effort final billing for disconnect and timeout paths.
-///
-/// Logs and ignores errors so that a transient DB or billing failure
-/// does not change the `ExecuteResult` from `Disconnected` to an error.
-async fn bill_final_minutes_best_effort(
-    log: &slog::Logger,
-    context: &ApiContext,
-    job_id: JobId,
-    billing_state: &mut BillingState,
-) {
-    if let Err(e) = bill_final_minutes(log, context, job_id, billing_state).await {
-        slog::error!(log, "Best-effort final billing failed"; "job_id" => ?job_id, "error" => %e);
-        #[cfg(feature = "sentry")]
-        sentry::capture_error(&e);
-    }
 }
 
 /// Handle a Completed message: transition job from Running to Completed,
@@ -1284,12 +1286,12 @@ where
             Ok(Some(msg_result)) => msg_result,
             Ok(None) => {
                 // Stream ended (client disconnected) — best-effort bill any remaining partial minute
-                bill_final_minutes_best_effort(log, context, job.id, &mut billing_state).await;
+                bill_final_minutes(log, context, job.id, &mut billing_state).await;
                 return Ok(ExecuteResult::Disconnected);
             },
             Err(_elapsed) => {
                 // Heartbeat timeout — best-effort bill any remaining partial minute before marking job
-                bill_final_minutes_best_effort(log, context, job.id, &mut billing_state).await;
+                bill_final_minutes(log, context, job.id, &mut billing_state).await;
                 let reason = handle_timeout(log, context, job.id).await?;
                 let reason_json = serde_json::to_string(&reason)?;
                 let close_frame = CloseFrame {
@@ -1305,7 +1307,7 @@ where
             Ok(msg) => msg,
             Err(e) => {
                 slog::warn!(log, "WebSocket error during execution"; "error" => %e);
-                bill_final_minutes_best_effort(log, context, job.id, &mut billing_state).await;
+                bill_final_minutes(log, context, job.id, &mut billing_state).await;
                 return Ok(ExecuteResult::Disconnected);
             },
         };
@@ -1345,7 +1347,7 @@ where
             },
             Message::Close(_) => {
                 slog::info!(log, "Channel closed by client during execution");
-                bill_final_minutes_best_effort(log, context, job.id, &mut billing_state).await;
+                bill_final_minutes(log, context, job.id, &mut billing_state).await;
                 return Ok(ExecuteResult::Disconnected);
             },
             Message::Ping(data) => {

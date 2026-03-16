@@ -171,7 +171,6 @@ jobs:
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
 
-
   cargo_udeps:
     name: Cargo Unused Deps
     runs-on: ubuntu-22.04
