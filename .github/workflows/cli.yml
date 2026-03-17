@@ -21,6 +21,9 @@ on:
       check-cli:
         type: boolean
         required: true
+      is-fork:
+        type: boolean
+        required: true
       build-cli:
         type: boolean
         required: true
@@ -86,7 +89,7 @@ jobs:
 
   script_gen:
     name: Script Gen
-    if: ${{ inputs.check-cli }}
+    if: ${{ inputs.check-cli && !inputs.is-fork }}
     strategy:
       fail-fast: false
       matrix:
@@ -105,7 +108,7 @@ jobs:
 
   script_gen_version:
     name: Script Gen Version
-    if: ${{ inputs.check-cli }}
+    if: ${{ inputs.check-cli && !inputs.is-fork }}
     strategy:
       fail-fast: false
       matrix:
