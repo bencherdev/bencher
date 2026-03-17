@@ -49,12 +49,12 @@ impl FromStr for Timeout {
 impl Timeout {
     pub const MIN: Self = Self(MIN_TIMEOUT);
     pub const MAX: Self = Self(MAX_TIMEOUT);
-    /// Maximum timeout for unclaimed projects: 5 minutes.
-    pub const UNCLAIMED_MAX: Self = Self(300);
-    /// Maximum timeout for free projects: 15 minutes.
-    pub const FREE_MAX: Self = Self(900);
-    /// Default timeout for paid projects: 1 hour.
-    pub const PAID_DEFAULT: Self = Self(3_600);
+    /// Maximum timeout for unclaimed projects: 1 minute.
+    pub const UNCLAIMED_MAX: Self = Self(60);
+    /// Maximum timeout for free projects: 5 minutes.
+    pub const FREE_MAX: Self = Self(300);
+    /// Default timeout for Plus projects: 1 hour.
+    pub const PLUS_DEFAULT: Self = Self(3_600);
 
     /// Return the inner value as `u64` seconds.
     #[must_use]
@@ -188,9 +188,9 @@ mod tests {
     fn tier_constants_valid() {
         assert!(is_valid_timeout(Timeout::UNCLAIMED_MAX.into()));
         assert!(is_valid_timeout(Timeout::FREE_MAX.into()));
-        assert!(is_valid_timeout(Timeout::PAID_DEFAULT.into()));
-        assert_eq!(u32::from(Timeout::UNCLAIMED_MAX), 300);
-        assert_eq!(u32::from(Timeout::FREE_MAX), 900);
-        assert_eq!(u32::from(Timeout::PAID_DEFAULT), 3_600);
+        assert!(is_valid_timeout(Timeout::PLUS_DEFAULT.into()));
+        assert_eq!(u32::from(Timeout::UNCLAIMED_MAX), 60);
+        assert_eq!(u32::from(Timeout::FREE_MAX), 300);
+        assert_eq!(u32::from(Timeout::PLUS_DEFAULT), 3_600);
     }
 }
