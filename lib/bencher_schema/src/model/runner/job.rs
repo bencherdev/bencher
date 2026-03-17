@@ -475,7 +475,7 @@ fn insert_job_duration(
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, Entitlements, MeteredPlanId};
+    use bencher_json::{DateTime, Entitlements};
     use diesel::{Connection as _, QueryDsl as _};
     use pretty_assertions::assert_eq;
 
@@ -490,7 +490,7 @@ mod tests {
     };
 
     fn metered_plan() -> PlanKind {
-        PlanKind::Metered("test_plan".parse::<MeteredPlanId>().unwrap())
+        PlanKind::Metered("cus_test".into())
     }
 
     fn licensed_plan(level: PlanLevel) -> PlanKind {

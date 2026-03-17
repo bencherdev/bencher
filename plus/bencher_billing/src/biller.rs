@@ -625,10 +625,13 @@ impl Biller {
     pub async fn get_metered_plan_status(
         &self,
         metered_plan_id: &MeteredPlanId,
-    ) -> Result<PlanStatus, BillingError> {
+    ) -> Result<(PlanStatus, CustomerId), BillingError> {
         let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
         let subscription = self.get_subscription(&subscription_id).await?;
-        Ok(Self::map_status(&subscription.status))
+        Ok((
+            Self::map_status(&subscription.status),
+            subscription.customer.id().clone(),
+        ))
     }
 
     pub async fn get_licensed_plan_status(
@@ -655,36 +658,32 @@ impl Biller {
 
     pub async fn record_metrics_usage(
         &self,
-        metered_plan_id: &MeteredPlanId,
+        customer_id: &CustomerId,
         quantity: u32,
     ) -> Result<BillingMeterEvent, BillingError> {
-        self.record_metered_usage(METRICS_METER_NAME, metered_plan_id, quantity)
+        self.record_metered_usage(METRICS_METER_NAME, customer_id, quantity)
             .await
     }
 
     pub async fn record_runner_usage(
         &self,
-        metered_plan_id: &MeteredPlanId,
+        customer_id: &CustomerId,
         minutes: u32,
     ) -> Result<BillingMeterEvent, BillingError> {
-        self.record_metered_usage(RUNNER_MINUTES_METER_NAME, metered_plan_id, minutes)
+        self.record_metered_usage(RUNNER_MINUTES_METER_NAME, customer_id, minutes)
             .await
     }
 
     async fn record_metered_usage(
         &self,
         meter_name: &str,
-        metered_plan_id: &MeteredPlanId,
+        customer_id: &CustomerId,
         quantity: u32,
     ) -> Result<BillingMeterEvent, BillingError> {
-        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
-        let subscription = self.get_subscription(&subscription_id).await?;
-        let customer_id = subscription.customer.id().to_string();
-
         CreateBillingMeterEvent::new(
             meter_name,
             HashMap::from([
-                (METER_CUSTOMER_KEY.to_owned(), customer_id),
+                (METER_CUSTOMER_KEY.to_owned(), customer_id.to_string()),
                 (METER_VALUE_KEY.to_owned(), quantity.to_string()),
             ]),
         )
@@ -740,7 +739,7 @@ mod tests {
     use std::collections::HashSet;
 
     use bencher_json::{
-        Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
+        Entitlements, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
         organization::plan::{DEFAULT_PRICE_NAME, METRICS_METER_NAME},
         system::{
             config::{JsonBilling, JsonProduct, JsonProducts},
@@ -814,19 +813,19 @@ mod tests {
         let metered_plan_id = &subscription_id.as_ref().parse().unwrap();
         biller.get_metered_plan(metered_plan_id).await.unwrap();
 
-        let plan_status = biller
+        let (plan_status, customer_id) = biller
             .get_metered_plan_status(metered_plan_id)
             .await
             .unwrap();
         assert_eq!(plan_status, PlanStatus::Active);
 
-        record_metrics_usage(biller, metered_plan_id, usage_count).await;
+        record_metrics_usage(biller, &customer_id, usage_count).await;
 
         biller
             .cancel_metered_subscription(&subscription_id.parse().unwrap())
             .await
             .unwrap();
-        let plan_status = biller
+        let (plan_status, _) = biller
             .get_metered_plan_status(metered_plan_id)
             .await
             .unwrap();
@@ -879,15 +878,11 @@ mod tests {
         assert_eq!(plan_status, PlanStatus::Canceled);
     }
 
-    async fn record_metrics_usage(
-        biller: &Biller,
-        metered_plan_id: &MeteredPlanId,
-        usage_count: usize,
-    ) {
+    async fn record_metrics_usage(biller: &Biller, customer_id: &CustomerId, usage_count: usize) {
         for _ in 0..usage_count {
             let quantity = u32::from(rand::random::<u8>());
             biller
-                .record_metrics_usage(metered_plan_id, quantity)
+                .record_metrics_usage(customer_id, quantity)
                 .await
                 .unwrap();
         }

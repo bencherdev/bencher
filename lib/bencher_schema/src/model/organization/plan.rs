@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_billing::Biller;
+use bencher_billing::{Biller, CustomerId};
 use bencher_json::{
     DateTime, Entitlements, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId, OrganizationUuid,
     PlanLevel, project::Visibility,
@@ -93,7 +93,7 @@ impl QueryPlan {
         biller: Option<&Biller>,
         public_user: &PublicUser,
         query_organization: &QueryOrganization,
-    ) -> Result<Option<MeteredPlanId>, HttpError> {
+    ) -> Result<Option<CustomerId>, HttpError> {
         let Some(biller) = biller else {
             return Ok(None);
         };
@@ -108,13 +108,13 @@ impl QueryPlan {
             return Ok(None);
         };
 
-        let plan_status = biller
+        let (plan_status, customer_id) = biller
             .get_metered_plan_status(&metered_plan_id)
             .await
             .map_err(not_found_error)?;
 
         if plan_status.is_active() {
-            Ok(Some(metered_plan_id))
+            Ok(Some(customer_id))
         } else {
             Err(payment_required_error(PlanKindError::InactiveMeteredPlan {
                 organization: query_organization.clone(),
@@ -214,7 +214,7 @@ impl InsertPlan {
 }
 
 pub enum PlanKind {
-    Metered(MeteredPlanId),
+    Metered(CustomerId),
     Licensed(LicenseUsage),
     None,
 }
@@ -254,11 +254,11 @@ impl PlanKind {
         query_organization: &QueryOrganization,
         visibility: Visibility,
     ) -> Result<Self, HttpError> {
-        if let Some(metered_plan_id) =
+        if let Some(customer_id) =
             QueryPlan::get_active_metered_plan(context, biller, public_user, query_organization)
                 .await?
         {
-            Ok(Self::Metered(metered_plan_id))
+            Ok(Self::Metered(customer_id))
         } else if let Some(license_usage) = LicenseUsage::get(
             public_conn!(context, public_user),
             licensor,
@@ -376,7 +376,7 @@ impl PlanKind {
         usage: u32,
     ) -> Result<(), HttpError> {
         match self {
-            Self::Metered(metered_plan_id) => {
+            Self::Metered(customer_id) => {
                 let Some(biller) = biller else {
                     return Err(issue_error(
                         "No Biller when checking usage",
@@ -385,7 +385,7 @@ impl PlanKind {
                     ));
                 };
                 biller
-                    .record_metrics_usage(&metered_plan_id, usage)
+                    .record_metrics_usage(&customer_id, usage)
                     .await
                     .map_err(|e| {
                         issue_error(

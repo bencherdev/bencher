@@ -5,6 +5,7 @@
 
 use std::time::Duration;
 
+use bencher_billing::CustomerId;
 use bencher_json::{
     DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimedJob, JsonSpec, MeteredPlanId, Priority,
     RunnerResourceId,
@@ -76,6 +77,9 @@ enum ChannelError {
 
     #[error("{0}")]
     Json(#[from] serde_json::Error),
+
+    #[error("{0}")]
+    Billing(#[from] bencher_billing::BillingError),
 
     /// Job is in an unexpected state for the requested transition.
     #[error("Invalid state transition to {target:?} for job {job_id:?}, found {current:?}")]
@@ -403,14 +407,11 @@ async fn bill_stripe_best_effort(
     organization_id: OrganizationId,
     billing_state: &mut BillingState,
 ) {
-    let metered_plan_id = match billing_state
-        .metered_plan_id(context, organization_id)
-        .await
-    {
+    let customer_id = match billing_state.customer_id(context, organization_id).await {
         Ok(Some(id)) => id,
         Ok(None) => return,
         Err(e) => {
-            slog::warn!(log, "Failed to look up metered plan for billing"; "job_id" => ?job_id, "error" => %e);
+            slog::warn!(log, "Failed to look up customer for billing"; "job_id" => ?job_id, "error" => %e);
             #[cfg(feature = "sentry")]
             sentry::capture_error(&e);
             return;
@@ -421,7 +422,7 @@ async fn bill_stripe_best_effort(
         return;
     };
 
-    if let Err(e) = biller.record_runner_usage(&metered_plan_id, delta).await {
+    if let Err(e) = biller.record_runner_usage(&customer_id, delta).await {
         slog::warn!(log, "Failed to record runner billing"; "job_id" => ?job_id, "delta" => delta, "error" => %e);
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBillingFailed);
@@ -433,25 +434,25 @@ async fn bill_stripe_best_effort(
     }
 }
 
-/// Cached result of the metered plan lookup for an organization.
+/// Cached result of the customer ID lookup for an organization.
 ///
-/// Avoids querying `schema::plan::table` on every heartbeat, since the plan
+/// Avoids querying the DB and Stripe on every heartbeat, since the customer
 /// will not change mid-job.
-enum CachedMeteredPlan {
+enum CachedCustomer {
     /// Not yet looked up.
     Unknown,
     /// Looked up and no metered plan exists for the organization.
     None,
-    /// Looked up and found a metered plan.
-    Some(MeteredPlanId),
+    /// Looked up and resolved the Stripe customer ID.
+    Some(CustomerId),
 }
 
-/// Per-job billing state: caches the metered plan lookup and tracks Sentry
+/// Per-job billing state: caches the customer ID lookup and tracks Sentry
 /// reporting so only the first billing failure per job is sent.
 ///
 /// Created at the start of each job execution and dropped when the job finishes.
 struct BillingState {
-    metered_plan: CachedMeteredPlan,
+    customer: CachedCustomer,
     #[cfg(feature = "sentry")]
     reported: bool,
 }
@@ -459,35 +460,41 @@ struct BillingState {
 impl BillingState {
     fn new() -> Self {
         Self {
-            metered_plan: CachedMeteredPlan::Unknown,
+            customer: CachedCustomer::Unknown,
             #[cfg(feature = "sentry")]
             reported: false,
         }
     }
 
-    /// Return the cached metered plan ID, querying the DB on first call.
-    async fn metered_plan_id(
+    /// Return the cached customer ID, querying the DB and Stripe on first call.
+    async fn customer_id(
         &mut self,
         context: &ApiContext,
         organization_id: OrganizationId,
-    ) -> Result<Option<MeteredPlanId>, ChannelError> {
-        match &self.metered_plan {
-            CachedMeteredPlan::Unknown => {
+    ) -> Result<Option<CustomerId>, ChannelError> {
+        match &self.customer {
+            CachedCustomer::Unknown => {
                 let plan_id: Option<Option<MeteredPlanId>> = schema::plan::table
                     .filter(schema::plan::organization_id.eq(organization_id))
                     .select(schema::plan::metered_plan)
                     .first(auth_conn!(context))
                     .optional()?;
-                if let Some(id) = plan_id.flatten() {
-                    self.metered_plan = CachedMeteredPlan::Some(id.clone());
-                    Ok(Some(id))
+                if let Some(metered_plan_id) = plan_id.flatten() {
+                    let Some(biller) = context.biller.as_ref() else {
+                        self.customer = CachedCustomer::None;
+                        return Ok(None);
+                    };
+                    let (_status, customer_id) =
+                        biller.get_metered_plan_status(&metered_plan_id).await?;
+                    self.customer = CachedCustomer::Some(customer_id.clone());
+                    Ok(Some(customer_id))
                 } else {
-                    self.metered_plan = CachedMeteredPlan::None;
+                    self.customer = CachedCustomer::None;
                     Ok(None)
                 }
             },
-            CachedMeteredPlan::None => Ok(None),
-            CachedMeteredPlan::Some(id) => Ok(Some(id.clone())),
+            CachedCustomer::None => Ok(None),
+            CachedCustomer::Some(id) => Ok(Some(id.clone())),
         }
     }
 
