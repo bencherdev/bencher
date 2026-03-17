@@ -799,6 +799,13 @@ impl UpdateJob {
         }
     }
 
+    /// Apply this changeset to a job unconditionally (no status filter).
+    pub fn execute(&self, conn: &mut DbConnection, job_id: JobId) -> QueryResult<usize> {
+        diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+            .set(self)
+            .execute(conn)
+    }
+
     /// Apply this changeset to a job, filtering on the expected current status.
     ///
     /// Returns the number of rows updated (0 if the job was not in the expected status).

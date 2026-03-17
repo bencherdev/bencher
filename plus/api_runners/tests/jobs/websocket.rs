@@ -371,7 +371,6 @@ async fn channel_invalid_json() {
 /// The server should mark the job as Failed after the heartbeat timeout.
 /// Uses tokio time manipulation to avoid waiting real wall-clock time.
 #[tokio::test]
-#[expect(clippy::panic)]
 async fn channel_heartbeat_timeout() {
     let server = TestServer::new().await;
     let (mut ws, _runner_uuid, _runner_token, job_uuid) =
@@ -434,7 +433,6 @@ async fn channel_ping_pong() {
 /// Full lifecycle with a job containing optional spec fields (entrypoint, cmd, env).
 /// Verifies that jobs with complete specs work correctly through the channel.
 #[tokio::test]
-#[expect(clippy::panic)]
 async fn channel_lifecycle_with_full_spec() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "ws-fullspec@example.com").await;
@@ -518,7 +516,6 @@ async fn channel_lifecycle_with_full_spec() {
 /// Uses a server with a 1 MiB body limit so the 2 MiB payload is rejected
 /// at the protocol level and the connection is closed immediately.
 #[tokio::test]
-#[expect(clippy::panic)]
 async fn channel_large_message() {
     // 1 MiB body limit so the WebSocket max_message_size < our 2 MiB payload
     let server = TestServer::new_with_limits(30, 1024 * 1024).await;
@@ -577,7 +574,6 @@ async fn channel_large_message() {
 /// be marked Failed because Ping does NOT count as a valid heartbeat message.
 /// Uses tokio time manipulation: pause after Running, advance past the timeout.
 #[tokio::test]
-#[expect(clippy::panic)]
 async fn channel_ping_does_not_reset_heartbeat_timeout() {
     let server = TestServer::new().await;
     let (mut ws, _runner_uuid, _runner_token, job_uuid) =
@@ -1196,7 +1192,6 @@ async fn channel_failed_multiple_iterations() {
 /// This is distinct from heartbeat timeout (which marks jobs as Failed).
 /// Uses tokio time manipulation to avoid waiting real wall-clock time.
 #[tokio::test]
-#[expect(clippy::panic)]
 async fn channel_job_timeout() {
     use std::sync::{
         Arc,
@@ -1922,7 +1917,6 @@ async fn channel_heartbeat_timeout_skipped_before_running() {
 /// Complete one job, then immediately send Ready and complete another job
 /// on the SAME persistent channel connection.
 #[tokio::test]
-#[expect(clippy::panic)]
 async fn channel_multi_job_cycle() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "ws-multijob@example.com").await;
@@ -2223,7 +2217,6 @@ async fn channel_failed_during_idle() {
 /// Send Ready with `poll_timeout: None`; server should use its default timeout
 /// and still return a Job if one is available.
 #[tokio::test]
-#[expect(clippy::panic)]
 async fn channel_ready_no_poll_timeout() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "ws-nopt@example.com").await;
@@ -2420,7 +2413,6 @@ async fn channel_running_twice_idempotent() {
 /// Trigger heartbeat timeout by going silent after Running.
 /// The close frame should contain a parseable `CloseReason`.
 #[tokio::test]
-#[expect(clippy::panic)]
 async fn channel_close_reason_on_heartbeat_timeout() {
     let server = TestServer::new().await;
     let (mut ws, _runner_uuid, _runner_token, job_uuid) =

@@ -313,22 +313,30 @@ async fn handle_heartbeat(
         let conn = write_conn!(context);
         let job = QueryJob::get(conn, job_id)?;
 
-        let billing = billing_delta(&job, now);
+        let billing = BillingDelta::new(&job, now);
 
-        let update = match billing {
-            Some((_, minutes, _)) => UpdateJob::heartbeat_with_billing(now, minutes),
+        let update = match &billing {
+            Some(b) => UpdateJob::heartbeat_with_billing(now, b.minutes),
             None => UpdateJob::heartbeat(now),
         };
 
         update.execute_if_either_status(conn, job_id, JobStatus::Claimed, JobStatus::Running)?;
 
-        billing.map(|(delta, _, org_id)| (delta, org_id))
+        billing
     };
     // write lock released here
 
     // Bill Stripe best-effort — the delta is already claimed in the DB.
-    if let Some((delta, organization_id)) = bill_info {
-        bill_stripe_best_effort(log, context, job_id, delta, organization_id, billing_state).await;
+    if let Some(billing) = bill_info {
+        bill_stripe_best_effort(
+            log,
+            context,
+            job_id,
+            billing.delta,
+            billing.organization_id,
+            billing_state,
+        )
+        .await;
     }
 
     Ok(None)
@@ -338,38 +346,52 @@ async fn handle_heartbeat(
 /// Negative input is clamped to zero. Always returns at least 1 minute for non-negative input,
 /// so that a job is billed for a minimum of 1 minute even if it completes in under a second.
 fn elapsed_minutes(elapsed_secs: i64) -> i32 {
-    let clamped = elapsed_secs.max(0);
+    // Clamp to [0, i32::MAX * 60] so the `+ 59` ceiling-division step cannot overflow
+    // and the final value is guaranteed to fit in i32.
+    let clamped = elapsed_secs.clamp(0, i64::from(i32::MAX) * 60);
     #[expect(
         clippy::cast_possible_truncation,
-        reason = "clamped to i32::MAX before cast"
+        reason = "clamped to i32::MAX * 60 before ceiling division"
     )]
     #[expect(
         clippy::integer_division,
         reason = "intentional ceiling division for minute billing"
     )]
-    let minutes = ((clamped + 59) / 60).min(i64::from(i32::MAX)) as i32;
+    let minutes = ((clamped + 59) / 60) as i32;
     // Always bill at least 1 minute for any job that ran (including 0 elapsed seconds).
     minutes.max(1)
 }
 
-/// Calculate the billing delta between elapsed minutes and last billed minute.
-fn billing_delta(
-    job: &QueryJob,
-    now: bencher_json::DateTime,
-) -> Option<(u32, i32, OrganizationId)> {
-    let started = job.started?;
-    let elapsed_secs = now.timestamp() - started.timestamp();
-    let minutes = elapsed_minutes(elapsed_secs);
-    let last_billed = job.last_billed_minute.unwrap_or(0);
-    if minutes <= last_billed {
-        return None;
+/// Billing delta between elapsed minutes and last billed minute.
+#[derive(Debug, PartialEq, Eq)]
+struct BillingDelta {
+    delta: u32,
+    minutes: i32,
+    organization_id: OrganizationId,
+}
+
+impl BillingDelta {
+    /// Calculate the billing delta between elapsed minutes and last billed minute.
+    /// Returns `None` if the job hasn't started or no new minutes need billing.
+    fn new(job: &QueryJob, now: bencher_json::DateTime) -> Option<Self> {
+        let started = job.started?;
+        let elapsed_secs = now.timestamp() - started.timestamp();
+        let minutes = elapsed_minutes(elapsed_secs);
+        let last_billed = job.last_billed_minute.unwrap_or(0);
+        if minutes <= last_billed {
+            return None;
+        }
+        #[expect(
+            clippy::cast_sign_loss,
+            reason = "delta is always positive (minutes > last_billed)"
+        )]
+        let delta = (minutes - last_billed) as u32;
+        Some(Self {
+            delta,
+            minutes,
+            organization_id: job.organization_id,
+        })
     }
-    #[expect(
-        clippy::cast_sign_loss,
-        reason = "delta is always positive (minutes > last_billed)"
-    )]
-    let delta = (minutes - last_billed) as u32;
-    Some((delta, minutes, job.organization_id))
 }
 
 /// Report runner usage to Stripe best-effort. Errors are logged but not propagated.
@@ -518,25 +540,33 @@ async fn bill_final_minutes_inner(
         let conn = write_conn!(context);
         let job = QueryJob::get(conn, job_id)?;
 
-        let Some((delta, minutes, _)) = billing_delta(&job, now) else {
+        let Some(billing) = BillingDelta::new(&job, now) else {
             return Ok(());
         };
 
-        let update_job = UpdateJob::final_billing(minutes, now);
-        diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
-            .set(&update_job)
-            .execute(conn)?;
+        let update_job = UpdateJob::final_billing(billing.minutes, now);
+        // No status filter needed here (unlike `handle_heartbeat` which uses
+        // `execute_if_either_status`): the write lock held since `write_conn!`
+        // prevents concurrent heartbeats from advancing `last_billed_minute`
+        // between our read and write, and `UpdateJob::final_billing` only
+        // touches `last_billed_minute`/`modified` — not status — so it is safe
+        // regardless of the current job status.
+        update_job.execute(conn, job_id)?;
 
-        Some((delta, job.organization_id))
+        billing
     };
     // write lock released here
 
     // Bill Stripe best-effort — the delta is already claimed in the DB.
-    let Some((delta, organization_id)) = bill_info else {
-        return Ok(());
-    };
-
-    bill_stripe_best_effort(log, context, job_id, delta, organization_id, billing_state).await;
+    bill_stripe_best_effort(
+        log,
+        context,
+        job_id,
+        bill_info.delta,
+        bill_info.organization_id,
+        billing_state,
+    )
+    .await;
 
     Ok(())
 }
@@ -1491,13 +1521,18 @@ mod tests {
         assert_eq!(elapsed_minutes(-100), 1);
     }
 
-    // --- billing_delta tests ---
+    #[test]
+    fn elapsed_minutes_i64_max() {
+        assert_eq!(elapsed_minutes(i64::MAX), i32::MAX);
+    }
+
+    // --- BillingDelta tests ---
 
     #[test]
     fn billing_delta_not_started() {
         let mut job = test_job();
         job.started = None;
-        assert_eq!(billing_delta(&job, DateTime::TEST), None);
+        assert_eq!(BillingDelta::new(&job, DateTime::TEST), None);
     }
 
     #[test]
@@ -1505,8 +1540,12 @@ mod tests {
         // 0 elapsed seconds → 1 minute (ceiling), no last_billed → delta = 1
         let job = test_job();
         assert_eq!(
-            billing_delta(&job, DateTime::TEST),
-            Some((1, 1, job.organization_id)),
+            BillingDelta::new(&job, DateTime::TEST),
+            Some(BillingDelta {
+                delta: 1,
+                minutes: 1,
+                organization_id: job.organization_id
+            }),
         );
     }
 
@@ -1515,7 +1554,7 @@ mod tests {
         // Already billed minute 1, still in minute 1 → None
         let mut job = test_job();
         job.last_billed_minute = Some(1);
-        assert_eq!(billing_delta(&job, DateTime::TEST), None);
+        assert_eq!(BillingDelta::new(&job, DateTime::TEST), None);
     }
 
     #[test]
@@ -1523,7 +1562,14 @@ mod tests {
         // 60 seconds → minute 1, last_billed = None (0) → delta = 1
         let job = test_job();
         let now = DateTime::try_from(DateTime::TEST.timestamp() + 60).unwrap();
-        assert_eq!(billing_delta(&job, now), Some((1, 1, job.organization_id)),);
+        assert_eq!(
+            BillingDelta::new(&job, now),
+            Some(BillingDelta {
+                delta: 1,
+                minutes: 1,
+                organization_id: job.organization_id
+            })
+        );
     }
 
     #[test]
@@ -1531,7 +1577,14 @@ mod tests {
         // 61 seconds → minute 2, last_billed = None (0) → delta = 2
         let job = test_job();
         let now = DateTime::try_from(DateTime::TEST.timestamp() + 61).unwrap();
-        assert_eq!(billing_delta(&job, now), Some((2, 2, job.organization_id)),);
+        assert_eq!(
+            BillingDelta::new(&job, now),
+            Some(BillingDelta {
+                delta: 2,
+                minutes: 2,
+                organization_id: job.organization_id
+            })
+        );
     }
 
     #[test]
@@ -1540,7 +1593,14 @@ mod tests {
         let mut job = test_job();
         job.last_billed_minute = Some(1);
         let now = DateTime::try_from(DateTime::TEST.timestamp() + 180).unwrap();
-        assert_eq!(billing_delta(&job, now), Some((2, 3, job.organization_id)),);
+        assert_eq!(
+            BillingDelta::new(&job, now),
+            Some(BillingDelta {
+                delta: 2,
+                minutes: 3,
+                organization_id: job.organization_id
+            })
+        );
     }
 
     #[test]
@@ -1549,7 +1609,7 @@ mod tests {
         let mut job = test_job();
         job.last_billed_minute = Some(2);
         let now = DateTime::try_from(DateTime::TEST.timestamp() + 120).unwrap();
-        assert_eq!(billing_delta(&job, now), None);
+        assert_eq!(BillingDelta::new(&job, now), None);
     }
 
     #[test]
@@ -1559,7 +1619,7 @@ mod tests {
         let mut job = test_job();
         job.last_billed_minute = Some(5);
         let now = DateTime::try_from(DateTime::TEST.timestamp() + 120).unwrap();
-        assert_eq!(billing_delta(&job, now), None);
+        assert_eq!(BillingDelta::new(&job, now), None);
     }
 
     #[test]
@@ -1567,8 +1627,12 @@ mod tests {
         let mut job = test_job();
         job.organization_id = OrganizationId::try_from_raw(42).unwrap();
         assert_eq!(
-            billing_delta(&job, DateTime::TEST),
-            Some((1, 1, OrganizationId::try_from_raw(42).unwrap())),
+            BillingDelta::new(&job, DateTime::TEST),
+            Some(BillingDelta {
+                delta: 1,
+                minutes: 1,
+                organization_id: OrganizationId::try_from_raw(42).unwrap()
+            }),
         );
     }
 
@@ -1578,6 +1642,13 @@ mod tests {
         let mut job = test_job();
         job.last_billed_minute = Some(58);
         let now = DateTime::try_from(DateTime::TEST.timestamp() + 3600).unwrap();
-        assert_eq!(billing_delta(&job, now), Some((2, 60, job.organization_id)),);
+        assert_eq!(
+            BillingDelta::new(&job, now),
+            Some(BillingDelta {
+                delta: 2,
+                minutes: 60,
+                organization_id: job.organization_id
+            })
+        );
     }
 }
