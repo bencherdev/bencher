@@ -3,7 +3,7 @@ use clap::{Parser, ValueEnum};
 #[derive(Parser, Debug)]
 pub struct CliNoise {
     /// Total measurement duration in seconds
-    #[clap(long, default_value = "60")]
+    #[clap(long, default_value_t = 30)]
     pub duration: u64,
 
     /// Output format
