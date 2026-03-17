@@ -2361,7 +2361,6 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
 /// The claim endpoint parses the config after claiming, so the job transitions to
 /// Claimed but the response is an error.
 #[tokio::test]
-#[expect(clippy::panic)]
 async fn claim_job_invalid_config() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "invalid-config@example.com").await;

@@ -2,10 +2,7 @@
 
 ## In-Code TODOs
 
-1. **`plus/api_runners/src/channel.rs`** — `TODO: Billing logic - check elapsed minutes and bill to Stripe`
-   - Billing for runner usage not yet implemented
-
-2. **`lib/bencher_schema/src/model/runner/job.rs` — `process_results()`** — `TODO: Refactor PlanKind to support auth_conn directly`
+1. **`lib/bencher_schema/src/model/runner/job.rs` — `process_results()`** — `TODO: Refactor PlanKind to support auth_conn directly`
    - `PlanKind::new_for_project` requires a `PublicUser` for `public_conn!` routing. In the runner context we're already authenticated, so we use `PublicUser::Public(None)` as a workaround. Refactor `PlanKind` (and its callees like `QueryPlan::get_active_metered_plan`, `LicenseUsage::get`, `QueryOrganization::window_usage`) to accept a `&mut DbConnection` directly instead of requiring `public_conn!`.
 
 ## Claude Code Skill for Bencher Workflow

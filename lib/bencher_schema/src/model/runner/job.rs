@@ -755,6 +755,27 @@ impl UpdateJob {
         }
     }
 
+    /// Update heartbeat timestamp and billing minute together.
+    pub fn heartbeat_with_billing(now: DateTime, billed_minute: i32) -> Self {
+        Self {
+            last_heartbeat: Some(Some(now)),
+            last_billed_minute: Some(Some(billed_minute)),
+            modified: Some(now),
+            ..Default::default()
+        }
+    }
+
+    /// Update billing minute only (no heartbeat timestamp).
+    ///
+    /// Used by final billing when the job is already in a terminal state.
+    pub fn final_billing(billed_minute: i32, now: DateTime) -> Self {
+        Self {
+            last_billed_minute: Some(Some(billed_minute)),
+            modified: Some(now),
+            ..Default::default()
+        }
+    }
+
     /// Transition to Running (Claimed -> Running).
     pub fn start(now: DateTime) -> Self {
         Self {
@@ -776,6 +797,13 @@ impl UpdateJob {
             modified: Some(now),
             ..Default::default()
         }
+    }
+
+    /// Apply this changeset to a job unconditionally (no status filter).
+    pub fn execute(&self, conn: &mut DbConnection, job_id: JobId) -> QueryResult<usize> {
+        diesel::update(schema::job::table.filter(schema::job::id.eq(job_id)))
+            .set(self)
+            .execute(conn)
     }
 
     /// Apply this changeset to a job, filtering on the expected current status.
