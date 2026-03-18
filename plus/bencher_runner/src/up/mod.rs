@@ -65,6 +65,7 @@ pub struct UpConfig {
     pub poll_timeout_secs: u32,
     pub tuning: TuningConfig,
     /// CPU layout for isolating benchmark cores from housekeeping tasks.
+    /// Populated at runtime after tuning is applied (so SMT state is reflected).
     pub cpu_layout: CpuLayout,
     /// Maximum size in bytes for collected stdout/stderr.
     pub max_output_size: Option<usize>,
@@ -88,7 +89,7 @@ impl Up {
 
     #[cfg(target_os = "linux")]
     #[expect(clippy::print_stdout)]
-    pub fn run(self) -> Result<(), UpError> {
+    pub fn run(mut self) -> Result<(), UpError> {
         install_signal_handlers();
 
         println!("Bencher Runner starting...");
@@ -96,20 +97,22 @@ impl Up {
         println!("  Runner: {}", self.config.runner);
         println!("  Poll timeout: {}s", self.config.poll_timeout_secs);
 
-        // Log CPU layout
-        let layout = &self.config.cpu_layout;
-        if layout.has_isolation() {
+        // Apply host tuning — guard restores settings on drop.
+        // This must happen before CPU layout detection so that SMT changes
+        // are reflected in the core count.
+        let _tuning_guard = crate::tuning::apply(&self.config.tuning);
+
+        // Re-detect CPU layout after tuning (SMT may have changed core count)
+        self.config.cpu_layout = CpuLayout::detect();
+        if self.config.cpu_layout.has_isolation() {
             println!(
                 "  CPU isolation: housekeeping={}, benchmark={}",
-                layout.housekeeping_cpuset(),
-                layout.benchmark_cpuset()
+                self.config.cpu_layout.housekeeping_cpuset(),
+                self.config.cpu_layout.benchmark_cpuset()
             );
         } else {
             println!("  CPU isolation: disabled (insufficient cores)");
         }
-
-        // Apply host tuning — guard restores settings on drop
-        let _tuning_guard = crate::tuning::apply(&self.config.tuning);
 
         let client = RunnerApiClient::new(
             self.config.host.clone(),

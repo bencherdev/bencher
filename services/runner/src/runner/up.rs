@@ -15,7 +15,8 @@ impl TryFrom<CliUp> for Up {
     fn try_from(task: CliUp) -> Result<Self, Self::Error> {
         let tuning = task.tuning.try_into()?;
 
-        // Detect CPU layout for core isolation
+        // CPU layout is detected at runtime in Up::run() after tuning
+        // (e.g. SMT disable) has been applied, so the core count is accurate.
         let cpu_layout = CpuLayout::detect();
 
         Ok(Self {
