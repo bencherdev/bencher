@@ -75,7 +75,7 @@ static DEFAULT_POLL_INTERVAL: std::sync::LazyLock<bencher_json::PollTimeout> =
         bencher_json::PollTimeout::try_from(5).expect("5 is a valid PollTimeout")
     });
 #[cfg(feature = "plus")]
-const DEFAULT_JOB_TIMEOUT: u64 = bencher_json::Timeout::PAID_DEFAULT.as_secs();
+const DEFAULT_JOB_TIMEOUT: u64 = bencher_json::Timeout::PLUS_DEFAULT.as_secs();
 #[cfg(feature = "plus")]
 const CLI_TIMEOUT_MULTIPLE: u64 = 2;
 

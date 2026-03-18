@@ -423,9 +423,9 @@ async fn resolve_digest(
 }
 
 /// Resolve the job timeout, clamping to plan-tier maximums.
-/// - Unclaimed: max 5 min
-/// - Free (`PlanKind::None`): max 15 min
-/// - Paid (Metered/Licensed): default 1 hour, no upper bound
+/// - Unclaimed: max 1 min
+/// - Free (`PlanKind::None`): max 5 min
+/// - Plus (Metered/Licensed): default 1 hour, no upper bound
 fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed: bool) -> Timeout {
     if !is_claimed {
         return requested.map_or(Timeout::UNCLAIMED_MAX, |t| {
@@ -434,7 +434,7 @@ fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed:
     }
     match plan_kind {
         PlanKind::None => requested.map_or(Timeout::FREE_MAX, |t| t.clamp_max(Timeout::FREE_MAX)),
-        PlanKind::Metered(_) | PlanKind::Licensed(_) => requested.unwrap_or(Timeout::PAID_DEFAULT),
+        PlanKind::Metered(_) | PlanKind::Licensed(_) => requested.unwrap_or(Timeout::PLUS_DEFAULT),
     }
 }
 
@@ -511,16 +511,16 @@ mod tests {
 
     #[test]
     fn timeout_unclaimed_clamped() {
-        let requested = Timeout::try_from(600).unwrap(); // 10 min > 5 min max
+        let requested = Timeout::try_from(120).unwrap(); // 2 min > 1 min max
         let timeout = resolve_timeout(Some(requested), &PlanKind::None, false);
         assert_eq!(u32::from(timeout), u32::from(Timeout::UNCLAIMED_MAX));
     }
 
     #[test]
     fn timeout_unclaimed_below_max() {
-        let requested = Timeout::try_from(60).unwrap(); // 1 min < 5 min max
+        let requested = Timeout::try_from(30).unwrap(); // 30 sec < 1 min max
         let timeout = resolve_timeout(Some(requested), &PlanKind::None, false);
-        assert_eq!(u32::from(timeout), 60);
+        assert_eq!(u32::from(timeout), 30);
     }
 
     #[test]
@@ -531,7 +531,7 @@ mod tests {
 
     #[test]
     fn timeout_free_clamped() {
-        let requested = Timeout::try_from(1800).unwrap(); // 30 min > 15 min max
+        let requested = Timeout::try_from(600).unwrap(); // 10 min > 5 min max
         let timeout = resolve_timeout(Some(requested), &PlanKind::None, true);
         assert_eq!(u32::from(timeout), u32::from(Timeout::FREE_MAX));
     }
@@ -546,7 +546,7 @@ mod tests {
     #[test]
     fn timeout_metered_default() {
         let timeout = resolve_timeout(None, &metered_plan(), true);
-        assert_eq!(u32::from(timeout), u32::from(Timeout::PAID_DEFAULT));
+        assert_eq!(u32::from(timeout), u32::from(Timeout::PLUS_DEFAULT));
     }
 
     #[test]
@@ -560,7 +560,7 @@ mod tests {
     fn timeout_licensed_default() {
         let plan = licensed_plan(PlanLevel::Team);
         let timeout = resolve_timeout(None, &plan, true);
-        assert_eq!(u32::from(timeout), u32::from(Timeout::PAID_DEFAULT));
+        assert_eq!(u32::from(timeout), u32::from(Timeout::PLUS_DEFAULT));
     }
 
     #[test]
@@ -583,7 +583,7 @@ mod tests {
 
     #[test]
     fn priority_unclaimed_ignores_plan() {
-        // Even with a paid plan, unclaimed is always Unclaimed
+        // Even with a Plus plan, unclaimed is always Unclaimed
         assert_eq!(
             determine_priority(&metered_plan(), false),
             Priority::Unclaimed

@@ -875,7 +875,7 @@ async fn run_post_with_job_custom_timeout() {
     let project_slug: &str = project.slug.as_ref();
     push_test_image(&server, &project, &user, "v1").await;
 
-    // Request a 120s timeout — stored as-is since 120s < free max (900s)
+    // Request a 120s timeout — stored as-is since 120s < FREE_MAX
     // (the user is authenticated and org is claimed, so free max applies, but no clamping needed)
     let body = serde_json::json!({
         "project": project_slug,
@@ -906,7 +906,7 @@ async fn run_post_with_job_custom_timeout() {
     let jobs = list_project_jobs(&server, &user, project_slug).await;
     assert_eq!(jobs.len(), 1);
 
-    // Verify timeout stored correctly (120s < free max 900s, so unchanged)
+    // Verify timeout stored correctly (120s < FREE_MAX, so unchanged)
     {
         use bencher_schema::schema;
         use diesel::{QueryDsl as _, RunQueryDsl as _};
@@ -1267,7 +1267,7 @@ async fn run_post_with_job_validation_failure_no_report() {
     );
 }
 
-// POST /v0/run with job timeout exceeding free max — clamped to 900
+// POST /v0/run with job timeout exceeding free max — clamped to FREE_MAX
 #[cfg(feature = "plus")]
 #[tokio::test]
 async fn run_post_with_job_timeout_clamped() {
@@ -1282,7 +1282,7 @@ async fn run_post_with_job_timeout_clamped() {
     push_test_image(&server, &project, &user, "v1").await;
 
     // Request a 1200s timeout — the org is claimed (has members) with no billing plan,
-    // so PlanKind::None applies FREE_MAX (900s) and the timeout should be clamped
+    // so PlanKind::None applies FREE_MAX and the timeout should be clamped
     let body = serde_json::json!({
         "project": project_slug,
         "branch": "main",
@@ -1312,7 +1312,7 @@ async fn run_post_with_job_timeout_clamped() {
     let jobs = list_project_jobs(&server, &user, project_slug).await;
     assert_eq!(jobs.len(), 1);
 
-    // Verify timeout was clamped to free max (900s)
+    // Verify timeout was clamped to FREE_MAX
     {
         use bencher_schema::schema;
         use diesel::{QueryDsl as _, RunQueryDsl as _};
@@ -1323,8 +1323,8 @@ async fn run_post_with_job_timeout_clamped() {
             .expect("Failed to query job timeout");
         assert_eq!(
             stored_timeout,
-            bencher_json::Timeout::try_from(900).unwrap(),
-            "Timeout should be clamped to free max"
+            bencher_json::Timeout::FREE_MAX,
+            "Timeout should be clamped to FREE_MAX"
         );
     }
 }
@@ -1485,7 +1485,7 @@ async fn run_post_with_job_default_timeout() {
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::CREATED);
 
-    // Verify timeout defaults to FREE_MAX (900s) for a claimed org with no plan
+    // Verify timeout defaults to FREE_MAX for a claimed org with no plan
     {
         use bencher_schema::schema;
         use diesel::{QueryDsl as _, RunQueryDsl as _};
@@ -1496,8 +1496,8 @@ async fn run_post_with_job_default_timeout() {
             .expect("Failed to query job timeout");
         assert_eq!(
             stored_timeout,
-            bencher_json::Timeout::try_from(900).unwrap(),
-            "Default timeout should be FREE_MAX (900s)"
+            bencher_json::Timeout::FREE_MAX,
+            "Default timeout should be FREE_MAX"
         );
     }
 }
