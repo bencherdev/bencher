@@ -3,6 +3,7 @@ use std::fmt::Write as _;
 use super::merge_ssh;
 use super::ssh::Ssh;
 use crate::parser::TaskLogs;
+use crate::parser::server::load_server;
 
 #[derive(Debug)]
 pub struct Logs {
@@ -16,14 +17,15 @@ impl TryFrom<TaskLogs> for Logs {
 
     fn try_from(task: TaskLogs) -> anyhow::Result<Self> {
         let TaskLogs {
-            name,
+            runner,
             server,
             key,
             user,
             lines,
             follow,
         } = task;
-        let (server, key, user) = merge_ssh(name.as_deref(), server, key, user)?;
+        let file = runner.as_ref().map(load_server).transpose()?.flatten();
+        let (server, key, user) = merge_ssh(file.as_ref(), server, key, user)?;
         Ok(Self {
             ssh: Ssh::new(server, key, user),
             lines,

@@ -1,5 +1,6 @@
 pub mod server;
 
+use bencher_json::{RunnerResourceId, Secret};
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 
@@ -25,16 +26,16 @@ pub enum TaskSub {
 
 #[derive(Parser, Debug)]
 pub struct TaskProvision {
-    /// Server name from servers.json
+    /// Runner slug or UUID (for runners.json lookup)
     #[clap(long)]
-    pub name: Option<String>,
+    pub runner: Option<RunnerResourceId>,
 
     /// IP address or hostname of the server
-    #[clap(long, required_unless_present = "name")]
+    #[clap(long, required_unless_present = "runner")]
     pub server: Option<String>,
 
     /// Path to SSH private key
-    #[clap(long, required_unless_present = "name")]
+    #[clap(long, required_unless_present = "runner")]
     pub key: Option<Utf8PathBuf>,
 
     /// SSH user
@@ -48,29 +49,25 @@ pub struct TaskProvision {
 
 #[derive(Parser, Debug)]
 pub struct TaskDeploy {
-    /// Server name from servers.json
+    /// Runner slug or UUID
     #[clap(long)]
-    pub name: Option<String>,
+    pub runner: RunnerResourceId,
 
     /// IP address or hostname of the server
-    #[clap(long, required_unless_present = "name")]
+    #[clap(long)]
     pub server: Option<String>,
 
     /// Path to SSH private key
-    #[clap(long, required_unless_present = "name")]
+    #[clap(long)]
     pub key: Option<Utf8PathBuf>,
 
     /// SSH user
     #[clap(long)]
     pub user: Option<String>,
 
-    /// Runner UUID or slug
-    #[clap(long, required_unless_present = "name")]
-    pub runner: Option<String>,
-
     /// Runner authentication token
-    #[clap(long, required_unless_present = "name")]
-    pub token: Option<String>,
+    #[clap(long)]
+    pub token: Option<Secret>,
 
     /// Bencher API host URL
     #[clap(long)]
@@ -83,29 +80,25 @@ pub struct TaskDeploy {
 
 #[derive(Parser, Debug)]
 pub struct TaskStart {
-    /// Server name from servers.json
+    /// Runner slug or UUID
     #[clap(long)]
-    pub name: Option<String>,
+    pub runner: RunnerResourceId,
 
     /// IP address or hostname of the server
-    #[clap(long, required_unless_present = "name")]
+    #[clap(long)]
     pub server: Option<String>,
 
     /// Path to SSH private key
-    #[clap(long, required_unless_present = "name")]
+    #[clap(long)]
     pub key: Option<Utf8PathBuf>,
 
     /// SSH user
     #[clap(long)]
     pub user: Option<String>,
 
-    /// Runner UUID or slug
-    #[clap(long, required_unless_present = "name")]
-    pub runner: Option<String>,
-
     /// Runner authentication token
-    #[clap(long, required_unless_present = "name")]
-    pub token: Option<String>,
+    #[clap(long)]
+    pub token: Option<Secret>,
 
     /// Bencher API host URL
     #[clap(long)]
@@ -114,16 +107,16 @@ pub struct TaskStart {
 
 #[derive(Parser, Debug)]
 pub struct TaskStop {
-    /// Server name from servers.json
+    /// Runner slug or UUID (for runners.json lookup)
     #[clap(long)]
-    pub name: Option<String>,
+    pub runner: Option<RunnerResourceId>,
 
     /// IP address or hostname of the server
-    #[clap(long, required_unless_present = "name")]
+    #[clap(long, required_unless_present = "runner")]
     pub server: Option<String>,
 
     /// Path to SSH private key
-    #[clap(long, required_unless_present = "name")]
+    #[clap(long, required_unless_present = "runner")]
     pub key: Option<Utf8PathBuf>,
 
     /// SSH user
@@ -133,16 +126,16 @@ pub struct TaskStop {
 
 #[derive(Parser, Debug)]
 pub struct TaskLogs {
-    /// Server name from servers.json
+    /// Runner slug or UUID (for runners.json lookup)
     #[clap(long)]
-    pub name: Option<String>,
+    pub runner: Option<RunnerResourceId>,
 
     /// IP address or hostname of the server
-    #[clap(long, required_unless_present = "name")]
+    #[clap(long, required_unless_present = "runner")]
     pub server: Option<String>,
 
     /// Path to SSH private key
-    #[clap(long, required_unless_present = "name")]
+    #[clap(long, required_unless_present = "runner")]
     pub key: Option<Utf8PathBuf>,
 
     /// SSH user

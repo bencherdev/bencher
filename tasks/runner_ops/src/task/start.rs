@@ -1,3 +1,5 @@
+use bencher_json::{RunnerResourceId, Secret};
+
 use super::merge_ssh_with_extras;
 use super::ssh::Ssh;
 use crate::parser::TaskStart;
@@ -6,8 +8,8 @@ use crate::parser::TaskStart;
 pub struct Start {
     ssh: Ssh,
     host: url::Url,
-    runner: String,
-    token: String,
+    runner: RunnerResourceId,
+    token: Secret,
 }
 
 impl TryFrom<TaskStart> for Start {
@@ -15,16 +17,15 @@ impl TryFrom<TaskStart> for Start {
 
     fn try_from(task: TaskStart) -> anyhow::Result<Self> {
         let TaskStart {
-            name,
+            runner,
             server,
             key,
             user,
-            runner,
             token,
             host,
         } = task;
         let (ssh, host, runner, token) =
-            merge_ssh_with_extras(name.as_deref(), server, key, user, runner, token, host)?;
+            merge_ssh_with_extras(runner, server, key, user, token, host)?;
         Ok(Self {
             ssh,
             host,
@@ -35,7 +36,7 @@ impl TryFrom<TaskStart> for Start {
 }
 
 impl Start {
-    pub fn new(ssh: Ssh, host: url::Url, runner: String, token: String) -> Self {
+    pub fn new(ssh: Ssh, host: url::Url, runner: RunnerResourceId, token: Secret) -> Self {
         Self {
             ssh,
             host,
@@ -59,7 +60,8 @@ impl Start {
              Environment=BENCHER_HOST={host}\n\
              Environment=BENCHER_RUNNER={runner}\n\
              Environment=BENCHER_RUNNER_TOKEN={token}\n\
-             CRED_EOF"
+             CRED_EOF",
+            token = token.as_ref(),
         ))?;
         println!("Starting runner service...");
         ssh.run("systemctl daemon-reload")?;

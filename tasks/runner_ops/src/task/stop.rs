@@ -1,6 +1,7 @@
 use super::merge_ssh;
 use super::ssh::Ssh;
 use crate::parser::TaskStop;
+use crate::parser::server::load_server;
 
 #[derive(Debug)]
 pub struct Stop {
@@ -12,12 +13,13 @@ impl TryFrom<TaskStop> for Stop {
 
     fn try_from(task: TaskStop) -> anyhow::Result<Self> {
         let TaskStop {
-            name,
+            runner,
             server,
             key,
             user,
         } = task;
-        let (server, key, user) = merge_ssh(name.as_deref(), server, key, user)?;
+        let file = runner.as_ref().map(load_server).transpose()?.flatten();
+        let (server, key, user) = merge_ssh(file.as_ref(), server, key, user)?;
         Ok(Self {
             ssh: Ssh::new(server, key, user),
         })

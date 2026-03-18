@@ -9,10 +9,11 @@ pub mod ssh;
 mod start;
 pub mod stop;
 
+use bencher_json::{RunnerResourceId, Secret};
 use camino::Utf8PathBuf;
 use clap::Parser as _;
 
-use crate::parser::server::load_server;
+use crate::parser::server::{Server, load_server};
 use crate::parser::{TaskRunnerOps, TaskSub};
 use deploy::Deploy;
 use logs::Logs;
@@ -88,47 +89,34 @@ impl Sub {
 
 /// Merge SSH fields from CLI flags and optional server config file.
 fn merge_ssh(
-    name: Option<&str>,
+    file: Option<&Server>,
     server: Option<String>,
     key: Option<Utf8PathBuf>,
     user: Option<String>,
 ) -> anyhow::Result<(String, Utf8PathBuf, String)> {
-    let file = name.map(load_server).transpose()?;
     let server = server
-        .or(file.as_ref().map(|f| f.server.clone()))
+        .or(file.map(|f| f.server.clone()))
         .ok_or_else(|| anyhow::anyhow!("--server is required"))?;
     let key = key
-        .or(file.as_ref().and_then(|f| f.key.clone()))
+        .or(file.and_then(|f| f.key.clone()))
         .ok_or_else(|| anyhow::anyhow!("--key is required"))?;
     let user = user
-        .or(file.as_ref().and_then(|f| f.user.clone()))
+        .or(file.and_then(|f| f.user.clone()))
         .unwrap_or_else(|| DEFAULT_USER.into());
     Ok((server, key, user))
 }
 
-/// Merge SSH + runner/token/host fields from CLI flags and optional server config file.
+/// Merge SSH + runner/token/host fields from CLI flags and server config file.
 fn merge_ssh_with_extras(
-    name: Option<&str>,
+    runner: RunnerResourceId,
     server: Option<String>,
     key: Option<Utf8PathBuf>,
     user: Option<String>,
-    runner: Option<String>,
-    token: Option<String>,
+    token: Option<Secret>,
     host: Option<url::Url>,
-) -> anyhow::Result<(Ssh, url::Url, String, String)> {
-    let file = name.map(load_server).transpose()?;
-    let server = server
-        .or(file.as_ref().map(|f| f.server.clone()))
-        .ok_or_else(|| anyhow::anyhow!("--server is required"))?;
-    let key = key
-        .or(file.as_ref().and_then(|f| f.key.clone()))
-        .ok_or_else(|| anyhow::anyhow!("--key is required"))?;
-    let user = user
-        .or(file.as_ref().and_then(|f| f.user.clone()))
-        .unwrap_or_else(|| DEFAULT_USER.into());
-    let runner = runner
-        .or(file.as_ref().and_then(|f| f.runner.clone()))
-        .ok_or_else(|| anyhow::anyhow!("--runner is required"))?;
+) -> anyhow::Result<(Ssh, url::Url, RunnerResourceId, Secret)> {
+    let file = load_server(&runner)?;
+    let (server, key, user) = merge_ssh(file.as_ref(), server, key, user)?;
     let token = token
         .or(file.as_ref().and_then(|f| f.token.clone()))
         .ok_or_else(|| anyhow::anyhow!("--token is required"))?;

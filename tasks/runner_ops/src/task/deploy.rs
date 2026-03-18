@@ -1,3 +1,5 @@
+use bencher_json::{RunnerResourceId, Secret};
+
 use super::download;
 use super::merge_ssh_with_extras;
 use super::setup;
@@ -9,8 +11,8 @@ use crate::parser::TaskDeploy;
 pub struct Deploy {
     ssh: Ssh,
     host: url::Url,
-    runner: String,
-    token: String,
+    runner: RunnerResourceId,
+    token: Secret,
     run_id: Option<u64>,
 }
 
@@ -19,17 +21,16 @@ impl TryFrom<TaskDeploy> for Deploy {
 
     fn try_from(task: TaskDeploy) -> anyhow::Result<Self> {
         let TaskDeploy {
-            name,
+            runner,
             server,
             key,
             user,
-            runner,
             token,
             host,
             run_id,
         } = task;
         let (ssh, host, runner, token) =
-            merge_ssh_with_extras(name.as_deref(), server, key, user, runner, token, host)?;
+            merge_ssh_with_extras(runner, server, key, user, token, host)?;
         Ok(Self {
             ssh,
             host,

@@ -4,6 +4,7 @@ use super::merge_ssh;
 use super::setup;
 use super::ssh::Ssh;
 use crate::parser::TaskProvision;
+use crate::parser::server::load_server;
 
 #[derive(Debug)]
 pub struct Provision {
@@ -16,13 +17,14 @@ impl TryFrom<TaskProvision> for Provision {
 
     fn try_from(task: TaskProvision) -> anyhow::Result<Self> {
         let TaskProvision {
-            name,
+            runner,
             server,
             key,
             user,
             runner_binary,
         } = task;
-        let (server, key, user) = merge_ssh(name.as_deref(), server, key, user)?;
+        let file = runner.as_ref().map(load_server).transpose()?.flatten();
+        let (server, key, user) = merge_ssh(file.as_ref(), server, key, user)?;
         Ok(Self {
             ssh: Ssh::new(server, key, user),
             runner_binary,
