@@ -625,10 +625,13 @@ impl Biller {
     pub async fn get_metered_plan_status(
         &self,
         metered_plan_id: &MeteredPlanId,
-    ) -> Result<PlanStatus, BillingError> {
+    ) -> Result<(PlanStatus, CustomerId), BillingError> {
         let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
         let subscription = self.get_subscription(&subscription_id).await?;
-        Ok(Self::map_status(&subscription.status))
+        Ok((
+            Self::map_status(&subscription.status),
+            subscription.customer.id().clone(),
+        ))
     }
 
     pub async fn get_licensed_plan_status(
@@ -655,36 +658,32 @@ impl Biller {
 
     pub async fn record_metrics_usage(
         &self,
-        metered_plan_id: &MeteredPlanId,
+        customer_id: &CustomerId,
         quantity: u32,
     ) -> Result<BillingMeterEvent, BillingError> {
-        self.record_metered_usage(METRICS_METER_NAME, metered_plan_id, quantity)
+        self.record_metered_usage(METRICS_METER_NAME, customer_id, quantity)
             .await
     }
 
     pub async fn record_runner_usage(
         &self,
-        metered_plan_id: &MeteredPlanId,
+        customer_id: &CustomerId,
         minutes: u32,
     ) -> Result<BillingMeterEvent, BillingError> {
-        self.record_metered_usage(RUNNER_MINUTES_METER_NAME, metered_plan_id, minutes)
+        self.record_metered_usage(RUNNER_MINUTES_METER_NAME, customer_id, minutes)
             .await
     }
 
     async fn record_metered_usage(
         &self,
         meter_name: &str,
-        metered_plan_id: &MeteredPlanId,
+        customer_id: &CustomerId,
         quantity: u32,
     ) -> Result<BillingMeterEvent, BillingError> {
-        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
-        let subscription = self.get_subscription(&subscription_id).await?;
-        let customer_id = subscription.customer.id().to_string();
-
         CreateBillingMeterEvent::new(
             meter_name,
             HashMap::from([
-                (METER_CUSTOMER_KEY.to_owned(), customer_id),
+                (METER_CUSTOMER_KEY.to_owned(), customer_id.to_string()),
                 (METER_VALUE_KEY.to_owned(), quantity.to_string()),
             ]),
         )
@@ -740,8 +739,8 @@ mod tests {
     use std::collections::HashSet;
 
     use bencher_json::{
-        Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
-        organization::plan::{DEFAULT_PRICE_NAME, METRICS_METER_NAME},
+        Entitlements, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
+        organization::plan::{DEFAULT_PRICE_NAME, METRICS_METER_NAME, RUNNER_MINUTES_METER_NAME},
         system::{
             config::{JsonBilling, JsonProduct, JsonProducts},
             payment::{JsonCard, JsonCustomer},
@@ -755,6 +754,8 @@ mod tests {
     use rustls::crypto::ring::default_provider;
 
     use crate::Biller;
+
+    use super::{METER_CUSTOMER_KEY, METER_VALUE_KEY};
 
     const TEST_BILLING_KEY: &str = "TEST_BILLING_KEY";
 
@@ -787,6 +788,7 @@ mod tests {
         }
     }
 
+    #[expect(clippy::too_many_arguments)]
     async fn metered_subscription(
         biller: &Biller,
         organization: OrganizationUuid,
@@ -794,7 +796,8 @@ mod tests {
         payment_method_id: PaymentMethodId,
         plan_level: PlanLevel,
         price_name: String,
-        usage_count: usize,
+        runner_minutes: usize,
+        metrics_quantity: u32,
     ) {
         let create_subscription = biller
             .create_metered_subscription(
@@ -814,19 +817,20 @@ mod tests {
         let metered_plan_id = &subscription_id.as_ref().parse().unwrap();
         biller.get_metered_plan(metered_plan_id).await.unwrap();
 
-        let plan_status = biller
+        let (plan_status, customer_id) = biller
             .get_metered_plan_status(metered_plan_id)
             .await
             .unwrap();
         assert_eq!(plan_status, PlanStatus::Active);
 
-        record_metrics_usage(biller, metered_plan_id, usage_count).await;
+        record_runner_usage(biller, &customer_id, runner_minutes).await;
+        record_metrics_usage(biller, &customer_id, metrics_quantity).await;
 
         biller
             .cancel_metered_subscription(&subscription_id.parse().unwrap())
             .await
             .unwrap();
-        let plan_status = biller
+        let (plan_status, _) = biller
             .get_metered_plan_status(metered_plan_id)
             .await
             .unwrap();
@@ -879,18 +883,32 @@ mod tests {
         assert_eq!(plan_status, PlanStatus::Canceled);
     }
 
-    async fn record_metrics_usage(
-        biller: &Biller,
-        metered_plan_id: &MeteredPlanId,
-        usage_count: usize,
-    ) {
-        for _ in 0..usage_count {
-            let quantity = u32::from(rand::random::<u8>());
-            biller
-                .record_metrics_usage(metered_plan_id, quantity)
-                .await
-                .unwrap();
+    async fn record_runner_usage(biller: &Biller, customer_id: &CustomerId, runner_minutes: usize) {
+        for _ in 0..runner_minutes {
+            let event = biller.record_runner_usage(customer_id, 1).await.unwrap();
+            assert_eq!(event.event_name, RUNNER_MINUTES_METER_NAME);
+            assert_eq!(
+                event.payload.get(METER_CUSTOMER_KEY),
+                Some(&customer_id.to_string()),
+            );
+            assert_eq!(event.payload.get(METER_VALUE_KEY), Some(&"1".to_owned()),);
         }
+    }
+
+    async fn record_metrics_usage(biller: &Biller, customer_id: &CustomerId, quantity: u32) {
+        let event = biller
+            .record_metrics_usage(customer_id, quantity)
+            .await
+            .unwrap();
+        assert_eq!(event.event_name, METRICS_METER_NAME);
+        assert_eq!(
+            event.payload.get(METER_CUSTOMER_KEY),
+            Some(&customer_id.to_string()),
+        );
+        assert_eq!(
+            event.payload.get(METER_VALUE_KEY),
+            Some(&quantity.to_string()),
+        );
     }
 
     fn make_price(price_id: &str) -> stripe_shared::Price {
@@ -1125,6 +1143,7 @@ mod tests {
             payment_method_id.clone(),
             PlanLevel::Team,
             METRICS_METER_NAME.into(),
+            5,
             10,
         )
         .await;
@@ -1151,6 +1170,7 @@ mod tests {
             payment_method_id.clone(),
             PlanLevel::Enterprise,
             METRICS_METER_NAME.into(),
+            10,
             25,
         )
         .await;

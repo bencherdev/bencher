@@ -15,6 +15,7 @@ plus = [
     "bencher_otel?/plus",
     "bencher_schema/plus",
     "bencher_token/plus",
+    "dep:bencher_billing",
     "dep:bencher_token",
     "dep:diesel",
     "dep:dropshot",
@@ -30,7 +31,7 @@ plus = [
     "dep:tokio-tungstenite",
     "dep:uuid",
 ]
-sentry = ["bencher_schema/sentry", "dep:bencher_billing", "dep:sentry"]
+sentry = ["bencher_schema/sentry", "dep:sentry"]
 otel = ["bencher_endpoint/otel", "bencher_schema/otel", "dep:bencher_otel"]
 
 [dependencies]
