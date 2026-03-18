@@ -7,10 +7,16 @@ mod ssh;
 use camino::Utf8PathBuf;
 use clap::Parser as _;
 
+use crate::parser::server::load_server;
 use crate::parser::{
     TaskDeploy, TaskLogs, TaskProvision, TaskRunnerOps, TaskStart, TaskStop, TaskSub,
 };
 use ssh::Ssh;
+
+const DEFAULT_USER: &str = "root";
+#[expect(clippy::expect_used, reason = "known-valid constant URL")]
+static DEFAULT_HOST: std::sync::LazyLock<url::Url> =
+    std::sync::LazyLock::new(|| "https://api.bencher.dev".parse().expect("valid URL"));
 
 #[derive(Debug)]
 pub struct Task {
@@ -61,44 +67,55 @@ struct Logs {
     follow: bool,
 }
 
-impl From<TaskRunnerOps> for Task {
-    fn from(task: TaskRunnerOps) -> Self {
-        Self {
-            sub: task.sub.into(),
-        }
+impl TryFrom<TaskRunnerOps> for Task {
+    type Error = anyhow::Error;
+
+    fn try_from(task: TaskRunnerOps) -> anyhow::Result<Self> {
+        Ok(Self {
+            sub: task.sub.try_into()?,
+        })
     }
 }
 
-impl From<TaskSub> for Sub {
-    fn from(sub: TaskSub) -> Self {
-        match sub {
-            TaskSub::Provision(provision) => Self::Provision(provision.into()),
-            TaskSub::Deploy(deploy) => Self::Deploy(deploy.into()),
-            TaskSub::Start(start) => Self::Start(start.into()),
-            TaskSub::Stop(stop) => Self::Stop(stop.into()),
-            TaskSub::Logs(logs) => Self::Logs(logs.into()),
-        }
+impl TryFrom<TaskSub> for Sub {
+    type Error = anyhow::Error;
+
+    fn try_from(sub: TaskSub) -> anyhow::Result<Self> {
+        Ok(match sub {
+            TaskSub::Provision(provision) => Self::Provision(provision.try_into()?),
+            TaskSub::Deploy(deploy) => Self::Deploy(deploy.try_into()?),
+            TaskSub::Start(start) => Self::Start(start.try_into()?),
+            TaskSub::Stop(stop) => Self::Stop(stop.try_into()?),
+            TaskSub::Logs(logs) => Self::Logs(logs.try_into()?),
+        })
     }
 }
 
-impl From<TaskProvision> for Provision {
-    fn from(task: TaskProvision) -> Self {
+impl TryFrom<TaskProvision> for Provision {
+    type Error = anyhow::Error;
+
+    fn try_from(task: TaskProvision) -> anyhow::Result<Self> {
         let TaskProvision {
+            name,
             server,
             key,
             user,
             runner_binary,
         } = task;
-        Self {
+        let (server, key, user) = merge_ssh(name.as_deref(), server, key, user)?;
+        Ok(Self {
             ssh: Ssh::new(server, key, user),
             runner_binary,
-        }
+        })
     }
 }
 
-impl From<TaskDeploy> for Deploy {
-    fn from(task: TaskDeploy) -> Self {
+impl TryFrom<TaskDeploy> for Deploy {
+    type Error = anyhow::Error;
+
+    fn try_from(task: TaskDeploy) -> anyhow::Result<Self> {
         let TaskDeploy {
+            name,
             server,
             key,
             user,
@@ -107,19 +124,41 @@ impl From<TaskDeploy> for Deploy {
             host,
             run_id,
         } = task;
-        Self {
+        let file = name.as_deref().map(load_server).transpose()?;
+        let server = server
+            .or(file.as_ref().map(|f| f.server.clone()))
+            .ok_or_else(|| anyhow::anyhow!("--server is required"))?;
+        let key = key
+            .or(file.as_ref().and_then(|f| f.key.clone()))
+            .ok_or_else(|| anyhow::anyhow!("--key is required"))?;
+        let user = user
+            .or(file.as_ref().and_then(|f| f.user.clone()))
+            .unwrap_or_else(|| DEFAULT_USER.into());
+        let runner = runner
+            .or(file.as_ref().and_then(|f| f.runner.clone()))
+            .ok_or_else(|| anyhow::anyhow!("--runner is required"))?;
+        let token = token
+            .or(file.as_ref().and_then(|f| f.token.clone()))
+            .ok_or_else(|| anyhow::anyhow!("--token is required"))?;
+        let host = host
+            .or(file.as_ref().and_then(|f| f.host.clone()))
+            .unwrap_or_else(|| DEFAULT_HOST.clone());
+        Ok(Self {
             ssh: Ssh::new(server, key, user),
             host,
             runner,
             token,
             run_id,
-        }
+        })
     }
 }
 
-impl From<TaskStart> for Start {
-    fn from(task: TaskStart) -> Self {
+impl TryFrom<TaskStart> for Start {
+    type Error = anyhow::Error;
+
+    fn try_from(task: TaskStart) -> anyhow::Result<Self> {
         let TaskStart {
+            name,
             server,
             key,
             user,
@@ -127,44 +166,95 @@ impl From<TaskStart> for Start {
             token,
             host,
         } = task;
-        Self {
+        let file = name.as_deref().map(load_server).transpose()?;
+        let server = server
+            .or(file.as_ref().map(|f| f.server.clone()))
+            .ok_or_else(|| anyhow::anyhow!("--server is required"))?;
+        let key = key
+            .or(file.as_ref().and_then(|f| f.key.clone()))
+            .ok_or_else(|| anyhow::anyhow!("--key is required"))?;
+        let user = user
+            .or(file.as_ref().and_then(|f| f.user.clone()))
+            .unwrap_or_else(|| DEFAULT_USER.into());
+        let runner = runner
+            .or(file.as_ref().and_then(|f| f.runner.clone()))
+            .ok_or_else(|| anyhow::anyhow!("--runner is required"))?;
+        let token = token
+            .or(file.as_ref().and_then(|f| f.token.clone()))
+            .ok_or_else(|| anyhow::anyhow!("--token is required"))?;
+        let host = host
+            .or(file.as_ref().and_then(|f| f.host.clone()))
+            .unwrap_or_else(|| DEFAULT_HOST.clone());
+        Ok(Self {
             ssh: Ssh::new(server, key, user),
             host,
             runner,
             token,
-        }
+        })
     }
 }
 
-impl From<TaskStop> for Stop {
-    fn from(task: TaskStop) -> Self {
-        let TaskStop { server, key, user } = task;
-        Self {
+impl TryFrom<TaskStop> for Stop {
+    type Error = anyhow::Error;
+
+    fn try_from(task: TaskStop) -> anyhow::Result<Self> {
+        let TaskStop {
+            name,
+            server,
+            key,
+            user,
+        } = task;
+        let (server, key, user) = merge_ssh(name.as_deref(), server, key, user)?;
+        Ok(Self {
             ssh: Ssh::new(server, key, user),
-        }
+        })
     }
 }
 
-impl From<TaskLogs> for Logs {
-    fn from(task: TaskLogs) -> Self {
+impl TryFrom<TaskLogs> for Logs {
+    type Error = anyhow::Error;
+
+    fn try_from(task: TaskLogs) -> anyhow::Result<Self> {
         let TaskLogs {
+            name,
             server,
             key,
             user,
             lines,
             follow,
         } = task;
-        Self {
+        let (server, key, user) = merge_ssh(name.as_deref(), server, key, user)?;
+        Ok(Self {
             ssh: Ssh::new(server, key, user),
             lines,
             follow,
-        }
+        })
     }
+}
+
+/// Merge SSH fields from CLI flags and optional server config file.
+fn merge_ssh(
+    name: Option<&str>,
+    server: Option<String>,
+    key: Option<Utf8PathBuf>,
+    user: Option<String>,
+) -> anyhow::Result<(String, Utf8PathBuf, String)> {
+    let file = name.map(load_server).transpose()?;
+    let server = server
+        .or(file.as_ref().map(|f| f.server.clone()))
+        .ok_or_else(|| anyhow::anyhow!("--server is required"))?;
+    let key = key
+        .or(file.as_ref().and_then(|f| f.key.clone()))
+        .ok_or_else(|| anyhow::anyhow!("--key is required"))?;
+    let user = user
+        .or(file.as_ref().and_then(|f| f.user.clone()))
+        .unwrap_or_else(|| DEFAULT_USER.into());
+    Ok((server, key, user))
 }
 
 impl Task {
-    pub fn new() -> Self {
-        TaskRunnerOps::parse().into()
+    pub fn new() -> anyhow::Result<Self> {
+        TaskRunnerOps::parse().try_into()
     }
 
     pub fn exec(self) -> anyhow::Result<()> {

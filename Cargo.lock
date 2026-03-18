@@ -7397,6 +7397,8 @@ dependencies = [
  "anyhow",
  "camino",
  "clap",
+ "serde",
+ "serde_json",
  "tempfile",
  "url",
 ]
