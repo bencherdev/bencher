@@ -1,3 +1,4 @@
+use bencher_json::RunnerResourceId;
 use clap::Parser;
 
 use super::CliTuning;
@@ -15,7 +16,7 @@ pub struct CliUp {
 
     /// Runner UUID or slug.
     #[arg(long, env = "BENCHER_RUNNER")]
-    pub runner: String,
+    pub runner: RunnerResourceId,
 
     /// Long-poll timeout in seconds (1-900).
     #[arg(long, default_value = "55", value_parser = clap::value_parser!(u32).range(1..=900))]

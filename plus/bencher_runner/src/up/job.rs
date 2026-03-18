@@ -335,7 +335,7 @@ mod tests {
         UpConfig {
             host: url::Url::parse("https://api.bencher.dev").unwrap(),
             token: "bencher_runner_test".parse().unwrap(),
-            runner: "test-runner".to_owned(),
+            runner: "test-runner".parse().unwrap(),
             poll_timeout_secs: 30,
             tuning: crate::TuningConfig::disabled(),
             cpu_layout: crate::cpu::CpuLayout::with_core_count(4),

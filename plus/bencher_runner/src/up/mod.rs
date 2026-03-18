@@ -6,6 +6,7 @@ use std::sync::atomic::AtomicBool;
 #[cfg(target_os = "linux")]
 use std::sync::atomic::Ordering;
 
+use bencher_json::RunnerResourceId;
 use url::Url;
 
 use crate::cpu::CpuLayout;
@@ -61,7 +62,7 @@ static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 pub struct UpConfig {
     pub host: Url,
     pub token: bencher_valid::Secret,
-    pub runner: String,
+    pub runner: RunnerResourceId,
     pub poll_timeout_secs: u32,
     pub tuning: TuningConfig,
     /// CPU layout for isolating benchmark cores from housekeeping tasks.

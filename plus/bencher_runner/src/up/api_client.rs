@@ -1,3 +1,4 @@
+use bencher_json::RunnerResourceId;
 use url::Url;
 
 use super::error::ApiClientError;
@@ -7,11 +8,11 @@ const TOKEN_PREFIX: &str = "bencher_runner_";
 pub struct RunnerApiClient {
     host: Url,
     token: String,
-    runner: String,
+    runner: RunnerResourceId,
 }
 
 impl RunnerApiClient {
-    pub fn new(host: Url, token: String, runner: String) -> Result<Self, ApiClientError> {
+    pub fn new(host: Url, token: String, runner: RunnerResourceId) -> Result<Self, ApiClientError> {
         if !token.starts_with(TOKEN_PREFIX) {
             return Err(ApiClientError::InvalidToken);
         }
@@ -66,32 +67,40 @@ mod tests {
 
     #[test]
     fn new_accepts_valid_token() {
-        let client = RunnerApiClient::new(test_host(), valid_token(), "my-runner".to_owned());
+        let client = RunnerApiClient::new(test_host(), valid_token(), "my-runner".parse().unwrap());
         assert!(client.is_ok());
     }
 
     #[test]
     fn new_rejects_empty_token() {
-        let result = RunnerApiClient::new(test_host(), String::new(), "r".to_owned());
+        let result = RunnerApiClient::new(test_host(), String::new(), "r".parse().unwrap());
         assert!(matches!(result, Err(ApiClientError::InvalidToken)));
     }
 
     #[test]
     fn new_rejects_wrong_prefix() {
-        let result = RunnerApiClient::new(test_host(), "bearer_abc123".to_owned(), "r".to_owned());
+        let result = RunnerApiClient::new(
+            test_host(),
+            "bearer_abc123".to_owned(),
+            "r".parse().unwrap(),
+        );
         assert!(matches!(result, Err(ApiClientError::InvalidToken)));
     }
 
     #[test]
     fn new_rejects_partial_prefix() {
-        let result = RunnerApiClient::new(test_host(), "bencher_runne".to_owned(), "r".to_owned());
+        let result = RunnerApiClient::new(
+            test_host(),
+            "bencher_runne".to_owned(),
+            "r".parse().unwrap(),
+        );
         assert!(matches!(result, Err(ApiClientError::InvalidToken)));
     }
 
     #[test]
     fn new_stores_token() {
         let client =
-            RunnerApiClient::new(test_host(), valid_token(), "my-runner".to_owned()).unwrap();
+            RunnerApiClient::new(test_host(), valid_token(), "my-runner".parse().unwrap()).unwrap();
         assert_eq!(client.token(), "bencher_runner_abc123");
     }
 
@@ -100,7 +109,7 @@ mod tests {
     #[test]
     fn channel_url_http_becomes_ws() {
         let client =
-            RunnerApiClient::new(test_host(), valid_token(), "my-runner".to_owned()).unwrap();
+            RunnerApiClient::new(test_host(), valid_token(), "my-runner".parse().unwrap()).unwrap();
         let ws_url = client.channel_url().unwrap();
         assert_eq!(ws_url.scheme(), "ws");
         assert_eq!(
@@ -111,8 +120,12 @@ mod tests {
 
     #[test]
     fn channel_url_https_becomes_wss() {
-        let client =
-            RunnerApiClient::new(test_https_host(), valid_token(), "runner-1".to_owned()).unwrap();
+        let client = RunnerApiClient::new(
+            test_https_host(),
+            valid_token(),
+            "runner-1".parse().unwrap(),
+        )
+        .unwrap();
         let ws_url = client.channel_url().unwrap();
         assert_eq!(ws_url.scheme(), "wss");
         assert_eq!(
@@ -124,7 +137,7 @@ mod tests {
     #[test]
     fn channel_url_includes_runner() {
         let client =
-            RunnerApiClient::new(test_host(), valid_token(), "slug-test".to_owned()).unwrap();
+            RunnerApiClient::new(test_host(), valid_token(), "slug-test".parse().unwrap()).unwrap();
         let ws_url = client.channel_url().unwrap();
         let path = ws_url.path();
         assert!(
