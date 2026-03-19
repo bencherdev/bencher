@@ -768,8 +768,7 @@ mod tests {
             team: JsonProduct {
                 id: "prod_NKz5B9dGhDiSY1".into(),
                 metered: hmap! {
-                    "default".to_owned() => "price_1McW12Kal5vzTlmhoPltpBAW".to_owned(),
-                    "metrics".to_owned() => "price_1T8NRdKal5vzTlmhBfL9IdMi".to_owned(),
+                    "default".to_owned() => "price_1T8NRdKal5vzTlmhBfL9IdMi".to_owned(),
                 },
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4XlwKal5vzTlmh0n0wtplQ".to_owned(),
@@ -778,11 +777,19 @@ mod tests {
             enterprise: JsonProduct {
                 id: "prod_NLC7fDet2C8Nmk".into(),
                 metered: hmap! {
-                    "default".to_owned() => "price_1McW2eKal5vzTlmhECLIyVQz".to_owned(),
-                    "metrics".to_owned() => "price_1T8NStKal5vzTlmhPBxy2izR".to_owned(),
+                    "default".to_owned() => "price_1T8NStKal5vzTlmhPBxy2izR".to_owned(),
                 },
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4Xo1Kal5vzTlmh1KrcEbq0".to_owned(),
+                },
+            },
+            bare_metal: JsonProduct {
+                id: "prod_U6a28ecwqRZHYz".into(),
+                metered: hmap! {
+                    "default".to_owned() => "price_1T8Ms4Kal5vzTlmhSAPxSbrT".to_owned(),
+                },
+                licensed: hmap! {
+                    "default".to_owned() => "price_1TCWdkKal5vzTlmh9fdahWqY".to_owned(),
                 },
             },
         }

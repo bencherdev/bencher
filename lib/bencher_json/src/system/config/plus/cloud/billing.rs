@@ -23,6 +23,7 @@ impl Sanitize for JsonBilling {
 pub struct JsonProducts {
     pub team: JsonProduct,
     pub enterprise: JsonProduct,
+    pub bare_metal: JsonProduct,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

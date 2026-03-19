@@ -15,15 +15,21 @@ use crate::BillingError;
 pub struct Products {
     pub team: Product,
     pub enterprise: Product,
+    pub bare_metal: Product,
 }
 
 impl Products {
     pub async fn new(client: &StripeClient, products: JsonProducts) -> Result<Self, BillingError> {
-        let JsonProducts { team, enterprise } = products;
+        let JsonProducts {
+            team,
+            enterprise,
+            bare_metal,
+        } = products;
 
         Ok(Self {
             team: Product::new(client, team).await?,
             enterprise: Product::new(client, enterprise).await?,
+            bare_metal: Product::new(client, bare_metal).await?,
         })
     }
 
@@ -41,6 +47,7 @@ impl Products {
             .preferred_price_ids(preferred)
             .into_iter()
             .chain(self.enterprise.preferred_price_ids(preferred))
+            .chain(self.bare_metal.preferred_price_ids(preferred))
             .collect()
     }
 }
