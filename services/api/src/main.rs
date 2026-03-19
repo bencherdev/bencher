@@ -9,6 +9,8 @@ use bencher_config::{Config, ConfigTx};
 use bencher_json::BENCHER_API_VERSION;
 #[cfg(feature = "plus")]
 use bencher_json::system::config::JsonLitestream;
+use futures_concurrency::future::Race as _;
+use futures_util::FutureExt as _;
 #[cfg(feature = "sentry")]
 use sentry::ClientInitGuard;
 use slog::{Logger, error, info};
@@ -96,38 +98,31 @@ async fn run(
         .and_then(|plus| plus.litestream.clone())
     {
         let (replicate_tx, replicate_rx) = sync::oneshot::channel();
-        let mut litestream_handle = run_litestream(log, &config, litestream, replicate_tx)?;
+        let litestream_handle = run_litestream(log, &config, litestream, replicate_tx)?;
         // Wait for Litestream to start replicating
         replicate_rx.await.map_err(LitestreamError::ReplicateRecv)?;
 
-        let mut api_handle = run_api_server(config);
-        tokio::select! {
-            _ = tokio::signal::ctrl_c() => return Ok(()),
-            result = &mut litestream_handle => {
-                return match result {
-                    Ok(result) => result,
-                    Err(e) => Err(LitestreamError::JoinHandle(e))
-                }.map_err(Into::into);
+        let api_handle = run_api_server(config);
+        return (
+            tokio::signal::ctrl_c().map(|_| Ok(())),
+            async {
+                litestream_handle
+                    .await
+                    .map_err(LitestreamError::JoinHandle)?
+                    .map_err(Into::into)
             },
-            result = &mut api_handle => {
-                return match result {
-                    Ok(result) => result,
-                    Err(e) => Err(ApiError::JoinHandle(e))
-                };
-            },
-        }
+            async { api_handle.await.map_err(ApiError::JoinHandle)? },
+        )
+            .race()
+            .await;
     }
 
-    let mut api_handle = run_api_server(config);
-    tokio::select! {
-        _ = tokio::signal::ctrl_c() => Ok(()),
-        result = &mut api_handle => {
-            match result {
-                Ok(result) => result,
-                Err(e) => Err(ApiError::JoinHandle(e))
-            }
-        },
-    }
+    let api_handle = run_api_server(config);
+    (tokio::signal::ctrl_c().map(|_| Ok(())), async {
+        api_handle.await.map_err(ApiError::JoinHandle)?
+    })
+        .race()
+        .await
 }
 
 #[cfg(all(feature = "plus", feature = "sentry"))]

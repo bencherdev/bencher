@@ -81,6 +81,8 @@ bencher_schema.workspace = true
 bencher_otel = { workspace = true, optional = true }
 bencher_otel_provider = { workspace = true, optional = true }
 dropshot.workspace = true
+futures-concurrency.workspace = true
+futures-util.workspace = true
 libsqlite3-sys.workspace = true
 sentry = { workspace = true, optional = true }
 serde_yaml.workspace = true

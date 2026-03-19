@@ -1074,6 +1074,8 @@ dependencies = [
  "bencher_otel_provider",
  "bencher_schema",
  "dropshot",
+ "futures-concurrency",
+ "futures-util",
  "libsqlite3-sys",
  "sentry",
  "serde_yaml",

@@ -8,6 +8,8 @@ use bencher_logger as _;
 use bencher_otel as _;
 #[cfg(any(feature = "plus", feature = "otel"))]
 use bencher_otel_provider as _;
+use futures_concurrency as _;
+use futures_util as _;
 #[cfg(feature = "sentry")]
 use sentry as _;
 use serde_yaml as _;
