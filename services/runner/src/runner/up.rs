@@ -1,4 +1,3 @@
-use bencher_runner::cpu::CpuLayout;
 use bencher_runner::up::{Up as RunnerUp, UpConfig, UpError};
 
 use crate::error::RunnerCliError;
@@ -15,9 +14,6 @@ impl TryFrom<CliUp> for Up {
     fn try_from(task: CliUp) -> Result<Self, Self::Error> {
         let tuning = task.tuning.try_into()?;
 
-        // Detect CPU layout for core isolation
-        let cpu_layout = CpuLayout::detect();
-
         Ok(Self {
             config: UpConfig {
                 host: task.host,
@@ -25,7 +21,7 @@ impl TryFrom<CliUp> for Up {
                 runner: task.runner,
                 poll_timeout_secs: task.poll_timeout,
                 tuning,
-                cpu_layout,
+                cpu_layout: None,
                 max_output_size: task.max_output_size,
                 max_file_count: task.max_file_count,
                 grace_period: task.grace_period,

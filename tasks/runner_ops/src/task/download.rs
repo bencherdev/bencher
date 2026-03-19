@@ -3,19 +3,23 @@ use std::process::Command;
 use camino::Utf8PathBuf;
 use tempfile::TempDir;
 
-const ARTIFACT_NAME: &str = "runner-cloud-linux-x86-64";
+const DEFAULT_BRANCH: &str = "devel";
 
 /// Download the runner binary from GitHub Actions.
 ///
-/// If `run_id` is `None`, finds the latest successful `cloud` branch run.
+/// If `run_id` is `None`, finds the latest successful `devel` branch run.
 /// Returns the path to the downloaded binary and the temp directory that owns it.
 pub fn download(run_id: Option<u64>) -> anyhow::Result<(Utf8PathBuf, TempDir)> {
-    let run_id = match run_id {
-        Some(id) => id,
-        None => latest_cloud_run_id()?,
+    let (run_id, branch) = if let Some(id) = run_id {
+        let branch = run_branch(id)?;
+        (id, branch)
+    } else {
+        let id = latest_devel_run_id()?;
+        (id, DEFAULT_BRANCH.into())
     };
 
-    println!("Downloading runner artifact from run {run_id}...");
+    let artifact_name = format!("runner-{branch}-linux-x86-64");
+    println!("Downloading artifact {artifact_name} from run {run_id}...");
 
     let temp_dir = tempfile::tempdir()?;
     let temp_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
@@ -29,7 +33,7 @@ pub fn download(run_id: Option<u64>) -> anyhow::Result<(Utf8PathBuf, TempDir)> {
             "--repo",
             "bencherdev/bencher",
             "-n",
-            ARTIFACT_NAME,
+            &artifact_name,
             "-D",
             temp_path.as_str(),
         ])
@@ -40,7 +44,7 @@ pub fn download(run_id: Option<u64>) -> anyhow::Result<(Utf8PathBuf, TempDir)> {
         anyhow::bail!("gh run download failed: {stderr}");
     }
 
-    let binary_path = temp_path.join(ARTIFACT_NAME);
+    let binary_path = temp_path.join(&artifact_name);
     if !binary_path.exists() {
         anyhow::bail!(
             "Expected binary not found at {binary_path}; contents: {:?}",
@@ -55,8 +59,37 @@ pub fn download(run_id: Option<u64>) -> anyhow::Result<(Utf8PathBuf, TempDir)> {
     Ok((binary_path, temp_dir))
 }
 
-fn latest_cloud_run_id() -> anyhow::Result<u64> {
-    println!("Finding latest successful cloud CI run...");
+fn run_branch(run_id: u64) -> anyhow::Result<String> {
+    let output = Command::new("gh")
+        .args([
+            "run",
+            "view",
+            &run_id.to_string(),
+            "--repo",
+            "bencherdev/bencher",
+            "--json",
+            "headBranch",
+            "--jq",
+            ".headBranch",
+        ])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("gh run view failed: {stderr}");
+    }
+
+    let branch = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+    if branch.is_empty() {
+        anyhow::bail!("Could not determine branch for run {run_id}");
+    }
+
+    println!("Run {run_id} is from branch: {branch}");
+    Ok(branch)
+}
+
+fn latest_devel_run_id() -> anyhow::Result<u64> {
+    println!("Finding latest successful devel CI run...");
 
     let output = Command::new("gh")
         .args([
@@ -65,7 +98,7 @@ fn latest_cloud_run_id() -> anyhow::Result<u64> {
             "--repo",
             "bencherdev/bencher",
             "--branch",
-            "cloud",
+            DEFAULT_BRANCH,
             "--workflow",
             "ci.yml",
             "--status",
@@ -90,6 +123,6 @@ fn latest_cloud_run_id() -> anyhow::Result<u64> {
         .parse()
         .map_err(|e| anyhow::anyhow!("Failed to parse run ID from '{stdout}': {e}"))?;
 
-    println!("Latest cloud run ID: {run_id}");
+    println!("Latest devel run ID: {run_id}");
     Ok(run_id)
 }

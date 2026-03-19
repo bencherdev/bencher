@@ -1,68 +1,59 @@
-use camino::Utf8Path;
+use bencher_json::{RunnerResourceId, Secret};
 
+use super::deploy_setup;
+use super::download;
+use super::merge_ssh_with_extras;
 use super::ssh::Ssh;
+use super::start::Start;
+use crate::parser::TaskDeploy;
 
-const SYSTEMD_SERVICE: &str = "\
-[Unit]
-Description=Bencher Runner
-After=network-online.target
-Wants=network-online.target
+#[derive(Debug)]
+pub struct Deploy {
+    ssh: Ssh,
+    host: url::Url,
+    runner: RunnerResourceId,
+    token: Secret,
+    run_id: Option<u64>,
+}
 
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/runner up
-Restart=always
-RestartSec=5
+impl TryFrom<TaskDeploy> for Deploy {
+    type Error = anyhow::Error;
 
-[Install]
-WantedBy=multi-user.target";
-
-pub fn deploy(ssh: &Ssh, runner_binary: Option<&Utf8Path>) -> anyhow::Result<()> {
-    // System verification
-    println!("Verifying system capabilities...");
-
-    let has_kvm = ssh.check("test -c /dev/kvm")?;
-    if !has_kvm {
-        anyhow::bail!("/dev/kvm not found — KVM is required");
+    fn try_from(task: TaskDeploy) -> anyhow::Result<Self> {
+        let TaskDeploy {
+            runner,
+            server,
+            key,
+            user,
+            token,
+            host,
+            run_id,
+        } = task;
+        let (ssh, host, runner, token) =
+            merge_ssh_with_extras(runner, server, key, user, token, host)?;
+        Ok(Self {
+            ssh,
+            host,
+            runner,
+            token,
+            run_id,
+        })
     }
-    println!("  KVM: available");
+}
 
-    let has_cgroups_v2 = ssh.check("test -f /sys/fs/cgroup/cgroup.controllers")?;
-    if !has_cgroups_v2 {
-        anyhow::bail!("cgroups v2 not available — required for runner");
+impl Deploy {
+    pub fn exec(self) -> anyhow::Result<()> {
+        let Self {
+            ssh,
+            host,
+            runner,
+            token,
+            run_id,
+        } = self;
+        let (runner_binary, _temp_dir) = download::download(run_id)?;
+        deploy_setup::deploy(&ssh, Some(runner_binary.as_path()))?;
+        let start = Start::new(ssh, host, runner, token);
+        start.exec()?;
+        Ok(())
     }
-    println!("  cgroups v2: available");
-
-    let controllers = ssh.run("cat /sys/fs/cgroup/cgroup.controllers")?;
-    let controllers = controllers.trim();
-    for required in ["cpu", "memory", "pids"] {
-        if !controllers.split_whitespace().any(|c| c == required) {
-            anyhow::bail!("Required cgroup controller '{required}' not found in: {controllers}");
-        }
-    }
-    println!("  cgroup controllers: {controllers}");
-
-    // Set timezone to UTC
-    ssh.run("timedatectl set-timezone UTC")?;
-    println!("  timezone: UTC");
-
-    // Deploy runner (only if binary provided)
-    let Some(runner_binary) = runner_binary else {
-        println!("No --runner-binary provided, skipping deployment");
-        return Ok(());
-    };
-
-    println!("Deploying runner binary...");
-    ssh.copy_to(runner_binary, "/usr/local/bin/runner")?;
-    ssh.run("chmod +x /usr/local/bin/runner")?;
-
-    // Write systemd service
-    ssh.run(&format!(
-        "cat > /etc/systemd/system/bencher-runner.service << 'SVC_EOF'\n{SYSTEMD_SERVICE}\nSVC_EOF"
-    ))?;
-    ssh.run("systemctl daemon-reload && systemctl enable bencher-runner")?;
-
-    println!("Runner deployed successfully");
-
-    Ok(())
 }

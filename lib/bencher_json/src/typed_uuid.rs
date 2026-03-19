@@ -13,6 +13,8 @@ macro_rules! typed_uuid {
             Default,
             PartialEq,
             Eq,
+            PartialOrd,
+            Ord,
             Hash,
             derive_more::Display,
             serde::Serialize,

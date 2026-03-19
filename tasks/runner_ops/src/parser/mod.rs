@@ -1,3 +1,6 @@
+pub mod server;
+
+use bencher_json::{RunnerResourceId, Secret};
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 
@@ -23,17 +26,21 @@ pub enum TaskSub {
 
 #[derive(Parser, Debug)]
 pub struct TaskProvision {
-    /// IP address or hostname of the server
+    /// Runner slug or UUID (for runners.json lookup)
     #[clap(long)]
-    pub server: String,
+    pub runner: Option<RunnerResourceId>,
+
+    /// IP address or hostname of the server
+    #[clap(long, required_unless_present = "runner")]
+    pub server: Option<String>,
 
     /// Path to SSH private key
-    #[clap(long)]
-    pub key: Utf8PathBuf,
+    #[clap(long, required_unless_present = "runner")]
+    pub key: Option<Utf8PathBuf>,
 
-    /// SSH user (default: root)
-    #[clap(long, default_value = "root")]
-    pub user: String,
+    /// SSH user
+    #[clap(long)]
+    pub user: Option<String>,
 
     /// Path to runner binary to deploy (Linux `x86_64`)
     #[clap(long)]
@@ -42,90 +49,98 @@ pub struct TaskProvision {
 
 #[derive(Parser, Debug)]
 pub struct TaskDeploy {
+    /// Runner slug or UUID
+    #[clap(long)]
+    pub runner: RunnerResourceId,
+
     /// IP address or hostname of the server
     #[clap(long)]
-    pub server: String,
+    pub server: Option<String>,
 
     /// Path to SSH private key
     #[clap(long)]
-    pub key: Utf8PathBuf,
+    pub key: Option<Utf8PathBuf>,
 
-    /// SSH user (default: root)
-    #[clap(long, default_value = "root")]
-    pub user: String,
-
-    /// Runner UUID or slug
+    /// SSH user
     #[clap(long)]
-    pub runner: String,
+    pub user: Option<String>,
 
     /// Runner authentication token
     #[clap(long)]
-    pub token: String,
+    pub token: Option<Secret>,
 
     /// Bencher API host URL
-    #[clap(long, default_value = "https://api.bencher.dev")]
-    pub host: url::Url,
+    #[clap(long)]
+    pub host: Option<url::Url>,
 
-    /// GitHub Actions run ID (defaults to latest successful `cloud` run)
+    /// GitHub Actions run ID (defaults to latest successful `devel` run)
     #[clap(long)]
     pub run_id: Option<u64>,
 }
 
 #[derive(Parser, Debug)]
 pub struct TaskStart {
+    /// Runner slug or UUID
+    #[clap(long)]
+    pub runner: RunnerResourceId,
+
     /// IP address or hostname of the server
     #[clap(long)]
-    pub server: String,
+    pub server: Option<String>,
 
     /// Path to SSH private key
     #[clap(long)]
-    pub key: Utf8PathBuf,
+    pub key: Option<Utf8PathBuf>,
 
-    /// SSH user (default: root)
-    #[clap(long, default_value = "root")]
-    pub user: String,
-
-    /// Runner UUID or slug
+    /// SSH user
     #[clap(long)]
-    pub runner: String,
+    pub user: Option<String>,
 
     /// Runner authentication token
     #[clap(long)]
-    pub token: String,
+    pub token: Option<Secret>,
 
     /// Bencher API host URL
-    #[clap(long, default_value = "https://api.bencher.dev")]
-    pub host: url::Url,
+    #[clap(long)]
+    pub host: Option<url::Url>,
 }
 
 #[derive(Parser, Debug)]
 pub struct TaskStop {
-    /// IP address or hostname of the server
+    /// Runner slug or UUID (for runners.json lookup)
     #[clap(long)]
-    pub server: String,
+    pub runner: Option<RunnerResourceId>,
+
+    /// IP address or hostname of the server
+    #[clap(long, required_unless_present = "runner")]
+    pub server: Option<String>,
 
     /// Path to SSH private key
-    #[clap(long)]
-    pub key: Utf8PathBuf,
+    #[clap(long, required_unless_present = "runner")]
+    pub key: Option<Utf8PathBuf>,
 
-    /// SSH user (default: root)
-    #[clap(long, default_value = "root")]
-    pub user: String,
+    /// SSH user
+    #[clap(long)]
+    pub user: Option<String>,
 }
 
 #[derive(Parser, Debug)]
 pub struct TaskLogs {
-    /// IP address or hostname of the server
+    /// Runner slug or UUID (for runners.json lookup)
     #[clap(long)]
-    pub server: String,
+    pub runner: Option<RunnerResourceId>,
+
+    /// IP address or hostname of the server
+    #[clap(long, required_unless_present = "runner")]
+    pub server: Option<String>,
 
     /// Path to SSH private key
-    #[clap(long)]
-    pub key: Utf8PathBuf,
+    #[clap(long, required_unless_present = "runner")]
+    pub key: Option<Utf8PathBuf>,
 
-    /// SSH user (default: root)
-    #[clap(long, default_value = "root")]
-    pub user: String,
+    /// SSH user
+    #[clap(long)]
+    pub user: Option<String>,
 
     /// Number of lines to show (omit to show all logs)
     #[clap(long)]

@@ -8,12 +8,15 @@ publish = false
 
 [features]
 default = ["plus"]
-plus = []
+plus = ["bencher_json/plus"]
 
 [dependencies]
 anyhow.workspace = true
+bencher_json = { workspace = true, features = ["client"] }
 camino.workspace = true
 clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 tempfile.workspace = true
 url.workspace = true
 

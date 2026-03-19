@@ -7395,8 +7395,11 @@ name = "runner_ops"
 version = "0.5.10"
 dependencies = [
  "anyhow",
+ "bencher_json",
  "camino",
  "clap",
+ "serde",
+ "serde_json",
  "tempfile",
  "url",
 ]
