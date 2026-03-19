@@ -65,7 +65,6 @@ pub async fn org_usage_get(
     Ok(Get::auth_response_ok(json))
 }
 
-#[expect(clippy::too_many_lines)]
 async fn get_inner(
     context: &ApiContext,
     path_params: OrgUsageParams,
@@ -116,10 +115,7 @@ async fn get_inner(
                 usage: Some(usage),
             })
         // Licensed plan
-        } else if let Some(json_plan) = query_plan
-            .to_licensed_plan(biller, licensor, query_organization.uuid)
-            .await?
-        {
+        } else if let Some(json_plan) = query_plan.to_licensed_plan(biller, licensor).await? {
             let Some(json_license) = json_plan.license.clone() else {
                 return Err(issue_error(
                     "No license JSON found for licensed plan",
@@ -131,26 +127,14 @@ async fn get_inner(
             };
             let start_time = json_license.issued_at;
             let end_time = json_license.expiration;
-            // If on Bencher Cloud it doesn't make sense to calculate usage for a Self-Hosted license
-            let (kind, usage) = if json_license.self_hosted {
-                (UsageKind::CloudSelfHostedLicensed, None)
-            } else {
-                let usage = QueryMetric::usage(
-                    auth_conn!(context),
-                    query_organization.id,
-                    start_time,
-                    end_time,
-                )?;
-                (UsageKind::CloudLicensed, Some(usage))
-            };
             Ok(JsonUsage {
                 organization: query_organization.uuid,
-                kind,
+                kind: UsageKind::CloudSelfHostedLicensed,
                 plan: Some(json_plan),
                 license: Some(json_license),
                 start_time,
                 end_time,
-                usage,
+                usage: None,
             })
         } else {
             Err(issue_error(
@@ -164,7 +148,7 @@ async fn get_inner(
     // Self-Hosted Licensed
     } else if let Some(license) = query_organization.license.clone() {
         let json_license = licensor
-            .into_json(license, None)
+            .into_json(license)
             .map_err(payment_required_error)?;
         let start_time = json_license.issued_at;
         let end_time = json_license.expiration;

@@ -176,21 +176,10 @@ impl Licensor {
         }
     }
 
-    pub fn into_json(
-        &self,
-        license: Jwt,
-        plan_organization_uuid: Option<OrganizationUuid>,
-    ) -> Result<JsonLicense, LicenseError> {
+    pub fn into_json(&self, license: Jwt) -> Result<JsonLicense, LicenseError> {
         // Do not validate the organization here
         // In the case of a Self-Hosted license, the organizations will not match
         let token_data = self.validate(&license)?;
-        // If there is a plan, check to see if the organization matches
-        // Otherwise, this is a Self-Hosted license
-        let self_hosted = if let Some(organization_uuid) = plan_organization_uuid {
-            token_data.claims.organization() != organization_uuid
-        } else {
-            true
-        };
         Ok(JsonLicense {
             key: license,
             organization: token_data.claims.organization(),
@@ -198,7 +187,6 @@ impl Licensor {
             entitlements: token_data.claims.entitlements(),
             issued_at: token_data.claims.issued_at(),
             expiration: token_data.claims.expiration(),
-            self_hosted,
         })
     }
 }

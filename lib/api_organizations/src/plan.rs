@@ -86,7 +86,7 @@ async fn get_one_inner(
     if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
         Ok(json_plan)
     } else if let Some(json_plan) = query_plan
-        .to_licensed_plan(biller, &context.licensor, query_organization.uuid)
+        .to_licensed_plan(biller, &context.licensor)
         .await?
     {
         Ok(json_plan)
@@ -208,7 +208,7 @@ async fn post_inner(
         QueryPlan::belonging_to(&query_organization)
             .first::<QueryPlan>(auth_conn!(context))
             .map_err(resource_not_found_err!(Plan, query_organization))?
-            .to_licensed_plan(biller, &context.licensor, query_organization.uuid).await?
+            .to_licensed_plan(biller, &context.licensor).await?
             .ok_or_else(|| {
                 issue_error(
                     "Failed to find licensed plan after creating it",

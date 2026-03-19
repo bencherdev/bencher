@@ -38,8 +38,6 @@ pub enum UsageKind {
     CloudFree,
     /// Bencher Cloud (Metered)
     CloudMetered,
-    /// Bencher Cloud (Licensed)
-    CloudLicensed,
     /// Bencher Self-Hosted (Licensed) via Bencher Cloud
     CloudSelfHostedLicensed,
     /// Bencher Self-Hosted (Free)
