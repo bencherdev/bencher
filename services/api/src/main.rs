@@ -35,6 +35,8 @@ pub enum ApiError {
     Litestream(#[from] LitestreamError),
     #[error("{0}")]
     ConfigTxError(bencher_config::ConfigTxError),
+    #[error("Failed to listen for ctrl-c signal: {0}")]
+    CtrlC(std::io::Error),
     #[error("Shutting down server: {0}")]
     RunServer(String),
     #[error("Failed to join handle: {0}")]
@@ -104,7 +106,7 @@ async fn run(
 
         let api_handle = run_api_server(config);
         return (
-            tokio::signal::ctrl_c().map(|_| Ok(())),
+            tokio::signal::ctrl_c().map(|r| r.map_err(ApiError::CtrlC)),
             async {
                 litestream_handle
                     .await
@@ -118,9 +120,10 @@ async fn run(
     }
 
     let api_handle = run_api_server(config);
-    (tokio::signal::ctrl_c().map(|_| Ok(())), async {
-        api_handle.await.map_err(ApiError::JoinHandle)?
-    })
+    (
+        tokio::signal::ctrl_c().map(|r| r.map_err(ApiError::CtrlC)),
+        async { api_handle.await.map_err(ApiError::JoinHandle)? },
+    )
         .race()
         .await
 }
