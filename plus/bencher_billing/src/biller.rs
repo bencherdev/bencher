@@ -59,45 +59,59 @@ pub struct Biller {
 }
 
 #[derive(Debug, Clone)]
-enum ProductPlan {
+enum PlusPlan {
     Free,
-    Team(ProductUsage),
-    Enterprise(ProductUsage),
+    Team(PlusUsage),
+    Enterprise(PlusUsage),
 }
 
 #[derive(Debug, Clone)]
-enum ProductUsage {
+enum PlusUsage {
     Metered(String),
     Licensed(String, Entitlements),
 }
 
-impl ProductPlan {
+impl PlusPlan {
     fn metered(plan_level: PlanLevel, price_name: String) -> Self {
         match plan_level {
             PlanLevel::Free => Self::Free,
-            PlanLevel::Team => Self::Team(ProductUsage::Metered(price_name)),
-            PlanLevel::Enterprise => Self::Enterprise(ProductUsage::Metered(price_name)),
+            PlanLevel::Team => Self::Team(PlusUsage::Metered(price_name)),
+            PlanLevel::Enterprise => Self::Enterprise(PlusUsage::Metered(price_name)),
         }
     }
 
     fn licensed(plan_level: PlanLevel, price_name: String, entitlements: Entitlements) -> Self {
         match plan_level {
             PlanLevel::Free => Self::Free,
-            PlanLevel::Team => Self::Team(ProductUsage::Licensed(price_name, entitlements)),
+            PlanLevel::Team => Self::Team(PlusUsage::Licensed(price_name, entitlements)),
             PlanLevel::Enterprise => {
-                Self::Enterprise(ProductUsage::Licensed(price_name, entitlements))
+                Self::Enterprise(PlusUsage::Licensed(price_name, entitlements))
             },
         }
     }
 
-    fn into_price(
+    fn bare_metal_price<'a>(&self, products: &'a Products) -> Result<&'a Price, BillingError> {
+        let usage = match self {
+            Self::Free => return Err(BillingError::ProductLevelFree),
+            Self::Team(usage) | Self::Enterprise(usage) => usage,
+        };
+        let (pricing, price_name) = match usage {
+            PlusUsage::Metered(price_name) => (&products.bare_metal.metered, price_name),
+            PlusUsage::Licensed(price_name, _) => (&products.bare_metal.licensed, price_name),
+        };
+        pricing
+            .get(price_name.as_str())
+            .ok_or_else(|| BillingError::PriceNotFound(price_name.clone()))
+    }
+
+    fn into_plus_price(
         self,
         products: &Products,
     ) -> Result<(&Price, Option<Entitlements>), BillingError> {
         Ok(match self {
-            ProductPlan::Free => return Err(BillingError::ProductLevelFree),
-            ProductPlan::Team(product_usage) => match product_usage {
-                ProductUsage::Metered(price_name) => (
+            PlusPlan::Free => return Err(BillingError::ProductLevelFree),
+            PlusPlan::Team(plus_usage) => match plus_usage {
+                PlusUsage::Metered(price_name) => (
                     products
                         .team
                         .metered
@@ -105,7 +119,7 @@ impl ProductPlan {
                         .ok_or(BillingError::PriceNotFound(price_name))?,
                     None,
                 ),
-                ProductUsage::Licensed(price_name, entitlements) => (
+                PlusUsage::Licensed(price_name, entitlements) => (
                     products
                         .team
                         .licensed
@@ -114,8 +128,8 @@ impl ProductPlan {
                     Some(entitlements),
                 ),
             },
-            ProductPlan::Enterprise(product_usage) => match product_usage {
-                ProductUsage::Metered(price_name) => (
+            PlusPlan::Enterprise(plus_usage) => match plus_usage {
+                PlusUsage::Metered(price_name) => (
                     products
                         .enterprise
                         .metered
@@ -123,7 +137,7 @@ impl ProductPlan {
                         .ok_or(BillingError::PriceNotFound(price_name))?,
                     None,
                 ),
-                ProductUsage::Licensed(price_name, entitlements) => (
+                PlusUsage::Licensed(price_name, entitlements) => (
                     products
                         .enterprise
                         .licensed
@@ -195,24 +209,30 @@ impl Biller {
     ) -> Result<JsonCheckout, BillingError> {
         let customer = self.get_or_create_customer(customer).await?;
 
-        let product_plan = if let Some(entitlements) = entitlements {
-            ProductPlan::licensed(plan_level, price_name, entitlements)
+        let plus_plan = if let Some(entitlements) = entitlements {
+            PlusPlan::licensed(plan_level, price_name, entitlements)
         } else {
-            ProductPlan::metered(plan_level, price_name)
+            PlusPlan::metered(plan_level, price_name)
         };
-        let (price, entitlements) = product_plan.into_price(&self.products)?;
+        let bare_metal_price = plus_plan.bare_metal_price(&self.products)?;
+        let (plus_price, entitlements) = plus_plan.into_plus_price(&self.products)?;
 
-        let mut line_item = CreateCheckoutSessionLineItems {
-            price: Some(price.id.to_string()),
+        let mut plus_line_item = CreateCheckoutSessionLineItems {
+            price: Some(plus_price.id.to_string()),
             quantity: entitlements.map(|e| std::cmp::min(e.into(), STRIPE_MAX_QUANTITY.into())),
             ..Default::default()
         };
-        line_item.adjustable_quantity = entitlements.map(|_| {
+        plus_line_item.adjustable_quantity = entitlements.map(|_| {
             let mut aq = CreateCheckoutSessionLineItemsAdjustableQuantity::new(true);
             aq.minimum = Some(10_000);
             aq.maximum = Some(STRIPE_MAX_QUANTITY.into());
             aq
         });
+
+        let bare_metal_line_item = CreateCheckoutSessionLineItems {
+            price: Some(bare_metal_price.id.to_string()),
+            ..Default::default()
+        };
 
         let mut consent = CreateCheckoutSessionConsentCollection::new();
         // https://bencher.dev/legal/subscription/
@@ -232,7 +252,7 @@ impl Biller {
             .payment_method_types(vec![CreateCheckoutSessionPaymentMethodTypes::Card])
             .currency(Currency::USD)
             .mode(CheckoutSessionMode::Subscription)
-            .line_items(vec![line_item])
+            .line_items(vec![plus_line_item, bare_metal_line_item])
             .consent_collection(consent)
             .subscription_data(sub_data)
             .success_url(return_url)
@@ -345,7 +365,7 @@ impl Biller {
             organization,
             customer_id,
             payment_method_id,
-            ProductPlan::metered(plan_level, price_name),
+            PlusPlan::metered(plan_level, price_name),
         )
         .await
     }
@@ -363,7 +383,7 @@ impl Biller {
             organization,
             customer_id,
             payment_method_id,
-            ProductPlan::licensed(plan_level, price_name, entitlements),
+            PlusPlan::licensed(plan_level, price_name, entitlements),
         )
         .await
     }
@@ -374,17 +394,21 @@ impl Biller {
         organization: OrganizationUuid,
         customer_id: CustomerId,
         payment_method_id: PaymentMethodId,
-        product_plan: ProductPlan,
+        plus_plan: PlusPlan,
     ) -> Result<Subscription, BillingError> {
-        let (price, entitlements) = product_plan.into_price(&self.products)?;
+        let bare_metal_price = plus_plan.bare_metal_price(&self.products)?;
+        let (plus_price, entitlements) = plus_plan.into_plus_price(&self.products)?;
 
-        let mut item = CreateSubscriptionItems::new();
-        item.price = Some(price.id.to_string());
-        item.quantity = entitlements.map(Into::into);
+        let mut plus_item = CreateSubscriptionItems::new();
+        plus_item.price = Some(plus_price.id.to_string());
+        plus_item.quantity = entitlements.map(Into::into);
+
+        let mut bare_metal_item = CreateSubscriptionItems::new();
+        bare_metal_item.price = Some(bare_metal_price.id.to_string());
 
         CreateSubscription::new()
             .customer(customer_id.to_string())
-            .items(vec![item])
+            .items(vec![plus_item, bare_metal_item])
             .default_payment_method(payment_method_id.to_string())
             .metadata(
                 [(METADATA_ORGANIZATION.to_owned(), organization.to_string())]
@@ -432,11 +456,11 @@ impl Biller {
             .parse()
             .map_err(|e| BillingError::BadOrganizationUuid(organization.clone(), e))?;
 
-        let preferred_price_ids = self.products.preferred_price_ids(METRICS_METER_NAME);
+        let plan_price_ids = self.products.plan_price_ids(METRICS_METER_NAME);
         let subscription_items = Self::filter_subscription_items(
             subscription_id,
             subscription.items.data,
-            &preferred_price_ids,
+            &plan_price_ids,
         )?;
         let subscription_item = Self::get_subscription_item(subscription_id, subscription_items)?;
 
@@ -1064,6 +1088,28 @@ mod tests {
         let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
         let result = Biller::get_subscription_item(&sub_id, filtered).unwrap();
         assert_eq!(result.price.id, known);
+    }
+
+    #[test]
+    fn filter_subscription_items_excludes_bare_metal() {
+        let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
+        let team_price: stripe_product::PriceId = "price_team".parse().unwrap();
+        let bare_metal_price: stripe_product::PriceId = "price_bare_metal".parse().unwrap();
+        let items = vec![
+            make_subscription_item("price_team"),
+            make_subscription_item("price_bare_metal"),
+        ];
+        // Only team/enterprise prices, not bare_metal
+        let price_ids = HashSet::from([&team_price]);
+        let filtered = Biller::filter_subscription_items(&sub_id, items, &price_ids).unwrap();
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered.first().unwrap().price.id, team_price);
+        // Verify bare_metal was excluded
+        assert!(
+            filtered
+                .iter()
+                .all(|item| item.price.id != bare_metal_price)
+        );
     }
 
     #[test]
