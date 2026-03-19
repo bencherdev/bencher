@@ -18,7 +18,4 @@ pub enum CliError {
     Noise(#[from] crate::bencher::sub::NoiseError),
     #[error("{0}")]
     Docker(#[from] crate::bencher::sub::DockerError),
-
-    #[error("Failed to serialize config: {0}")]
-    SerializeConfig(serde_json::Error),
 }

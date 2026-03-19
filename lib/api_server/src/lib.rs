@@ -41,7 +41,6 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(spec::server_spec_get)?;
         api_description.register(restart::server_restart_post)?;
         api_description.register(config::server_config_get)?;
-        api_description.register(config::server_config_put)?;
         api_description.register(config::server_config_console_get)?;
         api_description.register(backup::server_backup_post)?;
 

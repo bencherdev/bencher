@@ -39,13 +39,6 @@ pub use smtp::JsonSmtp;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonUpdateConfig {
-    pub config: JsonConfig,
-    pub delay: Option<u64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConfig {
     pub console: JsonConsole,
     pub security: JsonSecurity,

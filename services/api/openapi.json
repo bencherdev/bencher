@@ -8390,79 +8390,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "put": {
-        "tags": [
-          "server"
-        ],
-        "summary": "Update server configuration",
-        "description": "Update the API server configuration. The user must be an admin on the server to use this route. Updating the configuration will cause the server to restart.",
-        "operationId": "server_config_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonUpdateConfig"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonConfig"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/server/config/console": {
@@ -16163,23 +16090,6 @@
             ]
           }
         }
-      },
-      "JsonUpdateConfig": {
-        "type": "object",
-        "properties": {
-          "config": {
-            "$ref": "#/components/schemas/JsonConfig"
-          },
-          "delay": {
-            "nullable": true,
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "config"
-        ]
       },
       "JsonUpdateMeasure": {
         "type": "object",
