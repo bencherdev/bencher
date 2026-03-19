@@ -46,7 +46,6 @@ interface Props {
 
 enum PlanKind {
 	Metered = "metered",
-	Licensed = "licensed",
 	SelfHosted = "self-hosted",
 }
 
@@ -84,7 +83,6 @@ const BillingForm = (props: Props) => {
 		switch (planKind()) {
 			case PlanKind.Metered:
 				return null;
-			case PlanKind.Licensed:
 			case PlanKind.SelfHosted:
 				return entitlementsAnnual();
 		}
@@ -93,7 +91,6 @@ const BillingForm = (props: Props) => {
 	const organizationUuidJson = createMemo(() => {
 		switch (planKind()) {
 			case PlanKind.Metered:
-			case PlanKind.Licensed:
 				return null;
 			case PlanKind.SelfHosted:
 				return organizationUuid();
@@ -102,7 +99,6 @@ const BillingForm = (props: Props) => {
 	const organizationUuidValid = createMemo(() => {
 		switch (planKind()) {
 			case PlanKind.Metered:
-			case PlanKind.Licensed:
 				return true;
 			case PlanKind.SelfHosted: {
 				const uuid = organizationUuid();
@@ -223,7 +219,6 @@ const PlanLocality = (props: {
 					<For
 						each={[
 							["Monthly Metered", PlanKind.Metered],
-							["Annual License", PlanKind.Licensed],
 							["Self-Hosted License", PlanKind.SelfHosted],
 						]}
 					>
