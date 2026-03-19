@@ -309,6 +309,8 @@ async fn post_inner(
     let new_run_report = NewRunReport {
         report: json_report,
         #[cfg(feature = "plus")]
+        is_claimed: true,
+        #[cfg(feature = "plus")]
         testbed: RunTestbed::Explicit,
         #[cfg(feature = "plus")]
         spec_reset: false,

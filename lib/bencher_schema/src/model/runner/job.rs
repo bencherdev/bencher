@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, PlanLevel, Priority,
-    Timeout, project::report::JsonReportSettings, runner::JsonIterationOutput,
-    runner::job::JsonNewRunJob,
+    DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, Priority, Timeout,
+    project::report::JsonReportSettings, runner::JsonIterationOutput, runner::job::JsonNewRunJob,
 };
 use diesel::{
     BoolExpressionMethods as _, Connection as _, ExpressionMethods as _, QueryDsl as _,
@@ -147,6 +146,7 @@ impl QueryJob {
                 &results_array,
                 query_report.adapter,
                 settings,
+                self.priority,
                 plan_kind,
                 &query_project,
             )
@@ -439,17 +439,7 @@ fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed:
 }
 
 fn determine_priority(plan_kind: &PlanKind, is_claimed: bool) -> Priority {
-    if !is_claimed {
-        return Priority::Unclaimed;
-    }
-    match plan_kind {
-        PlanKind::None => Priority::Free,
-        PlanKind::Metered(_) => Priority::Plus,
-        PlanKind::Licensed(license_usage) => match license_usage.level {
-            PlanLevel::Free => Priority::Free,
-            PlanLevel::Team | PlanLevel::Enterprise => Priority::Plus,
-        },
-    }
+    plan_kind.priority(is_claimed)
 }
 
 /// Insert the job duration summary for a report.
@@ -475,7 +465,7 @@ fn insert_job_duration(
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, Entitlements};
+    use bencher_json::{DateTime, Entitlements, PlanLevel};
     use diesel::{Connection as _, QueryDsl as _};
     use pretty_assertions::assert_eq;
 

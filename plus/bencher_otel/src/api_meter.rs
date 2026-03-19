@@ -16,12 +16,20 @@ impl ApiMeter {
     /// The `OTel` SDK deduplicates instruments by (name, description, unit),
     /// so re-building on every call is cheap and returns the same instrument.
     pub fn increment(api_counter: ApiCounter) {
+        Self::increment_by(api_counter, 1);
+    }
+
+    /// Increment a counter by `value`.
+    ///
+    /// The `OTel` SDK deduplicates instruments by (name, description, unit),
+    /// so re-building on every call is cheap and returns the same instrument.
+    pub fn increment_by(api_counter: ApiCounter, value: u64) {
         let counter = METER
             .u64_counter(api_counter.name())
             .with_description(api_counter.description())
             .build();
         let attributes = api_counter.attributes();
-        counter.add(1, &attributes);
+        counter.add(value, &attributes);
     }
 
     /// Record a histogram observation.
@@ -49,13 +57,12 @@ pub enum ApiCounter {
     ProjectCreate,
     ProjectDelete,
 
-    RunClaimed,
-    RunUnclaimed,
+    Run(Priority),
 
     ReportCreate,
     ReportDelete,
 
-    MetricCreate,
+    MetricCreate(Priority),
 
     UserIp,
     UserIpNotFound,
@@ -121,13 +128,12 @@ impl ApiCounter {
             Self::ProjectCreate => "project.create",
             Self::ProjectDelete => "project.delete",
 
-            Self::RunClaimed => "run.claimed",
-            Self::RunUnclaimed => "run.unclaimed",
+            Self::Run(_) => "run",
 
             Self::ReportCreate => "report.create",
             Self::ReportDelete => "report.delete",
 
-            Self::MetricCreate => "metric.create",
+            Self::MetricCreate(_) => "metric.create",
 
             Self::UserIp => "user.ip",
             Self::UserIpNotFound => "user.ip.not_found",
@@ -193,13 +199,12 @@ impl ApiCounter {
             Self::ProjectCreate => "Counts the number of project creations",
             Self::ProjectDelete => "Counts the number of project deletions",
 
-            Self::RunClaimed => "Counts the number of claimed runs",
-            Self::RunUnclaimed => "Counts the number of unclaimed runs",
+            Self::Run(_) => "Counts the number of runs",
 
             Self::ReportCreate => "Counts the number of report creations",
             Self::ReportDelete => "Counts the number of report deletions",
 
-            Self::MetricCreate => "Counts the number of metric creations",
+            Self::MetricCreate(_) => "Counts the number of metric creations",
 
             Self::UserIp => "Counts the number of user IP address found occurrences",
             Self::UserIpNotFound => "Counts the number of user IP address not found occurrences",
@@ -272,11 +277,8 @@ impl ApiCounter {
             | Self::OrganizationDelete
             | Self::ProjectCreate
             | Self::ProjectDelete
-            | Self::RunClaimed
-            | Self::RunUnclaimed
             | Self::ReportCreate
             | Self::ReportDelete
-            | Self::MetricCreate
             | Self::UserIp
             | Self::UserIpNotFound
             | Self::UserRecaptchaFailure
@@ -297,6 +299,9 @@ impl ApiCounter {
             | Self::RunnerMinutesBillingFailed
             | Self::RunnerHeartbeatTimeout
             | Self::RunnerJobTimeout => Vec::new(),
+            Self::Run(priority) | Self::MetricCreate(priority) => {
+                vec![priority_attribute(priority)]
+            },
             Self::UserSignup(auth_method)
             | Self::UserLogin(auth_method)
             | Self::UserSsoJoin(auth_method) => auth_method.attributes(),

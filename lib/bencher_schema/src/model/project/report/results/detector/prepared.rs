@@ -60,9 +60,6 @@ impl PreparedDetection {
 
         let boundary_id = diesel::select(last_insert_rowid()).get_result::<BoundaryId>(conn)?;
 
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::MetricCreate);
-
         if !ignore_benchmark && let Some(boundary_limit) = outlier {
             InsertAlert::insert(conn, boundary_id, boundary_limit)?;
         }

@@ -3,7 +3,7 @@
 use bencher_billing::{Biller, CustomerId};
 use bencher_json::{
     DateTime, Entitlements, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId, OrganizationUuid,
-    PlanLevel, project::Visibility,
+    PlanLevel, Priority, project::Visibility,
 };
 use bencher_license::Licensor;
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -245,6 +245,20 @@ pub enum PlanKindError {
 }
 
 impl PlanKind {
+    pub fn priority(&self, is_claimed: bool) -> Priority {
+        if !is_claimed {
+            return Priority::Unclaimed;
+        }
+        match self {
+            Self::None => Priority::Free,
+            Self::Metered(_) => Priority::Plus,
+            Self::Licensed(license_usage) => match license_usage.level {
+                PlanLevel::Free => Priority::Free,
+                PlanLevel::Team | PlanLevel::Enterprise => Priority::Plus,
+            },
+        }
+    }
+
     async fn new(
         context: &ApiContext,
         biller: Option<&Biller>,
