@@ -4,6 +4,8 @@ use std::sync::LazyLock;
 use opentelemetry::metrics::Meter;
 use uuid::Uuid;
 
+use crate::api_histogram::{ApiHistogram, Priority, priority_attribute};
+
 static METER: LazyLock<Meter> = LazyLock::new(|| opentelemetry::global::meter(ApiMeter::NAME));
 
 pub struct ApiMeter;
@@ -62,7 +64,9 @@ pub enum ApiCounter {
     ReportCreate,
     ReportDelete,
 
-    MetricCreate(Priority),
+    MetricsCreate(Priority),
+    MetricsBilled,
+    MetricsBilledFailed,
 
     UserIp,
     UserIpNotFound,
@@ -108,7 +112,7 @@ pub enum ApiCounter {
     RunnerJobClaim,
     RunnerJobUpdate(JobStatusKind),
     RunnerMinutesBilled,
-    RunnerMinutesBillingFailed,
+    RunnerMinutesBilledFailed,
     RunnerHeartbeatTimeout,
     RunnerJobTimeout,
 
@@ -133,7 +137,9 @@ impl ApiCounter {
             Self::ReportCreate => "report.create",
             Self::ReportDelete => "report.delete",
 
-            Self::MetricCreate(_) => "metric.create",
+            Self::MetricsCreate(_) => "metrics.create",
+            Self::MetricsBilled => "metrics.billed",
+            Self::MetricsBilledFailed => "metrics.billed.failed",
 
             Self::UserIp => "user.ip",
             Self::UserIpNotFound => "user.ip.not_found",
@@ -179,7 +185,7 @@ impl ApiCounter {
             Self::RunnerJobClaim => "runner.job.claim",
             Self::RunnerJobUpdate(_) => "runner.job.update",
             Self::RunnerMinutesBilled => "runner.minutes.billed",
-            Self::RunnerMinutesBillingFailed => "runner.minutes.billing_failed",
+            Self::RunnerMinutesBilledFailed => "runner.minutes.billed.failed",
             Self::RunnerHeartbeatTimeout => "runner.heartbeat.timeout",
             Self::RunnerJobTimeout => "runner.job.timeout",
 
@@ -204,7 +210,9 @@ impl ApiCounter {
             Self::ReportCreate => "Counts the number of report creations",
             Self::ReportDelete => "Counts the number of report deletions",
 
-            Self::MetricCreate(_) => "Counts the number of metric creations",
+            Self::MetricsCreate(_) => "Counts the number of metrics created",
+            Self::MetricsBilled => "Counts the number of metrics successfully billed",
+            Self::MetricsBilledFailed => "Counts the number of metrics billing failures",
 
             Self::UserIp => "Counts the number of user IP address found occurrences",
             Self::UserIpNotFound => "Counts the number of user IP address not found occurrences",
@@ -254,8 +262,8 @@ impl ApiCounter {
             Self::RunnerJobClaim => "Counts the number of runner job claims",
             Self::RunnerJobUpdate(_) => "Counts the number of runner job status updates",
             Self::RunnerMinutesBilled => "Counts the number of runner minutes successfully billed",
-            Self::RunnerMinutesBillingFailed => {
-                "Counts the number of runner minutes billing failures"
+            Self::RunnerMinutesBilledFailed => {
+                "Counts the number of runner minutes billed failures"
             },
             Self::RunnerHeartbeatTimeout => {
                 "Counts the number of jobs failed due to heartbeat timeout"
@@ -285,6 +293,8 @@ impl ApiCounter {
             | Self::UserInvite
             | Self::UserClaim
             | Self::UserCheckout
+            | Self::MetricsBilled
+            | Self::MetricsBilledFailed
             | Self::EmailSend
             | Self::OciBlobPush
             | Self::OciBlobPull
@@ -296,10 +306,10 @@ impl ApiCounter {
             | Self::RunnerTokenRotate
             | Self::RunnerJobClaim
             | Self::RunnerMinutesBilled
-            | Self::RunnerMinutesBillingFailed
+            | Self::RunnerMinutesBilledFailed
             | Self::RunnerHeartbeatTimeout
             | Self::RunnerJobTimeout => Vec::new(),
-            Self::Run(priority) | Self::MetricCreate(priority) => {
+            Self::Run(priority) | Self::MetricsCreate(priority) => {
                 vec![priority_attribute(priority)]
             },
             Self::UserSignup(auth_method)
@@ -488,80 +498,4 @@ fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
     const KEY: &str = "server.uuid";
 
     vec![opentelemetry::KeyValue::new(KEY, server_uuid.to_string())]
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum ApiHistogram {
-    /// Time a job spent waiting in the queue before being claimed.
-    JobQueueDuration(Priority),
-    /// Actual execution time from job started to completion (excludes queue wait).
-    JobRunDuration(Priority),
-    /// Total time from job creation to completion.
-    JobCompleteDuration(Priority),
-    /// Total wall-clock time for the entire report creation endpoint.
-    ReportCreateDuration,
-    /// Total time to process report results (adapter parsing + all iterations).
-    ReportProcessDuration,
-    /// Time spent in the batched DB write transaction per iteration.
-    ReportWriteDuration,
-}
-
-impl ApiHistogram {
-    fn name(self) -> &'static str {
-        match self {
-            Self::JobQueueDuration(_) => "job.queue.duration",
-            Self::JobRunDuration(_) => "job.run.duration",
-            Self::JobCompleteDuration(_) => "job.complete.duration",
-            Self::ReportCreateDuration => "report.create.duration",
-            Self::ReportProcessDuration => "report.process.duration",
-            Self::ReportWriteDuration => "report.write.duration",
-        }
-    }
-
-    fn description(self) -> &'static str {
-        match self {
-            Self::JobQueueDuration(_) => {
-                "Time a job spent waiting in the queue before being claimed"
-            },
-            Self::JobRunDuration(_) => "Actual execution time from job started to completion",
-            Self::JobCompleteDuration(_) => "Total time from job creation to completion",
-            Self::ReportCreateDuration => {
-                "Total wall-clock time for the entire report creation endpoint"
-            },
-            Self::ReportProcessDuration => {
-                "Total time to process report results (adapter parsing + all iterations)"
-            },
-            Self::ReportWriteDuration => {
-                "Time spent in the batched DB write transaction per iteration"
-            },
-        }
-    }
-
-    fn unit(self) -> &'static str {
-        match self {
-            Self::JobQueueDuration(_)
-            | Self::JobRunDuration(_)
-            | Self::JobCompleteDuration(_)
-            | Self::ReportCreateDuration
-            | Self::ReportProcessDuration
-            | Self::ReportWriteDuration => "s",
-        }
-    }
-
-    fn attributes(self) -> Vec<opentelemetry::KeyValue> {
-        match self {
-            Self::JobQueueDuration(priority)
-            | Self::JobRunDuration(priority)
-            | Self::JobCompleteDuration(priority) => vec![priority_attribute(priority)],
-            Self::ReportCreateDuration
-            | Self::ReportProcessDuration
-            | Self::ReportWriteDuration => Vec::new(),
-        }
-    }
-}
-
-pub use bencher_json::Priority;
-
-fn priority_attribute(priority: Priority) -> opentelemetry::KeyValue {
-    opentelemetry::KeyValue::new("job.priority", priority.to_string())
 }

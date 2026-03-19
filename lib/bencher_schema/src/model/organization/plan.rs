@@ -397,16 +397,23 @@ impl PlanKind {
                         PlanKindError::NoBiller,
                     ));
                 };
-                biller
-                    .record_metrics_usage(&customer_id, usage)
-                    .await
-                    .map_err(|e| {
-                        issue_error(
+                match biller.record_metrics_usage(&customer_id, usage).await {
+                    Ok(_) => {
+                        #[cfg(feature = "otel")]
+                        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::MetricsBilled);
+                    },
+                    Err(e) => {
+                        #[cfg(feature = "otel")]
+                        bencher_otel::ApiMeter::increment(
+                            bencher_otel::ApiCounter::MetricsBilledFailed,
+                        );
+                        return Err(issue_error(
                             "Failed to record usage",
                             &format!("Failed to record usage ({usage}) for project ({project:?})."),
                             e,
-                        )
-                    })?;
+                        ));
+                    },
+                }
             },
             Self::Licensed(LicenseUsage {
                 entitlements,

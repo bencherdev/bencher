@@ -1,8 +1,9 @@
 #![cfg(feature = "plus")]
 
+mod api_histogram;
 mod api_meter;
 
+pub use api_histogram::{ApiHistogram, Priority};
 pub use api_meter::{
-    ApiCounter, ApiHistogram, ApiMeter, AuthMethod, AuthorizationKind, IntervalKind, JobStatusKind,
-    OAuthProvider, Priority,
+    ApiCounter, ApiMeter, AuthMethod, AuthorizationKind, IntervalKind, JobStatusKind, OAuthProvider,
 };

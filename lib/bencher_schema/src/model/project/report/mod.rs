@@ -462,7 +462,7 @@ impl QueryReport {
         #[cfg(all(feature = "otel", feature = "plus"))]
         if usage > 0 {
             bencher_otel::ApiMeter::increment_by(
-                bencher_otel::ApiCounter::MetricCreate(priority),
+                bencher_otel::ApiCounter::MetricsCreate(priority),
                 u64::from(usage),
             );
         }

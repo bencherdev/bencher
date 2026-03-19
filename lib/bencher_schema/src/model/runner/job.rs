@@ -329,7 +329,7 @@ impl PendingInsertJob {
         .await?;
 
         // 2. Determine priority
-        let priority = determine_priority(plan_kind, is_claimed);
+        let priority = plan_kind.priority(is_claimed);
 
         // 3. Resolve timeout (clamped by plan tier)
         let timeout = resolve_timeout(new_run_job.timeout, plan_kind, is_claimed);
@@ -436,10 +436,6 @@ fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed:
         PlanKind::None => requested.map_or(Timeout::FREE_MAX, |t| t.clamp_max(Timeout::FREE_MAX)),
         PlanKind::Metered(_) | PlanKind::Licensed(_) => requested.unwrap_or(Timeout::PLUS_DEFAULT),
     }
-}
-
-fn determine_priority(plan_kind: &PlanKind, is_claimed: bool) -> Priority {
-    plan_kind.priority(is_claimed)
 }
 
 /// Insert the job duration summary for a report.
@@ -561,39 +557,33 @@ mod tests {
         assert_eq!(u32::from(timeout), 86400);
     }
 
-    // --- determine_priority tests ---
+    // --- PlanKind::priority tests ---
 
     #[test]
     fn priority_unclaimed() {
-        assert_eq!(
-            determine_priority(&PlanKind::None, false),
-            Priority::Unclaimed
-        );
+        assert_eq!(PlanKind::None.priority(false), Priority::Unclaimed);
     }
 
     #[test]
     fn priority_unclaimed_ignores_plan() {
         // Even with a Plus plan, unclaimed is always Unclaimed
-        assert_eq!(
-            determine_priority(&metered_plan(), false),
-            Priority::Unclaimed
-        );
+        assert_eq!(metered_plan().priority(false), Priority::Unclaimed);
     }
 
     #[test]
     fn priority_free() {
-        assert_eq!(determine_priority(&PlanKind::None, true), Priority::Free);
+        assert_eq!(PlanKind::None.priority(true), Priority::Free);
     }
 
     #[test]
     fn priority_metered() {
-        assert_eq!(determine_priority(&metered_plan(), true), Priority::Plus);
+        assert_eq!(metered_plan().priority(true), Priority::Plus);
     }
 
     #[test]
     fn priority_licensed_free() {
         assert_eq!(
-            determine_priority(&licensed_plan(PlanLevel::Free), true),
+            licensed_plan(PlanLevel::Free).priority(true),
             Priority::Free
         );
     }
@@ -601,7 +591,7 @@ mod tests {
     #[test]
     fn priority_licensed_team() {
         assert_eq!(
-            determine_priority(&licensed_plan(PlanLevel::Team), true),
+            licensed_plan(PlanLevel::Team).priority(true),
             Priority::Plus
         );
     }
@@ -609,7 +599,7 @@ mod tests {
     #[test]
     fn priority_licensed_enterprise() {
         assert_eq!(
-            determine_priority(&licensed_plan(PlanLevel::Enterprise), true),
+            licensed_plan(PlanLevel::Enterprise).priority(true),
             Priority::Plus
         );
     }
