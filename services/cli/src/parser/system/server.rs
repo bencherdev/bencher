@@ -46,28 +46,12 @@ pub struct CliRestart {
 pub enum CliConfig {
     /// View server config
     View(CliConfigView),
-    /// Update server config and restart
-    Update(CliConfigUpdate),
     /// View console config
     Console(CliConfigConsole),
 }
 
 #[derive(Parser, Debug)]
 pub struct CliConfigView {
-    #[clap(flatten)]
-    pub backend: CliBackend,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliConfigUpdate {
-    /// New server config
-    #[clap(long)]
-    pub config: String,
-
-    /// Server restart delay seconds
-    #[clap(long, default_value = "3")]
-    pub delay: u64,
-
     #[clap(flatten)]
     pub backend: CliBackend,
 }

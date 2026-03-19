@@ -1,22 +1,17 @@
-use bencher_config::{BENCHER_CONFIG, Config};
-use bencher_endpoint::{CorsResponse, Endpoint, Get, Put, ResponseAccepted, ResponseOk};
-use bencher_json::{
-    JsonConfig,
-    system::config::{JsonConsole, JsonUpdateConfig},
-};
+use bencher_config::Config;
+use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
+use bencher_json::{JsonConfig, system::config::JsonConsole};
 use bencher_schema::{
     context::ApiContext,
-    error::{bad_request_error, issue_error},
+    error::issue_error,
     model::user::{
         admin::AdminUser,
         auth::BearerToken,
         public::{PubBearerToken, PublicUser},
     },
 };
-use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
+use dropshot::{HttpError, RequestContext, endpoint};
 use slog::Logger;
-
-use super::restart::countdown;
 
 #[endpoint {
     method = OPTIONS,
@@ -59,58 +54,6 @@ async fn get_one_inner(log: &Logger) -> Result<JsonConfig, HttpError> {
         })?
         .unwrap_or_default()
         .into())
-}
-
-/// Update server configuration
-///
-/// Update the API server configuration.
-/// The user must be an admin on the server to use this route.
-/// Updating the configuration will cause the server to restart.
-#[endpoint {
-    method = PUT,
-    path =  "/v0/server/config",
-    tags = ["server"]
-}]
-pub async fn server_config_put(
-    rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
-    body: TypedBody<JsonUpdateConfig>,
-) -> Result<ResponseAccepted<JsonConfig>, HttpError> {
-    let admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = put_inner(&rqctx.log, rqctx.context(), body.into_inner(), &admin_user).await?;
-    Ok(Put::auth_response_accepted(json))
-}
-
-async fn put_inner(
-    log: &Logger,
-    context: &ApiContext,
-    json_config: JsonUpdateConfig,
-    admin_user: &AdminUser,
-) -> Result<JsonConfig, HttpError> {
-    let JsonUpdateConfig { config, delay } = json_config;
-
-    // TODO add validation here
-    let config_str = serde_json::to_string(&config).map_err(bad_request_error)?;
-    // SAFETY: This endpoint can only be called by an admin on the server.
-    // May the odds ever be in their favor.
-    #[expect(unsafe_code, reason = "BENCHER_CONFIG")]
-    unsafe {
-        std::env::set_var(BENCHER_CONFIG, &config_str);
-    }
-    Config::write(log, config_str.as_bytes())
-        .await
-        .map_err(|e| {
-            issue_error(
-                "Failed to write config file",
-                "Failed to write configuration file",
-                e,
-            )
-        })?;
-    let json_config = serde_json::from_str(&config_str).map_err(bad_request_error)?;
-
-    countdown(log, context.restart_tx.clone(), delay, admin_user.user().id);
-
-    Ok(json_config)
 }
 
 #[endpoint {

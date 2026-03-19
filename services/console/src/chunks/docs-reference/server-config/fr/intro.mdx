@@ -8,12 +8,6 @@ La configuration peut être fournie de trois manières :
 
 Si aucune configuration n'est trouvée, une configuration par défaut est chargée.
 
-Pour mettre à jour la configuration pendant que le serveur est en cours d'exécution,
-un administrateur peut utiliser la commande CLI `bencher server config update`
-qui sollicite le [point de terminaison PUT `/v0/server/config`](/fr/docs/api/server/config/#put-v0serverconfig).
-Toutes les configurations mises à jour sont enregistrées dans la variable d'environnement `BENCHER_CONFIG`
-et sur le disque à `BENCHER_CONFIG_PATH`.
-
 Exemple de configuration JSON :
 
 <Example />

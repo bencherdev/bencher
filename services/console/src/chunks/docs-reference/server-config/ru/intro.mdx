@@ -8,11 +8,6 @@ import Example from "../example.mdx";
 
 Если конфигурация не найдена, загружается конфигурация по умолчанию.
 
-Для обновления конфигурации во время работы сервера администратор может использовать команду CLI `bencher server config update`,
-которая обращается к [PUT `/v0/server/config` endpoint](/ru/docs/api/server/config/#put-v0serverconfig).
-Все обновленные конфигурации сохраняются в переменной окружения `BENCHER_CONFIG`
-и на диске по пути `BENCHER_CONFIG_PATH`.
-
 Пример JSON-конфигурации:
 
 <Example />

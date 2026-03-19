@@ -8,12 +8,6 @@ Bencher API 서버는 시작 시 JSON 구성을 필요로 합니다.
 
 구성을 찾을 수 없는 경우 기본 구성이 로드됩니다.
 
-서버가 실행 중일 때 구성을 업데이트하려면,
-관리자는 CLI `bencher server config update` 명령어를 사용하여
-[PUT `/v0/server/config` 엔드포인트](/ko/docs/api/server/config/#put-v0serverconfig)를 실행할 수 있습니다.
-업데이트된 모든 구성은 `BENCHER_CONFIG` 환경 변수와
-디스크의 `BENCHER_CONFIG_PATH`에 저장됩니다.
-
 JSON 구성 예:
 
 <Example />
