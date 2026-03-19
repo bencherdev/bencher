@@ -7,7 +7,7 @@ license-file.workspace = true
 publish = false
 
 [features]
-default = ["plus"]
+default = ["plus", "sentry", "otel"]
 plus = [
     "bencher_api/plus",
     "bencher_config/plus",
@@ -19,6 +19,8 @@ plus = [
     "dep:http",
     "dep:sha2",
 ]
+sentry = ["bencher_api/sentry"]
+otel = ["bencher_api/otel"]
 
 [dependencies]
 bencher_api.workspace = true

@@ -9,7 +9,7 @@ use bencher_rbac::organization::Permission;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{forbidden_error, issue_error},
+    error::{bad_request_error, forbidden_error, issue_error},
     model::{
         organization::QueryOrganization,
         user::auth::{AuthUser, BearerToken},
@@ -62,6 +62,12 @@ async fn checkouts_post_inner(
         entitlements,
         self_hosted,
     } = json_checkout;
+
+    if entitlements.is_some() && self_hosted.is_none() {
+        return Err(bad_request_error(
+            "Licensed plans are only available for Bencher Self-Hosted",
+        ));
+    }
 
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserCheckout);

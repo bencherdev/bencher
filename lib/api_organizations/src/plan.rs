@@ -13,7 +13,7 @@ use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{
-        BencherResource, forbidden_error, issue_error, resource_conflict_err,
+        BencherResource, bad_request_error, forbidden_error, issue_error, resource_conflict_err,
         resource_conflict_error, resource_not_found_err,
     },
     model::{
@@ -163,6 +163,12 @@ async fn post_inner(
         self_hosted,
         remote,
     } = json_plan;
+
+    if context.is_bencher_cloud && entitlements.is_some() && self_hosted.is_none() {
+        return Err(bad_request_error(
+            "Licensed plans are only available for Bencher Self-Hosted",
+        ));
+    }
 
     let subscription_id = if remote.unwrap_or(true) {
         biller
