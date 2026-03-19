@@ -15,7 +15,7 @@ use diesel::{
 };
 use dropshot::{ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpServer};
 use tempfile::NamedTempFile;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::Mutex;
 
 const ISSUER: &str = "http://localhost:3000";
 
@@ -95,7 +95,6 @@ impl TestServer {
         // Build minimal ApiContext
         let token_key = TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let rbac = init_rbac().expect("Failed to init RBAC").into();
-        let (restart_tx, _restart_rx) = mpsc::channel(1);
 
         let database = Database {
             path: PathBuf::from(&db_path),
@@ -116,7 +115,6 @@ impl TestServer {
             rbac,
             messenger: Messenger::default(),
             database,
-            restart_tx,
             rate_limiting: bencher_schema::context::RateLimiting::max(),
             github_client: None,
             google_client: None,
@@ -182,7 +180,6 @@ impl TestServer {
         // Build minimal ApiContext
         let token_key = TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let rbac = init_rbac().expect("Failed to init RBAC").into();
-        let (restart_tx, _restart_rx) = mpsc::channel(1);
 
         let database = Database {
             path: PathBuf::from(&db_path),
@@ -201,7 +198,6 @@ impl TestServer {
             rbac,
             messenger: Messenger::default(),
             database,
-            restart_tx,
             clock: bencher_json::Clock::System,
         };
 

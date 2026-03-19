@@ -33,14 +33,6 @@ const getDefault = (name) => {
 				return "magic";
 			}
 			return;
-		case "delay":
-			if (
-				(path === "/v0/server/restart" && method === MethodKind.Post) ||
-				(path === "/v0/server/config" && method === MethodKind.Put)
-			) {
-				return 3;
-			}
-			return;
 		default:
 			return;
 	}
