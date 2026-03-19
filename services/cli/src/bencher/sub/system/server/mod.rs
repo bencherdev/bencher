@@ -2,7 +2,6 @@ use crate::{CliError, bencher::sub::SubCmd, parser::system::server::CliServer};
 
 mod backup;
 mod config;
-mod restart;
 mod spec;
 mod stats;
 mod version;
@@ -11,7 +10,6 @@ mod version;
 pub enum Server {
     Version(version::Version),
     Spec(spec::OpenApiSpec),
-    Restart(restart::Restart),
     Config(config::Config),
     Backup(backup::Backup),
     #[cfg(feature = "plus")]
@@ -25,7 +23,6 @@ impl TryFrom<CliServer> for Server {
         Ok(match admin {
             CliServer::Version(version) => Self::Version(version.try_into()?),
             CliServer::Spec(spec) => Self::Spec(spec.try_into()?),
-            CliServer::Restart(restart) => Self::Restart(restart.try_into()?),
             CliServer::Config(config) => Self::Config(config.try_into()?),
             CliServer::Backup(backup) => Self::Backup(backup.try_into()?),
             #[cfg(feature = "plus")]
@@ -39,7 +36,6 @@ impl SubCmd for Server {
         match self {
             Self::Version(version) => version.exec().await,
             Self::Spec(spec) => spec.exec().await,
-            Self::Restart(restart) => restart.exec().await,
             Self::Config(config) => config.exec().await,
             Self::Backup(backup) => backup.exec().await,
             #[cfg(feature = "plus")]

@@ -14,7 +14,9 @@ use sentry::ClientInitGuard;
 use slog::{Logger, error, info};
 #[cfg(feature = "plus")]
 use tokio::process::Command;
-use tokio::{sync, task::JoinHandle};
+#[cfg(feature = "plus")]
+use tokio::sync;
+use tokio::task::JoinHandle;
 use tokio_rustls::rustls::crypto::{CryptoProvider, ring};
 
 #[derive(Debug, thiserror::Error)]
@@ -31,8 +33,6 @@ pub enum ApiError {
     Litestream(#[from] LitestreamError),
     #[error("{0}")]
     ConfigTxError(bencher_config::ConfigTxError),
-    #[error("Unexpected empty shutdown signal. This is likely a bug. Please report it.")]
-    EmptyShutdown,
     #[error("Shutting down server: {0}")]
     RunServer(String),
     #[error("Failed to join handle: {0}")]
@@ -73,70 +73,41 @@ async fn run(
     log: &Logger,
     #[cfg(feature = "sentry")] mut _guard: ClientInitGuard,
 ) -> Result<(), ApiError> {
-    loop {
-        let config = Config::load_or_default(log)
-            .await
-            .map_err(ApiError::Config)?;
+    let config = Config::load_or_default(log)
+        .await
+        .map_err(ApiError::Config)?;
 
-        #[cfg(all(feature = "plus", feature = "sentry"))]
-        let _guard = init_sentry(log, &config);
+    #[cfg(all(feature = "plus", feature = "sentry"))]
+    let _guard = init_sentry(log, &config);
 
-        #[cfg(all(feature = "plus", feature = "otel"))]
-        bencher_otel_provider::run_open_telemetry(log, &config)
-            .inspect_err(|e| {
-                error!(log, "Failed to run OpenTelemetry: {e}");
-                #[cfg(feature = "sentry")]
-                sentry::capture_error(&e);
-            })
-            .map_err(ApiError::OpenTelemetry)?;
+    #[cfg(all(feature = "plus", feature = "otel"))]
+    bencher_otel_provider::run_open_telemetry(log, &config)
+        .inspect_err(|e| {
+            error!(log, "Failed to run OpenTelemetry: {e}");
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&e);
+        })
+        .map_err(ApiError::OpenTelemetry)?;
 
-        let (restart_tx, mut restart_rx) = sync::mpsc::channel(1);
-        #[cfg(feature = "plus")]
-        if let Some(litestream) = config
-            .plus
-            .as_ref()
-            .and_then(|plus| plus.litestream.clone())
-        {
-            let (replicate_tx, replicate_rx) = sync::oneshot::channel();
-            let mut litestream_handle = run_litestream(log, &config, litestream, replicate_tx)?;
-            // Wait for Litestream to start replicating
-            replicate_rx.await.map_err(LitestreamError::ReplicateRecv)?;
+    #[cfg(feature = "plus")]
+    if let Some(litestream) = config
+        .plus
+        .as_ref()
+        .and_then(|plus| plus.litestream.clone())
+    {
+        let (replicate_tx, replicate_rx) = sync::oneshot::channel();
+        let mut litestream_handle = run_litestream(log, &config, litestream, replicate_tx)?;
+        // Wait for Litestream to start replicating
+        replicate_rx.await.map_err(LitestreamError::ReplicateRecv)?;
 
-            let mut api_handle = run_api_server(config, restart_tx);
-            tokio::select! {
-                _ = tokio::signal::ctrl_c() => return Ok(()),
-                restart = restart_rx.recv() => {
-                    if restart.is_some() {
-                        api_handle.abort();
-                        litestream_handle.abort();
-                        continue;
-                    }
-                    return Err(ApiError::EmptyShutdown);
-                },
-                result = &mut litestream_handle => {
-                    return match result {
-                        Ok(result) => result,
-                        Err(e) => Err(LitestreamError::JoinHandle(e))
-                    }.map_err(Into::into);
-                },
-                result = &mut api_handle => {
-                    return match result {
-                        Ok(result) => result,
-                        Err(e) => Err(ApiError::JoinHandle(e))
-                    };
-                },
-            }
-        }
-
-        let mut api_handle = run_api_server(config, restart_tx);
+        let mut api_handle = run_api_server(config);
         tokio::select! {
             _ = tokio::signal::ctrl_c() => return Ok(()),
-            restart = restart_rx.recv() => {
-                if restart.is_some() {
-                    api_handle.abort();
-                    continue;
-                }
-                return Err(ApiError::EmptyShutdown);
+            result = &mut litestream_handle => {
+                return match result {
+                    Ok(result) => result,
+                    Err(e) => Err(LitestreamError::JoinHandle(e))
+                }.map_err(Into::into);
             },
             result = &mut api_handle => {
                 return match result {
@@ -145,6 +116,17 @@ async fn run(
                 };
             },
         }
+    }
+
+    let mut api_handle = run_api_server(config);
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => Ok(()),
+        result = &mut api_handle => {
+            match result {
+                Ok(result) => result,
+                Err(e) => Err(ApiError::JoinHandle(e))
+            }
+        },
     }
 }
 
@@ -252,14 +234,11 @@ fn run_litestream(
     }))
 }
 
-fn run_api_server(
-    config: Config,
-    restart_tx: sync::mpsc::Sender<()>,
-) -> JoinHandle<Result<(), ApiError>> {
+fn run_api_server(config: Config) -> JoinHandle<Result<(), ApiError>> {
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ServerStartup);
 
-    let config_tx = ConfigTx { config, restart_tx };
+    let config_tx = ConfigTx { config };
     tokio::spawn(async move {
         config_tx
             .into_server::<Api>()

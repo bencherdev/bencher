@@ -8,8 +8,6 @@ pub enum CliServer {
     Version(CliVersion),
     /// Server `OpenAPI` Spec
     Spec(CliOpenApiSpec),
-    /// Restart server
-    Restart(CliRestart),
     /// Manager server config
     #[clap(subcommand)]
     Config(CliConfig),
@@ -28,16 +26,6 @@ pub struct CliVersion {
 
 #[derive(Parser, Debug)]
 pub struct CliOpenApiSpec {
-    #[clap(flatten)]
-    pub backend: CliBackend,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliRestart {
-    /// Server restart delay seconds
-    #[clap(long, default_value = "3")]
-    pub delay: u64,
-
     #[clap(flatten)]
     pub backend: CliBackend,
 }

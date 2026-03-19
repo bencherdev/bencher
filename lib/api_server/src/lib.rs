@@ -3,10 +3,11 @@
 use bencher_api_tests as _;
 #[cfg(test)]
 use http as _;
+#[cfg(test)]
+use tokio as _;
 
 mod backup;
 mod config;
-mod restart;
 mod root;
 mod spec;
 mod stats;
@@ -32,14 +33,12 @@ impl bencher_endpoint::Registrar for Api {
         if http_options {
             api_description.register(version::server_version_options)?;
             api_description.register(spec::server_spec_options)?;
-            api_description.register(restart::server_restart_options)?;
             api_description.register(config::server_config_options)?;
             api_description.register(config::server_config_console_options)?;
             api_description.register(backup::server_backup_options)?;
         }
         api_description.register(version::server_version_get)?;
         api_description.register(spec::server_spec_get)?;
-        api_description.register(restart::server_restart_post)?;
         api_description.register(config::server_config_get)?;
         api_description.register(config::server_config_console_get)?;
         api_description.register(backup::server_backup_post)?;

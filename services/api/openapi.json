@@ -8457,85 +8457,6 @@
         }
       }
     },
-    "/v0/server/restart": {
-      "post": {
-        "tags": [
-          "server"
-        ],
-        "summary": "Restart server",
-        "description": "Restart the API server. The user must be an admin on the server to use this route.",
-        "operationId": "server_restart_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonRestart"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "Null",
-                  "type": "string",
-                  "enum": [
-                    null
-                  ]
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/server/spec": {
       "get": {
         "tags": [
@@ -14755,18 +14676,6 @@
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/JsonReport"
-        }
-      },
-      "JsonRestart": {
-        "type": "object",
-        "properties": {
-          "delay": {
-            "nullable": true,
-            "description": "The delay in seconds before the server restarts. Defaults to 3 seconds, if not specified.",
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          }
         }
       },
       "JsonRunner": {

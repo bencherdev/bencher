@@ -34,10 +34,7 @@ const getDefault = (name) => {
 			}
 			return;
 		case "delay":
-			if (
-				(path === "/v0/server/restart" && method === MethodKind.Post) ||
-				(path === "/v0/server/config" && method === MethodKind.Put)
-			) {
+			if (path === "/v0/server/config" && method === MethodKind.Put) {
 				return 3;
 			}
 			return;

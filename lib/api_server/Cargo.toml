@@ -38,7 +38,6 @@ schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json.workspace = true
 slog.workspace = true
-tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
 bencher_api_tests.workspace = true

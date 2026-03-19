@@ -11,7 +11,6 @@ use bencher_oci_storage::OciStorage;
 use bencher_token::TokenKey;
 #[cfg(feature = "plus")]
 use dropshot::HttpError;
-use tokio::sync::mpsc::Sender;
 use url::Url;
 
 #[cfg(feature = "plus")]
@@ -52,7 +51,6 @@ pub struct ApiContext {
     pub rbac: Rbac,
     pub messenger: Messenger,
     pub database: Database,
-    pub restart_tx: Sender<()>,
     #[cfg(feature = "plus")]
     pub rate_limiting: RateLimiting,
     #[cfg(feature = "plus")]

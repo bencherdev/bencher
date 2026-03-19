@@ -1,5 +1,5 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
-use bencher_json::{JsonBackup, JsonBackupCreated, JsonRestart};
+use bencher_json::{JsonBackup, JsonBackupCreated};
 use bencher_schema::{
     context::ApiContext,
     error::bad_request_error,
@@ -17,7 +17,7 @@ use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 }]
 pub async fn server_backup_options(
     _rqctx: RequestContext<ApiContext>,
-    _body: TypedBody<JsonRestart>,
+    _body: TypedBody<JsonBackup>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Post.into()]))
 }

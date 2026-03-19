@@ -41,7 +41,6 @@ use dropshot::{
     ConfigTls, HttpServer,
 };
 use slog::{Logger, debug, error, info};
-use tokio::sync::mpsc::Sender;
 
 #[cfg(feature = "plus")]
 use super::plus::Plus;
@@ -52,7 +51,6 @@ const SQLITE_TMPDIR: &str = "SQLITE_TMPDIR";
 
 pub struct ConfigTx {
     pub config: Config,
-    pub restart_tx: Sender<()>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -106,7 +104,7 @@ impl ConfigTx {
     where
         R: Registrar,
     {
-        let ConfigTx { config, restart_tx } = self;
+        let ConfigTx { config } = self;
 
         let Config(JsonConfig {
             console,
@@ -129,7 +127,6 @@ impl ConfigTx {
             request_body_max_bytes,
             smtp,
             database,
-            restart_tx,
             #[cfg(feature = "plus")]
             plus,
         )
@@ -176,7 +173,6 @@ impl ConfigTx {
 }
 
 #[expect(
-    clippy::too_many_arguments,
     clippy::too_many_lines,
     reason = "Context initialization needs to handle DB setup, PRAGMAs, migrations, and pool creation"
 )]
@@ -187,7 +183,6 @@ async fn into_context(
     request_body_max_bytes: usize,
     smtp: Option<JsonSmtp>,
     json_database: JsonDatabase,
-    restart_tx: Sender<()>,
     #[cfg(feature = "plus")] plus: Option<JsonPlus>,
 ) -> Result<ApiContext, ConfigTxError> {
     let console_url: url::Url = console.url.try_into().map_err(ConfigTxError::Endpoint)?;
@@ -313,7 +308,6 @@ async fn into_context(
         rbac,
         messenger: smtp.into(),
         database,
-        restart_tx,
         #[cfg(feature = "plus")]
         rate_limiting,
         #[cfg(feature = "plus")]
