@@ -66,8 +66,8 @@ pub struct UpConfig {
     pub poll_timeout_secs: u32,
     pub tuning: TuningConfig,
     /// CPU layout for isolating benchmark cores from housekeeping tasks.
-    /// Populated at runtime after tuning is applied (so SMT state is reflected).
-    pub cpu_layout: CpuLayout,
+    /// `None` until tuning is applied at runtime (so SMT state is reflected).
+    pub cpu_layout: Option<CpuLayout>,
     /// Maximum size in bytes for collected stdout/stderr.
     pub max_output_size: Option<usize>,
     /// Maximum number of output files to decode.
@@ -104,15 +104,17 @@ impl Up {
         let _tuning_guard = crate::tuning::apply(&self.config.tuning);
 
         // Re-detect CPU layout after tuning (SMT may have changed core count)
-        self.config.cpu_layout = CpuLayout::detect();
-        if self.config.cpu_layout.has_isolation() {
-            println!(
-                "  CPU isolation: housekeeping={}, benchmark={}",
-                self.config.cpu_layout.housekeeping_cpuset(),
-                self.config.cpu_layout.benchmark_cpuset()
-            );
-        } else {
-            println!("  CPU isolation: disabled (insufficient cores)");
+        self.config.cpu_layout = Some(CpuLayout::detect());
+        if let Some(cpu_layout) = &self.config.cpu_layout {
+            if cpu_layout.has_isolation() {
+                println!(
+                    "  CPU isolation: housekeeping={}, benchmark={}",
+                    cpu_layout.housekeeping_cpuset(),
+                    cpu_layout.benchmark_cpuset()
+                );
+            } else {
+                println!("  CPU isolation: disabled (insufficient cores)");
+            }
         }
 
         let client = RunnerApiClient::new(

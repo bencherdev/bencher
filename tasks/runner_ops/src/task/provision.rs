@@ -1,7 +1,7 @@
 use camino::Utf8PathBuf;
 
+use super::deploy_setup;
 use super::merge_ssh;
-use super::setup;
 use super::ssh::Ssh;
 use crate::parser::TaskProvision;
 use crate::parser::server::load_server;
@@ -37,7 +37,7 @@ impl Provision {
         let Self { ssh, runner_binary } = self;
         super::install_os::install_os(&ssh)?;
         super::harden::harden(&ssh)?;
-        setup::deploy(&ssh, runner_binary.as_deref())?;
+        deploy_setup::deploy(&ssh, runner_binary.as_deref())?;
         Ok(())
     }
 }

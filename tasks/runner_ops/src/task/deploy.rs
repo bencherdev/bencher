@@ -1,8 +1,8 @@
 use bencher_json::{RunnerResourceId, Secret};
 
+use super::deploy_setup;
 use super::download;
 use super::merge_ssh_with_extras;
-use super::setup;
 use super::ssh::Ssh;
 use super::start::Start;
 use crate::parser::TaskDeploy;
@@ -51,7 +51,7 @@ impl Deploy {
             run_id,
         } = self;
         let (runner_binary, _temp_dir) = download::download(run_id)?;
-        setup::deploy(&ssh, Some(runner_binary.as_path()))?;
+        deploy_setup::deploy(&ssh, Some(runner_binary.as_path()))?;
         let start = Start::new(ssh, host, runner, token);
         start.exec()?;
         Ok(())

@@ -4,7 +4,7 @@ use bencher_json::{RunnerResourceId, Secret};
 use camino::Utf8PathBuf;
 use serde::Deserialize;
 
-type Servers = BTreeMap<String, Server>;
+type Servers = BTreeMap<RunnerResourceId, Server>;
 
 #[derive(Debug, Deserialize)]
 #[expect(clippy::struct_field_names)]
@@ -22,5 +22,5 @@ pub fn load_server(runner: &RunnerResourceId) -> anyhow::Result<Option<Server>> 
         return Ok(None);
     };
     let mut servers: Servers = serde_json::from_str(&contents)?;
-    Ok(servers.remove(&runner.to_string()))
+    Ok(servers.remove(runner))
 }

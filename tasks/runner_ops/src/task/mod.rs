@@ -1,10 +1,10 @@
 mod deploy;
+mod deploy_setup;
 mod download;
 mod harden;
 mod install_os;
 mod logs;
 mod provision;
-mod setup;
 pub mod ssh;
 mod start;
 pub mod stop;

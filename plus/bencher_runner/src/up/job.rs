@@ -36,7 +36,11 @@ pub fn execute_job(
     let ws_heartbeat = Arc::clone(ws);
     let cancel_heartbeat = Arc::clone(&cancel_flag);
     let stop_heartbeat = Arc::clone(&stop_flag);
-    let housekeeping_cores = config.cpu_layout.housekeeping.clone();
+    let housekeeping_cores = config
+        .cpu_layout
+        .as_ref()
+        .map(|l| l.housekeeping.clone())
+        .unwrap_or_default();
     let heartbeat = std::thread::spawn(move || {
         // Pin this thread to housekeeping cores to avoid interfering with benchmarks
         if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
@@ -191,8 +195,10 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
     runner_config = runner_config.with_file_paths_opt(config.file_paths.clone());
 
     // Pass through CPU layout for core isolation
-    if up_config.cpu_layout.has_isolation() {
-        runner_config = runner_config.with_cpu_layout(up_config.cpu_layout.clone());
+    if let Some(cpu_layout) = &up_config.cpu_layout
+        && cpu_layout.has_isolation()
+    {
+        runner_config = runner_config.with_cpu_layout(cpu_layout.clone());
     }
 
     // Pass through max output size if configured
@@ -338,7 +344,7 @@ mod tests {
             runner: "test-runner".parse().unwrap(),
             poll_timeout_secs: 30,
             tuning: crate::TuningConfig::disabled(),
-            cpu_layout: crate::cpu::CpuLayout::with_core_count(4),
+            cpu_layout: Some(crate::cpu::CpuLayout::with_core_count(4)),
             max_output_size: None,
             max_file_count: None,
             grace_period: None,
@@ -598,7 +604,7 @@ mod tests {
     fn cpu_layout_not_passed_when_no_isolation() {
         let mut up_config = test_up_config();
         // Single core - no isolation possible
-        up_config.cpu_layout = crate::cpu::CpuLayout::with_core_count(1);
+        up_config.cpu_layout = Some(crate::cpu::CpuLayout::with_core_count(1));
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
         let result = build_config_from_job(&up_config, &job);
         // CPU layout should not be passed through when no isolation is possible
