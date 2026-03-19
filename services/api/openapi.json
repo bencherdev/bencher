@@ -11888,16 +11888,32 @@
       "JsonLitestream": {
         "type": "object",
         "properties": {
-          "replicas": {
-            "description": "Disaster recovery replicas",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/JsonReplica"
-            }
+          "replica": {
+            "description": "Disaster recovery replica",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReplica"
+              }
+            ]
+          },
+          "retention": {
+            "nullable": true,
+            "description": "Snapshot retention",
+            "type": "string"
+          },
+          "snapshot_interval": {
+            "nullable": true,
+            "description": "Snapshot interval",
+            "type": "string"
+          },
+          "validation_interval": {
+            "nullable": true,
+            "description": "Validation interval",
+            "type": "string"
           }
         },
         "required": [
-          "replicas"
+          "replica"
         ]
       },
       "JsonLogging": {
@@ -14249,29 +14265,13 @@
               "path": {
                 "type": "string"
               },
-              "retention": {
-                "nullable": true,
-                "type": "string"
-              },
-              "retention_check_interval": {
-                "nullable": true,
-                "type": "string"
-              },
               "scheme": {
                 "type": "string",
                 "enum": [
                   "file"
                 ]
               },
-              "snapshot_interval": {
-                "nullable": true,
-                "type": "string"
-              },
               "sync_interval": {
-                "nullable": true,
-                "type": "string"
-              },
-              "validation_interval": {
                 "nullable": true,
                 "type": "string"
               }
@@ -14308,33 +14308,17 @@
                 "format": "uint16",
                 "minimum": 0
               },
-              "retention": {
-                "nullable": true,
-                "type": "string"
-              },
-              "retention_check_interval": {
-                "nullable": true,
-                "type": "string"
-              },
               "scheme": {
                 "type": "string",
                 "enum": [
                   "sftp"
                 ]
               },
-              "snapshot_interval": {
-                "nullable": true,
-                "type": "string"
-              },
               "sync_interval": {
                 "nullable": true,
                 "type": "string"
               },
               "user": {
-                "type": "string"
-              },
-              "validation_interval": {
-                "nullable": true,
                 "type": "string"
               }
             },
@@ -14366,14 +14350,6 @@
                 "nullable": true,
                 "type": "string"
               },
-              "retention": {
-                "nullable": true,
-                "type": "string"
-              },
-              "retention_check_interval": {
-                "nullable": true,
-                "type": "string"
-              },
               "scheme": {
                 "type": "string",
                 "enum": [
@@ -14383,15 +14359,7 @@
               "secret_access_key": {
                 "$ref": "#/components/schemas/Secret"
               },
-              "snapshot_interval": {
-                "nullable": true,
-                "type": "string"
-              },
               "sync_interval": {
-                "nullable": true,
-                "type": "string"
-              },
-              "validation_interval": {
                 "nullable": true,
                 "type": "string"
               }
@@ -14401,98 +14369,6 @@
               "bucket",
               "scheme",
               "secret_access_key"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "account_key": {
-                "$ref": "#/components/schemas/Secret"
-              },
-              "account_name": {
-                "type": "string"
-              },
-              "bucket": {
-                "type": "string"
-              },
-              "path": {
-                "type": "string"
-              },
-              "retention": {
-                "nullable": true,
-                "type": "string"
-              },
-              "retention_check_interval": {
-                "nullable": true,
-                "type": "string"
-              },
-              "scheme": {
-                "type": "string",
-                "enum": [
-                  "abs"
-                ]
-              },
-              "snapshot_interval": {
-                "nullable": true,
-                "type": "string"
-              },
-              "sync_interval": {
-                "nullable": true,
-                "type": "string"
-              },
-              "validation_interval": {
-                "nullable": true,
-                "type": "string"
-              }
-            },
-            "required": [
-              "account_key",
-              "account_name",
-              "bucket",
-              "path",
-              "scheme"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "bucket": {
-                "type": "string"
-              },
-              "path": {
-                "nullable": true,
-                "type": "string"
-              },
-              "retention": {
-                "nullable": true,
-                "type": "string"
-              },
-              "retention_check_interval": {
-                "nullable": true,
-                "type": "string"
-              },
-              "scheme": {
-                "type": "string",
-                "enum": [
-                  "gcs"
-                ]
-              },
-              "snapshot_interval": {
-                "nullable": true,
-                "type": "string"
-              },
-              "sync_interval": {
-                "nullable": true,
-                "type": "string"
-              },
-              "validation_interval": {
-                "nullable": true,
-                "type": "string"
-              }
-            },
-            "required": [
-              "bucket",
-              "scheme"
             ]
           }
         ]

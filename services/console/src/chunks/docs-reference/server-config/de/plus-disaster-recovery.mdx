@@ -4,7 +4,7 @@ Dieser Abschnitt spezifiziert die Konfiguration der Notfallwiederherstellung.
 Bencher unterstützt das kontinuierliche Replizieren aller Datenbankänderungen.
 Für die Durchführung von bedarfs- oder zeitgesteuerten Backups siehe den Abschnitt `database.data_store` der Konfiguration.
 
-Es gibt vier Replikations-`scheme`s:
+Es gibt drei Replikations-`scheme`s:
 - `file`: Replikation zu einem lokalen Dateipfad
     - `path`: Pfad, zu dem repliziert wird
 - `sftp`: Replikation über SFTP
@@ -21,17 +21,8 @@ Es gibt vier Replikations-`scheme`s:
     - `region`: (Optional) Bucket-Region
     - `access_key_id`: S3-Zugangsschlüssel
     - `secret_access_key`: S3-Geheimzugangsschlüssel
-- `abs`: Replikation zu Azure Blob Storage
-    - `account_name`: Kontoname
-    - `bucket`: Bucket-Name
-    - `path`: (Optional) Pfad im Bucket
-    - `account_key`: Azure-Kontoschlüssel
-- `gcs`: Replikation zu Google Cloud Storage
-    - `bucket`: Bucket-Name
-    - `path`: (Optional) Pfad im Bucket
-    - `GOOGLE_APPLICATION_CREDENTIALS`: Umgebungsvariable, die auf den Dateipfad zeigt, der auf die Dienstkontoanmeldeinformationen verweist
 
-Alle vier Replikations-`scheme`s haben die folgenden zusätzlichen Optionen:
+Alle drei Replikations-`scheme`s haben die folgenden zusätzlichen Optionen:
 
 - `retention`: (Optional) Die Dauer, die Schnappschuss- und WAL-Dateien aufbewahrt werden. Nach dem Ablauf der Aufbewahrungsfrist wird ein neuer Schnappschuss erstellt und der alte entfernt. WAL-Dateien, die vor dem ältesten Schnappschuss existieren, werden ebenfalls entfernt. Standardwert ist `24h`.
 - `retention_check_interval`: (Optional) Gibt an, wie oft Bencher überprüft, ob die Aufbewahrung durchgesetzt werden muss. Standardwert ist `1h`.
@@ -39,8 +30,7 @@ Alle vier Replikations-`scheme`s haben die folgenden zusätzlichen Optionen:
 - `validation_interval`: (Optional) Wenn angegeben, wird Bencher automatisch wiederherstellen und validieren, dass die Daten auf der Replik mit der lokalen Kopie übereinstimmen. Standardmäßig deaktiviert. Das Aktivieren kann die Kosten für den Betrieb von Bencher erheblich erhöhen, da die meisten Cloud-Services Gebühren für Downloads erheben.
 - `sync_interval`: (Optional) Häufigkeit, mit der Frames zur Replik übertragen werden. Standardwert ist `1s`. Eine höhere Frequenz kann die Kosten für Cloud-Speicher erheblich erhöhen.
 
-|           Name           | Beispiel  | Standardwert | Erforderlich |                                        Beschreibung                                         |
-| :----------------------: | :-------: | :----------: | :----------: | :-----------------------------------------------------------------------------------------: |
-|         replicas         |  [ ... ]  |     ---      |      Ja      |                               Gibt ein Array von Repliken an.                               |
-|    replicas[replica]     | \{ ... \} |     ---      |      Ja      |                               Gibt ein Replikationsobjekt an.                               |
-| replicas[replica].scheme |   "s3"    |     ---      |      Ja      | Gibt das Replikationsschema an. Für alle anderen `replica`-Schlüssel siehe die obige Liste. |
+|         Name         | Beispiel  | Standardwert | Erforderlich |                                        Beschreibung                                         |
+| :------------------: | :-------: | :----------: | :----------: | :-----------------------------------------------------------------------------------------: |
+|       replica        | \{ ... \} |     ---      |      Ja      |                               Gibt ein Replikationsobjekt an.                               |
+|   replica.scheme     |   "s3"    |     ---      |      Ja      | Gibt das Replikationsschema an. Für alle anderen `replica`-Schlüssel siehe die obige Liste. |

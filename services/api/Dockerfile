@@ -15,7 +15,7 @@ RUN apt-get update \
 WORKDIR /tmp/litestream
 ARG LITESTREAM_VERSION
 ARG LITESTREAM_ARCH
-ARG LITESTREAM_BIN=litestream-v${LITESTREAM_VERSION}-linux-${LITESTREAM_ARCH}
+ARG LITESTREAM_BIN=litestream-${LITESTREAM_VERSION}-linux-${LITESTREAM_ARCH}
 RUN wget https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/${LITESTREAM_BIN}.tar.gz
 RUN tar -xzf ${LITESTREAM_BIN}.tar.gz
 
