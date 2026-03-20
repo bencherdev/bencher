@@ -336,17 +336,17 @@ pub(crate) mod test_c_sharp_dot_net {
         assert_eq!(gen2collects.value, OrderedFloat::from(0));
 
         let total_operations = metrics.get("total-operations").unwrap();
-        assert_eq!(total_operations.value, OrderedFloat::from(8388608));
+        assert_eq!(total_operations.value, OrderedFloat::from(0x0080_0000));
 
         let latency = metrics.get("latency").unwrap();
-        assert_eq!(latency.value, OrderedFloat::from(77.494_494_120_279_952));
+        assert_eq!(latency.value, OrderedFloat::from(77.494_494_120_279_95));
         assert_eq!(
             latency.lower_value,
-            Some(76.318_534_543_028_989).map(OrderedFloat::from)
+            Some(OrderedFloat::from(76.318_534_543_028_99))
         );
         assert_eq!(
             latency.upper_value,
-            Some(78.670_453_697_530_917).map(OrderedFloat::from)
+            Some(OrderedFloat::from(78.670_453_697_530_92))
         );
     }
 
