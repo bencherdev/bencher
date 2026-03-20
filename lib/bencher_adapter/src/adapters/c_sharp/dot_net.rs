@@ -3,12 +3,12 @@ use bencher_json::{BenchmarkName, JsonAny, JsonNewMetric, project::report::JsonA
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
+use crate::results::adapter_results::DotNetMeasure;
 use crate::{
     Adaptable, AdapterError, Settings,
     adapters::util::{Units, latency_as_nanos},
     results::adapter_results::AdapterResults,
 };
-use crate::results::adapter_results::DotNetMeasure;
 
 pub struct AdapterCSharpDotNet;
 
@@ -157,7 +157,8 @@ impl DotNet {
                     upper_value: None,
                 };
 
-                let total_operations_measure = DotNetMeasure::TotalOperations(total_operations_json);
+                let total_operations_measure =
+                    DotNetMeasure::TotalOperations(total_operations_json);
 
                 measures.push(total_operations_measure);
             }
@@ -171,8 +172,8 @@ impl DotNet {
 
 #[cfg(test)]
 pub(crate) mod test_c_sharp_dot_net {
-    use ordered_float::OrderedFloat;
     use bencher_json::project::report::JsonAverage;
+    use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -318,7 +319,9 @@ pub(crate) mod test_c_sharp_dot_net {
         let results = convert_c_sharp_dot_net("memory");
         assert_eq!(results.inner.len(), 2);
 
-        let metrics = results.get("BenchmarkDotNet.Samples.AllocEmptyList").unwrap();
+        let metrics = results
+            .get("BenchmarkDotNet.Samples.AllocEmptyList")
+            .unwrap();
 
         let allocated = metrics.get("allocated").unwrap();
         assert_eq!(allocated.value, OrderedFloat::from(368));
@@ -337,8 +340,14 @@ pub(crate) mod test_c_sharp_dot_net {
 
         let latency = metrics.get("latency").unwrap();
         assert_eq!(latency.value, OrderedFloat::from(77.494_494_120_279_952));
-        assert_eq!(latency.lower_value, Some(76.318_534_543_028_989).map(OrderedFloat::from));
-        assert_eq!(latency.upper_value, Some(78.670_453_697_530_917).map(OrderedFloat::from));
+        assert_eq!(
+            latency.lower_value,
+            Some(76.318_534_543_028_989).map(OrderedFloat::from)
+        );
+        assert_eq!(
+            latency.upper_value,
+            Some(78.670_453_697_530_917).map(OrderedFloat::from)
+        );
     }
 
     #[test]
