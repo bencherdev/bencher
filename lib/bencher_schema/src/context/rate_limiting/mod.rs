@@ -272,15 +272,11 @@ impl RateLimiting {
         }
         .inspect(|()| {
             #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::Create(
-                bencher_otel::IntervalKind::Day,
-                authorization_kind,
-            ));
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::Create(authorization_kind));
         })
         .inspect_err(|_| {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::CreateMax(
-                bencher_otel::IntervalKind::Day,
                 authorization_kind,
             ));
         })

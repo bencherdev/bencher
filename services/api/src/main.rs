@@ -85,7 +85,7 @@ async fn run(
     let _guard = init_sentry(log, &config);
 
     #[cfg(all(feature = "plus", feature = "otel"))]
-    bencher_otel_provider::run_open_telemetry(log, &config)
+    let otel_provider = bencher_otel_provider::run_open_telemetry(log, &config)
         .inspect_err(|e| {
             error!(log, "Failed to run OpenTelemetry: {e}");
             #[cfg(feature = "sentry")]
@@ -105,7 +105,7 @@ async fn run(
         replicate_rx.await.map_err(LitestreamError::ReplicateRecv)?;
 
         let api_handle = run_api_server(config);
-        return (
+        let result = (
             tokio::signal::ctrl_c().map(|r| r.map_err(ApiError::CtrlC)),
             async {
                 litestream_handle
@@ -117,15 +117,33 @@ async fn run(
         )
             .race()
             .await;
+
+        #[cfg(feature = "otel")]
+        if let Some(provider) = otel_provider
+            && let Err(e) = bencher_otel_provider::shutdown_open_telemetry(&provider)
+        {
+            error!(log, "Failed to shutdown OpenTelemetry: {e}");
+        }
+
+        return result;
     }
 
     let api_handle = run_api_server(config);
-    (
+    let result = (
         tokio::signal::ctrl_c().map(|r| r.map_err(ApiError::CtrlC)),
         async { api_handle.await.map_err(ApiError::JoinHandle)? },
     )
         .race()
-        .await
+        .await;
+
+    #[cfg(all(feature = "plus", feature = "otel"))]
+    if let Some(provider) = otel_provider
+        && let Err(e) = bencher_otel_provider::shutdown_open_telemetry(&provider)
+    {
+        error!(log, "Failed to shutdown OpenTelemetry: {e}");
+    }
+
+    result
 }
 
 #[cfg(all(feature = "plus", feature = "sentry"))]

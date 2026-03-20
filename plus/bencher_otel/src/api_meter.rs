@@ -29,6 +29,7 @@ impl ApiMeter {
         let counter = METER
             .u64_counter(api_counter.name())
             .with_description(api_counter.description())
+            .with_unit(api_counter.unit())
             .build();
         let attributes = api_counter.attributes();
         counter.add(value, &attributes);
@@ -90,8 +91,8 @@ pub enum ApiCounter {
     UserOrganizationMax(IntervalKind),
     UserInviteMax(IntervalKind),
 
-    Create(IntervalKind, AuthorizationKind),
-    CreateMax(IntervalKind, AuthorizationKind),
+    Create(AuthorizationKind),
+    CreateMax(AuthorizationKind),
 
     // Email
     EmailSend,
@@ -122,6 +123,55 @@ pub enum ApiCounter {
 }
 
 impl ApiCounter {
+    fn unit(&self) -> &'static str {
+        match self {
+            Self::ServerStartup | Self::SelfHostedServerStartup(_) => "{startup}",
+
+            Self::OrganizationCreate | Self::OrganizationDelete | Self::UserOrganizationMax(_) => {
+                "{organization}"
+            },
+
+            Self::ProjectCreate | Self::ProjectDelete => "{project}",
+
+            Self::Run(_) | Self::RunClaimedMax(_) | Self::RunUnclaimedMax(_) => "{run}",
+
+            Self::ReportCreate | Self::ReportDelete | Self::SelfHostedServerStats(_) => "{report}",
+
+            Self::MetricsCreate(_) | Self::MetricsBilled | Self::MetricsBilledFailed => "{metric}",
+
+            Self::UserIp
+            | Self::UserIpNotFound
+            | Self::RequestMax(_, _)
+            | Self::RunnerRequestMax(_)
+            | Self::OciTagsList => "{request}",
+
+            Self::UserSignup(_) => "{signup}",
+            Self::UserLogin(_) => "{login}",
+            Self::UserRecaptchaFailure => "{failure}",
+            Self::UserInvite | Self::UserInviteMax(_) => "{invite}",
+            Self::UserAccept(_) => "{accept}",
+            Self::UserConfirm => "{confirmation}",
+            Self::UserClaim => "{claim}",
+            Self::UserSsoJoin(_) => "{join}",
+            Self::UserCheckout => "{checkout}",
+
+            Self::UserAttemptMax(_, _) => "{attempt}",
+            Self::UserTokenMax(_) | Self::RunnerTokenRotate => "{token}",
+
+            Self::Create(_) | Self::CreateMax(_) => "{resource}",
+
+            Self::EmailSend => "{email}",
+
+            Self::OciBlobPush | Self::OciBlobPull => "{blob}",
+            Self::OciManifestPush | Self::OciManifestPull => "{manifest}",
+
+            Self::RunnerCreate | Self::RunnerUpdate => "{runner}",
+            Self::RunnerJobClaim | Self::RunnerJobUpdate(_) => "{job}",
+            Self::RunnerMinutesBilled | Self::RunnerMinutesBilledFailed => "{minute}",
+            Self::RunnerHeartbeatTimeout | Self::RunnerJobTimeout => "{timeout}",
+        }
+    }
+
     fn name(&self) -> &'static str {
         match self {
             Self::ServerStartup => "server.startup",
@@ -132,7 +182,7 @@ impl ApiCounter {
             Self::ProjectCreate => "project.create",
             Self::ProjectDelete => "project.delete",
 
-            Self::Run(_) => "run",
+            Self::Run(_) => "run.create",
 
             Self::ReportCreate => "report.create",
             Self::ReportDelete => "report.delete",
@@ -164,8 +214,8 @@ impl ApiCounter {
             Self::UserOrganizationMax(_) => "user.organization.max",
             Self::UserInviteMax(_) => "user.invite.max",
 
-            Self::Create(_, _) => "create",
-            Self::CreateMax(_, _) => "create.max",
+            Self::Create(_) => "resource.create",
+            Self::CreateMax(_) => "resource.create.max",
 
             Self::EmailSend => "email.send",
 
@@ -241,8 +291,8 @@ impl ApiCounter {
             },
             Self::UserInviteMax(_) => "Counts the number of user invite maximums reached",
 
-            Self::Create(_, _) => "Counts the number of creations",
-            Self::CreateMax(_, _) => "Counts the number of creation maximums reached",
+            Self::Create(_) => "Counts the number of resource creations",
+            Self::CreateMax(_) => "Counts the number of resource creation maximums reached",
 
             Self::EmailSend => "Counts the number of sent emails",
 
@@ -318,10 +368,11 @@ impl ApiCounter {
             Self::UserAccept(auth_method) => AuthMethod::nullable_attributes(auth_method),
             Self::UserConfirm => AuthMethod::Email.attributes(),
             Self::RequestMax(interval_kind, authorization_kind)
-            | Self::UserAttemptMax(interval_kind, authorization_kind)
-            | Self::Create(interval_kind, authorization_kind)
-            | Self::CreateMax(interval_kind, authorization_kind) => {
+            | Self::UserAttemptMax(interval_kind, authorization_kind) => {
                 vec![interval_kind.into(), authorization_kind.into()]
+            },
+            Self::Create(authorization_kind) | Self::CreateMax(authorization_kind) => {
+                vec![authorization_kind.into()]
             },
             Self::RunnerRequestMax(interval_kind)
             | Self::RunUnclaimedMax(interval_kind)
