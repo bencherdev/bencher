@@ -1195,7 +1195,7 @@ mod tests {
             customer_id.clone(),
             payment_method_id.clone(),
             PlanLevel::Team,
-            METRICS_METER_NAME.into(),
+            DEFAULT_PRICE_NAME.into(),
             5,
             10,
         )
@@ -1222,7 +1222,7 @@ mod tests {
             customer_id.clone(),
             payment_method_id.clone(),
             PlanLevel::Enterprise,
-            METRICS_METER_NAME.into(),
+            DEFAULT_PRICE_NAME.into(),
             10,
             25,
         )
