@@ -11874,9 +11874,6 @@
           },
           "organization": {
             "$ref": "#/components/schemas/OrganizationUuid"
-          },
-          "self_hosted": {
-            "type": "boolean"
           }
         },
         "required": [
@@ -11885,8 +11882,7 @@
           "issued_at",
           "key",
           "level",
-          "organization",
-          "self_hosted"
+          "organization"
         ]
       },
       "JsonLitestream": {
@@ -13890,6 +13886,9 @@
       "JsonProducts": {
         "type": "object",
         "properties": {
+          "bare_metal": {
+            "$ref": "#/components/schemas/JsonProduct"
+          },
           "enterprise": {
             "$ref": "#/components/schemas/JsonProduct"
           },
@@ -13898,6 +13897,7 @@
           }
         },
         "required": [
+          "bare_metal",
           "enterprise",
           "team"
         ]
@@ -16913,13 +16913,6 @@
             "type": "string",
             "enum": [
               "cloud_metered"
-            ]
-          },
-          {
-            "description": "Bencher Cloud (Licensed)",
-            "type": "string",
-            "enum": [
-              "cloud_licensed"
             ]
           },
           {

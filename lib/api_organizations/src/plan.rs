@@ -13,7 +13,7 @@ use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{
-        BencherResource, forbidden_error, issue_error, resource_conflict_err,
+        BencherResource, bad_request_error, forbidden_error, issue_error, resource_conflict_err,
         resource_conflict_error, resource_not_found_err,
     },
     model::{
@@ -86,7 +86,7 @@ async fn get_one_inner(
     if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
         Ok(json_plan)
     } else if let Some(json_plan) = query_plan
-        .to_licensed_plan(biller, &context.licensor, query_organization.uuid)
+        .to_licensed_plan(biller, &context.licensor)
         .await?
     {
         Ok(json_plan)
@@ -164,6 +164,12 @@ async fn post_inner(
         remote,
     } = json_plan;
 
+    if context.is_bencher_cloud && entitlements.is_some() && self_hosted.is_none() {
+        return Err(bad_request_error(
+            "Licensed plans are only available for Bencher Self-Hosted",
+        ));
+    }
+
     let subscription_id = if remote.unwrap_or(true) {
         biller
             .get_checkout_session(checkout.as_ref())
@@ -202,7 +208,7 @@ async fn post_inner(
         QueryPlan::belonging_to(&query_organization)
             .first::<QueryPlan>(auth_conn!(context))
             .map_err(resource_not_found_err!(Plan, query_organization))?
-            .to_licensed_plan(biller, &context.licensor, query_organization.uuid).await?
+            .to_licensed_plan(biller, &context.licensor).await?
             .ok_or_else(|| {
                 issue_error(
                     "Failed to find licensed plan after creating it",

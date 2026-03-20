@@ -516,7 +516,6 @@ export interface JsonLicense {
 	entitlements: Entitlements;
 	issued_at: string;
 	expiration: string;
-	self_hosted: boolean;
 }
 
 export interface JsonLogin {
@@ -1033,8 +1032,6 @@ export enum UsageKind {
 	CloudFree = "cloud_free",
 	/** Bencher Cloud (Metered) */
 	CloudMetered = "cloud_metered",
-	/** Bencher Cloud (Licensed) */
-	CloudLicensed = "cloud_licensed",
 	/** Bencher Self-Hosted (Licensed) via Bencher Cloud */
 	CloudSelfHostedLicensed = "cloud_self_hosted_licensed",
 	/** Bencher Self-Hosted (Free) */

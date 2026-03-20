@@ -154,9 +154,6 @@ const BillingPanelSwitch = (props: {
 			<Match when={props.usage()?.kind === UsageKind.CloudMetered}>
 				<CloudMeteredPanel usage={props.usage} />
 			</Match>
-			<Match when={props.usage()?.kind === UsageKind.CloudLicensed}>
-				<CloudLicensedPanel usage={props.usage} />
-			</Match>
 			<Match when={props.usage()?.kind === UsageKind.CloudSelfHostedLicensed}>
 				<CloudSelfHostedLicensedPanel
 					onboard={props.onboard}
@@ -207,38 +204,6 @@ const CloudMeteredPanel = (props: {
 				Estimated Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}
 			</h4>
 			<h4>Current Estimated Cost: {fmtUsd(estCost())}</h4>
-			<br />
-			<PaymentMethod usage={props.usage} />
-			<br />
-			{manageSubscription}
-		</div>
-	);
-};
-
-const CloudLicensedPanel = (props: {
-	usage: Resource<null | JsonUsage>;
-}) => {
-	return (
-		<div class="content">
-			<h2 class="title is-2">
-				{planLevel(props.usage()?.license?.level)} Tier (Bencher Cloud Licensed)
-			</h2>
-			<h3 class="subtitle is-3">
-				{fmtDate(props.usage()?.start_time)} -{" "}
-				{fmtDate(props.usage()?.end_time)}
-			</h3>
-			<h4>
-				Entitlements:{" "}
-				{props.usage()?.license?.entitlements?.toLocaleString() ?? 0}
-			</h4>
-			<h4>Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}</h4>
-			<h4>
-				Metrics Remaining:{" "}
-				{(
-					(props.usage()?.license?.entitlements ?? 0) -
-					(props.usage()?.usage ?? 0)
-				).toLocaleString()}
-			</h4>
 			<br />
 			<PaymentMethod usage={props.usage} />
 			<br />

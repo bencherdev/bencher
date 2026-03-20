@@ -89,6 +89,7 @@ jobs:
         run: cargo test-api smoke dev
       - name: Run OCI Conformance Test
         continue-on-error: true
+        timeout-minutes: 5
         run: |
           cargo test-api oci \
           --url https://bencher-api-dev.fly.dev/

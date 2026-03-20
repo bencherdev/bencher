@@ -15,18 +15,28 @@ use crate::BillingError;
 pub struct Products {
     pub team: Product,
     pub enterprise: Product,
+    pub bare_metal: Product,
 }
 
 impl Products {
     pub async fn new(client: &StripeClient, products: JsonProducts) -> Result<Self, BillingError> {
-        let JsonProducts { team, enterprise } = products;
+        let JsonProducts {
+            team,
+            enterprise,
+            bare_metal,
+        } = products;
 
         Ok(Self {
             team: Product::new(client, team).await?,
             enterprise: Product::new(client, enterprise).await?,
+            bare_metal: Product::new(client, bare_metal).await?,
         })
     }
 
+    // Returns the price IDs for Team and Enterprise plans only (excluding
+    // bare_metal), used by `get_plan` to filter subscription items to the
+    // main plan item.
+    //
     // During the metered billing migration, a subscription may temporarily have
     // multiple subscription items (old metered + new metered). The config holds
     // both price IDs under different keys: the currently-active price under
@@ -36,7 +46,7 @@ impl Products {
     // falling back to "default" if the preferred key is not found.
     // Once the migration cutover is complete and the old subscription items are
     // removed, this filtering becomes a no-op (one item in, one item out).
-    pub fn preferred_price_ids(&self, preferred: &str) -> HashSet<&PriceId> {
+    pub fn plan_price_ids(&self, preferred: &str) -> HashSet<&PriceId> {
         self.team
             .preferred_price_ids(preferred)
             .into_iter()
@@ -74,7 +84,7 @@ impl Product {
 
     // Returns the price IDs for the given `preferred` key, falling back to
     // "default" if the preferred key is not found.
-    // See `Products::preferred_price_ids` for migration context.
+    // See `Products::plan_price_ids` for migration context.
     fn preferred_price_ids(&self, preferred: &str) -> Vec<&PriceId> {
         let metered_id = self
             .metered

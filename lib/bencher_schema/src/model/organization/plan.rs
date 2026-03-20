@@ -59,7 +59,6 @@ impl QueryPlan {
         &self,
         biller: &Biller,
         licensor: &Licensor,
-        organization_uuid: OrganizationUuid,
     ) -> Result<Option<JsonPlan>, HttpError> {
         let Some(licensed_plan_id) = &self.licensed_plan else {
             return Ok(None);
@@ -81,7 +80,7 @@ impl QueryPlan {
         };
 
         let json_license = licensor
-            .into_json(license, Some(organization_uuid))
+            .into_json(license)
             .map_err(payment_required_error)?;
         json_plan.license = Some(json_license);
 
