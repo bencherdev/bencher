@@ -15,6 +15,14 @@ pub fn execute_job(
     job: &JsonClaimedJob,
     ws: &Arc<Mutex<JobChannel>>,
 ) -> JobFinishResult {
+    // Reject non-sandboxed jobs unless the operator explicitly opted in.
+    if job.spec.sandbox.is_none() && !config.allow_no_sandbox {
+        return JobFinishResult::Failed {
+            error: "Job requires non-sandboxed execution but runner was not started with --danger-allow-no-sandbox".to_owned(),
+            results: Vec::new(),
+        };
+    }
+
     // Build runner Config from claimed job spec (all values from job spec, no defaults)
     let job_config = build_config_from_job(config, job);
     let iter_count = job.config.iter.map_or(1, bencher_json::Iteration::as_usize);
@@ -339,6 +347,7 @@ mod tests {
             max_file_count: None,
             grace_period: None,
             firecracker_log_level: crate::FirecrackerLogLevel::default(),
+            allow_no_sandbox: false,
         }
     }
 

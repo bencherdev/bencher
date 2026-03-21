@@ -57,6 +57,8 @@ pub struct UpConfig {
     pub grace_period: Option<bencher_json::GracePeriod>,
     /// Firecracker process log level.
     pub firecracker_log_level: FirecrackerLogLevel,
+    /// Whether to allow non-sandboxed execution.
+    pub allow_no_sandbox: bool,
 }
 
 pub struct Up {
@@ -76,6 +78,9 @@ impl Up {
         println!("  Host: {}", self.config.host);
         println!("  Runner: {}", self.config.runner);
         println!("  Poll timeout: {}s", self.config.poll_timeout_secs);
+        if self.config.allow_no_sandbox {
+            println!("  Non-sandboxed execution: allowed");
+        }
 
         // Apply host tuning — guard restores settings on drop (no-op on non-Linux).
         // This must happen before CPU layout detection so that SMT changes

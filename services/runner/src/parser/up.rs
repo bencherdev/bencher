@@ -40,4 +40,9 @@ pub struct CliUp {
     /// Firecracker process log level (default: warning).
     #[arg(long, default_value = "warning")]
     pub firecracker_log_level: bencher_runner::FirecrackerLogLevel,
+
+    /// Allow executing benchmarks without a sandbox.
+    /// Without this flag, jobs with no sandbox will be rejected at runtime.
+    #[arg(long)]
+    pub danger_allow_no_sandbox: bool,
 }
