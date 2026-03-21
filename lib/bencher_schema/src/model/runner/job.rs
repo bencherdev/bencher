@@ -146,8 +146,8 @@ impl QueryJob {
                 &results_array,
                 query_report.adapter,
                 settings,
-                self.priority,
                 plan_kind,
+                self.priority,
                 &query_project,
             )
             .await?;

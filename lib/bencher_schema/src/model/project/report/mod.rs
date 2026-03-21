@@ -332,9 +332,9 @@ impl QueryReport {
                 adapter,
                 json_settings,
                 #[cfg(feature = "plus")]
-                priority,
-                #[cfg(feature = "plus")]
                 plan_kind,
+                #[cfg(feature = "plus")]
+                priority,
                 #[cfg(feature = "plus")]
                 query_project,
             )
@@ -432,8 +432,8 @@ impl QueryReport {
         results: &[&str],
         adapter: Adapter,
         settings: JsonReportSettings,
-        #[cfg(feature = "plus")] priority: bencher_json::Priority,
         #[cfg(feature = "plus")] plan_kind: PlanKind,
+        #[cfg(feature = "plus")] priority: bencher_json::Priority,
         #[cfg(feature = "plus")] query_project: &QueryProject,
     ) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]

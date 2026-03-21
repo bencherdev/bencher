@@ -32,46 +32,69 @@ pub enum OtelProviderError {
     Shutdown(opentelemetry_sdk::error::OTelSdkError),
 }
 
+/// A guard that shuts down the OpenTelemetry meter provider when dropped,
+/// flushing any buffered metrics.
+pub struct OtelProviderGuard {
+    provider: Option<SdkMeterProvider>,
+    log: Logger,
+}
+
+impl Drop for OtelProviderGuard {
+    fn drop(&mut self) {
+        if let Some(provider) = self.provider.take()
+            && let Err(e) = shutdown_open_telemetry(&provider)
+        {
+            slog::error!(self.log, "Failed to shutdown OpenTelemetry: {e}");
+        }
+    }
+}
+
 /// Initialize and run OpenTelemetry for the server.
 ///
-/// Returns `Some(provider)` when `OTel` is configured, `None` otherwise.
-/// The caller should hold the provider and call [`shutdown_open_telemetry`] on
-/// graceful exit so that any buffered metrics are flushed.
+/// Returns an `OtelProviderGuard` that will flush buffered metrics and shut
+/// down the meter provider when dropped.
 // https://docs.rs/opentelemetry-otlp/0.31.0/opentelemetry_otlp/index.html#using-with-prometheus
 pub fn run_open_telemetry(
     log: &Logger,
     config: &Config,
-) -> Result<Option<SdkMeterProvider>, OtelProviderError> {
-    let Some(otel_config) = config
+) -> Result<OtelProviderGuard, OtelProviderError> {
+    let otel_config = config
         .plus
         .as_ref()
         .and_then(|plus| plus.cloud.as_ref())
-        .and_then(|cloud| cloud.otel.as_ref())
-    else {
+        .and_then(|cloud| cloud.otel.as_ref());
+
+    let provider = if let Some(otel_config) = otel_config {
+        let JsonOtel {
+            endpoint,
+            protocol,
+            interval,
+        } = otel_config;
+
+        let resource = otel_resource(log);
+        let reader = otel_reader(endpoint, protocol, *interval)?;
+        let provider = SdkMeterProvider::builder()
+            .with_resource(resource)
+            .with_reader(reader)
+            .build();
+
+        let handle = provider.clone();
+        opentelemetry::global::set_meter_provider(provider);
+
+        Some(handle)
+    } else {
         slog::info!(log, "OpenTelemetry not configured, skipping initialization");
-        return Ok(None);
+        None
     };
-    let JsonOtel {
-        endpoint,
-        protocol,
-        interval,
-    } = otel_config;
 
-    let resource = otel_resource(log);
-    let reader = otel_reader(endpoint, protocol, *interval)?;
-    let provider = SdkMeterProvider::builder()
-        .with_resource(resource)
-        .with_reader(reader)
-        .build();
-
-    let handle = provider.clone();
-    opentelemetry::global::set_meter_provider(provider);
-
-    Ok(Some(handle))
+    Ok(OtelProviderGuard {
+        provider,
+        log: log.clone(),
+    })
 }
 
 /// Flush buffered metrics and shut down the meter provider.
-pub fn shutdown_open_telemetry(provider: &SdkMeterProvider) -> Result<(), OtelProviderError> {
+fn shutdown_open_telemetry(provider: &SdkMeterProvider) -> Result<(), OtelProviderError> {
     provider.shutdown().map_err(OtelProviderError::Shutdown)
 }
 
