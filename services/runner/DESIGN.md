@@ -675,10 +675,10 @@ The runner supports two execution modes, selected via the `--sandbox` flag on `r
 
 Omitting `--sandbox` runs the benchmark directly on the host. The OCI image is pulled and unpacked to a temporary directory, and the command executes via `std::process::Command` from the unpacked rootfs.
 
-**Non-sandboxed mode is for trusted workloads only.** There is no isolation:
+**Non-sandboxed mode is for trusted workloads only.** There is no VM isolation:
 - The process runs with full host privileges
-- Host environment variables are inherited
-- The filesystem is the host filesystem (command runs from the unpacked rootfs)
+- The host environment is cleared; only OCI-derived variables are set
+- The command runs from the unpacked rootfs on the host filesystem
 - Network access is unrestricted
 - Output file paths are read directly from the host
 
