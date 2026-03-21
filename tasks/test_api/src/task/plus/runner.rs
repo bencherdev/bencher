@@ -1,6 +1,6 @@
 use std::process::Command;
 
-use assert_cmd::{assert::OutputAssertExt as _, cargo::CommandCargoExt as _};
+use assert_cmd::cargo::CommandCargoExt as _;
 use bencher_json::{Jwt, Url};
 use pretty_assertions::assert_eq;
 
@@ -260,11 +260,17 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result
     }
     args.extend(["--exec", "mock"]);
     cmd.args(&args).current_dir(CLI_DIR);
-    let assert = cmd.assert().success();
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 
     // Step 6: Verify the results
     println!("Step 6: Verifying results...");
-    let json: bencher_json::JsonReport = serde_json::from_slice(&assert.get_output().stdout)?;
+    let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
     assert_eq!(json.project.slug.to_string(), PROJECT_SLUG);
     #[cfg(feature = "plus")]
     assert!(json.job.is_some(), "Expected job UUID in report: {json:?}");
