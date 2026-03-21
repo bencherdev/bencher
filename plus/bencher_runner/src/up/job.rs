@@ -15,12 +15,16 @@ pub fn execute_job(
     job: &JsonClaimedJob,
     ws: &Arc<Mutex<JobChannel>>,
 ) -> JobFinishResult {
-    // Reject non-sandboxed jobs unless the operator explicitly opted in.
-    if job.spec.sandbox.is_none() && !config.allow_no_sandbox {
-        return JobFinishResult::Failed {
-            error: "Job requires non-sandboxed execution but runner was not started with --danger-allow-no-sandbox".to_owned(),
-            results: Vec::new(),
-        };
+    // Only allow jobs with a known sandbox type or explicit opt-in for non-sandboxed.
+    match job.spec.sandbox {
+        Some(bencher_json::Sandbox::Firecracker) => {},
+        None if config.allow_no_sandbox => {},
+        None => {
+            return JobFinishResult::Failed {
+                error: "Job requires non-sandboxed execution but runner was not started with --danger-allow-no-sandbox".to_owned(),
+                results: Vec::new(),
+            };
+        },
     }
 
     // Build runner Config from claimed job spec (all values from job spec, no defaults)

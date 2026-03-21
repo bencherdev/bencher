@@ -3,10 +3,10 @@
 //! # Trust Model
 //!
 //! Non-sandboxed mode is intended for **trusted workloads only**. The benchmark
-//! process runs with full host privileges — there is no environment isolation,
-//! no filesystem sandboxing, and no network restrictions. The OCI image layers
-//! are unpacked to a temporary directory and the command executes from there
-//! with the host's environment inherited.
+//! process runs with full host privileges — there is no filesystem sandboxing
+//! and no network restrictions. The OCI image layers are unpacked to a temporary
+//! directory and the command executes from there. The host environment is cleared
+//! and only OCI-derived environment variables are set.
 //!
 //! The `--danger-allow-no-sandbox` flag on `runner up` (or omitting `--sandbox`
 //! on `runner run`) gates this mode to prevent accidental use.
@@ -82,7 +82,8 @@ pub fn local_execute(
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
 
-    // Set env vars from OCI config + overrides (host env is inherited)
+    // Clear parent env and set only OCI-derived variables
+    cmd.env_clear();
     for (key, value) in &oci_config.env {
         cmd.env(key, value);
     }
