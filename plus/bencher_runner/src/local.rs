@@ -99,10 +99,14 @@ pub fn local_execute(
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
 
-    // Set env vars from merged+sanitized env
+    // Clear host environment and set only the sanitized env vars
+    cmd.env_clear();
     for (key, value) in &env {
         cmd.env(key, value);
     }
+
+    // Run the benchmark in the temp directory for isolation
+    cmd.current_dir(temp_dir.path());
 
     let child = cmd
         .spawn()
@@ -113,8 +117,10 @@ pub fn local_execute(
 
     let output = wait_with_timeout(child, config.timeout_secs, cancel_flag)?;
 
-    // Collect output files from host filesystem if file_paths configured
-    let output_files = collect_output_files(config.file_paths.as_deref());
+    // Collect output files from the work directory if file_paths configured.
+    // In non-sandboxed mode, paths are resolved relative to the temp work dir
+    // to prevent reading arbitrary host files.
+    let output_files = collect_output_files(config.file_paths.as_deref(), work_dir);
 
     Ok(RunOutput {
         exit_code: output.exit_code,
@@ -171,10 +177,9 @@ fn wait_with_timeout(
             {
                 drop(child.kill());
             }
-            return Err(crate::error::ConfigError::OutOfRange {
-                name: "timeout",
-                value: format!("{timeout_secs}s elapsed"),
-                range: "process did not complete in time",
+            return Err(crate::error::ConfigError::Runtime {
+                kind: "timeout",
+                message: format!("process did not complete within {timeout_secs}s"),
             }
             .into());
         }
@@ -188,10 +193,9 @@ fn wait_with_timeout(
             {
                 drop(child.kill());
             }
-            return Err(crate::error::ConfigError::OutOfRange {
-                name: "canceled",
-                value: "job was canceled".to_owned(),
-                range: "n/a",
+            return Err(crate::error::ConfigError::Runtime {
+                kind: "canceled",
+                message: "job was canceled".to_owned(),
             }
             .into());
         }
@@ -214,15 +218,34 @@ fn wait_with_timeout(
     })
 }
 
-/// Collect output files from the host filesystem.
+/// Collect output files, resolving paths relative to the work directory.
+///
+/// Absolute paths are stripped to relative (e.g., `/tmp/results.json` → `tmp/results.json`)
+/// and then resolved under `work_dir`. Paths that would escape the work directory
+/// via `..` segments are rejected to prevent reading arbitrary host files.
 fn collect_output_files(
     file_paths: Option<&[Utf8PathBuf]>,
+    work_dir: &Utf8Path,
 ) -> Option<HashMap<Utf8PathBuf, Vec<u8>>> {
     let paths = file_paths?;
 
     let mut files = HashMap::with_capacity(paths.len());
     for path in paths {
-        match std::fs::read(path.as_std_path()) {
+        // Strip leading `/` so absolute container paths become relative
+        let relative = path.as_str().trim_start_matches('/');
+        if relative.is_empty() {
+            eprintln!("Warning: skipping empty output file path");
+            continue;
+        }
+        let resolved = work_dir.join(relative);
+
+        // Reject paths that escape the work directory via `..`
+        if !resolved.as_str().starts_with(work_dir.as_str()) {
+            eprintln!("Warning: rejecting output file path that escapes work directory: {path}");
+            continue;
+        }
+
+        match std::fs::read(resolved.as_std_path()) {
             Ok(contents) => {
                 files.insert(path.clone(), contents);
             },

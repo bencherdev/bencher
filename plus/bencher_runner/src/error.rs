@@ -87,4 +87,7 @@ pub enum ConfigError {
         value: String,
         range: &'static str,
     },
+
+    #[error("Benchmark {kind}: {message}")]
+    Runtime { kind: &'static str, message: String },
 }
