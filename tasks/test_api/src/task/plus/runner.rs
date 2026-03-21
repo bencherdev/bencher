@@ -61,14 +61,6 @@ impl RunnerTest {
     }
 
     fn exec_with_daemon(&self) -> anyhow::Result<()> {
-        let is_linux = cfg!(target_os = "linux");
-        let has_kvm = is_linux && camino::Utf8Path::new("/dev/kvm").exists();
-
-        if !has_kvm {
-            println!("Skipping runner test: requires Linux + KVM");
-            return Ok(());
-        }
-
         if !docker_available() {
             println!("Skipping runner test: Docker not available");
             return Ok(());
@@ -98,31 +90,43 @@ impl RunnerTest {
         );
         let runner_token: bencher_json::JsonRunnerToken = serde_json::from_slice(&output.stdout)?;
 
-        // Build bencher-init for the musl target so it can be bundled into the runner binary.
-        let workspace_root = camino::Utf8PathBuf::try_from(std::env::current_dir()?)
-            .expect("workspace root should be valid UTF-8");
-        let target_triple = musl_target_triple()?;
+        // On Linux with KVM, build bencher-init for the musl target so it can
+        // be bundled into the runner binary. On other platforms (e.g. macOS),
+        // the runner runs in debug mode without KVM and doesn't need bencher-init.
+        let is_linux = cfg!(target_os = "linux");
+        let has_kvm = is_linux && camino::Utf8Path::new("/dev/kvm").exists();
 
-        println!("Building bencher-init ({target_triple})...");
-        let build_status = Command::new("cargo")
-            .args(["build", "--target", target_triple, "-p", "bencher_init"])
-            .status()?;
-        anyhow::ensure!(build_status.success(), "Failed to build bencher-init");
+        if has_kvm {
+            let workspace_root = camino::Utf8PathBuf::try_from(std::env::current_dir()?)
+                .expect("workspace root should be valid UTF-8");
+            let target_triple = musl_target_triple()?;
 
-        let init_path = workspace_root
-            .join("target")
-            .join(target_triple)
-            .join("debug")
-            .join("bencher-init");
-        anyhow::ensure!(init_path.exists(), "bencher-init not found at {init_path}");
+            println!("Building bencher-init ({target_triple})...");
+            let build_status = Command::new("cargo")
+                .args(["build", "--target", target_triple, "-p", "bencher_init"])
+                .status()?;
+            anyhow::ensure!(build_status.success(), "Failed to build bencher-init");
 
-        // Build the runner binary with BENCHER_INIT_PATH so the init binary gets bundled.
-        println!("Building runner (BENCHER_INIT_PATH={init_path})...");
-        let build_status = Command::new("cargo")
-            .args(["build", "--bin", "runner"])
-            .env("BENCHER_INIT_PATH", &init_path)
-            .status()?;
-        anyhow::ensure!(build_status.success(), "Failed to build runner binary");
+            let init_path = workspace_root
+                .join("target")
+                .join(target_triple)
+                .join("debug")
+                .join("bencher-init");
+            anyhow::ensure!(init_path.exists(), "bencher-init not found at {init_path}");
+
+            println!("Building runner (BENCHER_INIT_PATH={init_path})...");
+            let build_status = Command::new("cargo")
+                .args(["build", "--bin", "runner"])
+                .env("BENCHER_INIT_PATH", &init_path)
+                .status()?;
+            anyhow::ensure!(build_status.success(), "Failed to build runner binary");
+        } else {
+            println!("Building runner (debug mode, no KVM)...");
+            let build_status = Command::new("cargo")
+                .args(["build", "--bin", "runner"])
+                .status()?;
+            anyhow::ensure!(build_status.success(), "Failed to build runner binary");
+        }
 
         // Start the runner daemon as a background process
         println!("Starting runner daemon...");
@@ -138,6 +142,7 @@ impl RunnerTest {
                 "test-runner",
             ])
             .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::inherit())
             .spawn()?;
 
         // Wait for the runner to be ready instead of sleeping a fixed duration
@@ -179,8 +184,25 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result
 
     println!("Running runner smoke test against: {host}");
 
-    // Extract the registry host (e.g. "localhost:61016") from the URL.
-    let registry = registry_host(host)?;
+    // On macOS, Docker Desktop runs the daemon in a VM where localhost is the
+    // VM's loopback, not the host. We need host.docker.internal for Docker
+    // commands, and the API server's registry_url must also use it so the auth
+    // realm URL is reachable from Docker's daemon.
+    // The runner daemon on the host also needs to resolve host.docker.internal,
+    // so we ensure it's in /etc/hosts.
+    let registry = if cfg!(target_os = "macos") {
+        let port = registry_host(host)?
+            .rsplit_once(':')
+            .and_then(|(_, p)| p.parse::<u16>().ok())
+            .unwrap_or(bencher_json::BENCHER_API_PORT);
+        let docker_registry = format!("host.docker.internal:{port}");
+        println!("macOS detected, using Docker registry host: {docker_registry}");
+        ensure_hosts_entry()?;
+        ensure_insecure_registry(&docker_registry)?;
+        docker_registry
+    } else {
+        registry_host(host)?
+    };
 
     // Step 1: Pull the prebuilt Docker image
     println!("Step 1: Pulling Docker image {DOCKER_IMAGE}...");
@@ -202,7 +224,14 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result
     // Step 5: Submit a job via `bencher run --image`
     println!("Step 5: Submitting job via bencher run --image...");
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    cmd.args([
+    let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
+    // On macOS in debug mode, the runner executes on the host directly, so the
+    // OCI image's entrypoint (/usr/bin/bencher) won't exist. Override it with
+    // the locally built binary.
+    let bencher_bin = assert_cmd::cargo::cargo_bin(BENCHER_CMD)
+        .to_string_lossy()
+        .to_string();
+    let mut args = vec![
         "run",
         HOST_ARG,
         host,
@@ -215,7 +244,7 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result
         "--testbed",
         "base",
         "--image",
-        &format!("{PROJECT_SLUG}:{IMAGE_TAG}"),
+        &image_ref,
         "--spec",
         "test-spec",
         "--format",
@@ -225,10 +254,12 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result
         "120",
         "--poll-interval",
         "2",
-        "--exec",
-        "mock",
-    ])
-    .current_dir(CLI_DIR);
+    ];
+    if cfg!(target_os = "macos") {
+        args.extend(["--entrypoint", &bencher_bin]);
+    }
+    args.extend(["--exec", "mock"]);
+    cmd.args(&args).current_dir(CLI_DIR);
     let assert = cmd.assert().success();
 
     // Step 6: Verify the results
@@ -240,6 +271,94 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result
 
     println!("Runner smoke test passed!");
     Ok(())
+}
+
+/// Ensure that `host.docker.internal` resolves on the host by adding it to
+/// `/etc/hosts` if not already present. Requires `sudo`.
+fn ensure_hosts_entry() -> anyhow::Result<()> {
+    let hosts = std::fs::read_to_string("/etc/hosts")?;
+    if hosts.contains("host.docker.internal") {
+        println!("host.docker.internal already in /etc/hosts.");
+        return Ok(());
+    }
+
+    let entry = "127.0.0.1 host.docker.internal";
+    anyhow::bail!(
+        "host.docker.internal is not in /etc/hosts.\n\
+         Run this once to fix it:\n\n\
+         echo '{entry}' | sudo tee -a /etc/hosts\n"
+    );
+}
+
+/// Ensure that the given registry is listed as an insecure registry in
+/// Docker Desktop's `~/.docker/daemon.json`.
+///
+/// If the registry is already configured, this is a no-op.
+/// Otherwise, it adds the entry to `daemon.json` and restarts Docker Desktop.
+fn ensure_insecure_registry(registry: &str) -> anyhow::Result<()> {
+    let info_output = Command::new("docker")
+        .args(["info", "--format", "{{json .RegistryConfig.IndexConfigs}}"])
+        .output()?;
+    if info_output.status.success() {
+        let info_str = String::from_utf8_lossy(&info_output.stdout);
+        if let Ok(configs) = serde_json::from_str::<serde_json::Value>(info_str.trim())
+            && configs.get(registry).is_some()
+        {
+            println!("Insecure registry '{registry}' is already configured.");
+            return Ok(());
+        }
+    }
+
+    println!("Configuring '{registry}' as an insecure Docker registry...");
+
+    let home = std::env::var("HOME")?;
+    let daemon_json_path = std::path::PathBuf::from(home).join(".docker/daemon.json");
+
+    let mut config: serde_json::Value = if daemon_json_path.exists() {
+        let contents = std::fs::read_to_string(&daemon_json_path)?;
+        serde_json::from_str(&contents)?
+    } else {
+        serde_json::json!({})
+    };
+
+    let registries = config
+        .as_object_mut()
+        .ok_or_else(|| anyhow::anyhow!("daemon.json is not a JSON object"))?
+        .entry("insecure-registries")
+        .or_insert_with(|| serde_json::json!([]));
+    let arr = registries
+        .as_array_mut()
+        .ok_or_else(|| anyhow::anyhow!("insecure-registries is not an array"))?;
+    let registry_value = serde_json::Value::String(registry.to_owned());
+    if !arr.contains(&registry_value) {
+        arr.push(registry_value);
+    }
+
+    let pretty = serde_json::to_string_pretty(&config)?;
+    std::fs::write(&daemon_json_path, &pretty)?;
+    println!("Updated {}", daemon_json_path.display());
+
+    // Restart Docker Desktop to pick up the new config.
+    println!("Restarting Docker Desktop...");
+    drop(Command::new("killall").arg("Docker").status());
+    std::thread::sleep(std::time::Duration::from_secs(5));
+    drop(Command::new("open").args(["-a", "Docker"]).status());
+
+    // Wait for Docker to become ready.
+    println!("Waiting for Docker to be ready...");
+    let start = std::time::Instant::now();
+    let timeout = std::time::Duration::from_secs(60);
+    loop {
+        if docker_available() {
+            println!("Docker is ready.");
+            return Ok(());
+        }
+        anyhow::ensure!(
+            start.elapsed() < timeout,
+            "Timed out waiting for Docker Desktop to restart"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
 }
 
 /// Extract the host:port portion of a URL string for use as a Docker registry address.

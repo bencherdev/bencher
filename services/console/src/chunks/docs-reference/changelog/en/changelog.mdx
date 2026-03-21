@@ -1,11 +1,12 @@
 ## Pending `v0.6.0`
-- **BREAKING CHANGE** Remove the `POST /v0/server/restart` endpoint and CLI `bencher server restart` command
-- **BREAKING CHANGE** Remove the `PUT /v0/server/config` endpoint and CLI `bencher server config update` command
-- Improve server concurrency with database connection pooling
 - **BREAKING CHANGE** Update Bencher Metric Format (BMF) to accept UUID, slug, or name for the Benchmark identifier
 - Move to soft deletion for Organizations and Projects with admin-only hard deletion
 - Add an OCI compliant image registry API
 - Add a bare metal `runner`
+- **BREAKING CHANGE** Remove the `POST /v0/server/restart` endpoint and CLI `bencher server restart` command
+- **BREAKING CHANGE** Remove the `PUT /v0/server/config` endpoint and CLI `bencher server config update` command
+- Improve server concurrency with database connection pooling
+- Add `[MemoryDiagnoser]` support to [the C# DotNet Adapter](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F%E2%83%A3-c-dotnet) (Thank you [@ricardoboss](https://github.com/ricardoboss))
 
 ## `v0.5.10`
 - Fix GitHub PR comment exceeding maximum length (Thank you [@alexeyr-ci2](https://github.com/alexeyr-ci2))

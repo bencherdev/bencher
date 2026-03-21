@@ -9,7 +9,7 @@ pub struct TaskRunner {
     pub url: Option<Url>,
 
     /// Admin token for runner token rotation
-    #[clap(long, requires = "with-daemon")]
+    #[clap(long, requires = "with_daemon")]
     pub admin_token: Option<Jwt>,
 
     /// Username for OCI authentication (email address)
