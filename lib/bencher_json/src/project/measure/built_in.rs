@@ -81,6 +81,21 @@ pub mod json {
     create_measure!(FileSize, "File Size", "file-size", BYTES);
 }
 
+pub mod dotnet {
+    use bencher_valid::BYTES;
+
+    create_measure!(Allocated, "Allocated", "allocated", BYTES);
+    create_measure!(Gen0Collects, "Gen0 Collects", "gen0-collects", "collects");
+    create_measure!(Gen1Collects, "Gen1 Collects", "gen1-collects", "collects");
+    create_measure!(Gen2Collects, "Gen2 Collects", "gen2-collects", "collects");
+    create_measure!(
+        TotalOperations,
+        "Total Operations",
+        "total-operations",
+        "operations"
+    );
+}
+
 pub mod iai {
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Accesses, "L1 Accesses", "l1-accesses", "accesses");

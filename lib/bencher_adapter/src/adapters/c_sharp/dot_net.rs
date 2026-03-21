@@ -3,6 +3,7 @@ use bencher_json::{BenchmarkName, JsonAny, JsonNewMetric, project::report::JsonA
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
+use crate::results::adapter_results::DotNetMeasure;
 use crate::{
     Adaptable, AdapterError, Settings,
     adapters::util::{Units, latency_as_nanos},
@@ -36,6 +37,7 @@ pub struct Benchmark {
     pub namespace: Option<BenchmarkName>,
     pub method: BenchmarkName,
     pub statistics: Statistics,
+    pub memory: Option<Memory>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -51,6 +53,16 @@ pub struct Statistics {
     pub interquartile_range: Decimal,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct Memory {
+    pub gen0_collections: u32,
+    pub gen1_collections: u32,
+    pub gen2_collections: u32,
+    pub total_operations: u32,
+    pub bytes_allocated_per_operation: u32,
+}
+
 impl DotNet {
     fn convert(self, settings: Settings) -> Result<Option<AdapterResults>, AdapterError> {
         let benchmarks = self.benchmarks.0;
@@ -60,7 +72,9 @@ impl DotNet {
                 namespace,
                 method,
                 statistics,
+                memory,
             } = benchmark;
+
             let Statistics {
                 mean,
                 standard_deviation,
@@ -84,24 +98,82 @@ impl DotNet {
                 JsonAverage::Mean => (mean, standard_deviation),
                 JsonAverage::Median => (median, interquartile_range),
             };
-            let value = latency_as_nanos(average, units);
+            let latency_value = latency_as_nanos(average, units);
             let spread = latency_as_nanos(spread, units);
-            let json_metric = JsonNewMetric {
-                value,
-                lower_value: Some(value - spread),
-                upper_value: Some(value + spread),
+            let json_latency_metric = JsonNewMetric {
+                value: latency_value,
+                lower_value: Some(latency_value - spread),
+                upper_value: Some(latency_value + spread),
             };
 
-            benchmark_metrics.push((benchmark_name, json_metric));
+            let latency_measure = DotNetMeasure::Latency(json_latency_metric);
+
+            let mut measures = vec![latency_measure];
+
+            if let Some(m) = memory {
+                let allocated_json = JsonNewMetric {
+                    value: m.bytes_allocated_per_operation.into(),
+                    lower_value: None,
+                    upper_value: None,
+                };
+
+                let allocated_measure = DotNetMeasure::Allocated(allocated_json);
+
+                measures.push(allocated_measure);
+
+                let gen0_collects_json = JsonNewMetric {
+                    value: m.gen0_collections.into(),
+                    lower_value: None,
+                    upper_value: None,
+                };
+
+                let gen0_measure = DotNetMeasure::Gen0Collects(gen0_collects_json);
+
+                measures.push(gen0_measure);
+
+                let gen1_collects_json = JsonNewMetric {
+                    value: m.gen1_collections.into(),
+                    lower_value: None,
+                    upper_value: None,
+                };
+
+                let gen1_measure = DotNetMeasure::Gen1Collects(gen1_collects_json);
+
+                measures.push(gen1_measure);
+
+                let gen2_collects_json = JsonNewMetric {
+                    value: m.gen2_collections.into(),
+                    lower_value: None,
+                    upper_value: None,
+                };
+
+                let gen2_measure = DotNetMeasure::Gen2Collects(gen2_collects_json);
+
+                measures.push(gen2_measure);
+
+                let total_operations_json = JsonNewMetric {
+                    value: m.total_operations.into(),
+                    lower_value: None,
+                    upper_value: None,
+                };
+
+                let total_operations_measure =
+                    DotNetMeasure::TotalOperations(total_operations_json);
+
+                measures.push(total_operations_measure);
+            }
+
+            benchmark_metrics.push((benchmark_name, measures));
         }
 
-        Ok(AdapterResults::new_latency(benchmark_metrics))
+        Ok(AdapterResults::new_dotnet(benchmark_metrics))
     }
 }
 
 #[cfg(test)]
 pub(crate) mod test_c_sharp_dot_net {
     use bencher_json::project::report::JsonAverage;
+    use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -239,6 +311,42 @@ pub(crate) mod test_c_sharp_dot_net {
             51.520_081_515_495_59,
             Some(50.729_707_813_342_635),
             Some(52.310_455_217_648_546),
+        );
+    }
+
+    #[test]
+    fn adapter_c_sharp_dot_net_memory() {
+        let results = convert_c_sharp_dot_net("memory");
+        assert_eq!(results.inner.len(), 2);
+
+        let metrics = results
+            .get("BenchmarkDotNet.Samples.AllocEmptyList")
+            .unwrap();
+
+        let allocated = metrics.get("allocated").unwrap();
+        assert_eq!(allocated.value, OrderedFloat::from(368));
+
+        let gen0collects = metrics.get("gen0-collects").unwrap();
+        assert_eq!(gen0collects.value, OrderedFloat::from(184));
+
+        let gen1collects = metrics.get("gen1-collects").unwrap();
+        assert_eq!(gen1collects.value, OrderedFloat::from(0));
+
+        let gen2collects = metrics.get("gen2-collects").unwrap();
+        assert_eq!(gen2collects.value, OrderedFloat::from(0));
+
+        let total_operations = metrics.get("total-operations").unwrap();
+        assert_eq!(total_operations.value, OrderedFloat::from(0x0080_0000));
+
+        let latency = metrics.get("latency").unwrap();
+        assert_eq!(latency.value, OrderedFloat::from(77.494_494_120_279_95));
+        assert_eq!(
+            latency.lower_value,
+            Some(OrderedFloat::from(76.318_534_543_028_99))
+        );
+        assert_eq!(
+            latency.upper_value,
+            Some(OrderedFloat::from(78.670_453_697_530_92))
         );
     }
 
