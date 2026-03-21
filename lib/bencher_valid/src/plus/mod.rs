@@ -2,7 +2,6 @@
 
 mod architecture;
 mod brand;
-
 mod cpu;
 mod cvc;
 mod disk;

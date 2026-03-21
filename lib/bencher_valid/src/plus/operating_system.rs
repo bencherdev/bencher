@@ -20,7 +20,7 @@ const WINDOWS: &str = "windows";
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub enum OperatingSystem {
     Linux,
-    MacOs,
+    Macos,
     Windows,
 }
 
@@ -39,7 +39,7 @@ impl TryFrom<String> for OperatingSystem {
     fn try_from(os: String) -> Result<Self, Self::Error> {
         match os.as_str() {
             LINUX => Ok(Self::Linux),
-            MACOS => Ok(Self::MacOs),
+            MACOS => Ok(Self::Macos),
             WINDOWS => Ok(Self::Windows),
             _ => Err(ValidError::OperatingSystem(os)),
         }
@@ -58,7 +58,7 @@ impl AsRef<str> for OperatingSystem {
     fn as_ref(&self) -> &str {
         match self {
             Self::Linux => LINUX,
-            Self::MacOs => MACOS,
+            Self::Macos => MACOS,
             Self::Windows => WINDOWS,
         }
     }
@@ -109,7 +109,7 @@ mod tests {
         assert_eq!(json, "\"linux\"");
 
         let os: OperatingSystem = serde_json::from_str("\"macos\"").unwrap();
-        assert_eq!(os, OperatingSystem::MacOs);
+        assert_eq!(os, OperatingSystem::Macos);
         let json = serde_json::to_string(&os).unwrap();
         assert_eq!(json, "\"macos\"");
 

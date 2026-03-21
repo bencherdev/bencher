@@ -16560,7 +16560,7 @@
         "type": "string",
         "enum": [
           "linux",
-          "mac_os",
+          "macos",
           "windows"
         ]
       },
