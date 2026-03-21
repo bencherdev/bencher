@@ -1,23 +1,23 @@
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 use std::sync::atomic::{AtomicBool, Ordering};
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 use std::sync::{Arc, Mutex};
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 use std::time::Duration;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 use bencher_json::JsonClaimedJob;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 use super::UpConfig;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 use super::state_machine::JobFinishResult;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 use super::websocket::JobChannel;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 #[expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
 pub fn execute_job(
     config: &UpConfig,
@@ -125,7 +125,7 @@ pub fn execute_job(
 }
 
 /// Convert a [`RunOutput`](crate::RunOutput) into a [`JsonIterationOutput`].
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 fn output_to_iteration(output: crate::RunOutput) -> JsonIterationOutput {
     let file_output = output.output_files.map(|files| {
         files
@@ -158,7 +158,7 @@ fn output_to_iteration(output: crate::RunOutput) -> JsonIterationOutput {
 /// authenticated image pulls.
 ///
 /// CPU layout from the up config is passed through for core isolation.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::Config {
     let spec = &job.spec;
     let config = &job.config;
@@ -222,7 +222,7 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
     runner_config
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", debug_assertions))]
 #[expect(clippy::print_stderr, clippy::use_debug)]
 fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_flag: &AtomicBool) {
     loop {
@@ -261,7 +261,6 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
 }
 
 #[cfg(test)]
-#[cfg(target_os = "linux")]
 #[expect(clippy::indexing_slicing, clippy::get_unwrap)]
 mod tests {
     use super::*;
@@ -348,7 +347,7 @@ mod tests {
             max_output_size: None,
             max_file_count: None,
             grace_period: None,
-            firecracker_log_level: crate::firecracker::FirecrackerLogLevel::default(),
+            firecracker_log_level: crate::FirecrackerLogLevel::default(),
         }
     }
 

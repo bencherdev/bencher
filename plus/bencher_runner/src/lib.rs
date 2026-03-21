@@ -14,8 +14,8 @@
     allow(unused_crate_dependencies)
 )]
 
-// tempfile is only used on Linux in the execute function
-#[cfg(all(feature = "plus", target_os = "linux"))]
+// tempfile is used in the execute function (Linux and non-Linux debug)
+#[cfg(all(feature = "plus", any(target_os = "linux", debug_assertions)))]
 use tempfile as _;
 
 #[cfg(feature = "plus")]
@@ -34,6 +34,8 @@ pub mod init;
 pub mod jail;
 #[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod kernel;
+#[cfg(all(feature = "plus", debug_assertions, not(target_os = "linux")))]
+mod local;
 #[cfg(feature = "plus")]
 mod log_level;
 #[cfg(feature = "plus")]
@@ -46,6 +48,8 @@ pub mod tuning;
 pub mod units;
 #[cfg(feature = "plus")]
 pub mod up;
+#[cfg(all(feature = "plus", target_os = "linux"))]
+mod vm;
 
 #[cfg(feature = "plus")]
 pub use bencher_json::{Cpu, Disk, GracePeriod, Memory};

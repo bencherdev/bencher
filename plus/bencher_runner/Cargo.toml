@@ -47,9 +47,12 @@ tungstenite = { workspace = true, optional = true }
 url = { workspace = true, optional = true }
 uuid = { workspace = true, features = ["v4", "serde"], optional = true }
 
+# Unix dependencies (Linux + macOS for signal handling)
+[target.'cfg(unix)'.dependencies]
+libc = { workspace = true }
+
 # Linux-only dependencies
 [target.'cfg(target_os = "linux")'.dependencies]
-libc = { workspace = true }
 nix = { workspace = true, features = ["feature", "poll", "sched", "signal"] }
 
 [build-dependencies]
