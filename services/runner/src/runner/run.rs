@@ -52,6 +52,7 @@ impl TryFrom<CliRun> for Run {
                 tuning,
                 grace_period: task.grace_period,
                 firecracker_log_level: task.firecracker_log_level,
+                sandbox: task.sandbox,
             },
         })
     }

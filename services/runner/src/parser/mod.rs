@@ -90,6 +90,12 @@ pub struct CliRun {
     #[arg(long)]
     pub network: bool,
 
+    /// Sandbox mode for benchmark execution.
+    /// Use "firecracker" for Firecracker microVM (Linux-only).
+    /// Omit for non-sandboxed host execution.
+    #[arg(long)]
+    pub sandbox: Option<bencher_json::Sandbox>,
+
     #[command(flatten)]
     pub tuning: CliTuning,
 

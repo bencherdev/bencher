@@ -1,23 +1,14 @@
-#[cfg(any(target_os = "linux", debug_assertions))]
 use std::sync::atomic::{AtomicBool, Ordering};
-#[cfg(any(target_os = "linux", debug_assertions))]
 use std::sync::{Arc, Mutex};
-#[cfg(any(target_os = "linux", debug_assertions))]
 use std::time::Duration;
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 use bencher_json::JsonClaimedJob;
-#[cfg(any(target_os = "linux", debug_assertions))]
 use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 use super::UpConfig;
-#[cfg(any(target_os = "linux", debug_assertions))]
 use super::state_machine::JobFinishResult;
-#[cfg(any(target_os = "linux", debug_assertions))]
 use super::websocket::JobChannel;
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 #[expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
 pub fn execute_job(
     config: &UpConfig,
@@ -125,7 +116,6 @@ pub fn execute_job(
 }
 
 /// Convert a [`RunOutput`](crate::RunOutput) into a [`JsonIterationOutput`].
-#[cfg(any(target_os = "linux", debug_assertions))]
 fn output_to_iteration(output: crate::RunOutput) -> JsonIterationOutput {
     let file_output = output.output_files.map(|files| {
         files
@@ -158,7 +148,6 @@ fn output_to_iteration(output: crate::RunOutput) -> JsonIterationOutput {
 /// authenticated image pulls.
 ///
 /// CPU layout from the up config is passed through for core isolation.
-#[cfg(any(target_os = "linux", debug_assertions))]
 fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::Config {
     let spec = &job.spec;
     let config = &job.config;
@@ -219,10 +208,12 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
     // Pass through Firecracker log level
     runner_config.firecracker_log_level = up_config.firecracker_log_level;
 
+    // Pass through sandbox mode from the job spec
+    runner_config = runner_config.with_sandbox(spec.sandbox);
+
     runner_config
 }
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 #[expect(clippy::print_stderr, clippy::use_debug)]
 fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_flag: &AtomicBool) {
     loop {

@@ -14,8 +14,8 @@
     allow(unused_crate_dependencies)
 )]
 
-// tempfile is used in the execute function (Linux and non-Linux debug)
-#[cfg(all(feature = "plus", any(target_os = "linux", debug_assertions)))]
+// tempfile is used in the execute function (Linux VM and non-sandboxed)
+#[cfg(feature = "plus")]
 use tempfile as _;
 
 #[cfg(feature = "plus")]
@@ -34,7 +34,7 @@ pub mod init;
 pub mod jail;
 #[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod kernel;
-#[cfg(all(feature = "plus", debug_assertions, not(target_os = "linux")))]
+#[cfg(feature = "plus")]
 mod local;
 #[cfg(feature = "plus")]
 mod log_level;

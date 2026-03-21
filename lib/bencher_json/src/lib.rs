@@ -42,7 +42,7 @@ pub mod urlencoded;
 pub mod user;
 
 #[cfg(feature = "plus")]
-pub use bencher_valid::Architecture;
+pub use bencher_valid::{Architecture, OperatingSystem, Sandbox};
 pub use big_int::BigInt;
 pub use clock::Clock;
 pub use organization::{

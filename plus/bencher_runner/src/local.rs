@@ -1,7 +1,5 @@
-//! Local host execution — runs commands directly on the host system.
+//! Non-sandboxed host execution — runs commands directly on the host system.
 //!
-//! Used for non-Linux debug builds to enable local development and testing
-//! against the API server without requiring a Linux machine with KVM.
 //! Pulls the OCI image from the registry (exercising the real pull path),
 //! parses its config for entrypoint/cmd/env, but does NOT unpack the image
 //! layers. Instead, the command is executed directly on the host via
@@ -28,7 +26,7 @@ pub fn local_execute(
     config: &crate::Config,
     cancel_flag: Option<&Arc<AtomicBool>>,
 ) -> Result<RunOutput, RunnerError> {
-    println!("Executing benchmark run (local debug mode):");
+    println!("Executing benchmark run (non-sandboxed mode):");
     println!("  OCI image: {}", config.oci_image);
     println!("  Timeout: {} seconds", config.timeout_secs);
 

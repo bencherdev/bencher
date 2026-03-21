@@ -1,8 +1,4 @@
-#![expect(clippy::print_stdout)]
-#![cfg_attr(
-    any(target_os = "linux", debug_assertions),
-    expect(clippy::print_stderr)
-)]
+#![expect(clippy::print_stdout, clippy::print_stderr)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -99,6 +95,8 @@ pub struct RunArgs {
     pub grace_period: bencher_json::GracePeriod,
     /// Firecracker process log level.
     pub firecracker_log_level: crate::FirecrackerLogLevel,
+    /// Sandbox mode for benchmark execution.
+    pub sandbox: Option<bencher_json::Sandbox>,
 }
 
 /// Build a `Config` from CLI `RunArgs`.
@@ -143,15 +141,16 @@ fn build_config_from_run_args(args: &RunArgs) -> crate::Config {
         .with_env_opt(args.env.clone());
     config = config.with_grace_period(args.grace_period);
     config.firecracker_log_level = args.firecracker_log_level;
+    config = config.with_sandbox(args.sandbox);
     config
 }
 
 /// Run the `run` subcommand with parsed arguments.
 ///
-/// Prepares the rootfs and launches a Firecracker microVM.
-#[cfg(target_os = "linux")]
+/// Dispatches to Firecracker VM or local host execution based on the sandbox
+/// setting in the configuration.
 pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
-    // Apply host tuning — guard restores settings on drop
+    // Apply host tuning — guard restores settings on drop (no-op on non-Linux)
     let _tuning_guard = crate::tuning::apply(&args.tuning);
 
     let config = build_config_from_run_args(args);
@@ -181,47 +180,6 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         }
     }
     Ok(())
-}
-
-/// Non-Linux debug stub for `run_with_args` — local host execution.
-#[cfg(all(debug_assertions, not(target_os = "linux")))]
-pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
-    let config = build_config_from_run_args(args);
-
-    let iter_count = args.iter.as_usize();
-    for iteration in 0..iter_count {
-        match execute(&config, None) {
-            Ok(output) => {
-                println!("{}", output.stdout);
-                if !output.stderr.is_empty() {
-                    eprintln!("{}", output.stderr);
-                }
-                if output.exit_code != 0 && !args.allow_failure {
-                    return Err(RunnerError::NonZeroExitCode(output.exit_code));
-                }
-            },
-            Err(e) => {
-                if args.allow_failure {
-                    eprintln!(
-                        "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
-                        iteration + 1
-                    );
-                    continue;
-                }
-                return Err(e);
-            },
-        }
-    }
-    Ok(())
-}
-
-/// Non-Linux release stub for `run_with_args`.
-#[cfg(all(not(debug_assertions), not(target_os = "linux")))]
-pub fn run_with_args(_args: &RunArgs) -> Result<(), RunnerError> {
-    Err(
-        crate::error::ConfigError::UnsupportedPlatform("bencher-runner requires Linux".to_owned())
-            .into(),
-    )
 }
 
 /// Resolve an OCI image source to a local path.
@@ -285,7 +243,9 @@ pub fn resolve_oci_image(
 
 /// Execute a single benchmark run with the given configuration.
 ///
-/// Prepares the rootfs and launches a Firecracker microVM.
+/// Dispatches based on `config.sandbox`:
+/// - `Some(Sandbox::Firecracker)` → Firecracker microVM (Linux-only)
+/// - `None` → local host execution (any platform)
 ///
 /// # Arguments
 ///
@@ -296,21 +256,26 @@ pub fn resolve_oci_image(
 /// # Returns
 ///
 /// The benchmark output including exit code and stdout.
-#[cfg(target_os = "linux")]
 pub fn execute(
     config: &crate::Config,
     cancel_flag: Option<&Arc<AtomicBool>>,
 ) -> Result<RunOutput, RunnerError> {
-    crate::vm::vm_execute(config, cancel_flag)
-}
-
-/// Execute a single benchmark run (non-Linux debug — local host execution).
-#[cfg(all(debug_assertions, not(target_os = "linux")))]
-pub fn execute(
-    config: &crate::Config,
-    cancel_flag: Option<&Arc<AtomicBool>>,
-) -> Result<RunOutput, RunnerError> {
-    crate::local::local_execute(config, cancel_flag)
+    match config.sandbox {
+        Some(bencher_json::Sandbox::Firecracker) => {
+            #[cfg(target_os = "linux")]
+            {
+                crate::vm::vm_execute(config, cancel_flag)
+            }
+            #[cfg(not(target_os = "linux"))]
+            {
+                Err(crate::error::ConfigError::UnsupportedPlatform(
+                    "Firecracker sandbox requires Linux with KVM support".to_owned(),
+                )
+                .into())
+            }
+        },
+        None => crate::local::local_execute(config, cancel_flag),
+    }
 }
 
 /// Sanitize environment variables by removing dangerous ones.
@@ -341,18 +306,6 @@ pub(crate) fn sanitize_env(env: &[(String, String)]) -> Vec<(String, String)> {
     }
 
     sanitized
-}
-
-/// Execute a single benchmark run (non-Linux release stub).
-#[cfg(all(not(debug_assertions), not(target_os = "linux")))]
-pub fn execute(
-    _config: &crate::Config,
-    _cancel_flag: Option<&Arc<AtomicBool>>,
-) -> Result<RunOutput, RunnerError> {
-    Err(crate::error::ConfigError::UnsupportedPlatform(
-        "Benchmark execution requires Linux with KVM support".to_owned(),
-    )
-    .into())
 }
 
 #[cfg(test)]

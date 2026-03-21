@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_json::{Cpu, Disk, GracePeriod, Memory};
+use bencher_json::{Cpu, Disk, GracePeriod, Memory, Sandbox};
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
@@ -125,6 +125,14 @@ pub struct Config {
     /// Firecracker process log level. This field is not serialized.
     #[serde(skip)]
     pub firecracker_log_level: FirecrackerLogLevel,
+
+    /// Sandbox mode for benchmark execution.
+    ///
+    /// When set to `Some(Sandbox::Firecracker)`, the benchmark runs inside a
+    /// Firecracker microVM (Linux-only). When `None`, the benchmark runs
+    /// directly on the host (non-sandboxed mode, any platform).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sandbox: Option<Sandbox>,
 }
 
 fn default_vcpus() -> Cpu {
@@ -202,6 +210,7 @@ impl Config {
             registry_scheme: RegistryScheme::default(),
             cpu_layout: None,
             firecracker_log_level: FirecrackerLogLevel::default(),
+            sandbox: None,
         }
     }
 
@@ -234,7 +243,15 @@ impl Config {
             registry_scheme: RegistryScheme::default(),
             cpu_layout: None,
             firecracker_log_level: FirecrackerLogLevel::default(),
+            sandbox: None,
         }
+    }
+
+    /// Set the sandbox mode for benchmark execution.
+    #[must_use]
+    pub fn with_sandbox(mut self, sandbox: Option<Sandbox>) -> Self {
+        self.sandbox = sandbox;
+        self
     }
 
     /// Set the JWT token for registry authentication.

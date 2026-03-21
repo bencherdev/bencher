@@ -96,6 +96,12 @@ pub enum ValidError {
     #[error("Failed to validate architecture: {0}")]
     Architecture(String),
     #[cfg(feature = "plus")]
+    #[error("Failed to validate operating system: {0}")]
+    OperatingSystem(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate sandbox: {0}")]
+    Sandbox(String),
+    #[cfg(feature = "plus")]
     #[error("Failed to validate plan level: {0}")]
     PlanLevel(String),
     #[cfg(feature = "plus")]

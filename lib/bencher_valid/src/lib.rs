@@ -53,8 +53,8 @@ pub use non_empty::NonEmpty;
 pub use plus::{
     Architecture, CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth,
     ExpirationYear, GracePeriod, HeartbeatTimeout, ImageReference, LastFour, LicensedPlanId,
-    Memory, MeteredPlanId, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore,
-    Timeout,
+    Memory, MeteredPlanId, OperatingSystem, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction,
+    RecaptchaScore, Sandbox, Timeout,
 };
 pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;

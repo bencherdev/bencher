@@ -1,8 +1,8 @@
 use std::string::ToString as _;
 
 use bencher_json::{
-    Architecture, Cpu, DateTime, Disk, JsonNewSpec, JsonSpec, JsonUpdateSpec, Memory, ResourceName,
-    SpecResourceId, SpecSlug, SpecUuid,
+    Architecture, Cpu, DateTime, Disk, JsonNewSpec, JsonSpec, JsonUpdateSpec, Memory,
+    OperatingSystem, ResourceName, Sandbox, SpecResourceId, SpecSlug, SpecUuid,
 };
 use diesel::{
     ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
@@ -29,7 +29,9 @@ pub struct QuerySpec {
     pub uuid: SpecUuid,
     pub name: ResourceName,
     pub slug: SpecSlug,
+    pub os: Option<OperatingSystem>,
     pub architecture: Architecture,
+    pub sandbox: Option<Sandbox>,
     pub cpu: Cpu,
     pub memory: Memory,
     pub disk: Disk,
@@ -53,7 +55,9 @@ impl QuerySpec {
             uuid: self.uuid,
             name: self.name,
             slug: self.slug,
+            os: self.os,
             architecture: self.architecture,
+            sandbox: self.sandbox,
             cpu: self.cpu,
             memory: self.memory,
             disk: self.disk,
@@ -105,7 +109,9 @@ pub struct InsertSpec {
     pub uuid: SpecUuid,
     pub name: ResourceName,
     pub slug: SpecSlug,
+    pub os: Option<OperatingSystem>,
     pub architecture: Architecture,
+    pub sandbox: Option<Sandbox>,
     pub cpu: Cpu,
     pub memory: Memory,
     pub disk: Disk,
@@ -122,7 +128,9 @@ impl InsertSpec {
             uuid: SpecUuid::new(),
             name: json.name.clone(),
             slug,
+            os: json.os,
             architecture: json.architecture,
+            sandbox: json.sandbox,
             cpu: json.cpu,
             memory: json.memory,
             disk: json.disk,
@@ -139,6 +147,8 @@ impl InsertSpec {
 pub struct UpdateSpec {
     pub name: Option<ResourceName>,
     pub slug: Option<SpecSlug>,
+    pub os: Option<Option<OperatingSystem>>,
+    pub sandbox: Option<Option<Sandbox>>,
     pub fallback: Option<Option<DateTime>>,
     pub modified: Option<DateTime>,
     pub archived: Option<Option<DateTime>>,
@@ -149,6 +159,8 @@ impl UpdateSpec {
         let JsonUpdateSpec {
             name,
             slug,
+            os,
+            sandbox,
             fallback,
             archived,
         } = update;
@@ -162,6 +174,8 @@ impl UpdateSpec {
         Self {
             name,
             slug,
+            os,
+            sandbox,
             fallback,
             archived,
             modified: Some(now),

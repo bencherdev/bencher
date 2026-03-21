@@ -1,10 +1,4 @@
-// All `up` code is used on Linux and non-Linux debug; suppress dead-code
-// warnings on non-Linux release where `Up::run()` is a stub.
-#![cfg_attr(all(not(target_os = "linux"), not(debug_assertions)), allow(dead_code))]
-
-use std::sync::atomic::AtomicBool;
-#[cfg(any(target_os = "linux", debug_assertions))]
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use bencher_json::RunnerResourceId;
 use url::Url;
@@ -21,32 +15,20 @@ mod websocket;
 
 pub use error::UpError;
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 use api_client::RunnerApiClient;
-#[cfg(any(target_os = "linux", debug_assertions))]
 use bencher_json::runner::{RunnerMessage, ServerMessage};
-#[cfg(any(target_os = "linux", debug_assertions))]
 use error::WebSocketError;
-#[cfg(any(target_os = "linux", debug_assertions))]
 use job::execute_job;
-#[cfg(any(target_os = "linux", debug_assertions))]
 use state_machine::{ChannelStateMachine, Effect, Input, LogLevel};
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 use std::collections::VecDeque;
-#[cfg(any(target_os = "linux", debug_assertions))]
 use std::sync::{Arc, Mutex};
-#[cfg(any(target_os = "linux", debug_assertions))]
 use std::time::Duration;
-#[cfg(any(target_os = "linux", debug_assertions))]
 use websocket::JobChannel;
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 const TRANSIENT_RETRY_BASE: Duration = Duration::from_secs(5);
-#[cfg(any(target_os = "linux", debug_assertions))]
 const TRANSIENT_RETRY_JITTER: u64 = 5;
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 fn transient_retry_delay() -> Duration {
     use rand::RngExt as _;
     let jitter = rand::rng().random_range(0..=TRANSIENT_RETRY_JITTER);
@@ -86,7 +68,6 @@ impl Up {
         Self { config }
     }
 
-    #[cfg(target_os = "linux")]
     #[expect(clippy::print_stdout)]
     pub fn run(mut self) -> Result<(), UpError> {
         install_signal_handlers();
@@ -96,22 +77,26 @@ impl Up {
         println!("  Runner: {}", self.config.runner);
         println!("  Poll timeout: {}s", self.config.poll_timeout_secs);
 
-        // Apply host tuning — guard restores settings on drop.
+        // Apply host tuning — guard restores settings on drop (no-op on non-Linux).
         // This must happen before CPU layout detection so that SMT changes
         // are reflected in the core count.
         let _tuning_guard = crate::tuning::apply(&self.config.tuning);
 
-        // Re-detect CPU layout after tuning (SMT may have changed core count)
-        self.config.cpu_layout = Some(CpuLayout::detect());
-        if let Some(cpu_layout) = &self.config.cpu_layout {
-            if cpu_layout.has_isolation() {
-                println!(
-                    "  CPU isolation: housekeeping={}, benchmark={}",
-                    cpu_layout.housekeeping_cpuset(),
-                    cpu_layout.benchmark_cpuset()
-                );
-            } else {
-                println!("  CPU isolation: disabled (insufficient cores)");
+        // Re-detect CPU layout after tuning (SMT may have changed core count).
+        // Linux-only: CpuLayout::detect() reads /sys/devices which only exists on Linux.
+        #[cfg(target_os = "linux")]
+        {
+            self.config.cpu_layout = Some(CpuLayout::detect());
+            if let Some(cpu_layout) = &self.config.cpu_layout {
+                if cpu_layout.has_isolation() {
+                    println!(
+                        "  CPU isolation: housekeeping={}, benchmark={}",
+                        cpu_layout.housekeeping_cpuset(),
+                        cpu_layout.benchmark_cpuset()
+                    );
+                } else {
+                    println!("  CPU isolation: disabled (insufficient cores)");
+                }
             }
         }
 
@@ -127,39 +112,10 @@ impl Up {
 
         run_driver(&self.config, &channel_url, client.token())
     }
-
-    #[cfg(all(debug_assertions, not(target_os = "linux")))]
-    #[expect(clippy::print_stdout)]
-    pub fn run(self) -> Result<(), UpError> {
-        install_signal_handlers();
-
-        println!("Bencher Runner starting (local debug mode)...");
-        println!("  Host: {}", self.config.host);
-        println!("  Runner: {}", self.config.runner);
-        println!("  Poll timeout: {}s", self.config.poll_timeout_secs);
-
-        let client = RunnerApiClient::new(
-            self.config.host.clone(),
-            String::from(self.config.token.clone()),
-            self.config.runner.clone(),
-        )?;
-
-        let channel_url = client.channel_url()?;
-
-        println!("Connecting to channel...");
-
-        run_driver(&self.config, &channel_url, client.token())
-    }
-
-    #[cfg(all(not(debug_assertions), not(target_os = "linux")))]
-    pub fn run(self) -> Result<(), UpError> {
-        Err(UpError::Config("Runner requires Linux".to_owned()))
-    }
 }
 
 /// Effect-driven protocol loop. The state machine decides what to do; this
 /// function executes effects and feeds I/O results back.
-#[cfg(any(target_os = "linux", debug_assertions))]
 #[expect(clippy::print_stdout)]
 fn run_driver(config: &UpConfig, channel_url: &Url, token: &str) -> Result<(), UpError> {
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs);
@@ -194,7 +150,6 @@ fn run_driver(config: &UpConfig, channel_url: &Url, token: &str) -> Result<(), U
     Ok(())
 }
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 enum EffectResult {
     /// Effect produced no input; continue to next effect.
     Continue,
@@ -204,7 +159,6 @@ enum EffectResult {
     Exit,
 }
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 #[expect(clippy::print_stdout, clippy::print_stderr)]
 fn execute_effect(
     effect: Effect,
@@ -270,7 +224,6 @@ fn execute_effect(
     }
 }
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 fn try_send(
     ws: Option<&Arc<Mutex<JobChannel>>>,
     msg: &RunnerMessage,
@@ -282,7 +235,6 @@ fn try_send(
     ws_guard.send_message(msg)
 }
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 fn receive_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
     let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
@@ -297,7 +249,6 @@ fn receive_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Inpu
     }
 }
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
     let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
@@ -315,7 +266,6 @@ fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) ->
     }
 }
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 #[expect(clippy::print_stdout, clippy::print_stderr)]
 fn report_outcome(outcome: &state_machine::JobOutcome) {
     let state_machine::JobOutcome { job, kind, acked } = outcome;
@@ -340,7 +290,6 @@ fn report_outcome(outcome: &state_machine::JobOutcome) {
     println!("Polling for jobs...");
 }
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 #[expect(clippy::print_stdout, clippy::print_stderr)]
 fn log_message(level: LogLevel, msg: &str) {
     match level {
@@ -373,7 +322,7 @@ fn install_signal_handlers() {
 /// Install signal handlers for SIGINT and SIGTERM (non-Linux POSIX).
 ///
 /// Uses `libc::signal()` directly since `nix` is not available on macOS.
-#[cfg(all(debug_assertions, not(target_os = "linux")))]
+#[cfg(not(target_os = "linux"))]
 fn install_signal_handlers() {
     // SAFETY: `signal_handler` only performs `AtomicBool::store` with
     // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
@@ -384,7 +333,6 @@ fn install_signal_handlers() {
     }
 }
 
-#[cfg(any(target_os = "linux", debug_assertions))]
 extern "C" fn signal_handler(_sig: libc::c_int) {
     SHUTDOWN.store(true, Ordering::SeqCst);
 }

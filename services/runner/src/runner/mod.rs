@@ -3,14 +3,14 @@ use clap::Parser as _;
 use crate::error::RunnerCliError;
 use crate::parser::{CliRunner, CliSub};
 
-#[cfg(all(feature = "plus", any(target_os = "linux", debug_assertions)))]
+#[cfg(feature = "plus")]
 mod run;
-#[cfg(all(feature = "plus", any(target_os = "linux", debug_assertions)))]
+#[cfg(feature = "plus")]
 mod up;
 
-#[cfg(all(feature = "plus", any(target_os = "linux", debug_assertions)))]
+#[cfg(feature = "plus")]
 use run::Run;
-#[cfg(all(feature = "plus", any(target_os = "linux", debug_assertions)))]
+#[cfg(feature = "plus")]
 use up::Up;
 
 #[derive(Debug)]
@@ -20,12 +20,10 @@ pub struct Runner {
 
 #[derive(Debug)]
 pub enum Sub {
-    #[cfg(all(feature = "plus", any(target_os = "linux", debug_assertions)))]
+    #[cfg(feature = "plus")]
     Up(Up),
-    #[cfg(all(feature = "plus", any(target_os = "linux", debug_assertions)))]
+    #[cfg(feature = "plus")]
     Run(Run),
-    #[cfg(not(all(feature = "plus", any(target_os = "linux", debug_assertions))))]
-    Unsupported,
 }
 
 impl TryFrom<CliRunner> for Runner {
@@ -41,17 +39,13 @@ impl TryFrom<CliRunner> for Runner {
 impl TryFrom<CliSub> for Sub {
     type Error = RunnerCliError;
 
-    #[cfg(all(feature = "plus", any(target_os = "linux", debug_assertions)))]
     fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
+            #[cfg(feature = "plus")]
             CliSub::Up(up) => Self::Up(up.try_into()?),
+            #[cfg(feature = "plus")]
             CliSub::Run(run) => Self::Run(run.try_into()?),
         })
-    }
-
-    #[cfg(not(all(feature = "plus", any(target_os = "linux", debug_assertions))))]
-    fn try_from(_sub: CliSub) -> Result<Self, Self::Error> {
-        Ok(Self::Unsupported)
     }
 }
 
@@ -68,12 +62,10 @@ impl Runner {
 impl Sub {
     pub fn exec(self) -> Result<(), RunnerCliError> {
         match self {
-            #[cfg(all(feature = "plus", any(target_os = "linux", debug_assertions)))]
+            #[cfg(feature = "plus")]
             Self::Up(up) => up.exec(),
-            #[cfg(all(feature = "plus", any(target_os = "linux", debug_assertions)))]
+            #[cfg(feature = "plus")]
             Self::Run(run) => run.exec(),
-            #[cfg(not(all(feature = "plus", any(target_os = "linux", debug_assertions))))]
-            Self::Unsupported => Err(RunnerCliError::Unsupported),
         }
     }
 }
