@@ -5,7 +5,7 @@ services:
       dockerfile: ./services/api/Dockerfile
       args:
         MOLD_VERSION: 2.34.1
-        LITESTREAM_VERSION: 0.3.13
+        LITESTREAM_VERSION: 0.5.10
         # If you are calling `docker compose` directly, you can set the `ARCH` environment variable
         # to the desired architecture.
         # x64 example: `ARCH=x86_64 docker compose build`

@@ -7,17 +7,24 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-// https://litestream.io/reference/config/#replica-settings
+// https://litestream.io/reference/config/
 pub struct JsonLitestream {
-    /// Disaster recovery replicas
-    pub replicas: Vec<JsonReplica>,
+    /// Disaster recovery replica
+    pub replica: JsonReplica,
+    /// Snapshot interval
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub snapshot_interval: Option<String>,
+    /// Snapshot retention
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub retention: Option<String>,
+    /// Validation interval
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validation_interval: Option<String>,
 }
 
 impl Sanitize for JsonLitestream {
     fn sanitize(&mut self) {
-        for replica in &mut self.replicas {
-            replica.sanitize();
-        }
+        self.replica.sanitize();
     }
 }
 
@@ -28,15 +35,6 @@ pub enum JsonReplica {
     // https://litestream.io/reference/config/#file-replica
     File {
         path: PathBuf,
-        // Shared keys
-        #[serde(skip_serializing_if = "Option::is_none")]
-        retention: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        retention_check_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        snapshot_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        validation_interval: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         sync_interval: Option<String>,
     },
@@ -51,15 +49,6 @@ pub enum JsonReplica {
         path: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         key_path: Option<PathBuf>,
-        // Shared keys
-        #[serde(skip_serializing_if = "Option::is_none")]
-        retention: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        retention_check_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        snapshot_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        validation_interval: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         sync_interval: Option<String>,
     },
@@ -74,50 +63,6 @@ pub enum JsonReplica {
         region: Option<String>,
         access_key_id: String,
         secret_access_key: Secret,
-        // Shared keys
-        #[serde(skip_serializing_if = "Option::is_none")]
-        retention: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        retention_check_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        snapshot_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        validation_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        sync_interval: Option<String>,
-    },
-    // https://litestream.io/guides/azure/
-    Abs {
-        account_name: String,
-        bucket: String,
-        path: String,
-        account_key: Secret,
-        // Shared keys
-        #[serde(skip_serializing_if = "Option::is_none")]
-        retention: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        retention_check_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        snapshot_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        validation_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        sync_interval: Option<String>,
-    },
-    // https://litestream.io/guides/gcs/
-    Gcs {
-        bucket: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        path: Option<String>,
-        // Shared keys
-        #[serde(skip_serializing_if = "Option::is_none")]
-        retention: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        retention_check_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        snapshot_interval: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        validation_interval: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         sync_interval: Option<String>,
     },
@@ -126,12 +71,11 @@ pub enum JsonReplica {
 impl Sanitize for JsonReplica {
     fn sanitize(&mut self) {
         match self {
-            Self::File { .. } | Self::Gcs { .. } => {},
+            Self::File { .. } => {},
             Self::Sftp { password, .. } => password.sanitize(),
             Self::S3 {
                 secret_access_key, ..
             } => secret_access_key.sanitize(),
-            Self::Abs { account_key, .. } => account_key.sanitize(),
         }
     }
 }
@@ -153,16 +97,33 @@ mod db {
             path: PathBuf,
             log_level: LogLevel,
         ) -> Result<String, serde_yaml::Error> {
-            let replicas = self
-                .replicas
-                .into_iter()
-                .map(LitestreamReplica::from)
-                .collect();
-            let dbs = vec![LitestreamDb { path, replicas }];
+            let Self {
+                replica,
+                snapshot_interval,
+                retention,
+                validation_interval,
+            } = self;
+            let replica = LitestreamReplica::from(replica);
+            let dbs = vec![LitestreamDb { path, replica }];
+            let snapshot = match (snapshot_interval, retention) {
+                (None, None) => None,
+                (interval, retention) => Some(LitestreamSnapshot {
+                    interval,
+                    retention,
+                }),
+            };
+            let validation = validation_interval.map(|interval| LitestreamValidation {
+                interval: Some(interval),
+            });
             let logging = Some(LitestreamLogging {
                 level: Some(log_level.into()),
             });
-            let litestream = Litestream { dbs, logging };
+            let litestream = Litestream {
+                dbs,
+                snapshot,
+                validation,
+                logging,
+            };
             serde_yaml::to_string(&litestream)
         }
     }
@@ -172,14 +133,34 @@ mod db {
     pub struct Litestream {
         pub dbs: Vec<LitestreamDb>,
         #[serde(skip_serializing_if = "Option::is_none")]
+        pub snapshot: Option<LitestreamSnapshot>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub validation: Option<LitestreamValidation>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub logging: Option<LitestreamLogging>,
+    }
+
+    #[derive(Debug, Clone, Serialize)]
+    #[serde(rename_all = "kebab-case")]
+    pub struct LitestreamSnapshot {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub interval: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub retention: Option<String>,
+    }
+
+    #[derive(Debug, Clone, Serialize)]
+    #[serde(rename_all = "kebab-case")]
+    pub struct LitestreamValidation {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub interval: Option<String>,
     }
 
     #[derive(Debug, Clone, Serialize)]
     #[serde(rename_all = "kebab-case")]
     pub struct LitestreamDb {
         pub path: PathBuf,
-        pub replicas: Vec<LitestreamReplica>,
+        pub replica: LitestreamReplica,
     }
 
     #[derive(Debug, Clone, Serialize)]
@@ -191,15 +172,6 @@ mod db {
     pub enum LitestreamReplica {
         File {
             path: PathBuf,
-            // Shared keys
-            #[serde(skip_serializing_if = "Option::is_none")]
-            retention: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            retention_check_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            snapshot_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            validation_interval: Option<String>,
             #[serde(skip_serializing_if = "Option::is_none")]
             sync_interval: Option<String>,
         },
@@ -212,15 +184,6 @@ mod db {
             path: Option<String>,
             #[serde(skip_serializing_if = "Option::is_none")]
             key_path: Option<PathBuf>,
-            // Shared keys
-            #[serde(skip_serializing_if = "Option::is_none")]
-            retention: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            retention_check_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            snapshot_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            validation_interval: Option<String>,
             #[serde(skip_serializing_if = "Option::is_none")]
             sync_interval: Option<String>,
         },
@@ -234,70 +197,19 @@ mod db {
             region: Option<String>,
             access_key_id: String,
             secret_access_key: Secret,
-            // Shared keys
-            #[serde(skip_serializing_if = "Option::is_none")]
-            retention: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            retention_check_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            snapshot_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            validation_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            sync_interval: Option<String>,
-        },
-        Abs {
-            account_name: String,
-            bucket: String,
-            path: String,
-            account_key: Secret,
-            // Shared keys
-            #[serde(skip_serializing_if = "Option::is_none")]
-            retention: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            retention_check_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            snapshot_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            validation_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            sync_interval: Option<String>,
-        },
-        Gcs {
-            bucket: String,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            path: Option<String>,
-            // Shared keys
-            #[serde(skip_serializing_if = "Option::is_none")]
-            retention: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            retention_check_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            snapshot_interval: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            validation_interval: Option<String>,
             #[serde(skip_serializing_if = "Option::is_none")]
             sync_interval: Option<String>,
         },
     }
 
     impl From<JsonReplica> for LitestreamReplica {
-        #[expect(clippy::too_many_lines)]
         fn from(replica: JsonReplica) -> Self {
             match replica {
                 JsonReplica::File {
                     path,
-                    retention,
-                    retention_check_interval,
-                    snapshot_interval,
-                    validation_interval,
                     sync_interval,
                 } => Self::File {
                     path,
-                    retention,
-                    retention_check_interval,
-                    snapshot_interval,
-                    validation_interval,
                     sync_interval,
                 },
                 JsonReplica::Sftp {
@@ -307,10 +219,6 @@ mod db {
                     password,
                     path,
                     key_path,
-                    retention,
-                    retention_check_interval,
-                    snapshot_interval,
-                    validation_interval,
                     sync_interval,
                 } => Self::Sftp {
                     host: format!("{host}:{port}"),
@@ -318,10 +226,6 @@ mod db {
                     password,
                     path,
                     key_path,
-                    retention,
-                    retention_check_interval,
-                    snapshot_interval,
-                    validation_interval,
                     sync_interval,
                 },
                 JsonReplica::S3 {
@@ -331,10 +235,6 @@ mod db {
                     region,
                     access_key_id,
                     secret_access_key,
-                    retention,
-                    retention_check_interval,
-                    snapshot_interval,
-                    validation_interval,
                     sync_interval,
                 } => Self::S3 {
                     bucket,
@@ -343,48 +243,6 @@ mod db {
                     region,
                     access_key_id,
                     secret_access_key,
-                    retention,
-                    retention_check_interval,
-                    snapshot_interval,
-                    validation_interval,
-                    sync_interval,
-                },
-                JsonReplica::Abs {
-                    account_name,
-                    bucket,
-                    path,
-                    account_key,
-                    retention,
-                    retention_check_interval,
-                    snapshot_interval,
-                    validation_interval,
-                    sync_interval,
-                } => Self::Abs {
-                    account_name,
-                    bucket,
-                    path,
-                    account_key,
-                    retention,
-                    retention_check_interval,
-                    snapshot_interval,
-                    validation_interval,
-                    sync_interval,
-                },
-                JsonReplica::Gcs {
-                    bucket,
-                    path,
-                    retention,
-                    retention_check_interval,
-                    snapshot_interval,
-                    validation_interval,
-                    sync_interval,
-                } => Self::Gcs {
-                    bucket,
-                    path,
-                    retention,
-                    retention_check_interval,
-                    snapshot_interval,
-                    validation_interval,
                     sync_interval,
                 },
             }
@@ -421,19 +279,18 @@ mod db {
     #[test]
     fn into_yaml() {
         let json_litestream = JsonLitestream {
-            replicas: vec![JsonReplica::S3 {
+            replica: JsonReplica::S3 {
                 bucket: "bucket".to_owned(),
                 path: Some("/path/to/backup".to_owned()),
                 endpoint: None,
                 region: None,
                 access_key_id: "access_key_id".to_owned(),
                 secret_access_key: "secret_access_key".parse().unwrap(),
-                retention: None,
-                retention_check_interval: None,
-                snapshot_interval: None,
-                validation_interval: None,
                 sync_interval: None,
-            }],
+            },
+            snapshot_interval: None,
+            retention: None,
+            validation_interval: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -442,8 +299,8 @@ mod db {
             yaml,
             "dbs:
 - path: /path/to/db
-  replicas:
-  - type: s3
+  replica:
+    type: s3
     bucket: bucket
     path: /path/to/backup
     access-key-id: access_key_id
@@ -452,5 +309,163 @@ logging:
   level: info
 "
         );
+    }
+
+    #[test]
+    fn into_yaml_with_snapshot_and_validation() {
+        let json_litestream = JsonLitestream {
+            replica: JsonReplica::S3 {
+                bucket: "bucket".to_owned(),
+                path: Some("/path/to/backup".to_owned()),
+                endpoint: None,
+                region: None,
+                access_key_id: "access_key_id".to_owned(),
+                secret_access_key: "secret_access_key".parse().unwrap(),
+                sync_interval: None,
+            },
+            snapshot_interval: Some("1h".to_owned()),
+            retention: Some("24h".to_owned()),
+            validation_interval: Some("6h".to_owned()),
+        };
+        let path = PathBuf::from("/path/to/db");
+        let log_level = LogLevel::Info;
+        let yaml = json_litestream.into_yaml(path, log_level).unwrap();
+        pretty_assertions::assert_eq!(
+            yaml,
+            "dbs:
+- path: /path/to/db
+  replica:
+    type: s3
+    bucket: bucket
+    path: /path/to/backup
+    access-key-id: access_key_id
+    secret-access-key: secret_access_key
+snapshot:
+  interval: 1h
+  retention: 24h
+validation:
+  interval: 6h
+logging:
+  level: info
+"
+        );
+    }
+
+    #[test]
+    fn into_yaml_file() {
+        let json_litestream = JsonLitestream {
+            replica: JsonReplica::File {
+                path: PathBuf::from("/path/to/replica"),
+                sync_interval: Some("5s".to_owned()),
+            },
+            snapshot_interval: None,
+            retention: None,
+            validation_interval: None,
+        };
+        let path = PathBuf::from("/path/to/db");
+        let log_level = LogLevel::Info;
+        let yaml = json_litestream.into_yaml(path, log_level).unwrap();
+        pretty_assertions::assert_eq!(
+            yaml,
+            "dbs:
+- path: /path/to/db
+  replica:
+    type: file
+    path: /path/to/replica
+    sync-interval: 5s
+logging:
+  level: info
+"
+        );
+    }
+
+    #[test]
+    fn into_yaml_sftp() {
+        let json_litestream = JsonLitestream {
+            replica: JsonReplica::Sftp {
+                host: "example.com".to_owned(),
+                port: 22,
+                user: "user".to_owned(),
+                password: Some("pass".parse().unwrap()),
+                path: Some("/backup".to_owned()),
+                key_path: None,
+                sync_interval: None,
+            },
+            snapshot_interval: None,
+            retention: None,
+            validation_interval: None,
+        };
+        let path = PathBuf::from("/path/to/db");
+        let log_level = LogLevel::Info;
+        let yaml = json_litestream.into_yaml(path, log_level).unwrap();
+        pretty_assertions::assert_eq!(
+            yaml,
+            "dbs:
+- path: /path/to/db
+  replica:
+    type: sftp
+    host: example.com:22
+    user: user
+    password: pass
+    path: /backup
+logging:
+  level: info
+"
+        );
+    }
+
+    #[test]
+    fn sanitize_file() {
+        use bencher_valid::Sanitize as _;
+        let mut replica = JsonReplica::File {
+            path: PathBuf::from("/path/to/replica"),
+            sync_interval: None,
+        };
+        replica.sanitize();
+        let JsonReplica::File { path, .. } = replica else {
+            panic!("expected File")
+        };
+        assert_eq!(path, PathBuf::from("/path/to/replica"));
+    }
+
+    #[test]
+    fn sanitize_sftp() {
+        use bencher_valid::Sanitize as _;
+        let mut replica = JsonReplica::Sftp {
+            host: "example.com".to_owned(),
+            port: 22,
+            user: "user".to_owned(),
+            password: Some("secret_pass".parse().unwrap()),
+            path: None,
+            key_path: None,
+            sync_interval: None,
+        };
+        replica.sanitize();
+        let JsonReplica::Sftp { password, .. } = replica else {
+            panic!("expected Sftp")
+        };
+        assert_eq!(password.unwrap().as_ref(), "************");
+    }
+
+    #[test]
+    fn sanitize_s3() {
+        use bencher_valid::Sanitize as _;
+        let mut replica = JsonReplica::S3 {
+            bucket: "mybucket".to_owned(),
+            path: None,
+            endpoint: None,
+            region: None,
+            access_key_id: "access_key_id".to_owned(),
+            secret_access_key: "my_secret".parse().unwrap(),
+            sync_interval: None,
+        };
+        replica.sanitize();
+        let JsonReplica::S3 {
+            secret_access_key, ..
+        } = replica
+        else {
+            panic!("expected S3")
+        };
+        assert_eq!(secret_access_key.as_ref(), "************");
     }
 }

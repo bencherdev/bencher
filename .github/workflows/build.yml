@@ -37,7 +37,7 @@ env:
   # Use head_ref for PRs (avoids `/merge` suffix), otherwise use ref_name
   CACHE_NAME: ${{ github.head_ref || github.ref_name }}
   WASM_BENCHER_VALID: bencher-valid-pkg
-  LITESTREAM_ARCH: amd64
+  LITESTREAM_ARCH: x86_64
 
 jobs:
   build_github_action:

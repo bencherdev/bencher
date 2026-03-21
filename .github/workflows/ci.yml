@@ -131,7 +131,7 @@ jobs:
     with:
       mold-version: "2.34.1"
       wasm-pack-version: "0.12.1"
-      litestream-version: "0.3.13"
+      litestream-version: "0.5.10"
       build-action: ${{ needs.changes.outputs.action == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
       build-docker: ${{ needs.changes.outputs.docker == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy')) }}
       deploy-only: ${{ github.ref == 'refs/heads/cloud' }}
@@ -226,3 +226,4 @@ jobs:
           imageName: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.DEV_CONTAINER_DOCKER_IMAGE }}
           cacheFrom: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.DEV_CONTAINER_DOCKER_IMAGE }}
           push: always
+
