@@ -118,7 +118,7 @@ async fn run(
             .race()
             .await;
 
-        #[cfg(feature = "otel")]
+        #[cfg(all(feature = "plus", feature = "otel"))]
         if let Some(provider) = otel_provider
             && let Err(e) = bencher_otel_provider::shutdown_open_telemetry(&provider)
         {
