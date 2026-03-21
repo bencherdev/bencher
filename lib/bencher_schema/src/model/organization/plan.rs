@@ -3,7 +3,7 @@
 use bencher_billing::{Biller, CustomerId};
 use bencher_json::{
     DateTime, Entitlements, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId, OrganizationUuid,
-    PlanLevel, project::Visibility,
+    PlanLevel, Priority, project::Visibility,
 };
 use bencher_license::Licensor;
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -245,6 +245,20 @@ pub enum PlanKindError {
 }
 
 impl PlanKind {
+    pub fn priority(&self, is_claimed: bool) -> Priority {
+        if !is_claimed {
+            return Priority::Unclaimed;
+        }
+        match self {
+            Self::None => Priority::Free,
+            Self::Metered(_) => Priority::Plus,
+            Self::Licensed(license_usage) => match license_usage.level {
+                PlanLevel::Free => Priority::Free,
+                PlanLevel::Team | PlanLevel::Enterprise => Priority::Plus,
+            },
+        }
+    }
+
     async fn new(
         context: &ApiContext,
         biller: Option<&Biller>,
@@ -383,16 +397,19 @@ impl PlanKind {
                         PlanKindError::NoBiller,
                     ));
                 };
-                biller
-                    .record_metrics_usage(&customer_id, usage)
-                    .await
-                    .map_err(|e| {
-                        issue_error(
-                            "Failed to record usage",
-                            &format!("Failed to record usage ({usage}) for project ({project:?})."),
-                            e,
-                        )
-                    })?;
+                if let Err(e) = biller.record_metrics_usage(&customer_id, usage).await {
+                    #[cfg(feature = "otel")]
+                    bencher_otel::ApiMeter::increment(
+                        bencher_otel::ApiCounter::MetricsBilledFailed,
+                    );
+                    return Err(issue_error(
+                        "Failed to record usage",
+                        &format!("Failed to record usage ({usage}) for project ({project:?})."),
+                        e,
+                    ));
+                }
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::MetricsBilled);
             },
             Self::Licensed(LicenseUsage {
                 entitlements,

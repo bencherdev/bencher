@@ -85,7 +85,7 @@ async fn run(
     let _guard = init_sentry(log, &config);
 
     #[cfg(all(feature = "plus", feature = "otel"))]
-    bencher_otel_provider::run_open_telemetry(log, &config)
+    let _otel_guard = bencher_otel_provider::run_open_telemetry(log, &config)
         .inspect_err(|e| {
             error!(log, "Failed to run OpenTelemetry: {e}");
             #[cfg(feature = "sentry")]
@@ -105,7 +105,7 @@ async fn run(
         replicate_rx.await.map_err(LitestreamError::ReplicateRecv)?;
 
         let api_handle = run_api_server(config);
-        return (
+        let result = (
             tokio::signal::ctrl_c().map(|r| r.map_err(ApiError::CtrlC)),
             async {
                 litestream_handle
@@ -117,6 +117,8 @@ async fn run(
         )
             .race()
             .await;
+
+        return result;
     }
 
     let api_handle = run_api_server(config);

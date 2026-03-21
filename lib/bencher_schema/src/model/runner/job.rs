@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, PlanLevel, Priority,
-    Timeout, project::report::JsonReportSettings, runner::JsonIterationOutput,
-    runner::job::JsonNewRunJob,
+    DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, Priority, Timeout,
+    project::report::JsonReportSettings, runner::JsonIterationOutput, runner::job::JsonNewRunJob,
 };
 use diesel::{
     BoolExpressionMethods as _, Connection as _, ExpressionMethods as _, QueryDsl as _,
@@ -148,6 +147,7 @@ impl QueryJob {
                 query_report.adapter,
                 settings,
                 plan_kind,
+                self.priority,
                 &query_project,
             )
             .await?;
@@ -329,7 +329,7 @@ impl PendingInsertJob {
         .await?;
 
         // 2. Determine priority
-        let priority = determine_priority(plan_kind, is_claimed);
+        let priority = plan_kind.priority(is_claimed);
 
         // 3. Resolve timeout (clamped by plan tier)
         let timeout = resolve_timeout(new_run_job.timeout, plan_kind, is_claimed);
@@ -438,20 +438,6 @@ fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed:
     }
 }
 
-fn determine_priority(plan_kind: &PlanKind, is_claimed: bool) -> Priority {
-    if !is_claimed {
-        return Priority::Unclaimed;
-    }
-    match plan_kind {
-        PlanKind::None => Priority::Free,
-        PlanKind::Metered(_) => Priority::Plus,
-        PlanKind::Licensed(license_usage) => match license_usage.level {
-            PlanLevel::Free => Priority::Free,
-            PlanLevel::Team | PlanLevel::Enterprise => Priority::Plus,
-        },
-    }
-}
-
 /// Insert the job duration summary for a report.
 ///
 /// Uses `on_conflict.do_nothing()` for idempotency — the first write wins.
@@ -475,7 +461,7 @@ fn insert_job_duration(
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, Entitlements};
+    use bencher_json::{DateTime, Entitlements, PlanLevel};
     use diesel::{Connection as _, QueryDsl as _};
     use pretty_assertions::assert_eq;
 
@@ -571,39 +557,33 @@ mod tests {
         assert_eq!(u32::from(timeout), 86400);
     }
 
-    // --- determine_priority tests ---
+    // --- PlanKind::priority tests ---
 
     #[test]
     fn priority_unclaimed() {
-        assert_eq!(
-            determine_priority(&PlanKind::None, false),
-            Priority::Unclaimed
-        );
+        assert_eq!(PlanKind::None.priority(false), Priority::Unclaimed);
     }
 
     #[test]
     fn priority_unclaimed_ignores_plan() {
         // Even with a Plus plan, unclaimed is always Unclaimed
-        assert_eq!(
-            determine_priority(&metered_plan(), false),
-            Priority::Unclaimed
-        );
+        assert_eq!(metered_plan().priority(false), Priority::Unclaimed);
     }
 
     #[test]
     fn priority_free() {
-        assert_eq!(determine_priority(&PlanKind::None, true), Priority::Free);
+        assert_eq!(PlanKind::None.priority(true), Priority::Free);
     }
 
     #[test]
     fn priority_metered() {
-        assert_eq!(determine_priority(&metered_plan(), true), Priority::Plus);
+        assert_eq!(metered_plan().priority(true), Priority::Plus);
     }
 
     #[test]
     fn priority_licensed_free() {
         assert_eq!(
-            determine_priority(&licensed_plan(PlanLevel::Free), true),
+            licensed_plan(PlanLevel::Free).priority(true),
             Priority::Free
         );
     }
@@ -611,7 +591,7 @@ mod tests {
     #[test]
     fn priority_licensed_team() {
         assert_eq!(
-            determine_priority(&licensed_plan(PlanLevel::Team), true),
+            licensed_plan(PlanLevel::Team).priority(true),
             Priority::Plus
         );
     }
@@ -619,7 +599,7 @@ mod tests {
     #[test]
     fn priority_licensed_enterprise() {
         assert_eq!(
-            determine_priority(&licensed_plan(PlanLevel::Enterprise), true),
+            licensed_plan(PlanLevel::Enterprise).priority(true),
             Priority::Plus
         );
     }

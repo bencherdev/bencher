@@ -79,9 +79,6 @@ async fn post_inner(
 ) -> Result<JsonReport, HttpError> {
     match public_user {
         PublicUser::Public(remote_ip) => {
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimed);
-
             if let Some(remote_ip) = remote_ip {
                 slog::info!(log, "Unclaimed run request from remote IP address"; "remote_ip" => ?remote_ip);
                 #[cfg(feature = "plus")]
@@ -89,9 +86,6 @@ async fn post_inner(
             }
         },
         PublicUser::Auth(auth_user) => {
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunClaimed);
-
             #[cfg(feature = "plus")]
             context.rate_limiting.claimed_run(auth_user.user.uuid)?;
 
@@ -173,6 +167,8 @@ async fn post_inner(
 
     let new_run_report = NewRunReport {
         report: json_run.into(),
+        #[cfg(feature = "plus")]
+        is_claimed,
         #[cfg(feature = "plus")]
         testbed,
         #[cfg(feature = "plus")]

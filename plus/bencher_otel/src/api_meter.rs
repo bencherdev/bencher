@@ -4,6 +4,8 @@ use std::sync::LazyLock;
 use opentelemetry::metrics::Meter;
 use uuid::Uuid;
 
+use crate::api_histogram::{ApiHistogram, Priority, priority_attribute};
+
 static METER: LazyLock<Meter> = LazyLock::new(|| opentelemetry::global::meter(ApiMeter::NAME));
 
 pub struct ApiMeter;
@@ -16,12 +18,21 @@ impl ApiMeter {
     /// The `OTel` SDK deduplicates instruments by (name, description, unit),
     /// so re-building on every call is cheap and returns the same instrument.
     pub fn increment(api_counter: ApiCounter) {
+        Self::increment_by(api_counter, 1);
+    }
+
+    /// Increment a counter by `value`.
+    ///
+    /// The `OTel` SDK deduplicates instruments by (name, description, unit),
+    /// so re-building on every call is cheap and returns the same instrument.
+    pub fn increment_by(api_counter: ApiCounter, value: u64) {
         let counter = METER
             .u64_counter(api_counter.name())
             .with_description(api_counter.description())
+            .with_unit(api_counter.unit())
             .build();
         let attributes = api_counter.attributes();
-        counter.add(1, &attributes);
+        counter.add(value, &attributes);
     }
 
     /// Record a histogram observation.
@@ -49,13 +60,14 @@ pub enum ApiCounter {
     ProjectCreate,
     ProjectDelete,
 
-    RunClaimed,
-    RunUnclaimed,
+    Run(Priority),
 
     ReportCreate,
     ReportDelete,
 
-    MetricCreate,
+    MetricsCreate(Priority),
+    MetricsBilled,
+    MetricsBilledFailed,
 
     UserIp,
     UserIpNotFound,
@@ -79,8 +91,8 @@ pub enum ApiCounter {
     UserOrganizationMax(IntervalKind),
     UserInviteMax(IntervalKind),
 
-    Create(IntervalKind, AuthorizationKind),
-    CreateMax(IntervalKind, AuthorizationKind),
+    Create(AuthorizationKind),
+    CreateMax(AuthorizationKind),
 
     // Email
     EmailSend,
@@ -101,7 +113,7 @@ pub enum ApiCounter {
     RunnerJobClaim,
     RunnerJobUpdate(JobStatusKind),
     RunnerMinutesBilled,
-    RunnerMinutesBillingFailed,
+    RunnerMinutesBilledFailed,
     RunnerHeartbeatTimeout,
     RunnerJobTimeout,
 
@@ -111,6 +123,55 @@ pub enum ApiCounter {
 }
 
 impl ApiCounter {
+    fn unit(&self) -> &'static str {
+        match self {
+            Self::ServerStartup | Self::SelfHostedServerStartup(_) => "{startup}",
+
+            Self::OrganizationCreate | Self::OrganizationDelete | Self::UserOrganizationMax(_) => {
+                "{organization}"
+            },
+
+            Self::ProjectCreate | Self::ProjectDelete => "{project}",
+
+            Self::Run(_) | Self::RunClaimedMax(_) | Self::RunUnclaimedMax(_) => "{run}",
+
+            Self::ReportCreate | Self::ReportDelete | Self::SelfHostedServerStats(_) => "{report}",
+
+            Self::MetricsCreate(_) | Self::MetricsBilled | Self::MetricsBilledFailed => "{metric}",
+
+            Self::UserIp
+            | Self::UserIpNotFound
+            | Self::RequestMax(_, _)
+            | Self::RunnerRequestMax(_)
+            | Self::OciTagsList => "{request}",
+
+            Self::UserSignup(_) => "{signup}",
+            Self::UserLogin(_) => "{login}",
+            Self::UserRecaptchaFailure => "{failure}",
+            Self::UserInvite | Self::UserInviteMax(_) => "{invite}",
+            Self::UserAccept(_) => "{accept}",
+            Self::UserConfirm => "{confirmation}",
+            Self::UserClaim => "{claim}",
+            Self::UserSsoJoin(_) => "{join}",
+            Self::UserCheckout => "{checkout}",
+
+            Self::UserAttemptMax(_, _) => "{attempt}",
+            Self::UserTokenMax(_) | Self::RunnerTokenRotate => "{token}",
+
+            Self::Create(_) | Self::CreateMax(_) => "{resource}",
+
+            Self::EmailSend => "{email}",
+
+            Self::OciBlobPush | Self::OciBlobPull => "{blob}",
+            Self::OciManifestPush | Self::OciManifestPull => "{manifest}",
+
+            Self::RunnerCreate | Self::RunnerUpdate => "{runner}",
+            Self::RunnerJobClaim | Self::RunnerJobUpdate(_) => "{job}",
+            Self::RunnerMinutesBilled | Self::RunnerMinutesBilledFailed => "{minute}",
+            Self::RunnerHeartbeatTimeout | Self::RunnerJobTimeout => "{timeout}",
+        }
+    }
+
     fn name(&self) -> &'static str {
         match self {
             Self::ServerStartup => "server.startup",
@@ -121,13 +182,14 @@ impl ApiCounter {
             Self::ProjectCreate => "project.create",
             Self::ProjectDelete => "project.delete",
 
-            Self::RunClaimed => "run.claimed",
-            Self::RunUnclaimed => "run.unclaimed",
+            Self::Run(_) => "run.create",
 
             Self::ReportCreate => "report.create",
             Self::ReportDelete => "report.delete",
 
-            Self::MetricCreate => "metric.create",
+            Self::MetricsCreate(_) => "metrics.create",
+            Self::MetricsBilled => "metrics.billed",
+            Self::MetricsBilledFailed => "metrics.billed.failed",
 
             Self::UserIp => "user.ip",
             Self::UserIpNotFound => "user.ip.not_found",
@@ -152,8 +214,8 @@ impl ApiCounter {
             Self::UserOrganizationMax(_) => "user.organization.max",
             Self::UserInviteMax(_) => "user.invite.max",
 
-            Self::Create(_, _) => "create",
-            Self::CreateMax(_, _) => "create.max",
+            Self::Create(_) => "resource.create",
+            Self::CreateMax(_) => "resource.create.max",
 
             Self::EmailSend => "email.send",
 
@@ -173,7 +235,7 @@ impl ApiCounter {
             Self::RunnerJobClaim => "runner.job.claim",
             Self::RunnerJobUpdate(_) => "runner.job.update",
             Self::RunnerMinutesBilled => "runner.minutes.billed",
-            Self::RunnerMinutesBillingFailed => "runner.minutes.billing_failed",
+            Self::RunnerMinutesBilledFailed => "runner.minutes.billed.failed",
             Self::RunnerHeartbeatTimeout => "runner.heartbeat.timeout",
             Self::RunnerJobTimeout => "runner.job.timeout",
 
@@ -193,13 +255,14 @@ impl ApiCounter {
             Self::ProjectCreate => "Counts the number of project creations",
             Self::ProjectDelete => "Counts the number of project deletions",
 
-            Self::RunClaimed => "Counts the number of claimed runs",
-            Self::RunUnclaimed => "Counts the number of unclaimed runs",
+            Self::Run(_) => "Counts the number of runs",
 
             Self::ReportCreate => "Counts the number of report creations",
             Self::ReportDelete => "Counts the number of report deletions",
 
-            Self::MetricCreate => "Counts the number of metric creations",
+            Self::MetricsCreate(_) => "Counts the number of metrics created",
+            Self::MetricsBilled => "Counts the number of metrics successfully billed",
+            Self::MetricsBilledFailed => "Counts the number of metrics billing failures",
 
             Self::UserIp => "Counts the number of user IP address found occurrences",
             Self::UserIpNotFound => "Counts the number of user IP address not found occurrences",
@@ -228,8 +291,8 @@ impl ApiCounter {
             },
             Self::UserInviteMax(_) => "Counts the number of user invite maximums reached",
 
-            Self::Create(_, _) => "Counts the number of creations",
-            Self::CreateMax(_, _) => "Counts the number of creation maximums reached",
+            Self::Create(_) => "Counts the number of resource creations",
+            Self::CreateMax(_) => "Counts the number of resource creation maximums reached",
 
             Self::EmailSend => "Counts the number of sent emails",
 
@@ -249,8 +312,8 @@ impl ApiCounter {
             Self::RunnerJobClaim => "Counts the number of runner job claims",
             Self::RunnerJobUpdate(_) => "Counts the number of runner job status updates",
             Self::RunnerMinutesBilled => "Counts the number of runner minutes successfully billed",
-            Self::RunnerMinutesBillingFailed => {
-                "Counts the number of runner minutes billing failures"
+            Self::RunnerMinutesBilledFailed => {
+                "Counts the number of runner minutes billed failures"
             },
             Self::RunnerHeartbeatTimeout => {
                 "Counts the number of jobs failed due to heartbeat timeout"
@@ -272,17 +335,16 @@ impl ApiCounter {
             | Self::OrganizationDelete
             | Self::ProjectCreate
             | Self::ProjectDelete
-            | Self::RunClaimed
-            | Self::RunUnclaimed
             | Self::ReportCreate
             | Self::ReportDelete
-            | Self::MetricCreate
             | Self::UserIp
             | Self::UserIpNotFound
             | Self::UserRecaptchaFailure
             | Self::UserInvite
             | Self::UserClaim
             | Self::UserCheckout
+            | Self::MetricsBilled
+            | Self::MetricsBilledFailed
             | Self::EmailSend
             | Self::OciBlobPush
             | Self::OciBlobPull
@@ -294,19 +356,23 @@ impl ApiCounter {
             | Self::RunnerTokenRotate
             | Self::RunnerJobClaim
             | Self::RunnerMinutesBilled
-            | Self::RunnerMinutesBillingFailed
+            | Self::RunnerMinutesBilledFailed
             | Self::RunnerHeartbeatTimeout
             | Self::RunnerJobTimeout => Vec::new(),
+            Self::Run(priority) | Self::MetricsCreate(priority) => {
+                vec![priority_attribute(priority)]
+            },
             Self::UserSignup(auth_method)
             | Self::UserLogin(auth_method)
             | Self::UserSsoJoin(auth_method) => auth_method.attributes(),
             Self::UserAccept(auth_method) => AuthMethod::nullable_attributes(auth_method),
             Self::UserConfirm => AuthMethod::Email.attributes(),
             Self::RequestMax(interval_kind, authorization_kind)
-            | Self::UserAttemptMax(interval_kind, authorization_kind)
-            | Self::Create(interval_kind, authorization_kind)
-            | Self::CreateMax(interval_kind, authorization_kind) => {
+            | Self::UserAttemptMax(interval_kind, authorization_kind) => {
                 vec![interval_kind.into(), authorization_kind.into()]
+            },
+            Self::Create(authorization_kind) | Self::CreateMax(authorization_kind) => {
+                vec![authorization_kind.into()]
             },
             Self::RunnerRequestMax(interval_kind)
             | Self::RunUnclaimedMax(interval_kind)
@@ -483,80 +549,4 @@ fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
     const KEY: &str = "server.uuid";
 
     vec![opentelemetry::KeyValue::new(KEY, server_uuid.to_string())]
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum ApiHistogram {
-    /// Time a job spent waiting in the queue before being claimed.
-    JobQueueDuration(Priority),
-    /// Actual execution time from job started to completion (excludes queue wait).
-    JobRunDuration(Priority),
-    /// Total time from job creation to completion.
-    JobCompleteDuration(Priority),
-    /// Total wall-clock time for the entire report creation endpoint.
-    ReportCreateDuration,
-    /// Total time to process report results (adapter parsing + all iterations).
-    ReportProcessDuration,
-    /// Time spent in the batched DB write transaction per iteration.
-    ReportWriteDuration,
-}
-
-impl ApiHistogram {
-    fn name(self) -> &'static str {
-        match self {
-            Self::JobQueueDuration(_) => "job.queue.duration",
-            Self::JobRunDuration(_) => "job.run.duration",
-            Self::JobCompleteDuration(_) => "job.complete.duration",
-            Self::ReportCreateDuration => "report.create.duration",
-            Self::ReportProcessDuration => "report.process.duration",
-            Self::ReportWriteDuration => "report.write.duration",
-        }
-    }
-
-    fn description(self) -> &'static str {
-        match self {
-            Self::JobQueueDuration(_) => {
-                "Time a job spent waiting in the queue before being claimed"
-            },
-            Self::JobRunDuration(_) => "Actual execution time from job started to completion",
-            Self::JobCompleteDuration(_) => "Total time from job creation to completion",
-            Self::ReportCreateDuration => {
-                "Total wall-clock time for the entire report creation endpoint"
-            },
-            Self::ReportProcessDuration => {
-                "Total time to process report results (adapter parsing + all iterations)"
-            },
-            Self::ReportWriteDuration => {
-                "Time spent in the batched DB write transaction per iteration"
-            },
-        }
-    }
-
-    fn unit(self) -> &'static str {
-        match self {
-            Self::JobQueueDuration(_)
-            | Self::JobRunDuration(_)
-            | Self::JobCompleteDuration(_)
-            | Self::ReportCreateDuration
-            | Self::ReportProcessDuration
-            | Self::ReportWriteDuration => "s",
-        }
-    }
-
-    fn attributes(self) -> Vec<opentelemetry::KeyValue> {
-        match self {
-            Self::JobQueueDuration(priority)
-            | Self::JobRunDuration(priority)
-            | Self::JobCompleteDuration(priority) => vec![priority_attribute(priority)],
-            Self::ReportCreateDuration
-            | Self::ReportProcessDuration
-            | Self::ReportWriteDuration => Vec::new(),
-        }
-    }
-}
-
-pub use bencher_json::Priority;
-
-fn priority_attribute(priority: Priority) -> opentelemetry::KeyValue {
-    opentelemetry::KeyValue::new("job.priority", priority.to_string())
 }

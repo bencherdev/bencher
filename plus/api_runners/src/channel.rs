@@ -425,7 +425,7 @@ async fn bill_stripe_best_effort(
     if let Err(e) = biller.record_runner_usage(&customer_id, delta).await {
         slog::warn!(log, "Failed to record runner billing"; "job_id" => ?job_id, "delta" => delta, "error" => %e);
         #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBillingFailed);
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerMinutesBilledFailed);
         #[cfg(feature = "sentry")]
         billing_state.report_err(&e);
     } else {

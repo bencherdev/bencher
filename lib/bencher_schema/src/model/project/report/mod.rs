@@ -51,6 +51,8 @@ use crate::{
 pub struct NewRunReport {
     pub report: JsonNewReport,
     #[cfg(feature = "plus")]
+    pub is_claimed: bool,
+    #[cfg(feature = "plus")]
     pub testbed: RunTestbed,
     #[cfg(feature = "plus")]
     pub spec_reset: bool,
@@ -143,12 +145,20 @@ impl QueryReport {
         let NewRunReport {
             report: mut json_report,
             #[cfg(feature = "plus")]
+            is_claimed,
+            #[cfg(feature = "plus")]
                 testbed: run_testbed,
             #[cfg(feature = "plus")]
             spec_reset,
             #[cfg(feature = "plus")]
                 job: new_run_job,
         } = new_run_report;
+
+        #[cfg(feature = "plus")]
+        let priority = plan_kind.priority(is_claimed);
+
+        #[cfg(all(feature = "otel", feature = "plus"))]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::Run(priority));
 
         #[cfg(feature = "plus")]
         let run_job = new_run_job
@@ -324,6 +334,8 @@ impl QueryReport {
                 #[cfg(feature = "plus")]
                 plan_kind,
                 #[cfg(feature = "plus")]
+                priority,
+                #[cfg(feature = "plus")]
                 query_project,
             )
             .await?;
@@ -421,6 +433,7 @@ impl QueryReport {
         adapter: Adapter,
         settings: JsonReportSettings,
         #[cfg(feature = "plus")] plan_kind: PlanKind,
+        #[cfg(feature = "plus")] priority: bencher_json::Priority,
         #[cfg(feature = "plus")] query_project: &QueryProject,
     ) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]
@@ -445,6 +458,14 @@ impl QueryReport {
                 &mut usage,
             )
             .await;
+
+        #[cfg(all(feature = "otel", feature = "plus"))]
+        if usage > 0 {
+            bencher_otel::ApiMeter::increment_by(
+                bencher_otel::ApiCounter::MetricsCreate(priority),
+                u64::from(usage),
+            );
+        }
 
         #[cfg(feature = "plus")]
         plan_kind
