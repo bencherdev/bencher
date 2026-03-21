@@ -241,6 +241,71 @@ pub fn resolve_oci_image(
     Ok(image_dir)
 }
 
+/// Resolved OCI image configuration (entrypoint, cmd, env, working directory).
+pub struct ResolvedOciConfig {
+    /// The full command to execute (entrypoint + cmd merged).
+    pub command: Vec<String>,
+    /// The working directory from the OCI image config.
+    pub working_dir: String,
+    /// Environment variables (OCI image defaults merged with config overrides, sanitized).
+    pub env: Vec<(String, String)>,
+}
+
+/// Parse an OCI image config and resolve entrypoint, cmd, env, and working dir,
+/// applying overrides from the runner `Config`.
+///
+/// Shared between `local.rs` (non-sandboxed) and `vm.rs` (Firecracker) to
+/// avoid duplicating the Docker-style entrypoint/cmd merge semantics.
+pub fn resolve_oci_config(
+    oci_image: &bencher_oci::OciImage,
+    config: &crate::Config,
+) -> Result<ResolvedOciConfig, RunnerError> {
+    // Apply entrypoint/cmd overrides (Config takes precedence over OCI image)
+    let entrypoint = config
+        .entrypoint
+        .clone()
+        .unwrap_or_else(|| oci_image.entrypoint());
+    // Docker semantics: overriding entrypoint clears image CMD
+    let cmd = if config.entrypoint.is_some() {
+        config.cmd.clone().unwrap_or_default()
+    } else {
+        config.cmd.clone().unwrap_or_else(|| oci_image.cmd())
+    };
+    let command = if entrypoint.is_empty() {
+        cmd
+    } else {
+        let mut c = entrypoint;
+        c.extend(cmd);
+        c
+    };
+
+    let working_dir = oci_image
+        .working_dir()
+        .filter(|w| !w.is_empty())
+        .unwrap_or("/")
+        .to_owned();
+
+    // Apply env overrides (Config env merged on top of OCI env, then sanitize)
+    let mut env = oci_image.env();
+    if let Some(config_env) = &config.env {
+        for (key, value) in config_env {
+            env.retain(|(k, _)| k != key);
+            env.push((key.clone(), value.clone()));
+        }
+    }
+    let env = sanitize_env(&env);
+
+    if command.is_empty() {
+        return Err(crate::error::ConfigError::MissingCommand.into());
+    }
+
+    Ok(ResolvedOciConfig {
+        command,
+        working_dir,
+        env,
+    })
+}
+
 /// Execute a single benchmark run with the given configuration.
 ///
 /// Dispatches based on `config.sandbox`:

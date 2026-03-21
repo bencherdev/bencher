@@ -8,7 +8,7 @@ use std::sync::atomic::AtomicBool;
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
-use crate::run::{RunOutput, resolve_oci_image, sanitize_env};
+use crate::run::{RunOutput, resolve_oci_config, resolve_oci_image};
 
 /// Execute a single benchmark run in a Firecracker microVM.
 pub fn vm_execute(
@@ -58,44 +58,11 @@ pub fn vm_execute(
     // Step 2: Parse OCI image config to get the command
     println!("Parsing OCI image config...");
     let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
+    let oci_config = resolve_oci_config(&oci_image, config)?;
 
-    // Apply entrypoint/cmd overrides (Config takes precedence over OCI image)
-    let entrypoint = config
-        .entrypoint
-        .clone()
-        .unwrap_or_else(|| oci_image.entrypoint());
-    // Docker semantics: overriding entrypoint clears image CMD
-    let cmd = if config.entrypoint.is_some() {
-        config.cmd.clone().unwrap_or_default()
-    } else {
-        config.cmd.clone().unwrap_or_else(|| oci_image.cmd())
-    };
-    let command = if entrypoint.is_empty() {
-        cmd
-    } else {
-        let mut c = entrypoint;
-        c.extend(cmd);
-        c
-    };
-
-    let working_dir = oci_image
-        .working_dir()
-        .filter(|w| !w.is_empty())
-        .unwrap_or("/");
-
-    // Apply env overrides (Config env merged on top of OCI env, then sanitize)
-    let mut env = oci_image.env();
-    if let Some(config_env) = &config.env {
-        for (key, value) in config_env {
-            env.retain(|(k, _)| k != key);
-            env.push((key.clone(), value.clone()));
-        }
-    }
-    let env = sanitize_env(&env);
-
-    if command.is_empty() {
-        return Err(crate::error::ConfigError::MissingCommand.into());
-    }
+    let command = oci_config.command;
+    let working_dir = &oci_config.working_dir;
+    let env = oci_config.env;
 
     println!("  Command: {}", command.join(" "));
     println!("  WorkDir: {working_dir}");

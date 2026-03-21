@@ -1,9 +1,15 @@
 //! Non-sandboxed host execution — runs commands directly on the host system.
 //!
-//! Pulls the OCI image from the registry (exercising the real pull path),
-//! parses its config for entrypoint/cmd/env, but does NOT unpack the image
-//! layers. Instead, the command is executed directly on the host via
-//! `std::process::Command`.
+//! # Trust Model
+//!
+//! Non-sandboxed mode is intended for **trusted workloads only**. The benchmark
+//! process runs with full host privileges — there is no environment isolation,
+//! no filesystem sandboxing, and no network restrictions. The OCI image layers
+//! are unpacked to a temporary directory and the command executes from there
+//! with the host's environment inherited.
+//!
+//! The `--danger-allow-no-sandbox` flag on `runner up` (or omitting `--sandbox`
+//! on `runner run`) gates this mode to prevent accidental use.
 
 #![expect(clippy::print_stdout, clippy::print_stderr)]
 
@@ -16,12 +22,12 @@ use std::time::{Duration, Instant};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
-use crate::run::{RunOutput, resolve_oci_image, sanitize_env};
+use crate::run::{RunOutput, resolve_oci_config, resolve_oci_image};
 
 /// Execute a single benchmark run locally on the host system.
 ///
-/// Pulls the OCI image, parses its config, and runs the command directly
-/// via `std::process::Command` instead of booting a Firecracker microVM.
+/// Pulls and unpacks the OCI image, then runs the command directly via
+/// `std::process::Command` from the unpacked rootfs. No sandboxing is applied.
 pub fn local_execute(
     config: &crate::Config,
     cancel_flag: Option<&Arc<AtomicBool>>,
@@ -35,6 +41,8 @@ pub fn local_execute(
     let work_dir =
         Utf8Path::from_path(temp_dir.path()).ok_or(crate::error::ConfigError::NonUtf8TempDir)?;
 
+    let unpack_dir = work_dir.join("rootfs");
+
     // Step 1: Resolve OCI image (local path or pull from registry)
     let oci_image_path = resolve_oci_image(
         &config.oci_image,
@@ -46,67 +54,46 @@ pub fn local_execute(
     // Step 2: Parse OCI image config to get the command
     println!("Parsing OCI image config...");
     let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
+    let oci_config = resolve_oci_config(&oci_image, config)?;
 
-    // Apply entrypoint/cmd overrides (Config takes precedence over OCI image)
-    let entrypoint = config
-        .entrypoint
-        .clone()
-        .unwrap_or_else(|| oci_image.entrypoint());
-    // Docker semantics: overriding entrypoint clears image CMD
-    let cmd = if config.entrypoint.is_some() {
-        config.cmd.clone().unwrap_or_default()
-    } else {
-        config.cmd.clone().unwrap_or_else(|| oci_image.cmd())
-    };
-    let command = if entrypoint.is_empty() {
-        cmd
-    } else {
-        let mut c = entrypoint;
-        c.extend(cmd);
-        c
-    };
-
-    // Apply env overrides (Config env merged on top of OCI env, then sanitize)
-    let mut env = oci_image.env();
-    if let Some(config_env) = &config.env {
-        for (key, value) in config_env {
-            env.retain(|(k, _)| k != key);
-            env.push((key.clone(), value.clone()));
-        }
-    }
-    let env = sanitize_env(&env);
-
-    if command.is_empty() {
-        return Err(crate::error::ConfigError::MissingCommand.into());
+    println!("  Command: {}", oci_config.command.join(" "));
+    println!("  WorkDir: {}", oci_config.working_dir);
+    if !oci_config.env.is_empty() {
+        println!("  Env: {} variables", oci_config.env.len());
     }
 
-    println!("  Command: {}", command.join(" "));
-    if !env.is_empty() {
-        println!("  Env: {} variables", env.len());
-    }
+    // Step 3: Unpack OCI image layers into the rootfs directory
+    println!("Unpacking OCI image to {unpack_dir}...");
+    bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
 
-    // Skip: unpacking, init config, init binary, ext4 rootfs, Firecracker
-    // Execute command directly on the host system
+    // Step 4: Execute command from the unpacked rootfs
     println!("Running command on host...");
 
-    let Some(program) = command.first() else {
+    let Some(program) = oci_config.command.first() else {
         return Err(crate::error::ConfigError::MissingCommand.into());
     };
-    let args = command.get(1..).unwrap_or_default();
+    let args = oci_config.command.get(1..).unwrap_or_default();
 
-    let mut cmd = Command::new(program);
+    // Resolve program path relative to the unpacked rootfs
+    let program_path = unpack_dir.join(program.trim_start_matches('/'));
+
+    let mut cmd = Command::new(program_path.as_str());
     cmd.args(args);
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
 
-    // Clear host environment and set only the sanitized env vars
-    cmd.env_clear();
-    for (key, value) in &env {
+    // Set env vars from OCI config + overrides (host env is inherited)
+    for (key, value) in &oci_config.env {
         cmd.env(key, value);
     }
 
-    // Run the benchmark in the temp directory for isolation
-    cmd.current_dir(temp_dir.path());
+    // Set working directory inside the unpacked rootfs
+    let cwd = unpack_dir.join(oci_config.working_dir.trim_start_matches('/'));
+    if cwd.exists() {
+        cmd.current_dir(cwd.as_std_path());
+    } else {
+        cmd.current_dir(unpack_dir.as_std_path());
+    }
 
     let child = cmd
         .spawn()
@@ -117,10 +104,8 @@ pub fn local_execute(
 
     let output = wait_with_timeout(child, config.timeout_secs, cancel_flag)?;
 
-    // Collect output files from the work directory if file_paths configured.
-    // In non-sandboxed mode, paths are resolved relative to the temp work dir
-    // to prevent reading arbitrary host files.
-    let output_files = collect_output_files(config.file_paths.as_deref(), work_dir);
+    // Collect output files directly from the host filesystem
+    let output_files = collect_output_files(config.file_paths.as_deref());
 
     Ok(RunOutput {
         exit_code: output.exit_code,
@@ -218,34 +203,15 @@ fn wait_with_timeout(
     })
 }
 
-/// Collect output files, resolving paths relative to the work directory.
-///
-/// Absolute paths are stripped to relative (e.g., `/tmp/results.json` → `tmp/results.json`)
-/// and then resolved under `work_dir`. Paths that would escape the work directory
-/// via `..` segments are rejected to prevent reading arbitrary host files.
+/// Collect output files directly from the host filesystem.
 fn collect_output_files(
     file_paths: Option<&[Utf8PathBuf]>,
-    work_dir: &Utf8Path,
 ) -> Option<HashMap<Utf8PathBuf, Vec<u8>>> {
     let paths = file_paths?;
 
     let mut files = HashMap::with_capacity(paths.len());
     for path in paths {
-        // Strip leading `/` so absolute container paths become relative
-        let relative = path.as_str().trim_start_matches('/');
-        if relative.is_empty() {
-            eprintln!("Warning: skipping empty output file path");
-            continue;
-        }
-        let resolved = work_dir.join(relative);
-
-        // Reject paths that escape the work directory via `..`
-        if !resolved.as_str().starts_with(work_dir.as_str()) {
-            eprintln!("Warning: rejecting output file path that escapes work directory: {path}");
-            continue;
-        }
-
-        match std::fs::read(resolved.as_std_path()) {
+        match std::fs::read(path.as_std_path()) {
             Ok(contents) => {
                 files.insert(path.clone(), contents);
             },

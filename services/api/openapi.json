@@ -12955,6 +12955,24 @@
             "default": false,
             "type": "boolean"
           },
+          "os": {
+            "nullable": true,
+            "description": "Operating system",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OperatingSystem"
+              }
+            ]
+          },
+          "sandbox": {
+            "nullable": true,
+            "description": "Sandbox type (e.g. firecracker). If not provided, the benchmark runs without a sandbox.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Sandbox"
+              }
+            ]
+          },
           "slug": {
             "nullable": true,
             "description": "The preferred slug for the spec. If not provided, the slug will be generated from the name.",
@@ -15309,6 +15327,24 @@
           "network": {
             "type": "boolean"
           },
+          "os": {
+            "nullable": true,
+            "description": "Operating system",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OperatingSystem"
+              }
+            ]
+          },
+          "sandbox": {
+            "nullable": true,
+            "description": "Sandbox type",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Sandbox"
+              }
+            ]
+          },
           "slug": {
             "$ref": "#/components/schemas/SpecSlug"
           },
@@ -16070,6 +16106,24 @@
               }
             ]
           },
+          "os": {
+            "nullable": true,
+            "description": "The new operating system for the spec. Set to null to clear.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OperatingSystem"
+              }
+            ]
+          },
+          "sandbox": {
+            "nullable": true,
+            "description": "The new sandbox type for the spec. Set to null to clear.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Sandbox"
+              }
+            ]
+          },
           "slug": {
             "nullable": true,
             "description": "The new slug for the spec.",
@@ -16502,6 +16556,14 @@
       "NonEmpty": {
         "type": "string"
       },
+      "OperatingSystem": {
+        "type": "string",
+        "enum": [
+          "linux",
+          "mac_os",
+          "windows"
+        ]
+      },
       "OrganizationRole": {
         "oneOf": [
           {
@@ -16660,6 +16722,12 @@
         "type": "integer",
         "format": "uint32",
         "minimum": 0
+      },
+      "Sandbox": {
+        "type": "string",
+        "enum": [
+          "firecracker"
+        ]
       },
       "Secret": {
         "type": "string"

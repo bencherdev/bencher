@@ -663,6 +663,27 @@ This token is scoped to:
 - Can claim jobs from any project on the server
 - Can only perform operations on jobs claimed by this runner
 
+## Sandbox Modes
+
+The runner supports two execution modes, selected via the `--sandbox` flag on `runner run` or the `sandbox` field in the job spec:
+
+### Firecracker (sandboxed)
+
+`--sandbox firecracker` — Full Firecracker microVM isolation. The OCI image is unpacked, converted to an ext4 rootfs, and booted inside a Firecracker VM with resource limits (CPU, memory, disk, network). This is the default for Bencher Cloud jobs.
+
+### Non-sandboxed (no `--sandbox` flag)
+
+Omitting `--sandbox` runs the benchmark directly on the host. The OCI image is pulled and unpacked to a temporary directory, and the command executes via `std::process::Command` from the unpacked rootfs.
+
+**Non-sandboxed mode is for trusted workloads only.** There is no isolation:
+- The process runs with full host privileges
+- Host environment variables are inherited
+- The filesystem is the host filesystem (command runs from the unpacked rootfs)
+- Network access is unrestricted
+- Output file paths are read directly from the host
+
+For `runner up` (daemon mode), the `--danger-allow-no-sandbox` flag must be passed to accept jobs with `sandbox: None`. Without this flag, non-sandboxed jobs are rejected at runtime.
+
 ## Design Decisions
 
 - **One job per report**: A Report has at most one Job. Benchmark suites cannot be split across multiple specs within a single report. Users submit separate runs for different specs.

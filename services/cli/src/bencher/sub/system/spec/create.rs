@@ -70,6 +70,8 @@ impl From<Create> for JsonNewSpec {
             memory: memory.into(),
             disk: disk.into(),
             network,
+            os: None,
+            sandbox: None,
             fallback,
         }
     }

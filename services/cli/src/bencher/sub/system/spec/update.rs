@@ -52,6 +52,8 @@ impl From<Update> for JsonUpdateSpec {
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
+            os: None,
+            sandbox: None,
             fallback,
             archived,
         }
