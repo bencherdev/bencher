@@ -87,7 +87,12 @@ pub fn local_execute(
     // Resolve program path within the unpacked rootfs.
     // Absolute paths are resolved directly; relative/bare names are searched
     // in PATH directories (mirroring how a container runtime resolves commands).
-    let canonical_program = resolve_program(program, &oci_config.env, &canonical_unpack_dir)?;
+    let canonical_program = resolve_program(
+        program,
+        &oci_config.env,
+        &canonical_unpack_dir,
+        config.max_symlinks,
+    )?;
 
     let mut cmd = Command::new(canonical_program.as_str());
     cmd.args(args);
@@ -103,7 +108,7 @@ pub fn local_execute(
     // Set working directory inside the unpacked rootfs.
     // Resolve symlinks within the rootfs context to avoid escaping.
     let cwd = canonical_unpack_dir.join(oci_config.working_dir.trim_start_matches('/'));
-    match canonicalize_within_rootfs(&cwd, &canonical_unpack_dir) {
+    match canonicalize_within_rootfs(&cwd, &canonical_unpack_dir, config.max_symlinks) {
         Ok(resolved_cwd) => cmd.current_dir(resolved_cwd.as_std_path()),
         Err(_) => cmd.current_dir(canonical_unpack_dir.as_std_path()),
     };
@@ -118,7 +123,11 @@ pub fn local_execute(
     let output = wait_with_timeout(child, config.timeout_secs, cancel_flag)?;
 
     // Collect output files from the unpacked rootfs
-    let output_files = collect_output_files(config.file_paths.as_deref(), &canonical_unpack_dir);
+    let output_files = collect_output_files(
+        config.file_paths.as_deref(),
+        &canonical_unpack_dir,
+        config.max_symlinks,
+    );
 
     Ok(RunOutput {
         exit_code: output.exit_code,
@@ -248,11 +257,12 @@ fn resolve_program(
     program: &str,
     env: &[(String, String)],
     unpack_dir: &Utf8Path,
+    max_symlinks: u32,
 ) -> Result<Utf8PathBuf, RunnerError> {
     if program.starts_with('/') || program.contains('/') {
         // Absolute or relative path — resolve directly
         let program_path = unpack_dir.join(program.trim_start_matches('/'));
-        return canonicalize_and_check(program, &program_path, unpack_dir);
+        return canonicalize_and_check(program, &program_path, unpack_dir, max_symlinks);
     }
 
     // Bare command name — search PATH directories within the rootfs
@@ -264,7 +274,7 @@ fn resolve_program(
     for dir in path_val.split(':') {
         let candidate = unpack_dir.join(dir.trim_start_matches('/')).join(program);
         if candidate.exists() {
-            return canonicalize_and_check(program, &candidate, unpack_dir);
+            return canonicalize_and_check(program, &candidate, unpack_dir, max_symlinks);
         }
     }
 
@@ -286,8 +296,9 @@ fn canonicalize_and_check(
     program: &str,
     candidate: &Utf8Path,
     unpack_dir: &Utf8Path,
+    max_symlinks: u32,
 ) -> Result<Utf8PathBuf, RunnerError> {
-    canonicalize_within_rootfs(candidate, unpack_dir).map_err(|e| {
+    canonicalize_within_rootfs(candidate, unpack_dir, max_symlinks).map_err(|e| {
         crate::error::ConfigError::BinaryNotFound {
             name: program.to_owned(),
             hint: format!("{e}"),
@@ -305,9 +316,8 @@ fn canonicalize_and_check(
 fn canonicalize_within_rootfs(
     path: &Utf8Path,
     rootfs: &Utf8Path,
+    max_symlinks: u32,
 ) -> Result<Utf8PathBuf, std::io::Error> {
-    const MAX_SYMLINKS: u32 = 40;
-
     let relative = path
         .strip_prefix(rootfs)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
@@ -339,7 +349,7 @@ fn canonicalize_within_rootfs(
                 match std::fs::symlink_metadata(resolved.as_std_path()) {
                     Ok(meta) if meta.is_symlink() => {
                         symlink_count += 1;
-                        if symlink_count > MAX_SYMLINKS {
+                        if symlink_count > max_symlinks {
                             return Err(std::io::Error::other(
                                 "too many symlinks in path resolution",
                             ));
@@ -398,6 +408,7 @@ fn canonicalize_within_rootfs(
 fn collect_output_files(
     file_paths: Option<&[Utf8PathBuf]>,
     unpack_dir: &Utf8Path,
+    max_symlinks: u32,
 ) -> Option<HashMap<Utf8PathBuf, Vec<u8>>> {
     let paths = file_paths?;
 
@@ -406,7 +417,7 @@ fn collect_output_files(
         // Resolve the OCI-relative path within the unpacked rootfs
         let host_path = unpack_dir.join(path.as_str().trim_start_matches('/'));
         // Validate the resolved path stays within unpack_dir (rootfs-aware resolution)
-        let resolved = match canonicalize_within_rootfs(&host_path, unpack_dir) {
+        let resolved = match canonicalize_within_rootfs(&host_path, unpack_dir, max_symlinks) {
             Ok(p) => p,
             Err(e) => {
                 eprintln!("Warning: output file {path}: {e}");

@@ -24,6 +24,7 @@ impl TryFrom<CliUp> for Up {
                 cpu_layout: None,
                 max_output_size: task.max_output_size,
                 max_file_count: task.max_file_count,
+                max_symlinks: task.max_symlinks,
                 grace_period: task.grace_period,
                 sandbox_log_level: task.sandbox_log_level,
                 allow_no_sandbox: task.danger_allow_no_sandbox,

@@ -225,6 +225,11 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
         runner_config = runner_config.with_max_file_count(max_file_count);
     }
 
+    // Pass through max symlinks if configured
+    if let Some(max_symlinks) = up_config.max_symlinks {
+        runner_config = runner_config.with_max_symlinks(max_symlinks);
+    }
+
     // Pass through grace period if configured
     if let Some(grace_period) = up_config.grace_period {
         runner_config = runner_config.with_grace_period(grace_period);
@@ -363,6 +368,7 @@ mod tests {
             cpu_layout: Some(crate::cpu::CpuLayout::with_core_count(4)),
             max_output_size: None,
             max_file_count: None,
+            max_symlinks: None,
             grace_period: None,
             sandbox_log_level: crate::SandboxLogLevel::default(),
             allow_no_sandbox: false,

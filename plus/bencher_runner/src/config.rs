@@ -101,6 +101,16 @@ pub struct Config {
     #[serde(default = "default_max_content_size")]
     pub max_content_size: u64,
 
+    /// Maximum number of symlinks to follow during chroot-aware path
+    /// resolution in non-sandboxed mode.
+    ///
+    /// This mirrors the Linux kernel's `MAXSYMLINKS` limit (40 since kernel
+    /// 3.18) and prevents infinite loops when resolving paths that contain
+    /// circular symlink chains. Only used by the local (non-sandboxed) runner.
+    /// Defaults to 40.
+    #[serde(default = "default_max_symlinks")]
+    pub max_symlinks: u32,
+
     /// Grace period in seconds after exit code arrives before final
     /// collection of remaining stdout/stderr/output files.
     ///
@@ -177,6 +187,11 @@ const fn default_max_content_size() -> u64 {
     25 * 1024 * 1024 // 25 MiB
 }
 
+/// Matches the Linux kernel's `MAXSYMLINKS` (40 since kernel 3.18).
+const fn default_max_symlinks() -> u32 {
+    40
+}
+
 fn default_grace_period() -> GracePeriod {
     GracePeriod::MIN
 }
@@ -206,6 +221,7 @@ impl Config {
             max_output_size: default_max_output_size(),
             max_file_count: default_max_file_count(),
             max_content_size: default_max_content_size(),
+            max_symlinks: default_max_symlinks(),
             grace_period: default_grace_period(),
             registry_scheme: RegistryScheme::default(),
             cpu_layout: None,
@@ -361,6 +377,13 @@ impl Config {
     #[must_use]
     pub fn with_max_content_size(mut self, max_content_size: u64) -> Self {
         self.max_content_size = max_content_size;
+        self
+    }
+
+    /// Set the maximum number of symlinks to follow during path resolution.
+    #[must_use]
+    pub fn with_max_symlinks(mut self, max_symlinks: u32) -> Self {
+        self.max_symlinks = max_symlinks;
         self
     }
 

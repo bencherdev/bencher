@@ -49,6 +49,8 @@ pub struct RunArgs {
     pub max_output_size: Option<usize>,
     /// Maximum number of output files to decode.
     pub max_file_count: Option<u32>,
+    /// Maximum number of symlinks to follow during path resolution.
+    pub max_symlinks: Option<u32>,
     /// Optional entrypoint override for the container.
     pub entrypoint: Option<Vec<String>>,
     /// Optional command override for the container.
@@ -102,8 +104,13 @@ fn build_config_from_run_args(args: &RunArgs) -> crate::Config {
     } else {
         config
     };
-    let mut config = if let Some(max_file_count) = args.max_file_count {
+    let config = if let Some(max_file_count) = args.max_file_count {
         config.with_max_file_count(max_file_count)
+    } else {
+        config
+    };
+    let mut config = if let Some(max_symlinks) = args.max_symlinks {
+        config.with_max_symlinks(max_symlinks)
     } else {
         config
     };

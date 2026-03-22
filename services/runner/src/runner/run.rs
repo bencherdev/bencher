@@ -43,6 +43,7 @@ impl TryFrom<CliRun> for Run {
                 },
                 max_output_size: task.max_output_size,
                 max_file_count: task.max_file_count,
+                max_symlinks: task.max_symlinks,
                 entrypoint: task.entrypoint,
                 cmd: task.cmd,
                 env,
