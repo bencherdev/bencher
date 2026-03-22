@@ -56,7 +56,12 @@ impl RunnerTest {
         if self.with_daemon {
             self.exec_with_daemon()
         } else {
-            run_runner_test(&self.url, &self.username, &self.token)
+            let spec = if cfg!(target_os = "linux") {
+                "test-spec"
+            } else {
+                "no-sandbox-spec"
+            };
+            run_runner_test(&self.url, &self.username, &self.token, spec)
         }
     }
 
@@ -109,7 +114,7 @@ impl RunnerTest {
             "Failed to rotate no-sandbox runner token: {}",
             String::from_utf8_lossy(&output.stderr)
         );
-        let nosandbox_runner_token: bencher_json::JsonRunnerToken =
+        let no_sandbox_runner_token: bencher_json::JsonRunnerToken =
             serde_json::from_slice(&output.stdout)?;
 
         // On Linux with KVM, build bencher-init for the musl target so it can
@@ -150,41 +155,46 @@ impl RunnerTest {
             anyhow::ensure!(build_status.success(), "Failed to build runner binary");
         }
 
-        // Start the runner daemon as a background process
-        println!("Starting runner daemon...");
-        let mut runner_child = Command::cargo_bin("runner")?;
-        let mut runner_child = runner_child
-            .args([
-                "up",
-                HOST_ARG,
-                host,
-                TOKEN_ARG,
-                runner_token.token.as_ref(),
-                "--runner",
-                "test-runner",
-            ])
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::inherit())
-            .spawn()?;
+        // Start the Firecracker runner daemon only when KVM is available
+        let runner_child_and_handle = if has_kvm {
+            println!("Starting runner daemon...");
+            let mut runner_child = Command::cargo_bin("runner")?;
+            let mut runner_child = runner_child
+                .args([
+                    "up",
+                    HOST_ARG,
+                    host,
+                    TOKEN_ARG,
+                    runner_token.token.as_ref(),
+                    "--runner",
+                    "test-runner",
+                ])
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::inherit())
+                .spawn()?;
 
-        // Wait for the runner to be ready instead of sleeping a fixed duration
-        let reader_handle = wait_for_stdout_ready(
-            &mut runner_child,
-            "Polling for jobs",
-            "runner",
-            std::time::Duration::from_secs(30),
-        );
+            let reader_handle = wait_for_stdout_ready(
+                &mut runner_child,
+                "Polling for jobs",
+                "runner",
+                std::time::Duration::from_secs(30),
+            );
+            Some((runner_child, reader_handle))
+        } else {
+            println!("Skipping Firecracker runner daemon (no KVM)");
+            None
+        };
 
         // Start the no-sandbox runner daemon
         println!("Starting no-sandbox runner daemon...");
-        let mut nosandbox_child = Command::cargo_bin("runner")?;
-        let mut nosandbox_child = nosandbox_child
+        let mut no_sandbox_child = Command::cargo_bin("runner")?;
+        let mut no_sandbox_child = no_sandbox_child
             .args([
                 "up",
                 HOST_ARG,
                 host,
                 TOKEN_ARG,
-                nosandbox_runner_token.token.as_ref(),
+                no_sandbox_runner_token.token.as_ref(),
                 "--runner",
                 "test-runner-no-sandbox",
                 "--danger-allow-no-sandbox",
@@ -193,33 +203,40 @@ impl RunnerTest {
             .stderr(std::process::Stdio::inherit())
             .spawn()?;
 
-        let nosandbox_reader_handle = wait_for_stdout_ready(
-            &mut nosandbox_child,
+        let no_sandbox_reader_handle = wait_for_stdout_ready(
+            &mut no_sandbox_child,
             "Polling for jobs",
-            "nosandbox-runner",
+            "no-sandbox-runner",
             std::time::Duration::from_secs(30),
         );
 
-        // Run the actual runner test
-        let result = run_runner_test(&self.url, &self.username, &self.token);
+        // Run the actual runner test (use no-sandbox spec when KVM is unavailable)
+        let spec = if has_kvm {
+            "test-spec"
+        } else {
+            "no-sandbox-spec"
+        };
+        let result = run_runner_test(&self.url, &self.username, &self.token, spec);
 
         // Run the no-sandbox runner test
-        let nosandbox_result = if result.is_ok() {
-            run_nosandbox_runner_test(&self.url, &self.token)
+        let no_sandbox_result = if result.is_ok() {
+            run_no_sandbox_runner_test(&self.url, &self.token)
         } else {
             Ok(())
         };
 
-        // Always kill both runner daemons, even if the test failed
-        let _kill = runner_child.kill();
-        let _wait = runner_child.wait();
-        let _join = reader_handle.join();
-        let _kill = nosandbox_child.kill();
-        let _wait = nosandbox_child.wait();
-        let _join = nosandbox_reader_handle.join();
+        // Always kill runner daemons, even if the test failed
+        if let Some((mut runner_child, reader_handle)) = runner_child_and_handle {
+            let _kill = runner_child.kill();
+            let _wait = runner_child.wait();
+            let _join = reader_handle.join();
+        }
+        let _kill = no_sandbox_child.kill();
+        let _wait = no_sandbox_child.wait();
+        let _join = no_sandbox_reader_handle.join();
 
         result?;
-        nosandbox_result?;
+        no_sandbox_result?;
         println!("=== Runner Daemon Test Passed ===");
         Ok(())
     }
@@ -237,7 +254,7 @@ pub fn docker_available() -> bool {
 
 /// Run the runner smoke test: pull a prebuilt image, push it to the API's OCI
 /// registry via Docker, then submit a job with `bencher run --image`.
-pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result<()> {
+pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running runner smoke test against: {host}");
@@ -304,7 +321,7 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result
         "--image",
         &image_ref,
         "--spec",
-        "test-spec",
+        spec,
         "--format",
         "json",
         "--quiet",
@@ -341,7 +358,7 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result
 ///
 /// Similar to `run_runner_test` but submits to the `no-sandbox-spec` spec
 /// which does not use Firecracker sandboxing.
-fn run_nosandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
+fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running no-sandbox runner smoke test against: {host}");
