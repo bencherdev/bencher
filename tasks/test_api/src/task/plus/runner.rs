@@ -346,16 +346,6 @@ fn run_nosandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 
     println!("Running no-sandbox runner smoke test against: {host}");
 
-    let _registry = if cfg!(target_os = "macos") {
-        let port = registry_host(host)?
-            .rsplit_once(':')
-            .and_then(|(_, p)| p.parse::<u16>().ok())
-            .unwrap_or(bencher_json::BENCHER_API_PORT);
-        format!("host.docker.internal:{port}")
-    } else {
-        registry_host(host)?
-    };
-
     // The image should already be pushed from the first test
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
