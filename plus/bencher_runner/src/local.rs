@@ -101,21 +101,12 @@ pub fn local_execute(
     }
 
     // Set working directory inside the unpacked rootfs.
-    // Canonicalize and validate it stays within the rootfs.
+    // Resolve symlinks within the rootfs context to avoid escaping.
     let cwd = canonical_unpack_dir.join(oci_config.working_dir.trim_start_matches('/'));
-    if cwd.exists() {
-        let canonical_cwd = cwd.canonicalize_utf8().map_err(|e| {
-            crate::error::ConfigError::Setup(format!("Failed to canonicalize working dir: {e}"))
-        })?;
-        if canonical_cwd.starts_with(&canonical_unpack_dir) {
-            cmd.current_dir(canonical_cwd.as_std_path());
-        } else {
-            eprintln!("Warning: working directory escapes rootfs, falling back to rootfs root");
-            cmd.current_dir(canonical_unpack_dir.as_std_path());
-        }
-    } else {
-        cmd.current_dir(canonical_unpack_dir.as_std_path());
-    }
+    match canonicalize_within_rootfs(&cwd, &canonical_unpack_dir) {
+        Ok(resolved_cwd) => cmd.current_dir(resolved_cwd.as_std_path()),
+        Err(_) => cmd.current_dir(canonical_unpack_dir.as_std_path()),
+    };
 
     let child = cmd
         .spawn()
@@ -284,27 +275,120 @@ fn resolve_program(
     .into())
 }
 
-/// Canonicalize a candidate path and verify it stays within `unpack_dir`.
+/// Resolve a candidate path within the rootfs, following symlinks without
+/// escaping.
+///
+/// Unlike [`Utf8Path::canonicalize_utf8`], this function re-roots absolute
+/// symlink targets within the rootfs and clamps `..` traversal at the rootfs
+/// boundary. This prevents OCI images with absolute symlinks (common in
+/// Alpine: `/bin` → `/usr/bin`) from resolving to host-system paths.
 fn canonicalize_and_check(
     program: &str,
     candidate: &Utf8Path,
     unpack_dir: &Utf8Path,
 ) -> Result<Utf8PathBuf, RunnerError> {
-    let canonical =
-        candidate
-            .canonicalize_utf8()
-            .map_err(|e| crate::error::ConfigError::BinaryNotFound {
-                name: program.to_owned(),
-                hint: format!("Failed to resolve program path: {e}"),
-            })?;
-    if !canonical.starts_with(unpack_dir) {
-        return Err(crate::error::ConfigError::BinaryNotFound {
+    canonicalize_within_rootfs(candidate, unpack_dir).map_err(|e| {
+        crate::error::ConfigError::BinaryNotFound {
             name: program.to_owned(),
-            hint: "program path escapes the unpacked rootfs".to_owned(),
+            hint: format!("{e}"),
         }
-        .into());
+        .into()
+    })
+}
+
+/// Chroot-aware path canonicalization.
+///
+/// Walks `path` component-by-component, resolving symlinks along the way.
+/// Absolute symlink targets are re-interpreted as relative to `rootfs`
+/// (identical to how a chroot/container resolves them). `..` components
+/// are clamped so they cannot escape `rootfs`.
+fn canonicalize_within_rootfs(
+    path: &Utf8Path,
+    rootfs: &Utf8Path,
+) -> Result<Utf8PathBuf, std::io::Error> {
+    const MAX_SYMLINKS: u32 = 40;
+
+    let relative = path
+        .strip_prefix(rootfs)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+
+    let components: Vec<String> = relative
+        .components()
+        .map(|c| c.as_str().to_owned())
+        .collect();
+
+    let mut resolved = rootfs.to_path_buf();
+    // Stack of components still to process (LIFO — push reversed segments).
+    let mut stack: Vec<String> = components.into_iter().rev().collect();
+    let mut symlink_count = 0u32;
+
+    while let Some(component) = stack.pop() {
+        match component.as_str() {
+            "" | "." => {},
+            ".." => {
+                // Clamp at rootfs boundary
+                if resolved != *rootfs
+                    && let Some(parent) = resolved.parent()
+                {
+                    resolved = parent.to_path_buf();
+                }
+            },
+            name => {
+                resolved.push(name);
+
+                match std::fs::symlink_metadata(resolved.as_std_path()) {
+                    Ok(meta) if meta.is_symlink() => {
+                        symlink_count += 1;
+                        if symlink_count > MAX_SYMLINKS {
+                            return Err(std::io::Error::other(
+                                "too many symlinks in path resolution",
+                            ));
+                        }
+
+                        let target = std::fs::read_link(resolved.as_std_path())?;
+                        let target_str = target.to_str().ok_or_else(|| {
+                            std::io::Error::new(
+                                std::io::ErrorKind::InvalidData,
+                                "non-UTF-8 symlink target",
+                            )
+                        })?;
+
+                        if target_str.starts_with('/') {
+                            // Absolute symlink — re-root within rootfs
+                            resolved = rootfs.to_path_buf();
+                        } else {
+                            // Relative symlink — resolve from the symlink's parent
+                            resolved.pop();
+                        }
+
+                        // Push target components onto the stack (reversed for LIFO)
+                        for comp in target_str.split('/').rev() {
+                            if !comp.is_empty() {
+                                stack.push(comp.to_owned());
+                            }
+                        }
+                    },
+                    Ok(_) => {
+                        // Regular file or directory — keep going
+                    },
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                        return Err(e);
+                    },
+                    Err(e) => return Err(e),
+                }
+            },
+        }
     }
-    Ok(canonical)
+
+    // Final existence check
+    if !resolved.exists() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("resolved path does not exist: {resolved}"),
+        ));
+    }
+
+    Ok(resolved)
 }
 
 /// Collect output files from the unpacked rootfs.
@@ -321,16 +405,15 @@ fn collect_output_files(
     for path in paths {
         // Resolve the OCI-relative path within the unpacked rootfs
         let host_path = unpack_dir.join(path.as_str().trim_start_matches('/'));
-        // Validate the resolved path stays within unpack_dir
-        let Ok(canonical) = host_path.canonicalize_utf8() else {
-            eprintln!("Warning: output file does not exist: {path}");
-            continue;
+        // Validate the resolved path stays within unpack_dir (rootfs-aware resolution)
+        let resolved = match canonicalize_within_rootfs(&host_path, unpack_dir) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("Warning: output file {path}: {e}");
+                continue;
+            },
         };
-        if !canonical.starts_with(unpack_dir) {
-            eprintln!("Warning: output file path escapes rootfs: {path}");
-            continue;
-        }
-        match std::fs::read(canonical.as_std_path()) {
+        match std::fs::read(resolved.as_std_path()) {
             Ok(contents) => {
                 files.insert(path.clone(), contents);
             },

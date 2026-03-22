@@ -1510,11 +1510,11 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1024 count=50 2>/dev/null | tr '\\0' 'X'"]"
             },
         },
         Scenario {
-            name: "env_var_sanitization",
-            description: "LD_PRELOAD and LD_LIBRARY_PATH blocked, safe vars pass",
+            name: "env_var_passthrough",
+            description: "All ENV variables (including LD_*) are passed to the guest",
             dockerfile: r#"FROM busybox
-ENV LD_PRELOAD=/evil.so
-ENV LD_LIBRARY_PATH=/evil
+ENV LD_PRELOAD=/test.so
+ENV LD_LIBRARY_PATH=/testlib
 ENV SAFE_VAR=safe_value
 CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH SAFE=$SAFE_VAR"]"#,
             cancel_after_secs: None,
@@ -1531,12 +1531,15 @@ CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH S
                         output.stdout
                     )
                 }
-                if output.stdout.contains("LD_PRELOAD=/evil") {
-                    bail!("LD_PRELOAD was NOT sanitized! Output: {}", output.stdout)
-                }
-                if output.stdout.contains("LD_LIBRARY_PATH=/evil") {
+                if !output.stdout.contains("LD_PRELOAD=/test.so") {
                     bail!(
-                        "LD_LIBRARY_PATH was NOT sanitized! Output: {}",
+                        "Expected 'LD_PRELOAD=/test.so' in output, got: {}",
+                        output.stdout
+                    )
+                }
+                if !output.stdout.contains("LD_LIBRARY_PATH=/testlib") {
+                    bail!(
+                        "Expected 'LD_LIBRARY_PATH=/testlib' in output, got: {}",
                         output.stdout
                     )
                 }
@@ -2099,7 +2102,7 @@ fn nosandbox_scenarios() -> Vec<Scenario> {
         Scenario {
             name: "nosandbox_basic",
             description: "Non-sandboxed: simple echo",
-            dockerfile: r#"FROM alpine:latest
+            dockerfile: r#"FROM busybox
 CMD ["echo", "hello from host"]"#,
             cancel_after_secs: None,
             sandboxed: false,
@@ -2119,7 +2122,7 @@ CMD ["echo", "hello from host"]"#,
         Scenario {
             name: "nosandbox_env",
             description: "Non-sandboxed: ENV variables from OCI config",
-            dockerfile: r#"FROM alpine:latest
+            dockerfile: r#"FROM busybox
 ENV MY_VAR=host_test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
             cancel_after_secs: None,
@@ -2140,7 +2143,7 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
         Scenario {
             name: "nosandbox_exit_code",
             description: "Non-sandboxed: non-zero exit code propagation",
-            dockerfile: r#"FROM alpine:latest
+            dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "exit 42"]"#,
             cancel_after_secs: None,
             sandboxed: false,

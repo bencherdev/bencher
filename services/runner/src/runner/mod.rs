@@ -1,31 +1,34 @@
-use clap::Parser as _;
-
-use crate::error::RunnerCliError;
-use crate::parser::{CliRunner, CliSub};
-
 #[cfg(feature = "plus")]
 mod run;
 #[cfg(feature = "plus")]
 mod up;
 
 #[cfg(feature = "plus")]
+use clap::Parser as _;
+#[cfg(feature = "plus")]
 use run::Run;
 #[cfg(feature = "plus")]
 use up::Up;
 
+#[cfg(feature = "plus")]
+use crate::error::RunnerCliError;
+#[cfg(feature = "plus")]
+use crate::parser::{CliRunner, CliSub};
+
+#[cfg(feature = "plus")]
 #[derive(Debug)]
 pub struct Runner {
     sub: Sub,
 }
 
+#[cfg(feature = "plus")]
 #[derive(Debug)]
-pub enum Sub {
-    #[cfg(feature = "plus")]
+enum Sub {
     Up(Up),
-    #[cfg(feature = "plus")]
     Run(Run),
 }
 
+#[cfg(feature = "plus")]
 impl TryFrom<CliRunner> for Runner {
     type Error = RunnerCliError;
 
@@ -36,19 +39,19 @@ impl TryFrom<CliRunner> for Runner {
     }
 }
 
+#[cfg(feature = "plus")]
 impl TryFrom<CliSub> for Sub {
     type Error = RunnerCliError;
 
     fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
-            #[cfg(feature = "plus")]
             CliSub::Up(up) => Self::Up(up.try_into()?),
-            #[cfg(feature = "plus")]
             CliSub::Run(run) => Self::Run(run.try_into()?),
         })
     }
 }
 
+#[cfg(feature = "plus")]
 impl Runner {
     pub fn new() -> Result<Self, RunnerCliError> {
         CliRunner::parse().try_into()
@@ -59,12 +62,11 @@ impl Runner {
     }
 }
 
+#[cfg(feature = "plus")]
 impl Sub {
-    pub fn exec(self) -> Result<(), RunnerCliError> {
+    fn exec(self) -> Result<(), RunnerCliError> {
         match self {
-            #[cfg(feature = "plus")]
             Self::Up(up) => up.exec(),
-            #[cfg(feature = "plus")]
             Self::Run(run) => run.exec(),
         }
     }

@@ -12,6 +12,7 @@ plus = [
     "dep:diesel",
     "dep:schemars",
     "dep:serde",
+    "dep:serde_json",
     "bencher_endpoint/plus",
     "bencher_config/plus",
     "bencher_json/plus",
@@ -36,7 +37,7 @@ diesel = { workspace = true, optional = true }
 dropshot.workspace = true
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
-serde_json.workspace = true
+serde_json = { workspace = true, optional = true }
 slog.workspace = true
 
 [dev-dependencies]

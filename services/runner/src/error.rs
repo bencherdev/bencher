@@ -19,4 +19,8 @@ pub enum RunnerCliError {
     #[cfg(feature = "plus")]
     #[error("Invalid disk size: {0} MiB")]
     InvalidDisk(u64),
+
+    #[cfg(not(feature = "plus"))]
+    #[error("Runner requires the `plus` feature")]
+    NoPlusFeature,
 }
