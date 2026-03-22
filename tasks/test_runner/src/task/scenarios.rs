@@ -2094,16 +2094,30 @@ CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
 ///
 /// These test the `local_execute` code path (no Firecracker VM).
 /// The OCI image is unpacked and the command runs directly on the host.
+#[expect(
+    clippy::too_many_lines,
+    reason = "Each scenario needs its configuration"
+)]
 fn nosandbox_scenarios() -> Vec<Scenario> {
+    // All non-sandboxed scenarios must use FROM scratch with statically-linked
+    // binaries. OCI images with symlinks (e.g. busybox) won't work because
+    // absolute symlinks in the unpacked rootfs resolve against the host root,
+    // not the rootfs. FROM scratch images have no symlinks.
     vec![
         Scenario {
             name: "nosandbox_basic",
-            description: "Non-sandboxed: simple echo",
-            dockerfile: r#"FROM busybox
-CMD ["echo", "hello from host"]"#,
+            description: "Non-sandboxed: simple echo (static binary)",
+            dockerfile: r#"FROM alpine:latest AS builder
+RUN echo -e '#include <stdio.h>\nint main(){puts("hello from host");return 0;}' > /hello.c \
+    && apk add --no-cache gcc musl-dev \
+    && gcc -static -o /hello /hello.c
+
+FROM scratch
+COPY --from=builder /hello /hello
+CMD ["/hello"]"#,
             cancel_after_secs: None,
             sandboxed: false,
-            extra_args: &["--timeout", "60"],
+            extra_args: &["--timeout", "120"],
             validate: |output| {
                 if output.stdout.contains("hello from host") {
                     Ok(())
@@ -2118,13 +2132,19 @@ CMD ["echo", "hello from host"]"#,
         },
         Scenario {
             name: "nosandbox_env",
-            description: "Non-sandboxed: ENV variables from OCI config",
-            dockerfile: r#"FROM busybox
+            description: "Non-sandboxed: ENV variables from OCI config (static binary)",
+            dockerfile: r#"FROM alpine:latest AS builder
+RUN echo -e '#include <stdio.h>\n#include <stdlib.h>\nint main(){const char*v=getenv("MY_VAR");puts(v?v:"(unset)");return 0;}' > /env.c \
+    && apk add --no-cache gcc musl-dev \
+    && gcc -static -o /env /env.c
+
+FROM scratch
 ENV MY_VAR=host_test_value
-CMD ["sh", "-c", "echo $MY_VAR"]"#,
+COPY --from=builder /env /env
+CMD ["/env"]"#,
             cancel_after_secs: None,
             sandboxed: false,
-            extra_args: &["--timeout", "60"],
+            extra_args: &["--timeout", "120"],
             validate: |output| {
                 if output.stdout.contains("host_test_value") {
                     Ok(())
@@ -2139,12 +2159,18 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
         },
         Scenario {
             name: "nosandbox_exit_code",
-            description: "Non-sandboxed: non-zero exit code propagation",
-            dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "exit 42"]"#,
+            description: "Non-sandboxed: non-zero exit code (static binary)",
+            dockerfile: r#"FROM alpine:latest AS builder
+RUN echo -e 'int main(){return 42;}' > /exit42.c \
+    && apk add --no-cache gcc musl-dev \
+    && gcc -static -o /exit42 /exit42.c
+
+FROM scratch
+COPY --from=builder /exit42 /exit42
+CMD ["/exit42"]"#,
             cancel_after_secs: None,
             sandboxed: false,
-            extra_args: &["--timeout", "60"],
+            extra_args: &["--timeout", "120"],
             validate: |output| {
                 if output.exit_code == 42 {
                     Ok(())
