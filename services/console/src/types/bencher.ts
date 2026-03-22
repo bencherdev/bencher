@@ -70,9 +70,19 @@ export enum JobStatus {
 
 export type ResourceName = string;
 
+export enum OperatingSystem {
+	Linux = "linux",
+	Macos = "macos",
+	Windows = "windows",
+}
+
 export enum Architecture {
 	X86_64 = "x86_64",
 	Aarch64 = "aarch64",
+}
+
+export enum Sandbox {
+	Firecracker = "firecracker",
 }
 
 /** A hardware spec */
@@ -80,8 +90,12 @@ export interface JsonSpec {
 	uuid: Uuid;
 	name: ResourceName;
 	slug: Slug;
+	/** Operating system */
+	os?: OperatingSystem;
 	/** CPU architecture */
 	architecture: Architecture;
+	/** Sandbox type */
+	sandbox?: Sandbox;
 	cpu: number;
 	memory: number;
 	disk: number;
@@ -705,8 +719,12 @@ export interface JsonNewSpec {
 	 * If not provided, the slug will be generated from the name.
 	 */
 	slug?: Slug;
+	/** Operating system */
+	os?: OperatingSystem;
 	/** CPU architecture */
 	architecture: Architecture;
+	/** Sandbox type (e.g. firecracker). If not provided, the benchmark runs without a sandbox. */
+	sandbox?: Sandbox;
 	/** Number of CPUs */
 	cpu: number;
 	/** Memory size in bytes */
@@ -995,6 +1013,10 @@ export interface JsonUpdateSpec {
 	name?: ResourceName;
 	/** The new slug for the spec. */
 	slug?: Slug;
+	/** The new operating system for the spec. Set to null to clear. */
+	os?: OperatingSystem | null;
+	/** The new sandbox type for the spec. Set to null to clear. */
+	sandbox?: Sandbox | null;
 	/** Set whether the spec is the fallback spec. */
 	fallback?: boolean;
 	/** Set whether the spec is archived. */

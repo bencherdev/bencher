@@ -2158,6 +2158,35 @@ CMD ["sh", "-c", "exit 42"]"#,
                 }
             },
         },
+        Scenario {
+            name: "nosandbox_scratch_image",
+            description: "Non-sandboxed: FROM scratch with static binary only",
+            // Multi-stage build: compile a static binary, then copy into scratch.
+            // This mirrors the common production use case of shipping only a
+            // single statically-linked benchmark binary in the OCI image.
+            dockerfile: r#"FROM alpine:latest AS builder
+RUN echo -e '#include <stdio.h>\nint main(){puts("hello from scratch");return 0;}' > /hello.c \
+    && apk add --no-cache gcc musl-dev \
+    && gcc -static -o /hello /hello.c
+
+FROM scratch
+COPY --from=builder /hello /hello
+CMD ["/hello"]"#,
+            cancel_after_secs: None,
+            sandboxed: false,
+            extra_args: &["--timeout", "120"],
+            validate: |output| {
+                if output.stdout.contains("hello from scratch") {
+                    Ok(())
+                } else {
+                    bail!(
+                        "Expected 'hello from scratch' in output.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+            },
+        },
     ]
 }
 
