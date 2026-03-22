@@ -1755,7 +1755,7 @@ impl SeedTest {
         let admin_token = self.admin_token.as_ref();
 
         // Create a spec
-        // cargo run -- spec create --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Test Spec" --architecture x86_64 --cpu 4 --memory 8589934592 --disk 1073741824
+        // cargo run -- spec create --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Test Spec" --architecture x86_64 --sandbox firecracker --os linux --cpu 4 --memory 8589934592 --disk 1073741824
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "spec",
@@ -1768,6 +1768,10 @@ impl SeedTest {
             "Test Spec",
             "--architecture",
             "x86_64",
+            "--sandbox",
+            "firecracker",
+            "--os",
+            "linux",
             "--cpu",
             "4",
             "--memory",
