@@ -8,7 +8,7 @@ use std::sync::atomic::AtomicBool;
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
-use crate::run::{RunOutput, resolve_oci_config, resolve_oci_image};
+use crate::run::{RunOutput, prepare_oci_workspace};
 
 /// Execute a single benchmark run in a Firecracker microVM.
 pub fn vm_execute(
@@ -27,12 +27,11 @@ pub fn vm_execute(
     println!("  Memory: {} MiB", config.memory.to_mib());
     println!("  Timeout: {} seconds", config.timeout_secs);
 
-    // Create a temporary work directory
-    let temp_dir = tempfile::tempdir().map_err(crate::error::ConfigError::TempDir)?;
-    let work_dir =
-        Utf8Path::from_path(temp_dir.path()).ok_or(crate::error::ConfigError::NonUtf8TempDir)?;
+    let workspace = prepare_oci_workspace(config)?;
+    let work_dir = &workspace.work_dir;
+    let unpack_dir = &workspace.unpack_dir;
+    let oci_config = workspace.oci_config;
 
-    let unpack_dir = work_dir.join("rootfs");
     let rootfs_path = work_dir.join("rootfs.ext4");
 
     // Get kernel path - use bundled, provided, or find system kernel
@@ -47,37 +46,14 @@ pub fn vm_execute(
         find_kernel()?
     };
 
-    // Step 1: Resolve OCI image (local path or pull from registry)
-    let oci_image_path = resolve_oci_image(
-        &config.oci_image,
-        config.token.as_ref().map(AsRef::as_ref),
-        config.registry_scheme,
-        work_dir,
-    )?;
-
-    // Step 2: Parse OCI image config to get the command
-    println!("Parsing OCI image config...");
-    let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
-    let oci_config = resolve_oci_config(&oci_image, config)?;
-
     let command = oci_config.command;
     let working_dir = &oci_config.working_dir;
     let env = oci_config.env;
 
-    println!("  Command: {}", command.join(" "));
-    println!("  WorkDir: {working_dir}");
-    if !env.is_empty() {
-        println!("  Env: {} variables", env.len());
-    }
-
-    // Step 3: Unpack OCI image
-    println!("Unpacking OCI image to {unpack_dir}...");
-    bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
-
-    // Step 4: Write command config for the VM
+    // Write command config for the VM
     println!("Writing init config...");
     write_init_config(
-        &unpack_dir,
+        unpack_dir,
         &command,
         working_dir,
         &env,
@@ -87,14 +63,14 @@ pub fn vm_execute(
 
     // Step 5: Install init binary
     println!("Installing init binary...");
-    install_init_binary(&unpack_dir)?;
+    install_init_binary(unpack_dir)?;
 
     // Step 6: Create ext4 rootfs
     println!(
         "Creating ext4 at {rootfs_path} ({} MiB)...",
         config.disk.to_mib()
     );
-    bencher_rootfs::create_ext4_with_size(&unpack_dir, &rootfs_path, config.disk.to_mib())?;
+    bencher_rootfs::create_ext4_with_size(unpack_dir, &rootfs_path, config.disk.to_mib())?;
 
     // Step 7–8: Build Firecracker config and run the microVM
     let fc_config = build_firecracker_config(config, work_dir, kernel_path, rootfs_path)?;

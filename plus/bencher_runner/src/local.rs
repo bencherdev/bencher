@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
-use crate::run::{RunOutput, resolve_oci_config, resolve_oci_image};
+use crate::run::{RunOutput, prepare_oci_workspace};
 
 /// Execute a single benchmark run locally on the host system.
 ///
@@ -40,43 +40,17 @@ pub fn local_execute(
     println!("  OCI image: {}", config.oci_image);
     println!("  Timeout: {} seconds", config.timeout_secs);
 
-    // Create a temporary work directory
-    let temp_dir = tempfile::tempdir().map_err(crate::error::ConfigError::TempDir)?;
-    let work_dir =
-        Utf8Path::from_path(temp_dir.path()).ok_or(crate::error::ConfigError::NonUtf8TempDir)?;
-
-    let unpack_dir = work_dir.join("rootfs");
-
-    // Step 1: Resolve OCI image (local path or pull from registry)
-    let oci_image_path = resolve_oci_image(
-        &config.oci_image,
-        config.token.as_ref().map(AsRef::as_ref),
-        config.registry_scheme,
-        work_dir,
-    )?;
-
-    // Step 2: Parse OCI image config to get the command
-    println!("Parsing OCI image config...");
-    let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
-    let oci_config = resolve_oci_config(&oci_image, config)?;
-
-    println!("  Command: {}", oci_config.command.join(" "));
-    println!("  WorkDir: {}", oci_config.working_dir);
-    if !oci_config.env.is_empty() {
-        println!("  Env: {} variables", oci_config.env.len());
-    }
-
-    // Step 3: Unpack OCI image layers into the rootfs directory
-    println!("Unpacking OCI image to {unpack_dir}...");
-    bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
+    let workspace = prepare_oci_workspace(config)?;
+    let unpack_dir = &workspace.unpack_dir;
+    let oci_config = &workspace.oci_config;
 
     // Canonicalize unpack_dir *after* unpacking so all symlinks within the
     // rootfs are materialized and we have a stable base for containment checks.
     let canonical_unpack_dir = unpack_dir.canonicalize_utf8().map_err(|e| {
-        crate::error::ConfigError::Setup(format!("Failed to canonicalize unpack dir: {e}"))
+        crate::error::ExecutionError::Setup(format!("Failed to canonicalize unpack dir: {e}"))
     })?;
 
-    // Step 4: Execute command from the unpacked rootfs
+    // Execute command from the unpacked rootfs
     println!("Running command on host...");
 
     let Some(program) = oci_config.command.first() else {
@@ -110,7 +84,12 @@ pub fn local_execute(
     let cwd = canonical_unpack_dir.join(oci_config.working_dir.trim_start_matches('/'));
     match canonicalize_within_rootfs(&cwd, &canonical_unpack_dir, config.max_symlinks) {
         Ok(resolved_cwd) => cmd.current_dir(resolved_cwd.as_std_path()),
-        Err(_) => cmd.current_dir(canonical_unpack_dir.as_std_path()),
+        Err(err) => {
+            eprintln!(
+                "Warning: failed to resolve working directory {cwd}, falling back to rootfs: {err}"
+            );
+            cmd.current_dir(canonical_unpack_dir.as_std_path())
+        },
     };
 
     let child = cmd
@@ -157,9 +136,10 @@ fn wait_with_timeout(
     let timeout = Duration::from_secs(timeout_secs);
     let start = Instant::now();
 
-    // Save PID before the thread consumes the child, so we can reliably kill
-    // the process even after `wait_with_output` takes ownership.
-    let pid = child.id();
+    // Acquire a handle to the child process before the thread consumes it.
+    // On Linux, this attempts to use pidfd_open for a race-free handle;
+    // on other platforms (or old kernels) it falls back to the raw PID.
+    let child_handle = ChildHandle::new(&child);
 
     let handle = std::thread::spawn(move || child.wait_with_output());
 
@@ -170,9 +150,9 @@ fn wait_with_timeout(
         }
 
         if start.elapsed() > timeout {
-            kill_by_pid(pid);
+            child_handle.kill();
             drop(handle.join());
-            return Err(crate::error::ConfigError::Timeout(format!(
+            return Err(crate::error::ExecutionError::Timeout(format!(
                 "process did not complete within {timeout_secs}s"
             ))
             .into());
@@ -181,9 +161,11 @@ fn wait_with_timeout(
         if let Some(flag) = cancel_flag
             && flag.load(Ordering::SeqCst)
         {
-            kill_by_pid(pid);
+            child_handle.kill();
             drop(handle.join());
-            return Err(crate::error::ConfigError::Canceled("job was canceled".to_owned()).into());
+            return Err(
+                crate::error::ExecutionError::Canceled("job was canceled".to_owned()).into(),
+            );
         }
 
         std::thread::sleep(Duration::from_millis(100));
@@ -219,27 +201,104 @@ fn wait_with_timeout(
     })
 }
 
-/// Send SIGKILL to a process by PID. Best-effort; errors are silently ignored
-/// because the process may have already exited.
-#[cfg(unix)]
-fn kill_by_pid(pid: u32) {
-    // SAFETY: We send SIGKILL to a known child PID. If the process has already
-    // exited the call is harmless (returns ESRCH).
-    #[expect(unsafe_code, clippy::cast_possible_wrap)]
-    unsafe {
-        libc::kill(pid as i32, libc::SIGKILL);
+/// Handle to a child process for race-free killing.
+///
+/// On Linux, attempts to open a pidfd via `pidfd_open` for a stable process
+/// reference that is immune to PID reuse. Falls back to raw PID if the
+/// syscall is unavailable (kernels < 5.3).
+///
+/// On non-Linux platforms, always uses the raw PID.
+struct ChildHandle {
+    pid: u32,
+    /// File descriptor from `pidfd_open` (Linux only). `-1` means unavailable.
+    #[cfg(target_os = "linux")]
+    pidfd: i32,
+}
+
+impl ChildHandle {
+    /// Create a new handle from a live child process.
+    fn new(child: &std::process::Child) -> Self {
+        let pid = child.id();
+        #[cfg(target_os = "linux")]
+        {
+            // SAFETY: pidfd_open takes a valid PID and flags=0.
+            // If unsupported, returns -1 and we fall back to raw PID.
+            // The return value is a file descriptor (small int) or -1, so
+            // truncation from c_long to i32 is safe.
+            #[expect(
+                unsafe_code,
+                clippy::cast_possible_wrap,
+                clippy::cast_possible_truncation
+            )]
+            let pidfd = unsafe { libc::syscall(libc::SYS_pidfd_open, pid as i32, 0) } as i32;
+            Self { pid, pidfd }
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            Self { pid }
+        }
+    }
+
+    /// Send SIGKILL to the child process. Best-effort; errors are silently
+    /// ignored because the process may have already exited.
+    fn kill(&self) {
+        #[cfg(target_os = "linux")]
+        {
+            if self.pidfd >= 0 {
+                // SAFETY: pidfd_send_signal sends a signal via the stable fd.
+                // If the process has already exited the fd is still valid but
+                // the call returns ESRCH, which we ignore.
+                #[expect(unsafe_code)]
+                unsafe {
+                    libc::syscall(
+                        libc::SYS_pidfd_send_signal,
+                        self.pidfd,
+                        libc::SIGKILL,
+                        std::ptr::null::<libc::siginfo_t>(),
+                        0,
+                    );
+                }
+                return;
+            }
+            // SAFETY: Fall back to kill-by-PID. We send SIGKILL to a known
+            // child PID; if already exited, returns ESRCH (harmless).
+            #[expect(unsafe_code, clippy::cast_possible_wrap)]
+            unsafe {
+                libc::kill(self.pid as i32, libc::SIGKILL);
+            }
+        }
+        #[cfg(all(unix, not(target_os = "linux")))]
+        {
+            // SAFETY: We send SIGKILL to a known child PID. If the process has
+            // already exited the call is harmless (returns ESRCH).
+            #[expect(unsafe_code, clippy::cast_possible_wrap)]
+            unsafe {
+                libc::kill(self.pid as i32, libc::SIGKILL);
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            // On Windows, `taskkill /F /PID <pid>` forcefully terminates.
+            drop(
+                std::process::Command::new("taskkill")
+                    .args(["/F", "/PID", &self.pid.to_string()])
+                    .output(),
+            );
+        }
     }
 }
 
-/// Non-Unix fallback: uses `std::process::Command` to kill by PID.
-#[cfg(not(unix))]
-fn kill_by_pid(pid: u32) {
-    // On Windows, `taskkill /F /PID <pid>` forcefully terminates the process.
-    drop(
-        std::process::Command::new("taskkill")
-            .args(["/F", "/PID", &pid.to_string()])
-            .output(),
-    );
+#[cfg(target_os = "linux")]
+impl Drop for ChildHandle {
+    fn drop(&mut self) {
+        if self.pidfd >= 0 {
+            // SAFETY: Closing our owned file descriptor.
+            #[expect(unsafe_code)]
+            unsafe {
+                libc::close(self.pidfd);
+            }
+        }
+    }
 }
 
 /// Default PATH used when the OCI image does not specify one.

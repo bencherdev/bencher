@@ -53,7 +53,7 @@ pub use bencher_json::{Cpu, Disk, GracePeriod, Memory};
 #[cfg(feature = "plus")]
 pub use config::Config;
 #[cfg(feature = "plus")]
-pub use error::{ConfigError, JailError, RunnerError};
+pub use error::{ConfigError, ExecutionError, JailError, RunnerError};
 #[cfg(feature = "plus")]
 pub use jail::ResourceLimits;
 #[cfg(feature = "plus")]

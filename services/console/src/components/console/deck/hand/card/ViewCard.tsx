@@ -352,7 +352,7 @@ const SpecCard = (props: Props) => {
 		<div>
 			Name: {spec()?.name}
 			<br />
-			Operating System: {fmtOs(spec()?.os)}
+			OS: {fmtOs(spec()?.os)}
 			<br />
 			Architecture: {spec()?.architecture}
 			<br />

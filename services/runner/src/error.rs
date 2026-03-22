@@ -20,6 +20,10 @@ pub enum RunnerCliError {
     #[error("Invalid disk size: {0} MiB")]
     InvalidDisk(u64),
 
+    #[cfg(feature = "plus")]
+    #[error("Failed to install default crypto provider: {0}")]
+    CryptoProvider(String),
+
     #[cfg(not(feature = "plus"))]
     #[error("Runner requires the `plus` feature")]
     NoPlusFeature,

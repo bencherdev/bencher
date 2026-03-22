@@ -161,6 +161,67 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     Ok(())
 }
 
+/// Workspace created by [`prepare_oci_workspace`]: temp directory, work/unpack
+/// paths, and the resolved OCI configuration.
+pub(crate) struct OciWorkspace {
+    /// Held for RAII — dropping this removes the temporary directory.
+    #[expect(dead_code, reason = "kept alive for RAII cleanup of temp directory")]
+    pub temp_dir: tempfile::TempDir,
+    /// Base working directory inside the temp dir.
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(dead_code, reason = "only read by vm_execute on Linux")
+    )]
+    pub work_dir: Utf8PathBuf,
+    pub unpack_dir: Utf8PathBuf,
+    pub oci_config: ResolvedOciConfig,
+}
+
+/// Prepare a temporary OCI workspace: create temp dir, resolve the OCI image,
+/// parse its config, and unpack the layers.
+///
+/// Shared between `local_execute` and `vm_execute` to avoid duplicating this
+/// setup sequence.
+pub(crate) fn prepare_oci_workspace(config: &crate::Config) -> Result<OciWorkspace, RunnerError> {
+    // Create a temporary work directory
+    let temp_dir = tempfile::tempdir().map_err(crate::error::ConfigError::TempDir)?;
+    let work_dir =
+        Utf8Path::from_path(temp_dir.path()).ok_or(crate::error::ConfigError::NonUtf8TempDir)?;
+    let work_dir = work_dir.to_path_buf();
+
+    let unpack_dir = work_dir.join("rootfs");
+
+    // Resolve OCI image (local path or pull from registry)
+    let oci_image_path = resolve_oci_image(
+        &config.oci_image,
+        config.token.as_ref().map(AsRef::as_ref),
+        config.registry_scheme,
+        &work_dir,
+    )?;
+
+    // Parse OCI image config to get the command
+    println!("Parsing OCI image config...");
+    let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
+    let oci_config = resolve_oci_config(&oci_image, config)?;
+
+    println!("  Command: {}", oci_config.command.join(" "));
+    println!("  WorkDir: {}", oci_config.working_dir);
+    if !oci_config.env.is_empty() {
+        println!("  Env: {} variables", oci_config.env.len());
+    }
+
+    // Unpack OCI image layers into the rootfs directory
+    println!("Unpacking OCI image to {unpack_dir}...");
+    bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
+
+    Ok(OciWorkspace {
+        temp_dir,
+        work_dir,
+        unpack_dir,
+        oci_config,
+    })
+}
+
 /// Resolve an OCI image source to a local path.
 ///
 /// If the source is a local path that exists, returns it directly.

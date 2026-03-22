@@ -24,9 +24,8 @@ fn exec() -> Result<(), error::RunnerCliError> {
     use rustls::crypto::ring;
 
     let crypto_provider = ring::default_provider();
-    #[expect(clippy::use_debug)]
     if let Err(err) = crypto_provider.install_default() {
-        eprintln!("Failed to install default crypto provider: {err:?}");
+        return Err(error::RunnerCliError::CryptoProvider(format!("{err:?}")));
     }
 
     let runner = runner::Runner::new()?;
