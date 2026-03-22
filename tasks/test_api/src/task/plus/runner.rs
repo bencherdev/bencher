@@ -153,6 +153,12 @@ impl RunnerTest {
                 .args(["build", "--bin", "runner"])
                 .status()?;
             anyhow::ensure!(build_status.success(), "Failed to build runner binary");
+
+            println!("Building bencher CLI...");
+            let build_status = Command::new("cargo")
+                .args(["build", "--bin", "bencher"])
+                .status()?;
+            anyhow::ensure!(build_status.success(), "Failed to build bencher CLI");
         }
 
         // Start the Firecracker runner daemon only when KVM is available
@@ -279,14 +285,18 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> an
         registry_host(host)?
     };
 
-    // Step 1: Pull the prebuilt Docker image
-    println!("Step 1: Pulling Docker image {DOCKER_IMAGE}...");
-    docker_pull(DOCKER_IMAGE)?;
-
-    // Step 2: Tag the image for the local registry
     let local_ref = format!("{registry}/{PROJECT_SLUG}:{IMAGE_TAG}");
-    println!("Step 2: Tagging image as {local_ref}...");
-    docker_tag(DOCKER_IMAGE, &local_ref)?;
+    if cfg!(target_os = "macos") {
+        // Build a local OCI image containing the macOS-native bencher binary
+        println!("Step 1: Building local Docker image from macOS bencher binary...");
+        docker_build_local_image(&local_ref)?;
+    } else {
+        // Pull the prebuilt Linux Docker image
+        println!("Step 1: Pulling Docker image {DOCKER_IMAGE}...");
+        docker_pull(DOCKER_IMAGE)?;
+        println!("Step 2: Tagging image as {local_ref}...");
+        docker_tag(DOCKER_IMAGE, &local_ref)?;
+    }
 
     // Step 3: Log in to the local OCI registry
     println!("Step 3: Logging in to {registry}...");
@@ -300,13 +310,7 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> an
     println!("Step 5: Submitting job via bencher run --image...");
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
-    // On macOS in debug mode, the runner executes on the host directly, so the
-    // OCI image's entrypoint (/usr/bin/bencher) won't exist. Override it with
-    // the locally built binary.
-    let bencher_bin = assert_cmd::cargo::cargo_bin(BENCHER_CMD)
-        .to_string_lossy()
-        .to_string();
-    let mut args = vec![
+    let args = [
         "run",
         HOST_ARG,
         host,
@@ -329,12 +333,10 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> an
         "120",
         "--poll-interval",
         "2",
+        "--exec",
+        "mock",
     ];
-    if cfg!(target_os = "macos") {
-        args.extend(["--entrypoint", &bencher_bin]);
-    }
-    args.extend(["--exec", "mock"]);
-    cmd.args(&args).current_dir(CLI_DIR);
+    cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
     anyhow::ensure!(
         output.status.success(),
@@ -366,10 +368,7 @@ fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     // The image should already be pushed from the first test
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
-    let bencher_bin = assert_cmd::cargo::cargo_bin(BENCHER_CMD)
-        .to_string_lossy()
-        .to_string();
-    let mut args = vec![
+    let args = [
         "run",
         HOST_ARG,
         host,
@@ -392,12 +391,10 @@ fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
         "120",
         "--poll-interval",
         "2",
+        "--exec",
+        "mock",
     ];
-    if cfg!(target_os = "macos") {
-        args.extend(["--entrypoint", &bencher_bin]);
-    }
-    args.extend(["--exec", "mock"]);
-    cmd.args(&args).current_dir(CLI_DIR);
+    cmd.args(args).current_dir(CLI_DIR);
     let output = cmd.output()?;
     anyhow::ensure!(
         output.status.success(),
@@ -557,6 +554,31 @@ fn docker_login(registry: &str, username: &str, password: &str) -> anyhow::Resul
 fn docker_push(image: &str) -> anyhow::Result<()> {
     let status = Command::new("docker").args(["push", image]).status()?;
     anyhow::ensure!(status.success(), "docker push {image} failed: {status}");
+    Ok(())
+}
+
+/// Build a Docker image containing the locally-compiled bencher binary.
+///
+/// Creates a minimal `FROM scratch` image with the binary at `/usr/bin/bencher`,
+/// matching the production image layout. This allows macOS tests to use a native
+/// binary inside the OCI image instead of overriding the entrypoint.
+fn docker_build_local_image(tag: &str) -> anyhow::Result<()> {
+    let bencher_bin = assert_cmd::cargo::cargo_bin(BENCHER_CMD);
+    let build_context = bencher_bin.parent().expect("binary should have parent dir");
+
+    let dockerfile =
+        "FROM scratch\nCOPY bencher /usr/bin/bencher\nENTRYPOINT [\"/usr/bin/bencher\"]\n";
+    let dockerfile_path = std::env::temp_dir().join("Dockerfile.bencher-runner-test");
+    std::fs::write(&dockerfile_path, dockerfile)?;
+
+    let status = Command::new("docker")
+        .args(["build", "-t", tag, "-f"])
+        .arg(&dockerfile_path)
+        .arg(build_context)
+        .status()?;
+
+    drop(std::fs::remove_file(&dockerfile_path));
+    anyhow::ensure!(status.success(), "docker build failed");
     Ok(())
 }
 
