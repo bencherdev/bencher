@@ -1,4 +1,8 @@
-#![expect(clippy::print_stdout, clippy::print_stderr)]
+#![expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "runner prints progress and diagnostic output"
+)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -23,38 +27,6 @@ pub struct RunOutput {
     /// Optional output files: path → contents.
     pub output_files: Option<HashMap<Utf8PathBuf, Vec<u8>>>,
 }
-
-/// Environment variables that are blocked for security reasons.
-///
-/// These variables could be used to inject malicious code or libraries
-/// into the guest process if passed through from the OCI image.
-const BLOCKED_ENV_VARS: &[&str] = &[
-    // Dynamic linker variables - could load malicious libraries
-    "LD_PRELOAD",
-    "LD_LIBRARY_PATH",
-    "LD_AUDIT",
-    "LD_DEBUG",
-    "LD_DEBUG_OUTPUT",
-    "LD_DYNAMIC_WEAK",
-    "LD_HWCAP_MASK",
-    "LD_ORIGIN_PATH",
-    "LD_POINTER_GUARD",
-    "LD_PROFILE",
-    "LD_PROFILE_OUTPUT",
-    "LD_SHOW_AUXV",
-    "LD_USE_LOAD_BIAS",
-    "LD_BIND_NOW",
-    "LD_BIND_NOT",
-    // glibc malloc hooks
-    "MALLOC_CHECK_",
-    "MALLOC_TRACE",
-    // Other potentially dangerous variables
-    "BASH_ENV",
-    "ENV",
-    "CDPATH",
-    "GLOBIGNORE",
-    "IFS",
-];
 
 /// Arguments for the `run` subcommand.
 #[derive(Debug, Clone)]
@@ -247,7 +219,7 @@ pub struct ResolvedOciConfig {
     pub command: Vec<String>,
     /// The working directory from the OCI image config.
     pub working_dir: String,
-    /// Environment variables (OCI image defaults merged with config overrides, sanitized).
+    /// Environment variables (OCI image defaults merged with config overrides).
     pub env: Vec<(String, String)>,
 }
 
@@ -285,7 +257,7 @@ pub fn resolve_oci_config(
         .unwrap_or("/")
         .to_owned();
 
-    // Apply env overrides (Config env merged on top of OCI env, then sanitize)
+    // Apply env overrides (Config env merged on top of OCI env)
     let mut env = oci_image.env();
     if let Some(config_env) = &config.env {
         for (key, value) in config_env {
@@ -293,8 +265,6 @@ pub fn resolve_oci_config(
             env.push((key.clone(), value.clone()));
         }
     }
-    let env = sanitize_env(&env);
-
     if command.is_empty() {
         return Err(crate::error::ConfigError::MissingCommand.into());
     }
@@ -340,140 +310,5 @@ pub fn execute(
             }
         },
         None => crate::local::local_execute(config, cancel_flag),
-    }
-}
-
-/// Sanitize environment variables by removing dangerous ones.
-///
-/// This filters out environment variables that could be used to inject
-/// malicious code into the guest process, such as `LD_PRELOAD`.
-pub(crate) fn sanitize_env(env: &[(String, String)]) -> Vec<(String, String)> {
-    let mut sanitized = Vec::with_capacity(env.len());
-    let mut blocked_count = 0;
-
-    for (key, value) in env {
-        let key_upper = key.to_uppercase();
-        let is_blocked = BLOCKED_ENV_VARS.iter().any(|blocked| {
-            key_upper == *blocked
-                || (key_upper.starts_with(blocked)
-                    && key_upper.as_bytes().get(blocked.len()) == Some(&b'_'))
-        });
-
-        if is_blocked {
-            blocked_count += 1;
-        } else {
-            sanitized.push((key.clone(), value.clone()));
-        }
-    }
-
-    if blocked_count > 0 {
-        println!("  Blocked {blocked_count} dangerous environment variable(s)");
-    }
-
-    sanitized
-}
-
-#[cfg(test)]
-#[expect(clippy::indexing_slicing, clippy::str_to_string)]
-mod tests {
-    use super::*;
-
-    fn env(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
-        pairs
-            .iter()
-            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
-            .collect()
-    }
-
-    #[test]
-    fn sanitize_env_passes_safe_vars() {
-        let input = env(&[("PATH", "/usr/bin"), ("HOME", "/root"), ("LANG", "C")]);
-        let result = sanitize_env(&input);
-        assert_eq!(result.len(), 3);
-        assert_eq!(result[0].0, "PATH");
-    }
-
-    #[test]
-    fn sanitize_env_blocks_ld_preload() {
-        let input = env(&[("LD_PRELOAD", "/evil.so"), ("PATH", "/usr/bin")]);
-        let result = sanitize_env(&input);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].0, "PATH");
-    }
-
-    #[test]
-    fn sanitize_env_blocks_ld_library_path() {
-        let input = env(&[("LD_LIBRARY_PATH", "/tmp"), ("HOME", "/root")]);
-        let result = sanitize_env(&input);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].0, "HOME");
-    }
-
-    #[test]
-    fn sanitize_env_blocks_all_known_dangerous_vars() {
-        let input = env(&[
-            ("LD_PRELOAD", "x"),
-            ("LD_LIBRARY_PATH", "x"),
-            ("LD_AUDIT", "x"),
-            ("LD_DEBUG", "x"),
-            ("LD_DEBUG_OUTPUT", "x"),
-            ("LD_DYNAMIC_WEAK", "x"),
-            ("LD_HWCAP_MASK", "x"),
-            ("LD_ORIGIN_PATH", "x"),
-            ("LD_POINTER_GUARD", "x"),
-            ("LD_PROFILE", "x"),
-            ("LD_PROFILE_OUTPUT", "x"),
-            ("LD_SHOW_AUXV", "x"),
-            ("LD_USE_LOAD_BIAS", "x"),
-            ("LD_BIND_NOW", "x"),
-            ("LD_BIND_NOT", "x"),
-            ("MALLOC_CHECK_", "x"),
-            ("MALLOC_TRACE", "x"),
-            ("BASH_ENV", "x"),
-            ("ENV", "x"),
-            ("CDPATH", "x"),
-            ("GLOBIGNORE", "x"),
-            ("IFS", "x"),
-        ]);
-        let result = sanitize_env(&input);
-        assert!(
-            result.is_empty(),
-            "all dangerous vars should be blocked, got: {result:?}"
-        );
-    }
-
-    #[test]
-    fn sanitize_env_case_insensitive() {
-        let input = env(&[("ld_preload", "/evil.so"), ("Ld_Library_Path", "/tmp")]);
-        let result = sanitize_env(&input);
-        assert!(
-            result.is_empty(),
-            "case-insensitive matching should block lowercase variants"
-        );
-    }
-
-    #[test]
-    fn sanitize_env_blocks_prefixed_variants() {
-        let input = env(&[("LD_PRELOAD_32", "/evil.so"), ("MALLOC_CHECK__FOO", "1")]);
-        let result = sanitize_env(&input);
-        assert!(
-            result.is_empty(),
-            "prefix-suffixed variants should be blocked"
-        );
-    }
-
-    #[test]
-    fn sanitize_env_empty_input() {
-        let result = sanitize_env(&[]);
-        assert!(result.is_empty());
-    }
-
-    #[test]
-    fn sanitize_env_preserves_order() {
-        let input = env(&[("A", "1"), ("B", "2"), ("C", "3")]);
-        let result = sanitize_env(&input);
-        assert_eq!(result[0].0, "A");
-        assert_eq!(result[1].0, "B");
-        assert_eq!(result[2].0, "C");
     }
 }

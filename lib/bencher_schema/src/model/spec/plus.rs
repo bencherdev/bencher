@@ -29,7 +29,7 @@ pub struct QuerySpec {
     pub uuid: SpecUuid,
     pub name: ResourceName,
     pub slug: SpecSlug,
-    pub os: Option<OperatingSystem>,
+    pub os: OperatingSystem,
     pub architecture: Architecture,
     pub sandbox: Option<Sandbox>,
     pub cpu: Cpu,
@@ -51,21 +51,38 @@ impl QuerySpec {
     fn_from_resource_id!(spec, Spec, SpecResourceId);
 
     pub fn into_json(self) -> JsonSpec {
+        let Self {
+            id: _,
+            uuid,
+            name,
+            slug,
+            os,
+            architecture,
+            sandbox,
+            cpu,
+            memory,
+            disk,
+            network,
+            fallback,
+            created,
+            modified,
+            archived,
+        } = self;
         JsonSpec {
-            uuid: self.uuid,
-            name: self.name,
-            slug: self.slug,
-            os: self.os,
-            architecture: self.architecture,
-            sandbox: self.sandbox,
-            cpu: self.cpu,
-            memory: self.memory,
-            disk: self.disk,
-            network: self.network,
-            fallback: self.fallback,
-            created: self.created,
-            modified: self.modified,
-            archived: self.archived,
+            uuid,
+            name,
+            slug,
+            os,
+            architecture,
+            sandbox,
+            cpu,
+            memory,
+            disk,
+            network,
+            fallback,
+            created,
+            modified,
+            archived,
         }
     }
 
@@ -109,7 +126,7 @@ pub struct InsertSpec {
     pub uuid: SpecUuid,
     pub name: ResourceName,
     pub slug: SpecSlug,
-    pub os: Option<OperatingSystem>,
+    pub os: OperatingSystem,
     pub architecture: Architecture,
     pub sandbox: Option<Sandbox>,
     pub cpu: Cpu,
@@ -147,8 +164,6 @@ impl InsertSpec {
 pub struct UpdateSpec {
     pub name: Option<ResourceName>,
     pub slug: Option<SpecSlug>,
-    pub os: Option<Option<OperatingSystem>>,
-    pub sandbox: Option<Option<Sandbox>>,
     pub fallback: Option<Option<DateTime>>,
     pub modified: Option<DateTime>,
     pub archived: Option<Option<DateTime>>,
@@ -159,8 +174,6 @@ impl UpdateSpec {
         let JsonUpdateSpec {
             name,
             slug,
-            os,
-            sandbox,
             fallback,
             archived,
         } = update;
@@ -174,8 +187,6 @@ impl UpdateSpec {
         Self {
             name,
             slug,
-            os,
-            sandbox,
             fallback,
             archived,
             modified: Some(now),

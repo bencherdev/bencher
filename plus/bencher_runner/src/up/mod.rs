@@ -71,6 +71,7 @@ impl Up {
     }
 
     #[expect(clippy::print_stdout)]
+    #[expect(unused_mut, reason = "mut needed on Linux for CPU layout detection")]
     pub fn run(mut self) -> Result<(), UpError> {
         install_signal_handlers();
 

@@ -11,7 +11,7 @@ use crate::{
 pub struct Create {
     pub name: ResourceName,
     pub slug: Option<SpecSlug>,
-    pub os: Option<OperatingSystem>,
+    pub os: OperatingSystem,
     pub architecture: Architecture,
     pub sandbox: Option<Sandbox>,
     pub cpu: u32,
@@ -73,7 +73,7 @@ impl From<Create> for JsonNewSpec {
         Self {
             name: name.into(),
             slug: slug.map(Into::into),
-            os: os.map(Into::into),
+            os: os.into(),
             architecture: architecture.into(),
             sandbox: sandbox.map(Into::into),
             cpu: cpu.into(),

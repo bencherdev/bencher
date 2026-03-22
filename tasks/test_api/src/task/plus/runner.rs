@@ -60,6 +60,7 @@ impl RunnerTest {
         }
     }
 
+    #[expect(clippy::too_many_lines)]
     fn exec_with_daemon(&self) -> anyhow::Result<()> {
         if !docker_available() {
             println!("Skipping runner test: Docker not available");
@@ -89,6 +90,27 @@ impl RunnerTest {
             String::from_utf8_lossy(&output.stderr)
         );
         let runner_token: bencher_json::JsonRunnerToken = serde_json::from_slice(&output.stdout)?;
+
+        // Rotate the no-sandbox runner token
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "token",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            self.admin_token.as_ref(),
+            "test-runner-no-sandbox",
+        ])
+        .current_dir(CLI_DIR);
+        let output = cmd.output()?;
+        anyhow::ensure!(
+            output.status.success(),
+            "Failed to rotate no-sandbox runner token: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let nosandbox_runner_token: bencher_json::JsonRunnerToken =
+            serde_json::from_slice(&output.stdout)?;
 
         // On Linux with KVM, build bencher-init for the musl target so it can
         // be bundled into the runner binary. On other platforms (e.g. macOS),
@@ -153,15 +175,51 @@ impl RunnerTest {
             std::time::Duration::from_secs(30),
         );
 
+        // Start the no-sandbox runner daemon
+        println!("Starting no-sandbox runner daemon...");
+        let mut nosandbox_child = Command::cargo_bin("runner")?;
+        let mut nosandbox_child = nosandbox_child
+            .args([
+                "up",
+                HOST_ARG,
+                host,
+                TOKEN_ARG,
+                nosandbox_runner_token.token.as_ref(),
+                "--runner",
+                "test-runner-no-sandbox",
+                "--danger-allow-no-sandbox",
+            ])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::inherit())
+            .spawn()?;
+
+        let nosandbox_reader_handle = wait_for_stdout_ready(
+            &mut nosandbox_child,
+            "Polling for jobs",
+            "nosandbox-runner",
+            std::time::Duration::from_secs(30),
+        );
+
         // Run the actual runner test
         let result = run_runner_test(&self.url, &self.username, &self.token);
 
-        // Always kill the runner daemon, even if the test failed
+        // Run the no-sandbox runner test
+        let nosandbox_result = if result.is_ok() {
+            run_nosandbox_runner_test(&self.url, &self.username, &self.token)
+        } else {
+            Ok(())
+        };
+
+        // Always kill both runner daemons, even if the test failed
         let _kill = runner_child.kill();
         let _wait = runner_child.wait();
         let _join = reader_handle.join();
+        let _kill = nosandbox_child.kill();
+        let _wait = nosandbox_child.wait();
+        let _join = nosandbox_reader_handle.join();
 
         result?;
+        nosandbox_result?;
         println!("=== Runner Daemon Test Passed ===");
         Ok(())
     }
@@ -276,6 +334,80 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result
     assert!(json.job.is_some(), "Expected job UUID in report: {json:?}");
 
     println!("Runner smoke test passed!");
+    Ok(())
+}
+
+/// Run the no-sandbox runner smoke test variant.
+///
+/// Similar to `run_runner_test` but submits to the `no-sandbox-spec` spec
+/// which does not use Firecracker sandboxing.
+fn run_nosandbox_runner_test(url: &Url, _username: &str, token: &Jwt) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("Running no-sandbox runner smoke test against: {host}");
+
+    let _registry = if cfg!(target_os = "macos") {
+        let port = registry_host(host)?
+            .rsplit_once(':')
+            .and_then(|(_, p)| p.parse::<u16>().ok())
+            .unwrap_or(bencher_json::BENCHER_API_PORT);
+        format!("host.docker.internal:{port}")
+    } else {
+        registry_host(host)?
+    };
+
+    // The image should already be pushed from the first test
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
+    let bencher_bin = assert_cmd::cargo::cargo_bin(BENCHER_CMD)
+        .to_string_lossy()
+        .to_string();
+    let mut args = vec![
+        "run",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        "--project",
+        PROJECT_SLUG,
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+        "--image",
+        &image_ref,
+        "--spec",
+        "no-sandbox-spec",
+        "--format",
+        "json",
+        "--quiet",
+        "--job-timeout",
+        "120",
+        "--poll-interval",
+        "2",
+    ];
+    if cfg!(target_os = "macos") {
+        args.extend(["--entrypoint", &bencher_bin]);
+    }
+    args.extend(["--exec", "mock"]);
+    cmd.args(&args).current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run (no-sandbox) failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(json.project.slug.to_string(), PROJECT_SLUG);
+    #[cfg(feature = "plus")]
+    assert!(
+        json.job.is_some(),
+        "Expected job UUID in no-sandbox report: {json:?}"
+    );
+
+    println!("No-sandbox runner smoke test passed!");
     Ok(())
 }
 

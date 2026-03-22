@@ -88,6 +88,12 @@ pub enum ConfigError {
         range: &'static str,
     },
 
-    #[error("Benchmark {kind}: {message}")]
-    Runtime { kind: &'static str, message: String },
+    #[error("Benchmark timeout: {0}")]
+    Timeout(String),
+
+    #[error("Benchmark canceled: {0}")]
+    Canceled(String),
+
+    #[error("Benchmark setup: {0}")]
+    Setup(String),
 }

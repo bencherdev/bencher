@@ -1,5 +1,5 @@
 use bencher_client::types::JsonUpdateSpec;
-use bencher_json::{OperatingSystem, ResourceName, Sandbox, SpecResourceId, SpecSlug};
+use bencher_json::{ResourceName, SpecResourceId, SpecSlug};
 
 use crate::{
     CliError,
@@ -12,8 +12,6 @@ pub struct Update {
     pub spec: SpecResourceId,
     pub name: Option<ResourceName>,
     pub slug: Option<SpecSlug>,
-    pub os: Option<OperatingSystem>,
-    pub sandbox: Option<Sandbox>,
     pub fallback: Option<bool>,
     pub archived: Option<bool>,
     pub backend: AuthBackend,
@@ -27,8 +25,6 @@ impl TryFrom<CliSpecUpdate> for Update {
             spec,
             name,
             slug,
-            os,
-            sandbox,
             fallback,
             archived,
             backend,
@@ -37,8 +33,6 @@ impl TryFrom<CliSpecUpdate> for Update {
             spec,
             name,
             slug,
-            os,
-            sandbox,
             fallback,
             archived: archived.into(),
             backend: backend.try_into()?,
@@ -51,8 +45,6 @@ impl From<Update> for JsonUpdateSpec {
         let Update {
             name,
             slug,
-            os,
-            sandbox,
             fallback,
             archived,
             ..
@@ -60,8 +52,6 @@ impl From<Update> for JsonUpdateSpec {
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
-            os: os.map(Into::into),
-            sandbox: sandbox.map(Into::into),
             fallback,
             archived,
         }

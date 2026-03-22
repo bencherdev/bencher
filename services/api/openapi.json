@@ -12956,7 +12956,6 @@
             "type": "boolean"
           },
           "os": {
-            "nullable": true,
             "description": "Operating system",
             "allOf": [
               {
@@ -12988,7 +12987,8 @@
           "cpu",
           "disk",
           "memory",
-          "name"
+          "name",
+          "os"
         ]
       },
       "JsonNewSso": {
@@ -15328,7 +15328,6 @@
             "type": "boolean"
           },
           "os": {
-            "nullable": true,
             "description": "Operating system",
             "allOf": [
               {
@@ -15361,6 +15360,7 @@
           "modified",
           "name",
           "network",
+          "os",
           "slug",
           "uuid"
         ]
@@ -16103,24 +16103,6 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceName"
-              }
-            ]
-          },
-          "os": {
-            "nullable": true,
-            "description": "The new operating system for the spec. Set to null to clear.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/OperatingSystem"
-              }
-            ]
-          },
-          "sandbox": {
-            "nullable": true,
-            "description": "The new sandbox type for the spec. Set to null to clear.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Sandbox"
               }
             ]
           },

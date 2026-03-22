@@ -9,6 +9,23 @@ use super::UpConfig;
 use super::state_machine::JobFinishResult;
 use super::websocket::JobChannel;
 
+/// Check whether the sandbox configuration is allowed by the runner.
+///
+/// Returns `Ok(())` if the job may proceed, or `Err` with a human-readable
+/// reason when the runner is not configured to accept the requested sandbox.
+fn check_sandbox_allowed(
+    sandbox: Option<bencher_json::Sandbox>,
+    allow_no_sandbox: bool,
+) -> Result<(), &'static str> {
+    match sandbox {
+        Some(bencher_json::Sandbox::Firecracker) => Ok(()),
+        None if allow_no_sandbox => Ok(()),
+        None => Err(
+            "Job requires non-sandboxed execution but runner was not started with --danger-allow-no-sandbox",
+        ),
+    }
+}
+
 #[expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
 pub fn execute_job(
     config: &UpConfig,
@@ -16,15 +33,11 @@ pub fn execute_job(
     ws: &Arc<Mutex<JobChannel>>,
 ) -> JobFinishResult {
     // Only allow jobs with a known sandbox type or explicit opt-in for non-sandboxed.
-    match job.spec.sandbox {
-        Some(bencher_json::Sandbox::Firecracker) => {},
-        None if config.allow_no_sandbox => {},
-        None => {
-            return JobFinishResult::Failed {
-                error: "Job requires non-sandboxed execution but runner was not started with --danger-allow-no-sandbox".to_owned(),
-                results: Vec::new(),
-            };
-        },
+    if let Err(reason) = check_sandbox_allowed(job.spec.sandbox, config.allow_no_sandbox) {
+        return JobFinishResult::Failed {
+            error: reason.to_owned(),
+            results: Vec::new(),
+        };
     }
 
     // Build runner Config from claimed job spec (all values from job spec, no defaults)
@@ -312,6 +325,7 @@ mod tests {
                 "uuid": "00000000-0000-0000-0000-000000000001",
                 "name": "test-spec",
                 "slug": "test-spec",
+                "os": "linux",
                 "architecture": "x86_64",
                 "cpu": cpu,
                 "memory": memory_bytes,
@@ -416,6 +430,7 @@ mod tests {
                 "uuid": "00000000-0000-0000-0000-000000000001",
                 "name": "test-spec",
                 "slug": "test-spec",
+                "os": "linux",
                 "architecture": "x86_64",
                 "cpu": 1,
                 "memory": mib_to_bytes(512),
@@ -612,5 +627,23 @@ mod tests {
         let result = build_config_from_job(&up_config, &job);
         // CPU layout should not be passed through when no isolation is possible
         assert!(result.cpu_layout.is_none());
+    }
+
+    // --- check_sandbox_allowed ---
+
+    #[test]
+    fn sandbox_firecracker_always_allowed() {
+        assert!(check_sandbox_allowed(Some(bencher_json::Sandbox::Firecracker), false).is_ok());
+        assert!(check_sandbox_allowed(Some(bencher_json::Sandbox::Firecracker), true).is_ok());
+    }
+
+    #[test]
+    fn sandbox_none_rejected_without_flag() {
+        assert!(check_sandbox_allowed(None, false).is_err());
+    }
+
+    #[test]
+    fn sandbox_none_allowed_with_flag() {
+        assert!(check_sandbox_allowed(None, true).is_ok());
     }
 }

@@ -66,7 +66,7 @@ pub struct CliSpecCreate {
 
     /// Operating system (linux, macos, windows)
     #[clap(long)]
-    pub os: Option<OperatingSystem>,
+    pub os: OperatingSystem,
 
     /// CPU architecture
     #[clap(long)]
@@ -121,14 +121,6 @@ pub struct CliSpecUpdate {
     /// Spec slug
     #[clap(long)]
     pub slug: Option<SpecSlug>,
-
-    /// Operating system (linux, macos, windows)
-    #[clap(long)]
-    pub os: Option<OperatingSystem>,
-
-    /// Sandbox type (firecracker)
-    #[clap(long)]
-    pub sandbox: Option<Sandbox>,
 
     /// Set or unset as the fallback spec
     #[clap(long)]

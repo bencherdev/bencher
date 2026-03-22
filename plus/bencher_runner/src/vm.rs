@@ -1,6 +1,6 @@
 //! Linux VM execution — runs benchmarks in Firecracker microVMs.
 
-#![expect(clippy::print_stdout)]
+#![expect(clippy::print_stdout, reason = "VM executor prints progress output")]
 
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;

@@ -91,7 +91,7 @@ export interface JsonSpec {
 	name: ResourceName;
 	slug: Slug;
 	/** Operating system */
-	os?: OperatingSystem;
+	os: OperatingSystem;
 	/** CPU architecture */
 	architecture: Architecture;
 	/** Sandbox type */
@@ -720,7 +720,7 @@ export interface JsonNewSpec {
 	 */
 	slug?: Slug;
 	/** Operating system */
-	os?: OperatingSystem;
+	os: OperatingSystem;
 	/** CPU architecture */
 	architecture: Architecture;
 	/** Sandbox type (e.g. firecracker). If not provided, the benchmark runs without a sandbox. */
@@ -1013,10 +1013,6 @@ export interface JsonUpdateSpec {
 	name?: ResourceName;
 	/** The new slug for the spec. */
 	slug?: Slug;
-	/** The new operating system for the spec. Set to null to clear. */
-	os?: OperatingSystem | null;
-	/** The new sandbox type for the spec. Set to null to clear. */
-	sandbox?: Sandbox | null;
 	/** Set whether the spec is the fallback spec. */
 	fallback?: boolean;
 	/** Set whether the spec is archived. */

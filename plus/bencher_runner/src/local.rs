@@ -11,7 +11,11 @@
 //! The `--danger-allow-no-sandbox` flag on `runner up` (or omitting `--sandbox`
 //! on `runner run`) gates this mode to prevent accidental use.
 
-#![expect(clippy::print_stdout, clippy::print_stderr)]
+#![expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "local executor prints progress and diagnostic output"
+)]
 
 use std::collections::HashMap;
 use std::process::Command;
@@ -68,13 +72,9 @@ pub fn local_execute(
 
     // Canonicalize unpack_dir *after* unpacking so all symlinks within the
     // rootfs are materialized and we have a stable base for containment checks.
-    let canonical_unpack_dir =
-        unpack_dir
-            .canonicalize_utf8()
-            .map_err(|e| crate::error::ConfigError::Runtime {
-                kind: "setup",
-                message: format!("Failed to canonicalize unpack dir: {e}"),
-            })?;
+    let canonical_unpack_dir = unpack_dir.canonicalize_utf8().map_err(|e| {
+        crate::error::ConfigError::Setup(format!("Failed to canonicalize unpack dir: {e}"))
+    })?;
 
     // Step 4: Execute command from the unpacked rootfs
     println!("Running command on host...");
@@ -104,12 +104,9 @@ pub fn local_execute(
     // Canonicalize and validate it stays within the rootfs.
     let cwd = canonical_unpack_dir.join(oci_config.working_dir.trim_start_matches('/'));
     if cwd.exists() {
-        let canonical_cwd =
-            cwd.canonicalize_utf8()
-                .map_err(|e| crate::error::ConfigError::Runtime {
-                    kind: "setup",
-                    message: format!("Failed to canonicalize working dir: {e}"),
-                })?;
+        let canonical_cwd = cwd.canonicalize_utf8().map_err(|e| {
+            crate::error::ConfigError::Setup(format!("Failed to canonicalize working dir: {e}"))
+        })?;
         if canonical_cwd.starts_with(&canonical_unpack_dir) {
             cmd.current_dir(canonical_cwd.as_std_path());
         } else {
@@ -149,10 +146,9 @@ struct WaitOutput {
 
 /// Wait for a child process with timeout and cancellation support.
 ///
-/// Uses a dedicated `exited` flag to avoid the PID reuse window: once the
-/// wait thread observes that the child has exited, it sets the flag _before_
-/// returning. The polling loop checks the flag _before_ attempting to signal,
-/// ensuring we never send SIGKILL to a recycled PID.
+/// Spawns a background thread to call `wait_with_output`. The main thread
+/// polls for timeout or cancellation, killing the child process if either
+/// triggers. On timeout/cancel the thread is joined to ensure cleanup.
 fn wait_with_timeout(
     child: std::process::Child,
     timeout_secs: u64,
@@ -165,16 +161,7 @@ fn wait_with_timeout(
     // the process even after `wait_with_output` takes ownership.
     let pid = child.id();
 
-    // Flag set by the wait thread once `wait_with_output` returns, closing the
-    // PID reuse window: we never signal the PID after this flag is set.
-    let exited = Arc::new(AtomicBool::new(false));
-    let exited_clone = Arc::clone(&exited);
-
-    let handle = std::thread::spawn(move || {
-        let result = child.wait_with_output();
-        exited_clone.store(true, Ordering::Release);
-        result
-    });
+    let handle = std::thread::spawn(move || child.wait_with_output());
 
     // Poll for completion, timeout, or cancellation
     loop {
@@ -182,36 +169,46 @@ fn wait_with_timeout(
             break;
         }
 
-        // Only signal if the child has not yet exited (avoids PID reuse).
-        if start.elapsed() > timeout && !exited.load(Ordering::Acquire) {
+        if start.elapsed() > timeout {
             kill_by_pid(pid);
-            return Err(crate::error::ConfigError::Runtime {
-                kind: "timeout",
-                message: format!("process did not complete within {timeout_secs}s"),
-            }
+            drop(handle.join());
+            return Err(crate::error::ConfigError::Timeout(format!(
+                "process did not complete within {timeout_secs}s"
+            ))
             .into());
         }
 
         if let Some(flag) = cancel_flag
             && flag.load(Ordering::SeqCst)
-            && !exited.load(Ordering::Acquire)
         {
             kill_by_pid(pid);
-            return Err(crate::error::ConfigError::Runtime {
-                kind: "canceled",
-                message: "job was canceled".to_owned(),
-            }
-            .into());
+            drop(handle.join());
+            return Err(crate::error::ConfigError::Canceled("job was canceled".to_owned()).into());
         }
 
         std::thread::sleep(Duration::from_millis(100));
     }
 
-    let output = handle
-        .join()
-        .map_err(|_panic| std::io::Error::other("child thread panicked"))??;
+    let output = handle.join().map_err(|panic| {
+        let msg = panic
+            .downcast_ref::<&str>()
+            .copied()
+            .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
+            .unwrap_or("unknown panic");
+        std::io::Error::other(format!("child thread panicked: {msg}"))
+    })??;
 
-    let exit_code = output.status.code().unwrap_or(-1);
+    let exit_code = output.status.code().unwrap_or_else(|| {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt as _;
+            output.status.signal().map_or(-1, |sig| 128 + sig)
+        }
+        #[cfg(not(unix))]
+        {
+            -1
+        }
+    });
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
 

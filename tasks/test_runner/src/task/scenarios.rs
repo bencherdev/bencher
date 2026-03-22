@@ -2099,7 +2099,7 @@ fn nosandbox_scenarios() -> Vec<Scenario> {
         Scenario {
             name: "nosandbox_basic",
             description: "Non-sandboxed: simple echo",
-            dockerfile: r#"FROM busybox
+            dockerfile: r#"FROM alpine:latest
 CMD ["echo", "hello from host"]"#,
             cancel_after_secs: None,
             sandboxed: false,
@@ -2119,7 +2119,7 @@ CMD ["echo", "hello from host"]"#,
         Scenario {
             name: "nosandbox_env",
             description: "Non-sandboxed: ENV variables from OCI config",
-            dockerfile: r#"FROM busybox
+            dockerfile: r#"FROM alpine:latest
 ENV MY_VAR=host_test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
             cancel_after_secs: None,
@@ -2140,7 +2140,7 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
         Scenario {
             name: "nosandbox_exit_code",
             description: "Non-sandboxed: non-zero exit code propagation",
-            dockerfile: r#"FROM busybox
+            dockerfile: r#"FROM alpine:latest
 CMD ["sh", "-c", "exit 42"]"#,
             cancel_after_secs: None,
             sandboxed: false,

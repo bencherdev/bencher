@@ -324,7 +324,7 @@ diesel::table! {
         uuid -> Text,
         name -> Text,
         slug -> Text,
-        os -> Nullable<Text>,
+        os -> Text,
         architecture -> Text,
         sandbox -> Nullable<Text>,
         cpu -> Integer,

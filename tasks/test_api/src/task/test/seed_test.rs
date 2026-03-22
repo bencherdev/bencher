@@ -1766,6 +1766,8 @@ impl SeedTest {
             admin_token,
             "--name",
             "Test Spec",
+            "--os",
+            "linux",
             "--architecture",
             "x86_64",
             "--cpu",
@@ -1902,6 +1904,67 @@ impl SeedTest {
             Some(spec_uuid),
             "Expected spec UUID to match"
         );
+
+        // Create a non-sandboxed spec
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "spec",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--name",
+            "No Sandbox Spec",
+            "--os",
+            "linux",
+            "--architecture",
+            "x86_64",
+            "--cpu",
+            "4",
+            "--memory",
+            "8589934592",
+            "--disk",
+            "1073741824",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _nosandbox_spec: bencher_json::JsonSpec =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // Create a second runner for non-sandboxed execution
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--name",
+            "Test Runner No Sandbox",
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _nosandbox_runner_token: bencher_json::JsonRunnerToken =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // Add spec to no-sandbox runner
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "runner",
+            "spec",
+            "add",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token,
+            "--spec",
+            "no-sandbox-spec",
+            "test-runner-no-sandbox",
+        ])
+        .current_dir(CLI_DIR);
+        cmd.assert().success();
 
         // Rotate runner token
         // cargo run -- runner token --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-runner

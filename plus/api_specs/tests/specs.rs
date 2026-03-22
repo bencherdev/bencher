@@ -18,6 +18,7 @@ async fn specs_create() {
 
     let body = serde_json::json!({
         "name": "Small x86",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -59,6 +60,7 @@ async fn specs_create_custom_slug() {
     let body = serde_json::json!({
         "name": "My Custom Spec",
         "slug": "my-custom-slug",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -92,6 +94,7 @@ async fn specs_create_forbidden_for_non_admin() {
 
     let body = serde_json::json!({
         "name": "Forbidden Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -123,6 +126,7 @@ async fn specs_list() {
     // Create a spec first
     let body = serde_json::json!({
         "name": "List Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -168,6 +172,7 @@ async fn specs_get_by_uuid() {
     // Create a spec
     let body = serde_json::json!({
         "name": "Get By UUID Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -213,6 +218,7 @@ async fn specs_get_by_slug() {
     // Create a spec
     let body = serde_json::json!({
         "name": "Slug Lookup Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -259,6 +265,7 @@ async fn specs_archive() {
     // Create a spec
     let body = serde_json::json!({
         "name": "Archive Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -322,6 +329,7 @@ async fn specs_list_with_archived() {
     // Create and archive a spec
     let body = serde_json::json!({
         "name": "Archived List Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -380,6 +388,7 @@ async fn specs_unarchive() {
     // Create and archive a spec
     let body = serde_json::json!({
         "name": "Unarchive Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -440,6 +449,7 @@ async fn specs_delete() {
     // Create a spec
     let body = serde_json::json!({
         "name": "Delete Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -497,6 +507,7 @@ async fn specs_delete_fails_when_in_use() {
     // Create a spec
     let body = serde_json::json!({
         "name": "FK Test Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -571,6 +582,7 @@ async fn specs_create_fallback() {
 
     let body = serde_json::json!({
         "name": "Fallback Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -603,6 +615,7 @@ async fn specs_create_without_fallback() {
 
     let body = serde_json::json!({
         "name": "No Fallback Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -634,6 +647,7 @@ async fn specs_create_fallback_false() {
 
     let body = serde_json::json!({
         "name": "Fallback False Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -670,6 +684,7 @@ async fn specs_create_fallback_replaces_existing() {
     // Create spec A with fallback
     let body_a = serde_json::json!({
         "name": "Fallback A",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -694,6 +709,7 @@ async fn specs_create_fallback_replaces_existing() {
     // Create spec B with fallback
     let body_b = serde_json::json!({
         "name": "Fallback B",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -742,6 +758,7 @@ async fn specs_update_set_fallback() {
     // Create spec without fallback
     let body = serde_json::json!({
         "name": "Set Fallback Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -789,6 +806,7 @@ async fn specs_update_unset_fallback() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "Unset Fallback Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -837,6 +855,7 @@ async fn specs_update_fallback_no_change() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "No Change Fallback",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -885,6 +904,7 @@ async fn specs_update_fallback_replaces_existing() {
     // Create spec A with fallback
     let body_a = serde_json::json!({
         "name": "Update Replace A",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -907,6 +927,7 @@ async fn specs_update_fallback_replaces_existing() {
     // Create spec B without fallback
     let body_b = serde_json::json!({
         "name": "Update Replace B",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -969,6 +990,7 @@ async fn specs_archive_clears_fallback() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "Archive Fallback",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1021,6 +1043,7 @@ async fn specs_delete_fallback_spec() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "Delete Fallback",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1056,6 +1079,7 @@ async fn specs_delete_fallback_spec() {
     // Create a new spec without fallback
     let body = serde_json::json!({
         "name": "After Delete Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1088,6 +1112,7 @@ async fn specs_list_includes_fallback_field() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "List Fallback Yes",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1111,6 +1136,7 @@ async fn specs_list_includes_fallback_field() {
     // Create spec without fallback
     let body = serde_json::json!({
         "name": "List Fallback No",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -1175,6 +1201,7 @@ async fn specs_create_fallback_replaces_archived_fallback() {
     // Create spec A with fallback
     let body_a = serde_json::json!({
         "name": "Archived FB A",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1220,6 +1247,7 @@ async fn specs_create_fallback_replaces_archived_fallback() {
     // Create spec B with fallback
     let body_b = serde_json::json!({
         "name": "Archived FB B",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -1268,6 +1296,7 @@ async fn specs_update_set_fallback_already_fallback() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "Idempotent FB",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1320,6 +1349,7 @@ async fn specs_update_unset_fallback_already_unset() {
     // Create spec without fallback
     let body = serde_json::json!({
         "name": "Noop Unset FB",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1371,6 +1401,7 @@ async fn specs_patch_fallback_true_and_archived_true() {
     // Create spec A with fallback
     let body_a = serde_json::json!({
         "name": "FB Archive A",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1395,6 +1426,7 @@ async fn specs_patch_fallback_true_and_archived_true() {
     // Create spec B without fallback
     let body_b = serde_json::json!({
         "name": "FB Archive B",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -1464,6 +1496,7 @@ async fn specs_unarchive_former_fallback() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "Unarchive FB",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1545,6 +1578,7 @@ async fn specs_archive_clears_testbed_spec_id() {
     // Create a fallback spec
     let body = serde_json::json!({
         "name": "Clearable Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,

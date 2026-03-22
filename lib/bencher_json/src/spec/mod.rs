@@ -23,8 +23,7 @@ pub struct JsonNewSpec {
     /// If not provided, the slug will be generated from the name.
     pub slug: Option<SpecSlug>,
     /// Operating system
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub os: Option<OperatingSystem>,
+    pub os: OperatingSystem,
     /// CPU architecture
     pub architecture: Architecture,
     /// Sandbox type (e.g. firecracker). If not provided, the benchmark runs without a sandbox.
@@ -61,7 +60,7 @@ pub struct JsonSpec {
     pub name: ResourceName,
     pub slug: SpecSlug,
     /// Operating system
-    pub os: Option<OperatingSystem>,
+    pub os: OperatingSystem,
     /// CPU architecture
     pub architecture: Architecture,
     /// Sandbox type
@@ -85,12 +84,6 @@ pub struct JsonUpdateSpec {
     pub name: Option<ResourceName>,
     /// The new slug for the spec.
     pub slug: Option<SpecSlug>,
-    /// The new operating system for the spec. Set to null to clear.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub os: Option<Option<OperatingSystem>>,
-    /// The new sandbox type for the spec. Set to null to clear.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub sandbox: Option<Option<Sandbox>>,
     /// Set whether the spec is the fallback spec.
     pub fallback: Option<bool>,
     /// Set whether the spec is archived.

@@ -222,29 +222,9 @@ impl Config {
     /// * `kernel` - Path to the Linux kernel
     #[must_use]
     pub fn with_kernel<S: Into<String>>(oci_image: S, kernel: Utf8PathBuf) -> Self {
-        Self {
-            oci_image: oci_image.into(),
-            kernel: Some(kernel),
-            token: None,
-            vcpus: default_vcpus(),
-            memory: default_memory(),
-            disk: default_disk(),
-            kernel_cmdline: default_kernel_cmdline(),
-            timeout_secs: default_timeout_secs(),
-            file_paths: None,
-            network: false,
-            entrypoint: None,
-            cmd: None,
-            env: None,
-            max_output_size: default_max_output_size(),
-            max_file_count: default_max_file_count(),
-            max_content_size: default_max_content_size(),
-            grace_period: default_grace_period(),
-            registry_scheme: RegistryScheme::default(),
-            cpu_layout: None,
-            firecracker_log_level: FirecrackerLogLevel::default(),
-            sandbox: None,
-        }
+        let mut config = Self::new(oci_image);
+        config.kernel = Some(kernel);
+        config
     }
 
     /// Set the sandbox mode for benchmark execution.

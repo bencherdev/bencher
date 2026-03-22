@@ -5,7 +5,7 @@ CREATE TABLE up_spec (
     uuid TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
-    os TEXT,
+    os TEXT NOT NULL,
     architecture TEXT NOT NULL,
     sandbox TEXT,
     cpu INTEGER NOT NULL CHECK (cpu > 0),
