@@ -74,10 +74,24 @@ pub fn local_execute(
     };
     let args = oci_config.command.get(1..).unwrap_or_default();
 
-    // Resolve program path relative to the unpacked rootfs
+    // Resolve program path relative to the unpacked rootfs and validate it
+    // stays within the rootfs to prevent path traversal (e.g. `../../bin/sh`).
     let program_path = unpack_dir.join(program.trim_start_matches('/'));
+    let canonical_program = program_path.canonicalize_utf8().map_err(|e| {
+        crate::error::ConfigError::BinaryNotFound {
+            name: program.clone(),
+            hint: format!("Failed to resolve program path: {e}"),
+        }
+    })?;
+    if !canonical_program.starts_with(&unpack_dir) {
+        return Err(crate::error::ConfigError::BinaryNotFound {
+            name: program.clone(),
+            hint: "program path escapes the unpacked rootfs".to_owned(),
+        }
+        .into());
+    }
 
-    let mut cmd = Command::new(program_path.as_str());
+    let mut cmd = Command::new(canonical_program.as_str());
     cmd.args(args);
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
@@ -105,8 +119,8 @@ pub fn local_execute(
 
     let output = wait_with_timeout(child, config.timeout_secs, cancel_flag)?;
 
-    // Collect output files directly from the host filesystem
-    let output_files = collect_output_files(config.file_paths.as_deref());
+    // Collect output files from the unpacked rootfs
+    let output_files = collect_output_files(config.file_paths.as_deref(), &unpack_dir);
 
     Ok(RunOutput {
         exit_code: output.exit_code,
@@ -124,6 +138,10 @@ struct WaitOutput {
 }
 
 /// Wait for a child process with timeout and cancellation support.
+///
+/// Saves the child PID before spawning the wait thread so that timeout/cancel
+/// can reliably signal the process via `libc::kill` even after `wait_with_output`
+/// has consumed the `Child` handle.
 fn wait_with_timeout(
     child: std::process::Child,
     timeout_secs: u64,
@@ -132,23 +150,11 @@ fn wait_with_timeout(
     let timeout = Duration::from_secs(timeout_secs);
     let start = Instant::now();
 
-    // We need to capture stdout/stderr, so use piped I/O via wait_with_output
-    // in a separate thread with timeout checking.
-    let child_arc = Arc::new(std::sync::Mutex::new(Some(child)));
-    let child_thread = Arc::clone(&child_arc);
+    // Save PID before the thread consumes the child, so we can reliably kill
+    // the process even after `wait_with_output` takes ownership.
+    let pid = child.id();
 
-    let handle = std::thread::spawn(move || -> Result<std::process::Output, std::io::Error> {
-        // These are safe to unwrap: the lock is never poisoned (only this thread
-        // and the polling loop access it), and the child is always Some (only
-        // taken once here).
-        let Ok(mut guard) = child_thread.lock() else {
-            return Err(std::io::Error::other("child lock poisoned"));
-        };
-        let Some(child) = guard.take() else {
-            return Err(std::io::Error::other("child already taken"));
-        };
-        child.wait_with_output()
-    });
+    let handle = std::thread::spawn(move || child.wait_with_output());
 
     // Poll for completion, timeout, or cancellation
     loop {
@@ -157,12 +163,7 @@ fn wait_with_timeout(
         }
 
         if start.elapsed() > timeout {
-            // Kill the child process on timeout
-            if let Ok(mut guard) = child_arc.lock()
-                && let Some(ref mut child) = *guard
-            {
-                drop(child.kill());
-            }
+            kill_by_pid(pid);
             return Err(crate::error::ConfigError::Runtime {
                 kind: "timeout",
                 message: format!("process did not complete within {timeout_secs}s"),
@@ -173,12 +174,7 @@ fn wait_with_timeout(
         if let Some(flag) = cancel_flag
             && flag.load(Ordering::SeqCst)
         {
-            // Kill the child process on cancellation
-            if let Ok(mut guard) = child_arc.lock()
-                && let Some(ref mut child) = *guard
-            {
-                drop(child.kill());
-            }
+            kill_by_pid(pid);
             return Err(crate::error::ConfigError::Runtime {
                 kind: "canceled",
                 message: "job was canceled".to_owned(),
@@ -204,15 +200,41 @@ fn wait_with_timeout(
     })
 }
 
-/// Collect output files directly from the host filesystem.
+/// Send SIGKILL to a process by PID. Best-effort; errors are silently ignored
+/// because the process may have already exited.
+fn kill_by_pid(pid: u32) {
+    // SAFETY: We send SIGKILL to a known child PID. If the process has already
+    // exited the call is harmless (returns ESRCH).
+    #[expect(unsafe_code, clippy::cast_possible_wrap)]
+    unsafe {
+        libc::kill(pid as i32, libc::SIGKILL);
+    }
+}
+
+/// Collect output files from the unpacked rootfs.
+///
+/// OCI file paths are specified relative to the container root. We resolve them
+/// relative to `unpack_dir` and validate they don't escape the rootfs.
 fn collect_output_files(
     file_paths: Option<&[Utf8PathBuf]>,
+    unpack_dir: &Utf8Path,
 ) -> Option<HashMap<Utf8PathBuf, Vec<u8>>> {
     let paths = file_paths?;
 
     let mut files = HashMap::with_capacity(paths.len());
     for path in paths {
-        match std::fs::read(path.as_std_path()) {
+        // Resolve the OCI-relative path within the unpacked rootfs
+        let host_path = unpack_dir.join(path.as_str().trim_start_matches('/'));
+        // Validate the resolved path stays within unpack_dir
+        let Ok(canonical) = host_path.canonicalize_utf8() else {
+            eprintln!("Warning: output file does not exist: {path}");
+            continue;
+        };
+        if !canonical.starts_with(unpack_dir) {
+            eprintln!("Warning: output file path escapes rootfs: {path}");
+            continue;
+        }
+        match std::fs::read(canonical.as_std_path()) {
             Ok(contents) => {
                 files.insert(path.clone(), contents);
             },

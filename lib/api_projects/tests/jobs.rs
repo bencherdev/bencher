@@ -726,7 +726,7 @@ fn write_job_output(
         .db_path()
         .parent()
         .expect("db has parent")
-        .join("oci");
+        .join("registry");
     let output_dir = oci_dir
         .join(project_uuid.to_string())
         .join("output")
