@@ -66,6 +66,16 @@ pub fn local_execute(
     println!("Unpacking OCI image to {unpack_dir}...");
     bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
 
+    // Canonicalize unpack_dir *after* unpacking so all symlinks within the
+    // rootfs are materialized and we have a stable base for containment checks.
+    let canonical_unpack_dir =
+        unpack_dir
+            .canonicalize_utf8()
+            .map_err(|e| crate::error::ConfigError::Runtime {
+                kind: "setup",
+                message: format!("Failed to canonicalize unpack dir: {e}"),
+            })?;
+
     // Step 4: Execute command from the unpacked rootfs
     println!("Running command on host...");
 
@@ -74,22 +84,10 @@ pub fn local_execute(
     };
     let args = oci_config.command.get(1..).unwrap_or_default();
 
-    // Resolve program path relative to the unpacked rootfs and validate it
-    // stays within the rootfs to prevent path traversal (e.g. `../../bin/sh`).
-    let program_path = unpack_dir.join(program.trim_start_matches('/'));
-    let canonical_program = program_path.canonicalize_utf8().map_err(|e| {
-        crate::error::ConfigError::BinaryNotFound {
-            name: program.clone(),
-            hint: format!("Failed to resolve program path: {e}"),
-        }
-    })?;
-    if !canonical_program.starts_with(&unpack_dir) {
-        return Err(crate::error::ConfigError::BinaryNotFound {
-            name: program.clone(),
-            hint: "program path escapes the unpacked rootfs".to_owned(),
-        }
-        .into());
-    }
+    // Resolve program path within the unpacked rootfs.
+    // Absolute paths are resolved directly; relative/bare names are searched
+    // in PATH directories (mirroring how a container runtime resolves commands).
+    let canonical_program = resolve_program(program, &oci_config.env, &canonical_unpack_dir)?;
 
     let mut cmd = Command::new(canonical_program.as_str());
     cmd.args(args);
@@ -102,12 +100,24 @@ pub fn local_execute(
         cmd.env(key, value);
     }
 
-    // Set working directory inside the unpacked rootfs
-    let cwd = unpack_dir.join(oci_config.working_dir.trim_start_matches('/'));
+    // Set working directory inside the unpacked rootfs.
+    // Canonicalize and validate it stays within the rootfs.
+    let cwd = canonical_unpack_dir.join(oci_config.working_dir.trim_start_matches('/'));
     if cwd.exists() {
-        cmd.current_dir(cwd.as_std_path());
+        let canonical_cwd =
+            cwd.canonicalize_utf8()
+                .map_err(|e| crate::error::ConfigError::Runtime {
+                    kind: "setup",
+                    message: format!("Failed to canonicalize working dir: {e}"),
+                })?;
+        if canonical_cwd.starts_with(&canonical_unpack_dir) {
+            cmd.current_dir(canonical_cwd.as_std_path());
+        } else {
+            eprintln!("Warning: working directory escapes rootfs, falling back to rootfs root");
+            cmd.current_dir(canonical_unpack_dir.as_std_path());
+        }
     } else {
-        cmd.current_dir(unpack_dir.as_std_path());
+        cmd.current_dir(canonical_unpack_dir.as_std_path());
     }
 
     let child = cmd
@@ -120,7 +130,7 @@ pub fn local_execute(
     let output = wait_with_timeout(child, config.timeout_secs, cancel_flag)?;
 
     // Collect output files from the unpacked rootfs
-    let output_files = collect_output_files(config.file_paths.as_deref(), &unpack_dir);
+    let output_files = collect_output_files(config.file_paths.as_deref(), &canonical_unpack_dir);
 
     Ok(RunOutput {
         exit_code: output.exit_code,
@@ -139,9 +149,10 @@ struct WaitOutput {
 
 /// Wait for a child process with timeout and cancellation support.
 ///
-/// Saves the child PID before spawning the wait thread so that timeout/cancel
-/// can reliably signal the process via `libc::kill` even after `wait_with_output`
-/// has consumed the `Child` handle.
+/// Uses a dedicated `exited` flag to avoid the PID reuse window: once the
+/// wait thread observes that the child has exited, it sets the flag _before_
+/// returning. The polling loop checks the flag _before_ attempting to signal,
+/// ensuring we never send SIGKILL to a recycled PID.
 fn wait_with_timeout(
     child: std::process::Child,
     timeout_secs: u64,
@@ -154,7 +165,16 @@ fn wait_with_timeout(
     // the process even after `wait_with_output` takes ownership.
     let pid = child.id();
 
-    let handle = std::thread::spawn(move || child.wait_with_output());
+    // Flag set by the wait thread once `wait_with_output` returns, closing the
+    // PID reuse window: we never signal the PID after this flag is set.
+    let exited = Arc::new(AtomicBool::new(false));
+    let exited_clone = Arc::clone(&exited);
+
+    let handle = std::thread::spawn(move || {
+        let result = child.wait_with_output();
+        exited_clone.store(true, Ordering::Release);
+        result
+    });
 
     // Poll for completion, timeout, or cancellation
     loop {
@@ -162,7 +182,8 @@ fn wait_with_timeout(
             break;
         }
 
-        if start.elapsed() > timeout {
+        // Only signal if the child has not yet exited (avoids PID reuse).
+        if start.elapsed() > timeout && !exited.load(Ordering::Acquire) {
             kill_by_pid(pid);
             return Err(crate::error::ConfigError::Runtime {
                 kind: "timeout",
@@ -173,6 +194,7 @@ fn wait_with_timeout(
 
         if let Some(flag) = cancel_flag
             && flag.load(Ordering::SeqCst)
+            && !exited.load(Ordering::Acquire)
         {
             kill_by_pid(pid);
             return Err(crate::error::ConfigError::Runtime {
@@ -202,6 +224,7 @@ fn wait_with_timeout(
 
 /// Send SIGKILL to a process by PID. Best-effort; errors are silently ignored
 /// because the process may have already exited.
+#[cfg(unix)]
 fn kill_by_pid(pid: u32) {
     // SAFETY: We send SIGKILL to a known child PID. If the process has already
     // exited the call is harmless (returns ESRCH).
@@ -209,6 +232,82 @@ fn kill_by_pid(pid: u32) {
     unsafe {
         libc::kill(pid as i32, libc::SIGKILL);
     }
+}
+
+/// Non-Unix fallback: uses `std::process::Command` to kill by PID.
+#[cfg(not(unix))]
+fn kill_by_pid(pid: u32) {
+    // On Windows, `taskkill /F /PID <pid>` forcefully terminates the process.
+    drop(
+        std::process::Command::new("taskkill")
+            .args(["/F", "/PID", &pid.to_string()])
+            .output(),
+    );
+}
+
+/// Default PATH used when the OCI image does not specify one.
+const DEFAULT_PATH: &str = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+
+/// Resolve a program name to a canonical path within the unpacked rootfs.
+///
+/// - Absolute paths (e.g. `/bin/sh`) are resolved directly within the rootfs.
+/// - Bare names (e.g. `echo`) are searched in each PATH directory within the
+///   rootfs, mirroring how a container runtime resolves commands.
+///
+/// The resolved path is canonicalized and validated to stay within `unpack_dir`
+/// to prevent path traversal.
+fn resolve_program(
+    program: &str,
+    env: &[(String, String)],
+    unpack_dir: &Utf8Path,
+) -> Result<Utf8PathBuf, RunnerError> {
+    if program.starts_with('/') || program.contains('/') {
+        // Absolute or relative path — resolve directly
+        let program_path = unpack_dir.join(program.trim_start_matches('/'));
+        return canonicalize_and_check(program, &program_path, unpack_dir);
+    }
+
+    // Bare command name — search PATH directories within the rootfs
+    let path_val = env
+        .iter()
+        .find(|(k, _)| k == "PATH")
+        .map_or(DEFAULT_PATH, |(_, v)| v.as_str());
+
+    for dir in path_val.split(':') {
+        let candidate = unpack_dir.join(dir.trim_start_matches('/')).join(program);
+        if candidate.exists() {
+            return canonicalize_and_check(program, &candidate, unpack_dir);
+        }
+    }
+
+    Err(crate::error::ConfigError::BinaryNotFound {
+        name: program.to_owned(),
+        hint: format!("not found in PATH directories within rootfs (PATH={path_val})"),
+    }
+    .into())
+}
+
+/// Canonicalize a candidate path and verify it stays within `unpack_dir`.
+fn canonicalize_and_check(
+    program: &str,
+    candidate: &Utf8Path,
+    unpack_dir: &Utf8Path,
+) -> Result<Utf8PathBuf, RunnerError> {
+    let canonical =
+        candidate
+            .canonicalize_utf8()
+            .map_err(|e| crate::error::ConfigError::BinaryNotFound {
+                name: program.to_owned(),
+                hint: format!("Failed to resolve program path: {e}"),
+            })?;
+    if !canonical.starts_with(unpack_dir) {
+        return Err(crate::error::ConfigError::BinaryNotFound {
+            name: program.to_owned(),
+            hint: "program path escapes the unpacked rootfs".to_owned(),
+        }
+        .into());
+    }
+    Ok(canonical)
 }
 
 /// Collect output files from the unpacked rootfs.
