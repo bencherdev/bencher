@@ -230,8 +230,8 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
         runner_config = runner_config.with_grace_period(grace_period);
     }
 
-    // Pass through Firecracker log level
-    runner_config.firecracker_log_level = up_config.firecracker_log_level;
+    // Pass through sandbox log level
+    runner_config.sandbox_log_level = up_config.sandbox_log_level;
 
     // Pass through sandbox mode from the job spec
     runner_config = runner_config.with_sandbox(spec.sandbox);
@@ -364,7 +364,7 @@ mod tests {
             max_output_size: None,
             max_file_count: None,
             grace_period: None,
-            firecracker_log_level: crate::FirecrackerLogLevel::default(),
+            sandbox_log_level: crate::SandboxLogLevel::default(),
             allow_no_sandbox: false,
         }
     }

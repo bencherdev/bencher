@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use bencher_oci::RegistryScheme;
 
 use crate::cpu::CpuLayout;
-use crate::log_level::FirecrackerLogLevel;
+use crate::log_level::SandboxLogLevel;
 
 /// Configuration for a benchmark run.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -122,9 +122,9 @@ pub struct Config {
     #[serde(skip)]
     pub cpu_layout: Option<CpuLayout>,
 
-    /// Firecracker process log level (ignored in non-sandboxed mode). This field is not serialized.
+    /// Sandbox process log level (used by Firecracker; ignored in non-sandboxed mode). This field is not serialized.
     #[serde(skip)]
-    pub firecracker_log_level: FirecrackerLogLevel,
+    pub sandbox_log_level: SandboxLogLevel,
 
     /// Sandbox mode for benchmark execution.
     ///
@@ -209,7 +209,7 @@ impl Config {
             grace_period: default_grace_period(),
             registry_scheme: RegistryScheme::default(),
             cpu_layout: None,
-            firecracker_log_level: FirecrackerLogLevel::default(),
+            sandbox_log_level: SandboxLogLevel::default(),
             sandbox: None,
         }
     }

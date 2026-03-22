@@ -14,7 +14,7 @@ mod vsock;
 
 use std::collections::HashMap;
 
-pub use crate::log_level::FirecrackerLogLevel;
+pub use crate::log_level::SandboxLogLevel;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::time::{Duration, Instant};
@@ -65,7 +65,7 @@ pub struct FirecrackerJobConfig {
     /// Optional CPU layout for core isolation via cpuset.
     pub cpu_layout: Option<CpuLayout>,
     /// Firecracker process log level.
-    pub log_level: FirecrackerLogLevel,
+    pub log_level: SandboxLogLevel,
     /// Maximum number of output files to decode.
     pub max_file_count: u32,
     /// Maximum content size in bytes for a single output file.
@@ -304,47 +304,41 @@ mod tests {
 
     #[test]
     fn log_level_default() {
-        let level = FirecrackerLogLevel::default();
+        let level = SandboxLogLevel::default();
         assert_eq!(level.as_str(), "Warning");
     }
 
     #[test]
     fn log_level_from_str() {
         assert_eq!(
-            "error".parse::<FirecrackerLogLevel>().unwrap().as_str(),
+            "error".parse::<SandboxLogLevel>().unwrap().as_str(),
             "Error"
         );
         assert_eq!(
-            "WARNING".parse::<FirecrackerLogLevel>().unwrap().as_str(),
+            "WARNING".parse::<SandboxLogLevel>().unwrap().as_str(),
             "Warning"
         );
+        assert_eq!("Info".parse::<SandboxLogLevel>().unwrap().as_str(), "Info");
         assert_eq!(
-            "Info".parse::<FirecrackerLogLevel>().unwrap().as_str(),
-            "Info"
-        );
-        assert_eq!(
-            "debug".parse::<FirecrackerLogLevel>().unwrap().as_str(),
+            "debug".parse::<SandboxLogLevel>().unwrap().as_str(),
             "Debug"
         );
         assert_eq!(
-            "trace".parse::<FirecrackerLogLevel>().unwrap().as_str(),
+            "trace".parse::<SandboxLogLevel>().unwrap().as_str(),
             "Trace"
         );
-        assert_eq!(
-            "off".parse::<FirecrackerLogLevel>().unwrap().as_str(),
-            "Off"
-        );
+        assert_eq!("off".parse::<SandboxLogLevel>().unwrap().as_str(), "Off");
     }
 
     #[test]
     fn log_level_from_str_invalid() {
-        assert!("invalid".parse::<FirecrackerLogLevel>().is_err());
+        assert!("invalid".parse::<SandboxLogLevel>().is_err());
     }
 
     #[test]
     fn log_level_display() {
-        assert_eq!(FirecrackerLogLevel::Error.to_string(), "Error");
-        assert_eq!(FirecrackerLogLevel::Warning.to_string(), "Warning");
+        assert_eq!(SandboxLogLevel::Error.to_string(), "Error");
+        assert_eq!(SandboxLogLevel::Warning.to_string(), "Warning");
     }
 
     #[test]

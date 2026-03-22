@@ -37,9 +37,9 @@ pub struct CliUp {
     #[arg(long)]
     pub grace_period: Option<bencher_runner::GracePeriod>,
 
-    /// Firecracker process log level; ignored in non-sandboxed mode (default: warning).
+    /// Sandbox process log level (default: warning).
     #[arg(long, default_value = "warning")]
-    pub firecracker_log_level: bencher_runner::FirecrackerLogLevel,
+    pub sandbox_log_level: bencher_runner::SandboxLogLevel,
 
     /// Allow executing jobs without a sandbox.
     /// Without this flag, jobs with no sandbox will be rejected at runtime.

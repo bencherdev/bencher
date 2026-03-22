@@ -65,8 +65,8 @@ pub struct RunArgs {
     pub tuning: TuningConfig,
     /// Grace period in seconds after exit code before final collection.
     pub grace_period: bencher_json::GracePeriod,
-    /// Firecracker process log level.
-    pub firecracker_log_level: crate::FirecrackerLogLevel,
+    /// Sandbox process log level.
+    pub sandbox_log_level: crate::SandboxLogLevel,
     /// Sandbox mode for benchmark execution.
     pub sandbox: Option<bencher_json::Sandbox>,
 }
@@ -112,7 +112,7 @@ fn build_config_from_run_args(args: &RunArgs) -> crate::Config {
         .with_cmd_opt(args.cmd.clone())
         .with_env_opt(args.env.clone());
     config = config.with_grace_period(args.grace_period);
-    config.firecracker_log_level = args.firecracker_log_level;
+    config.sandbox_log_level = args.sandbox_log_level;
     config = config.with_sandbox(args.sandbox);
     config
 }

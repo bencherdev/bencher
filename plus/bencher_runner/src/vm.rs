@@ -144,7 +144,7 @@ fn build_firecracker_config(
         timeout_secs: config.timeout_secs,
         work_dir: work_dir.to_owned(),
         cpu_layout: config.cpu_layout.clone(),
-        log_level: config.firecracker_log_level,
+        log_level: config.sandbox_log_level,
         max_file_count: config.max_file_count,
         max_content_size: config.max_content_size,
         max_output_size: config.max_output_size,

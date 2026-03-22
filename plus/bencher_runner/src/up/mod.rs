@@ -4,7 +4,7 @@ use bencher_json::RunnerResourceId;
 use url::Url;
 
 use crate::cpu::CpuLayout;
-use crate::log_level::FirecrackerLogLevel;
+use crate::log_level::SandboxLogLevel;
 use crate::tuning::TuningConfig;
 
 mod api_client;
@@ -55,8 +55,8 @@ pub struct UpConfig {
     pub max_file_count: Option<u32>,
     /// Grace period in seconds after exit code before final collection.
     pub grace_period: Option<bencher_json::GracePeriod>,
-    /// Firecracker process log level.
-    pub firecracker_log_level: FirecrackerLogLevel,
+    /// Sandbox process log level.
+    pub sandbox_log_level: SandboxLogLevel,
     /// Whether to allow non-sandboxed execution.
     pub allow_no_sandbox: bool,
 }

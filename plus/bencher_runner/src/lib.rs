@@ -57,7 +57,7 @@ pub use error::{ConfigError, JailError, RunnerError};
 #[cfg(feature = "plus")]
 pub use jail::ResourceLimits;
 #[cfg(feature = "plus")]
-pub use log_level::FirecrackerLogLevel;
+pub use log_level::SandboxLogLevel;
 #[cfg(feature = "plus")]
 pub use run::{RunArgs, RunOutput, execute, resolve_oci_image, run_with_args};
 #[cfg(feature = "plus")]

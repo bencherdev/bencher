@@ -111,7 +111,7 @@ pub struct CliRun {
     #[arg(long, default_value = "1")]
     pub grace_period: bencher_runner::GracePeriod,
 
-    /// Firecracker process log level; ignored in non-sandboxed mode (default: warning).
-    #[arg(long, default_value = "warning")]
-    pub firecracker_log_level: bencher_runner::FirecrackerLogLevel,
+    /// Sandbox process log level; requires --sandbox (default: warning).
+    #[arg(long, default_value = "warning", requires = "sandbox")]
+    pub sandbox_log_level: bencher_runner::SandboxLogLevel,
 }
