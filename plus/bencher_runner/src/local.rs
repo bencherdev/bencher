@@ -74,24 +74,14 @@ pub fn local_execute(
     };
     let args = oci_config.command.get(1..).unwrap_or_default();
 
-    // Resolve program path relative to the unpacked rootfs and validate it
-    // stays within the rootfs to prevent path traversal (e.g. `../../bin/sh`).
+    // Resolve program path relative to the unpacked rootfs.
+    // We don't canonicalize here because OCI images often contain absolute
+    // symlinks (e.g. /bin/echo -> /bin/busybox) that resolve against the host
+    // root rather than the unpacked rootfs. The OS resolves symlinks at exec
+    // time, so we just join the path and let Command::new handle it.
     let program_path = unpack_dir.join(program.trim_start_matches('/'));
-    let canonical_program = program_path.canonicalize_utf8().map_err(|e| {
-        crate::error::ConfigError::BinaryNotFound {
-            name: program.clone(),
-            hint: format!("Failed to resolve program path: {e}"),
-        }
-    })?;
-    if !canonical_program.starts_with(&unpack_dir) {
-        return Err(crate::error::ConfigError::BinaryNotFound {
-            name: program.clone(),
-            hint: "program path escapes the unpacked rootfs".to_owned(),
-        }
-        .into());
-    }
 
-    let mut cmd = Command::new(canonical_program.as_str());
+    let mut cmd = Command::new(program_path.as_str());
     cmd.args(args);
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
@@ -214,7 +204,7 @@ fn kill_by_pid(pid: u32) {
 /// Collect output files from the unpacked rootfs.
 ///
 /// OCI file paths are specified relative to the container root. We resolve them
-/// relative to `unpack_dir` and validate they don't escape the rootfs.
+/// relative to `unpack_dir`.
 fn collect_output_files(
     file_paths: Option<&[Utf8PathBuf]>,
     unpack_dir: &Utf8Path,
@@ -223,18 +213,8 @@ fn collect_output_files(
 
     let mut files = HashMap::with_capacity(paths.len());
     for path in paths {
-        // Resolve the OCI-relative path within the unpacked rootfs
         let host_path = unpack_dir.join(path.as_str().trim_start_matches('/'));
-        // Validate the resolved path stays within unpack_dir
-        let Ok(canonical) = host_path.canonicalize_utf8() else {
-            eprintln!("Warning: output file does not exist: {path}");
-            continue;
-        };
-        if !canonical.starts_with(unpack_dir) {
-            eprintln!("Warning: output file path escapes rootfs: {path}");
-            continue;
-        }
-        match std::fs::read(canonical.as_std_path()) {
+        match std::fs::read(host_path.as_std_path()) {
             Ok(contents) => {
                 files.insert(path.clone(), contents);
             },
