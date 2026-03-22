@@ -33,6 +33,11 @@ pub struct CliUp {
     #[arg(long)]
     pub max_file_count: Option<u32>,
 
+    /// Maximum number of symlinks to follow during path resolution (default: 40).
+    /// Matches the Linux kernel's MAXSYMLINKS limit. Only used in non-sandboxed mode.
+    #[arg(long)]
+    pub max_symlinks: Option<u32>,
+
     /// Grace period in seconds after exit code before final collection.
     #[arg(long)]
     pub grace_period: Option<bencher_runner::GracePeriod>,

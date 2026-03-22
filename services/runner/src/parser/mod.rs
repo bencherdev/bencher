@@ -74,6 +74,11 @@ pub struct CliRun {
     #[arg(long)]
     pub max_file_count: Option<u32>,
 
+    /// Maximum number of symlinks to follow during path resolution (default: 40).
+    /// Matches the Linux kernel's MAXSYMLINKS limit. Only used in non-sandboxed mode.
+    #[arg(long, conflicts_with = "sandbox")]
+    pub max_symlinks: Option<u32>,
+
     /// Container entrypoint override.
     #[arg(long, num_args = 1..=bencher_json::MAX_ENTRYPOINT_LEN)]
     pub entrypoint: Option<Vec<String>>,
