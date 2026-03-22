@@ -1,22 +1,19 @@
-//! Bencher Runner - Orchestrates benchmark execution in Firecracker microVMs.
+//! Bencher Runner - Orchestrates benchmark execution.
 //!
 //! This crate provides the main runner logic for executing benchmarks
-//! in isolated Firecracker microVMs. It coordinates:
+//! either in isolated Firecracker microVMs (sandboxed) or directly
+//! on the host system (non-sandboxed). It coordinates:
 //!
 //! - OCI image pulling and unpacking
-//! - ext4 rootfs creation
-//! - Firecracker microVM lifecycle management
-//! - Result collection via vsock
+//! - Firecracker microVM lifecycle (sandboxed mode)
+//! - Direct host execution (non-sandboxed mode)
+//! - Result collection via vsock (sandboxed) or stdout/stderr (non-sandboxed)
 
 // Suppress unused crate warnings on non-Linux or without plus
 #![cfg_attr(
     any(not(target_os = "linux"), not(feature = "plus")),
     allow(unused_crate_dependencies)
 )]
-
-// tempfile is used in the execute function (Linux VM and non-sandboxed)
-#[cfg(feature = "plus")]
-use tempfile as _;
 
 #[cfg(feature = "plus")]
 mod config;

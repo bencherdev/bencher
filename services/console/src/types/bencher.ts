@@ -723,7 +723,7 @@ export interface JsonNewSpec {
 	os: OperatingSystem;
 	/** CPU architecture */
 	architecture: Architecture;
-	/** Sandbox type (e.g. firecracker). If not provided, the benchmark runs without a sandbox. */
+	/** Sandbox type (e.g. firecracker). If not provided, the job runs without a sandbox. */
 	sandbox?: Sandbox;
 	/** Number of CPUs */
 	cpu: number;

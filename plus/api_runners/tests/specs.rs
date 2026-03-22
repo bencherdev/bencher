@@ -237,18 +237,33 @@ async fn runner_specs_list_multiple() {
     let runner = create_runner(&server, &admin.token, "Spec Multi Runner").await;
 
     // Create 3 different specs
-    let (spec1_uuid, _) =
-        insert_test_spec_full(&server, "x86_64", 1, 0x8000_0000, 5_368_709_120, false);
+    let (spec1_uuid, _) = insert_test_spec_full(
+        &server,
+        "linux",
+        "x86_64",
+        1,
+        0x8000_0000,
+        5_368_709_120,
+        false,
+    );
     let (spec2_uuid, _) = insert_test_spec_full(
         &server,
+        "linux",
         "aarch64",
         2,
         0x0001_0000_0000,
         10_737_418_240,
         false,
     );
-    let (spec3_uuid, _) =
-        insert_test_spec_full(&server, "x86_64", 4, 0x0002_0000_0000, 21_474_836_480, true);
+    let (spec3_uuid, _) = insert_test_spec_full(
+        &server,
+        "linux",
+        "x86_64",
+        4,
+        0x0002_0000_0000,
+        21_474_836_480,
+        true,
+    );
 
     // Associate all 3 specs with the runner
     for spec_uuid in [spec1_uuid, spec2_uuid, spec3_uuid] {
@@ -361,6 +376,7 @@ async fn claim_job_spec_mismatch() {
     // Create two specs with different configurations
     let (_spec_x86_uuid, spec_x86_id) = insert_test_spec_full(
         &server,
+        "linux",
         "x86_64",
         2,
         0x0001_0000_0000,
@@ -369,6 +385,7 @@ async fn claim_job_spec_mismatch() {
     );
     let (_spec_arm_uuid, spec_arm_id) = insert_test_spec_full(
         &server,
+        "linux",
         "aarch64",
         4,
         0x0002_0000_0000,
@@ -511,10 +528,18 @@ async fn runner_specs_get_multiple() {
 
     let runner = create_runner(&server, &admin.token, "Spec GetMulti Runner").await;
 
-    let (spec1_uuid, _) =
-        insert_test_spec_full(&server, "x86_64", 1, 0x8000_0000, 5_368_709_120, false);
+    let (spec1_uuid, _) = insert_test_spec_full(
+        &server,
+        "linux",
+        "x86_64",
+        1,
+        0x8000_0000,
+        5_368_709_120,
+        false,
+    );
     let (spec2_uuid, _) = insert_test_spec_full(
         &server,
+        "linux",
         "aarch64",
         2,
         0x0001_0000_0000,

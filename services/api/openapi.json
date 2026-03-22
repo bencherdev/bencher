@@ -12965,7 +12965,7 @@
           },
           "sandbox": {
             "nullable": true,
-            "description": "Sandbox type (e.g. firecracker). If not provided, the benchmark runs without a sandbox.",
+            "description": "Sandbox type (e.g. firecracker). If not provided, the job runs without a sandbox.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Sandbox"

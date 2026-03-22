@@ -122,7 +122,7 @@ pub struct Config {
     #[serde(skip)]
     pub cpu_layout: Option<CpuLayout>,
 
-    /// Firecracker process log level. This field is not serialized.
+    /// Firecracker process log level (ignored in non-sandboxed mode). This field is not serialized.
     #[serde(skip)]
     pub firecracker_log_level: FirecrackerLogLevel,
 

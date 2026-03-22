@@ -10,6 +10,7 @@ pub struct Start {
     host: url::Url,
     runner: RunnerResourceId,
     token: Secret,
+    danger_allow_no_sandbox: bool,
 }
 
 impl TryFrom<TaskStart> for Start {
@@ -23,6 +24,7 @@ impl TryFrom<TaskStart> for Start {
             user,
             token,
             host,
+            danger_allow_no_sandbox,
         } = task;
         let (ssh, host, runner, token) =
             merge_ssh_with_extras(runner, server, key, user, token, host)?;
@@ -31,17 +33,25 @@ impl TryFrom<TaskStart> for Start {
             host,
             runner,
             token,
+            danger_allow_no_sandbox,
         })
     }
 }
 
 impl Start {
-    pub fn new(ssh: Ssh, host: url::Url, runner: RunnerResourceId, token: Secret) -> Self {
+    pub fn new(
+        ssh: Ssh,
+        host: url::Url,
+        runner: RunnerResourceId,
+        token: Secret,
+        danger_allow_no_sandbox: bool,
+    ) -> Self {
         Self {
             ssh,
             host,
             runner,
             token,
+            danger_allow_no_sandbox,
         }
     }
 
@@ -51,15 +61,22 @@ impl Start {
             host,
             runner,
             token,
+            danger_allow_no_sandbox,
         } = self;
         println!("Configuring runner credentials...");
         ssh.run("mkdir -p /etc/systemd/system/bencher-runner.service.d")?;
+        let no_sandbox_env = if danger_allow_no_sandbox {
+            "Environment=BENCHER_DANGER_ALLOW_NO_SANDBOX=true\n"
+        } else {
+            ""
+        };
         ssh.run(&format!(
             "cat > /etc/systemd/system/bencher-runner.service.d/credentials.conf << 'CRED_EOF'\n\
              [Service]\n\
              Environment=BENCHER_HOST={host}\n\
              Environment=BENCHER_RUNNER={runner}\n\
              Environment=BENCHER_RUNNER_TOKEN={token}\n\
+             {no_sandbox_env}\
              CRED_EOF",
             token = token.as_ref(),
         ))?;

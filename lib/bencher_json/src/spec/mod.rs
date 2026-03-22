@@ -26,7 +26,7 @@ pub struct JsonNewSpec {
     pub os: OperatingSystem,
     /// CPU architecture
     pub architecture: Architecture,
-    /// Sandbox type (e.g. firecracker). If not provided, the benchmark runs without a sandbox.
+    /// Sandbox type (e.g. firecracker). If not provided, the job runs without a sandbox.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sandbox: Option<Sandbox>,
     /// Number of CPUs
