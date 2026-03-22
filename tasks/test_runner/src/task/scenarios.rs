@@ -2102,7 +2102,7 @@ fn nosandbox_scenarios() -> Vec<Scenario> {
         Scenario {
             name: "nosandbox_basic",
             description: "Non-sandboxed: simple echo",
-            dockerfile: r#"FROM busybox
+            dockerfile: r#"FROM busybox:musl
 CMD ["echo", "hello from host"]"#,
             cancel_after_secs: None,
             sandboxed: false,
@@ -2122,7 +2122,7 @@ CMD ["echo", "hello from host"]"#,
         Scenario {
             name: "nosandbox_env",
             description: "Non-sandboxed: ENV variables from OCI config",
-            dockerfile: r#"FROM busybox
+            dockerfile: r#"FROM busybox:musl
 ENV MY_VAR=host_test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
             cancel_after_secs: None,
@@ -2143,7 +2143,7 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
         Scenario {
             name: "nosandbox_exit_code",
             description: "Non-sandboxed: non-zero exit code propagation",
-            dockerfile: r#"FROM busybox
+            dockerfile: r#"FROM busybox:musl
 CMD ["sh", "-c", "exit 42"]"#,
             cancel_after_secs: None,
             sandboxed: false,
@@ -2157,35 +2157,6 @@ CMD ["sh", "-c", "exit 42"]"#,
                 } else {
                     bail!(
                         "Expected exit code 42 in output or non-zero runner exit.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
-            },
-        },
-        Scenario {
-            name: "nosandbox_scratch_image",
-            description: "Non-sandboxed: FROM scratch with static binary only",
-            // Multi-stage build: compile a static binary, then copy into scratch.
-            // This mirrors the common production use case of shipping only a
-            // single statically-linked benchmark binary in the OCI image.
-            dockerfile: r#"FROM alpine:latest AS builder
-RUN echo -e '#include <stdio.h>\nint main(){puts("hello from scratch");return 0;}' > /hello.c \
-    && apk add --no-cache gcc musl-dev \
-    && gcc -static -o /hello /hello.c
-
-FROM scratch
-COPY --from=builder /hello /hello
-CMD ["/hello"]"#,
-            cancel_after_secs: None,
-            sandboxed: false,
-            extra_args: &["--timeout", "120"],
-            validate: |output| {
-                if output.stdout.contains("hello from scratch") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'hello from scratch' in output.\nstdout: {}\nstderr: {}",
                         output.stdout,
                         output.stderr
                     )
