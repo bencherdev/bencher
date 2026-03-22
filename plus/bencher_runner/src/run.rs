@@ -76,7 +76,7 @@ pub struct RunArgs {
 /// Build a `Config` from CLI `RunArgs`.
 ///
 /// Shared between the Linux and non-Linux debug `run_with_args` paths.
-fn build_config_from_run_args(args: &RunArgs) -> crate::Config {
+fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::error::ConfigError> {
     let mut config = crate::Config::new(args.image.clone())
         .with_timeout_secs(args.timeout_secs)
         .with_network(args.network);
@@ -90,7 +90,7 @@ fn build_config_from_run_args(args: &RunArgs) -> crate::Config {
         config = config.with_disk(disk);
     }
     let config = if let Some(token) = &args.token {
-        config.with_token(token.clone())
+        config.with_token(token.clone())?
     } else {
         config
     };
@@ -121,7 +121,7 @@ fn build_config_from_run_args(args: &RunArgs) -> crate::Config {
     config = config.with_grace_period(args.grace_period);
     config.sandbox_log_level = args.sandbox_log_level;
     config = config.with_sandbox(args.sandbox);
-    config
+    Ok(config)
 }
 
 /// Run the `run` subcommand with parsed arguments.
@@ -132,7 +132,7 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     // Apply host tuning — guard restores settings on drop (no-op on non-Linux)
     let _tuning_guard = crate::tuning::apply(&args.tuning);
 
-    let config = build_config_from_run_args(args);
+    let config = build_config_from_run_args(args)?;
 
     let iter_count = args.iter.as_usize();
     for iteration in 0..iter_count {

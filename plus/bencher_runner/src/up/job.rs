@@ -41,7 +41,15 @@ pub fn execute_job(
     }
 
     // Build runner Config from claimed job spec (all values from job spec, no defaults)
-    let job_config = build_config_from_job(config, job);
+    let job_config = match build_config_from_job(config, job) {
+        Ok(config) => config,
+        Err(e) => {
+            return JobFinishResult::Failed {
+                error: e.to_string(),
+                results: Vec::new(),
+            };
+        },
+    };
     let iter_count = job.config.iter.map_or(1, bencher_json::Iteration::as_usize);
     let allow_failure = job.config.allow_failure.unwrap_or_default();
 
@@ -173,7 +181,10 @@ fn output_to_iteration(output: crate::RunOutput) -> JsonIterationOutput {
 /// authenticated image pulls.
 ///
 /// CPU layout from the up config is passed through for core isolation.
-fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::Config {
+fn build_config_from_job(
+    up_config: &UpConfig,
+    job: &JsonClaimedJob,
+) -> Result<crate::Config, crate::error::ConfigError> {
     let spec = &job.spec;
     let config = &job.config;
 
@@ -195,7 +206,7 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
 
     let mut runner_config = crate::Config::new(oci_image)
         .with_registry_scheme(registry_scheme)
-        .with_token(job.oci_token.to_string())
+        .with_token(job.oci_token.to_string())?
         .with_vcpus(spec.cpu)
         .with_memory(spec.memory)
         .with_disk(spec.disk)
@@ -241,7 +252,7 @@ fn build_config_from_job(up_config: &UpConfig, job: &JsonClaimedJob) -> crate::C
     // Pass through sandbox mode from the job spec
     runner_config = runner_config.with_sandbox(spec.sandbox);
 
-    runner_config
+    Ok(runner_config)
 }
 
 #[expect(clippy::print_stderr, clippy::use_debug)]
@@ -379,7 +390,7 @@ mod tests {
     fn uses_job_spec_vcpus() {
         let up_config = test_up_config();
         let job = test_job(4, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert_eq!(result.vcpus, Cpu::try_from(4).unwrap());
     }
 
@@ -387,7 +398,7 @@ mod tests {
     fn converts_memory_from_job() {
         let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(2048), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert_eq!(result.memory, Memory::from_mib(2048).unwrap());
     }
 
@@ -395,7 +406,7 @@ mod tests {
     fn converts_disk_from_job() {
         let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(10240), 300, false);
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert_eq!(result.disk, Disk::from_mib(10240).unwrap());
     }
 
@@ -404,7 +415,7 @@ mod tests {
         let up_config = test_up_config();
         // 512 MiB + 1 byte - strong type preserves exact byte value
         let job = test_job(1, mib_to_bytes(512) + 1, mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert_eq!(result.memory.to_mib(), 513);
     }
 
@@ -412,7 +423,7 @@ mod tests {
     fn timeout_converts_u32_to_u64() {
         let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 600, false);
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert_eq!(result.timeout_secs, 600);
     }
 
@@ -420,7 +431,7 @@ mod tests {
     fn builds_oci_image_url() {
         let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert_eq!(
             result.oci_image,
             "registry.bencher.dev/11111111-2222-3333-4444-555555555555@sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
@@ -457,7 +468,7 @@ mod tests {
         });
         let job: JsonClaimedJob =
             serde_json::from_value(json).expect("Failed to construct test JsonClaimedJob");
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert_eq!(
             result.oci_image,
             "localhost:61016/11111111-2222-3333-4444-555555555555@sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
@@ -468,7 +479,7 @@ mod tests {
     fn oci_token_passed_through() {
         let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert!(
             result.token.is_some(),
             "OCI token should be passed to config"
@@ -479,7 +490,7 @@ mod tests {
     fn network_enabled() {
         let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, true);
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert!(result.network);
     }
 
@@ -487,7 +498,7 @@ mod tests {
     fn network_disabled() {
         let up_config = test_up_config();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert!(!result.network);
     }
 
@@ -505,7 +516,7 @@ mod tests {
             None,
             None,
         );
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert_eq!(result.entrypoint.unwrap(), vec!["/bin/sh"]);
         assert_eq!(result.cmd.unwrap(), vec!["-c", "cargo bench"]);
     }
@@ -528,7 +539,7 @@ mod tests {
             Some(env.clone()),
             None,
         );
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         let result_env = result.env.unwrap();
         assert_eq!(result_env.get("RUST_LOG").unwrap(), "debug");
         assert_eq!(result_env.get("CI").unwrap(), "true");
@@ -548,7 +559,7 @@ mod tests {
             None,
             Some(vec!["/tmp/results.json".to_owned()]),
         );
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert_eq!(
             result.file_paths.as_deref(),
             Some([Utf8PathBuf::from("/tmp/results.json")].as_slice())
@@ -572,7 +583,7 @@ mod tests {
                 "/tmp/metrics.csv".to_owned(),
             ]),
         );
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         let paths = result.file_paths.unwrap();
         assert_eq!(paths.len(), 2);
         assert_eq!(paths[0], Utf8PathBuf::from("/tmp/results.json"));
@@ -596,7 +607,7 @@ mod tests {
             Some(env),
             Some(vec!["/output/bench.txt".to_owned()]),
         );
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         assert_eq!(result.vcpus, Cpu::try_from(8).unwrap());
         assert_eq!(result.memory, Memory::from_mib(4096).unwrap());
         assert_eq!(result.disk, Disk::from_mib(20480).unwrap());
@@ -616,7 +627,7 @@ mod tests {
     fn cpu_layout_passed_through() {
         let up_config = test_up_config();
         let job = test_job(4, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         // CPU layout should be passed through from up config
         assert!(result.cpu_layout.is_some());
         let layout = result.cpu_layout.unwrap();
@@ -630,7 +641,7 @@ mod tests {
         // Single core - no isolation possible
         up_config.cpu_layout = Some(crate::cpu::CpuLayout::with_core_count(1));
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
-        let result = build_config_from_job(&up_config, &job);
+        let result = build_config_from_job(&up_config, &job).unwrap();
         // CPU layout should not be passed through when no isolation is possible
         assert!(result.cpu_layout.is_none());
     }

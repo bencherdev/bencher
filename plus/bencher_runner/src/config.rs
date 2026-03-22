@@ -251,10 +251,12 @@ impl Config {
     }
 
     /// Set the JWT token for registry authentication.
-    #[must_use]
-    pub fn with_token<S: Into<String>>(mut self, token: S) -> Self {
-        self.token = bencher_valid::Secret::try_from(token.into()).ok();
-        self
+    pub fn with_token<S: Into<String>>(
+        mut self,
+        token: S,
+    ) -> Result<Self, crate::error::ConfigError> {
+        self.token = Some(bencher_valid::Secret::try_from(token.into())?);
+        Ok(self)
     }
 
     /// Set the number of vCPUs.
@@ -446,6 +448,7 @@ mod tests {
         let env: HashMap<String, String> = [("RUST_LOG".to_owned(), "debug".to_owned())].into();
         let config = Config::new("img")
             .with_token("jwt-token")
+            .unwrap()
             .with_vcpus(Cpu::try_from(4).unwrap())
             .with_memory(Memory::from_mib(2048).unwrap())
             .with_disk(Disk::from_mib(4096).unwrap())
@@ -526,5 +529,10 @@ mod tests {
         assert!(config.entrypoint.is_none());
         assert!(config.cmd.is_none());
         assert!(config.env.is_none());
+    }
+
+    #[test]
+    fn config_with_empty_token_errors() {
+        assert!(Config::new("img").with_token("").is_err());
     }
 }

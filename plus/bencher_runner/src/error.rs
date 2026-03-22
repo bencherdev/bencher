@@ -96,4 +96,7 @@ pub enum ConfigError {
 
     #[error("Benchmark setup: {0}")]
     Setup(String),
+
+    #[error("Invalid registry token: {0}")]
+    InvalidToken(#[from] bencher_valid::ValidError),
 }

@@ -205,7 +205,7 @@ impl RunnerTest {
 
         // Run the no-sandbox runner test
         let nosandbox_result = if result.is_ok() {
-            run_nosandbox_runner_test(&self.url, &self.username, &self.token)
+            run_nosandbox_runner_test(&self.url, &self.token)
         } else {
             Ok(())
         };
@@ -341,7 +341,7 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt) -> anyhow::Result
 ///
 /// Similar to `run_runner_test` but submits to the `no-sandbox-spec` spec
 /// which does not use Firecracker sandboxing.
-fn run_nosandbox_runner_test(url: &Url, _username: &str, token: &Jwt) -> anyhow::Result<()> {
+fn run_nosandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running no-sandbox runner smoke test against: {host}");
