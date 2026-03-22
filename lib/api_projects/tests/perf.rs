@@ -372,6 +372,7 @@ fn create_spec(server: &TestServer) -> (SpecUuid, i32) {
             schema::spec::uuid.eq(&spec_uuid),
             schema::spec::name.eq(&spec_name),
             schema::spec::slug.eq(&spec_slug),
+            schema::spec::os.eq("linux"),
             schema::spec::architecture.eq("x86_64"),
             schema::spec::cpu.eq(4),
             schema::spec::memory.eq(0x0002_0000_0000i64),

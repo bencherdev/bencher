@@ -182,6 +182,7 @@ async fn testbeds_get_with_spec_query() {
     // Create two specs
     let spec_a_body = serde_json::json!({
         "name": "Spec A",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -204,6 +205,7 @@ async fn testbeds_get_with_spec_query() {
 
     let spec_b_body = serde_json::json!({
         "name": "Spec B",
+        "os": "linux",
         "architecture": "aarch64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -422,6 +424,7 @@ async fn testbeds_create_with_spec() {
     // Create a spec
     let spec_body = serde_json::json!({
         "name": "Create Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -484,6 +487,7 @@ async fn testbeds_patch_spec_null() {
     // Create a spec
     let spec_body = serde_json::json!({
         "name": "Null Spec",
+        "os": "linux",
         "architecture": "aarch64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
