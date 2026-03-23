@@ -108,6 +108,8 @@ const RUBY_INT: i32 = 90;
 const RUBY_BENCHMARK_INT: i32 = 91;
 const SHELL_INT: i32 = 100;
 const SHELL_HYPERFINE_INT: i32 = 101;
+const DART_INT: i32 = 110;
+const DART_BENCHMARK_HARNESS_INT: i32 = 111;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -147,6 +149,8 @@ pub enum Adapter {
     RubyBenchmark = RUBY_BENCHMARK_INT,
     Shell = SHELL_INT,
     ShellHyperfine = SHELL_HYPERFINE_INT,
+    Dart = DART_INT,
+    DartBenchmarkHarness = DART_BENCHMARK_HARNESS_INT,
 }
 
 impl fmt::Display for Adapter {
@@ -178,6 +182,8 @@ impl fmt::Display for Adapter {
             Self::RubyBenchmark => write!(f, "ruby_benchmark"),
             Self::Shell => write!(f, "shell"),
             Self::ShellHyperfine => write!(f, "shell_hyperfine"),
+            Self::Dart => write!(f, "dart"),
+            Self::DartBenchmarkHarness => write!(f, "dart_benchmark_harness"),
         }
     }
 }
@@ -186,10 +192,10 @@ impl fmt::Display for Adapter {
 mod adapter {
     use super::{
         Adapter, C_SHARP_DOT_NET_INT, C_SHARP_INT, CPP_CATCH2_INT, CPP_GOOGLE_INT, CPP_INT,
-        GO_BENCH_INT, GO_INT, JAVA_INT, JAVA_JMH_INT, JS_BENCHMARK_INT, JS_INT, JS_TIME_INT,
-        JSON_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT,
-        RUBY_INT, RUST_BENCH_INT, RUST_CRITERION_INT, RUST_GUNGRAUN_INT, RUST_IAI_INT, RUST_INT,
-        SHELL_HYPERFINE_INT, SHELL_INT,
+        DART_BENCHMARK_HARNESS_INT, DART_INT, GO_BENCH_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
+        JS_BENCHMARK_INT, JS_INT, JS_TIME_INT, JSON_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT,
+        PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT, RUST_BENCH_INT, RUST_CRITERION_INT,
+        RUST_GUNGRAUN_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -234,6 +240,8 @@ mod adapter {
                 Self::RubyBenchmark => RUBY_BENCHMARK_INT.to_sql(out),
                 Self::Shell => SHELL_INT.to_sql(out),
                 Self::ShellHyperfine => SHELL_HYPERFINE_INT.to_sql(out),
+                Self::Dart => DART_INT.to_sql(out),
+                Self::DartBenchmarkHarness => DART_BENCHMARK_HARNESS_INT.to_sql(out),
             }
         }
     }
@@ -271,6 +279,8 @@ mod adapter {
                 RUBY_BENCHMARK_INT => Ok(Self::RubyBenchmark),
                 SHELL_INT => Ok(Self::Shell),
                 SHELL_HYPERFINE_INT => Ok(Self::ShellHyperfine),
+                DART_INT => Ok(Self::Dart),
+                DART_BENCHMARK_HARNESS_INT => Ok(Self::DartBenchmarkHarness),
                 value => Err(Box::new(AdapterError::Invalid(value))),
             }
         }

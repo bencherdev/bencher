@@ -43,6 +43,11 @@ const BenchmarkHarnessFallback = () => (
 				adapters={[Adapter.RubyBenchmark]}
 			/>
 			<LanguageBox
+				icon="devicon-dart-plain"
+				name="Dart"
+				adapters={[Adapter.DartBenchmarkHarness]}
+			/>
+			<LanguageBox
 				icon="devicon-rust-plain"
 				name="Rust"
 				adapters={[

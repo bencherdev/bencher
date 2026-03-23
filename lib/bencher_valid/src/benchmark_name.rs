@@ -31,7 +31,7 @@ impl BenchmarkName {
     pub const MAX_LEN: usize = MAX_BENCHMARK_NAME_LEN;
 
     pub fn try_push(&mut self, separator: char, other: &Self) -> Result<(), ValidError> {
-        let remaining_capacity = Self::MAX_LEN.checked_sub(self.0.len()).unwrap_or_default();
+        let remaining_capacity = Self::MAX_LEN.saturating_sub(self.0.len());
         if other.0.len() < remaining_capacity {
             self.0.push(separator);
             self.0.push_str(other.as_ref());

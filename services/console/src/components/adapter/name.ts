@@ -54,6 +54,10 @@ export const adapterName = (adapter: Adapter): string => {
 			return "Shell";
 		case Adapter.ShellHyperfine:
 			return "Hyperfine";
+		case Adapter.Dart:
+			return "Dart";
+		case Adapter.DartBenchmarkHarness:
+			return "benchmark_harness";
 	}
 };
 
@@ -86,6 +90,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} --file results.json "pytest --benchmark-json results.json benchmarks.py"`;
 		case Adapter.RubyBenchmark:
 			return `bencher run${host} "ruby benchmarks.rb"`;
+		case Adapter.DartBenchmarkHarness:
+			return `bencher run${host} --adapter dart_benchmark_harness "dart run benchmark/benchmark.dart"`;
 		case Adapter.ShellHyperfine:
 			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs

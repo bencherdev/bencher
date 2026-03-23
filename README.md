@@ -114,6 +114,8 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
   - [pytest-benchmark](https://bencher.dev/docs/explanation/adapters/#-python-pytest)
 - ♦️ Ruby
   - [Benchmark](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F-ruby-benchmark)
+- 🎯 Dart
+  - [benchmark_harness](https://bencher.dev/docs/explanation/adapters/#-dart-benchmark-harness)
 - 🦀 Rust
   - [libtest bench](https://bencher.dev/docs/explanation/adapters/#-rust-bench)
   - [Criterion](https://bencher.dev/docs/explanation/adapters/#-rust-criterion)

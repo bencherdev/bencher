@@ -84,6 +84,11 @@ const BencherRunInner = (props) => {
 					{props.ruby_benchmark_bash}
 				</Show>
 			</Match>
+			<Match when={adapter() === Adapter.DartBenchmarkHarness}>
+				<Show when={bash()} fallback={props.dart_benchmark_harness_powershell}>
+					{props.dart_benchmark_harness_bash}
+				</Show>
+			</Match>
 			<Match when={adapter() === Adapter.ShellHyperfine}>
 				<Show when={bash()} fallback={props.shell_hyperfine_powershell}>
 					{props.shell_hyperfine_bash}
