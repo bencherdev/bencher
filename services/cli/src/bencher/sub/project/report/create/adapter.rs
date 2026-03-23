@@ -31,6 +31,8 @@ impl From<CliReportAdapter> for Adapter {
             CliReportAdapter::RustGungraun => Self::RustGungraun,
             CliReportAdapter::Shell => Self::Shell,
             CliReportAdapter::ShellHyperfine => Self::ShellHyperfine,
+            CliReportAdapter::Dart => Self::Dart,
+            CliReportAdapter::DartBenchmarkHarness => Self::DartBenchmarkHarness,
         }
     }
 }

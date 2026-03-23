@@ -855,7 +855,6 @@ impl Measure {
                         .measures
                         .iter()
                         .filter(|&report_measure| report_measure.threshold.is_none())
-                        .cloned()
                         .map(|report_measure| Measure::from(report_measure.measure.clone()))
                 })
             })

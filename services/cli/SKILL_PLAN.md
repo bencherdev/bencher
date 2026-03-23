@@ -67,7 +67,7 @@ Detailed bare metal workflow:
 
 Local benchmark workflow:
 1. Basic: `bencher run "cargo bench"` with auto-detection (`--adapter magic`)
-2. Explicit adapter selection: when to use which adapter (table of 17 adapters)
+2. Explicit adapter selection: when to use which adapter (table of 18 adapters)
 3. Multi-iteration: `--iter 5 --fold mean`
 4. File-based: `--file results.json` for pre-existing output
 5. Build time tracking: `--build-time`
@@ -91,6 +91,7 @@ Local benchmark workflow:
 | `python_asv` | Python | ASV |
 | `python_pytest` | Python | pytest-benchmark |
 | `ruby_benchmark` | Ruby | Benchmark module |
+| `dart_benchmark_harness` | Dart | [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) |
 | `rust_bench` | Rust | `#[bench]` (nightly) |
 | `rust_criterion` | Rust | Criterion.rs |
 | `rust_iai` | Rust | Iai |

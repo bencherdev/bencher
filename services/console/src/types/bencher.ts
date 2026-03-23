@@ -940,6 +940,8 @@ export enum Adapter {
 	RubyBenchmark = "ruby_benchmark",
 	Shell = "shell",
 	ShellHyperfine = "shell_hyperfine",
+	Dart = "dart",
+	DartBenchmarkHarness = "dart_benchmark_harness",
 }
 
 export interface JsonReport {

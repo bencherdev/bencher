@@ -15,6 +15,7 @@ const PYTHON_ICON = "devicon-python-plain";
 const RUBY_ICON = "devicon-ruby-plain";
 const RUST_ICON = "devicon-rust-plain";
 const SHELL_ICON = "devicon-bash-plain";
+const DART_ICON = "devicon-dart-plain";
 
 export const adapterIcon = (adapter: Adapter) => {
 	switch (adapter) {
@@ -42,6 +43,8 @@ export const adapterIcon = (adapter: Adapter) => {
 			return PYTHON_ICON;
 		case Adapter.RubyBenchmark:
 			return RUBY_ICON;
+		case Adapter.DartBenchmarkHarness:
+			return DART_ICON;
 		case Adapter.ShellHyperfine:
 			return SHELL_ICON;
 		default:
@@ -79,6 +82,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} --file results.json "pytest --benchmark-json results.json benchmarks.py"`;
 		case Adapter.RubyBenchmark:
 			return `bencher run${host} "ruby benchmarks.rb"`;
+		case Adapter.DartBenchmarkHarness:
+			return `bencher run${host} --adapter dart_benchmark_harness "dart run benchmark/benchmark.dart"`;
 		case Adapter.ShellHyperfine:
 			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
@@ -157,6 +162,7 @@ const validAdapter = (adapter: undefined | null | string | Adapter) => {
 		case Adapter.PythonAsv:
 		case Adapter.PythonPytest:
 		case Adapter.RubyBenchmark:
+		case Adapter.DartBenchmarkHarness:
 		case Adapter.ShellHyperfine:
 			return true;
 		default:

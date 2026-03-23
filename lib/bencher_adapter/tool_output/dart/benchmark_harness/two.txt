@@ -1,0 +1,2 @@
+Template(RunTime): 1.0 us.
+ForLoop(RunTime): 2.0 us.

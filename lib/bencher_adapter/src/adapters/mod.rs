@@ -2,6 +2,7 @@ use nom::IResult;
 
 pub mod c_sharp;
 pub mod cpp;
+pub mod dart;
 pub mod go;
 pub mod java;
 pub mod js;
