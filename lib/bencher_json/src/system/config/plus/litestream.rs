@@ -20,6 +20,30 @@ pub struct JsonLitestream {
     /// Validation interval
     #[serde(skip_serializing_if = "Option::is_none")]
     pub validation_interval: Option<String>,
+    /// Checkpoint configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub checkpoint: Option<JsonCheckpoint>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonCheckpoint {
+    /// How often to perform a non-blocking PASSIVE checkpoint
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interval: Option<String>,
+    /// Minimum WAL pages before a PASSIVE checkpoint triggers
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_page_count: Option<u64>,
+    /// Page threshold for blocking TRUNCATE checkpoint (0 to disable)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub truncate_page_n: Option<u64>,
+}
+
+impl JsonCheckpoint {
+    /// Default value for `truncate_page_n`: disables blocking TRUNCATE checkpoints.
+    /// When set to 0, Litestream will never perform a blocking TRUNCATE checkpoint,
+    /// only non-blocking PASSIVE checkpoints (controlled by `interval` / `min_page_count`).
+    pub const TRUNCATE_DISABLED: u64 = 0;
 }
 
 impl Sanitize for JsonLitestream {
@@ -89,7 +113,7 @@ mod db {
 
     use crate::system::config::LogLevel;
 
-    use super::{JsonLitestream, JsonReplica};
+    use super::{JsonCheckpoint, JsonLitestream, JsonReplica};
 
     impl JsonLitestream {
         pub fn into_yaml(
@@ -102,9 +126,29 @@ mod db {
                 snapshot_interval,
                 retention,
                 validation_interval,
+                checkpoint,
             } = self;
             let replica = LitestreamReplica::from(replica);
-            let dbs = vec![LitestreamDb { path, replica }];
+            let (min_checkpoint_page_count, checkpoint_interval, truncate_page_n) = checkpoint
+                .map_or((None, None, JsonCheckpoint::TRUNCATE_DISABLED), |c| {
+                    let JsonCheckpoint {
+                        interval,
+                        min_page_count,
+                        truncate_page_n,
+                    } = c;
+                    (
+                        min_page_count,
+                        interval,
+                        truncate_page_n.unwrap_or(JsonCheckpoint::TRUNCATE_DISABLED),
+                    )
+                });
+            let dbs = vec![LitestreamDb {
+                path,
+                replica,
+                min_checkpoint_page_count,
+                checkpoint_interval,
+                truncate_page_n,
+            }];
             let snapshot = match (snapshot_interval, retention) {
                 (None, None) => None,
                 (interval, retention) => Some(LitestreamSnapshot {
@@ -161,6 +205,11 @@ mod db {
     pub struct LitestreamDb {
         pub path: PathBuf,
         pub replica: LitestreamReplica,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub min_checkpoint_page_count: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub checkpoint_interval: Option<String>,
+        pub truncate_page_n: u64,
     }
 
     #[derive(Debug, Clone, Serialize)]
@@ -291,6 +340,7 @@ mod db {
             snapshot_interval: None,
             retention: None,
             validation_interval: None,
+            checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -305,6 +355,7 @@ mod db {
     path: /path/to/backup
     access-key-id: access_key_id
     secret-access-key: secret_access_key
+  truncate-page-n: 0
 logging:
   level: info
 "
@@ -326,6 +377,7 @@ logging:
             snapshot_interval: Some("1h".to_owned()),
             retention: Some("24h".to_owned()),
             validation_interval: Some("6h".to_owned()),
+            checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -340,11 +392,55 @@ logging:
     path: /path/to/backup
     access-key-id: access_key_id
     secret-access-key: secret_access_key
+  truncate-page-n: 0
 snapshot:
   interval: 1h
   retention: 24h
 validation:
   interval: 6h
+logging:
+  level: info
+"
+        );
+    }
+
+    #[test]
+    fn into_yaml_with_checkpoint_config() {
+        let json_litestream = JsonLitestream {
+            replica: JsonReplica::S3 {
+                bucket: "bucket".to_owned(),
+                path: Some("/path/to/backup".to_owned()),
+                endpoint: None,
+                region: None,
+                access_key_id: "access_key_id".to_owned(),
+                secret_access_key: "secret_access_key".parse().unwrap(),
+                sync_interval: None,
+            },
+            snapshot_interval: None,
+            retention: None,
+            validation_interval: None,
+            checkpoint: Some(JsonCheckpoint {
+                interval: Some("5m".to_owned()),
+                min_page_count: Some(2000),
+                truncate_page_n: Some(121_359),
+            }),
+        };
+        let path = PathBuf::from("/path/to/db");
+        let log_level = LogLevel::Info;
+        let yaml = json_litestream.into_yaml(path, log_level).unwrap();
+        pretty_assertions::assert_eq!(
+            yaml,
+            "dbs:
+- path: /path/to/db
+  replica:
+    type: s3
+    bucket: bucket
+    path: /path/to/backup
+    access-key-id: access_key_id
+    secret-access-key: secret_access_key
+  min-checkpoint-page-count: 2000
+  checkpoint-interval: 5m
+  truncate-page-n: 121359
 logging:
   level: info
 "
@@ -361,6 +457,7 @@ logging:
             snapshot_interval: None,
             retention: None,
             validation_interval: None,
+            checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -373,6 +470,7 @@ logging:
     type: file
     path: /path/to/replica
     sync-interval: 5s
+  truncate-page-n: 0
 logging:
   level: info
 "
@@ -394,6 +492,7 @@ logging:
             snapshot_interval: None,
             retention: None,
             validation_interval: None,
+            checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -408,6 +507,7 @@ logging:
     user: user
     password: pass
     path: /backup
+  truncate-page-n: 0
 logging:
   level: info
 "

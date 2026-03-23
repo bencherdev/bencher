@@ -24,7 +24,7 @@ pub use plus::{
         otel::{JsonOtel, OtelProtocol},
         recaptcha::JsonRecaptcha,
     },
-    litestream::{JsonLitestream, JsonReplica},
+    litestream::{JsonCheckpoint, JsonLitestream, JsonReplica},
     rate_limiting::{
         JsonOciBandwidth, JsonPublicRateLimiter, JsonRateLimiting, JsonRunnerRateLimiter,
         JsonUserRateLimiter,
