@@ -11267,6 +11267,30 @@
           "url"
         ]
       },
+      "JsonCheckpoint": {
+        "type": "object",
+        "properties": {
+          "interval": {
+            "nullable": true,
+            "description": "How often to perform a non-blocking PASSIVE checkpoint",
+            "type": "string"
+          },
+          "min_page_count": {
+            "nullable": true,
+            "description": "Minimum WAL pages before a PASSIVE checkpoint triggers",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "truncate_page_n": {
+            "nullable": true,
+            "description": "Page threshold for blocking TRUNCATE checkpoint (0 to disable)",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          }
+        }
+      },
       "JsonCloud": {
         "type": "object",
         "properties": {
@@ -11888,6 +11912,15 @@
       "JsonLitestream": {
         "type": "object",
         "properties": {
+          "checkpoint": {
+            "nullable": true,
+            "description": "Checkpoint configuration",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCheckpoint"
+              }
+            ]
+          },
           "replica": {
             "description": "Disaster recovery replica",
             "allOf": [

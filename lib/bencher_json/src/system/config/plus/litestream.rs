@@ -20,13 +20,21 @@ pub struct JsonLitestream {
     /// Validation interval
     #[serde(skip_serializing_if = "Option::is_none")]
     pub validation_interval: Option<String>,
-    /// Minimum checkpoint page count
+    /// Checkpoint configuration
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub min_checkpoint_page_count: Option<u64>,
-    /// Checkpoint interval
+    pub checkpoint: Option<JsonCheckpoint>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonCheckpoint {
+    /// How often to perform a non-blocking PASSIVE checkpoint
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub checkpoint_interval: Option<String>,
-    /// Truncate page count (0 to disable)
+    pub interval: Option<String>,
+    /// Minimum WAL pages before a PASSIVE checkpoint triggers
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_page_count: Option<u64>,
+    /// Page threshold for blocking TRUNCATE checkpoint (0 to disable)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub truncate_page_n: Option<u64>,
 }
@@ -98,7 +106,7 @@ mod db {
 
     use crate::system::config::LogLevel;
 
-    use super::{JsonLitestream, JsonReplica};
+    use super::{JsonCheckpoint, JsonLitestream, JsonReplica};
 
     impl JsonLitestream {
         pub fn into_yaml(
@@ -111,17 +119,24 @@ mod db {
                 snapshot_interval,
                 retention,
                 validation_interval,
-                min_checkpoint_page_count,
-                checkpoint_interval,
-                truncate_page_n,
+                checkpoint,
             } = self;
             let replica = LitestreamReplica::from(replica);
+            let (min_checkpoint_page_count, checkpoint_interval, truncate_page_n) = checkpoint
+                .map_or((None, None, 0), |c| {
+                    let JsonCheckpoint {
+                        interval,
+                        min_page_count,
+                        truncate_page_n,
+                    } = c;
+                    (min_page_count, interval, truncate_page_n.unwrap_or(0))
+                });
             let dbs = vec![LitestreamDb {
                 path,
                 replica,
                 min_checkpoint_page_count,
                 checkpoint_interval,
-                truncate_page_n: truncate_page_n.unwrap_or(0),
+                truncate_page_n,
             }];
             let snapshot = match (snapshot_interval, retention) {
                 (None, None) => None,
@@ -314,9 +329,7 @@ mod db {
             snapshot_interval: None,
             retention: None,
             validation_interval: None,
-            min_checkpoint_page_count: None,
-            checkpoint_interval: None,
-            truncate_page_n: None,
+            checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -353,9 +366,7 @@ logging:
             snapshot_interval: Some("1h".to_owned()),
             retention: Some("24h".to_owned()),
             validation_interval: Some("6h".to_owned()),
-            min_checkpoint_page_count: None,
-            checkpoint_interval: None,
-            truncate_page_n: None,
+            checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -397,9 +408,11 @@ logging:
             snapshot_interval: None,
             retention: None,
             validation_interval: None,
-            min_checkpoint_page_count: Some(2000),
-            checkpoint_interval: Some("5m".to_owned()),
-            truncate_page_n: Some(121359),
+            checkpoint: Some(JsonCheckpoint {
+                interval: Some("5m".to_owned()),
+                min_page_count: Some(2000),
+                truncate_page_n: Some(121_359),
+            }),
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -433,9 +446,7 @@ logging:
             snapshot_interval: None,
             retention: None,
             validation_interval: None,
-            min_checkpoint_page_count: None,
-            checkpoint_interval: None,
-            truncate_page_n: None,
+            checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -470,9 +481,7 @@ logging:
             snapshot_interval: None,
             retention: None,
             validation_interval: None,
-            min_checkpoint_page_count: None,
-            checkpoint_interval: None,
-            truncate_page_n: None,
+            checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
