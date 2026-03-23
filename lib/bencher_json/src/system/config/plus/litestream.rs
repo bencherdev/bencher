@@ -144,20 +144,8 @@ mod db {
                 checkpoint,
             } = self;
             let replica = LitestreamReplica::from(replica);
-            let snapshot = snapshot.map(|s| {
-                let JsonSnapshot {
-                    interval,
-                    retention,
-                } = s;
-                LitestreamSnapshot {
-                    interval,
-                    retention,
-                }
-            });
-            let validation = validation.map(|v| {
-                let JsonValidation { interval } = v;
-                LitestreamValidation { interval }
-            });
+            let snapshot = snapshot.map(LitestreamSnapshot::from);
+            let validation = validation.map(LitestreamValidation::from);
             let (min_checkpoint_page_count, checkpoint_interval, truncate_page_n) = checkpoint
                 .map_or((None, None, JsonCheckpoint::TRUNCATE_DISABLED), |c| {
                     let JsonCheckpoint {
@@ -314,6 +302,26 @@ mod db {
                     sync_interval,
                 },
             }
+        }
+    }
+
+    impl From<JsonSnapshot> for LitestreamSnapshot {
+        fn from(snapshot: JsonSnapshot) -> Self {
+            let JsonSnapshot {
+                interval,
+                retention,
+            } = snapshot;
+            Self {
+                interval,
+                retention,
+            }
+        }
+    }
+
+    impl From<JsonValidation> for LitestreamValidation {
+        fn from(validation: JsonValidation) -> Self {
+            let JsonValidation { interval } = validation;
+            Self { interval }
         }
     }
 
