@@ -39,6 +39,13 @@ pub struct JsonCheckpoint {
     pub truncate_page_n: Option<u64>,
 }
 
+impl JsonCheckpoint {
+    /// Default value for `truncate_page_n`: disables blocking TRUNCATE checkpoints.
+    /// When set to 0, Litestream will never perform a blocking TRUNCATE checkpoint,
+    /// only non-blocking PASSIVE checkpoints (controlled by `interval` / `min_page_count`).
+    pub const TRUNCATE_DISABLED: u64 = 0;
+}
+
 impl Sanitize for JsonLitestream {
     fn sanitize(&mut self) {
         self.replica.sanitize();
@@ -123,13 +130,17 @@ mod db {
             } = self;
             let replica = LitestreamReplica::from(replica);
             let (min_checkpoint_page_count, checkpoint_interval, truncate_page_n) = checkpoint
-                .map_or((None, None, 0), |c| {
+                .map_or((None, None, JsonCheckpoint::TRUNCATE_DISABLED), |c| {
                     let JsonCheckpoint {
                         interval,
                         min_page_count,
                         truncate_page_n,
                     } = c;
-                    (min_page_count, interval, truncate_page_n.unwrap_or(0))
+                    (
+                        min_page_count,
+                        interval,
+                        truncate_page_n.unwrap_or(JsonCheckpoint::TRUNCATE_DISABLED),
+                    )
                 });
             let dbs = vec![LitestreamDb {
                 path,
