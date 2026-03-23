@@ -1,4 +1,6 @@
-use bencher_valid::{Architecture, Cpu, DateTime, Disk, Memory, ResourceId, ResourceName};
+use bencher_valid::{
+    Architecture, Cpu, DateTime, Disk, Memory, OperatingSystem, ResourceId, ResourceName, Sandbox,
+};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -20,8 +22,13 @@ pub struct JsonNewSpec {
     /// The preferred slug for the spec.
     /// If not provided, the slug will be generated from the name.
     pub slug: Option<SpecSlug>,
+    /// Operating system
+    pub os: OperatingSystem,
     /// CPU architecture
     pub architecture: Architecture,
+    /// Sandbox type (e.g. firecracker). If not provided, the job runs without a sandbox.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sandbox: Option<Sandbox>,
     /// Number of CPUs
     pub cpu: Cpu,
     /// Memory size in bytes
@@ -52,8 +59,12 @@ pub struct JsonSpec {
     pub uuid: SpecUuid,
     pub name: ResourceName,
     pub slug: SpecSlug,
+    /// Operating system
+    pub os: OperatingSystem,
     /// CPU architecture
     pub architecture: Architecture,
+    /// Sandbox type
+    pub sandbox: Option<Sandbox>,
     pub cpu: Cpu,
     pub memory: Memory,
     pub disk: Disk,

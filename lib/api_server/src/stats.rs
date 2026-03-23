@@ -1,5 +1,3 @@
-#![cfg(feature = "plus")]
-
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted, ResponseOk};
 use bencher_json::{
     BooleanParam, JsonServerStats, JsonUuid, SelfHostedStartup, SelfHostedStats, ServerUuid,

@@ -1,11 +1,11 @@
-/// Error type for invalid firecracker log level strings.
+/// Error type for invalid sandbox log level strings.
 #[derive(Debug, thiserror::Error)]
-#[error("Invalid firecracker log level: {0} (expected: off, error, warning, info, debug, trace)")]
+#[error("Invalid sandbox log level: {0} (expected: off, error, warning, info, debug, trace)")]
 pub struct ParseLogLevelError(pub String);
 
-/// Firecracker log level (maps to `--level` CLI flag).
+/// Sandbox process log level (maps to `--level` CLI flag for Firecracker).
 #[derive(Debug, Clone, Copy, Default)]
-pub enum FirecrackerLogLevel {
+pub enum SandboxLogLevel {
     Off,
     Error,
     #[default]
@@ -15,7 +15,7 @@ pub enum FirecrackerLogLevel {
     Trace,
 }
 
-impl FirecrackerLogLevel {
+impl SandboxLogLevel {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Off => "Off",
@@ -28,13 +28,13 @@ impl FirecrackerLogLevel {
     }
 }
 
-impl std::fmt::Display for FirecrackerLogLevel {
+impl std::fmt::Display for SandboxLogLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.as_str())
     }
 }
 
-impl std::str::FromStr for FirecrackerLogLevel {
+impl std::str::FromStr for SandboxLogLevel {
     type Err = ParseLogLevelError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

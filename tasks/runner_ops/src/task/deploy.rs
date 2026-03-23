@@ -52,7 +52,7 @@ impl Deploy {
         } = self;
         let (runner_binary, _temp_dir) = download::download(run_id)?;
         deploy_setup::deploy(&ssh, Some(runner_binary.as_path()))?;
-        let start = Start::new(ssh, host, runner, token);
+        let start = Start::new(ssh, host, runner, token, false);
         start.exec()?;
         Ok(())
     }

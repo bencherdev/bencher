@@ -1,8 +1,8 @@
 use std::string::ToString as _;
 
 use bencher_json::{
-    Architecture, Cpu, DateTime, Disk, JsonNewSpec, JsonSpec, JsonUpdateSpec, Memory, ResourceName,
-    SpecResourceId, SpecSlug, SpecUuid,
+    Architecture, Cpu, DateTime, Disk, JsonNewSpec, JsonSpec, JsonUpdateSpec, Memory,
+    OperatingSystem, ResourceName, Sandbox, SpecResourceId, SpecSlug, SpecUuid,
 };
 use diesel::{
     ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
@@ -29,7 +29,9 @@ pub struct QuerySpec {
     pub uuid: SpecUuid,
     pub name: ResourceName,
     pub slug: SpecSlug,
+    pub os: OperatingSystem,
     pub architecture: Architecture,
+    pub sandbox: Option<Sandbox>,
     pub cpu: Cpu,
     pub memory: Memory,
     pub disk: Disk,
@@ -49,19 +51,38 @@ impl QuerySpec {
     fn_from_resource_id!(spec, Spec, SpecResourceId);
 
     pub fn into_json(self) -> JsonSpec {
+        let Self {
+            id: _,
+            uuid,
+            name,
+            slug,
+            os,
+            architecture,
+            sandbox,
+            cpu,
+            memory,
+            disk,
+            network,
+            fallback,
+            created,
+            modified,
+            archived,
+        } = self;
         JsonSpec {
-            uuid: self.uuid,
-            name: self.name,
-            slug: self.slug,
-            architecture: self.architecture,
-            cpu: self.cpu,
-            memory: self.memory,
-            disk: self.disk,
-            network: self.network,
-            fallback: self.fallback,
-            created: self.created,
-            modified: self.modified,
-            archived: self.archived,
+            uuid,
+            name,
+            slug,
+            os,
+            architecture,
+            sandbox,
+            cpu,
+            memory,
+            disk,
+            network,
+            fallback,
+            created,
+            modified,
+            archived,
         }
     }
 
@@ -105,7 +126,9 @@ pub struct InsertSpec {
     pub uuid: SpecUuid,
     pub name: ResourceName,
     pub slug: SpecSlug,
+    pub os: OperatingSystem,
     pub architecture: Architecture,
+    pub sandbox: Option<Sandbox>,
     pub cpu: Cpu,
     pub memory: Memory,
     pub disk: Disk,
@@ -122,7 +145,9 @@ impl InsertSpec {
             uuid: SpecUuid::new(),
             name: json.name.clone(),
             slug,
+            os: json.os,
             architecture: json.architecture,
+            sandbox: json.sandbox,
             cpu: json.cpu,
             memory: json.memory,
             disk: json.disk,

@@ -12955,6 +12955,23 @@
             "default": false,
             "type": "boolean"
           },
+          "os": {
+            "description": "Operating system",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OperatingSystem"
+              }
+            ]
+          },
+          "sandbox": {
+            "nullable": true,
+            "description": "Sandbox type (e.g. firecracker). If not provided, the job runs without a sandbox.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Sandbox"
+              }
+            ]
+          },
           "slug": {
             "nullable": true,
             "description": "The preferred slug for the spec. If not provided, the slug will be generated from the name.",
@@ -12970,7 +12987,8 @@
           "cpu",
           "disk",
           "memory",
-          "name"
+          "name",
+          "os"
         ]
       },
       "JsonNewSso": {
@@ -15309,6 +15327,23 @@
           "network": {
             "type": "boolean"
           },
+          "os": {
+            "description": "Operating system",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OperatingSystem"
+              }
+            ]
+          },
+          "sandbox": {
+            "nullable": true,
+            "description": "Sandbox type",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Sandbox"
+              }
+            ]
+          },
           "slug": {
             "$ref": "#/components/schemas/SpecSlug"
           },
@@ -15325,6 +15360,7 @@
           "modified",
           "name",
           "network",
+          "os",
           "slug",
           "uuid"
         ]
@@ -16502,6 +16538,14 @@
       "NonEmpty": {
         "type": "string"
       },
+      "OperatingSystem": {
+        "type": "string",
+        "enum": [
+          "linux",
+          "macos",
+          "windows"
+        ]
+      },
       "OrganizationRole": {
         "oneOf": [
           {
@@ -16660,6 +16704,12 @@
         "type": "integer",
         "format": "uint32",
         "minimum": 0
+      },
+      "Sandbox": {
+        "type": "string",
+        "enum": [
+          "firecracker"
+        ]
       },
       "Secret": {
         "type": "string"

@@ -82,11 +82,31 @@ from_client!(
 );
 
 #[cfg(feature = "plus")]
+impl From<bencher_json::OperatingSystem> for types::OperatingSystem {
+    fn from(os: bencher_json::OperatingSystem) -> Self {
+        match os {
+            bencher_json::OperatingSystem::Linux => Self::Linux,
+            bencher_json::OperatingSystem::Macos => Self::Macos,
+            bencher_json::OperatingSystem::Windows => Self::Windows,
+        }
+    }
+}
+
+#[cfg(feature = "plus")]
 impl From<bencher_json::Architecture> for types::Architecture {
     fn from(arch: bencher_json::Architecture) -> Self {
         match arch {
             bencher_json::Architecture::X86_64 => Self::X8664,
             bencher_json::Architecture::Aarch64 => Self::Aarch64,
+        }
+    }
+}
+
+#[cfg(feature = "plus")]
+impl From<bencher_json::Sandbox> for types::Sandbox {
+    fn from(sandbox: bencher_json::Sandbox) -> Self {
+        match sandbox {
+            bencher_json::Sandbox::Firecracker => Self::Firecracker,
         }
     }
 }

@@ -74,6 +74,11 @@ pub struct CliRun {
     #[arg(long)]
     pub max_file_count: Option<u32>,
 
+    /// Maximum number of symlinks to follow during path resolution (default: 40).
+    /// Matches the Linux kernel's MAXSYMLINKS limit. Only used in non-sandboxed mode.
+    #[arg(long, conflicts_with = "sandbox")]
+    pub max_symlinks: Option<u32>,
+
     /// Container entrypoint override.
     #[arg(long, num_args = 1..=bencher_json::MAX_ENTRYPOINT_LEN)]
     pub entrypoint: Option<Vec<String>>,
@@ -90,6 +95,12 @@ pub struct CliRun {
     #[arg(long)]
     pub network: bool,
 
+    /// Sandbox mode for benchmark execution.
+    /// Use "firecracker" for Firecracker microVM (Linux-only).
+    /// Omit for non-sandboxed host execution.
+    #[arg(long)]
+    pub sandbox: Option<bencher_json::Sandbox>,
+
     #[command(flatten)]
     pub tuning: CliTuning,
 
@@ -105,7 +116,7 @@ pub struct CliRun {
     #[arg(long, default_value = "1")]
     pub grace_period: bencher_runner::GracePeriod,
 
-    /// Firecracker process log level (default: warning).
-    #[arg(long, default_value = "warning")]
-    pub firecracker_log_level: bencher_runner::FirecrackerLogLevel,
+    /// Sandbox process log level; requires --sandbox (default: warning).
+    #[arg(long, default_value = "warning", requires = "sandbox")]
+    pub sandbox_log_level: bencher_runner::SandboxLogLevel,
 }

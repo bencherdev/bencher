@@ -19,6 +19,9 @@ pub enum RunnerError {
     #[error("Config error: {0}")]
     Config(#[from] ConfigError),
 
+    #[error("Execution error: {0}")]
+    Execution(#[from] ExecutionError),
+
     #[error("Benchmark exited with non-zero exit code: {0}")]
     NonZeroExitCode(i32),
 
@@ -87,4 +90,19 @@ pub enum ConfigError {
         value: String,
         range: &'static str,
     },
+
+    #[error("Invalid registry token: {0}")]
+    InvalidToken(#[from] bencher_valid::ValidError),
+}
+
+#[derive(Debug, Error)]
+pub enum ExecutionError {
+    #[error("Benchmark timeout: {0}")]
+    Timeout(String),
+
+    #[error("Benchmark canceled: {0}")]
+    Canceled(String),
+
+    #[error("Benchmark setup: {0}")]
+    Setup(String),
 }

@@ -10,7 +10,7 @@ use bencher_api_tests::TestServer;
 use bencher_json::{JsonRunnerToken, JsonSpec, JsonSpecs};
 use http::StatusCode;
 
-// POST /v0/specs - admin can create spec
+// POST /v0/specs - admin can create spec (no sandbox)
 #[tokio::test]
 async fn specs_create() {
     let server = TestServer::new().await;
@@ -18,6 +18,7 @@ async fn specs_create() {
 
     let body = serde_json::json!({
         "name": "Small x86",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -48,6 +49,11 @@ async fn specs_create() {
     assert_eq!(value["disk"], 10_737_418_240i64);
     assert_eq!(value["network"], false);
     assert!(value["archived"].is_null());
+    assert_eq!(value["os"], "linux");
+    assert!(
+        spec.sandbox.is_none(),
+        "sandbox should be None when omitted"
+    );
 }
 
 // POST /v0/specs - custom slug on create
@@ -59,6 +65,7 @@ async fn specs_create_custom_slug() {
     let body = serde_json::json!({
         "name": "My Custom Spec",
         "slug": "my-custom-slug",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -92,6 +99,7 @@ async fn specs_create_forbidden_for_non_admin() {
 
     let body = serde_json::json!({
         "name": "Forbidden Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -123,6 +131,7 @@ async fn specs_list() {
     // Create a spec first
     let body = serde_json::json!({
         "name": "List Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -168,6 +177,7 @@ async fn specs_get_by_uuid() {
     // Create a spec
     let body = serde_json::json!({
         "name": "Get By UUID Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -213,6 +223,7 @@ async fn specs_get_by_slug() {
     // Create a spec
     let body = serde_json::json!({
         "name": "Slug Lookup Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -259,6 +270,7 @@ async fn specs_archive() {
     // Create a spec
     let body = serde_json::json!({
         "name": "Archive Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -322,6 +334,7 @@ async fn specs_list_with_archived() {
     // Create and archive a spec
     let body = serde_json::json!({
         "name": "Archived List Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -380,6 +393,7 @@ async fn specs_unarchive() {
     // Create and archive a spec
     let body = serde_json::json!({
         "name": "Unarchive Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -440,6 +454,7 @@ async fn specs_delete() {
     // Create a spec
     let body = serde_json::json!({
         "name": "Delete Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -497,6 +512,7 @@ async fn specs_delete_fails_when_in_use() {
     // Create a spec
     let body = serde_json::json!({
         "name": "FK Test Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -571,6 +587,7 @@ async fn specs_create_fallback() {
 
     let body = serde_json::json!({
         "name": "Fallback Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -603,6 +620,7 @@ async fn specs_create_without_fallback() {
 
     let body = serde_json::json!({
         "name": "No Fallback Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -634,6 +652,7 @@ async fn specs_create_fallback_false() {
 
     let body = serde_json::json!({
         "name": "Fallback False Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -670,6 +689,7 @@ async fn specs_create_fallback_replaces_existing() {
     // Create spec A with fallback
     let body_a = serde_json::json!({
         "name": "Fallback A",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -694,6 +714,7 @@ async fn specs_create_fallback_replaces_existing() {
     // Create spec B with fallback
     let body_b = serde_json::json!({
         "name": "Fallback B",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -742,6 +763,7 @@ async fn specs_update_set_fallback() {
     // Create spec without fallback
     let body = serde_json::json!({
         "name": "Set Fallback Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -789,6 +811,7 @@ async fn specs_update_unset_fallback() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "Unset Fallback Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -837,6 +860,7 @@ async fn specs_update_fallback_no_change() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "No Change Fallback",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -885,6 +909,7 @@ async fn specs_update_fallback_replaces_existing() {
     // Create spec A with fallback
     let body_a = serde_json::json!({
         "name": "Update Replace A",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -907,6 +932,7 @@ async fn specs_update_fallback_replaces_existing() {
     // Create spec B without fallback
     let body_b = serde_json::json!({
         "name": "Update Replace B",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -969,6 +995,7 @@ async fn specs_archive_clears_fallback() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "Archive Fallback",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1021,6 +1048,7 @@ async fn specs_delete_fallback_spec() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "Delete Fallback",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1056,6 +1084,7 @@ async fn specs_delete_fallback_spec() {
     // Create a new spec without fallback
     let body = serde_json::json!({
         "name": "After Delete Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1088,6 +1117,7 @@ async fn specs_list_includes_fallback_field() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "List Fallback Yes",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1111,6 +1141,7 @@ async fn specs_list_includes_fallback_field() {
     // Create spec without fallback
     let body = serde_json::json!({
         "name": "List Fallback No",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -1175,6 +1206,7 @@ async fn specs_create_fallback_replaces_archived_fallback() {
     // Create spec A with fallback
     let body_a = serde_json::json!({
         "name": "Archived FB A",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1220,6 +1252,7 @@ async fn specs_create_fallback_replaces_archived_fallback() {
     // Create spec B with fallback
     let body_b = serde_json::json!({
         "name": "Archived FB B",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -1268,6 +1301,7 @@ async fn specs_update_set_fallback_already_fallback() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "Idempotent FB",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1320,6 +1354,7 @@ async fn specs_update_unset_fallback_already_unset() {
     // Create spec without fallback
     let body = serde_json::json!({
         "name": "Noop Unset FB",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1371,6 +1406,7 @@ async fn specs_patch_fallback_true_and_archived_true() {
     // Create spec A with fallback
     let body_a = serde_json::json!({
         "name": "FB Archive A",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1395,6 +1431,7 @@ async fn specs_patch_fallback_true_and_archived_true() {
     // Create spec B without fallback
     let body_b = serde_json::json!({
         "name": "FB Archive B",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 4,
         "memory": 8_589_934_592i64,
@@ -1464,6 +1501,7 @@ async fn specs_unarchive_former_fallback() {
     // Create spec with fallback
     let body = serde_json::json!({
         "name": "Unarchive FB",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -1528,6 +1566,363 @@ async fn specs_unarchive_former_fallback() {
     );
 }
 
+// POST /v0/specs - create with sandbox: firecracker
+#[tokio::test]
+async fn specs_create_with_sandbox_firecracker() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specsandbox1@example.com").await;
+
+    let body = serde_json::json!({
+        "name": "Sandboxed Spec",
+        "os": "linux",
+        "architecture": "x86_64",
+        "sandbox": "firecracker",
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64,
+        "network": false
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let spec: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert_eq!(
+        spec.sandbox,
+        Some(bencher_json::Sandbox::Firecracker),
+        "sandbox should be Firecracker"
+    );
+}
+
+// POST /v0/specs - create with invalid sandbox value
+#[tokio::test]
+async fn specs_create_with_invalid_sandbox() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specsandbox2@example.com").await;
+
+    let body = serde_json::json!({
+        "name": "Bad Sandbox Spec",
+        "os": "linux",
+        "architecture": "x86_64",
+        "sandbox": "invalid_sandbox",
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64,
+        "network": false
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Invalid sandbox value should be rejected"
+    );
+}
+
+// POST /v0/specs - sandbox null is the same as omitting it
+#[tokio::test]
+async fn specs_create_with_sandbox_null() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specsandbox3@example.com").await;
+
+    let body = serde_json::json!({
+        "name": "Null Sandbox Spec",
+        "os": "linux",
+        "architecture": "x86_64",
+        "sandbox": null,
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64,
+        "network": false
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let spec: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert!(
+        spec.sandbox.is_none(),
+        "sandbox should be None when set to null"
+    );
+}
+
+// GET /v0/specs/{uuid} - sandbox field round-trips through view
+#[tokio::test]
+async fn specs_view_sandbox_round_trip() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specsandbox4@example.com").await;
+
+    // Create sandboxed spec
+    let body = serde_json::json!({
+        "name": "View Sandbox Spec",
+        "os": "linux",
+        "architecture": "x86_64",
+        "sandbox": "firecracker",
+        "cpu": 4,
+        "memory": 8_589_934_592i64,
+        "disk": 21_474_836_480i64,
+        "network": true
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let created: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert_eq!(created.sandbox, Some(bencher_json::Sandbox::Firecracker));
+
+    // View by UUID
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/specs/{}", created.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let viewed: JsonSpec = resp.json().await.expect("Failed to parse response");
+    assert_eq!(
+        viewed.sandbox,
+        Some(bencher_json::Sandbox::Firecracker),
+        "sandbox should persist through view"
+    );
+}
+
+// GET /v0/specs - list includes sandbox field for both sandboxed and non-sandboxed specs
+#[tokio::test]
+async fn specs_list_includes_sandbox_field() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specsandbox5@example.com").await;
+
+    // Create sandboxed spec
+    let body = serde_json::json!({
+        "name": "List Sandbox Yes",
+        "os": "linux",
+        "architecture": "x86_64",
+        "sandbox": "firecracker",
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let sandboxed: JsonSpec = resp.json().await.expect("Failed to parse response");
+
+    // Create non-sandboxed spec
+    let body = serde_json::json!({
+        "name": "List Sandbox No",
+        "os": "linux",
+        "architecture": "x86_64",
+        "cpu": 4,
+        "memory": 8_589_934_592i64,
+        "disk": 21_474_836_480i64
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let unsandboxed: JsonSpec = resp.json().await.expect("Failed to parse response");
+
+    // List specs
+    let resp = server
+        .client
+        .get(server.api_url("/v0/specs"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let specs: JsonSpecs = resp.json().await.expect("Failed to parse response");
+
+    let sb = specs
+        .0
+        .iter()
+        .find(|s| s.uuid == sandboxed.uuid)
+        .expect("sandboxed spec not found");
+    assert_eq!(
+        sb.sandbox,
+        Some(bencher_json::Sandbox::Firecracker),
+        "sandboxed spec should have sandbox set in list"
+    );
+
+    let no_sb = specs
+        .0
+        .iter()
+        .find(|s| s.uuid == unsandboxed.uuid)
+        .expect("non-sandboxed spec not found");
+    assert!(
+        no_sb.sandbox.is_none(),
+        "non-sandboxed spec should have sandbox unset in list"
+    );
+}
+
+// POST /v0/specs - create with os: macos
+#[tokio::test]
+async fn specs_create_with_os_macos() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specos1@example.com").await;
+
+    let body = serde_json::json!({
+        "name": "macOS Spec",
+        "os": "macos",
+        "architecture": "aarch64",
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64,
+        "network": false
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let spec: JsonSpec = resp.json().await.expect("Failed to parse response");
+    let value = serde_json::to_value(&spec).expect("Failed to serialize");
+    assert_eq!(value["os"], "macos");
+}
+
+// POST /v0/specs - create with os: windows
+#[tokio::test]
+async fn specs_create_with_os_windows() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specos2@example.com").await;
+
+    let body = serde_json::json!({
+        "name": "Windows Spec",
+        "os": "windows",
+        "architecture": "x86_64",
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64,
+        "network": false
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let spec: JsonSpec = resp.json().await.expect("Failed to parse response");
+    let value = serde_json::to_value(&spec).expect("Failed to serialize");
+    assert_eq!(value["os"], "windows");
+}
+
+// POST /v0/specs - create with invalid os value
+#[tokio::test]
+async fn specs_create_with_invalid_os() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "specos3@example.com").await;
+
+    let body = serde_json::json!({
+        "name": "Bad OS Spec",
+        "os": "plan9",
+        "architecture": "x86_64",
+        "cpu": 2,
+        "memory": 4_294_967_296i64,
+        "disk": 10_737_418_240i64,
+        "network": false
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "Invalid os value should be rejected"
+    );
+}
+
 // PATCH /v0/specs/{uuid} - archiving a spec clears testbed spec_id references
 #[cfg(feature = "plus")]
 #[tokio::test]
@@ -1545,6 +1940,7 @@ async fn specs_archive_clears_testbed_spec_id() {
     // Create a fallback spec
     let body = serde_json::json!({
         "name": "Clearable Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,

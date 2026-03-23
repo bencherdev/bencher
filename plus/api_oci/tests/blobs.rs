@@ -898,7 +898,7 @@ async fn blob_read_after_storage_deleted() {
         .db_path()
         .parent()
         .unwrap()
-        .join("oci")
+        .join("registry")
         .join(project.uuid.to_string());
     tokio::fs::remove_dir_all(&project_oci_dir)
         .await

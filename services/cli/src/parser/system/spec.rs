@@ -1,4 +1,6 @@
-use bencher_json::{Architecture, ResourceName, SpecResourceId, SpecSlug};
+use bencher_json::{
+    Architecture, OperatingSystem, ResourceName, Sandbox, SpecResourceId, SpecSlug,
+};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliArchived, CliBackend, CliPagination};
@@ -62,9 +64,17 @@ pub struct CliSpecCreate {
     #[clap(long)]
     pub slug: Option<SpecSlug>,
 
+    /// Operating system (linux, macos, windows)
+    #[clap(long)]
+    pub os: OperatingSystem,
+
     /// CPU architecture
     #[clap(long)]
     pub architecture: Architecture,
+
+    /// Sandbox type (firecracker). Omit for no sandbox.
+    #[clap(long)]
+    pub sandbox: Option<Sandbox>,
 
     /// Number of CPUs
     #[clap(long)]

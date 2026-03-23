@@ -1,17 +1,10 @@
-// All `up` code is used on Linux; suppress dead-code warnings on other platforms
-// where `Up::run()` is a stub.
-#![cfg_attr(not(target_os = "linux"), allow(dead_code))]
-
-use std::sync::atomic::AtomicBool;
-#[cfg(target_os = "linux")]
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use bencher_json::RunnerResourceId;
 use url::Url;
 
 use crate::cpu::CpuLayout;
-#[cfg(target_os = "linux")]
-use crate::firecracker::FirecrackerLogLevel;
+use crate::log_level::SandboxLogLevel;
 use crate::tuning::TuningConfig;
 
 mod api_client;
@@ -22,32 +15,20 @@ mod websocket;
 
 pub use error::UpError;
 
-#[cfg(target_os = "linux")]
 use api_client::RunnerApiClient;
-#[cfg(target_os = "linux")]
 use bencher_json::runner::{RunnerMessage, ServerMessage};
-#[cfg(target_os = "linux")]
 use error::WebSocketError;
-#[cfg(target_os = "linux")]
 use job::execute_job;
-#[cfg(target_os = "linux")]
 use state_machine::{ChannelStateMachine, Effect, Input, LogLevel};
 
-#[cfg(target_os = "linux")]
 use std::collections::VecDeque;
-#[cfg(target_os = "linux")]
 use std::sync::{Arc, Mutex};
-#[cfg(target_os = "linux")]
 use std::time::Duration;
-#[cfg(target_os = "linux")]
 use websocket::JobChannel;
 
-#[cfg(target_os = "linux")]
 const TRANSIENT_RETRY_BASE: Duration = Duration::from_secs(5);
-#[cfg(target_os = "linux")]
 const TRANSIENT_RETRY_JITTER: u64 = 5;
 
-#[cfg(target_os = "linux")]
 fn transient_retry_delay() -> Duration {
     use rand::RngExt as _;
     let jitter = rand::rng().random_range(0..=TRANSIENT_RETRY_JITTER);
@@ -72,11 +53,14 @@ pub struct UpConfig {
     pub max_output_size: Option<usize>,
     /// Maximum number of output files to decode.
     pub max_file_count: Option<u32>,
+    /// Maximum number of symlinks to follow during path resolution.
+    pub max_symlinks: Option<u32>,
     /// Grace period in seconds after exit code before final collection.
     pub grace_period: Option<bencher_json::GracePeriod>,
-    /// Firecracker process log level.
-    #[cfg(target_os = "linux")]
-    pub firecracker_log_level: FirecrackerLogLevel,
+    /// Sandbox process log level.
+    pub sandbox_log_level: SandboxLogLevel,
+    /// Whether to allow non-sandboxed execution.
+    pub allow_no_sandbox: bool,
 }
 
 pub struct Up {
@@ -88,8 +72,11 @@ impl Up {
         Self { config }
     }
 
-    #[cfg(target_os = "linux")]
     #[expect(clippy::print_stdout)]
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(unused_mut, reason = "mut needed on Linux for CPU layout detection")
+    )]
     pub fn run(mut self) -> Result<(), UpError> {
         install_signal_handlers();
 
@@ -97,23 +84,30 @@ impl Up {
         println!("  Host: {}", self.config.host);
         println!("  Runner: {}", self.config.runner);
         println!("  Poll timeout: {}s", self.config.poll_timeout_secs);
+        if self.config.allow_no_sandbox {
+            println!("  Non-sandboxed execution: allowed");
+        }
 
-        // Apply host tuning — guard restores settings on drop.
+        // Apply host tuning — guard restores settings on drop (no-op on non-Linux).
         // This must happen before CPU layout detection so that SMT changes
         // are reflected in the core count.
         let _tuning_guard = crate::tuning::apply(&self.config.tuning);
 
-        // Re-detect CPU layout after tuning (SMT may have changed core count)
-        self.config.cpu_layout = Some(CpuLayout::detect());
-        if let Some(cpu_layout) = &self.config.cpu_layout {
-            if cpu_layout.has_isolation() {
-                println!(
-                    "  CPU isolation: housekeeping={}, benchmark={}",
-                    cpu_layout.housekeeping_cpuset(),
-                    cpu_layout.benchmark_cpuset()
-                );
-            } else {
-                println!("  CPU isolation: disabled (insufficient cores)");
+        // Re-detect CPU layout after tuning (SMT may have changed core count).
+        // Linux-only: CpuLayout::detect() reads /sys/devices which only exists on Linux.
+        #[cfg(target_os = "linux")]
+        {
+            self.config.cpu_layout = Some(CpuLayout::detect());
+            if let Some(cpu_layout) = &self.config.cpu_layout {
+                if cpu_layout.has_isolation() {
+                    println!(
+                        "  CPU isolation: housekeeping={}, benchmark={}",
+                        cpu_layout.housekeeping_cpuset(),
+                        cpu_layout.benchmark_cpuset()
+                    );
+                } else {
+                    println!("  CPU isolation: disabled (insufficient cores)");
+                }
             }
         }
 
@@ -129,16 +123,10 @@ impl Up {
 
         run_driver(&self.config, &channel_url, client.token())
     }
-
-    #[cfg(not(target_os = "linux"))]
-    pub fn run(self) -> Result<(), UpError> {
-        Err(UpError::Config("Runner requires Linux".to_owned()))
-    }
 }
 
 /// Effect-driven protocol loop. The state machine decides what to do; this
 /// function executes effects and feeds I/O results back.
-#[cfg(target_os = "linux")]
 #[expect(clippy::print_stdout)]
 fn run_driver(config: &UpConfig, channel_url: &Url, token: &str) -> Result<(), UpError> {
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs);
@@ -173,7 +161,6 @@ fn run_driver(config: &UpConfig, channel_url: &Url, token: &str) -> Result<(), U
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
 enum EffectResult {
     /// Effect produced no input; continue to next effect.
     Continue,
@@ -183,7 +170,6 @@ enum EffectResult {
     Exit,
 }
 
-#[cfg(target_os = "linux")]
 #[expect(clippy::print_stdout, clippy::print_stderr)]
 fn execute_effect(
     effect: Effect,
@@ -249,7 +235,6 @@ fn execute_effect(
     }
 }
 
-#[cfg(target_os = "linux")]
 fn try_send(
     ws: Option<&Arc<Mutex<JobChannel>>>,
     msg: &RunnerMessage,
@@ -261,7 +246,6 @@ fn try_send(
     ws_guard.send_message(msg)
 }
 
-#[cfg(target_os = "linux")]
 fn receive_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
     let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
@@ -276,7 +260,6 @@ fn receive_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Inpu
     }
 }
 
-#[cfg(target_os = "linux")]
 fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
     let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
@@ -294,7 +277,6 @@ fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) ->
     }
 }
 
-#[cfg(target_os = "linux")]
 #[expect(clippy::print_stdout, clippy::print_stderr)]
 fn report_outcome(outcome: &state_machine::JobOutcome) {
     let state_machine::JobOutcome { job, kind, acked } = outcome;
@@ -319,7 +301,6 @@ fn report_outcome(outcome: &state_machine::JobOutcome) {
     println!("Polling for jobs...");
 }
 
-#[cfg(target_os = "linux")]
 #[expect(clippy::print_stdout, clippy::print_stderr)]
 fn log_message(level: LogLevel, msg: &str) {
     match level {
@@ -349,7 +330,20 @@ fn install_signal_handlers() {
     }
 }
 
-#[cfg(target_os = "linux")]
+/// Install signal handlers for SIGINT and SIGTERM (non-Linux POSIX).
+///
+/// Uses `libc::signal()` directly since `nix` is not available on macOS.
+#[cfg(not(target_os = "linux"))]
+fn install_signal_handlers() {
+    // SAFETY: `signal_handler` only performs `AtomicBool::store` with
+    // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
+    #[expect(unsafe_code, clippy::fn_to_numeric_cast_any)]
+    unsafe {
+        libc::signal(libc::SIGINT, signal_handler as libc::sighandler_t);
+        libc::signal(libc::SIGTERM, signal_handler as libc::sighandler_t);
+    }
+}
+
 extern "C" fn signal_handler(_sig: libc::c_int) {
     SHUTDOWN.store(true, Ordering::SeqCst);
 }

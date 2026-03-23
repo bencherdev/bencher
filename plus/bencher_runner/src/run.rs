@@ -1,5 +1,8 @@
-#![expect(clippy::print_stdout)]
-#![cfg_attr(target_os = "linux", expect(clippy::print_stderr))]
+#![expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "runner prints progress and diagnostic output"
+)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -25,39 +28,6 @@ pub struct RunOutput {
     pub output_files: Option<HashMap<Utf8PathBuf, Vec<u8>>>,
 }
 
-/// Environment variables that are blocked for security reasons.
-///
-/// These variables could be used to inject malicious code or libraries
-/// into the guest process if passed through from the OCI image.
-#[cfg(target_os = "linux")]
-const BLOCKED_ENV_VARS: &[&str] = &[
-    // Dynamic linker variables - could load malicious libraries
-    "LD_PRELOAD",
-    "LD_LIBRARY_PATH",
-    "LD_AUDIT",
-    "LD_DEBUG",
-    "LD_DEBUG_OUTPUT",
-    "LD_DYNAMIC_WEAK",
-    "LD_HWCAP_MASK",
-    "LD_ORIGIN_PATH",
-    "LD_POINTER_GUARD",
-    "LD_PROFILE",
-    "LD_PROFILE_OUTPUT",
-    "LD_SHOW_AUXV",
-    "LD_USE_LOAD_BIAS",
-    "LD_BIND_NOW",
-    "LD_BIND_NOT",
-    // glibc malloc hooks
-    "MALLOC_CHECK_",
-    "MALLOC_TRACE",
-    // Other potentially dangerous variables
-    "BASH_ENV",
-    "ENV",
-    "CDPATH",
-    "GLOBIGNORE",
-    "IFS",
-];
-
 /// Arguments for the `run` subcommand.
 #[derive(Debug, Clone)]
 pub struct RunArgs {
@@ -79,6 +49,8 @@ pub struct RunArgs {
     pub max_output_size: Option<usize>,
     /// Maximum number of output files to decode.
     pub max_file_count: Option<u32>,
+    /// Maximum number of symlinks to follow during path resolution.
+    pub max_symlinks: Option<u32>,
     /// Optional entrypoint override for the container.
     pub entrypoint: Option<Vec<String>>,
     /// Optional command override for the container.
@@ -95,20 +67,16 @@ pub struct RunArgs {
     pub tuning: TuningConfig,
     /// Grace period in seconds after exit code before final collection.
     pub grace_period: bencher_json::GracePeriod,
-    /// Firecracker process log level.
-    #[cfg(target_os = "linux")]
-    pub firecracker_log_level: crate::firecracker::FirecrackerLogLevel,
+    /// Sandbox process log level.
+    pub sandbox_log_level: crate::SandboxLogLevel,
+    /// Sandbox mode for benchmark execution.
+    pub sandbox: Option<bencher_json::Sandbox>,
 }
 
-/// Run the `run` subcommand with parsed arguments.
+/// Build a `Config` from CLI `RunArgs`.
 ///
-/// Prepares the rootfs and launches a Firecracker microVM.
-#[cfg(target_os = "linux")]
-pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
-    // Apply host tuning — guard restores settings on drop
-    let _tuning_guard = crate::tuning::apply(&args.tuning);
-
-    // Build config from args
+/// Shared between the Linux and non-Linux debug `run_with_args` paths.
+fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::error::ConfigError> {
     let mut config = crate::Config::new(args.image.clone())
         .with_timeout_secs(args.timeout_secs)
         .with_network(args.network);
@@ -122,7 +90,7 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         config = config.with_disk(disk);
     }
     let config = if let Some(token) = &args.token {
-        config.with_token(token.clone())
+        config.with_token(token.clone())?
     } else {
         config
     };
@@ -136,8 +104,13 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     } else {
         config
     };
-    let mut config = if let Some(max_file_count) = args.max_file_count {
+    let config = if let Some(max_file_count) = args.max_file_count {
         config.with_max_file_count(max_file_count)
+    } else {
+        config
+    };
+    let mut config = if let Some(max_symlinks) = args.max_symlinks {
+        config.with_max_symlinks(max_symlinks)
     } else {
         config
     };
@@ -146,7 +119,20 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         .with_cmd_opt(args.cmd.clone())
         .with_env_opt(args.env.clone());
     config = config.with_grace_period(args.grace_period);
-    config.firecracker_log_level = args.firecracker_log_level;
+    config.sandbox_log_level = args.sandbox_log_level;
+    config = config.with_sandbox(args.sandbox);
+    Ok(config)
+}
+
+/// Run the `run` subcommand with parsed arguments.
+///
+/// Dispatches to Firecracker VM or local host execution based on the sandbox
+/// setting in the configuration.
+pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
+    // Apply host tuning — guard restores settings on drop (no-op on non-Linux)
+    let _tuning_guard = crate::tuning::apply(&args.tuning);
+
+    let config = build_config_from_run_args(args)?;
 
     let iter_count = args.iter.as_usize();
     for iteration in 0..iter_count {
@@ -175,13 +161,65 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     Ok(())
 }
 
-/// Non-Linux stub for `run_with_args`.
-#[cfg(not(target_os = "linux"))]
-pub fn run_with_args(_args: &RunArgs) -> Result<(), RunnerError> {
-    Err(
-        crate::error::ConfigError::UnsupportedPlatform("bencher-runner requires Linux".to_owned())
-            .into(),
-    )
+/// Workspace created by [`prepare_oci_workspace`]: temp directory, work/unpack
+/// paths, and the resolved OCI configuration.
+pub(crate) struct OciWorkspace {
+    /// Held for RAII — dropping this removes the temporary directory.
+    #[expect(dead_code, reason = "kept alive for RAII cleanup of temp directory")]
+    pub temp_dir: tempfile::TempDir,
+    /// Base working directory inside the temp dir.
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(dead_code, reason = "only read by vm_execute on Linux")
+    )]
+    pub work_dir: Utf8PathBuf,
+    pub unpack_dir: Utf8PathBuf,
+    pub oci_config: ResolvedOciConfig,
+}
+
+/// Prepare a temporary OCI workspace: create temp dir, resolve the OCI image,
+/// parse its config, and unpack the layers.
+///
+/// Shared between `local_execute` and `vm_execute` to avoid duplicating this
+/// setup sequence.
+pub(crate) fn prepare_oci_workspace(config: &crate::Config) -> Result<OciWorkspace, RunnerError> {
+    // Create a temporary work directory
+    let temp_dir = tempfile::tempdir().map_err(crate::error::ConfigError::TempDir)?;
+    let work_dir =
+        Utf8Path::from_path(temp_dir.path()).ok_or(crate::error::ConfigError::NonUtf8TempDir)?;
+    let work_dir = work_dir.to_path_buf();
+
+    let unpack_dir = work_dir.join("rootfs");
+
+    // Resolve OCI image (local path or pull from registry)
+    let oci_image_path = resolve_oci_image(
+        &config.oci_image,
+        config.token.as_ref().map(AsRef::as_ref),
+        config.registry_scheme,
+        &work_dir,
+    )?;
+
+    // Parse OCI image config to get the command
+    println!("Parsing OCI image config...");
+    let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
+    let oci_config = resolve_oci_config(&oci_image, config)?;
+
+    println!("  Command: {}", oci_config.command.join(" "));
+    println!("  WorkDir: {}", oci_config.working_dir);
+    if !oci_config.env.is_empty() {
+        println!("  Env: {} variables", oci_config.env.len());
+    }
+
+    // Unpack OCI image layers into the rootfs directory
+    println!("Unpacking OCI image to {unpack_dir}...");
+    bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
+
+    Ok(OciWorkspace {
+        temp_dir,
+        work_dir,
+        unpack_dir,
+        oci_config,
+    })
 }
 
 /// Resolve an OCI image source to a local path.
@@ -243,68 +281,25 @@ pub fn resolve_oci_image(
     Ok(image_dir)
 }
 
-/// Execute a single benchmark run with the given configuration.
+/// Resolved OCI image configuration (entrypoint, cmd, env, working directory).
+pub struct ResolvedOciConfig {
+    /// The full command to execute (entrypoint + cmd merged).
+    pub command: Vec<String>,
+    /// The working directory from the OCI image config.
+    pub working_dir: String,
+    /// Environment variables (OCI image defaults merged with config overrides).
+    pub env: Vec<(String, String)>,
+}
+
+/// Parse an OCI image config and resolve entrypoint, cmd, env, and working dir,
+/// applying overrides from the runner `Config`.
 ///
-/// Prepares the rootfs and launches a Firecracker microVM.
-///
-/// # Arguments
-///
-/// * `config` - The benchmark run configuration
-/// * `cancel_flag` - Optional cancellation flag; if set to `true`, the run
-///   will be aborted as soon as the vsock polling loop detects it.
-///
-/// # Returns
-///
-/// The benchmark output including exit code and stdout.
-#[cfg(target_os = "linux")]
-pub fn execute(
+/// Shared between `local.rs` (non-sandboxed) and `vm.rs` (Firecracker) to
+/// avoid duplicating the Docker-style entrypoint/cmd merge semantics.
+pub fn resolve_oci_config(
+    oci_image: &bencher_oci::OciImage,
     config: &crate::Config,
-    cancel_flag: Option<&Arc<AtomicBool>>,
-) -> Result<RunOutput, RunnerError> {
-    use crate::firecracker::run_firecracker;
-
-    println!("Executing benchmark run:");
-    println!("  OCI image: {}", config.oci_image);
-    println!(
-        "  Kernel: {}",
-        config.kernel.as_ref().map_or("(system)", |p| p.as_str())
-    );
-    println!("  vCPUs: {}", config.vcpus);
-    println!("  Memory: {} MiB", config.memory.to_mib());
-    println!("  Timeout: {} seconds", config.timeout_secs);
-
-    // Create a temporary work directory
-    let temp_dir = tempfile::tempdir().map_err(crate::error::ConfigError::TempDir)?;
-    let work_dir =
-        Utf8Path::from_path(temp_dir.path()).ok_or(crate::error::ConfigError::NonUtf8TempDir)?;
-
-    let unpack_dir = work_dir.join("rootfs");
-    let rootfs_path = work_dir.join("rootfs.ext4");
-
-    // Get kernel path - use bundled, provided, or find system kernel
-    let kernel_path = if let Some(kernel) = &config.kernel {
-        kernel.clone()
-    } else if crate::kernel::KERNEL_BUNDLED {
-        let kernel_dest = work_dir.join("vmlinux");
-        crate::kernel::write_kernel_to_file(&kernel_dest)?;
-        println!("  Extracted bundled kernel to {kernel_dest}");
-        kernel_dest
-    } else {
-        find_kernel()?
-    };
-
-    // Step 1: Resolve OCI image (local path or pull from registry)
-    let oci_image_path = resolve_oci_image(
-        &config.oci_image,
-        config.token.as_ref().map(AsRef::as_ref),
-        config.registry_scheme,
-        work_dir,
-    )?;
-
-    // Step 2: Parse OCI image config to get the command
-    println!("Parsing OCI image config...");
-    let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
-
+) -> Result<ResolvedOciConfig, RunnerError> {
     // Apply entrypoint/cmd overrides (Config takes precedence over OCI image)
     let entrypoint = config
         .entrypoint
@@ -327,9 +322,10 @@ pub fn execute(
     let working_dir = oci_image
         .working_dir()
         .filter(|w| !w.is_empty())
-        .unwrap_or("/");
+        .unwrap_or("/")
+        .to_owned();
 
-    // Apply env overrides (Config env merged on top of OCI env, then sanitize)
+    // Apply env overrides (Config env merged on top of OCI env)
     let mut env = oci_image.env();
     if let Some(config_env) = &config.env {
         for (key, value) in config_env {
@@ -337,404 +333,50 @@ pub fn execute(
             env.push((key.clone(), value.clone()));
         }
     }
-    let env = sanitize_env(&env);
-
     if command.is_empty() {
         return Err(crate::error::ConfigError::MissingCommand.into());
     }
 
-    println!("  Command: {}", command.join(" "));
-    println!("  WorkDir: {working_dir}");
-    if !env.is_empty() {
-        println!("  Env: {} variables", env.len());
-    }
-
-    // Step 3: Unpack OCI image
-    println!("Unpacking OCI image to {unpack_dir}...");
-    bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
-
-    // Step 4: Write command config for the VM
-    println!("Writing init config...");
-    write_init_config(
-        &unpack_dir,
-        &command,
+    Ok(ResolvedOciConfig {
+        command,
         working_dir,
-        &env,
-        config.file_paths.as_deref(),
-        config.max_output_size,
-    )?;
-
-    // Step 5: Install init binary
-    println!("Installing init binary...");
-    install_init_binary(&unpack_dir)?;
-
-    // Step 6: Create ext4 rootfs
-    println!(
-        "Creating ext4 at {rootfs_path} ({} MiB)...",
-        config.disk.to_mib()
-    );
-    bencher_rootfs::create_ext4_with_size(&unpack_dir, &rootfs_path, config.disk.to_mib())?;
-
-    // Step 7–8: Build Firecracker config and run the microVM
-    let fc_config = build_firecracker_config(config, work_dir, kernel_path, rootfs_path)?;
-
-    let run_output = run_firecracker(&fc_config, cancel_flag)?;
-
-    Ok(run_output)
-}
-
-/// Build the Firecracker job config: resolve the binary and convert types.
-#[cfg(target_os = "linux")]
-fn build_firecracker_config(
-    config: &crate::Config,
-    work_dir: &Utf8Path,
-    kernel_path: Utf8PathBuf,
-    rootfs_path: Utf8PathBuf,
-) -> Result<crate::firecracker::FirecrackerJobConfig, RunnerError> {
-    let firecracker_bin = if crate::firecracker_bin::FIRECRACKER_BUNDLED {
-        let fc_dest = work_dir.join("firecracker");
-        crate::firecracker_bin::write_firecracker_to_file(&fc_dest)?;
-        println!("  Extracted bundled firecracker to {fc_dest}");
-        fc_dest
-    } else {
-        find_firecracker_binary()?
-    };
-
-    println!("Launching Firecracker microVM...");
-    let vcpus = u8::try_from(u32::from(config.vcpus)).map_err(|_err| {
-        crate::error::ConfigError::OutOfRange {
-            name: "vCPU count",
-            value: config.vcpus.to_string(),
-            range: "0-255",
-        }
-    })?;
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "Practical memory fits in u32 MiB for Firecracker"
-    )]
-    let memory_mib = config.memory.to_mib() as u32;
-
-    Ok(crate::firecracker::FirecrackerJobConfig {
-        firecracker_bin,
-        kernel_path,
-        rootfs_path,
-        vcpus,
-        memory_mib,
-        boot_args: config.kernel_cmdline.clone(),
-        timeout_secs: config.timeout_secs,
-        work_dir: work_dir.to_owned(),
-        cpu_layout: config.cpu_layout.clone(),
-        log_level: config.firecracker_log_level,
-        max_file_count: config.max_file_count,
-        max_content_size: config.max_content_size,
-        max_output_size: config.max_output_size,
-        grace_period: config.grace_period,
+        env,
     })
 }
 
-/// Write the init config for the VM.
+/// Execute a single benchmark run with the given configuration.
 ///
-/// This creates `/etc/bencher/config.json` which is read by `bencher-init`.
-#[cfg(target_os = "linux")]
-fn write_init_config(
-    rootfs: &Utf8Path,
-    command: &[String],
-    workdir: &str,
-    env: &[(String, String)],
-    file_paths: Option<&[Utf8PathBuf]>,
-    max_output_size: usize,
-) -> Result<(), RunnerError> {
-    use std::fs;
-
-    let config_dir = rootfs.join("etc/bencher");
-    fs::create_dir_all(&config_dir)?;
-
-    // Build the config JSON
-    let config = serde_json::json!({
-        "command": command,
-        "workdir": workdir,
-        "env": env,
-        "file_paths": file_paths,
-        "max_output_size": max_output_size,
-    });
-
-    let config_path = config_dir.join("config.json");
-    let config_str =
-        serde_json::to_string_pretty(&config).map_err(crate::error::ConfigError::Serialize)?;
-    fs::write(&config_path, config_str)?;
-
-    Ok(())
-}
-
-/// Install the bencher-init binary into the rootfs at /init.
+/// Dispatches based on `config.sandbox`:
+/// - `Some(Sandbox::Firecracker)` → Firecracker microVM (Linux-only)
+/// - `None` → local host execution (any platform)
 ///
-/// Uses the bundled init binary if available, otherwise falls back to searching on disk.
-#[cfg(target_os = "linux")]
-fn install_init_binary(rootfs: &Utf8Path) -> Result<(), RunnerError> {
-    use crate::init;
-    use std::os::unix::fs::PermissionsExt as _;
-
-    let dest_path = rootfs.join("init");
-
-    if init::INIT_BUNDLED {
-        // Use the bundled init binary
-        init::write_init_to_file(&dest_path)?;
-    } else {
-        // Fall back to searching for the binary on disk
-        let init_binary = find_init_binary()?;
-
-        std::fs::copy(&init_binary, &dest_path).map_err(|e| {
-            crate::error::ConfigError::CopyInit {
-                src: init_binary.clone(),
-                dest: dest_path.clone(),
-                source: e,
-            }
-        })?;
-
-        // Make it executable
-        let mut perms = std::fs::metadata(&dest_path)?.permissions();
-        perms.set_mode(0o755);
-        std::fs::set_permissions(&dest_path, perms)?;
-    }
-
-    Ok(())
-}
-
-/// Find the bencher-init binary on disk (fallback when not bundled).
-#[cfg(target_os = "linux")]
-fn find_init_binary() -> Result<Utf8PathBuf, RunnerError> {
-    // Look in these locations in order
-    let candidates = [
-        // Next to the current executable
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.join("bencher-init")))
-            .and_then(|p| Utf8PathBuf::try_from(p).ok()),
-        // Common installation paths
-        Some(Utf8PathBuf::from("/usr/local/bin/bencher-init")),
-        Some(Utf8PathBuf::from("/usr/bin/bencher-init")),
-    ];
-
-    for candidate in candidates.into_iter().flatten() {
-        if candidate.exists() {
-            return Ok(candidate);
-        }
-    }
-
-    Err(crate::error::ConfigError::BinaryNotFound {
-        name: "bencher-init".to_owned(),
-        hint: "Build with: cargo build -p bencher_init".to_owned(),
-    }
-    .into())
-}
-
-/// Find the Firecracker binary on the system.
-#[cfg(target_os = "linux")]
-fn find_firecracker_binary() -> Result<Utf8PathBuf, RunnerError> {
-    let candidates = [
-        // Next to the current executable
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.join("firecracker")))
-            .and_then(|p| Utf8PathBuf::try_from(p).ok()),
-        // Common installation paths
-        Some(Utf8PathBuf::from("/usr/local/bin/firecracker")),
-        Some(Utf8PathBuf::from("/usr/bin/firecracker")),
-    ];
-
-    for candidate in candidates.into_iter().flatten() {
-        if candidate.exists() {
-            return Ok(candidate);
-        }
-    }
-
-    Err(crate::error::ConfigError::BinaryNotFound {
-        name: "firecracker".to_owned(),
-        hint: "Install from: https://github.com/firecracker-microvm/firecracker/releases"
-            .to_owned(),
-    }
-    .into())
-}
-
-/// Find the kernel image on the system.
-#[cfg(target_os = "linux")]
-fn find_kernel() -> Result<Utf8PathBuf, RunnerError> {
-    let candidates = [
-        // Bencher's shared location
-        "/usr/local/share/bencher/vmlinux",
-        // Next to the current executable
-    ];
-
-    for candidate in candidates {
-        if Utf8Path::new(candidate).exists() {
-            return Ok(Utf8PathBuf::from(candidate));
-        }
-    }
-
-    // Try next to the current executable
-    if let Ok(exe) = std::env::current_exe()
-        && let Some(parent) = exe.parent()
-    {
-        let kernel = parent.join("vmlinux");
-        if kernel.exists()
-            && let Some(path) = kernel.to_str()
-        {
-            return Ok(Utf8PathBuf::from(path));
-        }
-    }
-
-    Err(crate::error::ConfigError::BinaryNotFound {
-        name: "vmlinux".to_owned(),
-        hint: "Place at /usr/local/share/bencher/vmlinux".to_owned(),
-    }
-    .into())
-}
-
-/// Sanitize environment variables by removing dangerous ones.
+/// # Arguments
 ///
-/// This filters out environment variables that could be used to inject
-/// malicious code into the guest process, such as `LD_PRELOAD`.
-#[cfg(target_os = "linux")]
-fn sanitize_env(env: &[(String, String)]) -> Vec<(String, String)> {
-    let mut sanitized = Vec::with_capacity(env.len());
-    let mut blocked_count = 0;
-
-    for (key, value) in env {
-        let key_upper = key.to_uppercase();
-        let is_blocked = BLOCKED_ENV_VARS.iter().any(|blocked| {
-            key_upper == *blocked
-                || (key_upper.starts_with(blocked)
-                    && key_upper.as_bytes().get(blocked.len()) == Some(&b'_'))
-        });
-
-        if is_blocked {
-            blocked_count += 1;
-        } else {
-            sanitized.push((key.clone(), value.clone()));
-        }
-    }
-
-    if blocked_count > 0 {
-        println!("  Blocked {blocked_count} dangerous environment variable(s)");
-    }
-
-    sanitized
-}
-
-/// Execute a single benchmark run (non-Linux stub).
-#[cfg(not(target_os = "linux"))]
+/// * `config` - The benchmark run configuration
+/// * `cancel_flag` - Optional cancellation flag; if set to `true`, the run
+///   will be aborted as soon as the vsock polling loop detects it.
+///
+/// # Returns
+///
+/// The benchmark output including exit code and stdout.
 pub fn execute(
-    _config: &crate::Config,
-    _cancel_flag: Option<&Arc<AtomicBool>>,
+    config: &crate::Config,
+    cancel_flag: Option<&Arc<AtomicBool>>,
 ) -> Result<RunOutput, RunnerError> {
-    Err(crate::error::ConfigError::UnsupportedPlatform(
-        "Benchmark execution requires Linux with KVM support".to_owned(),
-    )
-    .into())
-}
-
-#[cfg(test)]
-#[cfg(target_os = "linux")]
-#[expect(clippy::indexing_slicing, clippy::str_to_string)]
-mod tests {
-    use super::*;
-
-    fn env(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
-        pairs
-            .iter()
-            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
-            .collect()
-    }
-
-    #[test]
-    fn sanitize_env_passes_safe_vars() {
-        let input = env(&[("PATH", "/usr/bin"), ("HOME", "/root"), ("LANG", "C")]);
-        let result = sanitize_env(&input);
-        assert_eq!(result.len(), 3);
-        assert_eq!(result[0].0, "PATH");
-    }
-
-    #[test]
-    fn sanitize_env_blocks_ld_preload() {
-        let input = env(&[("LD_PRELOAD", "/evil.so"), ("PATH", "/usr/bin")]);
-        let result = sanitize_env(&input);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].0, "PATH");
-    }
-
-    #[test]
-    fn sanitize_env_blocks_ld_library_path() {
-        let input = env(&[("LD_LIBRARY_PATH", "/tmp"), ("HOME", "/root")]);
-        let result = sanitize_env(&input);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].0, "HOME");
-    }
-
-    #[test]
-    fn sanitize_env_blocks_all_known_dangerous_vars() {
-        let input = env(&[
-            ("LD_PRELOAD", "x"),
-            ("LD_LIBRARY_PATH", "x"),
-            ("LD_AUDIT", "x"),
-            ("LD_DEBUG", "x"),
-            ("LD_DEBUG_OUTPUT", "x"),
-            ("LD_DYNAMIC_WEAK", "x"),
-            ("LD_HWCAP_MASK", "x"),
-            ("LD_ORIGIN_PATH", "x"),
-            ("LD_POINTER_GUARD", "x"),
-            ("LD_PROFILE", "x"),
-            ("LD_PROFILE_OUTPUT", "x"),
-            ("LD_SHOW_AUXV", "x"),
-            ("LD_USE_LOAD_BIAS", "x"),
-            ("LD_BIND_NOW", "x"),
-            ("LD_BIND_NOT", "x"),
-            ("MALLOC_CHECK_", "x"),
-            ("MALLOC_TRACE", "x"),
-            ("BASH_ENV", "x"),
-            ("ENV", "x"),
-            ("CDPATH", "x"),
-            ("GLOBIGNORE", "x"),
-            ("IFS", "x"),
-        ]);
-        let result = sanitize_env(&input);
-        assert!(
-            result.is_empty(),
-            "all dangerous vars should be blocked, got: {result:?}"
-        );
-    }
-
-    #[test]
-    fn sanitize_env_case_insensitive() {
-        let input = env(&[("ld_preload", "/evil.so"), ("Ld_Library_Path", "/tmp")]);
-        let result = sanitize_env(&input);
-        assert!(
-            result.is_empty(),
-            "case-insensitive matching should block lowercase variants"
-        );
-    }
-
-    #[test]
-    fn sanitize_env_blocks_prefixed_variants() {
-        let input = env(&[("LD_PRELOAD_32", "/evil.so"), ("MALLOC_CHECK__FOO", "1")]);
-        let result = sanitize_env(&input);
-        assert!(
-            result.is_empty(),
-            "prefix-suffixed variants should be blocked"
-        );
-    }
-
-    #[test]
-    fn sanitize_env_empty_input() {
-        let result = sanitize_env(&[]);
-        assert!(result.is_empty());
-    }
-
-    #[test]
-    fn sanitize_env_preserves_order() {
-        let input = env(&[("A", "1"), ("B", "2"), ("C", "3")]);
-        let result = sanitize_env(&input);
-        assert_eq!(result[0].0, "A");
-        assert_eq!(result[1].0, "B");
-        assert_eq!(result[2].0, "C");
+    match config.sandbox {
+        Some(bencher_json::Sandbox::Firecracker) => {
+            #[cfg(target_os = "linux")]
+            {
+                crate::vm::vm_execute(config, cancel_flag)
+            }
+            #[cfg(not(target_os = "linux"))]
+            {
+                Err(crate::error::ConfigError::UnsupportedPlatform(
+                    "Firecracker sandbox requires Linux with KVM support".to_owned(),
+                )
+                .into())
+            }
+        },
+        None => crate::local::local_execute(config, cancel_flag),
     }
 }

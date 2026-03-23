@@ -103,6 +103,10 @@ pub struct TaskStart {
     /// Bencher API host URL
     #[clap(long)]
     pub host: Option<url::Url>,
+
+    /// Allow executing jobs without a sandbox (sets `BENCHER_DANGER_ALLOW_NO_SANDBOX=true`).
+    #[clap(long)]
+    pub danger_allow_no_sandbox: bool,
 }
 
 #[derive(Parser, Debug)]

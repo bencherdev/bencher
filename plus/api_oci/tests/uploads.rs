@@ -1227,7 +1227,7 @@ async fn upload_complete_after_storage_deleted() {
         .db_path()
         .parent()
         .unwrap()
-        .join("oci")
+        .join("registry")
         .join("_uploads")
         .join(&session_id);
     tokio::fs::remove_dir_all(&upload_dir)

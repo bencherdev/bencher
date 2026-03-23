@@ -1738,6 +1738,7 @@ async fn runner_multiple_specs_claims_matching_jobs() {
     // Create two different specs
     let (_, spec_x86_id) = insert_test_spec_full(
         &server,
+        "linux",
         "x86_64",
         2,
         0x0001_0000_0000,
@@ -1746,6 +1747,7 @@ async fn runner_multiple_specs_claims_matching_jobs() {
     );
     let (_, spec_arm_id) = insert_test_spec_full(
         &server,
+        "linux",
         "aarch64",
         4,
         0x0002_0000_0000,

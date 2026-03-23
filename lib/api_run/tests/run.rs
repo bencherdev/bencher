@@ -214,6 +214,7 @@ async fn create_fallback_spec(
 ) -> JsonSpec {
     let body = serde_json::json!({
         "name": "Job Test Spec",
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,
@@ -595,6 +596,7 @@ async fn create_spec(
 ) -> JsonSpec {
     let body = serde_json::json!({
         "name": name,
+        "os": "linux",
         "architecture": "x86_64",
         "cpu": 2,
         "memory": 4_294_967_296i64,

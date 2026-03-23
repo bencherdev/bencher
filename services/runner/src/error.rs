@@ -4,7 +4,7 @@ pub enum RunnerCliError {
     #[error(transparent)]
     Runner(#[from] bencher_runner::RunnerError),
 
-    #[cfg(all(feature = "plus", target_os = "linux"))]
+    #[cfg(feature = "plus")]
     #[error(transparent)]
     Up(#[from] bencher_runner::up::UpError),
 
@@ -12,15 +12,19 @@ pub enum RunnerCliError {
     #[error(transparent)]
     Valid(#[from] bencher_json::ValidError),
 
-    #[cfg(all(feature = "plus", target_os = "linux"))]
+    #[cfg(feature = "plus")]
     #[error("Invalid memory size: {0} MiB")]
     InvalidMemory(u64),
 
-    #[cfg(all(feature = "plus", target_os = "linux"))]
+    #[cfg(feature = "plus")]
     #[error("Invalid disk size: {0} MiB")]
     InvalidDisk(u64),
 
-    #[cfg(not(all(feature = "plus", target_os = "linux")))]
-    #[error("bencher-runner requires Linux with the `plus` feature")]
-    Unsupported,
+    #[cfg(feature = "plus")]
+    #[error("Failed to install default crypto provider: {0}")]
+    CryptoProvider(String),
+
+    #[cfg(not(feature = "plus"))]
+    #[error("Runner requires the `plus` feature")]
+    NoPlusFeature,
 }

@@ -9,6 +9,8 @@ import {
 	type JsonProject,
 	type JsonSpec,
 	type ModelTest,
+	OperatingSystem,
+	Sandbox,
 } from "../../../../../types/bencher";
 import { authUser } from "../../../../../util/auth";
 import { prettyPrintFloat } from "../../../../../util/convert";
@@ -322,13 +324,39 @@ const fmtBytes = (bytes: number | undefined): string => {
 	return `${bytes} B`;
 };
 
+const fmtOs = (os: string | undefined): string => {
+	switch (os) {
+		case OperatingSystem.Linux:
+			return "Linux";
+		case OperatingSystem.Macos:
+			return "macOS";
+		case OperatingSystem.Windows:
+			return "Windows";
+		default:
+			return os ?? "—";
+	}
+};
+
+const fmtSandbox = (sandbox: string | undefined): string => {
+	switch (sandbox) {
+		case Sandbox.Firecracker:
+			return "Firecracker";
+		default:
+			return sandbox ?? "⚠️ No Sandbox";
+	}
+};
+
 const SpecCard = (props: Props) => {
 	const spec = () => props.value as JsonSpec;
 	return (
 		<div>
 			Name: {spec()?.name}
 			<br />
+			OS: {fmtOs(spec()?.os)}
+			<br />
 			Architecture: {spec()?.architecture}
+			<br />
+			Sandbox: {fmtSandbox(spec()?.sandbox)}
 			<br />
 			CPU: {spec()?.cpu}
 			<br />

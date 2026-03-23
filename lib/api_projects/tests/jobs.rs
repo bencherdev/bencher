@@ -334,6 +334,7 @@ fn insert_test_job(
             schema::spec::uuid.eq(&spec_uuid),
             schema::spec::name.eq(&spec_name),
             schema::spec::slug.eq(&spec_slug),
+            schema::spec::os.eq("linux"),
             schema::spec::architecture.eq("x86_64"),
             schema::spec::cpu.eq(2),
             schema::spec::memory.eq(0x0001_0000_0000i64),
@@ -726,7 +727,7 @@ fn write_job_output(
         .db_path()
         .parent()
         .expect("db has parent")
-        .join("oci");
+        .join("registry");
     let output_dir = oci_dir
         .join(project_uuid.to_string())
         .join("output")

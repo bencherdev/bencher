@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use bencher_json::{Cpu, Disk, GracePeriod, Memory};
+use bencher_json::{Cpu, Disk, GracePeriod, Memory, Sandbox};
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
 use bencher_oci::RegistryScheme;
 
 use crate::cpu::CpuLayout;
-use crate::log_level::FirecrackerLogLevel;
+use crate::log_level::SandboxLogLevel;
 
 /// Configuration for a benchmark run.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -101,6 +101,16 @@ pub struct Config {
     #[serde(default = "default_max_content_size")]
     pub max_content_size: u64,
 
+    /// Maximum number of symlinks to follow during chroot-aware path
+    /// resolution in non-sandboxed mode.
+    ///
+    /// This mirrors the Linux kernel's `MAXSYMLINKS` limit (40 since kernel
+    /// 3.18) and prevents infinite loops when resolving paths that contain
+    /// circular symlink chains. Only used by the local (non-sandboxed) runner.
+    /// Defaults to 40.
+    #[serde(default = "default_max_symlinks")]
+    pub max_symlinks: u32,
+
     /// Grace period in seconds after exit code arrives before final
     /// collection of remaining stdout/stderr/output files.
     ///
@@ -122,9 +132,17 @@ pub struct Config {
     #[serde(skip)]
     pub cpu_layout: Option<CpuLayout>,
 
-    /// Firecracker process log level. This field is not serialized.
+    /// Sandbox process log level (used by Firecracker; ignored in non-sandboxed mode). This field is not serialized.
     #[serde(skip)]
-    pub firecracker_log_level: FirecrackerLogLevel,
+    pub sandbox_log_level: SandboxLogLevel,
+
+    /// Sandbox mode for benchmark execution.
+    ///
+    /// When set to `Some(Sandbox::Firecracker)`, the benchmark runs inside a
+    /// Firecracker microVM (Linux-only). When `None`, the benchmark runs
+    /// directly on the host (non-sandboxed mode, any platform).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sandbox: Option<Sandbox>,
 }
 
 fn default_vcpus() -> Cpu {
@@ -169,6 +187,11 @@ const fn default_max_content_size() -> u64 {
     25 * 1024 * 1024 // 25 MiB
 }
 
+/// Matches the Linux kernel's `MAXSYMLINKS` (40 since kernel 3.18).
+const fn default_max_symlinks() -> u32 {
+    40
+}
+
 fn default_grace_period() -> GracePeriod {
     GracePeriod::MIN
 }
@@ -198,10 +221,12 @@ impl Config {
             max_output_size: default_max_output_size(),
             max_file_count: default_max_file_count(),
             max_content_size: default_max_content_size(),
+            max_symlinks: default_max_symlinks(),
             grace_period: default_grace_period(),
             registry_scheme: RegistryScheme::default(),
             cpu_layout: None,
-            firecracker_log_level: FirecrackerLogLevel::default(),
+            sandbox_log_level: SandboxLogLevel::default(),
+            sandbox: None,
         }
     }
 
@@ -213,35 +238,25 @@ impl Config {
     /// * `kernel` - Path to the Linux kernel
     #[must_use]
     pub fn with_kernel<S: Into<String>>(oci_image: S, kernel: Utf8PathBuf) -> Self {
-        Self {
-            oci_image: oci_image.into(),
-            kernel: Some(kernel),
-            token: None,
-            vcpus: default_vcpus(),
-            memory: default_memory(),
-            disk: default_disk(),
-            kernel_cmdline: default_kernel_cmdline(),
-            timeout_secs: default_timeout_secs(),
-            file_paths: None,
-            network: false,
-            entrypoint: None,
-            cmd: None,
-            env: None,
-            max_output_size: default_max_output_size(),
-            max_file_count: default_max_file_count(),
-            max_content_size: default_max_content_size(),
-            grace_period: default_grace_period(),
-            registry_scheme: RegistryScheme::default(),
-            cpu_layout: None,
-            firecracker_log_level: FirecrackerLogLevel::default(),
-        }
+        let mut config = Self::new(oci_image);
+        config.kernel = Some(kernel);
+        config
+    }
+
+    /// Set the sandbox mode for benchmark execution.
+    #[must_use]
+    pub fn with_sandbox(mut self, sandbox: Option<Sandbox>) -> Self {
+        self.sandbox = sandbox;
+        self
     }
 
     /// Set the JWT token for registry authentication.
-    #[must_use]
-    pub fn with_token<S: Into<String>>(mut self, token: S) -> Self {
-        self.token = bencher_valid::Secret::try_from(token.into()).ok();
-        self
+    pub fn with_token<S: Into<String>>(
+        mut self,
+        token: S,
+    ) -> Result<Self, crate::error::ConfigError> {
+        self.token = Some(bencher_valid::Secret::try_from(token.into())?);
+        Ok(self)
     }
 
     /// Set the number of vCPUs.
@@ -367,6 +382,13 @@ impl Config {
         self
     }
 
+    /// Set the maximum number of symlinks to follow during path resolution.
+    #[must_use]
+    pub fn with_max_symlinks(mut self, max_symlinks: u32) -> Self {
+        self.max_symlinks = max_symlinks;
+        self
+    }
+
     /// Set the grace period after exit code before final collection.
     #[must_use]
     pub fn with_grace_period(mut self, grace_period: GracePeriod) -> Self {
@@ -426,6 +448,7 @@ mod tests {
         let env: HashMap<String, String> = [("RUST_LOG".to_owned(), "debug".to_owned())].into();
         let config = Config::new("img")
             .with_token("jwt-token")
+            .unwrap()
             .with_vcpus(Cpu::try_from(4).unwrap())
             .with_memory(Memory::from_mib(2048).unwrap())
             .with_disk(Disk::from_mib(4096).unwrap())
@@ -506,5 +529,10 @@ mod tests {
         assert!(config.entrypoint.is_none());
         assert!(config.cmd.is_none());
         assert!(config.env.is_none());
+    }
+
+    #[test]
+    fn config_with_empty_token_errors() {
+        assert!(Config::new("img").with_token("").is_err());
     }
 }

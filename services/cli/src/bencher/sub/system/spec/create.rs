@@ -1,5 +1,5 @@
 use bencher_client::types::JsonNewSpec;
-use bencher_json::{Architecture, ResourceName, SpecSlug};
+use bencher_json::{Architecture, OperatingSystem, ResourceName, Sandbox, SpecSlug};
 
 use crate::{
     CliError,
@@ -11,7 +11,9 @@ use crate::{
 pub struct Create {
     pub name: ResourceName,
     pub slug: Option<SpecSlug>,
+    pub os: OperatingSystem,
     pub architecture: Architecture,
+    pub sandbox: Option<Sandbox>,
     pub cpu: u32,
     pub memory: u64,
     pub disk: u64,
@@ -27,7 +29,9 @@ impl TryFrom<CliSpecCreate> for Create {
         let CliSpecCreate {
             name,
             slug,
+            os,
             architecture,
+            sandbox,
             cpu,
             memory,
             disk,
@@ -38,7 +42,9 @@ impl TryFrom<CliSpecCreate> for Create {
         Ok(Self {
             name,
             slug,
+            os,
             architecture,
+            sandbox,
             cpu,
             memory,
             disk,
@@ -54,7 +60,9 @@ impl From<Create> for JsonNewSpec {
         let Create {
             name,
             slug,
+            os,
             architecture,
+            sandbox,
             cpu,
             memory,
             disk,
@@ -65,7 +73,9 @@ impl From<Create> for JsonNewSpec {
         Self {
             name: name.into(),
             slug: slug.map(Into::into),
+            os: os.into(),
             architecture: architecture.into(),
+            sandbox: sandbox.map(Into::into),
             cpu: cpu.into(),
             memory: memory.into(),
             disk: disk.into(),

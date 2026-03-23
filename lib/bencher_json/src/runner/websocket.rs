@@ -129,6 +129,7 @@ mod tests {
                 "uuid": "00000000-0000-0000-0000-000000000001",
                 "name": "test-spec",
                 "slug": "test-spec",
+                "os": "linux",
                 "architecture": "x86_64",
                 "cpu": 2,
                 "memory": 0x4000_0000,

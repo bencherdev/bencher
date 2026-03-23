@@ -1,22 +1,19 @@
-//! Bencher Runner - Orchestrates benchmark execution in Firecracker microVMs.
+//! Bencher Runner - Orchestrates benchmark execution.
 //!
 //! This crate provides the main runner logic for executing benchmarks
-//! in isolated Firecracker microVMs. It coordinates:
+//! either in isolated Firecracker microVMs (sandboxed) or directly
+//! on the host system (non-sandboxed). It coordinates:
 //!
 //! - OCI image pulling and unpacking
-//! - ext4 rootfs creation
-//! - Firecracker microVM lifecycle management
-//! - Result collection via vsock
+//! - Firecracker microVM lifecycle (sandboxed mode)
+//! - Direct host execution (non-sandboxed mode)
+//! - Result collection via vsock (sandboxed) or stdout/stderr (non-sandboxed)
 
 // Suppress unused crate warnings on non-Linux or without plus
 #![cfg_attr(
     any(not(target_os = "linux"), not(feature = "plus")),
     allow(unused_crate_dependencies)
 )]
-
-// tempfile is only used on Linux in the execute function
-#[cfg(all(feature = "plus", target_os = "linux"))]
-use tempfile as _;
 
 #[cfg(feature = "plus")]
 mod config;
@@ -35,6 +32,8 @@ pub mod jail;
 #[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod kernel;
 #[cfg(feature = "plus")]
+mod local;
+#[cfg(feature = "plus")]
 mod log_level;
 #[cfg(feature = "plus")]
 pub mod metrics;
@@ -46,17 +45,19 @@ pub mod tuning;
 pub mod units;
 #[cfg(feature = "plus")]
 pub mod up;
+#[cfg(all(feature = "plus", target_os = "linux"))]
+mod vm;
 
 #[cfg(feature = "plus")]
 pub use bencher_json::{Cpu, Disk, GracePeriod, Memory};
 #[cfg(feature = "plus")]
 pub use config::Config;
 #[cfg(feature = "plus")]
-pub use error::{ConfigError, JailError, RunnerError};
+pub use error::{ConfigError, ExecutionError, JailError, RunnerError};
 #[cfg(feature = "plus")]
 pub use jail::ResourceLimits;
 #[cfg(feature = "plus")]
-pub use log_level::FirecrackerLogLevel;
+pub use log_level::SandboxLogLevel;
 #[cfg(feature = "plus")]
 pub use run::{RunArgs, RunOutput, execute, resolve_oci_image, run_with_args};
 #[cfg(feature = "plus")]

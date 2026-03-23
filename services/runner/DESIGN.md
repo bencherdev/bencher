@@ -4,7 +4,7 @@ This document outlines the design for Bencher's bare metal benchmark runner syst
 
 ## Overview
 
-A pull-based runner agent architecture where runners claim jobs from the API, execute benchmarks on bare metal (with Firecracker microVM isolation), and report results back. Designed to work for both Bencher Cloud (SaaS) and self-hosted deployments.
+A pull-based runner agent architecture where runners claim jobs from the API, execute benchmarks on bare metal (with Firecracker microVM isolation or local host execution), and report results back. Designed to work for both Bencher Cloud (SaaS) and self-hosted deployments.
 
 ## Architecture
 
@@ -25,8 +25,8 @@ A pull-based runner agent architecture where runners claim jobs from the API, ex
         └─────────────────────────────┘          ┌─────────────┐
                 (pushes images)                  │  Bare Metal │
                                                  │   Machine   │
-                                                 │ (Firecracker│
-                                                 │   microVM)  │
+                                                 │(Firecracker/│
+                                                 │ local exec) │
                                                  └─────────────┘
 ```
 
@@ -85,11 +85,14 @@ Represents a hardware specification that runners can be associated with and jobs
 | uuid             | `SpecUuid`          | Unique identifier                                    |
 | name             | `ResourceName`      | Human-readable name                                  |
 | slug             | `SpecSlug`          | URL-friendly slug (unique)                           |
+| os               | `OperatingSystem`   | Operating system (required, immutable: `linux`, `macos`, `windows`) |
 | architecture     | `Architecture`      | CPU architecture (`x86_64`, `aarch64`)               |
+| sandbox          | `Option<Sandbox>`   | Sandbox type (immutable: `firecracker` or none)      |
 | cpu              | `Cpu`               | Number of CPUs (u32, 1 to i32::MAX)                  |
 | memory           | `Memory`            | Memory size in bytes (u64, 1 to i64::MAX)            |
 | disk             | `Disk`              | Disk size in bytes (u64, 1 to i64::MAX)              |
-| network          | `bool`              | Whether VM has network access (default: false)       |
+| network          | `bool`              | Whether the job has network access (default: false)  |
+| fallback         | `Option<DateTime>`  | Set if this is the fallback spec (at most one)       |
 | created          | `DateTime`          | Creation timestamp                                   |
 | modified         | `DateTime`          | Last modification timestamp                          |
 | archived         | `Option<DateTime>`  | Soft delete timestamp                                |
@@ -186,7 +189,7 @@ The claim endpoint returns a dedicated `JsonClaimedJob` type (not `JsonJob`) con
 | Field       | Type              | Description                                          |
 | ----------- | ----------------- | ---------------------------------------------------- |
 | uuid        | `JobUuid`         | Job's unique identifier                              |
-| spec        | `JsonSpec`        | Full spec details (architecture, cpu, memory, etc.)  |
+| spec        | `JsonSpec`        | Full spec details (os, architecture, sandbox, cpu, memory, etc.) |
 | config      | `JsonJobConfig`   | Execution config — **required** (always present for claimed jobs) |
 | oci_token   | `Jwt`             | Short-lived, project-scoped OCI pull token — **required** |
 | timeout     | `Timeout`         | Maximum execution time in seconds                    |
@@ -279,7 +282,7 @@ Requires server admin permissions.
 | GET    | `/v0/specs`                  | List specs                                     |
 | POST   | `/v0/specs`                  | Create spec                                    |
 | GET    | `/v0/specs/{spec}`           | Get spec details                               |
-| PATCH  | `/v0/specs/{spec}`           | Update spec (name, slug, archive)              |
+| PATCH  | `/v0/specs/{spec}`           | Update spec (name, slug, fallback, archive) — os and sandbox are immutable |
 | DELETE | `/v0/specs/{spec}`           | Delete spec (RESTRICT if referenced by jobs)   |
 
 ### Runner-Spec Association (Server Scoped)
@@ -554,9 +557,9 @@ Job output (stdout, stderr, file contents) is stored in the **same OCI storage b
    Pull image from registry at digest specified in config
                 │
                 ▼
-4. Create Firecracker microVM with spec constraints
-   (architecture, cpu, memory, disk, network from spec)
-   Load OCI image rootfs into VM
+4. Dispatch based on spec sandbox mode:
+   - Firecracker: Create microVM with spec constraints, load rootfs
+   - None: Unpack OCI image to temp dir, resolve command within rootfs
                 │
                 ▼
 5. Send { "event": "running" } over WebSocket
@@ -662,6 +665,27 @@ This token is scoped to:
 - Only the runner agent endpoints (`/v0/runners/{runner}/channel`)
 - Can claim jobs from any project on the server
 - Can only perform operations on jobs claimed by this runner
+
+## Sandbox Modes
+
+The runner supports two execution modes, selected via the `--sandbox` flag on `runner run` or the `sandbox` field in the job spec. The `sandbox` and `os` fields are set at spec creation time and are immutable. The sandbox mode for a job is determined by the spec it targets.
+
+### Firecracker (sandboxed)
+
+`--sandbox firecracker` — Full Firecracker microVM isolation. The OCI image is unpacked, converted to an ext4 rootfs, and booted inside a Firecracker VM with resource limits (CPU, memory, disk, network). This is the default for Bencher Cloud jobs.
+
+### Non-sandboxed (no `--sandbox` flag)
+
+Omitting `--sandbox` runs the benchmark directly on the host. The OCI image is pulled and unpacked to a temporary directory, and the command executes via `std::process::Command` from the unpacked rootfs.
+
+**Non-sandboxed mode is for trusted workloads only.** There is no VM isolation:
+- The process runs with full host privileges
+- The host environment is cleared; only OCI-derived variables are set
+- The command runs from the unpacked rootfs on the host filesystem
+- Network access is unrestricted
+- Output file paths are read directly from the host
+
+For `runner up` (daemon mode), the `--danger-allow-no-sandbox` flag must be passed to accept jobs with `sandbox: None`. Without this flag, non-sandboxed jobs are rejected at runtime.
 
 ## Design Decisions
 

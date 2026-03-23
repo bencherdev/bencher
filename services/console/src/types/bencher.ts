@@ -70,9 +70,19 @@ export enum JobStatus {
 
 export type ResourceName = string;
 
+export enum OperatingSystem {
+	Linux = "linux",
+	Macos = "macos",
+	Windows = "windows",
+}
+
 export enum Architecture {
 	X86_64 = "x86_64",
 	Aarch64 = "aarch64",
+}
+
+export enum Sandbox {
+	Firecracker = "firecracker",
 }
 
 /** A hardware spec */
@@ -80,8 +90,12 @@ export interface JsonSpec {
 	uuid: Uuid;
 	name: ResourceName;
 	slug: Slug;
+	/** Operating system */
+	os: OperatingSystem;
 	/** CPU architecture */
 	architecture: Architecture;
+	/** Sandbox type */
+	sandbox?: Sandbox;
 	cpu: number;
 	memory: number;
 	disk: number;
@@ -705,8 +719,12 @@ export interface JsonNewSpec {
 	 * If not provided, the slug will be generated from the name.
 	 */
 	slug?: Slug;
+	/** Operating system */
+	os: OperatingSystem;
 	/** CPU architecture */
 	architecture: Architecture;
+	/** Sandbox type (e.g. firecracker). If not provided, the job runs without a sandbox. */
+	sandbox?: Sandbox;
 	/** Number of CPUs */
 	cpu: number;
 	/** Memory size in bytes */

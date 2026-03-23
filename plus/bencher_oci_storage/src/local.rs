@@ -2,7 +2,7 @@
 //!
 //! This implementation stores OCI artifacts on the local filesystem,
 //! sibling to the database file. If the database is at `data/bencher.db`,
-//! OCI data will be stored under `data/oci/`.
+//! OCI data will be stored under `data/registry/`.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -109,7 +109,7 @@ struct UploadState {
 
 /// OCI Storage implementation using local filesystem
 pub struct OciLocalStorage {
-    /// Base directory for OCI storage (e.g., `data/oci`)
+    /// Base directory for OCI storage (e.g., `data/registry`)
     base_dir: PathBuf,
     /// Upload timeout in seconds for stale upload cleanup
     upload_timeout: u64,
@@ -123,11 +123,13 @@ pub struct OciLocalStorage {
     clock: crate::Clock,
 }
 
+const REGISTRY_DIR: &str = "registry";
+
 impl OciLocalStorage {
     /// Creates a new local OCI storage instance
     ///
     /// The `database_path` is the path to the `SQLite` database file.
-    /// OCI data will be stored in an `oci` subdirectory next to it.
+    /// OCI data will be stored in a `registry` subdirectory next to it.
     pub fn new(
         log: Logger,
         database_path: &Path,
@@ -137,7 +139,7 @@ impl OciLocalStorage {
     ) -> Self {
         let base_dir = database_path
             .parent()
-            .map_or_else(|| PathBuf::from("oci"), |p| p.join("oci"));
+            .map_or_else(|| PathBuf::from(REGISTRY_DIR), |p| p.join(REGISTRY_DIR));
 
         Self {
             base_dir,
