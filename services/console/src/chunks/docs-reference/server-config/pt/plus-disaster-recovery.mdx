@@ -24,10 +24,9 @@ Existem três `scheme`s de replicação:
 
 Todos os três `scheme`s de replicação têm as seguintes opções adicionais:
 
-- `retention`: (Opcional) A quantidade de tempo que os arquivos de snapshot e WAL serão mantidos. Após o período de retenção, um novo snapshot será criado e o antigo será removido. Arquivos WAL que existirem antes do snapshot mais antigo também serão removidos. O padrão é `24h`.
-- `retention_check_interval`: (Opcional) Especifica com que frequência o Bencher verificará se a retenção precisa ser aplicada. O padrão é `1h`.
-- `snapshot_interval`: (Opcional) Especifica com que frequência novos snapshots serão criados. Isso é usado para reduzir o tempo de restauração, já que snapshots mais novos terão menos frames WAL para aplicar. A retenção ainda se aplica a esses snapshots. Se você não definir um intervalo de snapshot, um novo snapshot será criado sempre que a retenção for realizada. A retenção ocorre a cada 24 horas por padrão.
-- `validation_interval`: (Opcional) Quando especificado, o Bencher restaurará automaticamente e validará que os dados na réplica correspondem à cópia local. Desativado por padrão. Habilitar isso pode aumentar significativamente o custo de execução do Bencher, já que a maioria dos serviços em nuvem cobra pelos downloads.
+- `snapshot.interval`: (Opcional) Especifica com que frequência novos snapshots serão criados. Isso é usado para reduzir o tempo de restauração, já que snapshots mais novos terão menos frames WAL para aplicar. A retenção ainda se aplica a esses snapshots. Se você não definir um intervalo de snapshot, um novo snapshot será criado sempre que a retenção for realizada. A retenção ocorre a cada 24 horas por padrão.
+- `snapshot.retention`: (Opcional) A quantidade de tempo que os arquivos de snapshot e WAL serão mantidos. Após o período de retenção, um novo snapshot será criado e o antigo será removido. Arquivos WAL que existirem antes do snapshot mais antigo também serão removidos. O padrão é `24h`.
+- `validation.interval`: (Opcional) Quando especificado, o Bencher restaurará automaticamente e validará que os dados na réplica correspondem à cópia local. Desativado por padrão. Habilitar isso pode aumentar significativamente o custo de execução do Bencher, já que a maioria dos serviços em nuvem cobra pelos downloads.
 - `sync_interval`: (Opcional) Frequência com que os frames são enviados para a réplica. O padrão é `1s`. Aumentar a frequência pode aumentar significativamente os custos de armazenamento em nuvem.
 - `checkpoint.interval`: (Opcional) Com que frequência o Litestream realiza um checkpoint PASSIVE não bloqueante independentemente da contagem de páginas. O Litestream pula o checkpoint se leitores ou escritores estiverem ativos. O padrão é `1m`.
 - `checkpoint.min_page_count`: (Opcional) Número mínimo de páginas WAL antes de um checkpoint PASSIVE não bloqueante ser acionado (~4KB por página). O Litestream pula o checkpoint se leitores ou escritores estiverem ativos. O padrão é `1000` (~4MB).
@@ -37,6 +36,9 @@ Todos os três `scheme`s de replicação têm as seguintes opções adicionais:
 | :------------------------: | :-------: | :----: | :---------: | :---------------------------------------------------------------------------------------------------: |
 |          replica           | \{ ... \} |  ---   |     Sim     |                                   Especifica um objeto de réplica.                                    |
 |       replica.scheme       |   "s3"    |  ---   |     Sim     | Especifica o esquema de replicação. Para todas as outras chaves de `replica`, consulte a lista acima. |
+|     snapshot.interval      |   "1h"    |  ---   |     Não     | Frequência de criação de novos snapshots. Reduz o tempo de restauração. |
+|     snapshot.retention     |  "24h"    |  24h   |     Não     | Quanto tempo os arquivos de snapshot e WAL são mantidos antes de serem substituídos. |
+|    validation.interval     |   "6h"    |  ---   |     Não     | Frequência de restauração e validação dos dados de réplica contra a cópia local. Desativado por padrão. |
 |    checkpoint.interval     |   "1m"    |   1m   |     Não     | Frequência de execução de checkpoint PASSIVE não bloqueante. Ignorado se leitores/escritores estiverem ativos. |
 | checkpoint.min_page_count  |   1000    |  1000  |     Não     | Páginas WAL mínimas (~4KB cada) antes de um checkpoint PASSIVE. Ignorado se leitores/escritores estiverem ativos. |
 | checkpoint.truncate_page_n |     0     |   0    |     Não     | Limite de páginas para checkpoint TRUNCATE bloqueante. **0 desativa.** Valores diferentes de zero podem causar `database is locked` sob carga. |
