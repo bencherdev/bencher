@@ -24,10 +24,9 @@ There are three replication `scheme`s:
 
 All three replica `scheme`s have the following additional options:
 
-- `retention`: (Optional)  The amount of time that snapshot & WAL files will be kept. After the retention period, a new snapshot will be created and the old one will be removed. WAL files that exist before the oldest snapshot will also be removed. Defaults to `24h`.
-- `retention_check_interval`: (Optional) Specifies how often Bencher will check if retention needs to be enforced. Defaults to `1h`.
-- `snapshot_interval`: (Optional) Specifies how often new snapshots will be created. This is used to reduce the time to restore since newer snapshots will have fewer WAL frames to apply. Retention still applies to these snapshots. If you do not set a snapshot interval then a new snapshot will be created whenever retention is performed. Retention occurs every 24 hours by default.
-- `validation_interval`: (Optional) When specified, Bencher will automatically restore and validate that the data on the replica matches the local copy. Disabled by default. Enabling this may significantly increase the cost of running Bencher as most cloud services charge for downloads.
+- `snapshot.interval`: (Optional) Specifies how often new snapshots will be created. This is used to reduce the time to restore since newer snapshots will have fewer WAL frames to apply. Retention still applies to these snapshots. If you do not set a snapshot interval then a new snapshot will be created whenever retention is performed. Retention occurs every 24 hours by default.
+- `snapshot.retention`: (Optional) The amount of time that snapshot & WAL files will be kept. After the retention period, a new snapshot will be created and the old one will be removed. WAL files that exist before the oldest snapshot will also be removed. Defaults to `24h`.
+- `validation.interval`: (Optional) When specified, Bencher will automatically restore and validate that the data on the replica matches the local copy. Disabled by default. Enabling this may significantly increase the cost of running Bencher as most cloud services charge for downloads.
 - `sync_interval`: (Optional) Frequency in which frames are pushed to the replica. Defaults to `1s`. Increasing frequency can increase cloud storage costs significantly.
 - `checkpoint.interval`: (Optional) How often Litestream performs a non-blocking PASSIVE checkpoint regardless of page count. Litestream skips the checkpoint if readers or writers are active. Defaults to `1m`.
 - `checkpoint.min_page_count`: (Optional) Minimum number of WAL pages before a non-blocking PASSIVE checkpoint is triggered (~4KB per page). Litestream skips the checkpoint if readers or writers are active. Defaults to `1000` (~4MB).
@@ -37,6 +36,9 @@ All three replica `scheme`s have the following additional options:
 | :------------------------: | :-------: | :-----: | :------: | :---------------------------------------------------------------------------------: |
 |          replica           | \{ ... \} |   ---   |   Yes    |                             Specifies a replica object.                             |
 |       replica.scheme       |   "s3"    |   ---   |   Yes    | Specifies the replication scheme. For all other `replica` keys, see the list above. |
+|     snapshot.interval      |   "1h"    |   ---   |    No    | How often new snapshots are created. Reduces restore time. |
+|     snapshot.retention     |  "24h"    |   24h   |    No    | How long snapshot & WAL files are kept before being replaced. |
+|    validation.interval     |   "6h"    |   ---   |    No    | How often replica data is restored and validated against the local copy. Disabled by default. |
 |    checkpoint.interval     |   "1m"    |   1m    |    No    | How often a non-blocking PASSIVE checkpoint runs. Skipped if readers/writers are active. |
 | checkpoint.min_page_count  |   1000    |  1000   |    No    | Minimum WAL pages (~4KB each) before a PASSIVE checkpoint triggers. Skipped if readers/writers are active. |
 | checkpoint.truncate_page_n |     0     |    0    |    No    | Page threshold for a blocking TRUNCATE checkpoint. **0 disables.** Non-zero values may cause `database is locked` under load. |
