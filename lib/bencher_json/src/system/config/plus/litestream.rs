@@ -11,18 +11,34 @@ use serde::{Deserialize, Serialize};
 pub struct JsonLitestream {
     /// Disaster recovery replica
     pub replica: JsonReplica,
-    /// Snapshot interval
+    /// Snapshot configuration
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub snapshot_interval: Option<String>,
-    /// Snapshot retention
+    pub snapshot: Option<JsonSnapshot>,
+    /// Validation configuration
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub retention: Option<String>,
-    /// Validation interval
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub validation_interval: Option<String>,
+    pub validation: Option<JsonValidation>,
     /// Checkpoint configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub checkpoint: Option<JsonCheckpoint>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonSnapshot {
+    /// How often new snapshots are created
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interval: Option<String>,
+    /// How long snapshot & WAL files are kept
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub retention: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonValidation {
+    /// How often to restore and validate replica data
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interval: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,7 +129,7 @@ mod db {
 
     use crate::system::config::LogLevel;
 
-    use super::{JsonCheckpoint, JsonLitestream, JsonReplica};
+    use super::{JsonCheckpoint, JsonLitestream, JsonReplica, JsonSnapshot, JsonValidation};
 
     impl JsonLitestream {
         pub fn into_yaml(
@@ -123,12 +139,13 @@ mod db {
         ) -> Result<String, serde_yaml::Error> {
             let Self {
                 replica,
-                snapshot_interval,
-                retention,
-                validation_interval,
+                snapshot,
+                validation,
                 checkpoint,
             } = self;
             let replica = LitestreamReplica::from(replica);
+            let snapshot = snapshot.map(LitestreamSnapshot::from);
+            let validation = validation.map(LitestreamValidation::from);
             let (min_checkpoint_page_count, checkpoint_interval, truncate_page_n) = checkpoint
                 .map_or((None, None, JsonCheckpoint::TRUNCATE_DISABLED), |c| {
                     let JsonCheckpoint {
@@ -149,16 +166,6 @@ mod db {
                 checkpoint_interval,
                 truncate_page_n,
             }];
-            let snapshot = match (snapshot_interval, retention) {
-                (None, None) => None,
-                (interval, retention) => Some(LitestreamSnapshot {
-                    interval,
-                    retention,
-                }),
-            };
-            let validation = validation_interval.map(|interval| LitestreamValidation {
-                interval: Some(interval),
-            });
             let logging = Some(LitestreamLogging {
                 level: Some(log_level.into()),
             });
@@ -298,6 +305,26 @@ mod db {
         }
     }
 
+    impl From<JsonSnapshot> for LitestreamSnapshot {
+        fn from(snapshot: JsonSnapshot) -> Self {
+            let JsonSnapshot {
+                interval,
+                retention,
+            } = snapshot;
+            Self {
+                interval,
+                retention,
+            }
+        }
+    }
+
+    impl From<JsonValidation> for LitestreamValidation {
+        fn from(validation: JsonValidation) -> Self {
+            let JsonValidation { interval } = validation;
+            Self { interval }
+        }
+    }
+
     #[derive(Debug, Clone, Serialize)]
     #[serde(rename_all = "kebab-case")]
     pub struct LitestreamLogging {
@@ -337,9 +364,8 @@ mod db {
                 secret_access_key: "secret_access_key".parse().unwrap(),
                 sync_interval: None,
             },
-            snapshot_interval: None,
-            retention: None,
-            validation_interval: None,
+            snapshot: None,
+            validation: None,
             checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");
@@ -374,9 +400,13 @@ logging:
                 secret_access_key: "secret_access_key".parse().unwrap(),
                 sync_interval: None,
             },
-            snapshot_interval: Some("1h".to_owned()),
-            retention: Some("24h".to_owned()),
-            validation_interval: Some("6h".to_owned()),
+            snapshot: Some(JsonSnapshot {
+                interval: Some("1h".to_owned()),
+                retention: Some("24h".to_owned()),
+            }),
+            validation: Some(JsonValidation {
+                interval: Some("6h".to_owned()),
+            }),
             checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");
@@ -416,9 +446,8 @@ logging:
                 secret_access_key: "secret_access_key".parse().unwrap(),
                 sync_interval: None,
             },
-            snapshot_interval: None,
-            retention: None,
-            validation_interval: None,
+            snapshot: None,
+            validation: None,
             checkpoint: Some(JsonCheckpoint {
                 interval: Some("5m".to_owned()),
                 min_page_count: Some(2000),
@@ -454,9 +483,8 @@ logging:
                 path: PathBuf::from("/path/to/replica"),
                 sync_interval: Some("5s".to_owned()),
             },
-            snapshot_interval: None,
-            retention: None,
-            validation_interval: None,
+            snapshot: None,
+            validation: None,
             checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");
@@ -489,9 +517,8 @@ logging:
                 key_path: None,
                 sync_interval: None,
             },
-            snapshot_interval: None,
-            retention: None,
-            validation_interval: None,
+            snapshot: None,
+            validation: None,
             checkpoint: None,
         };
         let path = PathBuf::from("/path/to/db");

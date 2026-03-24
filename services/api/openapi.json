@@ -11929,20 +11929,23 @@
               }
             ]
           },
-          "retention": {
+          "snapshot": {
             "nullable": true,
-            "description": "Snapshot retention",
-            "type": "string"
+            "description": "Snapshot configuration",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonSnapshot"
+              }
+            ]
           },
-          "snapshot_interval": {
+          "validation": {
             "nullable": true,
-            "description": "Snapshot interval",
-            "type": "string"
-          },
-          "validation_interval": {
-            "nullable": true,
-            "description": "Validation interval",
-            "type": "string"
+            "description": "Validation configuration",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonValidation"
+              }
+            ]
           }
         },
         "required": [
@@ -15311,6 +15314,21 @@
           "username"
         ]
       },
+      "JsonSnapshot": {
+        "type": "object",
+        "properties": {
+          "interval": {
+            "nullable": true,
+            "description": "How often new snapshots are created",
+            "type": "string"
+          },
+          "retention": {
+            "nullable": true,
+            "description": "How long snapshot & WAL files are kept",
+            "type": "string"
+          }
+        }
+      },
       "JsonSpec": {
         "description": "A hardware spec",
         "type": "object",
@@ -16435,6 +16453,16 @@
         "required": [
           "uuid"
         ]
+      },
+      "JsonValidation": {
+        "type": "object",
+        "properties": {
+          "interval": {
+            "nullable": true,
+            "description": "How often to restore and validate replica data",
+            "type": "string"
+          }
+        }
       },
       "JsonVersion": {
         "type": "object",
