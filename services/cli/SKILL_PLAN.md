@@ -84,6 +84,7 @@ Local benchmark workflow:
 | `c_sharp_dot_net` | C# | DotNet BenchmarkDotNet |
 | `cpp_catch2` | C++ | Catch2 |
 | `cpp_google` | C++ | Google Benchmark |
+| `dart_benchmark_harness` | Dart | [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) |
 | `go_bench` | Go | `go test -bench` |
 | `java_jmh` | Java | JMH |
 | `js_benchmark` | JavaScript | Benchmark.js |
@@ -91,7 +92,6 @@ Local benchmark workflow:
 | `python_asv` | Python | ASV |
 | `python_pytest` | Python | pytest-benchmark |
 | `ruby_benchmark` | Ruby | Benchmark module |
-| `dart_benchmark_harness` | Dart | [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) |
 | `rust_bench` | Rust | `#[bench]` (nightly) |
 | `rust_criterion` | Rust | Criterion.rs |
 | `rust_iai` | Rust | Iai |

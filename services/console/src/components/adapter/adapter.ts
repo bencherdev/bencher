@@ -8,6 +8,7 @@ const CLEAR_ADAPTER = "";
 const JSON_ICON = "devicon-json-plain";
 const C_SHARP_ICON = "devicon-csharp-line";
 const CPP_ICON = "devicon-cplusplus-plain";
+const DART_ICON = "devicon-dart-plain";
 const GO_ICON = "devicon-go-original-wordmark";
 const JAVA_ICON = "devicon-java-plain";
 const JS_ICON = "devicon-javascript-plain";
@@ -15,7 +16,6 @@ const PYTHON_ICON = "devicon-python-plain";
 const RUBY_ICON = "devicon-ruby-plain";
 const RUST_ICON = "devicon-rust-plain";
 const SHELL_ICON = "devicon-bash-plain";
-const DART_ICON = "devicon-dart-plain";
 
 export const adapterIcon = (adapter: Adapter) => {
 	switch (adapter) {
@@ -29,6 +29,8 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.CppGoogle:
 		case Adapter.CppCatch2:
 			return CPP_ICON;
+		case Adapter.DartBenchmarkHarness:
+			return DART_ICON;
 		case Adapter.GoBench:
 			return GO_ICON;
 		case Adapter.JavaJmh:
@@ -43,8 +45,6 @@ export const adapterIcon = (adapter: Adapter) => {
 			return PYTHON_ICON;
 		case Adapter.RubyBenchmark:
 			return RUBY_ICON;
-		case Adapter.DartBenchmarkHarness:
-			return DART_ICON;
 		case Adapter.ShellHyperfine:
 			return SHELL_ICON;
 		default:
@@ -67,6 +67,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} "make benchmarks --benchmark_format=json"`;
 		case Adapter.CppCatch2:
 			return `bencher run${host} "make benchmarks"`;
+		case Adapter.DartBenchmarkHarness:
+			return `bencher run${host} --adapter dart_benchmark_harness "dart run benchmark/benchmark.dart"`;
 		case Adapter.GoBench:
 			return `bencher run${host} "go test -bench"`;
 		case Adapter.JavaJmh:
@@ -82,8 +84,6 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} --file results.json "pytest --benchmark-json results.json benchmarks.py"`;
 		case Adapter.RubyBenchmark:
 			return `bencher run${host} "ruby benchmarks.rb"`;
-		case Adapter.DartBenchmarkHarness:
-			return `bencher run${host} --adapter dart_benchmark_harness "dart run benchmark/benchmark.dart"`;
 		case Adapter.ShellHyperfine:
 			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
@@ -154,6 +154,7 @@ const validAdapter = (adapter: undefined | null | string | Adapter) => {
 		case Adapter.RustGungraun:
 		case Adapter.CppGoogle:
 		case Adapter.CppCatch2:
+		case Adapter.DartBenchmarkHarness:
 		case Adapter.GoBench:
 		case Adapter.JavaJmh:
 		case Adapter.CSharpDotNet:
@@ -162,7 +163,6 @@ const validAdapter = (adapter: undefined | null | string | Adapter) => {
 		case Adapter.PythonAsv:
 		case Adapter.PythonPytest:
 		case Adapter.RubyBenchmark:
-		case Adapter.DartBenchmarkHarness:
 		case Adapter.ShellHyperfine:
 			return true;
 		default:

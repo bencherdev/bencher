@@ -19,6 +19,11 @@ const BenchmarkHarnessInner = () => (
 				adapters={[Adapter.CppGoogle, Adapter.CppCatch2]}
 			/>
 			<LanguageBox
+				icon="devicon-dart-plain"
+				name="Dart"
+				adapters={[Adapter.DartBenchmarkHarness]}
+			/>
+			<LanguageBox
 				icon="devicon-go-original-wordmark"
 				name="Go"
 				adapters={[Adapter.GoBench]}
@@ -44,11 +49,6 @@ const BenchmarkHarnessInner = () => (
 				icon="devicon-ruby-plain"
 				name="Ruby"
 				adapters={[Adapter.RubyBenchmark]}
-			/>
-			<LanguageBox
-				icon="devicon-dart-plain"
-				name="Dart"
-				adapters={[Adapter.DartBenchmarkHarness]}
 			/>
 			<LanguageBox
 				icon="devicon-rust-plain"

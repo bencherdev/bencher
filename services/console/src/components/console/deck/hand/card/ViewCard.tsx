@@ -433,6 +433,8 @@ const AdapterCard = (props: Props) => {
 						return "-c-catch2";
 					case Adapter.CppGoogle:
 						return "-c-google";
+					case Adapter.DartBenchmarkHarness:
+						return "-dart-benchmark-harness";
 					case Adapter.GoBench:
 						return "-go-bench";
 					case Adapter.JavaJmh:
@@ -447,8 +449,6 @@ const AdapterCard = (props: Props) => {
 						return "-python-pytest";
 					case Adapter.RubyBenchmark:
 						return "%EF%B8%8F-ruby-benchmark";
-					case Adapter.DartBenchmarkHarness:
-						return "-dart-benchmark-harness";
 					case Adapter.RustBench:
 						return "-rust-bench";
 					case Adapter.RustCriterion:
@@ -480,6 +480,8 @@ const AdapterCard = (props: Props) => {
 							return "C++ Catch2";
 						case Adapter.CppGoogle:
 							return "C++ Google Benchmark";
+						case Adapter.DartBenchmarkHarness:
+							return "Dart benchmark_harness";
 						case Adapter.GoBench:
 							return "Go test -bench";
 						case Adapter.JavaJmh:
@@ -494,8 +496,6 @@ const AdapterCard = (props: Props) => {
 							return "Python pytest-benchmark";
 						case Adapter.RubyBenchmark:
 							return "Ruby Benchmark";
-						case Adapter.DartBenchmarkHarness:
-							return "Dart benchmark_harness";
 						case Adapter.RustBench:
 							return "Rust libtest bench";
 						case Adapter.RustCriterion:

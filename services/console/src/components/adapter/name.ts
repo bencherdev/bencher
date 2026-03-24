@@ -22,6 +22,10 @@ export const adapterName = (adapter: Adapter): string => {
 			return "Google Benchmark";
 		case Adapter.CppCatch2:
 			return "Catch2";
+		case Adapter.Dart:
+			return "Dart";
+		case Adapter.DartBenchmarkHarness:
+			return "benchmark_harness";
 		case Adapter.Go:
 			return "Go";
 		case Adapter.GoBench:
@@ -54,10 +58,6 @@ export const adapterName = (adapter: Adapter): string => {
 			return "Shell";
 		case Adapter.ShellHyperfine:
 			return "Hyperfine";
-		case Adapter.Dart:
-			return "Dart";
-		case Adapter.DartBenchmarkHarness:
-			return "benchmark_harness";
 	}
 };
 
@@ -75,6 +75,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} "make benchmarks --benchmark_format=json"`;
 		case Adapter.CppCatch2:
 			return `bencher run${host} "make benchmarks"`;
+		case Adapter.DartBenchmarkHarness:
+			return `bencher run${host} --adapter dart_benchmark_harness "dart run benchmark/benchmark.dart"`;
 		case Adapter.GoBench:
 			return `bencher run${host} "go test -bench"`;
 		case Adapter.JavaJmh:
@@ -90,8 +92,6 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} --file results.json "pytest --benchmark-json results.json benchmarks.py"`;
 		case Adapter.RubyBenchmark:
 			return `bencher run${host} "ruby benchmarks.rb"`;
-		case Adapter.DartBenchmarkHarness:
-			return `bencher run${host} --adapter dart_benchmark_harness "dart run benchmark/benchmark.dart"`;
 		case Adapter.ShellHyperfine:
 			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
