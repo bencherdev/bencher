@@ -12,8 +12,6 @@ jobs:
     permissions:
       checks: write
     runs-on: ubuntu-22.04
-    env:
-      BENCHMARK_RESULTS: benchmark_results.txt
     steps:
       - name: Download Noise Results (ubuntu)
         uses: actions/download-artifact@v8
@@ -27,10 +25,6 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: noise_results_windows-2022
-      - name: Download Benchmark Results
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.BENCHMARK_RESULTS }}
       - uses: bencherdev/bencher@main
       - name: Track Noise (ubuntu)
         run: |
@@ -88,9 +82,11 @@ jobs:
           bencher run \
           --project bencher \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --image "bencher:${{ github.sha }}" \
           --branch ${{ github.ref_name }} \
           --hash '${{ github.sha }}' \
-          --testbed ubuntu-22.04 \
+          --testbed intel-v1 \
+          --spec intel-v1 \
           --threshold-measure latency \
           --threshold-test t_test \
           --threshold-max-sample-size 64 \
@@ -98,5 +94,4 @@ jobs:
           --thresholds-reset \
           --err \
           --adapter rust_criterion \
-          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-          --file ./benchmark_results.txt
+          --github-actions '${{ secrets.GITHUB_TOKEN }}'

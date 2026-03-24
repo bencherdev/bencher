@@ -13,7 +13,6 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-22.04
     env:
-      BENCHMARK_RESULTS: benchmark_results.txt
       PR_EVENT: event.json
     steps:
       - name: Download Noise Results (ubuntu)
@@ -31,11 +30,6 @@ jobs:
         with:
           name: noise_results_windows-2022
           run_id: ${{ github.event.workflow_run.id }}
-      - name: Download Benchmark Results
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          name: ${{ env.BENCHMARK_RESULTS }}
-          run_id: ${{ github.event.workflow_run.id }}
       - name: Download PR Event
         uses: dawidd6/action-download-artifact@v6
         with:
@@ -52,6 +46,16 @@ jobs:
             core.exportVariable('PR_BASE', prEvent.pull_request.base.ref);
             core.exportVariable('PR_BASE_SHA', prEvent.pull_request.base.sha);
             core.exportVariable('PR_NUMBER', prEvent.number);
+      - name: Download Bench Image
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          name: bench_image.tar
+          run_id: ${{ github.event.workflow_run.id }}
+      - name: Load and push image
+        run: |
+          docker load -i bench_image.tar
+          echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
+          docker push registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
       - uses: bencherdev/bencher@main
       - name: Track Noise (ubuntu)
         env:
@@ -117,15 +121,16 @@ jobs:
           bencher run \
           --project bencher \
           --token "$BENCHER_API_TOKEN" \
+          --image "bencher:${{ github.event.workflow_run.head_sha }}" \
           --branch "$PR_HEAD" \
           --hash "$PR_HEAD_SHA" \
           --start-point "$PR_BASE" \
           --start-point-hash "$PR_BASE_SHA" \
           --start-point-clone-thresholds \
           --start-point-reset \
-          --testbed ubuntu-22.04 \
+          --testbed intel-v1 \
+          --spec intel-v1 \
           --adapter rust_criterion \
           --err \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-          --ci-number "$PR_NUMBER" \
-          --file ./${{ env.BENCHMARK_RESULTS }}
+          --ci-number "$PR_NUMBER"
