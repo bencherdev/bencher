@@ -121,9 +121,9 @@ Schließlich sind wir bereit, unsere `feature-branch` Benchmarks in CI auszufüh
    4. Setzen Sie das `--thresholds-reset` Flag, so dass nur die angegebene Schwelle aktiv ist.
    Siehe [die `--thresholds-reset` Dokus][thresholds reset] für eine vollständige Übersicht.
    (z.B.: `--thresholds-reset`)
-7. Setzen Sie das `--err` Flag, um den Befehl zu beenden, falls ein Alert erzeugt wird.
-   Siehe [die `--err` Dokus][alert err] für eine vollständige Übersicht.
-   (z.B.: `--err`)
+7. Setzen Sie das `--error-on-alert` Flag, um den Befehl zu beenden, falls ein Alert erzeugt wird.
+   Siehe [die `--error-on-alert` Dokus][alert err] für eine vollständige Übersicht.
+   (z.B.: `--error-on-alert`)
 8. Setzen Sie die `--adapter` Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
    Siehe [benchmark harness adapters][adapter json] für eine vollständige Übersicht.
    (z.B.: `--adapter json`)
@@ -141,4 +141,4 @@ Die angegebene Schwelle wird dann verwendet, um Leistungsregressionen zu erkenne
 [threshold test option]: /de/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /de/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /de/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /de/docs/explanation/thresholds/#--err
+[alert err]: /de/docs/explanation/thresholds/#--error-on-alert

@@ -56,7 +56,7 @@ pub struct Run {
     backdate: Option<DateTime>,
     allow_failure: bool,
     thresholds: Thresholds,
-    err: bool,
+    error_on_alert: bool,
     format: Format,
     log: bool,
     ci: Option<Ci>,
@@ -108,7 +108,7 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             thresholds,
-            err,
+            error_on_alert,
             output: CliRunOutput { format, quiet },
             ci,
             cmd,
@@ -168,7 +168,7 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             thresholds: thresholds.try_into().map_err(RunError::Thresholds)?,
-            err,
+            error_on_alert,
             format: format.into(),
             log: !quiet,
             ci: ci.try_into().map_err(RunError::Ci)?,
@@ -465,7 +465,7 @@ impl Run {
     async fn display_and_check_alerts(&self, json_report: JsonReport) -> Result<(), RunError> {
         let alerts_count = json_report.alerts.len();
         self.display_results(json_report).await?;
-        if self.err && alerts_count > 0 {
+        if self.error_on_alert && alerts_count > 0 {
             Err(RunError::Alerts(alerts_count))
         } else {
             Ok(())

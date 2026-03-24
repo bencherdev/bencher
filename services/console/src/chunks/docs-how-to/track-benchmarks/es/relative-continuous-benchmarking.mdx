@@ -121,9 +121,9 @@ Finalmente, estamos listos para ejecutar nuestros benchmarks de `feature-branch`
    4. Configura la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo.
    Consulta [la documentación de `--thresholds-reset`][thresholds reset] para una visión general completa.
    (ej: `--thresholds-reset`)
-7. Configura la bandera `--err` para que falle el comando si se genera una Alerta.
-   Consulta [la documentación de `--err`][alert err] para una visión general completa.
-   (ej: `--err`)
+7. Configura la bandera `--error-on-alert` para que falle el comando si se genera una Alerta.
+   Consulta [la documentación de `--error-on-alert`][alert err] para una visión general completa.
+   (ej: `--error-on-alert`)
 8. Configura la opción `--adapter` al [Formato de Métrica Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Consulta [los adaptadores del arnés de benchmark][adapter json] para una visión general completa.
    (ej: `--adapter json`)
@@ -141,4 +141,4 @@ El Umbral especificado se utiliza luego para detectar regresiones de rendimiento
 [threshold test option]: /es/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /es/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /es/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /es/docs/explanation/thresholds/#--err
+[alert err]: /es/docs/explanation/thresholds/#--error-on-alert

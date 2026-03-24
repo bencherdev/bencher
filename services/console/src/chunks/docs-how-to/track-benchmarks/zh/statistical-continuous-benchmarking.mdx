@@ -57,9 +57,9 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
    5. 设置`--thresholds-reset`标志以仅激活指定的阈值。
    查看[关于`--thresholds-reset`的文档][thresholds reset]以获取完整概述。
    （例如：`--thresholds-reset`）
-6. 设置`--err`标志以在生成警报时让命令失败。
-   查看[关于`--err`的文档][alert err]以获取完整概述。
-   （例如：`--err`）
+6. 设置`--error-on-alert`标志以在生成警报时让命令失败。
+   查看[关于`--error-on-alert`的文档][alert err]以获取完整概述。
+   （例如：`--error-on-alert`）
 7. 设置`--adapter`选项为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的[Bencher Metric Format JSON（`json`）][bmf]。
    查看[基准测试工具适配器][adapter json]以获取完整概述。
    （例如：`--adapter json`）
@@ -83,7 +83,7 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 [threshold max sample size]: /zh/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /zh/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /zh/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /zh/docs/explanation/thresholds/#--err
+[alert err]: /zh/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /zh/docs/reference/bencher-metric-format/
 [adapter json]: /zh/docs/explanation/adapters/#-json
 [command argument]: /zh/docs/explanation/bencher-run/#benchmark-command
@@ -120,9 +120,9 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 5. 将`--testbed`选项设置为测试台名称。
    查看[有关`--tested`的文档][testbed option]以获取更多详情。
    （例如：`--testbed ci-runner`）
-6. 设置`--err`标志以在生成警报时让命令失败。
-   查看[关于`--err`的文档][alert err]以获取完整概述。
-   （例如：`--err`）
+6. 设置`--error-on-alert`标志以在生成警报时让命令失败。
+   查看[关于`--error-on-alert`的文档][alert err]以获取完整概述。
+   （例如：`--error-on-alert`）
 7. 设置`--adapter`选项为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的[Bencher Metric Format JSON（`json`）][bmf]。
    查看[基准测试工具适配器][adapter json]以获取完整概述。
    （例如：`--adapter json`）

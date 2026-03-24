@@ -125,7 +125,7 @@ jobs:
           --start-point-reset \
           --testbed ubuntu-22.04 \
           --adapter rust_criterion \
-          --err \
+          --error-on-alert \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
           --ci-number "$PR_NUMBER" \
           --file ./${{ env.BENCHMARK_RESULTS }}

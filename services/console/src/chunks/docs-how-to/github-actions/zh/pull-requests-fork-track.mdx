@@ -61,9 +61,9 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
     这可能应与 `runs-on` 中选择的机器相匹配。
     有关更多细节，请参见[`--tested` 文档][testbed option]。
     （例如：`--testbed ubuntu-latest`）
-19. 设置 `--err` 标志以在生成警报时命令失败。
-   有关完整概述，请参见[`--err` 文档][alert err]。
-   （例如：`--err`）
+19. 设置 `--error-on-alert` 标志以在生成警报时命令失败。
+   有关完整概述，请参见[`--error-on-alert` 文档][alert err]。
+   （例如：`--error-on-alert`）
 20. 将 `--adapter` 选项设置为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的[Bencher Metric Format JSON (`json`)][bmf]。
    有关完整概述，请参见[基准测试硬件适配器][adapter json]。
    （例如：`--adapter json`）
@@ -98,7 +98,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 [start point clone thresholds]: /zh/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /zh/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /zh/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /zh/docs/explanation/thresholds/#--err
+[alert err]: /zh/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /zh/docs/reference/bencher-metric-format/
 [adapter json]: /zh/docs/explanation/adapters/#-json
 [github actions option]: /zh/docs/explanation/bencher-run/#--github-actions-github_token

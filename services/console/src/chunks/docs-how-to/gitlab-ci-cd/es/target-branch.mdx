@@ -54,9 +54,9 @@ Esta línea base histórica puede utilizarse para detectar regresiones de rendim
     5. Configure la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo.
     Vea [los documentos de `--thresholds-reset`][thresholds reset] para una visión completa.
     (ej: `--thresholds-reset`)
-12. Configure la bandera `--err` para que el comando falle si se genera una Alerta.
-    Vea [los documentos de `--err`][alert err] para una visión completa.
-    (ej: `--err`)
+12. Configure la bandera `--error-on-alert` para que el comando falle si se genera una Alerta.
+    Vea [los documentos de `--error-on-alert`][alert err] para una visión completa.
+    (ej: `--error-on-alert`)
 13. Configure la opción `--adapter` a [Bencher Metric Format JSON (`json`)][bmf] que se genera por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     Vea [adaptadores de benchmark harness][adapter json] para una visión completa.
     (ej: `--adapter json`)
@@ -80,7 +80,7 @@ Esta línea base histórica puede utilizarse para detectar regresiones de rendim
 [threshold max sample size]: /es/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /es/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /es/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /es/docs/explanation/thresholds/#--err
+[alert err]: /es/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /es/docs/reference/bencher-metric-format/
 [adapter json]: /es/docs/explanation/adapters/#-json
 [command argument]: /es/docs/explanation/bencher-run/#benchmark-command

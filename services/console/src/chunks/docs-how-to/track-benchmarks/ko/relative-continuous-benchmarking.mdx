@@ -85,8 +85,8 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
    (예: `--threshold-upper-boundary 0.25`)
    4. 지정된 임계값만 활성 상태가 되도록 `--thresholds-reset` 플래그를 설정합니다. 이에 대한 전체 개요는 [`--thresholds-reset` 문서][thresholds reset]를 참조하세요.
    (예: `--thresholds-reset`)
-7. 경고가 생성되면 명령이 실패하도록 `--err` 플래그를 설정합니다. 이에 대한 전체 개요는 [`--err` 문서][alert err]를 참조하세요.
-   (예: `--err`)
+7. 경고가 생성되면 명령이 실패하도록 `--error-on-alert` 플래그를 설정합니다. 이에 대한 전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하세요.
+   (예: `--error-on-alert`)
 8. `--adapter` 옵션으로 [Bencher Metric Format JSON (`json`)][bmf]을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>으로 생성합니다. 벤치마크 하네스 어댑터에 대한 전체 개요는 [어댑터 json][adapter json]을 참조하세요.
    (예: `--adapter json`)
 9. 벤치마크 명령의 인수를 지정합니다. 벤치마크 명령에 대한 전체 개요는 [명령 인수][command argument]를 참조하세요.
@@ -100,4 +100,4 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 [threshold test option]: /ko/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /ko/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ko/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /ko/docs/explanation/thresholds/#--err
+[alert err]: /ko/docs/explanation/thresholds/#--error-on-alert

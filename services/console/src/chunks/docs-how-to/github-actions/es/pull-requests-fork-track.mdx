@@ -74,9 +74,9 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
     Es probable que esto coincida con la máquina seleccionada en `runs-on`.
     Consulta [los documentos de `--tested`][testbed option] para más detalles.
     (ej: `--testbed ubuntu-latest`)
-19. Establece el flag `--err` para que el comando falle si se genera una Alerta.
-   Consulta [los documentos de `--err`][alert err] para una visión completa.
-   (ej: `--err`)
+19. Establece el flag `--error-on-alert` para que el comando falle si se genera una Alerta.
+   Consulta [los documentos de `--error-on-alert`][alert err] para una visión completa.
+   (ej: `--error-on-alert`)
 20. Establece la opción `--adapter` al [Formato de Métrica Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Consulta [los adaptadores de harness de benchmark][adapter json] para una visión completa.
    (ej: `--adapter json`)
@@ -113,7 +113,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 [start point clone thresholds]: /es/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /es/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /es/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /es/docs/explanation/thresholds/#--err
+[alert err]: /es/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /es/docs/reference/bencher-metric-format/
 [adapter json]: /es/docs/explanation/adapters/#-json
 [github actions option]: /es/docs/explanation/bencher-run/#--github-actions-github_token

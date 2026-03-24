@@ -81,9 +81,9 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
     Это, вероятно, должно совпадать с машиной, выбранной в `runs-on`.
     См. [документацию `--testbed`][testbed option] для подробностей.
     (пример: `--testbed ubuntu-latest`)
-15. Установите флаг `--err`, чтобы команда завершалась неудачей, если генерируется предупреждение.
-   См. [документацию `--err`][alert err] для полного обзора.
-   (пример: `--err`)
+15. Установите флаг `--error-on-alert`, чтобы команда завершалась неудачей, если генерируется предупреждение.
+   См. [документацию `--error-on-alert`][alert err] для полного обзора.
+   (пример: `--error-on-alert`)
 16. Установите опцию `--adapter` на [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    См. [адаптеры тестовых сред][adapter json] для полного обзора.
    (пример: `--adapter json`)
@@ -116,7 +116,7 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 [start point clone thresholds]: /ru/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /ru/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /ru/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /ru/docs/explanation/thresholds/#--err
+[alert err]: /ru/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ru/docs/reference/bencher-metric-format/
 [adapter json]: /ru/docs/explanation/adapters/#-json
 [github actions option]: /ru/docs/explanation/bencher-run/#--github-actions-github_token

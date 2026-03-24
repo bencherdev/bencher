@@ -43,8 +43,8 @@ Zuerst müssen wir eine historische Basis für unseren `main` Branch erstellen u
    Siehe [die `--threshold-upper-boundary` Dokumentation][threshold upper boundary] für mehr Details. (z.B.: `--threshold-upper-boundary 0.99`)
    5. Setzen Sie das `--thresholds-reset` Flag, sodass nur der angegebene Schwellenwert aktiv ist.
    Siehe [die `--thresholds-reset` Dokumentation][thresholds reset] für eine vollständige Übersicht. (z.B.: `--thresholds-reset`)
-6. Setzen Sie das `--err` Flag, um den Befehl fehlschlagen zu lassen, wenn ein Alarm generiert wird.
-   Siehe [die `--err` Dokumentation][alert err] für eine vollständige Übersicht. (z.B.: `--err`)
+6. Setzen Sie das `--error-on-alert` Flag, um den Befehl fehlschlagen zu lassen, wenn ein Alarm generiert wird.
+   Siehe [die `--error-on-alert` Dokumentation][alert err] für eine vollständige Übersicht. (z.B.: `--error-on-alert`)
 7. Setzen Sie die `--adapter` Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
    Siehe [Benchmark-Harness-Adapter][adapter json] für eine vollständige Übersicht. (z.B.: `--adapter json`)
 8. Geben Sie die Benchmark-Befehlsargumente an.
@@ -66,7 +66,7 @@ Der angegebene Schwellenwert wird dann verwendet, um Leistungsregressionen zu er
 [threshold max sample size]: /de/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /de/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /de/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /de/docs/explanation/thresholds/#--err
+[alert err]: /de/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /de/docs/reference/bencher-metric-format/
 [adapter json]: /de/docs/explanation/adapters/#-json
 [command argument]: /de/docs/explanation/bencher-run/#benchmark-command
@@ -92,8 +92,8 @@ So würden wir die Leistung eines neuen Feature-Branchs in CI verfolgen, passend
    Siehe [die `--start-point-reset` Dokumentation][start point reset] für eine vollständige Übersicht. (z.B.: `--start-point-reset`)
 5. Setzen Sie die `--testbed` Option auf den Namen des Testbeds.
    Siehe [die `--tested` Dokumentation][testbed option] für mehr Details. (z.B.: `--testbed ci-runner`)
-6. Setzen Sie das `--err` Flag, um den Befehl fehlschlagen zu lassen, wenn ein Alarm generiert wird.
-   Siehe [die `--err` Dokumentation][alert err] für eine vollständige Übersicht. (z.B.: `--err`)
+6. Setzen Sie das `--error-on-alert` Flag, um den Befehl fehlschlagen zu lassen, wenn ein Alarm generiert wird.
+   Siehe [die `--error-on-alert` Dokumentation][alert err] für eine vollständige Übersicht. (z.B.: `--error-on-alert`)
 7. Setzen Sie die `--adapter` Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
    Siehe [Benchmark-Harness-Adapter][adapter json] für eine vollständige Übersicht. (z.B.: `--adapter json`)
 8. Geben Sie die Benchmark-Befehlsargumente an.

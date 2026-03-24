@@ -42,8 +42,8 @@ Una piedra angular de [Benchmarking Continuo Estadístico][statistical continuou
     (ej: `--threshold-upper-boundary 0.99`)
     5. Establece la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo. Consulta [la documentación de `--thresholds-reset`][thresholds reset] para una visión completa.
     (ej: `--thresholds-reset`)
-14. Establece la bandera `--err` para que el comando falle si se genera una Alerta. Consulta [la documentación de `--err`][alert err] para una visión completa.
-   (ej: `--err`)
+14. Establece la bandera `--error-on-alert` para que el comando falle si se genera una Alerta. Consulta [la documentación de `--error-on-alert`][alert err] para una visión completa.
+   (ej: `--error-on-alert`)
 15. Establece la opción `--adapter` al Formato JSON de Métricas de Bencher (`json`) que genera <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Consulta [adaptadores de harness de benchmark][adapter json] para una visión completa.
    (ej: `--adapter json`)
 16. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como un comentario de Checks de GitHub usando
@@ -72,7 +72,7 @@ Una piedra angular de [Benchmarking Continuo Estadístico][statistical continuou
 [threshold max sample size]: /es/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /es/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /es/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /es/docs/explanation/thresholds/#--err
+[alert err]: /es/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /es/docs/reference/bencher-metric-format/
 [adapter json]: /es/docs/explanation/adapters/#-json
 [github actions option]: /es/docs/explanation/bencher-run/#--github-actions-github_token

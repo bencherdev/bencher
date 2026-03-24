@@ -60,9 +60,9 @@ Diese historische Basislinie kann dann verwendet werden, um Leistungsregressione
     5. Setzen Sie die `--thresholds-reset` Flag, damit nur der angegebene Threshold aktiv ist.
     Siehe [die `--thresholds-reset` Doku][thresholds reset] für einen vollständigen Überblick.
     (z.B.: `--thresholds-reset`)
-14. Setzen Sie die `--err` Flag, damit der Befehl fehlschlägt, wenn ein Alert generiert wird.
-    Siehe [die `--err` Doku][alert err] für einen vollständigen Überblick.
-    (z.B.: `--err`)
+14. Setzen Sie die `--error-on-alert` Flag, damit der Befehl fehlschlägt, wenn ein Alert generiert wird.
+    Siehe [die `--error-on-alert` Doku][alert err] für einen vollständigen Überblick.
+    (z.B.: `--error-on-alert`)
 15. Setzen Sie die `--adapter` Option auf das [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
     Siehe [benchmark harness adapters][adapter json] für einen vollständigen Überblick.
     (z.B.: `--adapter json`)
@@ -92,7 +92,7 @@ Diese historische Basislinie kann dann verwendet werden, um Leistungsregressione
 [threshold max sample size]: /de/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /de/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /de/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /de/docs/explanation/thresholds/#--err
+[alert err]: /de/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /de/docs/reference/bencher-metric-format/
 [adapter json]: /de/docs/explanation/adapters/#-json
 [github actions option]: /de/docs/explanation/bencher-run/#--github-actions-github_token

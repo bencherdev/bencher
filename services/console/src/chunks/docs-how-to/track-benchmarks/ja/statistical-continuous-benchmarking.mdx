@@ -55,9 +55,9 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
    5. `--thresholds-reset`フラグを設定し、指定されたしきい値のみを有効にします。
    詳細については[しきい値リセット][thresholds reset]を参照してください。
    (例: `--thresholds-reset`)
-6. アラートが生成された場合にコマンドを失敗させるために`--err`フラグを設定します。
+6. アラートが生成された場合にコマンドを失敗させるために`--error-on-alert`フラグを設定します。
    詳細については[アラートエラー][alert err]を参照してください。
-   (例: `--err`)
+   (例: `--error-on-alert`)
 7. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>で生成される[BencherメトリックフォーマットJSON（`json`）][bmf]を`--adapter`オプションに設定します。
    完全な概要については[ベンチマークハーネスアダプタ][adapter json]を参照してください。
    (例: `--adapter json`)
@@ -81,7 +81,7 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 [threshold max sample size]: /ja/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /ja/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ja/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /ja/docs/explanation/thresholds/#--err
+[alert err]: /ja/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ja/docs/reference/bencher-metric-format/
 [adapter json]: /ja/docs/explanation/adapters/#-json
 [command argument]: /ja/docs/explanation/bencher-run/#benchmark-command
@@ -118,9 +118,9 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 5. `--testbed`オプションをテストベッド名に設定します。
    詳細については[テストベッドオプション][testbed option]を参照してください。
    (例: `--testbed ci-runner`)
-6. アラートが生成された場合にコマンドを失敗させるために`--err`フラグを設定します。
+6. アラートが生成された場合にコマンドを失敗させるために`--error-on-alert`フラグを設定します。
    詳細については[アラートエラー][alert err]を参照してください。
-   (例: `--err`)
+   (例: `--error-on-alert`)
 7. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>で生成される[BencherメトリックフォーマットJSON（`json`）][bmf]を`--adapter`オプションに設定します。
    完全な概要については[ベンチマークハーネスアダプタ][adapter json]を参照してください。
    (例: `--adapter json`)

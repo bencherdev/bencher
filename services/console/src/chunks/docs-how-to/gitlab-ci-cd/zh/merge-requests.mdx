@@ -53,9 +53,9 @@ import MergeRequestsClosed from "./merge-requests-closed.mdx";
    可能应该与在 `image` 中选择的机器匹配。
    请参阅[`--tested` 文档][testbed option]了解更多细节。
    (例如：`--testbed debian:bullseye`)
-12. 设置 `--err` 标志以便在生成警报时使命令失败。
-   请参阅[`--err` 文档][alert err]了解完整概览。
-   (例如：`--err`)
+12. 设置 `--error-on-alert` 标志以便在生成警报时使命令失败。
+   请参阅[`--error-on-alert` 文档][alert err]了解完整概览。
+   (例如：`--error-on-alert`)
 13. 设置 `--adapter` 选项为 [Bencher Metric Format JSON (`json`)][bmf]，生成可通过 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>。
    请参阅[基准测试接口适配器][adapter json]了解完整概览。
    (例如：`--adapter json`)
@@ -79,7 +79,7 @@ import MergeRequestsClosed from "./merge-requests-closed.mdx";
 [start point clone thresholds]: /zh/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /zh/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /zh/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /zh/docs/explanation/thresholds/#--err
+[alert err]: /zh/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /zh/docs/reference/bencher-metric-format/
 [adapter json]: /zh/docs/explanation/adapters/#-json
 [github actions option]: /zh/docs/explanation/bencher-run/#--github-actions-github_token

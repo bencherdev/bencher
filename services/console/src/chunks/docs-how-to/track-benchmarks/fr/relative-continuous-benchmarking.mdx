@@ -67,7 +67,7 @@ Enfin, nous sommes prêts à exécuter nos benchmarks de `feature-branch` dans C
    2. Définissez l'option `--threshold-test` à un pourcentage de base (`percentage`). Voir [un aperçu complet des docs `--threshold-test`][threshold test option]. (ex : `--threshold-test percentage`)
    3. Définissez l'option `--threshold-upper-boundary` à la Limite Supérieure de `0.25`. Voir [les détails des docs `--threshold-upper-boundary`][threshold upper boundary]. (ex : `--threshold-upper-boundary 0.25`)
    4. Définissez l'indicateur `--thresholds-reset` pour que seul le Seuil spécifié soit actif. Voir [un aperçu complet des docs `--thresholds-reset`][thresholds reset]. (ex : `--thresholds-reset`)
-7. Définissez l'indicateur `--err` pour échouer à la commande si une Alarme est générée. Voir [un aperçu complet des docs `--err`][alert err]. (ex : `--err`)
+7. Définissez l'indicateur `--error-on-alert` pour échouer à la commande si une Alarme est générée. Voir [un aperçu complet des docs `--error-on-alert`][alert err]. (ex : `--error-on-alert`)
 8. Définissez l'option `--adapter` au [Format de Métrique Bencher JSON (`json`)][bmf] généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Voir [un aperçu complet des adaptateurs de harnais de benchmark][adapter json]. (ex : `--adapter json`)
 9. Spécifiez les arguments de la commande de benchmark. Voir [un aperçu complet de la commande de benchmark][command argument]. (ex : `bencher mock`)
 
@@ -79,4 +79,4 @@ Chaque fois que cette commande est exécutée dans CI, elle compare les résulta
 [threshold test option]: /fr/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /fr/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /fr/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /fr/docs/explanation/thresholds/#--err
+[alert err]: /fr/docs/explanation/thresholds/#--error-on-alert

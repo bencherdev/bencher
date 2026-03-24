@@ -68,9 +68,9 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
     이는 `runs-on`에서 선택한 머신과 일치해야 합니다.
     더 자세한 내용은 [`--tested` 문서][testbed option]를 참조하세요.
     (예: `--testbed ubuntu-latest`)
-19. 경고가 생성되면 명령을 실패 처리하는 `--err` 플래그를 설정합니다.
-   전체 개요는 [`--err` 문서][alert err]를 참조하세요.
-   (예: `--err`)
+19. 경고가 생성되면 명령을 실패 처리하는 `--error-on-alert` 플래그를 설정합니다.
+   전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하세요.
+   (예: `--error-on-alert`)
 20. <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 [Bencher Metric Format JSON (`json`)][bmf]으로 `--adapter` 옵션을 설정합니다.
    전체 개요는 [benchmark harness adapters][adapter json]를 참조하세요.
    (예: `--adapter json`)
@@ -106,7 +106,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 [start point clone thresholds]: /ko/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /ko/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /ko/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /ko/docs/explanation/thresholds/#--err
+[alert err]: /ko/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ko/docs/reference/bencher-metric-format/
 [adapter json]: /ko/docs/explanation/adapters/#-json
 [github actions option]: /ko/docs/explanation/bencher-run/#--github-actions-github_token

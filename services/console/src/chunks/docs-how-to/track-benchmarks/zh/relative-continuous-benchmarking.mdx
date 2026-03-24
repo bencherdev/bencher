@@ -67,7 +67,7 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
    2. 将`--threshold-test`选项设置为基本百分比(`percentage`)。有关完整概述，请参阅[`--threshold-test`文档][threshold test option]。（例如：`--threshold-test percentage`）
    3. 将`--threshold-upper-boundary`选项设置为上限`0.25`。有关详细信息，请参阅[`--threshold-upper-boundary`文档][threshold upper boundary]。（例如：`--threshold-upper-boundary 0.25`）
    4. 设置`--thresholds-reset`标志，以便仅激活指定的阈值。有关完整概述，请参阅[`--thresholds-reset`文档][thresholds reset]。（例如：`--thresholds-reset`）
-7. 设置`--err`标志以便在生成警报时命令失败。有关完整概述，请参阅[`--err`文档][alert err]。（例如：`--err`）
+7. 设置`--error-on-alert`标志以便在生成警报时命令失败。有关完整概述，请参阅[`--error-on-alert`文档][alert err]。（例如：`--error-on-alert`）
 8. 将`--adapter`选项设置为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的[Bencher Metric Format JSON（`json`）][bmf]。有关完整概述，请参阅[基准测试适配器][adapter json]。（例如：`--adapter json`）
 9. 指定基准命令参数。有关完整概述，请参阅[基准命令][command argument]。（例如：`bencher mock`）
 
@@ -79,4 +79,4 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 [threshold test option]: /zh/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /zh/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /zh/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /zh/docs/explanation/thresholds/#--err
+[alert err]: /zh/docs/explanation/thresholds/#--error-on-alert

@@ -55,9 +55,9 @@ Essa linha de base histórica pode então ser usada para detectar regressões de
     5. Defina a flag `--thresholds-reset` para que apenas o Limite especificado esteja ativo.
     Veja a [documentação de `--thresholds-reset`][thresholds reset] para uma visão geral completa.
     (ex: `--thresholds-reset`)
-12. Defina a flag `--err` para falhar o comando se um Alerta for gerado.
-   Veja a [documentação de `--err`][alert err] para uma visão geral completa.
-   (ex: `--err`)
+12. Defina a flag `--error-on-alert` para falhar o comando se um Alerta for gerado.
+   Veja a [documentação de `--error-on-alert`][alert err] para uma visão geral completa.
+   (ex: `--error-on-alert`)
 13. Defina a opção `--adapter` para [Bencher Metric Format JSON (`json`)][bmf] que é gerado por <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Veja [adapters de benchmark harness][adapter json] para uma visão geral completa.
    (ex: `--adapter json`)
@@ -81,7 +81,7 @@ Essa linha de base histórica pode então ser usada para detectar regressões de
 [threshold max sample size]: /pt/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /pt/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /pt/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /pt/docs/explanation/thresholds/#--err
+[alert err]: /pt/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /pt/docs/reference/bencher-metric-format/
 [adapter json]: /pt/docs/explanation/adapters/#-json
 [command argument]: /pt/docs/explanation/bencher-run/#benchmark-command

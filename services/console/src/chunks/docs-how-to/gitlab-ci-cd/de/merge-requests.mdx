@@ -56,9 +56,9 @@ Das untenstehende Beispiel sollte nur für Branches innerhalb desselben Reposito
     Dies sollte wahrscheinlich die Maschine widerspiegeln, die in `image` ausgewählt wurde.
     Siehe [die `--testbed` Dokumentation][testbed option] für mehr Details.
     (z.B.: `--testbed debian:bullseye`)
-12. Setzen Sie das `--err` Flag, um den Befehl bei Auslösung eines Alarms zum Abbruch zu bringen.
-    Siehe [die `--err` Dokumentation][alert err] für einen vollständigen Überblick.
-    (z.B.: `--err`)
+12. Setzen Sie das `--error-on-alert` Flag, um den Befehl bei Auslösung eines Alarms zum Abbruch zu bringen.
+    Siehe [die `--error-on-alert` Dokumentation][alert err] für einen vollständigen Überblick.
+    (z.B.: `--error-on-alert`)
 13. Setzen Sie die `--adapter` Option auf das [Bencher Metric Format JSON (`json`)][bmf], das durch <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> erzeugt wird.
     Siehe [Benchmark-Harness-Adapter][adapter json] für einen vollständigen Überblick.
     (z.B.: `--adapter json`)
@@ -82,7 +82,7 @@ Das untenstehende Beispiel sollte nur für Branches innerhalb desselben Reposito
 [start point clone thresholds]: /de/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /de/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /de/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /de/docs/explanation/thresholds/#--err
+[alert err]: /de/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /de/docs/reference/bencher-metric-format/
 [adapter json]: /de/docs/explanation/adapters/#-json
 [github actions option]: /de/docs/explanation/bencher-run/#--github-actions-github_token

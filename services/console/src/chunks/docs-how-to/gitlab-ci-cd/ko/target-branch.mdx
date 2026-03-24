@@ -51,9 +51,9 @@ import TargetBranchCode from "../target-branch-code.mdx";
     5. `--thresholds-reset` 플래그를 설정하여 지정된 임계값만 활성화되도록 합니다.
     전체 개요는 [`--thresholds-reset` 문서][thresholds reset]를 참조하십시오.
     (예: `--thresholds-reset`)
-12. 경고가 생성될 경우 명령이 실패하도록 `--err` 플래그를 설정합니다.
-    전체 개요는 [`--err` 문서][alert err]를 참조하십시오.
-    (예: `--err`)
+12. 경고가 생성될 경우 명령이 실패하도록 `--error-on-alert` 플래그를 설정합니다.
+    전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하십시오.
+    (예: `--error-on-alert`)
 13. [Bencher Metric Format JSON (`json`)][bmf]이 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 것으로 `--adapter` 옵션을 설정합니다.
     전체 개요는 [벤치마크 하네스 어댑터][adapter json]를 참조하십시오.
     (예: `--adapter json`)
@@ -77,7 +77,7 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [threshold max sample size]: /ko/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /ko/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ko/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /ko/docs/explanation/thresholds/#--err
+[alert err]: /ko/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ko/docs/reference/bencher-metric-format/
 [adapter json]: /ko/docs/explanation/adapters/#-json
 [command argument]: /ko/docs/explanation/bencher-run/#benchmark-command
