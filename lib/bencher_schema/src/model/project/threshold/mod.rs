@@ -9,7 +9,8 @@ use bencher_json::{
 };
 use diesel::{
     BelongingToDsl as _, Connection as _, ExpressionMethods as _, JoinOnDsl as _,
-    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    NullableExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
+    SelectableHelper as _,
 };
 use dropshot::HttpError;
 use model::UpdateModel;
@@ -25,7 +26,10 @@ use super::{
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
-    error::{BencherResource, assert_parentage, assert_siblings, resource_not_found_err},
+    error::{
+        BencherResource, assert_parentage, assert_siblings, resource_conflict_error,
+        resource_not_found_err,
+    },
     macros::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
         sql::last_insert_rowid,
@@ -61,6 +65,20 @@ impl QueryThreshold {
     fn_get!(threshold, ThresholdId);
     fn_get_id!(threshold, ThresholdId, ThresholdUuid);
     fn_get_uuid!(threshold, ThresholdId, ThresholdUuid);
+
+    pub fn find_by_dimensions(
+        conn: &mut DbConnection,
+        branch_id: BranchId,
+        testbed_id: TestbedId,
+        measure_id: MeasureId,
+    ) -> diesel::QueryResult<Option<Self>> {
+        schema::threshold::table
+            .filter(schema::threshold::branch_id.eq(branch_id))
+            .filter(schema::threshold::testbed_id.eq(testbed_id))
+            .filter(schema::threshold::measure_id.eq(measure_id))
+            .first::<Self>(conn)
+            .optional()
+    }
 
     pub fn get_with_uuid(
         conn: &mut DbConnection,
@@ -352,6 +370,30 @@ impl InsertThreshold {
         measure_id: MeasureId,
         model: Model,
     ) -> Result<ThresholdId, HttpError> {
+        // Check for an existing threshold with the same unique key before writing.
+        if let Some(existing) = QueryThreshold::find_by_dimensions(
+            auth_conn!(context),
+            branch_id,
+            testbed_id,
+            measure_id,
+        )
+        .map_err(|e| {
+            crate::error::issue_error(
+                "Failed to query threshold dimensions",
+                "Failed to query threshold dimensions:",
+                e,
+            )
+        })? {
+            return Err(resource_conflict_error(
+                BencherResource::Threshold,
+                (branch_id, testbed_id, measure_id),
+                format!(
+                    "A threshold ({}) already exists for this branch, testbed, and measure combination",
+                    existing.uuid
+                ),
+            ));
+        }
+
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
         let conn = write_conn!(context);
@@ -1916,5 +1958,146 @@ mod tests {
 
         assert_eq!(results.len(), 20);
         assert!(results.iter().all(|(_, m)| m.is_some()));
+    }
+
+    /// Test that `find_by_dimensions` returns `None` when no threshold exists.
+    #[test]
+    fn find_by_dimensions_returns_none_when_no_threshold() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000011",
+        );
+
+        let testbed = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000020",
+            "localhost",
+            "localhost",
+        );
+
+        let measure = create_measure(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "latency",
+            "latency",
+        );
+
+        let result =
+            QueryThreshold::find_by_dimensions(&mut conn, branch.branch_id, testbed, measure)
+                .expect("Query should succeed");
+        assert!(result.is_none());
+    }
+
+    /// Test that `find_by_dimensions` returns the existing threshold.
+    #[test]
+    fn find_by_dimensions_returns_existing_threshold() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000011",
+        );
+
+        let testbed = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000020",
+            "localhost",
+            "localhost",
+        );
+
+        let measure = create_measure(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "latency",
+            "latency",
+        );
+
+        let threshold_id = create_threshold(
+            &mut conn,
+            base.project_id,
+            branch.branch_id,
+            testbed,
+            measure,
+            "00000000-0000-0000-0000-000000000040",
+        );
+
+        let result =
+            QueryThreshold::find_by_dimensions(&mut conn, branch.branch_id, testbed, measure)
+                .expect("Query should succeed");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().id, threshold_id);
+    }
+
+    /// Test that inserting a duplicate threshold violates the UNIQUE constraint.
+    #[test]
+    fn duplicate_threshold_insert_fails_with_unique_constraint() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000011",
+        );
+
+        let testbed = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000020",
+            "localhost",
+            "localhost",
+        );
+
+        let measure = create_measure(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "latency",
+            "latency",
+        );
+
+        // First insert succeeds
+        create_threshold(
+            &mut conn,
+            base.project_id,
+            branch.branch_id,
+            testbed,
+            measure,
+            "00000000-0000-0000-0000-000000000040",
+        );
+
+        // Second insert with same (branch, testbed, measure) should fail
+        let result = diesel::insert_into(schema::threshold::table)
+            .values((
+                schema::threshold::uuid.eq("00000000-0000-0000-0000-000000000041"),
+                schema::threshold::project_id.eq(base.project_id),
+                schema::threshold::branch_id.eq(branch.branch_id),
+                schema::threshold::testbed_id.eq(testbed),
+                schema::threshold::measure_id.eq(measure),
+                schema::threshold::created.eq(bencher_json::DateTime::TEST),
+                schema::threshold::modified.eq(bencher_json::DateTime::TEST),
+            ))
+            .execute(&mut conn);
+
+        assert!(result.is_err());
     }
 }
