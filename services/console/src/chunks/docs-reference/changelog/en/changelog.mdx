@@ -5,6 +5,8 @@
 - Add a bare metal `runner`
 - **BREAKING CHANGE** Remove the `POST /v0/server/restart` endpoint and CLI `bencher server restart` command
 - **BREAKING CHANGE** Remove the `PUT /v0/server/config` endpoint and CLI `bencher server config update` command
+- **BREAKING CHANGE** Remove the deprecated `--project` flag and `BENCHER_PROJECT` environment variable from CLI `bencher threshold create` command (use the positional project argument instead)
+- **BREAKING CHANGE** Remove deprecated support for specifying multiple `--start-point` values for CLI `bencher run` (only a single start point is now accepted)
 - Improve server concurrency with database connection pooling
 - Add `[MemoryDiagnoser]` support to [the C# DotNet Adapter](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F%E2%83%A3-c-dotnet) (Thank you [@ricardoboss](https://github.com/ricardoboss))
 

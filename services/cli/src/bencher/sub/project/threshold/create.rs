@@ -1,11 +1,11 @@
 use bencher_client::types::JsonNewThreshold;
 use bencher_json::{BranchNameId, MeasureNameId, ProjectResourceId, TestbedNameId};
 
-use super::{ThresholdError, model::Model};
+use super::model::Model;
 use crate::{
     CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::project::threshold::{CliThresholdCreate, CliThresholdCreateProject},
+    parser::project::threshold::CliThresholdCreate,
 };
 
 #[derive(Debug, Clone)]
@@ -31,7 +31,7 @@ impl TryFrom<CliThresholdCreate> for Create {
             backend,
         } = create;
         Ok(Self {
-            project: unwrap_project(project)?,
+            project,
             branch,
             testbed,
             measure,
@@ -39,16 +39,6 @@ impl TryFrom<CliThresholdCreate> for Create {
             backend: backend.try_into()?,
         })
     }
-}
-
-fn unwrap_project(project: CliThresholdCreateProject) -> Result<ProjectResourceId, ThresholdError> {
-    Ok(if let Some(project) = project.project {
-        project
-    } else if let Some(project) = project.threshold_project {
-        project
-    } else {
-        return Err(ThresholdError::NoProject);
-    })
 }
 
 impl From<Create> for JsonNewThreshold {
