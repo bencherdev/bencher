@@ -60,7 +60,6 @@ pub struct CliBackup {
     #[clap(long)]
     pub data_store: Option<CliBackupDataStore>,
 
-    // TODO remove in due time
     /// Remove local copy of database backup
     #[clap(long, alias = "rm")]
     pub remove: bool,
