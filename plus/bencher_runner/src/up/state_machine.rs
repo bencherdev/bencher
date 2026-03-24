@@ -89,6 +89,52 @@ pub enum JobFinishResult {
     Canceled,
 }
 
+/// Why the state machine is requesting a reconnection.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReconnectReason {
+    /// Initial connection or reconnection attempt failed.
+    ConnectFailed,
+    /// Connection lost while polling for jobs.
+    PollingConnectionLost,
+    /// Timed out waiting for server response while polling.
+    PollingTimeout,
+    /// Connection lost while awaiting pending result ACK.
+    PendingAckConnectionLost,
+    /// Timed out waiting for pending result ACK.
+    PendingAckTimeout,
+    /// Unexpected message while awaiting pending result ACK.
+    PendingAckUnexpectedMessage,
+    /// Connection lost during job execution.
+    ExecutingConnectionLost,
+    /// Connection lost while awaiting terminal ACK.
+    TerminalAckConnectionLost,
+}
+
+impl std::fmt::Display for ReconnectReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ConnectFailed => write!(f, "connect failed"),
+            Self::PollingConnectionLost => {
+                write!(f, "connection lost while polling for jobs")
+            },
+            Self::PollingTimeout => write!(f, "timed out polling for jobs"),
+            Self::PendingAckConnectionLost => {
+                write!(f, "connection lost while awaiting pending ACK")
+            },
+            Self::PendingAckTimeout => write!(f, "timed out awaiting pending ACK"),
+            Self::PendingAckUnexpectedMessage => {
+                write!(f, "unexpected message while awaiting pending ACK")
+            },
+            Self::ExecutingConnectionLost => {
+                write!(f, "connection lost during execution")
+            },
+            Self::TerminalAckConnectionLost => {
+                write!(f, "connection lost while awaiting terminal ACK")
+            },
+        }
+    }
+}
+
 /// Effects for the driver to execute.
 #[derive(Debug)]
 pub enum Effect {
@@ -103,7 +149,7 @@ pub enum Effect {
     /// Execute a benchmark job. Driver feeds `Input::JobFinished` when done.
     ExecuteJob(Box<JsonClaimedJob>),
     /// Sleep before reconnect (with jitter).
-    SleepBeforeReconnect,
+    SleepBeforeReconnect(ReconnectReason),
     /// Close the WebSocket.
     Close,
     /// Report job outcome to the log/caller.
@@ -215,7 +261,10 @@ impl ChannelStateMachine {
             },
             Input::ConnectionFailed => {
                 self.state = ChannelState::Disconnected;
-                vec![Effect::SleepBeforeReconnect, Effect::Connect]
+                vec![
+                    Effect::SleepBeforeReconnect(ReconnectReason::ConnectFailed),
+                    Effect::Connect,
+                ]
             },
             input @ (Input::Message(_)
             | Input::ReceiveTimeout
@@ -244,7 +293,7 @@ impl ChannelStateMachine {
                 vec![
                     Effect::Log(LogLevel::Warn, "Retry ACK timed out".to_owned()),
                     Effect::Close,
-                    Effect::SleepBeforeReconnect,
+                    Effect::SleepBeforeReconnect(ReconnectReason::PendingAckTimeout),
                     Effect::Connect,
                 ]
             },
@@ -257,14 +306,17 @@ impl ChannelStateMachine {
                         format!("Expected ACK for pending result, got {other:?}"),
                     ),
                     Effect::Close,
-                    Effect::SleepBeforeReconnect,
+                    Effect::SleepBeforeReconnect(ReconnectReason::PendingAckUnexpectedMessage),
                     Effect::Connect,
                 ]
             },
             Input::ConnectionFailed => {
                 self.pending_result = self.in_flight.take();
                 self.state = ChannelState::Disconnected;
-                vec![Effect::SleepBeforeReconnect, Effect::Connect]
+                vec![
+                    Effect::SleepBeforeReconnect(ReconnectReason::PendingAckConnectionLost),
+                    Effect::Connect,
+                ]
             },
             input @ (Input::Connected | Input::JobFinished(_) | Input::Shutdown) => {
                 self.unexpected(ChannelState::AwaitingPendingAck, &input)
@@ -286,11 +338,18 @@ impl ChannelStateMachine {
             Input::Message(ServerMessage::NoJob) => self.resolve_idle(),
             Input::ReceiveTimeout => {
                 self.state = ChannelState::Disconnected;
-                vec![Effect::Close, Effect::SleepBeforeReconnect, Effect::Connect]
+                vec![
+                    Effect::Close,
+                    Effect::SleepBeforeReconnect(ReconnectReason::PollingTimeout),
+                    Effect::Connect,
+                ]
             },
             Input::ConnectionFailed => {
                 self.state = ChannelState::Disconnected;
-                vec![Effect::SleepBeforeReconnect, Effect::Connect]
+                vec![
+                    Effect::SleepBeforeReconnect(ReconnectReason::PollingConnectionLost),
+                    Effect::Connect,
+                ]
             },
             input @ (Input::Connected
             | Input::Message(ServerMessage::Ack { .. } | ServerMessage::Cancel)
@@ -309,7 +368,10 @@ impl ChannelStateMachine {
             },
             Input::ConnectionFailed => {
                 self.state = ChannelState::Disconnected;
-                vec![Effect::SleepBeforeReconnect, Effect::Connect]
+                vec![
+                    Effect::SleepBeforeReconnect(ReconnectReason::ExecutingConnectionLost),
+                    Effect::Connect,
+                ]
             },
             input @ (Input::Connected
             | Input::Message(_)
@@ -380,7 +442,7 @@ impl ChannelStateMachine {
                         kind,
                         acked: false,
                     }),
-                    Effect::SleepBeforeReconnect,
+                    Effect::SleepBeforeReconnect(ReconnectReason::TerminalAckConnectionLost),
                     Effect::Connect,
                 ]
             },
@@ -593,11 +655,10 @@ mod tests {
     fn connection_failure_triggers_reconnect() {
         let mut sm = test_sm();
         let effects = sm.step(Input::ConnectionFailed);
-        assert!(
-            effects
-                .iter()
-                .any(|e| matches!(e, Effect::SleepBeforeReconnect))
-        );
+        assert!(effects.iter().any(|e| matches!(
+            e,
+            Effect::SleepBeforeReconnect(ReconnectReason::ConnectFailed)
+        )));
         assert!(effects.iter().any(|e| matches!(e, Effect::Connect)));
         assert_eq!(*sm.state(), ChannelState::Disconnected);
     }
@@ -633,11 +694,10 @@ mod tests {
 
         let effects = sm.step(Input::ReceiveTimeout);
         assert!(effects.iter().any(|e| matches!(e, Effect::Close)));
-        assert!(
-            effects
-                .iter()
-                .any(|e| matches!(e, Effect::SleepBeforeReconnect))
-        );
+        assert!(effects.iter().any(|e| matches!(
+            e,
+            Effect::SleepBeforeReconnect(ReconnectReason::PendingAckTimeout)
+        )));
         assert_eq!(*sm.state(), ChannelState::Disconnected);
         assert!(sm.pending_result.is_some());
     }
@@ -698,11 +758,10 @@ mod tests {
         let mut sm = test_sm().with_state(ChannelState::AwaitingJob);
         let effects = sm.step(Input::ReceiveTimeout);
         assert!(effects.iter().any(|e| matches!(e, Effect::Close)));
-        assert!(
-            effects
-                .iter()
-                .any(|e| matches!(e, Effect::SleepBeforeReconnect))
-        );
+        assert!(effects.iter().any(|e| matches!(
+            e,
+            Effect::SleepBeforeReconnect(ReconnectReason::PollingTimeout)
+        )));
         assert_eq!(*sm.state(), ChannelState::Disconnected);
     }
 
@@ -710,11 +769,10 @@ mod tests {
     fn awaiting_job_connection_failed_reconnects() {
         let mut sm = test_sm().with_state(ChannelState::AwaitingJob);
         let effects = sm.step(Input::ConnectionFailed);
-        assert!(
-            effects
-                .iter()
-                .any(|e| matches!(e, Effect::SleepBeforeReconnect))
-        );
+        assert!(effects.iter().any(|e| matches!(
+            e,
+            Effect::SleepBeforeReconnect(ReconnectReason::PollingConnectionLost)
+        )));
         assert_eq!(*sm.state(), ChannelState::Disconnected);
     }
 
@@ -795,11 +853,10 @@ mod tests {
             job_uuid: test_job_uuid(),
         });
         let effects = sm.step(Input::ConnectionFailed);
-        assert!(
-            effects
-                .iter()
-                .any(|e| matches!(e, Effect::SleepBeforeReconnect))
-        );
+        assert!(effects.iter().any(|e| matches!(
+            e,
+            Effect::SleepBeforeReconnect(ReconnectReason::ExecutingConnectionLost)
+        )));
         assert_eq!(*sm.state(), ChannelState::Disconnected);
     }
 
@@ -913,11 +970,10 @@ mod tests {
             .with_in_flight(test_completed_msg());
 
         let effects = sm.step(Input::ConnectionFailed);
-        assert!(
-            effects
-                .iter()
-                .any(|e| matches!(e, Effect::SleepBeforeReconnect))
-        );
+        assert!(effects.iter().any(|e| matches!(
+            e,
+            Effect::SleepBeforeReconnect(ReconnectReason::TerminalAckConnectionLost)
+        )));
         assert_eq!(*sm.state(), ChannelState::Disconnected);
         assert!(sm.pending_result.is_some());
     }
@@ -1122,7 +1178,10 @@ mod tests {
         let mut sm = test_sm();
         let effects = sm.step(Input::ConnectionFailed);
         assert_eq!(effects.len(), 2);
-        assert!(matches!(effects[0], Effect::SleepBeforeReconnect));
+        assert!(matches!(
+            effects[0],
+            Effect::SleepBeforeReconnect(ReconnectReason::ConnectFailed)
+        ));
         assert!(matches!(effects[1], Effect::Connect));
     }
 
@@ -1132,7 +1191,10 @@ mod tests {
         let effects = sm.step(Input::ReceiveTimeout);
         assert_eq!(effects.len(), 3);
         assert!(matches!(effects[0], Effect::Close));
-        assert!(matches!(effects[1], Effect::SleepBeforeReconnect));
+        assert!(matches!(
+            effects[1],
+            Effect::SleepBeforeReconnect(ReconnectReason::PollingTimeout)
+        ));
         assert!(matches!(effects[2], Effect::Connect));
     }
 

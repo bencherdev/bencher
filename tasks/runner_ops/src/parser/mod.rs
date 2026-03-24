@@ -27,7 +27,6 @@ pub enum TaskSub {
 #[derive(Parser, Debug)]
 pub struct TaskProvision {
     /// Runner slug or UUID (for runners.json lookup)
-    #[clap(long)]
     pub runner: Option<RunnerResourceId>,
 
     /// IP address or hostname of the server
@@ -50,7 +49,6 @@ pub struct TaskProvision {
 #[derive(Parser, Debug)]
 pub struct TaskDeploy {
     /// Runner slug or UUID
-    #[clap(long)]
     pub runner: RunnerResourceId,
 
     /// IP address or hostname of the server
@@ -81,7 +79,6 @@ pub struct TaskDeploy {
 #[derive(Parser, Debug)]
 pub struct TaskStart {
     /// Runner slug or UUID
-    #[clap(long)]
     pub runner: RunnerResourceId,
 
     /// IP address or hostname of the server
@@ -112,7 +109,6 @@ pub struct TaskStart {
 #[derive(Parser, Debug)]
 pub struct TaskStop {
     /// Runner slug or UUID (for runners.json lookup)
-    #[clap(long)]
     pub runner: Option<RunnerResourceId>,
 
     /// IP address or hostname of the server
@@ -131,7 +127,6 @@ pub struct TaskStop {
 #[derive(Parser, Debug)]
 pub struct TaskLogs {
     /// Runner slug or UUID (for runners.json lookup)
-    #[clap(long)]
     pub runner: Option<RunnerResourceId>,
 
     /// IP address or hostname of the server
