@@ -208,9 +208,9 @@ fn execute_effect(
             let result = execute_job(config, &job, ws_ref);
             EffectResult::Input(Input::JobFinished(result))
         },
-        Effect::SleepBeforeReconnect => {
+        Effect::SleepBeforeReconnect(reason) => {
             let delay = transient_retry_delay();
-            println!("Reconnecting in {} seconds...", delay.as_secs());
+            println!("Reconnecting in {} seconds ({reason})...", delay.as_secs());
             std::thread::sleep(delay);
             EffectResult::Continue
         },
@@ -246,6 +246,7 @@ fn try_send(
     ws_guard.send_message(msg)
 }
 
+#[expect(clippy::print_stderr)]
 fn receive_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
     let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
@@ -256,10 +257,14 @@ fn receive_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Inpu
     match ws_guard.read_message_timeout(timeout) {
         Ok(Some(msg)) => Input::Message(msg),
         Ok(None) => Input::ReceiveTimeout,
-        Err(_) => Input::ConnectionFailed,
+        Err(e) => {
+            eprintln!("Connection lost: {e}");
+            Input::ConnectionFailed
+        },
     }
 }
 
+#[expect(clippy::print_stderr)]
 fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
     let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
@@ -273,7 +278,10 @@ fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) ->
         // wait_for_job conflates timeout and connection errors in Err;
         // ConnectionFailed is the safer default — the state machine will
         // reconnect either way, and Close on a dead connection is a no-op.
-        Err(_) => Input::ConnectionFailed,
+        Err(e) => {
+            eprintln!("Connection lost: {e}");
+            Input::ConnectionFailed
+        },
     }
 }
 
