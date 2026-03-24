@@ -26,7 +26,6 @@ jobs:
       rust: ${{ steps.filter.outputs.rust }}
       console: ${{ steps.filter.outputs.console }}
       action: ${{ steps.filter.outputs.action }}
-      api: ${{ steps.filter.outputs.api }}
       cli: ${{ steps.filter.outputs.cli }}
       docker: ${{ steps.filter.outputs.docker }}
       runner: ${{ steps.filter.outputs.runner }}
@@ -43,6 +42,7 @@ jobs:
               - 'plus/**'
               - 'services/api/**'
               - 'services/cli/**'
+              - 'services/runner/**'
               - 'tasks/**'
               - 'xtask/**'
             console:
@@ -51,13 +51,16 @@ jobs:
             action:
               - 'services/action/**'
               - 'services/api/openapi.json'
-            api:
-              - 'services/api/**'
-              - 'lib/**'
-              - 'plus/**'
             cli:
               - 'services/cli/**'
-              - 'lib/**'
+              - 'lib/bencher_adapter/**'
+              - 'lib/bencher_client/**'
+              - 'lib/bencher_comment/**'
+              - 'lib/bencher_context/**'
+              - 'lib/bencher_json/**'
+              - 'lib/bencher_noise/**'
+              - 'lib/bencher_parser/**'
+              - 'lib/bencher_valid/**'
               - 'services/api/openapi.json'
             docker:
               - 'services/api/Dockerfile'
@@ -65,11 +68,15 @@ jobs:
               - 'services/console/Dockerfile'
               - 'docker/**'
             runner:
-              - 'plus/bencher_runner/**'
+              - 'lib/bencher_context/**'
+              - 'lib/bencher_json/**'
+              - 'lib/bencher_parser/**'
+              - 'lib/bencher_valid/**'
+              - 'plus/bencher_init/**'
               - 'plus/bencher_oci/**'
               - 'plus/bencher_output_protocol/**'
               - 'plus/bencher_rootfs/**'
-              - 'plus/bencher_init/**'
+              - 'plus/bencher_runner/**'
               - 'services/runner/**'
               - 'tasks/test_runner/**'
 
