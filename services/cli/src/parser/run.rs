@@ -245,10 +245,6 @@ pub struct CliRunCi {
     /// CAUTION: Override safety checks and accept that you are vulnerable to pwn requests (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd", hide = true)]
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
-    /// Deprecated: Do not use. This will soon be removed.
-    // TODO remove in due time
-    #[clap(long, alias = "ci-no-metrics", hide = true)]
-    pub ci_deprecated: bool,
 }
 
 /// OCI image and remote runner options (Bencher Plus).

@@ -29,7 +29,6 @@ impl TryFrom<CliRunCi> for Option<Ci> {
             ci_id,
             ci_number,
             ci_i_am_vulnerable_to_pwn_requests,
-            ci_deprecated: _,
         } = ci;
         Ok(github_actions.map(|token| {
             Ci::GitHubActions(GitHubActions {
