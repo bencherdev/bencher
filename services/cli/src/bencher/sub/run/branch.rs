@@ -45,15 +45,14 @@ impl TryFrom<CliRunBranch> for Branch {
     }
 }
 
-#[expect(clippy::needless_pass_by_value)]
 fn map_start_point(
-    start_point: Vec<String>,
+    start_point: Option<String>,
     start_point_hash: Option<GitHash>,
     start_point_max_versions: u32,
     start_point_clone_thresholds: bool,
     start_point_reset: bool,
 ) -> StartPoint {
-    let branch = start_point.first().and_then(|b| {
+    let branch = start_point.and_then(|b| {
         // This allows for "continue on empty" semantics for the branch start point.
         b.parse().ok()
     });

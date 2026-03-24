@@ -111,11 +111,8 @@ pub struct CliRunBranch {
 
     /// Use the specified branch name, slug, or UUID as the start point for `branch`.
     /// If `branch` already exists and the start point is different, a new branch will be created.
-    /// Specifying more than one start point is now deprecated.
-    /// Only the first start point will be used.
     #[clap(long, alias = "else-if-branch", alias = "branch-start-point")]
-    // TODO move this to Option<String> in due time
-    pub start_point: Vec<String>,
+    pub start_point: Option<String>,
 
     /// Use the specified full `git` hash as the start point for `branch` (requires: `--branch-start-point`).
     /// If `branch` already exists and the start point hash is different, a new branch will be created.
