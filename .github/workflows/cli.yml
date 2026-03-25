@@ -194,7 +194,7 @@ jobs:
           echo "CLI_VERSION=${VERSION//\//-}" >> $GITHUB_ENV
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
-      - uses: mlugg/setup-zig@v1
+      - uses: mlugg/setup-zig@v2
         if: startsWith(matrix.build, 'linux')
         with:
           version: ${{ inputs.zig-version }}
@@ -221,14 +221,14 @@ jobs:
         run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
       - name: Upload Unix CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
           path: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
           if-no-files-found: error
       - name: Upload Windows CLI Artifact
         if: startsWith(matrix.build, 'windows')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
           path: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
@@ -259,7 +259,7 @@ jobs:
           VERSION="${{ github.head_ref || github.ref_name }}"
           echo "CLI_VERSION=${VERSION//\//-}" >> $GITHUB_ENV
       - name: Download CLI Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
       - uses: rui314/setup-mold@v1
@@ -277,7 +277,7 @@ jobs:
           bencher mock
           man bencher
       - name: Upload .deb Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb
           path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb
