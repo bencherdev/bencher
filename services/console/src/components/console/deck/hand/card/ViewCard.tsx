@@ -434,7 +434,7 @@ const AdapterCard = (props: Props) => {
 					case Adapter.CppGoogle:
 						return "-c-google";
 					case Adapter.DartBenchmarkHarness:
-						return "-dart-benchmark-harness";
+						return "-dart-benchmark_harness";
 					case Adapter.GoBench:
 						return "-go-bench";
 					case Adapter.JavaJmh:
