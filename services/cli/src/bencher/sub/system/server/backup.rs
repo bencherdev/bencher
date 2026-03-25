@@ -52,7 +52,7 @@ impl From<Backup> for JsonBackup {
         Self {
             compress,
             data_store,
-            rm: remove,
+            remove,
         }
     }
 }

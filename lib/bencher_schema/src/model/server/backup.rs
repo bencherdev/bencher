@@ -100,7 +100,7 @@ impl ServerBackup {
         }
 
         // Remove the remaining database backup
-        if json_backup.rm.unwrap_or_default() {
+        if json_backup.remove.unwrap_or_default() {
             remove_file(source_path).await.map_err(|e| {
                 if compress {
                     ServerBackupError::RmZipFile(e)

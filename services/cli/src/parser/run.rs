@@ -111,11 +111,8 @@ pub struct CliRunBranch {
 
     /// Use the specified branch name, slug, or UUID as the start point for `branch`.
     /// If `branch` already exists and the start point is different, a new branch will be created.
-    /// Specifying more than one start point is now deprecated.
-    /// Only the first start point will be used.
     #[clap(long, alias = "else-if-branch", alias = "branch-start-point")]
-    // TODO move this to Option<String> in due time
-    pub start_point: Vec<String>,
+    pub start_point: Option<String>,
 
     /// Use the specified full `git` hash as the start point for `branch` (requires: `--branch-start-point`).
     /// If `branch` already exists and the start point hash is different, a new branch will be created.
@@ -245,10 +242,6 @@ pub struct CliRunCi {
     /// CAUTION: Override safety checks and accept that you are vulnerable to pwn requests (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd", hide = true)]
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
-    /// Deprecated: Do not use. This will soon be removed.
-    // TODO remove in due time
-    #[clap(long, alias = "ci-no-metrics", hide = true)]
-    pub ci_deprecated: bool,
 }
 
 /// OCI image and remote runner options (Bencher Plus).

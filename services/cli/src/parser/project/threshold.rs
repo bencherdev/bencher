@@ -2,7 +2,7 @@ use bencher_json::{
     Boundary, BranchNameId, MeasureNameId, ModelUuid, ProjectResourceId, SampleSize, TestbedNameId,
     ThresholdUuid, Window,
 };
-use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
+use clap::{ArgGroup, Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
 
@@ -64,8 +64,8 @@ pub enum CliThresholdsSort {
 
 #[derive(Parser, Debug)]
 pub struct CliThresholdCreate {
-    #[clap(flatten)]
-    pub project: CliThresholdCreateProject,
+    /// Project slug or UUID
+    pub project: ProjectResourceId,
 
     /// Branch name, slug, or UUID
     #[clap(long)]
@@ -84,23 +84,6 @@ pub struct CliThresholdCreate {
 
     #[clap(flatten)]
     pub backend: CliBackend,
-}
-
-#[derive(Args, Debug)]
-#[clap(group(
-    ArgGroup::new("threshold_create_project")
-        .required(true)
-        .multiple(false)
-        .args(&["threshold_project", "project"]),
-))]
-pub struct CliThresholdCreateProject {
-    /// Project slug or UUID
-    pub threshold_project: Option<ProjectResourceId>,
-    /// Project slug or UUID.
-    /// Deprecated: Set the project as the first argument instead.
-    // TODO remove in due time
-    #[clap(long, env = "BENCHER_PROJECT")]
-    pub project: Option<ProjectResourceId>,
 }
 
 #[derive(Parser, Debug)]

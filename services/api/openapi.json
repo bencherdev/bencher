@@ -11063,7 +11063,7 @@
               }
             ]
           },
-          "rm": {
+          "remove": {
             "nullable": true,
             "description": "Remove the local copy of the database backup. This operation runs third.",
             "type": "boolean"
