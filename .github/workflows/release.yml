@@ -63,62 +63,62 @@ jobs:
 
       # Download all artifacts from the CI workflow
       - name: Download API Docker Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
 
       - name: Download Console Docker Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
 
       - name: Download CLI Linux x86_64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
 
       - name: Download CLI Linux ARM64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
 
       - name: Download CLI macOS x86_64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_X86_64 }}
 
       - name: Download CLI macOS ARM64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_ARM_64 }}
 
       - name: Download CLI Windows x86_64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
 
       - name: Download CLI Windows ARM64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
 
       - name: Download CLI Linux x86_64 .deb Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.deb
 
       - name: Download CLI Linux ARM64 .deb Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
 
       - name: Download Runner Linux x86_64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
 
       - name: Download Runner Linux ARM64 Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
 

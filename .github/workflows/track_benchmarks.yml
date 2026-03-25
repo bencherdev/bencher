@@ -16,19 +16,19 @@ jobs:
       BENCHMARK_RESULTS: benchmark_results.txt
     steps:
       - name: Download Noise Results (ubuntu)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: noise_results_ubuntu-22.04
       - name: Download Noise Results (macos)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: noise_results_macos-14
       - name: Download Noise Results (windows)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: noise_results_windows-2022
       - name: Download Benchmark Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.BENCHMARK_RESULTS }}
       - uses: bencherdev/bencher@main

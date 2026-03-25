@@ -70,7 +70,7 @@ jobs:
           go-version: ${{ inputs.go-version }}
 
       - name: Download API Docker Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Load & Tag Local Image
@@ -121,7 +121,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -162,7 +162,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download API Docker Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Load & Tag Litestream Image
@@ -193,7 +193,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Download API Docker Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Load & Tag Litestream Image
@@ -225,7 +225,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
