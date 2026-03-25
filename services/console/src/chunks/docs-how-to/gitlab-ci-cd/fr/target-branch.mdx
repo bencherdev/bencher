@@ -55,9 +55,9 @@ Cette base historique peut alors être utilisée pour détecter les régressions
     5. Définissez le flag `--thresholds-reset` pour que seul le seuil spécifié soit actif.
     Consultez [la documentation `--thresholds-reset`][thresholds reset] pour un aperçu complet.
     (ex : `--thresholds-reset`)
-12. Définissez le flag `--err` pour que la commande échoue si une alerte est générée.
-    Consultez [la documentation `--err`][alert err] pour un aperçu complet.
-    (ex : `--err`)
+12. Définissez le flag `--error-on-alert` pour que la commande échoue si une alerte est générée.
+    Consultez [la documentation `--error-on-alert`][alert err] pour un aperçu complet.
+    (ex : `--error-on-alert`)
 13. Définissez l'option `--adapter` sur le format JSON de Bencher Metric (`json`) [Bencher Metric Format JSON (`json`)][bmf] qui est généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     Consultez [les adaptateurs de harnais de benchmark][adapter json] pour un aperçu complet.
     (ex : `--adapter json`)
@@ -81,7 +81,7 @@ Cette base historique peut alors être utilisée pour détecter les régressions
 [threshold max sample size]: /fr/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /fr/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /fr/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /fr/docs/explanation/thresholds/#--err
+[alert err]: /fr/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /fr/docs/reference/bencher-metric-format/
 [adapter json]: /fr/docs/explanation/adapters/#-json
 [command argument]: /fr/docs/explanation/bencher-run/#benchmark-command

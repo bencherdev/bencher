@@ -96,7 +96,7 @@ jobs:
           --threshold-max-sample-size 64 \
           --threshold-upper-boundary 0.9999 \
           --thresholds-reset \
-          --err \
+          --error-on-alert \
           --adapter rust_criterion \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
           --file ./benchmark_results.txt

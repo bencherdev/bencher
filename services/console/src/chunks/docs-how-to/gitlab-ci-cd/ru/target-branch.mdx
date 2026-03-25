@@ -53,9 +53,9 @@ import TargetBranchCode from "../target-branch-code.mdx";
     5. Установите флаг `--thresholds-reset`, чтобы был активен только указанный порог.
     Смотрите [документацию `--thresholds-reset`][thresholds reset] для полного обзора.
     (например, `--thresholds-reset`)
-12. Установите флаг `--err`, чтобы команда завершалась с ошибкой, если создаётся предупреждение.
-   Смотрите [документацию `--err`][alert err] для полного обзора.
-   (например, `--err`)
+12. Установите флаг `--error-on-alert`, чтобы команда завершалась с ошибкой, если создаётся предупреждение.
+   Смотрите [документацию `--error-on-alert`][alert err] для полного обзора.
+   (например, `--error-on-alert`)
 13. Установите опцию `--adapter` на [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Смотрите [адаптеры тестового стенда][adapter json] для полного обзора.
    (например, `--adapter json`)
@@ -79,7 +79,7 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [threshold max sample size]: /ru/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /ru/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ru/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /ru/docs/explanation/thresholds/#--err
+[alert err]: /ru/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ru/docs/reference/bencher-metric-format/
 [adapter json]: /ru/docs/explanation/adapters/#-json
 [command argument]: /ru/docs/explanation/bencher-run/#benchmark-command

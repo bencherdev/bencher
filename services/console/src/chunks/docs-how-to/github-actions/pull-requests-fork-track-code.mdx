@@ -50,7 +50,7 @@ jobs:
           --start-point-clone-thresholds \
           --start-point-reset \
           --testbed ubuntu-latest \
-          --err \
+          --error-on-alert \
           --adapter json \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
           --ci-number "$PR_NUMBER" \

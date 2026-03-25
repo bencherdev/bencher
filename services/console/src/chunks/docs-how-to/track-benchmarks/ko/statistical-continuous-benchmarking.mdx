@@ -55,9 +55,9 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
    5. 지정된 임계값만 활성화되도록 `--thresholds-reset` 플래그를 설정합니다.
      전체 개요는 [`--thresholds-reset` 문서][thresholds reset]를 참조하세요.
      (예: `--thresholds-reset`)
-6. 경보가 생성되면 명령을 실패하게 하려면 `--err` 플래그를 설정합니다.
-   전체 개요는 [`--err` 문서][alert err]를 참조하세요.
-   (예: `--err`)
+6. 경보가 생성되면 명령을 실패하게 하려면 `--error-on-alert` 플래그를 설정합니다.
+   전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하세요.
+   (예: `--error-on-alert`)
 7. <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 [벤처 메트릭 형식 JSON (`json`)][bmf]을 `--adapter` 옵션으로 설정합니다.
    벤치마크 하네스 어댑터에 대한 전체 개요는 [어댑터 JSON][adapter json]를 참조하세요.
    (예: `--adapter json`)
@@ -81,7 +81,7 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 [threshold max sample size]: /ko/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /ko/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ko/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /ko/docs/explanation/thresholds/#--err
+[alert err]: /ko/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ko/docs/reference/bencher-metric-format/
 [adapter json]: /ko/docs/explanation/adapters/#-json
 [command argument]: /ko/docs/explanation/bencher-run/#benchmark-command
@@ -117,9 +117,9 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 5. `--testbed` 옵션을 테스트베드 이름으로 설정합니다.
    더 자세한 내용은 [`--tested` 문서][testbed option]를 참조하세요.
    (예: `--testbed ci-runner`)
-6. 경보가 생성되면 명령을 실패하게 하려면 `--err` 플래그를 설정합니다.
-   전체 개요는 [`--err` 문서][alert err]를 참조하세요.
-   (예: `--err`)
+6. 경보가 생성되면 명령을 실패하게 하려면 `--error-on-alert` 플래그를 설정합니다.
+   전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하세요.
+   (예: `--error-on-alert`)
 7. <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 [벤처 메트릭 형식 JSON (`json`)][bmf]을 `--adapter` 옵션으로 설정합니다.
    벤치마크 하네스 어댑터에 대한 전체 개요는 [어댑터 JSON][adapter json]를 참조하세요.
    (예: `--adapter json`)

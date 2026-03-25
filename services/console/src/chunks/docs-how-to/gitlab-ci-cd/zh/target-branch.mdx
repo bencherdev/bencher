@@ -52,9 +52,9 @@ import TargetBranchCode from "../target-branch-code.mdx";
     5. 设置 `--thresholds-reset` 标志以确保只有指定的阈值处于活动状态。
     查看 [the `--thresholds-reset` 文档][thresholds reset] 以获取完整概述。
     （例如：`--thresholds-reset`）
-12. 设置 `--err` 标志以在生成警报时使命令失败。
-    查看 [the `--err` 文档][alert err] 以获取完整概述。
-    （例如：`--err`）
+12. 设置 `--error-on-alert` 标志以在生成警报时使命令失败。
+    查看 [the `--error-on-alert` 文档][alert err] 以获取完整概述。
+    （例如：`--error-on-alert`）
 13. 将 `--adapter` 选项设置为 [Bencher Metric Format JSON (`json`)][bmf]，由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成。
     查看 [benchmark harness adapters][adapter json] 以获取完整概述。
     （例如：`--adapter json`）
@@ -78,7 +78,7 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [threshold max sample size]: /zh/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /zh/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /zh/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /zh/docs/explanation/thresholds/#--err
+[alert err]: /zh/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /zh/docs/reference/bencher-metric-format/
 [adapter json]: /zh/docs/explanation/adapters/#-json
 [command argument]: /zh/docs/explanation/bencher-run/#benchmark-command

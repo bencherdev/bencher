@@ -65,9 +65,9 @@ Um Performance-Regressionen in Pull Requests zu erfassen, müssen Sie Ihre Bench
 14. Setzen Sie die `--testbed`-Option auf den Namen des Testbeds. Dies sollte wahrscheinlich auf die in `runs-on` ausgewählte Maschine abgestimmt sein.
     Siehe [die `--tested` Dokumentation][testbed option] für mehr Details.
     (z.B.: `--testbed ubuntu-latest`)
-15. Setzen Sie das `--err` Flag, um den Befehl zu beenden, wenn ein Alarm generiert wird.
-   Siehe [die `--err` Dokumentation][alert err] für einen vollständigen Überblick.
-   (z.B.: `--err`)
+15. Setzen Sie das `--error-on-alert` Flag, um den Befehl zu beenden, wenn ein Alarm generiert wird.
+   Siehe [die `--error-on-alert` Dokumentation][alert err] für einen vollständigen Überblick.
+   (z.B.: `--error-on-alert`)
 16. Setzen Sie die `--adapter`-Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
    Siehe [Benchmark-Harness-Adapter][adapter json] für einen vollständigen Überblick.
    (z.B.: `--adapter json`)
@@ -99,7 +99,7 @@ Um Performance-Regressionen in Pull Requests zu erfassen, müssen Sie Ihre Bench
 [start point clone thresholds]: /de/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /de/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /de/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /de/docs/explanation/thresholds/#--err
+[alert err]: /de/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /de/docs/reference/bencher-metric-format/
 [adapter json]: /de/docs/explanation/adapters/#-json
 [github actions option]: /de/docs/explanation/bencher-run/#--github-actions-github_token

@@ -63,9 +63,9 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
     これは `runs-on` で選択したマシンに一致する必要があります。
     詳細は、[`--tested` ドキュメント][testbed option]をご覧ください。
     (例: `--testbed ubuntu-latest`)
-19. アラートが生成された場合にコマンドを失敗させる `--err` フラグを設定します。
-   完全な概要については、[`--err` ドキュメント][alert err]を参照してください。
-   (例: `--err`)
+19. アラートが生成された場合にコマンドを失敗させる `--error-on-alert` フラグを設定します。
+   完全な概要については、[`--error-on-alert` ドキュメント][alert err]を参照してください。
+   (例: `--error-on-alert`)
 20. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成された[Bencher Metric Format JSON (`json`)][bmf] に `--adapter` オプションを設定します。
    完全な概要については、[ベンチマークハーネスアダプタ][adapter json]を参照してください。
    (例: `--adapter json`)
@@ -100,7 +100,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 [start point clone thresholds]: /ja/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /ja/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /ja/docs/explanation/thresholds/#--err
+[alert err]: /ja/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ja/docs/reference/bencher-metric-format/
 [adapter json]: /ja/docs/explanation/adapters/#-json
 [github actions option]: /ja/docs/explanation/bencher-run/#--github-actions-github_token

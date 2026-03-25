@@ -51,9 +51,9 @@ import TargetBranchCode from "../target-branch-code.mdx";
     5. 特定された閾値のみがアクティブであるように`--thresholds-reset`フラグを設定します。
     詳細については、[`--thresholds-reset` ドキュメント][thresholds reset]をご覧ください。
     (例: `--thresholds-reset`)
-12. アラートが生成された場合にコマンドが失敗するように`--err`フラグを設定します。
-   詳細については、[`--err` ドキュメント][alert err]をご覧ください。
-   (例: `--err`)
+12. アラートが生成された場合にコマンドが失敗するように`--error-on-alert`フラグを設定します。
+   詳細については、[`--error-on-alert` ドキュメント][alert err]をご覧ください。
+   (例: `--error-on-alert`)
 13. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される[Bencher Metric Format JSON (`json`)][bmf]に`--adapter`オプションを設定します。
    詳細については、[ベンチマークハーネスアダプタ][adapter json]をご覧ください。
    (例: `--adapter json`)
@@ -77,7 +77,7 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [threshold max sample size]: /ja/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /ja/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ja/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /ja/docs/explanation/thresholds/#--err
+[alert err]: /ja/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ja/docs/reference/bencher-metric-format/
 [adapter json]: /ja/docs/explanation/adapters/#-json
 [command argument]: /ja/docs/explanation/bencher-run/#benchmark-command

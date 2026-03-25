@@ -121,9 +121,9 @@ Por fim, estamos prontos para executar nossos benchmarks de `feature-branch` no 
    4. Configure o sinalizador `--thresholds-reset` para que apenas o Limite especificado fique ativo.
    Veja [uma visão geral completa dos documentos do `--thresholds-reset`][thresholds reset].
    (ex: `--thresholds-reset`)
-7. Configure o sinalizador `--err` para falhar o comando se um Alerta for gerado.
-   Veja [uma visão geral completa dos documentos do `--err`][alert err].
-   (ex: `--err`)
+7. Configure o sinalizador `--error-on-alert` para falhar o comando se um Alerta for gerado.
+   Veja [uma visão geral completa dos documentos do `--error-on-alert`][alert err].
+   (ex: `--error-on-alert`)
 8. Configure a opção `--adapter` para [Bencher Metric Format JSON (`json`)][bmf] que é gerado por <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Veja [uma visão geral completa dos adaptadores de harness de benchmark][adapter json].
    (ex: `--adapter json`)
@@ -141,4 +141,4 @@ O Limite especificado é então usado para detectar regressões de desempenho.
 [threshold test option]: /pt/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /pt/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /pt/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /pt/docs/explanation/thresholds/#--err
+[alert err]: /pt/docs/explanation/thresholds/#--error-on-alert

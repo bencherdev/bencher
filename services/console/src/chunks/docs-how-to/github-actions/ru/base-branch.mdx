@@ -60,9 +60,9 @@ import BaseBranchCode from "../base-branch-code.mdx";
     5. Установите флаг `--thresholds-reset`, чтобы только указанное пороговое значение было активным.
     См. [документацию о `--thresholds-reset`][thresholds reset] для получения полной информации.
     (например, `--thresholds-reset`)
-14. Установите флаг `--err`, чтобы команда завершалась с ошибкой, если будет сформировано оповещение.
-    См. [документацию о `--err`][alert err] для получения полной информации.
-    (например, `--err`)
+14. Установите флаг `--error-on-alert`, чтобы команда завершалась с ошибкой, если будет сформировано оповещение.
+    См. [документацию о `--error-on-alert`][alert err] для получения полной информации.
+    (например, `--error-on-alert`)
 15. Установите опцию `--adapter` на [формат метрик Bencher в формате JSON (`json`)][bmf], который сгенерирован <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     См. [Адаптеры для бенчмарк-харнесов][adapter json] для получения полной информации.
     (например, `--adapter json`)
@@ -92,7 +92,7 @@ import BaseBranchCode from "../base-branch-code.mdx";
 [threshold max sample size]: /ru/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /ru/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ru/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /ru/docs/explanation/thresholds/#--err
+[alert err]: /ru/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ru/docs/reference/bencher-metric-format/
 [adapter json]: /ru/docs/explanation/adapters/#-json
 [github actions option]: /ru/docs/explanation/bencher-run/#--github-actions-github_token

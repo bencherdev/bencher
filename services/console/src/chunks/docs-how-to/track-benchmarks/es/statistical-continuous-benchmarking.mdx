@@ -58,9 +58,9 @@ Primero, necesitamos crear y mantener una línea base histórica para nuestra ra
    5. Establece la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo.
    Consulta [la documentación de `--thresholds-reset`][thresholds reset] para una descripción completa.
    (ej: `--thresholds-reset`)
-6. Establece la bandera `--err` para que el comando falle si se genera una Alerta.
-   Consulta [la documentación de `--err`][alert err] para una descripción completa.
-   (ej: `--err`)
+6. Establece la bandera `--error-on-alert` para que el comando falle si se genera una Alerta.
+   Consulta [la documentación de `--error-on-alert`][alert err] para una descripción completa.
+   (ej: `--error-on-alert`)
 7. Establece la opción `--adapter` en [Formato Métrico de Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Consulta [adaptadores de arneses de benchmarking][adapter json] para una descripción completa.
    (ej: `--adapter json`)
@@ -84,7 +84,7 @@ El Umbral especificado luego se usará para detectar regresiones de rendimiento.
 [threshold max sample size]: /es/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /es/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /es/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /es/docs/explanation/thresholds/#--err
+[alert err]: /es/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /es/docs/reference/bencher-metric-format/
 [adapter json]: /es/docs/explanation/adapters/#-json
 [command argument]: /es/docs/explanation/bencher-run/#benchmark-command
@@ -121,9 +121,9 @@ Así es como rastrearíamos el rendimiento de una nueva rama de características
 5. Establece la opción `--testbed` en el nombre del Testbed.
    Consulta [la documentación de `--tested`][testbed option] para más detalles.
    (ej: `--testbed ci-runner`)
-6. Establece la bandera `--err` para que el comando falle si se genera una Alerta.
-   Consulta [la documentación de `--err`][alert err] para una descripción completa.
-   (ej: `--err`)
+6. Establece la bandera `--error-on-alert` para que el comando falle si se genera una Alerta.
+   Consulta [la documentación de `--error-on-alert`][alert err] para una descripción completa.
+   (ej: `--error-on-alert`)
 7. Establece la opción `--adapter` en [Formato Métrico de Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Consulta [adaptadores de arneses de benchmarking][adapter json] para una descripción completa.
    (ej: `--adapter json`)

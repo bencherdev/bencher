@@ -81,9 +81,9 @@ alors vous pouvez simplement créer un autre workflow pour fonctionner avec des 
     Cela devrait probablement correspondre à la machine sélectionnée dans `runs-on`.
     Voir [la documentation `--testbed`][testbed option] pour plus de détails.
     (ex : `--testbed ubuntu-latest`)
-15. Définissez le drapeau `--err` pour échouer la commande si une Alerte est générée.
-   Voir [la documentation `--err`][alert err] pour un aperçu complet.
-   (ex : `--err`)
+15. Définissez le drapeau `--error-on-alert` pour échouer la commande si une Alerte est générée.
+   Voir [la documentation `--error-on-alert`][alert err] pour un aperçu complet.
+   (ex : `--error-on-alert`)
 16. Définissez l'option `--adapter` sur le Format de Métrique Bencher JSON (`json`) généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Voir [les adaptateurs de harnais de benchmark][adapter json] pour un aperçu complet.
    (ex : `--adapter json`)
@@ -116,7 +116,7 @@ alors vous pouvez simplement créer un autre workflow pour fonctionner avec des 
 [start point clone thresholds]: /fr/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /fr/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /fr/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /fr/docs/explanation/thresholds/#--err
+[alert err]: /fr/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /fr/docs/reference/bencher-metric-format/
 [adapter json]: /fr/docs/explanation/adapters/#-json
 [github actions option]: /fr/docs/explanation/bencher-run/#--github-actions-github_token

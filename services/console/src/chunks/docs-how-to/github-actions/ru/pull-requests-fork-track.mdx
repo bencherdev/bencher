@@ -72,9 +72,9 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
     Это должно совпадать с машиной, выбранной в `runs-on`.
     Подробности смотрите в [документации `--tested`][testbed option].
     (например, `--testbed ubuntu-latest`)
-19. Установите флаг `--err`, чтобы команда завершилась неудачно, если сгенерируется Уведомление.
-   Полный обзор см. в [документации `--err`][alert err].
-   (например, `--err`)
+19. Установите флаг `--error-on-alert`, чтобы команда завершилась неудачно, если сгенерируется Уведомление.
+   Полный обзор см. в [документации `--error-on-alert`][alert err].
+   (например, `--error-on-alert`)
 20. Установите параметр `--adapter` в значение [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Полный обзор см. в [документации адаптеров][adapter json].
    (например, `--adapter json`)
@@ -111,7 +111,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 [start point clone thresholds]: /ru/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /ru/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /ru/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /ru/docs/explanation/thresholds/#--err
+[alert err]: /ru/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ru/docs/reference/bencher-metric-format/
 [adapter json]: /ru/docs/explanation/adapters/#-json
 [github actions option]: /ru/docs/explanation/bencher-run/#--github-actions-github_token

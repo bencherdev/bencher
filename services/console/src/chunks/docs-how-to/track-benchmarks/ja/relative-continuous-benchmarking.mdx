@@ -113,9 +113,9 @@ CIでこのコマンドを初めて実行すると、存在しないため`main`
    4. `--thresholds-reset`フラグを設定して、指定されたスレッショルドのみがアクティブになるようにします。
    詳細は[`--thresholds-reset`ドキュメント][thresholds reset]をご覧ください。
    (例: `--thresholds-reset`)
-7. アラートが生成された場合にコマンドが失敗するように`--err`フラグを設定します。
-   詳細は[`--err`ドキュメント][alert err]をご覧ください。
-   (例: `--err`)
+7. アラートが生成された場合にコマンドが失敗するように`--error-on-alert`フラグを設定します。
+   詳細は[`--error-on-alert`ドキュメント][alert err]をご覧ください。
+   (例: `--error-on-alert`)
 8. `--adapter`オプションを<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成された[Bencher Metric Format JSON (`json`)][bmf]に設定します。
    詳細は[ベンチマーカーアダプター][adapter json]をご覧ください。
    (例: `--adapter json`)
@@ -132,4 +132,4 @@ CIでこのコマンドを実行するたびに、`feature-branch`の結果が`m
 [threshold test option]: /ja/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /ja/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ja/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /ja/docs/explanation/thresholds/#--err
+[alert err]: /ja/docs/explanation/thresholds/#--error-on-alert

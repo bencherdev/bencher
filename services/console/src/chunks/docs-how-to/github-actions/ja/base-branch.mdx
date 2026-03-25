@@ -56,9 +56,9 @@ import BaseBranchCode from "../base-branch-code.mdx";
     5. 指定されたしきい値のみをアクティブにするために`--thresholds-reset`フラグを設定します。
     詳細については、[`--thresholds-reset` ドキュメント][thresholds reset]を参照してください。
     （例: `--thresholds-reset`）
-14. 警告が生成された場合にコマンドを失敗させるように`--err`フラグを設定します。
-    詳細については、[`--err` ドキュメント][alert err]を参照してください。
-    （例: `--err`）
+14. 警告が生成された場合にコマンドを失敗させるように`--error-on-alert`フラグを設定します。
+    詳細については、[`--error-on-alert` ドキュメント][alert err]を参照してください。
+    （例: `--error-on-alert`）
 15. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される[Bencher Metric Format JSON（`json`）][bmf]を`--adapter`オプションに設定します。
     詳細については、[ベンチマークハーネスアダプタ][adapter json]を参照してください。
     （例: `--adapter json`）
@@ -87,7 +87,7 @@ import BaseBranchCode from "../base-branch-code.mdx";
 [threshold max sample size]: /ja/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /ja/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ja/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /ja/docs/explanation/thresholds/#--err
+[alert err]: /ja/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ja/docs/reference/bencher-metric-format/
 [adapter json]: /ja/docs/explanation/adapters/#-json
 [github actions option]: /ja/docs/explanation/bencher-run/#--github-actions-github_token

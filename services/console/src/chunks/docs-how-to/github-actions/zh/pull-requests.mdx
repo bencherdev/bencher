@@ -68,9 +68,9 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 14. 将 `--testbed` 选项设置为 Testbed 名称。此名称应与 `runs-on` 中选择的机器匹配。
     查看 [`--tested` 文档][testbed option] 以获取更多详细信息。
     （例如：`--testbed ubuntu-latest`）
-15. 设置 `--err` 标志以在生成警报时使命令失败。
-   查看 [`--err` 文档][alert err] 以获取完整概览。
-   （例如：`--err`）
+15. 设置 `--error-on-alert` 标志以在生成警报时使命令失败。
+   查看 [`--error-on-alert` 文档][alert err] 以获取完整概览。
+   （例如：`--error-on-alert`）
 16. 将 `--adapter` 选项设置为 [由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的 Bencher Metric Format JSON (`json`)][bmf]。
    查看 [基准测试适配器][adapter json] 以获取完整概览。
    （例如：`--adapter json`）
@@ -102,7 +102,7 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 [start point clone thresholds]: /zh/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /zh/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /zh/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /zh/docs/explanation/thresholds/#--err
+[alert err]: /zh/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /zh/docs/reference/bencher-metric-format/
 [adapter json]: /zh/docs/explanation/adapters/#-json
 [github actions option]: /zh/docs/explanation/bencher-run/#--github-actions-github_token

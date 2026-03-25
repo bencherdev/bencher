@@ -57,9 +57,9 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
    5. Установите флаг `--thresholds-reset`, чтобы только указанный порог был активен.
    Полный обзор смотрите в [документации по флагу `--thresholds-reset`][thresholds reset].
    (например: `--thresholds-reset`)
-6. Установите флаг `--err` для завершения команды в случае возникновения предупреждения.
-   Полный обзор смотрите в [документации по флагу `--err`][alert err].
-   (например: `--err`)
+6. Установите флаг `--error-on-alert` для завершения команды в случае возникновения предупреждения.
+   Полный обзор смотрите в [документации по флагу `--error-on-alert`][alert err].
+   (например: `--error-on-alert`)
 7. Установите опцию `--adapter` в [формат Bencher Metric JSON (`json`)][bmf], который создается <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Полный обзор смотрите в [адаптеры теста][adapter json].
    (например: `--adapter json`)
@@ -82,7 +82,7 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 [threshold max sample size]: /ru/docs/explanation/thresholds/#--threshold-max-sample-size-size
 [threshold upper boundary]: /ru/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ru/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /ru/docs/explanation/thresholds/#--err
+[alert err]: /ru/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ru/docs/reference/bencher-metric-format/
 [adapter json]: /ru/docs/explanation/adapters/#-json
 [command argument]: /ru/docs/explanation/bencher-run/#benchmark-command
@@ -119,9 +119,9 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 5. Установите опцию `--testbed` в название тестовой среды.
    Подробнее смотрите в [документации по опции `--testbed`][testbed option].
    (например: `--testbed ci-runner`)
-6. Установите флаг `--err` для завершения команды в случае возникновения предупреждения.
-   Полный обзор смотрите в [документации по флагу `--err`][alert err].
-   (например: `--err`)
+6. Установите флаг `--error-on-alert` для завершения команды в случае возникновения предупреждения.
+   Полный обзор смотрите в [документации по флагу `--error-on-alert`][alert err].
+   (например: `--error-on-alert`)
 7. Установите опцию `--adapter` в [формат Bencher Metric JSON (`json`)][bmf], который создается <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Полный обзор смотрите в [адаптеры теста][adapter json].
    (например: `--adapter json`)

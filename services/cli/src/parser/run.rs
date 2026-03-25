@@ -62,8 +62,8 @@ pub struct CliRun {
     pub thresholds: CliReportThresholds,
 
     /// Error on alert
-    #[clap(long)]
-    pub err: bool,
+    #[clap(long, alias = "err")]
+    pub error_on_alert: bool,
 
     #[clap(flatten)]
     pub output: CliRunOutput,

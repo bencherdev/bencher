@@ -119,9 +119,9 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
    4. Установите флаг `--thresholds-reset`, так чтобы был активен только указанный Порог.
    Смотрите [документацию по `--thresholds-reset`][thresholds reset] для полного обзора.
    (например: `--thresholds-reset`)
-7. Установите флаг `--err`, чтобы команда завершалась с ошибкой, если генерируется Предупреждение.
-   Смотрите [документацию по `--err`][alert err] для полного обзора.
-   (например: `--err`)
+7. Установите флаг `--error-on-alert`, чтобы команда завершалась с ошибкой, если генерируется Предупреждение.
+   Смотрите [документацию по `--error-on-alert`][alert err] для полного обзора.
+   (например: `--error-on-alert`)
 8. Установите опцию `--adapter` на [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Смотрите [адаптеры для бенчмаркинга][adapter json] для полного обзора.
    (например: `--adapter json`)
@@ -139,4 +139,4 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 [threshold test option]: /ru/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /ru/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ru/docs/explanation/thresholds/#--thresholds-reset
-[alert err]: /ru/docs/explanation/thresholds/#--err
+[alert err]: /ru/docs/explanation/thresholds/#--error-on-alert

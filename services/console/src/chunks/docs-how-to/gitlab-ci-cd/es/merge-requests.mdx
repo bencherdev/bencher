@@ -55,9 +55,9 @@ Para detectar regresiones de rendimiento en las Solicitudes de Fusión, necesita
    Esto probablemente debería coincidir con la máquina seleccionada en `image`.
    Consulta la documentación de [la opción `--tested`][testbed option] para más detalles.
    (ej: `--testbed debian:bullseye`)
-12. Activa el indicador `--err` para fallar el comando si se genera una Alerta.
-   Consulta la documentación de [la opción `--err`][alert err] para una visión completa.
-   (ej: `--err`)
+12. Activa el indicador `--error-on-alert` para fallar el comando si se genera una Alerta.
+   Consulta la documentación de [la opción `--error-on-alert`][alert err] para una visión completa.
+   (ej: `--error-on-alert`)
 13. Configura la opción `--adapter` al [Formato Métrico de Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Consulta los [adaptadores de prueba de referencia][adapter json] para una visión completa.
    (ej: `--adapter json`)
@@ -81,7 +81,7 @@ Para detectar regresiones de rendimiento en las Solicitudes de Fusión, necesita
 [start point clone thresholds]: /es/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /es/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /es/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /es/docs/explanation/thresholds/#--err
+[alert err]: /es/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /es/docs/reference/bencher-metric-format/
 [adapter json]: /es/docs/explanation/adapters/#-json
 [github actions option]: /es/docs/explanation/bencher-run/#--github-actions-github_token

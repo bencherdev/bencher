@@ -50,9 +50,9 @@ import MergeRequestsClosed from "./merge-requests-closed.mdx";
     これは、おそらく `image` で選択したマシンと一致する必要があります。
     [`--tested` ドキュメント][testbed option] を参照してください。
     （例: `--testbed debian:bullseye`）
-12. アラートが発生した場合にコマンドを失敗させるために `--err` フラグを設定します。
-    [`--err` ドキュメント][alert err] を参照して、全体像を確認してください。
-    （例: `--err`）
+12. アラートが発生した場合にコマンドを失敗させるために `--error-on-alert` フラグを設定します。
+    [`--error-on-alert` ドキュメント][alert err] を参照して、全体像を確認してください。
+    （例: `--error-on-alert`）
 13. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> によって生成される [Bencher Metric Format JSON (`json`)][bmf] に `--adapter` オプションを設定します。
     ベンチマークハーネスアダプター[adapter json] を参照して、全体像を確認してください。
     （例: `--adapter json`）
@@ -76,7 +76,7 @@ import MergeRequestsClosed from "./merge-requests-closed.mdx";
 [start point clone thresholds]: /ja/docs/explanation/branch-selection/#--start-point-clone-thresholds
 [start point reset]: /ja/docs/explanation/branch-selection/#--start-point-reset
 [testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
-[alert err]: /ja/docs/explanation/thresholds/#--err
+[alert err]: /ja/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ja/docs/reference/bencher-metric-format/
 [adapter json]: /ja/docs/explanation/adapters/#-json
 [github actions option]: /ja/docs/explanation/bencher-run/#--github-actions-github_token
