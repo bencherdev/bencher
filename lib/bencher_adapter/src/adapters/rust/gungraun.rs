@@ -8,13 +8,14 @@ use bencher_json::{
     },
 };
 use nom::{
-    IResult,
+    IResult, Parser,
     branch::alt,
     bytes::complete::{is_a, is_not, tag, take_until1},
     character::complete::{char, space0, space1},
     combinator::{map, opt, peek, recognize},
+    error::Error,
     multi::{many0, many1},
-    sequence::{delimited, preceded, terminated, tuple},
+    sequence::{delimited, preceded, terminated},
 };
 
 use crate::{
@@ -37,7 +38,7 @@ impl Adaptable for AdapterRustGungraun {
         // Clean up the input by removing ANSI escape codes:
         let input = strip_ansi_escapes::strip_str(input);
 
-        let benchmarks = match multiple_benchmarks()(&input) {
+        let benchmarks = match multiple_benchmarks().parse(&*input) {
             Err(error) => {
                 debug_assert!(false, "Error parsing input:\n{error:#?}");
                 return None;
@@ -53,7 +54,8 @@ impl Adaptable for AdapterRustGungraun {
 }
 
 fn multiple_benchmarks<'a>()
--> impl FnMut(&'a str) -> IResult<&'a str, Vec<(BenchmarkName, Vec<GungraunMeasure>)>> {
+-> impl Parser<&'a str, Output = Vec<(BenchmarkName, Vec<GungraunMeasure>)>, Error = Error<&'a str>>
+{
     map(
         many0(alt((
             // Try to parse a single benchmark:
@@ -69,17 +71,18 @@ fn multiple_benchmarks<'a>()
 }
 
 fn single_benchmark<'a>()
--> impl FnMut(&'a str) -> IResult<&'a str, Option<(BenchmarkName, Vec<GungraunMeasure>)>> {
+-> impl Parser<&'a str, Output = Option<(BenchmarkName, Vec<GungraunMeasure>)>, Error = Error<&'a str>>
+{
     map(
-        tuple((
+        (
             terminated(
-                recognize(tuple((
+                recognize((
                     is_not(":\r\n \t"),
                     tag("::"),
                     is_not(":\r\n \t"),
                     tag("::"),
                     not_benchmark_name_end(),
-                ))),
+                )),
                 benchmark_name_end(),
             ),
             many0(alt((
@@ -96,7 +99,7 @@ fn single_benchmark<'a>()
                 // Add Drd tool measures if it was enabled:
                 drd_tool_measures(),
             ))),
-        )),
+        ),
         |(benchmark_name, measures)| {
             // trim here to avoid loose `\r` chars at the end of the string because of the
             // `not_benchmark_name_end` parser. It's maybe not a bad idea anyways.
@@ -108,7 +111,8 @@ fn single_benchmark<'a>()
     )
 }
 
-fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
+fn callgrind_tool_measures<'a>()
+-> impl Parser<&'a str, Output = Vec<GungraunMeasure>, Error = Error<&'a str>> {
     map(
         preceded(opt(tool_name_line("CALLGRIND")), many1(metric_line())),
         |metrics| {
@@ -162,7 +166,8 @@ fn callgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<
     )
 }
 
-fn cachegrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
+fn cachegrind_tool_measures<'a>()
+-> impl Parser<&'a str, Output = Vec<GungraunMeasure>, Error = Error<&'a str>> {
     map(
         preceded(tool_name_line("CACHEGRIND"), many1(metric_line())),
         |metrics| {
@@ -199,7 +204,8 @@ fn cachegrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec
     )
 }
 
-fn dhat_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
+fn dhat_tool_measures<'a>()
+-> impl Parser<&'a str, Output = Vec<GungraunMeasure>, Error = Error<&'a str>> {
     map(
         preceded(tool_name_line("DHAT"), many1(metric_line())),
         |metrics| {
@@ -221,7 +227,8 @@ fn dhat_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Gungr
     )
 }
 
-fn memcheck_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
+fn memcheck_tool_measures<'a>()
+-> impl Parser<&'a str, Output = Vec<GungraunMeasure>, Error = Error<&'a str>> {
     map(
         preceded(tool_name_line("MEMCHECK"), many1(metric_line())),
         |metrics| {
@@ -243,7 +250,8 @@ fn memcheck_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<G
     )
 }
 
-fn helgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
+fn helgrind_tool_measures<'a>()
+-> impl Parser<&'a str, Output = Vec<GungraunMeasure>, Error = Error<&'a str>> {
     map(
         preceded(tool_name_line("HELGRIND"), many1(metric_line())),
         |metrics| {
@@ -265,7 +273,8 @@ fn helgrind_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<G
     )
 }
 
-fn drd_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<GungraunMeasure>> {
+fn drd_tool_measures<'a>()
+-> impl Parser<&'a str, Output = Vec<GungraunMeasure>, Error = Error<&'a str>> {
     map(
         preceded(tool_name_line("DRD"), many1(metric_line())),
         |metrics| {
@@ -287,17 +296,20 @@ fn drd_tool_measures<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Gungra
     )
 }
 
-fn tool_name_line<'a>(tool_name: &'static str) -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
+fn tool_name_line<'a>(
+    tool_name: &'static str,
+) -> impl Parser<&'a str, Output = &'a str, Error = Error<&'a str>> {
     delimited(
-        tuple((space1, many1(tag("=")), tag(" "))),
+        (space1, many1(tag("=")), tag(" ")),
         tag(tool_name),
-        tuple((tag(" "), many1(tag("=")), line_ending())),
+        (tag(" "), many1(tag("=")), line_ending()),
     )
 }
 
-fn metric_line<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, (String, JsonNewMetric)> {
+fn metric_line<'a>()
+-> impl Parser<&'a str, Output = (String, JsonNewMetric), Error = Error<&'a str>> {
     map(
-        tuple((
+        (
             space1,
             is_not(":\r\n"),
             char(':'),
@@ -307,27 +319,27 @@ fn metric_line<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, (String, JsonNew
             char('|'),
             alt((
                 // No previous run:
-                recognize(tuple((
+                recognize((
                     tag("N/A"),
                     space1,
                     delimited(char('('), many1(char('*')), char(')')),
-                ))),
+                )),
                 // Comparison to previous run:
-                recognize(tuple((
+                recognize((
                     parse_f64,
                     space0,
                     alt((
                         recognize(delimited(char('('), tag("No change"), char(')'))),
-                        recognize(tuple((
+                        recognize((
                             delimited(char('('), alt((infinity, percent)), char(')')),
                             space1,
                             delimited(char('['), alt((infinity, factor)), char(']')),
-                        ))),
+                        )),
                     )),
-                ))),
+                )),
             )),
             line_ending(),
-        )),
+        ),
         |(_, metric_name, _, _, current_value, _, _, _)| {
             (
                 metric_name.to_owned(),
@@ -343,11 +355,11 @@ fn metric_line<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, (String, JsonNew
 
 fn infinity(input: &str) -> IResult<&str, f64> {
     map(
-        tuple((
+        (
             alt((many1(char('+')), many1(char('-')))),
             tag("inf"),
             alt((many1(char('+')), many1(char('-')))),
-        )),
+        ),
         |(signs, _, _)| {
             // The indexing is safe due to the usage of `many1` above
             #[expect(clippy::indexing_slicing)]
@@ -358,40 +370,44 @@ fn infinity(input: &str) -> IResult<&str, f64> {
                 f64::NEG_INFINITY
             }
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn factor(input: &str) -> IResult<&str, f64> {
     map(
-        tuple((alt((char('+'), char('-'))), parse_f64, char('x'))),
+        (alt((char('+'), char('-'))), parse_f64, char('x')),
         |(sign, num, _)| {
             if sign == '+' { num } else { num.neg() }
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn percent(input: &str) -> IResult<&str, f64> {
     map(
-        tuple((alt((char('+'), char('-'))), parse_f64, char('%'))),
+        (alt((char('+'), char('-'))), parse_f64, char('%')),
         |(sign, num, _)| {
             if sign == '+' { num } else { num.neg() }
         },
-    )(input)
+    )
+    .parse(input)
 }
 
-fn line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
+fn line_ending<'a>() -> impl Parser<&'a str, Output = &'a str, Error = Error<&'a str>> {
     is_a("\r\n")
 }
 
-fn not_line_ending<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
+fn not_line_ending<'a>() -> impl Parser<&'a str, Output = &'a str, Error = Error<&'a str>> {
     // Note: `not(line_ending)` doesn't work here, as it won't consume the matched characters
     is_not("\r\n")
 }
 
 /// Parser that matches the benchmark name ending sequence, excluding the two spaces
-fn benchmark_name_end<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, (&'a str, &'a str)> {
+fn benchmark_name_end<'a>()
+-> impl Parser<&'a str, Output = (&'a str, &'a str), Error = Error<&'a str>> {
     // we only peek here so the `metric_line` parser can match the first spaces too
-    tuple((line_ending(), peek(tag("  "))))
+    (line_ending(), peek(tag("  ")))
 }
 
 /// A parser that matches input until it encounters the benchmark name end sequence.
@@ -401,7 +417,7 @@ fn benchmark_name_end<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, (&'a str,
 /// behavior is not a bug in `gungraun`, it deviates from the original intent. If there are multiple
 /// lines they don't start with two spaces, so we can use that as test for the end of the benchmark
 /// name.
-fn not_benchmark_name_end<'a>() -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
+fn not_benchmark_name_end<'a>() -> impl Parser<&'a str, Output = &'a str, Error = Error<&'a str>> {
     // Ignore the `\r\n` possibility here and instead trim the benchmark name later
     take_until1("\n  ")
 }

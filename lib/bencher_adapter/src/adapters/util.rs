@@ -2,7 +2,7 @@ use std::{fmt, str::FromStr};
 
 use bencher_json::BenchmarkName;
 use nom::{
-    IResult,
+    IResult, Parser as _,
     branch::alt,
     bytes::complete::tag,
     character::complete::digit1,
@@ -125,7 +125,8 @@ pub fn parse_units(input: &str) -> IResult<&str, Units> {
         map(tag("us"), |_| Units::Micro),
         map(tag("ms"), |_| Units::Milli),
         map(tag("s"), |_| Units::Sec),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 impl FromStr for Units {
@@ -172,15 +173,15 @@ impl Visitor<'_> for UnitsVisitor {
 pub fn parse_number_as_f64(input: &str) -> IResult<&str, f64> {
     // It is important to try to parse as a float first,
     // in order to avoid a false positive when parsing an integer.
-    map_res(alt((parse_float, parse_int)), into_number)(input)
+    map_res(alt((parse_float, parse_int)), into_number).parse(input)
 }
 
 pub fn parse_u64(input: &str) -> IResult<&str, u64> {
-    map_res(parse_int, into_number)(input)
+    map_res(parse_int, into_number).parse(input)
 }
 
 pub fn parse_f64(input: &str) -> IResult<&str, f64> {
-    map_res(parse_float, into_number)(input)
+    map_res(parse_float, into_number).parse(input)
 }
 
 pub fn parse_int(input: &str) -> IResult<&str, Vec<&str>> {
@@ -195,7 +196,8 @@ pub fn parse_int(input: &str) -> IResult<&str, Vec<&str>> {
                 int_chars
             }
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 pub fn parse_float(input: &str) -> IResult<&str, Vec<&str>> {
@@ -210,7 +212,8 @@ pub fn parse_float(input: &str) -> IResult<&str, Vec<&str>> {
                 float_chars
             }
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 pub fn into_number<T>(input: Vec<&str>) -> Result<T, nom::Err<nom::error::Error<&str>>>

@@ -1,12 +1,12 @@
 use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 
 use nom::{
-    IResult,
+    IResult, Parser as _,
     bytes::complete::tag,
     character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
-    sequence::{delimited, tuple},
+    sequence::delimited,
 };
 
 use crate::{
@@ -51,27 +51,28 @@ fn parse_benchmark(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)>
             let benchmark_name = parse_benchmark_name_chars(&name_chars)?;
             Ok((benchmark_name, json_metric))
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_benchmark_time(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
-        tuple((
-            tuple((space1, tag("x"), space1)),
+        (
+            (space1, tag("x"), space1),
             parse_number_as_f64,
-            tuple((space1, tag("ops/sec"), space1, tag("±"))),
+            (space1, tag("ops/sec"), space1, tag("±")),
             parse_f64,
-            tuple((
+            (
                 tag("%"),
                 space1,
                 delimited(
                     tag("("),
-                    tuple((parse_u64, space1, tag("runs"), space1, tag("sampled"))),
+                    (parse_u64, space1, tag("runs"), space1, tag("sampled")),
                     tag(")"),
                 ),
                 eof,
-            )),
-        )),
+            ),
+        ),
         |(_, throughput, _, percent_error, _)| {
             let value = throughput_as_secs(throughput, Units::Sec);
             let error = value * (percent_error / 100.0);
@@ -81,7 +82,8 @@ fn parse_benchmark_time(input: &str) -> IResult<&str, JsonNewMetric> {
                 upper_value: Some(value + error),
             }
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]
