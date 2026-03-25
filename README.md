@@ -284,13 +284,13 @@ Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `Repo -> Settings -> 
 ### Error on Alert
 
 You can set the `bencher run` CLI subcommand to error
-if [an Alert is generated](https://bencher.dev/docs/explanation/thresholds/) with the `--err` flag.
+if [an Alert is generated](https://bencher.dev/docs/explanation/thresholds/) with the `--error-on-alert` flag.
 
 ```bash
-bencher run --err "bencher mock"
+bencher run --error-on-alert "bencher mock"
 ```
 
-👉 For more details see the [explanation of `bencher run`](https://bencher.dev/docs/explanation/bencher-run/#--err).
+👉 For more details see the [explanation of `bencher run`](https://bencher.dev/docs/explanation/bencher-run/#--error-on-alert).
 
 ### Comment on PRs
 

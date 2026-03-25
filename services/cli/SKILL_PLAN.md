@@ -105,7 +105,7 @@ Threshold and alert configuration:
    - `--threshold-measure latency --threshold-test t --threshold-upper-boundary 0.99`
 3. Statistical models: when to use each
 4. Sample size and window configuration
-5. `--err` flag to fail CI on alerts
+5. `--error-on-alert` flag to fail CI on alerts
 6. Managing thresholds via `bencher threshold` subcommands
 
 #### Threshold Model Table
