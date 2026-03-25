@@ -78,7 +78,7 @@ jobs:
           $WASM_PACK_BUILD || \
           $WASM_PACK_BUILD
       - name: Upload Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -107,7 +107,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -125,7 +125,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -180,7 +180,7 @@ jobs:
           docker save ${{ env.API_DOCKER_IMAGE }} \
           | gzip > ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Upload API Docker Image Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
           path: ./${{ env.API_DOCKER_IMAGE }}.tar.gz
@@ -222,7 +222,7 @@ jobs:
           docker save ${{ env.CONSOLE_DOCKER_IMAGE }} \
           | gzip > ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
       - name: Upload Console Docker Image Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
           path: ./${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz

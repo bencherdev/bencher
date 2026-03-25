@@ -40,7 +40,7 @@ jobs:
       - name: Run Tests
         run: ./scripts/test.sh
       - name: Upload Perf JPEG
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: perf.jpeg
           path: ./lib/bencher_plot/perf.jpeg
@@ -67,7 +67,7 @@ jobs:
       - name: cargo test --doc
         run: RUST_BACKTRACE=1 cargo test --doc --all-features
       - name: Upload Perf JPEG
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: perf.jpeg
           path: ./lib/bencher_plot/perf.jpeg
@@ -125,12 +125,12 @@ jobs:
       - name: Run Benchmarks
         run: cargo bench --package bencher_adapter --package bencher_schema | tee benchmark_results.txt
       - name: Upload Benchmark Results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark_results.txt
           path: ./benchmark_results.txt
       - name: Upload GitHub Pull Request Event
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: event.json
           path: ${{ github.event_path }}
@@ -156,7 +156,7 @@ jobs:
         if: matrix.os == 'windows-2022'
         run: cargo run -p bencher_cli -- noise --format json --quiet | Out-File -FilePath noise_results_${{ matrix.os }}.json -Encoding utf8
       - name: Upload Noise Results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: noise_results_${{ matrix.os }}
           path: ./noise_results_${{ matrix.os }}.json
