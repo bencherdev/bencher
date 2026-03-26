@@ -57,12 +57,16 @@ jobs:
       - name: Check Typescript Types for changes
         run: git diff --exit-code
       - name: Generate Unix CLI install scripts
-        run: cargo gen-installer sh
+        run: cargo gen-installer cli sh
       - name: Check Unix CLI install script for changes
         run: git diff --exit-code
       - name: Generate Windows CLI install scripts
-        run: cargo gen-installer ps1
+        run: cargo gen-installer cli ps1
       - name: Check Windows CLI install script for changes
+        run: git diff --exit-code
+      - name: Generate Runner install script
+        run: cargo gen-installer runner
+      - name: Check Runner install script for changes
         run: git diff --exit-code
 
   cargo_deny:

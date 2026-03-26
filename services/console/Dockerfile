@@ -77,6 +77,7 @@ RUN ./build_wasm.sh
 FROM node:20.11.0-bookworm@sha256:7bf4a586b423aac858176b3f683e35f08575c84500fbcfd1d433ad8568972ec6 AS builder
 COPY services/api/openapi.json /usr/src/bencher/services/api/openapi.json
 COPY services/cli/templates/output /usr/src/bencher/services/cli/templates/output
+COPY services/runner/templates/output /usr/src/bencher/services/runner/templates/output
 COPY --from=wasm-builder /usr/src/bencher/lib/bencher_valid/pkg /usr/src/bencher/lib/bencher_valid/pkg
 
 WORKDIR /usr/src/bencher/services/console

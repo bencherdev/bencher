@@ -209,12 +209,22 @@ jobs:
             ${{ env.API_DOCKER_IMAGE }}.tar.gz
             ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.sha256
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.sha256
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_X86_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_X86_64 }}.sha256
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_ARM_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_ARM_64 }}.sha256
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe.sha256
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe.sha256
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.deb
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.deb.sha256
             ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
+            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.deb.sha256
             ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
+            ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.sha256
             ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
+            ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.sha256

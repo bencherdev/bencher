@@ -219,19 +219,30 @@ jobs:
       - name: Rename Windows CLI bin
         if: startsWith(matrix.build, 'windows')
         run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
+      - name: Generate Unix SHA256 checksum
+        if: (!startsWith(matrix.build, 'windows'))
+        run: shasum -a 256 ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }} > ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.sha256
       - name: Upload Unix CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
-          path: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
+          path: |
+            ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
+            ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.sha256
           if-no-files-found: error
+      - name: Generate Windows SHA256 checksum
+        if: startsWith(matrix.build, 'windows')
+        shell: bash
+        run: sha256sum ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe > ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe.sha256
       - name: Upload Windows CLI Artifact
         if: startsWith(matrix.build, 'windows')
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
-          path: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
+          path: |
+            ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
+            ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe.sha256
           if-no-files-found: error
 
   package_cli:
@@ -276,11 +287,15 @@ jobs:
           bencher --version
           bencher mock
           man bencher
+      - name: Generate .deb SHA256 checksum
+        run: shasum -a 256 ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb > ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb.sha256
       - name: Upload .deb Artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb
-          path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb
+          path: |
+            ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb
+            ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb.sha256
           if-no-files-found: error
 
   build_cli_docker:

@@ -6,12 +6,20 @@ use minijinja::Environment;
 use serde::Serialize;
 
 use crate::API_VERSION;
-use crate::parser::{TaskTemplate, TaskTemplateKind};
+use crate::parser::{TaskProduct, TaskTemplate, TaskTemplateKind};
 
 const CLI_TEMPLATES: &str = "services/cli/templates";
-const SH_TEMPLATE: &str = "install-cli.sh.j2";
-const PS1_TEMPLATE: &str = "install-cli.ps1.j2";
-const TEMPLATES: &[TemplateKind] = &[TemplateKind::Sh, TemplateKind::Ps1];
+const CLI_SH_TEMPLATE: &str = "install-cli.sh.j2";
+const CLI_PS1_TEMPLATE: &str = "install-cli.ps1.j2";
+
+const RUNNER_TEMPLATES: &str = "services/runner/templates";
+const RUNNER_SH_TEMPLATE: &str = "install-runner.sh.j2";
+
+const ALL_TEMPLATES: &[TemplateKind] = &[
+    TemplateKind::CliSh,
+    TemplateKind::CliPs1,
+    TemplateKind::RunnerSh,
+];
 
 #[derive(Debug)]
 pub struct Template {
@@ -21,33 +29,44 @@ pub struct Template {
 
 #[derive(Debug, Clone, Copy)]
 pub enum TemplateKind {
-    Sh,
-    Ps1,
+    CliSh,
+    CliPs1,
+    RunnerSh,
 }
 
 impl TryFrom<TaskTemplate> for Template {
     type Error = anyhow::Error;
 
-    fn try_from(template: TaskTemplate) -> Result<Self, Self::Error> {
-        let TaskTemplate { template } = template;
+    fn try_from(task: TaskTemplate) -> Result<Self, Self::Error> {
+        let TaskTemplate { product, template } = task;
+
+        let templates = match (product, template) {
+            // No args: generate everything
+            (None, None) => ALL_TEMPLATES.to_vec(),
+            // Product only
+            (Some(TaskProduct::Cli), None) => vec![TemplateKind::CliSh, TemplateKind::CliPs1],
+            (Some(TaskProduct::Runner), None | Some(TaskTemplateKind::Sh)) => {
+                vec![TemplateKind::RunnerSh]
+            },
+            // Product + template kind
+            (Some(TaskProduct::Cli), Some(TaskTemplateKind::Sh)) => vec![TemplateKind::CliSh],
+            (Some(TaskProduct::Cli), Some(TaskTemplateKind::Ps1)) => vec![TemplateKind::CliPs1],
+            (Some(TaskProduct::Runner), Some(TaskTemplateKind::Ps1)) => {
+                anyhow::bail!("Runner does not have a PowerShell installer");
+            },
+            // Template kind without product
+            (None, Some(_)) => {
+                anyhow::bail!(
+                    "Product (cli or runner) is required when specifying a template kind"
+                );
+            },
+        };
 
         let mut env = Environment::new();
-        env.set_loader(minijinja::path_loader(CLI_TEMPLATES));
-
-        let templates = if let Some(template) = template {
-            let t = TemplateKind::from(template);
-            let (name, source) = t.read()?;
+        for &template_kind in &templates {
+            let (name, source) = template_kind.read()?;
             env.add_template_owned(name, source)?;
-            vec![t]
-        } else {
-            let mut templates = Vec::with_capacity(TEMPLATES.len());
-            for &template_kind in TEMPLATES {
-                let (name, source) = template_kind.read()?;
-                env.add_template_owned(name, source)?;
-                templates.push(template_kind);
-            }
-            templates
-        };
+        }
 
         Ok(Self { env, templates })
     }
@@ -57,7 +76,7 @@ impl Template {
     #[expect(clippy::use_debug)]
     pub fn exec(&self) -> anyhow::Result<()> {
         for &template_kind in &self.templates {
-            let template = self.env.get_template(template_kind.as_ref())?;
+            let template = self.env.get_template(template_kind.template_file())?;
             let ctx = TemplateContext::new(template_kind);
             let mut rendered = template.render(&ctx)?;
             // minijinja strips trailing newlines from templates
@@ -66,8 +85,9 @@ impl Template {
             }
             let cleaned = newline_converter::dos2unix(&rendered).into_owned();
             let path = format!(
-                "{CLI_TEMPLATES}/output/{file_name}",
-                file_name = template_kind.as_ref().trim_end_matches(".j2")
+                "{template_dir}/output/{file_name}",
+                template_dir = template_kind.template_dir(),
+                file_name = template_kind.template_file().trim_end_matches(".j2")
             );
             println!("Using context: {ctx:#?}");
             println!("Saving to: {path}");
@@ -80,20 +100,42 @@ impl Template {
     }
 }
 
-impl From<TaskTemplateKind> for TemplateKind {
-    fn from(template: TaskTemplateKind) -> Self {
-        match template {
-            TaskTemplateKind::Sh => Self::Sh,
-            TaskTemplateKind::Ps1 => Self::Ps1,
+impl TemplateKind {
+    fn template_dir(self) -> &'static str {
+        match self {
+            Self::CliSh | Self::CliPs1 => CLI_TEMPLATES,
+            Self::RunnerSh => RUNNER_TEMPLATES,
         }
     }
-}
 
-impl AsRef<str> for TemplateKind {
-    fn as_ref(&self) -> &str {
+    fn template_file(self) -> &'static str {
         match self {
-            Self::Sh => SH_TEMPLATE,
-            Self::Ps1 => PS1_TEMPLATE,
+            Self::CliSh => CLI_SH_TEMPLATE,
+            Self::CliPs1 => CLI_PS1_TEMPLATE,
+            Self::RunnerSh => RUNNER_SH_TEMPLATE,
+        }
+    }
+
+    fn read(self) -> Result<(&'static str, String), std::io::Error> {
+        let file = self.template_file();
+        let dir = self.template_dir();
+        fs::read_to_string(format!("{dir}/{file}")).map(|t| (file, t))
+    }
+
+    fn artifacts(self) -> Vec<TemplateArtifact> {
+        match self {
+            Self::CliSh => SH_ARTIFACTS.iter().map(Self::as_artifact).collect(),
+            Self::CliPs1 => PS1_ARTIFACTS.iter().map(Self::as_artifact).collect(),
+            Self::RunnerSh => Vec::new(),
+        }
+    }
+
+    fn as_artifact(&(target_triple, os_arch): &(&str, &str)) -> TemplateArtifact {
+        TemplateArtifact {
+            target_triple: target_triple.to_owned(),
+            os_arch: os_arch.to_owned(),
+            binaries: vec![BENCHER_BIN.to_owned()],
+            zip_style: ZipStyle::TempDir,
         }
     }
 }
@@ -109,32 +151,6 @@ const PS1_ARTIFACTS: &[(&str, &str)] = &[
     ("aarch64-pc-windows-msvc", "windows-arm-64"),
 ];
 const BENCHER_BIN: &str = "bencher";
-
-impl TemplateKind {
-    pub fn read(self) -> Result<(&'static str, String), std::io::Error> {
-        let file = match self {
-            Self::Sh => SH_TEMPLATE,
-            Self::Ps1 => PS1_TEMPLATE,
-        };
-        fs::read_to_string(format!("{CLI_TEMPLATES}/{file}")).map(|t| (file, t))
-    }
-
-    pub fn artifacts(self) -> Vec<TemplateArtifact> {
-        match self {
-            Self::Sh => SH_ARTIFACTS.iter().map(Self::as_artifact).collect(),
-            Self::Ps1 => PS1_ARTIFACTS.iter().map(Self::as_artifact).collect(),
-        }
-    }
-
-    fn as_artifact(&(target_triple, os_arch): &(&str, &str)) -> TemplateArtifact {
-        TemplateArtifact {
-            target_triple: target_triple.to_owned(),
-            os_arch: os_arch.to_owned(),
-            binaries: vec![BENCHER_BIN.to_owned()],
-            zip_style: ZipStyle::TempDir,
-        }
-    }
-}
 
 #[derive(Debug, Serialize)]
 pub struct TemplateContext {

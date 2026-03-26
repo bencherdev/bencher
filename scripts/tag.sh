@@ -14,10 +14,11 @@ cargo gen-types
 git add ./services/api/openapi.json
 git add ./services/console/src/types/bencher.ts
 
-# Generate CLI installer scripts
+# Generate installer scripts
 cargo gen-installer
 git add ./services/cli/templates/output/install-cli.sh
 git add ./services/cli/templates/output/install-cli.ps1
+git add ./services/runner/templates/output/install-runner.sh
 
 # Generate the Bencher CLI GitHub Action
 cd ./services/action

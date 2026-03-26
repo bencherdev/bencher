@@ -7,6 +7,7 @@
 !lib/bencher_valid/
 !services/api/openapi.json
 !services/cli/templates/output
+!services/runner/templates/output
 !services/console/package-lock.json
 !services/console/package.json
 !services/console/public
