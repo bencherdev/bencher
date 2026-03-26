@@ -153,6 +153,45 @@ pub enum Adapter {
     DartBenchmarkHarness = DART_BENCHMARK_HARNESS_INT,
 }
 
+impl Adapter {
+    /// Normalize language-level adapters to Magic.
+    /// Language-level adapters (e.g. `Rust`, `Cpp`, `Go`) just try all tool-specific adapters
+    /// for that language in sequence, which is redundant with `Magic`.
+    #[must_use]
+    pub fn normalize(self) -> Self {
+        match self {
+            Self::Rust
+            | Self::Cpp
+            | Self::Go
+            | Self::Java
+            | Self::CSharp
+            | Self::Js
+            | Self::Python
+            | Self::Ruby
+            | Self::Shell
+            | Self::Dart => Self::Magic,
+            Self::Magic
+            | Self::Json
+            | Self::RustBench
+            | Self::RustCriterion
+            | Self::RustIai
+            | Self::RustGungraun
+            | Self::CppGoogle
+            | Self::CppCatch2
+            | Self::GoBench
+            | Self::JavaJmh
+            | Self::CSharpDotNet
+            | Self::JsBenchmark
+            | Self::JsTime
+            | Self::PythonAsv
+            | Self::PythonPytest
+            | Self::RubyBenchmark
+            | Self::ShellHyperfine
+            | Self::DartBenchmarkHarness => self,
+        }
+    }
+}
+
 impl fmt::Display for Adapter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -164,55 +164,28 @@ pub enum CliReportAdapter {
     Magic,
     /// {...} JSON
     Json,
-    // TODO remove in due time
-    #[clap(hide = true)]
-    CSharp,
     /// #️⃣ C# `DotNet`
     CSharpDotNet,
-    // TODO remove in due time
-    #[clap(hide = true)]
-    Cpp,
     /// ➕ C++ Catch2
     CppCatch2,
     /// ➕ C++ Google
     CppGoogle,
-    // TODO remove in due time
-    #[clap(hide = true)]
-    Dart,
     /// 🎯 Dart `benchmark_harness`
     DartBenchmarkHarness,
-    // TODO remove in due time
-    #[clap(hide = true)]
-    Go,
     /// 🕳 Go Bench
     GoBench,
-    // TODO remove in due time
-    #[clap(hide = true)]
-    Java,
     /// ☕️ Java JMH
     JavaJmh,
-    // TODO remove in due time
-    #[clap(hide = true)]
-    Js,
     /// 🕸 JavaScript Benchmark
     JsBenchmark,
     /// 🕸 JavaScript Time
     JsTime,
-    // TODO remove in due time
-    #[clap(hide = true)]
-    Python,
     /// 🐍 Python ASV
     PythonAsv,
     /// 🐍 Python Pytest
     PythonPytest,
-    // TODO remove in due time
-    #[clap(hide = true)]
-    Ruby,
     /// ♦️ Ruby Benchmark
     RubyBenchmark,
-    // TODO remove in due time
-    #[clap(hide = true)]
-    Rust,
     /// 🦀 Rust Bench
     RustBench,
     /// 🦀 Rust Criterion
@@ -224,9 +197,6 @@ pub enum CliReportAdapter {
     // https://github.com/bencherdev/bencher/issues/619
     #[clap(alias = "rust_iai_callgrind")]
     RustGungraun,
-    // TODO remove in due time
-    #[clap(hide = true)]
-    Shell,
     /// ❯_ Shell Hyperfine
     ShellHyperfine,
 }

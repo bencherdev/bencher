@@ -1,5 +1,4 @@
 ## Pending `v0.6.0`
-- Add Dart `benchmark_harness` adapter (`dart_benchmark_harness`)
 - **BREAKING CHANGE** Update Bencher Metric Format (BMF) to accept UUID, slug, or name for the Benchmark identifier
 - Move to soft deletion for Organizations and Projects with admin-only hard deletion
 - Add an OCI compliant image registry API
@@ -8,8 +7,10 @@
 - **BREAKING CHANGE** Remove the `PUT /v0/server/config` endpoint and CLI `bencher server config update` command
 - **BREAKING CHANGE** Remove the deprecated `--project` flag and `BENCHER_PROJECT` environment variable from CLI `bencher threshold create` command (use the positional project argument instead)
 - **BREAKING CHANGE** Remove deprecated support for specifying multiple `--start-point` values for CLI `bencher run` (only a single start point is now accepted)
+- **BREAKING CHANGE** Remove language-level adapter options (`rust`, `cpp`, `go`, `java`, `c_sharp`, `js`, `python`, `ruby`, `shell`, `dart`) from the CLI and API; use the specific tool adapter (e.g. `rust_bench`, `cpp_google`) or `magic` instead
 - Improve server concurrency with database connection pooling
 - Add `[MemoryDiagnoser]` support to [the C# DotNet Adapter](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F%E2%83%A3-c-dotnet) (Thank you [@ricardoboss](https://github.com/ricardoboss))
+- Add Dart `benchmark_harness` adapter (`dart_benchmark_harness`) (Thank you [@Louisvranderick](https://github.com/Louisvranderick))
 
 ## `v0.5.10`
 - Fix GitHub PR comment exceeding maximum length (Thank you [@alexeyr-ci2](https://github.com/alexeyr-ci2))
