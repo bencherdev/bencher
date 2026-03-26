@@ -1,11 +1,11 @@
 use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
-    IResult,
+    IResult, Parser as _,
     bytes::complete::tag,
     character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
-    sequence::{delimited, tuple},
+    sequence::delimited,
 };
 
 use crate::{
@@ -47,7 +47,7 @@ impl Adaptable for AdapterRubyBenchmark {
 
 fn parse_header(input: &str) -> IResult<&str, ()> {
     map(
-        tuple((
+        (
             space1,
             tag("user"),
             space1,
@@ -57,9 +57,10 @@ fn parse_header(input: &str) -> IResult<&str, ()> {
             space1,
             tag("real"),
             eof,
-        )),
+        ),
         |_| (),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_ruby(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
@@ -69,12 +70,13 @@ fn parse_ruby(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
             let benchmark_name = parse_benchmark_name_chars(&name)?;
             Ok((benchmark_name, json_metric))
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_ruby_benchmark(input: &str) -> IResult<&str, JsonNewMetric> {
     map_res(
-        tuple((
+        (
             space1,
             parse_f64,
             space1,
@@ -82,9 +84,9 @@ fn parse_ruby_benchmark(input: &str) -> IResult<&str, JsonNewMetric> {
             space1,
             parse_f64,
             space1,
-            delimited(tag("("), tuple((space1, parse_f64)), tag(")")),
+            delimited(tag("("), (space1, parse_f64), tag(")")),
             eof,
-        )),
+        ),
         |(_, _user, _, _system, _, _total, _, (_, real), _)| -> Result<JsonNewMetric, NomError> {
             let units = Units::Sec;
             let value = latency_as_nanos(real, units);
@@ -94,7 +96,8 @@ fn parse_ruby_benchmark(input: &str) -> IResult<&str, JsonNewMetric> {
                 upper_value: None,
             })
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]

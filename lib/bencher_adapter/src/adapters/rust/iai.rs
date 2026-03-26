@@ -9,12 +9,12 @@ use bencher_json::{
     },
 };
 use nom::{
-    IResult,
+    IResult, Parser as _,
     branch::alt,
     bytes::complete::tag,
     character::complete::{space0, space1},
     combinator::{eof, map},
-    sequence::{delimited, tuple},
+    sequence::delimited,
 };
 
 use crate::{
@@ -107,7 +107,7 @@ fn parse_iai_lines(
 #[expect(clippy::cast_precision_loss)]
 fn parse_iai_metric<'a>(input: &'a str, measure: &'static str) -> IResult<&'a str, JsonNewMetric> {
     map(
-        tuple((
+        (
             space0,
             tag(measure),
             tag(":"),
@@ -116,31 +116,29 @@ fn parse_iai_metric<'a>(input: &'a str, measure: &'static str) -> IResult<&'a st
             alt((
                 map(eof, |_| ()),
                 map(
-                    tuple((
+                    (
                         space1,
                         delimited(
                             tag("("),
                             alt((
                                 map(tag("No change"), |_| ()),
-                                map(
-                                    tuple((alt((tag("+"), tag("-"))), parse_f64, tag("%"))),
-                                    |_| (),
-                                ),
+                                map((alt((tag("+"), tag("-"))), parse_f64, tag("%")), |_| ()),
                             )),
                             tag(")"),
                         ),
                         eof,
-                    )),
+                    ),
                     |_| (),
                 ),
             )),
-        )),
+        ),
         |(_, _, _, _, metric, ())| JsonNewMetric {
             value: (metric as f64).into(),
             lower_value: None,
             upper_value: None,
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]

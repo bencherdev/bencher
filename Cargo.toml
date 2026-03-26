@@ -127,7 +127,7 @@ mail-send = "0.5"
 minijinja = "2.17"
 newline-converter = "0.3"
 nix = { version = "0.31", default-features = false }
-nom = "7.1"
+nom = "8.0"
 notify-rust = "4.12"
 oauth2 = "5.0"
 oci-spec = "0.9"

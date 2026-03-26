@@ -1,10 +1,10 @@
 use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
-    IResult,
+    IResult, Parser as _,
     bytes::complete::{tag, take_until1, take_while1},
     character::complete::{space0, space1},
     combinator::{eof, map, map_res},
-    sequence::{delimited, tuple},
+    sequence::delimited,
 };
 
 use crate::{
@@ -40,17 +40,17 @@ impl Adaptable for AdapterPythonAsv {
 
 fn parse_asv(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
     map_res(
-        tuple((
-            tuple((
-                delimited(tag("["), tuple((space0, parse_f64, tag("%"))), tag("]")),
+        (
+            (
+                delimited(tag("["), (space0, parse_f64, tag("%")), tag("]")),
                 space1,
                 take_while1(|c| c == '·'),
                 space1,
-            )),
+            ),
             take_until1(" "),
             space1,
             parse_asv_time,
-        )),
+        ),
         |(_, name, _, json_metric)| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
             if name.is_empty() {
                 return Err(nom_error(String::new()));
@@ -58,12 +58,13 @@ fn parse_asv(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
             let benchmark_name = parse_benchmark_name(name)?;
             Ok((benchmark_name, json_metric))
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_asv_time(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
-        tuple((parse_f64, tag("±"), parse_f64, parse_units, eof)),
+        (parse_f64, tag("±"), parse_f64, parse_units, eof),
         |(duration, _, range, units, _)| {
             let value = latency_as_nanos(duration, units);
             let range = latency_as_nanos(range, units);
@@ -73,7 +74,8 @@ fn parse_asv_time(input: &str) -> IResult<&str, JsonNewMetric> {
                 upper_value: Some(value + range),
             }
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]

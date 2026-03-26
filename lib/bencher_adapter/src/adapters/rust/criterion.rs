@@ -1,11 +1,11 @@
 use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
-    IResult,
+    IResult, Parser as _,
     bytes::complete::tag,
     character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
-    sequence::{delimited, tuple},
+    sequence::delimited,
 };
 use ordered_float::OrderedFloat;
 
@@ -58,31 +58,29 @@ fn parse_criterion<'i>(
             let benchmark_name = parse_benchmark_name(&name)?;
             Ok((benchmark_name, json_metric))
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_criterion_time(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
-        tuple((
-            tuple((space1, tag("time:"), space1)),
-            parse_criterion_metric,
-            eof,
-        )),
+        ((space1, tag("time:"), space1), parse_criterion_metric, eof),
         |(_, json_metric, _)| json_metric,
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_criterion_metric(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
         delimited(
             tag("["),
-            tuple((
+            (
                 parse_criterion_duration,
                 space1,
                 parse_criterion_duration,
                 space1,
                 parse_criterion_duration,
-            )),
+            ),
             tag("]"),
         ),
         |(lower_value, _, value, _, upper_value)| JsonNewMetric {
@@ -90,14 +88,15 @@ fn parse_criterion_metric(input: &str) -> IResult<&str, JsonNewMetric> {
             lower_value: Some(lower_value),
             upper_value: Some(upper_value),
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
-    map(
-        tuple((parse_f64, space1, parse_units)),
-        |(duration, _, units)| latency_as_nanos(duration, units),
-    )(input)
+    map((parse_f64, space1, parse_units), |(duration, _, units)| {
+        latency_as_nanos(duration, units)
+    })
+    .parse(input)
 }
 
 #[cfg(test)]

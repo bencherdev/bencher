@@ -1,10 +1,9 @@
 use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
-    IResult,
+    IResult, Parser as _,
     character::complete::{anychar, space0, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
-    sequence::tuple,
 };
 use ordered_float::OrderedFloat;
 
@@ -117,7 +116,8 @@ fn parse_catch2_prelude_line(input: &str) -> IResult<&str, String> {
     map_res(
         many_till(anychar, parse_catch2_prelude),
         |(name_chars, _)| -> Result<String, NomError> { Ok(name_chars.into_iter().collect()) },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_catch2_benchmark_time(input: &str) -> IResult<&str, (Option<String>, OrderedFloat<f64>)> {
@@ -128,7 +128,8 @@ fn parse_catch2_benchmark_time(input: &str) -> IResult<&str, (Option<String>, Or
             let name = (!name.is_empty()).then_some(name);
             Ok((name, time))
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 #[expect(dead_code)]
@@ -141,7 +142,7 @@ struct Prelude {
 
 fn parse_catch2_prelude(input: &str) -> IResult<&str, Prelude> {
     map(
-        tuple((
+        (
             space1,
             parse_u64,
             space1,
@@ -152,19 +153,20 @@ fn parse_catch2_prelude(input: &str) -> IResult<&str, Prelude> {
             parse_units,
             space0,
             eof,
-        )),
+        ),
         |(_, samples, _, iterations, _, estimated, _, estimated_units, _, _)| Prelude {
             samples,
             iterations,
             estimated,
             estimated_units,
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_catch2_time(input: &str) -> IResult<&str, OrderedFloat<f64>> {
     map(
-        tuple((
+        (
             space1,
             parse_catch2_duration,
             space1,
@@ -173,18 +175,20 @@ fn parse_catch2_time(input: &str) -> IResult<&str, OrderedFloat<f64>> {
             parse_catch2_duration,
             space0,
             eof,
-        )),
+        ),
         |(_, column_one, _, _, _, _, _, _)| column_one,
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_catch2_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
     map_res(
-        tuple((parse_number_as_f64, space1, parse_units)),
+        (parse_number_as_f64, space1, parse_units),
         |(duration, _, units)| -> Result<OrderedFloat<f64>, NomError> {
             Ok(latency_as_nanos(duration, units))
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]

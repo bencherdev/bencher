@@ -1,10 +1,10 @@
 use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
-    IResult,
+    IResult, Parser as _,
     bytes::complete::{tag, take_until1},
     character::complete::space1,
     combinator::{eof, map, map_res},
-    sequence::{delimited, tuple},
+    sequence::delimited,
 };
 
 use crate::{
@@ -40,7 +40,7 @@ impl Adaptable for AdapterRustBench {
 
 fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
     map_res(
-        tuple((
+        (
             tag("test"),
             space1,
             take_until1(" "),
@@ -49,19 +49,19 @@ fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
             space1,
             parse_cargo_bench,
             eof,
-        )),
+        ),
         |(_, _, name, _, _, _, json_metric, _)| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
             let benchmark_name = parse_benchmark_name(name)?;
             Ok((benchmark_name, json_metric))
         },
-    )(input)
+    ).parse(input)
 }
 
 // cargo bench
 // TODO cargo test -- -Z unstable-options --format json
 fn parse_cargo_bench(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
-        tuple((
+        (
             tag("bench:"),
             space1,
             parse_number_as_f64,
@@ -71,10 +71,10 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonNewMetric> {
             space1,
             delimited(
                 tag("("),
-                tuple((tag("+/-"), space1, parse_number_as_f64)),
+                (tag("+/-"), space1, parse_number_as_f64),
                 tag(")"),
             ),
-        )),
+        ),
         |(_, _, duration, _, units, _, _, (_, _, variance))| {
             let value = latency_as_nanos(duration, units);
             let variance = Some(latency_as_nanos(variance, units));
@@ -84,7 +84,8 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonNewMetric> {
                 upper_value: variance.map(|v| value + v),
             }
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]

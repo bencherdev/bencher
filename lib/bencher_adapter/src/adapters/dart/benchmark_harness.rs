@@ -1,10 +1,9 @@
 use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
-    IResult,
+    IResult, Parser as _,
     bytes::complete::{tag, take_until},
     character::complete::{space0, space1},
     combinator::{eof, map_res, opt},
-    sequence::tuple,
 };
 
 use crate::{
@@ -40,7 +39,7 @@ impl Adaptable for AdapterDartBenchmarkHarness {
 /// `PrintEmitter`: `<name>(RunTime): <microseconds> us.`
 fn parse_dart_line(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
     map_res(
-        tuple((
+        (
             take_until("(RunTime):"),
             tag("(RunTime):"),
             space0,
@@ -49,7 +48,7 @@ fn parse_dart_line(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)>
             tag("us."),
             opt(space0),
             eof,
-        )),
+        ),
         |(name_raw, _, _, micros, _, _, _, _): (&str, _, _, f64, _, _, _, _)| -> Result<
             (BenchmarkName, JsonNewMetric),
             NomError,
@@ -65,7 +64,8 @@ fn parse_dart_line(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)>
                 },
             ))
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]

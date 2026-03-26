@@ -1,12 +1,11 @@
 use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
-    IResult,
+    IResult, Parser as _,
     branch::alt,
     bytes::complete::{tag, take_till1},
     character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
-    sequence::tuple,
 };
 
 use crate::{
@@ -42,7 +41,7 @@ impl Adaptable for AdapterGoBench {
 
 fn parse_go(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
     map_res(
-        tuple((
+        (
             take_till1(|c| c == ' ' || c == '\t'),
             space1,
             parse_u64,
@@ -50,22 +49,20 @@ fn parse_go(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
             parse_go_bench,
             alt((
                 map(eof, |_| ()),
-                map(
-                    tuple((space1, parse_f64, space1, many_till(anychar, eof))),
-                    |_| (),
-                ),
+                map((space1, parse_f64, space1, many_till(anychar, eof)), |_| ()),
             )),
-        )),
+        ),
         |(name, _, _iter, _, json_metric, ())| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
             let benchmark_name = parse_benchmark_name(name)?;
             Ok((benchmark_name, json_metric))
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_go_bench(input: &str) -> IResult<&str, JsonNewMetric> {
     map_res(
-        tuple((parse_f64, space1, parse_units, tag("/op"))),
+        (parse_f64, space1, parse_units, tag("/op")),
         |(duration, _, units, _)| -> Result<JsonNewMetric, NomError> {
             let value = latency_as_nanos(duration, units);
             Ok(JsonNewMetric {
@@ -74,7 +71,8 @@ fn parse_go_bench(input: &str) -> IResult<&str, JsonNewMetric> {
                 upper_value: None,
             })
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]

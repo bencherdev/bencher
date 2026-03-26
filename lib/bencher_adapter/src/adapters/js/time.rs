@@ -1,12 +1,11 @@
 use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 
 use nom::{
-    IResult,
+    IResult, Parser as _,
     bytes::complete::tag,
     character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
-    sequence::tuple,
 };
 
 use crate::{
@@ -49,16 +48,17 @@ fn parse_time(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
             let benchmark_name = parse_benchmark_name_chars(&name_chars)?;
             Ok((benchmark_name, json_metric))
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_time_time(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
-        tuple((
-            tuple((tag(":"), space1)),
+        (
+            (tag(":"), space1),
             parse_u64,
             parse_units,
-            tuple((
+            (
                 space1,
                 tag("-"),
                 space1,
@@ -66,8 +66,8 @@ fn parse_time_time(input: &str) -> IResult<&str, JsonNewMetric> {
                 space1,
                 tag("ended"),
                 eof,
-            )),
-        )),
+            ),
+        ),
         |(_, duration, units, _)| {
             let value = latency_as_nanos(duration, units);
             JsonNewMetric {
@@ -76,7 +76,8 @@ fn parse_time_time(input: &str) -> IResult<&str, JsonNewMetric> {
                 upper_value: None,
             }
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]
