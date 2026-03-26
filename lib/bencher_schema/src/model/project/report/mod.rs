@@ -202,7 +202,7 @@ impl QueryReport {
         .await?;
 
         let json_settings = json_report.settings.take().unwrap_or_default();
-        let adapter = json_settings.adapter.unwrap_or_default();
+        let adapter = json_settings.adapter.unwrap_or_default().normalize();
 
         // Validate job before inserting report so that report + job creation is atomic:
         // if OCI resolution fails, neither the report nor the job is created.
@@ -402,6 +402,7 @@ impl QueryReport {
         let job = get_report_job(conn, id)?;
 
         let project = query_project.into_json(conn)?;
+        let adapter = adapter.normalize();
         Ok(JsonReport {
             uuid,
             user,
