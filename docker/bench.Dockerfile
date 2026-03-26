@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.91.1-bookworm AS builder
+FROM rust:1.91.1-bookworm@sha256:8fed34f697cc63b2c9bb92233b4c078667786834d94dd51880cd0184285eefcf AS builder
 
 RUN apt-get update \
     && apt-get install -y \
@@ -86,14 +86,11 @@ RUN cargo init runner
 COPY services/api/openapi.json /usr/src/bencher/services/api/openapi.json
 
 WORKDIR /usr/src/bencher
-RUN cargo bench --package bencher_adapter --no-run
+RUN cargo bench --package bencher_adapter --no-run --message-format=json \
+    | jq -r 'select(.executable != null) | .executable' \
+    | xargs -I {} cp {} /usr/local/bin/bench-adapter
 
-# Extract bench binary from target/release/deps/
-RUN mkdir -p /usr/local/bin && \
-    find target/release/deps -name 'adapter-*' -not -name '*.d' -type f -executable \
-        -exec cp {} /usr/local/bin/bench-adapter \;
-
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:b4aa902587c2e61ce789849cb54c332b0400fe27b1ee33af4669e1f7e7c3e22f
 
 COPY --from=builder /usr/local/bin/bench-adapter /usr/local/bin/bench-adapter
 
