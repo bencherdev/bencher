@@ -131,6 +131,6 @@ jobs:
           --testbed intel-v1 \
           --spec intel-v1 \
           --adapter rust_criterion \
-          --err \
+          --error-on-alert \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
           --ci-number "$PR_NUMBER"

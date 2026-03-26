@@ -4,7 +4,9 @@ FROM rust:1.91.1-bookworm@sha256:8fed34f697cc63b2c9bb92233b4c078667786834d94dd51
 RUN apt-get update \
     && apt-get install -y \
     # Linker
-    clang
+    clang \
+    # JSON parsing
+    jq
 
 WORKDIR /tmp/mold
 ARG MOLD_VERSION
