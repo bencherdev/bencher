@@ -176,6 +176,7 @@ jobs:
     uses: ./.github/workflows/track_benchmarks.yml
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_USER_EMAIL: ${{ secrets.BENCHER_USER_EMAIL }}
 
   cargo_udeps:
     name: Cargo Unused Deps

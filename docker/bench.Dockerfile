@@ -23,22 +23,22 @@ RUN cargo init --lib api_run
 RUN cargo init --lib api_server
 RUN cargo init --lib api_users
 RUN cargo init --lib bencher_api_tests
+RUN cargo init --lib bencher_boundary
 RUN cargo init --lib bencher_client
 RUN cargo init --lib bencher_comment
 RUN cargo init --lib bencher_config
 RUN cargo init --lib bencher_endpoint
+RUN cargo init --lib bencher_logger
 RUN cargo init --lib bencher_noise
 RUN cargo init --lib bencher_parser
 RUN cargo init --lib bencher_plot
-COPY lib/bencher_adapter bencher_adapter
-RUN cargo init --lib bencher_boundary
-COPY lib/bencher_context bencher_context
-COPY lib/bencher_json bencher_json
-RUN cargo init --lib bencher_logger
 RUN cargo init --lib bencher_rank
 RUN cargo init --lib bencher_rbac
 RUN cargo init --lib bencher_schema
 RUN cargo init --lib bencher_token
+COPY lib/bencher_adapter bencher_adapter
+COPY lib/bencher_context bencher_context
+COPY lib/bencher_json bencher_json
 COPY lib/bencher_valid bencher_valid
 
 WORKDIR /usr/src/bencher/plus

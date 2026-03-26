@@ -5,6 +5,8 @@ on:
     secrets:
       BENCHER_API_TOKEN:
         required: true
+      BENCHER_USER_EMAIL:
+        required: true
 
 jobs:
   track_benchmarks:
@@ -25,6 +27,15 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: noise_results_windows-2022
+      - name: Download Bench Image
+        uses: actions/download-artifact@v8
+        with:
+          name: bench_image.tar
+      - name: Load and push image
+        run: |
+          docker load -i bench_image.tar
+          echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
+          docker push registry.bencher.dev/bencher:${{ github.sha }}
       - uses: bencherdev/bencher@main
       - name: Track Noise (ubuntu)
         run: |
