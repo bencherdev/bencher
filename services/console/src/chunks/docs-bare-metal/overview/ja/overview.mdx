@@ -1,0 +1,69 @@
+## What are Bare Metal Runners?
+
+➕ Bencher Plus
+
+Bare Metal Runners are a pull-based agent architecture for running benchmarks on dedicated hardware.
+Instead of executing benchmarks directly on the current machine,
+benchmarks are packaged as [OCI container images][oci image],
+submitted to a job queue, and executed on a dedicated Bare Metal Runner.
+
+This approach ensures that your benchmarks run in a consistent, isolated environment
+free from noisy neighbors and shared resource contention.
+Bare Metal Runners are ideal for hardware-specific benchmarks
+where reproducibility and stability are critical.
+
+## Why Use Dedicated Hardware?
+
+Running benchmarks on shared or virtualized infrastructure introduces variability.
+Dedicated hardware eliminates these sources of noise:
+
+- **Consistent results**: No other workloads compete for CPU, memory, or I/O.
+- **No noisy neighbors**: The runner has exclusive access to the underlying hardware.
+- **Hardware-specific benchmarks**: Target specific CPU architectures, cache sizes, or GPU configurations.
+
+## Core Concepts
+
+### Runner
+
+A Runner is an agent that polls the Bencher API for pending jobs,
+claims them, and executes the benchmark container on its dedicated hardware.
+Each Runner is associated with one or more [Specs][spec page] that describe the hardware it provides.
+
+### Spec
+
+A Spec is a hardware specification that describes the resources available on a Runner.
+It includes the CPU architecture, number of CPUs, memory size, disk size, and whether the environment has network access.
+See the [Spec page][spec page] for more details.
+
+### Job
+
+A Job is a benchmark execution unit.
+When you run <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> with the `--image` and `--spec` options,
+a Job is created and placed in the queue.
+A Runner with a matching Spec claims the Job, executes the benchmark container, and reports the results.
+
+### Image
+
+An Image is an [OCI container image][oci image] that contains your benchmark code and its dependencies.
+When a Runner executes a Job, it pulls the Image and runs it in an isolated container environment.
+See the [Image page][image page] for how to create an Image for your own project.
+
+## Bare Metal vs Local Execution
+
+With local execution, <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> executes benchmarks directly on the current machine
+and reports the results to the Bencher API.
+This is the default behavior and works well for CI environments and local development.
+
+With Bare Metal execution, <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> packages the benchmark command,
+submits it as a Job to the Bencher API, and waits for a remote Runner to execute it on dedicated hardware.
+The results are then reported back through the same pipeline.
+To use Bare Metal execution, add the `--image` and `--spec` options to your `bencher run` command.
+
+> 🐰 For more background, see [Benchmarking Overview][benchmarking overview], [Continuous Benchmarking][continuous benchmarking], and [bencher run][bencher run].
+
+[oci image]: https://opencontainers.org/
+[spec page]: /docs/bare-metal/spec/
+[image page]: /docs/bare-metal/image/
+[benchmarking overview]: /docs/explanation/benchmarking/
+[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
+[bencher run]: /docs/explanation/bencher-run/

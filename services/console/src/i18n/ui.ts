@@ -147,6 +147,29 @@ export const explanation = (lang: Language) => {
 	}
 };
 
+export const bareMetal = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Bare Metal";
+		case Language.de:
+			return "Bare Metal";
+		case Language.es:
+			return "Bare Metal";
+		case Language.fr:
+			return "Bare Metal";
+		case Language.ja:
+			return "ベアメタル";
+		case Language.ko:
+			return "베어 메탈";
+		case Language.pt:
+			return "Bare Metal";
+		case Language.ru:
+			return "Bare Metal";
+		case Language.zh:
+			return "裸金属";
+	}
+};
+
 export const reference = (lang: Language) => {
 	switch (lang) {
 		case Language.en:

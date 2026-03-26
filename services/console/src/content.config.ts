@@ -72,6 +72,7 @@ export const collections = {
 	docs_tutorial: docs("tutorial"),
 	docs_how_to: docs("how-to"),
 	docs_explanation: docs("explanation"),
+	docs_bare_metal: docs("bare-metal"),
 	docs_reference: docs("reference"),
 	// api
 	api_run: api("run"),
