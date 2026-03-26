@@ -1,3 +1,5 @@
+#![expect(clippy::multiple_inherent_impl, reason = "codegen")]
+
 mod codegen {
     #![expect(
         unused_qualifications,
