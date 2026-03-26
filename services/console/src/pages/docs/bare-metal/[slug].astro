@@ -1,0 +1,32 @@
+---
+export const prerender = true;
+
+import { render } from "astro:content";
+
+import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
+import { getEnPaths } from "../../../i18n/utils";
+import Collection from "../../../util/collection";
+
+const collection = Collection.docs_bare_metal;
+
+export async function getStaticPaths() {
+	const collection = Collection.docs_bare_metal;
+	return await getEnPaths(collection);
+}
+
+const { slug } = Astro.params;
+const page = Astro.props;
+const { Content } = await render(page);
+---
+
+<DocsLayout
+  title={page.data.title}
+  description={page.data.description}
+  heading={page.data.heading}
+  published={page.data.published}
+  modified={page.data.modified}
+  collection={collection}
+  slug={slug}
+>
+  <Content />
+</DocsLayout>

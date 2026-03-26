@@ -1,0 +1,114 @@
+All Bare Metal features are Bencher Plus features.
+
+## What is a Job?
+
+A Job is a unit of benchmark execution on a Bare Metal Runner.
+When you run `bencher run --image ...`, the API server creates a Report and a corresponding Job.
+The Job contains the OCI image reference, hardware Spec, execution configuration, and timeout.
+A Runner then claims and executes the Job, and the results are processed and stored as metrics.
+
+## Job States
+
+A Job progresses through a state machine with the following states:
+
+| State | Value | Description |
+|---|---|---|
+| **Pending** | 0 | Job created, waiting to be claimed by a Runner |
+| **Claimed** | 1 | A Runner has claimed the Job |
+| **Running** | 2 | The benchmark is executing |
+| **Completed** | 3 | The benchmark finished successfully |
+| **Processed** | 4 | Results have been parsed and stored as metrics |
+| **Failed** | 5 | The Job failed (timeout, error, etc.) |
+| **Canceled** | 6 | The Job was canceled by the user |
+
+### State Machine
+
+```
+Pending → Claimed → Running → Completed → Processed
+   ↓         ↓         ↓
+   └─────────┴─────────┴──→ Failed
+   └─────────┴─────────┴──→ Canceled
+```
+
+A Job can transition to Failed or Canceled from any active state (Pending, Claimed, or Running).
+
+## Submission Flow
+
+When you run a command like:
+
+```
+bencher run --image my-image:latest --spec intel-v1 "bencher mock"
+```
+
+The CLI sends a request to the API server, which:
+1. Creates a Report for the run
+2. Resolves the OCI image reference to an immutable digest
+3. Creates a Job with the resolved Spec, image digest, and execution configuration
+4. The Job enters the **Pending** state
+
+The CLI then polls the Job status until it reaches a terminal state (Processed, Failed, or Canceled).
+
+## Claiming and Scheduling
+
+Runners claim Jobs via a WebSocket connection to the API server.
+When a Runner sends a `Ready` message, the server looks for the highest-priority eligible Pending Job
+that matches one of the Runner's associated Specs.
+
+Jobs are scheduled using priority tiers with concurrency limits:
+
+| Tier | Priority | Concurrency |
+|------|----------|-------------|
+| Plus | 200 | Unlimited |
+| Free | 100 | 1 per organization |
+| Unclaimed | 0 | 1 per source IP |
+
+Within the same priority tier, Jobs are ordered by creation time (oldest first).
+
+## Execution
+
+Once a Runner claims a Job, it:
+1. Pulls the OCI image from the registry using a short-lived, project-scoped token
+2. Creates a sandbox environment (Firecracker microVM) or a chroot, based on the Spec
+3. Executes the benchmark command with the configured entrypoint, cmd, and environment variables
+4. Captures stdout, stderr, and any specified output file paths
+5. Reports the results back to the server
+
+If the Spec includes multiple iterations (`--iter`), the Runner executes the benchmark
+the specified number of times and collects results from each iteration.
+
+## Result Processing
+
+When a Job completes successfully, the server:
+1. Parses the benchmark output using the configured [adapter][adapters]
+2. Extracts Benchmarks and their Metrics
+3. Stores the Metrics with the Report
+4. Checks against any configured [Thresholds][thresholds] and generates Alerts for regressions
+5. Transitions the Job to **Processed**
+
+[adapters]: /docs/explanation/adapters/
+[thresholds]: /docs/explanation/thresholds/
+
+## Timeouts and Heartbeats
+
+Three mechanisms prevent Jobs from running indefinitely:
+
+1. **Heartbeat timeout** (default 90 seconds): The Runner sends periodic heartbeat messages over the WebSocket connection. If the server receives no heartbeat within the configured timeout, the Job is marked as **Failed** and the WebSocket connection is closed.
+
+2. **Hard job timeout**: Each Job has a configured execution timeout. The server adds a grace period (default 60 seconds) to the Job's timeout. If the total time (`job_timeout + grace_period`) is exceeded, the server cancels the Job.
+
+3. **Disconnect timeout**: If the WebSocket connection drops unexpectedly, a background task monitors the orphaned Job and marks it as **Failed** after the heartbeat timeout expires.
+
+## No Automatic Retry
+
+Jobs are not automatically retried when they fail.
+This is intentional: automatic retries can mask intermittent failures
+and produce misleading benchmark results.
+
+If a Job fails, investigate the cause using the Job output (stdout, stderr, error message)
+visible in `bencher run` output or the Bencher Console.
+Once the issue is resolved, resubmit the benchmark run manually.
+
+## Viewing Job Status
+
+The `bencher run` command polls and displays the Job status as it progresses through the state machine.
+Jobs are also visible in the Bencher Console under the Report detail view.
