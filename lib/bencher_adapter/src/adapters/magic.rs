@@ -1,6 +1,6 @@
 use crate::{
-    Adaptable, AdapterCSharp, AdapterCpp, AdapterGo, AdapterJava, AdapterJs, AdapterJson,
-    AdapterPython, AdapterRuby, AdapterRust, AdapterShell, Settings,
+    Adaptable, AdapterCSharp, AdapterCpp, AdapterDart, AdapterGo, AdapterJava, AdapterJs,
+    AdapterJson, AdapterPython, AdapterRuby, AdapterRust, AdapterShell, Settings,
     results::adapter_results::AdapterResults,
 };
 
@@ -11,6 +11,7 @@ impl Adaptable for AdapterMagic {
         AdapterJson::parse(input, settings)
             .or_else(|| AdapterCSharp::parse(input, settings))
             .or_else(|| AdapterCpp::parse(input, settings))
+            .or_else(|| AdapterDart::parse(input, settings))
             .or_else(|| AdapterGo::parse(input, settings))
             .or_else(|| AdapterJava::parse(input, settings))
             .or_else(|| AdapterJs::parse(input, settings))
@@ -27,6 +28,7 @@ mod test_magic {
     use crate::adapters::{
         c_sharp::{AdapterCSharp, dot_net::test_c_sharp_dot_net},
         cpp::{catch2::test_cpp_catch2, google::test_cpp_google},
+        dart::benchmark_harness::test_dart_benchmark_harness,
         go::bench::test_go_bench,
         java::jmh::test_java_jmh,
         js::{benchmark::test_js_benchmark, time::test_js_time},
@@ -69,6 +71,13 @@ mod test_magic {
     fn adapter_magic_cpp_catch2() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/cpp/catch2/four.txt");
         test_cpp_catch2::validate_adapter_cpp_catch2(&results);
+    }
+
+    #[test]
+    fn adapter_magic_dart_benchmark_harness() {
+        let results =
+            convert_file_path::<AdapterMagic>("./tool_output/dart/benchmark_harness/two.txt");
+        test_dart_benchmark_harness::validate_adapter_dart_benchmark_harness(&results);
     }
 
     #[test]

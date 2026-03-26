@@ -44,6 +44,11 @@ const BencherRunInner = (props) => {
 					{props.cpp_catch2_bash}
 				</Show>
 			</Match>
+			<Match when={adapter() === Adapter.DartBenchmarkHarness}>
+				<Show when={bash()} fallback={props.dart_benchmark_harness_powershell}>
+					{props.dart_benchmark_harness_bash}
+				</Show>
+			</Match>
 			<Match when={adapter() === Adapter.GoBench}>
 				<Show when={bash()} fallback={props.go_bench_powershell}>
 					{props.go_bench_bash}

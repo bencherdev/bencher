@@ -22,6 +22,10 @@ export const adapterName = (adapter: Adapter): string => {
 			return "Google Benchmark";
 		case Adapter.CppCatch2:
 			return "Catch2";
+		case Adapter.Dart:
+			return "Dart";
+		case Adapter.DartBenchmarkHarness:
+			return "benchmark_harness";
 		case Adapter.Go:
 			return "Go";
 		case Adapter.GoBench:
@@ -71,6 +75,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} "make benchmarks --benchmark_format=json"`;
 		case Adapter.CppCatch2:
 			return `bencher run${host} "make benchmarks"`;
+		case Adapter.DartBenchmarkHarness:
+			return `bencher run${host} --adapter dart_benchmark_harness "dart run benchmark/benchmark.dart"`;
 		case Adapter.GoBench:
 			return `bencher run${host} "go test -bench"`;
 		case Adapter.JavaJmh:

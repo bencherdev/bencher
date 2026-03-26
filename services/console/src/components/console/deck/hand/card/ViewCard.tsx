@@ -433,6 +433,8 @@ const AdapterCard = (props: Props) => {
 						return "-c-catch2";
 					case Adapter.CppGoogle:
 						return "-c-google";
+					case Adapter.DartBenchmarkHarness:
+						return "-dart-benchmark_harness";
 					case Adapter.GoBench:
 						return "-go-bench";
 					case Adapter.JavaJmh:
@@ -478,6 +480,8 @@ const AdapterCard = (props: Props) => {
 							return "C++ Catch2";
 						case Adapter.CppGoogle:
 							return "C++ Google Benchmark";
+						case Adapter.DartBenchmarkHarness:
+							return "Dart benchmark_harness";
 						case Adapter.GoBench:
 							return "Go test -bench";
 						case Adapter.JavaJmh:

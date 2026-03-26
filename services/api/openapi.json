@@ -10689,7 +10689,9 @@
           "ruby",
           "ruby_benchmark",
           "shell",
-          "shell_hyperfine"
+          "shell_hyperfine",
+          "dart",
+          "dart_benchmark_harness"
         ]
       },
       "AlertStatus": {

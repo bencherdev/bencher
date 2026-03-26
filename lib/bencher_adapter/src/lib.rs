@@ -8,6 +8,7 @@ use criterion as _;
 use adapters::{
     c_sharp::{AdapterCSharp, dot_net::AdapterCSharpDotNet},
     cpp::{AdapterCpp, catch2::AdapterCppCatch2, google::AdapterCppGoogle},
+    dart::{AdapterDart, benchmark_harness::AdapterDartBenchmarkHarness},
     go::{AdapterGo, bench::AdapterGoBench},
     java::{AdapterJava, jmh::AdapterJavaJmh},
     js::{AdapterJs, benchmark::AdapterJsBenchmark, time::AdapterJsTime},
@@ -44,6 +45,8 @@ impl Adaptable for Adapter {
             Adapter::Cpp => AdapterCpp::parse(input, settings),
             Adapter::CppCatch2 => AdapterCppCatch2::parse(input, settings),
             Adapter::CppGoogle => AdapterCppGoogle::parse(input, settings),
+            Adapter::Dart => AdapterDart::parse(input, settings),
+            Adapter::DartBenchmarkHarness => AdapterDartBenchmarkHarness::parse(input, settings),
             Adapter::Go => AdapterGo::parse(input, settings),
             Adapter::GoBench => AdapterGoBench::parse(input, settings),
             Adapter::Java => AdapterJava::parse(input, settings),

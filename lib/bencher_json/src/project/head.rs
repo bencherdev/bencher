@@ -52,12 +52,12 @@ mod version_number {
     impl VersionNumber {
         #[must_use]
         pub fn increment(self) -> Self {
-            Self(self.0.checked_add(1).unwrap_or_default())
+            Self(self.0.saturating_add(1))
         }
 
         #[must_use]
         pub fn decrement(self) -> Self {
-            Self(self.0.checked_sub(1).unwrap_or_default())
+            Self(self.0.saturating_sub(1))
         }
     }
 

@@ -178,6 +178,11 @@ pub enum CliReportAdapter {
     CppGoogle,
     // TODO remove in due time
     #[clap(hide = true)]
+    Dart,
+    /// 🎯 Dart `benchmark_harness`
+    DartBenchmarkHarness,
+    // TODO remove in due time
+    #[clap(hide = true)]
     Go,
     /// 🕳 Go Bench
     GoBench,

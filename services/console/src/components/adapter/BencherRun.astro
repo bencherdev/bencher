@@ -70,6 +70,16 @@ const { isConsole } = Astro.props;
         code={adapterCommand(isConsole, Adapter.CppCatch2)}
     />
     <Code
+        slot="dart_benchmark_harness_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.DartBenchmarkHarness)}
+    />
+    <Code
+        slot="dart_benchmark_harness_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.DartBenchmarkHarness)}
+    />
+    <Code
         slot="go_bench_bash"
         lang="bash"
         code={adapterCommand(isConsole, Adapter.GoBench)}
