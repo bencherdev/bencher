@@ -28,10 +28,13 @@ jobs:
         with:
           name: noise_results_windows-2022
       - name: Download Bench Image
+        id: download_bench
+        continue-on-error: true
         uses: actions/download-artifact@v8
         with:
           name: bench_image.tar
       - name: Load and push image
+        if: steps.download_bench.outcome == 'success'
         run: |
           docker load -i bench_image.tar
           echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
@@ -89,6 +92,7 @@ jobs:
           --ci-only-on-alert \
           --file ./noise_results_windows-2022.json
       - name: Track benchmarks with Bencher
+        if: steps.download_bench.outcome == 'success'
         run: |
           bencher run \
           --project bencher \

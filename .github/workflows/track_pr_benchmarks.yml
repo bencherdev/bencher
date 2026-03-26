@@ -47,11 +47,14 @@ jobs:
             core.exportVariable('PR_BASE_SHA', prEvent.pull_request.base.sha);
             core.exportVariable('PR_NUMBER', prEvent.number);
       - name: Download Bench Image
+        id: download_bench
+        continue-on-error: true
         uses: dawidd6/action-download-artifact@v6
         with:
           name: bench_image.tar
           run_id: ${{ github.event.workflow_run.id }}
       - name: Load and push image
+        if: steps.download_bench.outcome == 'success'
         run: |
           docker load -i bench_image.tar
           echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
@@ -115,6 +118,7 @@ jobs:
           --ci-number "$PR_NUMBER" \
           --file ./noise_results_windows-2022.json
       - name: Track Benchmarks with Bencher
+        if: steps.download_bench.outcome == 'success'
         env:
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
         run: |
