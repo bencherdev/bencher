@@ -207,6 +207,8 @@ export interface JsonBenchmark {
 	created: string;
 	modified: string;
 	archived?: string;
+	/** Additional exact-match strings (the primary [`Self::name`] is always a matcher). */
+	aliases?: BenchmarkName[];
 }
 
 export interface JsonMetric {

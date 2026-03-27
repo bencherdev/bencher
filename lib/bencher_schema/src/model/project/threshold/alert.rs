@@ -173,7 +173,7 @@ impl QueryAlert {
             uuid,
             report: report_uuid,
             iteration,
-            benchmark: query_benchmark.into_json_for_project(project),
+            benchmark: query_benchmark.into_json_for_project(conn, project)?,
             metric: query_metric.into_json(),
             threshold,
             boundary: query_boundary.into_json(),

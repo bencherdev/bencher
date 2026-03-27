@@ -1,7 +1,9 @@
+use std::collections::{HashMap, HashSet};
+
 #[cfg(feature = "plus")]
 use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
 use bencher_json::{
-    DateTime, JsonNewReport, JsonReport, ReportUuid,
+    BenchmarkName, DateTime, JsonNewReport, JsonReport, ReportUuid,
     project::report::{
         Adapter, Iteration, JsonReportAlerts, JsonReportMeasure, JsonReportResult,
         JsonReportResults, JsonReportSettings,
@@ -34,7 +36,7 @@ use crate::{
     model::{
         project::{
             ProjectId, QueryProject,
-            benchmark::QueryBenchmark,
+            benchmark::{BenchmarkId, QueryBenchmark, aliases_by_benchmark_id},
             branch::version::{InsertVersion, QueryVersion},
             measure::QueryMeasure,
             testbed::{QueryTestbed, ResolvedTestbed, TestbedId},
@@ -491,7 +493,7 @@ fn get_report_results(
     project: &QueryProject,
     report_id: ReportId,
 ) -> Result<JsonReportResults, HttpError> {
-    schema::report_benchmark::table
+    let results = schema::report_benchmark::table
     .filter(schema::report_benchmark::report_id.eq(report_id))
     .inner_join(schema::benchmark::table)
     .inner_join(view::metric_boundary::table
@@ -536,14 +538,21 @@ fn get_report_results(
         ).nullable(),
     ))
     .load::<ResultsQuery>(conn)
-    .map(|results| into_report_results_json(log, project, results))
-    .map_err(resource_not_found_err!(ReportBenchmark, project))
+    .map_err(resource_not_found_err!(ReportBenchmark, project))?;
+
+    let id_set: HashSet<BenchmarkId> = results.iter().map(|(_, b, _, _, _)| b.id).collect();
+    let ids: Vec<BenchmarkId> = id_set.into_iter().collect();
+    let alias_map = aliases_by_benchmark_id(conn, project.id, &ids)
+        .map_err(resource_not_found_err!(ReportBenchmark, project))?;
+
+    Ok(into_report_results_json(log, project, results, &alias_map))
 }
 
 fn into_report_results_json(
     log: &Logger,
     project: &QueryProject,
     results: Vec<ResultsQuery>,
+    alias_map: &HashMap<BenchmarkId, Vec<BenchmarkName>>,
 ) -> JsonReportResults {
     let mut report_results = Vec::new();
     let mut report_iteration = Vec::new();
@@ -598,9 +607,13 @@ fn into_report_results_json(
         if let Some(result) = report_result.as_mut() {
             result.measures.push(report_measure);
         } else {
+            let aliases = alias_map
+                .get(&query_benchmark.id)
+                .cloned()
+                .unwrap_or_default();
             report_result = Some(JsonReportResult {
                 iteration,
-                benchmark: query_benchmark.into_json_for_project(project),
+                benchmark: query_benchmark.into_json_for_project_with_aliases(project, aliases),
                 measures: vec![report_measure],
             });
         }

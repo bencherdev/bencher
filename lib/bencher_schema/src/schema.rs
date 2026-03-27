@@ -25,6 +25,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    benchmark_alias (id) {
+        id -> Integer,
+        project_id -> Integer,
+        benchmark_id -> Integer,
+        alias -> Text,
+    }
+}
+
+diesel::table! {
     boundary (id) {
         id -> Integer,
         uuid -> Text,
@@ -414,6 +423,8 @@ diesel::table! {
 
 diesel::joinable!(alert -> boundary (boundary_id));
 diesel::joinable!(benchmark -> project (project_id));
+diesel::joinable!(benchmark_alias -> benchmark (benchmark_id));
+diesel::joinable!(benchmark_alias -> project (project_id));
 diesel::joinable!(boundary -> metric (metric_id));
 diesel::joinable!(boundary -> model (model_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
@@ -465,6 +476,7 @@ diesel::joinable!(version -> project (project_id));
 diesel::allow_tables_to_appear_in_same_query!(
     alert,
     benchmark,
+    benchmark_alias,
     boundary,
     branch,
     head,

@@ -210,7 +210,7 @@ fn metric_query_json(
 ) -> Result<JsonOneMetric, HttpError> {
     let branch = branch.into_json_for_head(conn, project, &head, Some(version))?;
     let testbed = testbed.into_json_for_spec(conn, project, spec_id)?;
-    let benchmark = benchmark.into_json_for_project(project);
+    let benchmark = benchmark.into_json_for_project(conn, project)?;
     let measure = measure.into_json_for_project(project);
 
     let (threshold, alert) = threshold_model_alert(project, tma);

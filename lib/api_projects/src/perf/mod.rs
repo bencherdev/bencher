@@ -548,7 +548,7 @@ fn new_perf_metrics(
     Ok(JsonPerfMetrics {
         branch: branch.into_json_for_head(conn, project, &head, None)?,
         testbed: testbed.into_json_for_spec(conn, project, spec_id)?,
-        benchmark: benchmark.into_json_for_project(project),
+        benchmark: benchmark.into_json_for_project(conn, project)?,
         measure: measure.into_json_for_project(project),
         metrics: vec![metric],
     })

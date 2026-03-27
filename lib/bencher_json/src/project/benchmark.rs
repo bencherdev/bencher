@@ -29,6 +29,9 @@ pub struct JsonNewBenchmark {
     /// If the provided or generated slug is already in use, a unique slug will be generated.
     /// Maximum length is 64 characters.
     pub slug: Option<BenchmarkSlug>,
+    /// Additional exact-match strings for this benchmark within the project.
+    #[serde(default)]
+    pub aliases: Option<Vec<BenchmarkName>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,6 +51,9 @@ pub struct JsonBenchmark {
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
+    /// Additional exact-match strings (the primary [`Self::name`] is always a matcher).
+    #[serde(default)]
+    pub aliases: Vec<BenchmarkName>,
 }
 
 impl fmt::Display for JsonBenchmark {
@@ -67,4 +73,6 @@ pub struct JsonUpdateBenchmark {
     pub slug: Option<BenchmarkSlug>,
     /// Set whether the benchmark is archived.
     pub archived: Option<bool>,
+    /// When set, replaces all additional aliases for this benchmark (full replace).
+    pub aliases: Option<Vec<BenchmarkName>>,
 }

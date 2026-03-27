@@ -1,24 +1,36 @@
+mod alias;
+
+use std::cell::RefCell;
+
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BenchmarkSlug, BenchmarkUuid, DateTime, JsonBenchmark, NameId,
     project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark},
 };
-use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    BoolExpressionMethods as _, Connection as _, ExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, dsl::exists,
+};
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
-    error::{BencherResource, assert_parentage, resource_conflict_err},
+    error::{BencherResource, assert_parentage, resource_conflict_err, resource_not_found_err},
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
-        name_id::{fn_eq_name_id, fn_from_name_id},
+        name_id::fn_eq_name_id,
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
         sql::last_insert_rowid,
     },
     schema::{self, benchmark as benchmark_table},
     write_conn,
+};
+
+pub use alias::{
+    aliases_by_benchmark_id, list_aliases_for_benchmark, replace_benchmark_aliases,
+    validate_benchmark_aliases_uniqueness,
 };
 
 crate::macros::typed_id::typed_id!(BenchmarkId);
@@ -50,12 +62,38 @@ impl QueryBenchmark {
     );
 
     fn_eq_name_id!(ResourceName, benchmark, BenchmarkNameId);
-    fn_from_name_id!(benchmark, Benchmark, BenchmarkNameId);
 
     fn_get!(benchmark, BenchmarkId);
     fn_get_id!(benchmark, BenchmarkId, BenchmarkUuid);
     fn_get_uuid!(benchmark, BenchmarkId, BenchmarkUuid);
     fn_from_uuid!(project_id, ProjectId, benchmark, BenchmarkUuid, Benchmark);
+
+    pub fn from_name_id(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        name_id: &BenchmarkNameId,
+    ) -> Result<Self, HttpError> {
+        match name_id {
+            NameId::Uuid(_) | NameId::Slug(_) => schema::benchmark::table
+                .filter(schema::benchmark::project_id.eq(project_id))
+                .filter(Self::eq_name_id(name_id))
+                .first::<Self>(conn)
+                .map_err(resource_not_found_err!(Benchmark, (project_id, name_id))),
+            NameId::Name(name) => {
+                let alias_match = exists(
+                    schema::benchmark_alias::table
+                        .filter(schema::benchmark_alias::benchmark_id.eq(schema::benchmark::id))
+                        .filter(schema::benchmark_alias::project_id.eq(project_id))
+                        .filter(schema::benchmark_alias::alias.eq(name.as_ref())),
+                );
+                schema::benchmark::table
+                    .filter(schema::benchmark::project_id.eq(project_id))
+                    .filter(schema::benchmark::name.eq(name.as_ref()).or(alias_match))
+                    .first::<Self>(conn)
+                    .map_err(resource_not_found_err!(Benchmark, (project_id, name_id)))
+            },
+        }
+    }
 
     pub async fn get_or_create(
         context: &ApiContext,
@@ -95,8 +133,13 @@ impl QueryBenchmark {
             NameId::Slug(slug) => JsonNewBenchmark {
                 name: slug.clone().into(),
                 slug: Some(slug),
+                aliases: None,
             },
-            NameId::Name(name) => JsonNewBenchmark { name, slug: None },
+            NameId::Name(name) => JsonNewBenchmark {
+                name,
+                slug: None,
+                aliases: None,
+            },
         };
 
         Self::create(context, project_id, json_benchmark).await
@@ -110,22 +153,69 @@ impl QueryBenchmark {
         #[cfg(feature = "plus")]
         InsertBenchmark::rate_limit(context, project_id).await?;
 
+        let JsonNewBenchmark {
+            name,
+            slug,
+            aliases,
+        } = json_benchmark;
+        let aliases = aliases.unwrap_or_default();
         let insert_benchmark =
-            InsertBenchmark::from_json(auth_conn!(context), project_id, json_benchmark);
+            InsertBenchmark::from_json(auth_conn!(context), project_id, name, slug);
 
+        let insert_for_err = insert_benchmark.clone();
         let conn = write_conn!(context);
-        conn.transaction(|conn| {
+        let validation_err: RefCell<Option<HttpError>> = RefCell::new(None);
+        let query_result = conn.transaction(|conn| -> diesel::QueryResult<QueryBenchmark> {
+            validate_benchmark_aliases_uniqueness(
+                conn,
+                project_id,
+                None,
+                &insert_benchmark.name,
+                &aliases,
+            )
+            .map_err(|e| {
+                *validation_err.borrow_mut() = Some(e);
+                diesel::result::Error::RollbackTransaction
+            })?;
+
             diesel::insert_into(schema::benchmark::table)
                 .values(&insert_benchmark)
                 .execute(conn)?;
-            diesel::select(last_insert_rowid()).get_result(conn)
-        })
-        .map_err(resource_conflict_err!(Benchmark, &insert_benchmark))
-        .map(|id| insert_benchmark.into_query(id))
+            let id = diesel::select(last_insert_rowid()).get_result::<BenchmarkId>(conn)?;
+            replace_benchmark_aliases(conn, project_id, id, &aliases)?;
+            Ok(insert_benchmark.into_query(id))
+        });
+
+        match query_result {
+            Ok(q) => Ok(q),
+            Err(e) => {
+                if let Some(he) = validation_err.into_inner() {
+                    Err(he)
+                } else {
+                    Err(resource_conflict_err!(Benchmark, &insert_for_err)(e))
+                }
+            },
+        }
     }
 
-    pub fn into_json_for_project(self, project: &QueryProject) -> JsonBenchmark {
+    pub fn into_json_for_project(
+        self,
+        conn: &mut DbConnection,
+        project: &QueryProject,
+    ) -> Result<JsonBenchmark, HttpError> {
+        let benchmark_id = self.id;
+        let aliases = list_aliases_for_benchmark(conn, benchmark_id)
+            .map_err(resource_not_found_err!(Benchmark, benchmark_id))?;
+        Ok(self.into_json_for_project_with_aliases(project, aliases))
+    }
+
+    pub fn into_json_for_project_with_aliases(
+        self,
+        project: &QueryProject,
+        aliases: Vec<BenchmarkName>,
+    ) -> JsonBenchmark {
         let Self {
+            id: _,
             uuid,
             project_id,
             name,
@@ -133,7 +223,6 @@ impl QueryBenchmark {
             created,
             modified,
             archived,
-            ..
         } = self;
         assert_parentage(
             BencherResource::Project,
@@ -149,11 +238,12 @@ impl QueryBenchmark {
             created,
             modified,
             archived,
+            aliases,
         }
     }
 }
 
-#[derive(Debug, diesel::Insertable)]
+#[derive(Debug, Clone, diesel::Insertable)]
 #[diesel(table_name = benchmark_table)]
 pub struct InsertBenchmark {
     pub uuid: BenchmarkUuid,
@@ -194,9 +284,9 @@ impl InsertBenchmark {
     fn from_json(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        benchmark: JsonNewBenchmark,
+        name: BenchmarkName,
+        slug: Option<BenchmarkSlug>,
     ) -> Self {
-        let JsonNewBenchmark { name, slug } = benchmark;
         let slug = ok_slug!(conn, project_id, &name, slug, benchmark, QueryBenchmark);
         let timestamp = DateTime::now();
         Self {
@@ -226,6 +316,7 @@ impl From<JsonUpdateBenchmark> for UpdateBenchmark {
             name,
             slug,
             archived,
+            aliases: _,
         } = update;
         let modified = DateTime::now();
         let archived = archived.map(|archived| archived.then_some(modified));
@@ -244,6 +335,7 @@ impl UpdateBenchmark {
             name: None,
             slug: None,
             archived: Some(false),
+            aliases: None,
         }
         .into()
     }
@@ -253,9 +345,9 @@ impl UpdateBenchmark {
 mod tests {
     use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
-    use bencher_json::DateTime;
+    use bencher_json::{BenchmarkName, BenchmarkNameId, DateTime};
 
-    use super::BenchmarkId;
+    use super::{BenchmarkId, QueryBenchmark, validate_benchmark_aliases_uniqueness};
     use crate::{
         macros::sql::last_insert_rowid,
         schema,
@@ -386,6 +478,161 @@ mod tests {
             .first(&mut conn)
             .expect("Failed to read back");
         assert_eq!(inserted_id, outside_id);
+    }
+
+    fn bench_name(s: &str) -> BenchmarkName {
+        s.parse().expect("benchmark name")
+    }
+
+    #[test]
+    fn validate_rejects_duplicate_alias_in_request() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let primary = bench_name("Primary");
+        let dup = bench_name("dup");
+        assert!(
+            validate_benchmark_aliases_uniqueness(
+                &mut conn,
+                base.project_id,
+                None,
+                &primary,
+                &[dup.clone(), dup.clone()],
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn validate_rejects_alias_matching_primary_name() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let primary = bench_name("Primary");
+        assert!(
+            validate_benchmark_aliases_uniqueness(
+                &mut conn,
+                base.project_id,
+                None,
+                &primary,
+                std::slice::from_ref(&primary),
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn validate_rejects_alias_conflicting_with_other_benchmark_name() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        create_benchmark(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "Other",
+            "other",
+        );
+        let primary = bench_name("Primary");
+        let conflict = bench_name("Other");
+        assert!(
+            validate_benchmark_aliases_uniqueness(
+                &mut conn,
+                base.project_id,
+                None,
+                &primary,
+                &[conflict],
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn validate_rejects_alias_conflicting_with_other_benchmark_alias() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let other_id = create_benchmark(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "Other",
+            "other",
+        );
+        diesel::insert_into(schema::benchmark_alias::table)
+            .values((
+                schema::benchmark_alias::project_id.eq(base.project_id),
+                schema::benchmark_alias::benchmark_id.eq(other_id),
+                schema::benchmark_alias::alias.eq("legacy"),
+            ))
+            .execute(&mut conn)
+            .expect("insert alias");
+        let primary = bench_name("Primary");
+        let conflict = bench_name("legacy");
+        assert!(
+            validate_benchmark_aliases_uniqueness(
+                &mut conn,
+                base.project_id,
+                None,
+                &primary,
+                &[conflict],
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn validate_allows_exclude_current_benchmark_on_update() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let benchmark_id = create_benchmark(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000020",
+            "Primary",
+            "primary",
+        );
+        diesel::insert_into(schema::benchmark_alias::table)
+            .values((
+                schema::benchmark_alias::project_id.eq(base.project_id),
+                schema::benchmark_alias::benchmark_id.eq(benchmark_id),
+                schema::benchmark_alias::alias.eq("legacy"),
+            ))
+            .execute(&mut conn)
+            .expect("insert alias");
+        let primary = bench_name("Primary");
+        let legacy = bench_name("legacy");
+        validate_benchmark_aliases_uniqueness(
+            &mut conn,
+            base.project_id,
+            Some(benchmark_id),
+            &primary,
+            &[legacy],
+        )
+        .expect("same benchmark may keep its alias");
+    }
+
+    #[test]
+    fn from_name_id_resolves_by_alias() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let benchmark_id = create_benchmark(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000020",
+            "Primary",
+            "primary",
+        );
+        diesel::insert_into(schema::benchmark_alias::table)
+            .values((
+                schema::benchmark_alias::project_id.eq(base.project_id),
+                schema::benchmark_alias::benchmark_id.eq(benchmark_id),
+                schema::benchmark_alias::alias.eq("legacy::bench"),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert benchmark alias");
+
+        let name_id: BenchmarkNameId = "legacy::bench".parse().expect("parse name id");
+        let found = QueryBenchmark::from_name_id(&mut conn, base.project_id, &name_id)
+            .expect("resolve by alias");
+        assert_eq!(found.id, benchmark_id);
+        assert_eq!(found.name.as_ref(), "Primary");
     }
 
     #[test]
