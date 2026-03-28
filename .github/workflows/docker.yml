@@ -17,10 +17,19 @@ env:
   CLI_DOCKER_IMAGE: bencher
 
 jobs:
-  # API amd64 is built in build.yml and pushed to GHCR
   build_api_docker:
-    name: Build API Docker (arm64)
-    runs-on: ubuntu-24.04-arm
+    name: Build API Docker (${{ matrix.suffix }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            platform: linux/amd64
+            suffix: amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            suffix: arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v6
       - name: Setup Docker buildx
@@ -34,20 +43,20 @@ jobs:
       - name: Set cache name
         id: cache-name
         run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
-      - name: Build & Push API Docker Image (arm64)
+      - name: Build & Push API Docker Image (${{ matrix.suffix }})
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./services/api/Dockerfile
-          platforms: linux/arm64
-          tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:${{ github.sha }}-arm64
+          platforms: ${{ matrix.platform }}
+          tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:${{ github.sha }}-${{ matrix.suffix }}
           build-args: |
             MOLD_VERSION=${{ inputs.mold-version }}
             LITESTREAM_VERSION=${{ inputs.litestream-version }}
           cache-from: |
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-arm64
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-devel-arm64
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-arm64,mode=max
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }}
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-devel-${{ matrix.suffix }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }},mode=max
           push: true
 
   create_api_docker_manifest:
