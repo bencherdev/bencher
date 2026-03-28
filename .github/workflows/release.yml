@@ -9,6 +9,11 @@ on:
       go-version:
         type: string
         required: true
+    secrets:
+      DOCKER_HUB_USERNAME:
+        required: true
+      DOCKER_HUB_TOKEN:
+        required: true
 
 env:
   GITHUB_REGISTRY: ghcr.io

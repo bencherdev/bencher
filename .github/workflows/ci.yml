@@ -177,6 +177,9 @@ jobs:
     with:
       mold-version: "2.34.1"
       go-version: "1.25"
+    secrets:
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
 
   ci-success:
     name: CI Success
