@@ -61,61 +61,61 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Download all artifacts from the CI workflow
-      - name: Download API Docker Artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
+      - name: Set version
+        run: |
+          VERSION="${{ github.head_ref || github.ref_name }}"
+          echo "VERSION=${VERSION//\//-}" >> $GITHUB_ENV
 
+      # Download all artifacts from the CI workflow
       - name: Download CLI Linux x86_64 Artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}
 
       - name: Download CLI Linux ARM64 Artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}
 
       - name: Download CLI macOS x86_64 Artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_X86_64 }}
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_MACOS_X86_64 }}
 
       - name: Download CLI macOS ARM64 Artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_ARM_64 }}
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_MACOS_ARM_64 }}
 
       - name: Download CLI Windows x86_64 Artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
 
       - name: Download CLI Windows ARM64 Artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
 
       - name: Download CLI Linux x86_64 .deb Artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.deb
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}.deb
 
       - name: Download CLI Linux ARM64 .deb Artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
+          name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
 
       - name: Download Runner Linux x86_64 Artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
+          name: ${{ env.RUNNER_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}
 
       - name: Download Runner Linux ARM64 Artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
+          name: ${{ env.RUNNER_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}
 
       # Push multi-arch images to GHCR & Docker Hub
       - name: Setup Docker buildx
@@ -138,37 +138,37 @@ jobs:
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}
           export DOCKER_HUB_IMAGE=${{ env.DOCKER_HUB_ORGANIZATION }}/${{ env.API_DOCKER_IMAGE }}
-          export TAG=${{ github.event.workflow_run.head_branch }}
+          export TAG=${{ env.VERSION }}
           docker buildx imagetools create \
             --tag ${GITHUB_IMAGE}:latest \
             --tag ${GITHUB_IMAGE}:${TAG} \
             --tag ${DOCKER_HUB_IMAGE}:latest \
             --tag ${DOCKER_HUB_IMAGE}:${TAG} \
-            ${GITHUB_IMAGE}:${GITHUB_SHA}
+            ${GITHUB_IMAGE}:${{ github.sha }}
 
       - name: Tag & Push Console Image to GHCR & Docker Hub
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}
           export DOCKER_HUB_IMAGE=${{ env.DOCKER_HUB_ORGANIZATION }}/${{ env.CONSOLE_DOCKER_IMAGE }}
-          export TAG=${{ github.event.workflow_run.head_branch }}
+          export TAG=${{ env.VERSION }}
           docker buildx imagetools create \
             --tag ${GITHUB_IMAGE}:latest \
             --tag ${GITHUB_IMAGE}:${TAG} \
             --tag ${DOCKER_HUB_IMAGE}:latest \
             --tag ${DOCKER_HUB_IMAGE}:${TAG} \
-            ${GITHUB_IMAGE}:${GITHUB_SHA}
+            ${GITHUB_IMAGE}:${{ github.sha }}
 
       - name: Tag & Push CLI Image to GHCR & Docker Hub
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}
           export DOCKER_HUB_IMAGE=${{ env.DOCKER_HUB_ORGANIZATION }}/${{ env.CLI_DOCKER_IMAGE }}
-          export TAG=${{ github.event.workflow_run.head_branch }}
+          export TAG=${{ env.VERSION }}
           docker buildx imagetools create \
             --tag ${GITHUB_IMAGE}:latest \
             --tag ${GITHUB_IMAGE}:${TAG} \
             --tag ${DOCKER_HUB_IMAGE}:latest \
             --tag ${DOCKER_HUB_IMAGE}:${TAG} \
-            ${GITHUB_IMAGE}:${GITHUB_SHA}
+            ${GITHUB_IMAGE}:${{ github.sha }}
 
       # Generate release notes and publish
       - uses: rui314/setup-mold@v1
@@ -181,28 +181,27 @@ jobs:
       - name: GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.workflow_run.head_branch }}
-          prerelease: ${{ contains(github.event.workflow_run.head_branch, '-rc') }}
+          tag_name: ${{ env.VERSION }}
+          prerelease: ${{ contains(env.VERSION, '-rc') }}
           body_path: release-notes.md
           files: |
-            ${{ env.API_DOCKER_IMAGE }}.tar.gz
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.sha256
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.sha256
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_X86_64 }}
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_X86_64 }}.sha256
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_ARM_64 }}
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_MACOS_ARM_64 }}.sha256
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe.sha256
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe.sha256
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.deb
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.deb.sha256
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
-            ${{ env.CLI_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.deb.sha256
-            ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}
-            ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_X86_64 }}.sha256
-            ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}
-            ${{ env.RUNNER_BIN_NAME }}-${{ github.event.workflow_run.head_branch }}-${{ env.BUILD_LINUX_ARM_64 }}.sha256
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}.sha256
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}.sha256
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_MACOS_X86_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_MACOS_X86_64 }}.sha256
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_MACOS_ARM_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_MACOS_ARM_64 }}.sha256
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe.sha256
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe.sha256
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}.deb
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}.deb.sha256
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
+            ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}.deb.sha256
+            ${{ env.RUNNER_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}
+            ${{ env.RUNNER_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}.sha256
+            ${{ env.RUNNER_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}
+            ${{ env.RUNNER_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}.sha256

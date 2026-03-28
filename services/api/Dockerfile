@@ -5,8 +5,6 @@ RUN apt-get update \
     && apt-get install -y \
     # Linker
     clang \
-    # Database
-    sqlite3 libsqlite3-dev \
     # Plot
     pkg-config libfreetype6-dev libfontconfig1-dev \
     # Stipe
