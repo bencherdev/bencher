@@ -17,13 +17,12 @@ env:
   CLI_DOCKER_IMAGE: bencher
 
 jobs:
+  # API amd64 is built in build.yml and pushed to GHCR
   build_api_docker:
-    name: Build API Docker
-    runs-on: ubuntu-22.04
+    name: Build API Docker (arm64)
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v6
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
       - name: Log in to the Container registry
@@ -35,29 +34,57 @@ jobs:
       - name: Set cache name
         id: cache-name
         run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
-      - name: Build & Push API Docker Image (multi-platform)
+      - name: Build & Push API Docker Image (arm64)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./services/api/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:${{ github.sha }}
+          platforms: linux/arm64
+          tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:${{ github.sha }}-arm64
           build-args: |
             MOLD_VERSION=${{ inputs.mold-version }}
             LITESTREAM_VERSION=${{ inputs.litestream-version }}
           cache-from: |
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-devel
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }},mode=max
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-arm64
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-devel-arm64
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-arm64,mode=max
           push: true
 
-  build_console_docker:
-    name: Build Console Docker
+  create_api_docker_manifest:
+    name: Create API Docker Manifest
+    needs: build_api_docker
     runs-on: ubuntu-22.04
     steps:
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            --tag ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:${{ github.sha }} \
+            ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:${{ github.sha }}-amd64 \
+            ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:${{ github.sha }}-arm64
+
+  build_console_docker:
+    name: Build Console Docker (${{ matrix.suffix }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            platform: linux/amd64
+            suffix: amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            suffix: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
       - uses: actions/checkout@v6
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
       - name: Log in to the Container registry
@@ -69,26 +96,54 @@ jobs:
       - name: Set cache name
         id: cache-name
         run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
-      - name: Build & Push Console Docker Image (multi-platform)
+      - name: Build & Push Console Docker Image (${{ matrix.suffix }})
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./services/console/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:${{ github.sha }}
+          platforms: ${{ matrix.platform }}
+          tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:${{ github.sha }}-${{ matrix.suffix }}
           cache-from: |
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-devel
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }},mode=max
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }}
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-devel-${{ matrix.suffix }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }},mode=max
           push: true
 
-  build_cli_docker:
-    name: Build CLI Docker
+  create_console_docker_manifest:
+    name: Create Console Docker Manifest
+    needs: build_console_docker
     runs-on: ubuntu-22.04
     steps:
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            --tag ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:${{ github.sha }} \
+            ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:${{ github.sha }}-amd64 \
+            ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:${{ github.sha }}-arm64
+
+  build_cli_docker:
+    name: Build CLI Docker (${{ matrix.suffix }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            platform: linux/amd64
+            suffix: amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            suffix: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
       - uses: actions/checkout@v6
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
       - name: Log in to the Container registry
@@ -100,17 +155,37 @@ jobs:
       - name: Set cache name
         id: cache-name
         run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
-      - name: Build & Push CLI Docker Image (multi-platform)
+      - name: Build & Push CLI Docker Image (${{ matrix.suffix }})
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./services/cli/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:${{ github.sha }}
+          platforms: ${{ matrix.platform }}
+          tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:${{ github.sha }}-${{ matrix.suffix }}
           build-args: |
             MOLD_VERSION=${{ inputs.mold-version }}
           cache-from: |
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-devel
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }},mode=max
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }}
+            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-devel-${{ matrix.suffix }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }},mode=max
           push: true
+
+  create_cli_docker_manifest:
+    name: Create CLI Docker Manifest
+    needs: build_cli_docker
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            --tag ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:${{ github.sha }} \
+            ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:${{ github.sha }}-amd64 \
+            ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:${{ github.sha }}-arm64
