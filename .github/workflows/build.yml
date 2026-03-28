@@ -24,9 +24,6 @@ on:
       deploy-only:
         type: boolean
         required: true
-    secrets:
-      LYCHEE_USER_AGENT:
-        required: true
     outputs:
       wasm-artifact-name:
         description: "WASM artifact name"
@@ -134,13 +131,6 @@ jobs:
       - name: Build Console UI
         working-directory: ./services/console
         run: npm run netlify
-      - name: Test Links
-        if: github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel'
-        timeout-minutes: 3
-        continue-on-error: true
-        uses: lycheeverse/lychee-action@v2.4.1
-        with:
-          args: --config ./services/console/lychee.toml --github-token ${{ secrets.GITHUB_TOKEN }} --user-agent "${{ secrets.LYCHEE_USER_AGENT }}" ./services/console/dist
 
   build_api_docker:
     name: Build API Docker

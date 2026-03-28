@@ -30,7 +30,7 @@ on:
         required: true
       NETLIFY_AUTH_TOKEN:
         required: true
-      LYCHEE_USER_AGENT:
+      BENCHER_USER_AGENT:
         required: true
 
 concurrency:
@@ -255,4 +255,4 @@ jobs:
       - name: Run Netlify Test
         env:
           RUST_BACKTRACE: full
-        run: cargo test-netlify prod --user-agent "${{ secrets.LYCHEE_USER_AGENT }}" cloud
+        run: cargo test-netlify prod --user-agent "${{ secrets.BENCHER_USER_AGENT }}" cloud
