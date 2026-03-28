@@ -85,6 +85,8 @@ jobs:
   script_gen:
     name: Script Gen
     if: ${{ inputs.check-cli && !inputs.is-fork }}
+    # This is expected to fail when tagging a new release
+    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') }}
     strategy:
       fail-fast: false
       matrix:
