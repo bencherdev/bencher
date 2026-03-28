@@ -1,48 +1,76 @@
-## What are Bare Metal Runners?
+Most benchmark tracking tools only let you run benchmarks from a single environment.
+Either you run your benchmarks locally or you run them in CI.
+Even if they support both local and CI execution,
+you're unable to compare results between the two.
 
-➕ Bencher Plus
+Bencher Bare Metal allows you to have the best of both worlds.
+You can run benchmarks from your local machine and have them executed on dedicated hardware,
+and you can also run benchmarks from CI and have them executed on the _same_ dedicated hardware.
+This allows you to have a consistent benchmark execution environment regardless of where you run your benchmarks.
 
-Bare Metal Runners are a pull-based agent architecture for running benchmarks on dedicated hardware.
-Instead of executing benchmarks directly on the current machine,
-benchmarks are packaged as [OCI container images][oci image],
-submitted to a job queue, and executed on a dedicated Bare Metal Runner.
+Bencher Bare Metal runs on dedicated hardware to eliminate variability and provide more accurate and reliable benchmark results.
 
-This approach ensures that your benchmarks run in a consistent, isolated environment
-free from noisy neighbors and shared resource contention.
-Bare Metal Runners are ideal for hardware-specific benchmarks
-where reproducibility and stability are critical.
+## Runner
 
-## Why Use Dedicated Hardware?
+A Runner is a remote benchmark execution orchestrator that runs on dedicated, bare metal hardware.
+The Runner polls the Bencher API for pending [Jobs][job] based on its associated [Specs][spec].
+Once a Job is claimed, the Runner pulls the specified [Image][image] for the Job,
+unpacks the Image, executes the benchmark command, and sends the results back to the Bencher API.
+Only one Job is executed at a time to ensure that the benchmarks are not affected by other workloads.
 
-Running benchmarks on shared or virtualized infrastructure introduces variability.
-Dedicated hardware eliminates these sources of noise:
+| Runner                   | Platform            | Level        | Managed By | [Sandbox][sandbox] | [Tier][pricing]        |
+| ------------------------ | ------------------- | ------------ | ---------- | ------------------ | ---------------------- |
+| Standard                 | Bencher Cloud       | Server       | Bencher    | Required           | Free, Team, Enterprise |
+| Dedicated                | Bencher Cloud       | Organization | Bencher    | Optional           | Enterprise             |
+| Custom                   | Bencher Cloud       | Organization | User       | Optional           | Enterprise             |
+| Self-Hosted Server       | Bencher Self-Hosted | Server       | User       | Optional           | Free, Team, Enterprise |
+| Self-Hosted Organization | Bencher Self-Hosted | Organization | User       | Optional           | Enterprise             |
 
-- **Consistent results**: No other workloads compete for CPU, memory, or I/O.
-- **No noisy neighbors**: The runner has exclusive access to the underlying hardware.
-- **Hardware-specific benchmarks**: Target specific CPU architectures, cache sizes, or GPU configurations.
+[job]: #job
+[spec]: #spec
+[image]: #image
+[sandbox]: #sandbox
+[pricing]: /pricing
 
-## Core Concepts
-
-### Runner
-
-A Runner is an agent that polls the Bencher API for pending jobs,
-claims them, and executes the benchmark container on its dedicated hardware.
-Each Runner is associated with one or more [Specs][spec page] that describe the hardware it provides.
-
-### Spec
+## Spec
 
 A Spec is a hardware specification that describes the resources available on a Runner.
-It includes the CPU architecture, number of CPUs, memory size, disk size, and whether the environment has network access.
-See the [Spec page][spec page] for more details.
 
-### Job
+1. Operating System (OS)
+   1. Linux
+   2. macOS
+   3. Windows
+2. CPU Architecture
+   1. x86_64
+   2. ARM64
+3. [Sandbox][sandbox]
+   1. Firecracker microVM
+   2. No Sandbox
+4. CPU Count
+5. Memory Size (RAM)
+6. Disk Size
+7. Network Access
+
+[sandbox]: #sandbox
+
+## Sandbox
+
+A Sandbox is an isolation mechanism that allows for safe multi-tenancy on a Runner.
+Bencher Bare Metal uses [Firecracker][firecracker] microVMs as the default Sandbox implementation.
+Running without a Sandbox on Bencher Cloud requires a Dedicated or Custom Runner (contact <a href="mailto:plus@bencher.dev">Bencher Plus support</a> for more information) or Bencher Self-Hosted.
+When a Runner is configured to use a Sandbox, each Job is executed within that Sandbox.
+See [the `runner` documentation][runner] for a full overview.
+
+[runner]: /docs/bare-metal/runner
+
+## Job
 
 A Job is a benchmark execution unit.
 When you run <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> with the `--image` and `--spec` options,
 a Job is created and placed in the queue.
 A Runner with a matching Spec claims the Job, executes the benchmark container, and reports the results.
 
-### Image
+## Image
 
 An Image is an [OCI container image][oci image] that contains your benchmark code and its dependencies.
 When a Runner executes a Job, it pulls the Image and runs it in an isolated container environment.
