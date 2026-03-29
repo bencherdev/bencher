@@ -107,9 +107,21 @@ impl hyper::body::Body for BlobBody {
     }
 }
 
-/// Minimum part size for S3 multipart upload (5MB)
-/// S3 requires all parts except the last to be at least 5MB
-const MIN_PART_SIZE: usize = 5 * 1024 * 1024;
+/// Default minimum chunk size for OCI upload buffering (5 MB).
+///
+/// This value serves two purposes:
+///
+/// 1. **S3 multipart upload minimum**: S3 requires all parts except the last to
+///    be at least 5 MB. During `complete_upload`, buffer chunks are assembled
+///    into S3 multipart parts of at least this size.
+///
+/// 2. **Network frame batching**: HTTP request bodies arrive as small network
+///    frames (typically 8–64 KB). Without batching, each frame would be stored
+///    as a separate S3 object, creating thousands of objects per layer and
+///    making both upload (~3 S3 ops per frame) and completion (~1 S3 `GetObject`
+///    per chunk) extremely slow. Buffering to this size reduces S3 operations
+///    by ~100×.
+pub const DEFAULT_CHUNK_SIZE: usize = 5 * 1024 * 1024;
 
 /// Maximum concurrency for parallel S3/IO operations.
 /// Clamped to available CPU parallelism, with this upper bound to prevent
@@ -329,6 +341,14 @@ impl OciStorage {
             Self::S3(s3) => s3.max_body_size,
             Self::Local(local) => local.max_body_size(),
         }
+    }
+
+    /// Returns the chunk size used for buffering upload data.
+    ///
+    /// Network frames are batched to at least this size before being stored,
+    /// reducing the number of storage operations. See [`DEFAULT_CHUNK_SIZE`].
+    pub fn chunk_size(&self) -> usize {
+        DEFAULT_CHUNK_SIZE
     }
 
     // ==================== Upload Operations ====================
@@ -1187,8 +1207,8 @@ impl OciS3Storage {
             part_buffer.extend_from_slice(&chunk);
 
             // Upload complete parts when we reach 5MB threshold
-            while part_buffer.len() >= MIN_PART_SIZE {
-                let part_data: Vec<u8> = part_buffer.drain(..MIN_PART_SIZE).collect();
+            while part_buffer.len() >= DEFAULT_CHUNK_SIZE {
+                let part_data: Vec<u8> = part_buffer.drain(..DEFAULT_CHUNK_SIZE).collect();
                 self.upload_multipart_part(&mut state, &data_key, part_data)
                     .await?;
             }

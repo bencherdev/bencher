@@ -87,28 +87,51 @@ fn format_upload_range(size: u64) -> String {
     }
 }
 
-/// Stream request body chunks directly to OCI storage.
+/// Stream request body chunks to OCI storage, buffering into larger batches.
 ///
-/// Each network-level chunk is passed to `append_upload`, which stores it
-/// incrementally and enforces `max_body_size`. Returns the cumulative upload
-/// session size (not just the bytes received in this call).
+/// Network frames are typically 8–64 KB. Storing each one as a separate S3
+/// object would create thousands of objects per layer, making both upload and
+/// completion extremely slow. Buffering to the storage's configured chunk size
+/// (see [`bencher_oci_storage::DEFAULT_CHUNK_SIZE`]) reduces S3 operations by
+/// ~100×.
+///
+/// Returns the cumulative upload session size (not just the bytes received in
+/// this call).
 pub(crate) async fn stream_to_storage(
     body: StreamingBody,
     storage: &bencher_oci_storage::OciStorage,
     upload_id: &UploadId,
     current_size: u64,
 ) -> Result<u64, HttpError> {
-    body.into_stream()
-        .try_fold(current_size, |new_size, data| async move {
-            if data.is_empty() {
-                return Ok(new_size);
-            }
-            storage
-                .append_upload(upload_id, data)
+    let chunk_size = storage.chunk_size();
+    let mut buffer = Vec::with_capacity(chunk_size);
+    let mut new_size = current_size;
+
+    let mut stream = std::pin::pin!(body.into_stream());
+    while let Some(data) = stream.try_next().await? {
+        if data.is_empty() {
+            continue;
+        }
+        buffer.extend_from_slice(&data);
+
+        if buffer.len() >= chunk_size {
+            let chunk = std::mem::replace(&mut buffer, Vec::with_capacity(chunk_size));
+            new_size = storage
+                .append_upload(upload_id, chunk.into())
                 .await
-                .map_err(|e| crate::error::into_http_error(OciError::from(e)))
-        })
-        .await
+                .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        }
+    }
+
+    // Flush remaining buffered data
+    if !buffer.is_empty() {
+        new_size = storage
+            .append_upload(upload_id, buffer.into())
+            .await
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+    }
+
+    Ok(new_size)
 }
 
 /// CORS preflight for upload session operations
