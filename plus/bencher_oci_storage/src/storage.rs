@@ -25,7 +25,8 @@ use aws_sdk_s3::types::CompletedMultipartUpload;
 use bencher_json::{
     ProjectUuid, Secret,
     system::config::{
-        DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore,
+        DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, MAX_CHUNK_SIZE,
+        RegistryDataStore,
     },
 };
 use bytes::Bytes;
@@ -619,7 +620,7 @@ impl OciS3Storage {
         access_point: &str,
         upload_timeout: u64,
         max_body_size: u64,
-        chunk_size: Option<u32>,
+        chunk_size: Option<u64>,
         clock: Clock,
     ) -> Result<Self, OciStorageError> {
         // Parse the S3 ARN
@@ -656,7 +657,7 @@ impl OciS3Storage {
 
         let chunk_size = chunk_size
             .unwrap_or(DEFAULT_CHUNK_SIZE)
-            .max(DEFAULT_CHUNK_SIZE) as usize;
+            .clamp(DEFAULT_CHUNK_SIZE, MAX_CHUNK_SIZE) as usize;
 
         Ok(Self {
             client,

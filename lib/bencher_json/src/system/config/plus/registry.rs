@@ -21,7 +21,13 @@ pub const DEFAULT_MAX_BODY_SIZE: u64 = 0x4000_0000;
 /// 5 MB also matches the S3 multipart upload minimum part size,
 /// so chunks stored at this size can be efficiently assembled during
 /// upload completion.
-pub const DEFAULT_CHUNK_SIZE: u32 = 5 * 1024 * 1024;
+pub const DEFAULT_CHUNK_SIZE: u64 = 5 * 1024 * 1024;
+
+/// Maximum chunk size for S3 upload buffering: 5 GB (5,368,709,120 bytes).
+///
+/// The S3 multipart upload maximum part size is 5 GiB.
+/// We use 5 GB as a practical upper bound.
+pub const MAX_CHUNK_SIZE: u64 = 5 * 1024 * 1024 * 1024;
 
 /// Container registry configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,8 +80,9 @@ pub enum RegistryDataStore {
         /// Format: arn:aws:s3:<region>:<account-id>:accesspoint/<bucket>[/path]
         access_point: String,
         /// Minimum chunk size in bytes for buffering upload data before storing to S3.
-        /// Defaults to 5 MB (5,242,880 bytes). See [`DEFAULT_CHUNK_SIZE`].
-        chunk_size: Option<u32>,
+        /// Valid range: 5 MB–5 GB. Defaults to 5 MB (5,242,880 bytes).
+        /// See [`DEFAULT_CHUNK_SIZE`] and [`MAX_CHUNK_SIZE`].
+        chunk_size: Option<u64>,
     },
 }
 
