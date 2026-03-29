@@ -140,3 +140,6 @@ jobs:
           --error-on-alert \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
           --ci-number "$PR_NUMBER"
+      - name: Check image push
+        if: steps.download_bench.outcome == 'success' && steps.load_push.outcome != 'success'
+        run: exit 1

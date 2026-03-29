@@ -112,3 +112,6 @@ jobs:
           --error-on-alert \
           --adapter rust_criterion \
           --github-actions '${{ secrets.GITHUB_TOKEN }}'
+      - name: Check image push
+        if: steps.download_bench.outcome == 'success' && steps.load_push.outcome != 'success'
+        run: exit 1
