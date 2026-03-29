@@ -17,6 +17,8 @@ on:
         required: true
       BENCHER_API_TOKEN:
         required: true
+      BENCHER_USER_EMAIL:
+        required: true
 
 env:
   CARGO_TERM_COLOR: always

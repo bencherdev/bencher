@@ -54,7 +54,9 @@ jobs:
           name: bench_image.tar
           run_id: ${{ github.event.workflow_run.id }}
       - name: Load and push image
+        id: load_push
         if: steps.download_bench.outcome == 'success'
+        continue-on-error: true
         run: |
           docker load -i bench_image.tar
           echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
@@ -118,7 +120,7 @@ jobs:
           --ci-number "$PR_NUMBER" \
           --file ./noise_results_windows-2022.json
       - name: Track Benchmarks with Bencher
-        if: steps.download_bench.outcome == 'success'
+        if: steps.load_push.outcome == 'success'
         env:
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
         run: |

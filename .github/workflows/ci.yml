@@ -130,6 +130,7 @@ jobs:
     secrets:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_USER_EMAIL: ${{ secrets.BENCHER_USER_EMAIL }}
 
   build:
     name: Build
