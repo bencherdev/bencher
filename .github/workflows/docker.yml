@@ -44,7 +44,7 @@ jobs:
         id: cache-name
         run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
       - name: Build & Push API Docker Image (${{ matrix.suffix }})
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./services/api/Dockerfile
@@ -106,7 +106,7 @@ jobs:
         id: cache-name
         run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
       - name: Build & Push Console Docker Image (${{ matrix.suffix }})
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./services/console/Dockerfile
@@ -165,7 +165,7 @@ jobs:
         id: cache-name
         run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
       - name: Build & Push CLI Docker Image (${{ matrix.suffix }})
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./services/cli/Dockerfile
