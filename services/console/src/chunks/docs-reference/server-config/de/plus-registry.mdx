@@ -17,6 +17,8 @@ Es gibt zwei Speicher-`service`-Optionen:
     - `secret_access_key`: AWS-Geheimzugangsschlüssel
     - `access_point`: S3 Access Point ARN mit optionalem Pfadpräfix.
       Format: `arn:aws:s3:<region>:<account-id>:accesspoint/<access-point-name>[/<path-prefix>]`
+    - `chunk_size`: Minimale Chunk-Größe in Bytes für die Pufferung von Upload-Daten vor dem Speichern in S3 (Standard: 5 MB).
+      HTTP-Anfragekörper kommen als kleine Netzwerk-Frames an (typischerweise 8–64 KB). Ohne Pufferung wird jeder Frame als separates S3-Objekt gespeichert, was Tausende von Objekten pro Layer erzeugt. Dieser Wert entspricht auch der minimalen S3-Multipart-Upload-Teilgröße.
 
 |             Name             |                              Beispiel                               | Standardwert | Erforderlich |                                            Beschreibung                                             |
 | :--------------------------: | :-----------------------------------------------------------------: | :----------: | :----------: | :-------------------------------------------------------------------------------------------------: |
@@ -26,5 +28,6 @@ Es gibt zwei Speicher-`service`-Optionen:
 |   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |     ---      | nur aws_s3   |                                      AWS-Zugangsschlüssel-ID.                                       |
 | data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |     ---      | nur aws_s3   |                                     AWS-Geheimzugangsschlüssel.                                     |
 |   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |     ---      | nur aws_s3   |               S3 Access Point ARN. Optionales Pfadpräfix nach dem Access-Point-Namen.               |
+|   data_store.chunk_size      |                               5242880                                     | 5242880 | nur aws_s3   | Minimale Chunk-Größe in Bytes für die Pufferung von Upload-Daten vor dem Speichern in S3. Standard: 5 MB. |
 |       upload_timeout         |                                3600                                 |     3600     |     Nein     | Upload-Sitzungs-Timeout in Sekunden. Veraltete Uploads werden bei neuen Uploads bereinigt. |
 |       max_body_size          |                            1073741824                               | 1073741824   |     Nein     | Maximale Body-Größe in Bytes für Blob- und Manifest-Uploads. Anfragen, die dieses Limit überschreiten, werden mit 413 Payload Too Large abgelehnt. Standard: 1 GiB. |
