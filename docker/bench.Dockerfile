@@ -89,7 +89,7 @@ COPY services/api/openapi.json /usr/src/bencher/services/api/openapi.json
 
 WORKDIR /usr/src/bencher
 RUN cargo bench --package bencher_adapter --no-run --message-format=json \
-    | jq -r 'select(.executable != null) | .executable' \
+    | jq -r 'select(.executable != null and .target.kind == ["bench"]) | .executable' \
     | xargs -I {} cp {} /usr/local/bin/bench-adapter
 
 FROM debian:bookworm-slim@sha256:b4aa902587c2e61ce789849cb54c332b0400fe27b1ee33af4669e1f7e7c3e22f
