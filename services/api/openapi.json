@@ -16716,6 +16716,13 @@
                 "description": "S3 Access Point ARN with optional path prefix Format: arn:aws:s3:<region>:<account-id>:accesspoint/<bucket>[/path]",
                 "type": "string"
               },
+              "chunk_size": {
+                "nullable": true,
+                "description": "Minimum chunk size in bytes for buffering upload data before storing to S3. Defaults to 5 MB (5,242,880 bytes). See [`DEFAULT_CHUNK_SIZE`].",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
               "secret_access_key": {
                 "description": "AWS Secret Access Key with permissions to read/write the specified S3 bucket",
                 "allOf": [
