@@ -41,6 +41,7 @@ jobs:
               - 'lib/**'
               - 'plus/**'
               - 'services/api/**'
+              - 'docker/bench.Dockerfile'
               - 'services/cli/**'
               - 'services/runner/**'
               - 'tasks/**'

@@ -113,22 +113,29 @@ jobs:
           RUST_BACKTRACE: full
         run: cargo test-api smoke ci
 
-  cargo_bench:
-    name: Cargo Bench
+  bench_image:
+    name: Bench Image
     runs-on: ubuntu-22.04
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v6
-      - uses: rui314/setup-mold@v1
+      - uses: jlumbroso/free-disk-space@main
         with:
-          mold-version: ${{ inputs.mold-version }}
-      - name: Run Benchmarks
-        run: cargo bench --package bencher_adapter --package bencher_schema | tee benchmark_results.txt
-      - name: Upload Benchmark Results
+          large-packages: false
+      - uses: actions/checkout@v6
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg MOLD_VERSION=${{ inputs.mold-version }} \
+            -t registry.bencher.dev/bencher:${{ github.sha }} \
+            -f docker/bench.Dockerfile \
+            .
+      - name: Save image as tarball
+        run: docker save registry.bencher.dev/bencher:${{ github.sha }} -o bench_image.tar
+      - name: Upload image tarball
         uses: actions/upload-artifact@v7
         with:
-          name: benchmark_results.txt
-          path: ./benchmark_results.txt
+          name: bench_image.tar
+          path: ./bench_image.tar
       - name: Upload GitHub Pull Request Event
         uses: actions/upload-artifact@v7
         with:
@@ -165,10 +172,11 @@ jobs:
   track_benchmarks:
     name: Track Benchmarks
     if: ${{ github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/main' }}
-    needs: [cargo_bench, bencher_noise]
+    needs: [bench_image, bencher_noise]
     uses: ./.github/workflows/track_benchmarks.yml
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_USER_EMAIL: ${{ secrets.BENCHER_USER_EMAIL }}
 
   cargo_udeps:
     name: Cargo Unused Deps

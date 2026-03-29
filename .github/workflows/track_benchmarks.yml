@@ -5,6 +5,8 @@ on:
     secrets:
       BENCHER_API_TOKEN:
         required: true
+      BENCHER_USER_EMAIL:
+        required: true
 
 jobs:
   track_benchmarks:
@@ -12,8 +14,6 @@ jobs:
     permissions:
       checks: write
     runs-on: ubuntu-22.04
-    env:
-      BENCHMARK_RESULTS: benchmark_results.txt
     steps:
       - name: Download Noise Results (ubuntu)
         uses: actions/download-artifact@v8
@@ -27,10 +27,18 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: noise_results_windows-2022
-      - name: Download Benchmark Results
+      - name: Download Bench Image
+        id: download_bench
+        continue-on-error: true
         uses: actions/download-artifact@v8
         with:
-          name: ${{ env.BENCHMARK_RESULTS }}
+          name: bench_image.tar
+      - name: Load and push image
+        if: steps.download_bench.outcome == 'success'
+        run: |
+          docker load -i bench_image.tar
+          echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
+          docker push registry.bencher.dev/bencher:${{ github.sha }}
       - uses: bencherdev/bencher@main
       - name: Track Noise (ubuntu)
         run: |
@@ -84,19 +92,21 @@ jobs:
           --ci-only-on-alert \
           --file ./noise_results_windows-2022.json
       - name: Track benchmarks with Bencher
+        if: steps.download_bench.outcome == 'success'
         run: |
           bencher run \
           --project bencher \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --image "bencher:${{ github.sha }}" \
           --branch ${{ github.ref_name }} \
           --hash '${{ github.sha }}' \
-          --testbed ubuntu-22.04 \
+          --testbed intel-v1 \
+          --spec intel-v1 \
           --threshold-measure latency \
           --threshold-test t_test \
           --threshold-max-sample-size 64 \
           --threshold-upper-boundary 0.9999 \
           --thresholds-reset \
-          --err \
+          --error-on-alert \
           --adapter rust_criterion \
-          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-          --file ./benchmark_results.txt
+          --github-actions '${{ secrets.GITHUB_TOKEN }}'
