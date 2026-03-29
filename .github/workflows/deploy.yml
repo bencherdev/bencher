@@ -95,7 +95,7 @@ jobs:
         timeout-minutes: 5
         run: |
           cargo test-api oci \
-          --url https://dev.api.bencher.dev/
+          --url https://dev.registry.bencher.dev/
       - name: OCI Conformance Test Summary
         if: always()
         run: |

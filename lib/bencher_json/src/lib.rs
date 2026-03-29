@@ -208,6 +208,8 @@ pub static PROD_BENCHER_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
 });
 
 pub const LOCALHOST_BENCHER_REGISTRY_URL_STR: &str = "http://localhost:61016";
+pub const DEV_BENCHER_REGISTRY_URL_STR: &str = "https://dev.registry.bencher.dev";
+pub const TEST_BENCHER_REGISTRY_URL_STR: &str = "https://test.registry.bencher.dev";
 pub const PROD_BENCHER_REGISTRY_URL_STR: &str = "https://registry.bencher.dev";
 
 #[cfg(debug_assertions)]
@@ -228,6 +230,18 @@ pub static LOCALHOST_BENCHER_REGISTRY_URL: LazyLock<url::Url> = LazyLock::new(||
         .unwrap_or_else(|e| {
             panic!("Failed to parse endpoint \"{LOCALHOST_BENCHER_REGISTRY_URL_STR}\": {e}")
         })
+});
+#[expect(clippy::panic)]
+pub static DEV_BENCHER_REGISTRY_URL: LazyLock<url::Url> = LazyLock::new(|| {
+    DEV_BENCHER_REGISTRY_URL_STR.parse().unwrap_or_else(|e| {
+        panic!("Failed to parse endpoint \"{DEV_BENCHER_REGISTRY_URL_STR}\": {e}")
+    })
+});
+#[expect(clippy::panic)]
+pub static TEST_BENCHER_REGISTRY_URL: LazyLock<url::Url> = LazyLock::new(|| {
+    TEST_BENCHER_REGISTRY_URL_STR.parse().unwrap_or_else(|e| {
+        panic!("Failed to parse endpoint \"{TEST_BENCHER_REGISTRY_URL_STR}\": {e}")
+    })
 });
 #[expect(clippy::panic)]
 pub static PROD_BENCHER_REGISTRY_URL: LazyLock<url::Url> = LazyLock::new(|| {

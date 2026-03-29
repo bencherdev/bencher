@@ -282,7 +282,7 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> an
         ensure_insecure_registry(&docker_registry)?;
         docker_registry
     } else {
-        registry_host(host)?
+        registry_for_api(host)?
     };
 
     let local_ref = format!("{registry}/{PROJECT_SLUG}:{IMAGE_TAG}");
@@ -500,6 +500,22 @@ fn ensure_insecure_registry(registry: &str) -> anyhow::Result<()> {
             "Timed out waiting for Docker Desktop to restart"
         );
         std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+}
+
+/// Map an API URL to its corresponding registry host for Docker operations.
+///
+/// For known Bencher environments, returns the dedicated registry hostname.
+/// For other URLs (e.g. localhost), falls back to extracting the host from the URL.
+fn registry_for_api(api_url: &str) -> anyhow::Result<String> {
+    if api_url.starts_with(bencher_json::DEV_BENCHER_API_URL_STR) {
+        registry_host(bencher_json::DEV_BENCHER_REGISTRY_URL_STR)
+    } else if api_url.starts_with(bencher_json::TEST_BENCHER_API_URL_STR) {
+        registry_host(bencher_json::TEST_BENCHER_REGISTRY_URL_STR)
+    } else if api_url.starts_with(bencher_json::PROD_BENCHER_API_URL_STR) {
+        registry_host(bencher_json::PROD_BENCHER_REGISTRY_URL_STR)
+    } else {
+        registry_host(api_url)
     }
 }
 
