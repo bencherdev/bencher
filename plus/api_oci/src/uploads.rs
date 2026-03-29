@@ -32,10 +32,11 @@ use crate::auth::resolve_project;
 #[cfg(feature = "plus")]
 use crate::auth::{apply_public_rate_limit, check_oci_bandwidth, record_oci_bandwidth};
 use crate::blobs::UPLOADS_REF;
+use crate::error::storage_error;
 use crate::response::{DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers};
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
 use bencher_json::ProjectResourceId;
-use bencher_oci_storage::{Digest, OciError, UploadId};
+use bencher_oci_storage::{Digest, UploadId};
 use bencher_schema::context::ApiContext;
 use dropshot::{
     Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, StreamingBody, endpoint,
@@ -137,7 +138,7 @@ async fn stream_to_s3(
                     new_size = s3
                         .append_upload(upload_id, chunk.into())
                         .await
-                        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+                        .map_err(storage_error)?;
                 }
                 Ok((buffer, new_size))
             },
@@ -149,7 +150,7 @@ async fn stream_to_s3(
         return s3
             .append_upload(upload_id, buffer.into())
             .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)));
+            .map_err(storage_error);
     }
 
     Ok(new_size)
@@ -170,7 +171,7 @@ async fn stream_direct(
             local
                 .append_upload(upload_id, data)
                 .await
-                .map_err(|e| crate::error::into_http_error(OciError::from(e)))
+                .map_err(storage_error)
         })
         .await
 }
@@ -231,13 +232,13 @@ pub async fn oci_upload_status(
     storage
         .validate_upload_repository(&upload_id, &project_uuid)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Get current upload size
     let size = storage
         .get_upload_size(&upload_id)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Build 204 No Content response with Range header (OCI spec)
     let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
@@ -309,13 +310,13 @@ pub async fn oci_upload_chunk(
     storage
         .validate_upload_repository(&upload_id, &project_uuid)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Get current upload size for Content-Range validation
     let current_size = storage
         .get_upload_size(&upload_id)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Parse Content-Range header upfront (before streaming) if present
     // Content-Range format can be:
@@ -473,20 +474,20 @@ pub async fn oci_upload_complete(
     storage
         .validate_upload_repository(&upload_id, &project_uuid)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Stream optional final data to storage and complete with digest verification.
     // On error, cancel the upload session to avoid orphaned state.
     let current_size = storage
         .get_upload_size(&upload_id)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
     let result = async {
         let final_size = stream_to_storage(body, storage, &upload_id, current_size).await?;
         let digest = storage
             .complete_upload(&upload_id, &expected_digest)
             .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+            .map_err(storage_error)?;
         Ok::<(Digest, u64), HttpError>((digest, final_size))
     }
     .await;
@@ -561,13 +562,13 @@ pub async fn oci_upload_cancel(
     storage
         .validate_upload_repository(&upload_id, &project_uuid)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Cancel the upload
     storage
         .cancel_upload(&upload_id)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // OCI spec requires 202 Accepted for DELETE (or 204 No Content)
     let response = oci_cors_headers(

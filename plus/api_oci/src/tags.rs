@@ -12,6 +12,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::auth::{require_pull_access, resolve_project};
+use crate::error::storage_error;
 use crate::response::{APPLICATION_JSON, oci_cors_headers};
 
 /// Path parameters for tags list
@@ -106,7 +107,7 @@ pub async fn oci_tags_list(
     let result = storage
         .list_tags(&project_uuid, Some(page_size), last_tag)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Record metric
     #[cfg(feature = "otel")]

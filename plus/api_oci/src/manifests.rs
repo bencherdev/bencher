@@ -21,6 +21,7 @@ use crate::auth::{check_oci_bandwidth, record_oci_bandwidth};
 use crate::auth::{
     require_pull_access, require_push_access, resolve_project, validate_push_access,
 };
+use crate::error::storage_error;
 use crate::response::{DOCKER_CONTENT_DIGEST, OCI_SUBJECT, oci_cors_headers};
 
 /// Parse a reference string, returning the correct OCI error code on failure.
@@ -63,10 +64,7 @@ async fn resolve_reference(
 ) -> Result<Digest, HttpError> {
     match reference {
         Reference::Digest(d) => Ok(d.clone()),
-        Reference::Tag(t) => storage
-            .resolve_tag(name, t)
-            .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e))),
+        Reference::Tag(t) => storage.resolve_tag(name, t).await.map_err(storage_error),
     }
 }
 
@@ -127,7 +125,7 @@ pub async fn oci_manifest_exists(
     let manifest = storage
         .get_manifest_by_digest(&project_uuid, &digest)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Determine content type from typed manifest
     let parsed = Manifest::from_bytes(&manifest).map_err(|e| {
@@ -188,7 +186,7 @@ pub async fn oci_manifest_get(
     let manifest = storage
         .get_manifest_by_digest(&project_uuid, &digest)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Record bandwidth usage
     #[cfg(feature = "plus")]
@@ -314,7 +312,7 @@ pub async fn oci_manifest_put(
             &parsed_manifest,
         )
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Record bandwidth usage
     #[cfg(feature = "plus")]
@@ -396,7 +394,7 @@ async fn verify_referenced_blobs(
             let exists = storage
                 .blob_exists(repository, &digest)
                 .await
-                .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+                .map_err(storage_error)?;
             if !exists {
                 return Err(crate::error::into_http_error(
                     OciError::ManifestBlobUnknown { digest: digest_str },
@@ -442,7 +440,7 @@ pub async fn oci_manifest_delete(
         Reference::Tag(tag) => storage
             .resolve_tag(&project_uuid, tag)
             .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?,
+            .map_err(storage_error)?,
     };
 
     match &reference {
@@ -451,14 +449,14 @@ pub async fn oci_manifest_delete(
             storage
                 .delete_manifest(&project_uuid, digest)
                 .await
-                .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+                .map_err(storage_error)?;
         },
         Reference::Tag(tag) => {
             // Delete by tag - delete the tag link only (manifest may still exist)
             storage
                 .delete_tag(&project_uuid, tag)
                 .await
-                .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+                .map_err(storage_error)?;
         },
     }
 
