@@ -167,8 +167,8 @@ pub fn is_bencher_cloud(url: &url::Url) -> bool {
 // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
 pub const BENCHER_API_PORT: u16 = 61016;
 pub const LOCALHOST_BENCHER_API_URL_STR: &str = "http://localhost:61016";
-pub const DEV_BENCHER_API_URL_STR: &str = "https://bencher-api-dev.fly.dev";
-pub const TEST_BENCHER_API_URL_STR: &str = "https://bencher-api-test.fly.dev";
+pub const DEV_BENCHER_API_URL_STR: &str = "https://dev.api.bencher.dev";
+pub const TEST_BENCHER_API_URL_STR: &str = "https://test.api.bencher.dev";
 pub const PROD_BENCHER_API_URL_STR: &str = "https://api.bencher.dev";
 
 #[cfg(debug_assertions)]

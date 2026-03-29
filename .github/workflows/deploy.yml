@@ -95,7 +95,7 @@ jobs:
         timeout-minutes: 5
         run: |
           cargo test-api oci \
-          --url https://bencher-api-dev.fly.dev/
+          --url https://dev.api.bencher.dev/
       - name: OCI Conformance Test Summary
         if: always()
         run: |

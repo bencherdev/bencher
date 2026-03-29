@@ -67,9 +67,9 @@ pub enum TaskTestEnvironment {
     Localhost,
     /// Docker https://localhost:61016
     Docker,
-    /// https://bencher-api-dev.fly.dev
+    /// https://dev.api.bencher.dev
     Dev,
-    /// https://bencher-api-test.fly.dev
+    /// https://test.api.bencher.dev
     Test,
     /// https://api.bencher.dev
     Prod,
