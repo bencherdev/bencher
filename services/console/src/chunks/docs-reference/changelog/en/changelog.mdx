@@ -1,3 +1,6 @@
+## Pending `v0.6.1`
+- Buffer OCI upload network frames into configurable S3 chunks (`registry.data_store.chunk_size`, default 5 MB) to reduce S3 operations during Docker push
+
 ## `v0.6.0`
 - **BREAKING CHANGE** Update Bencher Metric Format (BMF) to accept UUID, slug, or name for the Benchmark identifier
 - Move to soft deletion for Organizations and Projects with admin-only hard deletion

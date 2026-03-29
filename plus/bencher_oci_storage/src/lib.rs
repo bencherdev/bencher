@@ -26,7 +26,5 @@ pub use bencher_json::ProjectUuid;
 pub use bencher_json::system::config::DEFAULT_MAX_BODY_SIZE;
 pub use error::OciError;
 pub use job_output::JobOutput;
-pub use storage::{
-    BlobBody, DEFAULT_CHUNK_SIZE, ListTagsResult, MAX_CONCURRENCY, OciStorage, OciStorageError,
-};
+pub use storage::{BlobBody, ListTagsResult, MAX_CONCURRENCY, OciStorage, OciStorageError};
 pub use types::{Digest, DigestError, Reference, Tag, UploadId};

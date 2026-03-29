@@ -87,13 +87,14 @@ fn format_upload_range(size: u64) -> String {
     }
 }
 
-/// Stream request body chunks to OCI storage, buffering into larger batches.
+/// Stream request body chunks to OCI storage.
 ///
-/// Network frames are typically 8–64 KB. Storing each one as a separate S3
-/// object would create thousands of objects per layer, making both upload and
-/// completion extremely slow. Buffering to the storage's configured chunk size
-/// (see [`bencher_oci_storage::DEFAULT_CHUNK_SIZE`]) reduces S3 operations by
-/// ~100×.
+/// For S3 storage, buffers small network frames (typically 8–64 KB) into larger
+/// chunks before storing. Without this, each frame becomes a separate S3 object,
+/// creating thousands of objects per layer and making both upload (~3 S3 ops per
+/// frame) and completion (~1 S3 `GetObject` per chunk) extremely slow.
+///
+/// For local storage, passes frames through directly — file appends are fast.
 ///
 /// Returns the cumulative upload session size (not just the bytes received in
 /// this call).
@@ -103,7 +104,24 @@ pub(crate) async fn stream_to_storage(
     upload_id: &UploadId,
     current_size: u64,
 ) -> Result<u64, HttpError> {
-    let chunk_size = storage.chunk_size();
+    match storage {
+        bencher_oci_storage::OciStorage::S3(s3) => {
+            stream_to_s3(body, storage, upload_id, current_size, s3.chunk_size()).await
+        },
+        bencher_oci_storage::OciStorage::Local(_) => {
+            stream_direct(body, storage, upload_id, current_size).await
+        },
+    }
+}
+
+/// Buffer network frames into ≥`chunk_size` batches before storing to S3.
+async fn stream_to_s3(
+    body: StreamingBody,
+    storage: &bencher_oci_storage::OciStorage,
+    upload_id: &UploadId,
+    current_size: u64,
+    chunk_size: usize,
+) -> Result<u64, HttpError> {
     let mut buffer = Vec::with_capacity(chunk_size);
     let mut new_size = current_size;
 
@@ -132,6 +150,26 @@ pub(crate) async fn stream_to_storage(
     }
 
     Ok(new_size)
+}
+
+/// Pass network frames directly to local storage (no buffering needed).
+async fn stream_direct(
+    body: StreamingBody,
+    storage: &bencher_oci_storage::OciStorage,
+    upload_id: &UploadId,
+    current_size: u64,
+) -> Result<u64, HttpError> {
+    body.into_stream()
+        .try_fold(current_size, |new_size, data| async move {
+            if data.is_empty() {
+                return Ok(new_size);
+            }
+            storage
+                .append_upload(upload_id, data)
+                .await
+                .map_err(|e| crate::error::into_http_error(OciError::from(e)))
+        })
+        .await
 }
 
 /// CORS preflight for upload session operations

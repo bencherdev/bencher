@@ -29,7 +29,9 @@ pub use plus::{
         JsonOciBandwidth, JsonPublicRateLimiter, JsonRateLimiting, JsonRunnerRateLimiter,
         JsonUserRateLimiter,
     },
-    registry::{DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
+    registry::{
+        DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore,
+    },
     runners::{DEFAULT_HEARTBEAT_TIMEOUT_SECS, DEFAULT_JOB_TIMEOUT_GRACE_PERIOD_SECS},
     stats::JsonStats,
 };
