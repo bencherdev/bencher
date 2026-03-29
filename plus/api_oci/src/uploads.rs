@@ -106,10 +106,10 @@ pub(crate) async fn stream_to_storage(
 ) -> Result<u64, HttpError> {
     match storage {
         bencher_oci_storage::OciStorage::S3(s3) => {
-            stream_to_s3(body, storage, upload_id, current_size, s3.chunk_size()).await
+            stream_to_s3(body, s3, upload_id, current_size, s3.chunk_size()).await
         },
-        bencher_oci_storage::OciStorage::Local(_) => {
-            stream_direct(body, storage, upload_id, current_size).await
+        bencher_oci_storage::OciStorage::Local(local) => {
+            stream_direct(body, local, upload_id, current_size).await
         },
     }
 }
@@ -117,36 +117,39 @@ pub(crate) async fn stream_to_storage(
 /// Buffer network frames into ≥`chunk_size` batches before storing to S3.
 async fn stream_to_s3(
     body: StreamingBody,
-    storage: &bencher_oci_storage::OciStorage,
+    s3: &bencher_oci_storage::OciS3Storage,
     upload_id: &UploadId,
     current_size: u64,
     chunk_size: usize,
 ) -> Result<u64, HttpError> {
-    let mut buffer = Vec::with_capacity(chunk_size);
-    let mut new_size = current_size;
+    let (buffer, new_size) = body
+        .into_stream()
+        .try_fold(
+            (Vec::with_capacity(chunk_size), current_size),
+            |(mut buffer, mut new_size), data| async move {
+                if data.is_empty() {
+                    return Ok((buffer, new_size));
+                }
+                buffer.extend_from_slice(&data);
 
-    let mut stream = std::pin::pin!(body.into_stream());
-    while let Some(data) = stream.try_next().await? {
-        if data.is_empty() {
-            continue;
-        }
-        buffer.extend_from_slice(&data);
-
-        if buffer.len() >= chunk_size {
-            let chunk = std::mem::replace(&mut buffer, Vec::with_capacity(chunk_size));
-            new_size = storage
-                .append_upload(upload_id, chunk.into())
-                .await
-                .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
-        }
-    }
+                if buffer.len() >= chunk_size {
+                    let chunk = std::mem::replace(&mut buffer, Vec::with_capacity(chunk_size));
+                    new_size = s3
+                        .append_upload(upload_id, chunk.into())
+                        .await
+                        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+                }
+                Ok((buffer, new_size))
+            },
+        )
+        .await?;
 
     // Flush remaining buffered data
     if !buffer.is_empty() {
-        new_size = storage
+        return s3
             .append_upload(upload_id, buffer.into())
             .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+            .map_err(|e| crate::error::into_http_error(OciError::from(e)));
     }
 
     Ok(new_size)
@@ -155,7 +158,7 @@ async fn stream_to_s3(
 /// Pass network frames directly to local storage (no buffering needed).
 async fn stream_direct(
     body: StreamingBody,
-    storage: &bencher_oci_storage::OciStorage,
+    local: &bencher_oci_storage::OciLocalStorage,
     upload_id: &UploadId,
     current_size: u64,
 ) -> Result<u64, HttpError> {
@@ -164,7 +167,7 @@ async fn stream_direct(
             if data.is_empty() {
                 return Ok(new_size);
             }
-            storage
+            local
                 .append_upload(upload_id, data)
                 .await
                 .map_err(|e| crate::error::into_http_error(OciError::from(e)))

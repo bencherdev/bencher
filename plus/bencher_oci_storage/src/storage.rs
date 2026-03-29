@@ -654,7 +654,9 @@ impl OciS3Storage {
             .unwrap_or(1)
             .clamp(1, MAX_CONCURRENCY);
 
-        let chunk_size = chunk_size.unwrap_or(DEFAULT_CHUNK_SIZE) as usize;
+        let chunk_size = chunk_size
+            .unwrap_or(DEFAULT_CHUNK_SIZE)
+            .max(DEFAULT_CHUNK_SIZE) as usize;
 
         Ok(Self {
             client,
