@@ -58,8 +58,8 @@ jobs:
         if: steps.download_bench.outcome == 'success'
         continue-on-error: true
         run: |
-          LOADED_IMAGE=$(docker load -i bench_image.tar | grep "Loaded image:" | sed 's/Loaded image: //')
-          docker tag "$LOADED_IMAGE" registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
+          docker load -i bench_image.tar
+          docker tag bench:ci registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
           echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
           docker push registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
       - uses: bencherdev/bencher@main
