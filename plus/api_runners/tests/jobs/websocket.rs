@@ -182,6 +182,94 @@ async fn channel_lifecycle_completed() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
+/// Completed lifecycle records a non-zero job duration in `job_duration_by_report`.
+///
+/// Regression test: the in-memory `QueryJob` was loaded at claim time (before the
+/// `started` timestamp was set), so `process_results` fell back to `now` and
+/// computed a duration of 0.
+#[tokio::test]
+async fn channel_completed_records_job_duration() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicI64, Ordering},
+    };
+
+    let base_time = bencher_json::DateTime::TEST.timestamp();
+    let mock_time = Arc::new(AtomicI64::new(base_time));
+    let time_ref = mock_time.clone();
+    let clock = bencher_json::Clock::Custom(Arc::new(move || {
+        bencher_json::DateTime::try_from(time_ref.load(Ordering::Relaxed)).unwrap()
+    }));
+
+    let server = TestServer::new_with_clock(3600, 1024 * 1024, clock).await;
+    let admin = server.signup("Admin", "ws-duration@example.com").await;
+    let org = server.create_org(&admin, "Ws duration").await;
+    let project = server
+        .create_project(&admin, &org, "Ws duration proj")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner duration").await;
+    let runner_token = runner.token.to_string();
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    let runner_id = get_runner_id(&server, runner.uuid);
+    associate_runner_spec(&server, runner_id, spec_id);
+
+    // Connect channel, send Ready, receive Job
+    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+    };
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    assert!(matches!(response, ServerMessage::Job(_)));
+
+    // Send Running (sets `started` in DB at current mock time)
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Advance mock clock by 120 seconds to simulate benchmark execution time
+    mock_time.fetch_add(120, Ordering::Relaxed);
+
+    // Send Completed
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            job: job_uuid,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+
+    // Verify that job_duration_by_report recorded the correct duration
+    let mut conn = server.db_conn();
+    let duration: i32 = schema::job_duration_by_report::table
+        .filter(schema::job_duration_by_report::report_id.eq(report_id))
+        .select(schema::job_duration_by_report::job_duration)
+        .first(&mut conn)
+        .expect("job_duration_by_report row should exist");
+    assert_eq!(
+        duration, 120,
+        "Job duration should equal elapsed mock clock time"
+    );
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
 /// Full lifecycle: Ready -> Job -> Running -> Failed.
 /// After Failed, server sends Ack and connection stays open.
 #[tokio::test]

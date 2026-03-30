@@ -608,28 +608,23 @@ async fn handle_completed(
         JobStatus::Failed,
     )?;
 
-    if updated == 0 {
-        // Re-read the job to determine what happened
-        let current_job: QueryJob = schema::job::table
-            .filter(schema::job::id.eq(job.id))
-            .first(auth_conn!(context))
-            .map_err(resource_not_found_err!(Job, job.id))?;
+    // Re-read job to get fresh timestamps (started, claimed) set during execution.
+    // The in-memory QueryJob was loaded at claim time before these fields were set.
+    let job = QueryJob::get(auth_conn!(context), job.id)?;
 
-        if matches!(
-            current_job.status,
-            JobStatus::Completed | JobStatus::Processed
-        ) {
+    if updated == 0 {
+        if matches!(job.status, JobStatus::Completed | JobStatus::Processed) {
             slog::debug!(log, "Job already completed (idempotent duplicate)"; "job_id" => ?job.id);
             return Ok(());
         }
-        if current_job.status == JobStatus::Canceled {
+        if job.status == JobStatus::Canceled {
             slog::warn!(log, "Job already canceled, completion report lost"; "job_id" => ?job.id);
             return Ok(());
         }
         return Err(ChannelError::InvalidStateTransition {
             job_id: job.id,
             target: JobStatus::Completed,
-            current: current_job.status,
+            current: job.status,
         });
     }
 
@@ -651,7 +646,7 @@ async fn handle_completed(
         results,
         error: None,
     };
-    if let Err(e) = store_job_output(context, job, &job_output).await {
+    if let Err(e) = store_job_output(context, &job, &job_output).await {
         slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
     }
 
