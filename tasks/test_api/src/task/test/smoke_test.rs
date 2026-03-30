@@ -7,8 +7,9 @@ use std::{
 };
 
 use bencher_json::{
-    BENCHER_API_PORT, DEV_BENCHER_API_URL, JsonApiVersion, Jwt, LOCALHOST_BENCHER_API_URL,
-    PROD_BENCHER_API_URL, TEST_BENCHER_API_URL, Url,
+    BENCHER_API_PORT, DEV_BENCHER_API_URL, DEV_BENCHER_REGISTRY_URL, JsonApiVersion, Jwt,
+    LOCALHOST_BENCHER_API_URL, LOCALHOST_BENCHER_REGISTRY_URL, PROD_BENCHER_API_URL,
+    PROD_BENCHER_REGISTRY_URL, TEST_BENCHER_API_URL, TEST_BENCHER_REGISTRY_URL, Url,
 };
 
 use crate::{
@@ -82,12 +83,14 @@ impl SmokeTest {
         };
 
         let api_url = self.environment.as_url();
+        let registry_url = self.environment.as_registry_url();
         test_api_version(&api_url)?;
 
         match self.environment {
             Environment::Ci => {
                 test(
                     &api_url,
+                    &registry_url,
                     MockSetup::SelfHosted {
                         examples: false,
                         runner: true,
@@ -98,6 +101,7 @@ impl SmokeTest {
             Environment::Localhost => {
                 test(
                     &api_url,
+                    &registry_url,
                     MockSetup::SelfHosted {
                         examples: true,
                         runner: false,
@@ -106,7 +110,7 @@ impl SmokeTest {
                 kill_child(child)?;
             },
             Environment::Docker => bencher_down()?,
-            Environment::Dev => test(&api_url, MockSetup::BencherCloud)?,
+            Environment::Dev => test(&api_url, &registry_url, MockSetup::BencherCloud)?,
             Environment::Test | Environment::Prod => {},
         }
 
@@ -121,6 +125,16 @@ impl Environment {
             Self::Dev => DEV_BENCHER_API_URL.clone(),
             Self::Test => TEST_BENCHER_API_URL.clone(),
             Self::Prod => PROD_BENCHER_API_URL.clone(),
+        }
+        .into()
+    }
+
+    fn as_registry_url(self) -> Url {
+        match self {
+            Self::Ci | Self::Localhost | Self::Docker => LOCALHOST_BENCHER_REGISTRY_URL.clone(),
+            Self::Dev => DEV_BENCHER_REGISTRY_URL.clone(),
+            Self::Test => TEST_BENCHER_REGISTRY_URL.clone(),
+            Self::Prod => PROD_BENCHER_REGISTRY_URL.clone(),
         }
         .into()
     }
@@ -205,7 +219,7 @@ enum MockSetup {
     SelfHosted { examples: bool, runner: bool },
 }
 
-fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
+fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
     match mock_setup {
         MockSetup::BencherCloud => {
             let task = TaskSeedTest {
@@ -215,9 +229,16 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
             };
             SeedTest::try_from(task)?.exec()?;
 
-            // Run runner smoke test (requires Docker + KVM for the runner daemon)
             #[cfg(feature = "plus")]
             {
+                // Run OCI conformance tests
+                let oci = Oci::try_from(TaskOci {
+                    url: Some(registry_url.clone()),
+                    ..Default::default()
+                })?;
+                oci.exec()?;
+
+                // Run runner smoke test (requires Docker + KVM for the runner daemon)
                 let runner_test = runner::RunnerTest::try_from(TaskRunner {
                     url: Some(api_url.clone()),
                     with_daemon: true,
@@ -239,7 +260,7 @@ fn test(api_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
             {
                 // Run OCI conformance tests
                 let oci = Oci::try_from(TaskOci {
-                    url: Some(api_url.clone()),
+                    url: Some(registry_url.clone()),
                     ..Default::default()
                 })?;
                 oci.exec()?;

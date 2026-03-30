@@ -90,12 +90,6 @@ jobs:
         env:
           RUST_BACKTRACE: full
         run: cargo test-api smoke dev
-      - name: Run OCI Conformance Test
-        continue-on-error: true
-        timeout-minutes: 5
-        run: |
-          cargo test-api oci \
-          --url https://dev.registry.bencher.dev/
       - name: OCI Conformance Test Summary
         if: always()
         run: |
