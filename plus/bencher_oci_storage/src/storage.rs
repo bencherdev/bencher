@@ -24,7 +24,10 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::CompletedMultipartUpload;
 use bencher_json::{
     ProjectUuid, Secret,
-    system::config::{DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, RegistryDataStore},
+    system::config::{
+        DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, MAX_CHUNK_SIZE,
+        RegistryDataStore,
+    },
 };
 use bytes::Bytes;
 use chrono::Utc;
@@ -106,10 +109,6 @@ impl hyper::body::Body for BlobBody {
         }
     }
 }
-
-/// Minimum part size for S3 multipart upload (5MB)
-/// S3 requires all parts except the last to be at least 5MB
-const MIN_PART_SIZE: usize = 5 * 1024 * 1024;
 
 /// Maximum concurrency for parallel S3/IO operations.
 /// Clamped to available CPU parallelism, with this upper bound to prevent
@@ -254,6 +253,9 @@ pub struct OciS3Storage {
     upload_timeout: u64,
     /// Maximum body size in bytes for uploads
     max_body_size: u64,
+    /// Minimum chunk size in bytes for buffering upload data before storing to S3.
+    /// See [`bencher_json::system::config::DEFAULT_CHUNK_SIZE`].
+    chunk_size: usize,
     /// Logger for error/warning reporting
     log: Logger,
     /// Concurrency limit for parallel referrer fetches
@@ -305,6 +307,7 @@ impl OciStorage {
                 access_key_id,
                 secret_access_key,
                 access_point,
+                chunk_size,
             }) => OciS3Storage::new(
                 log,
                 access_key_id,
@@ -312,6 +315,7 @@ impl OciStorage {
                 &access_point,
                 timeout,
                 body_size,
+                chunk_size,
                 clock,
             )
             .map(OciStorage::S3),
@@ -602,6 +606,7 @@ fn is_s3_not_found<E>(err: &aws_sdk_s3::error::SdkError<E>) -> bool {
 
 impl OciS3Storage {
     /// Creates a new S3 storage instance
+    #[expect(clippy::too_many_arguments)]
     fn new(
         log: Logger,
         access_key_id: String,
@@ -609,6 +614,7 @@ impl OciS3Storage {
         access_point: &str,
         upload_timeout: u64,
         max_body_size: u64,
+        chunk_size: Option<u64>,
         clock: Clock,
     ) -> Result<Self, OciStorageError> {
         // Parse the S3 ARN
@@ -643,16 +649,27 @@ impl OciS3Storage {
             .unwrap_or(1)
             .clamp(1, MAX_CONCURRENCY);
 
+        let chunk_size = chunk_size
+            .unwrap_or(DEFAULT_CHUNK_SIZE)
+            .clamp(DEFAULT_CHUNK_SIZE, MAX_CHUNK_SIZE) as usize;
+
         Ok(Self {
             client,
             config,
             upload_timeout,
             max_body_size,
+            chunk_size,
             log,
             concurrency,
             last_cleanup: AtomicI64::new(0),
             clock,
         })
+    }
+
+    /// Returns the configured chunk size for buffering upload data before
+    /// storing to S3. See [`bencher_json::system::config::DEFAULT_CHUNK_SIZE`].
+    pub fn chunk_size(&self) -> usize {
+        self.chunk_size
     }
 
     // ==================== S3 Error Helpers ====================
@@ -1186,9 +1203,9 @@ impl OciS3Storage {
             // Add to part buffer
             part_buffer.extend_from_slice(&chunk);
 
-            // Upload complete parts when we reach 5MB threshold
-            while part_buffer.len() >= MIN_PART_SIZE {
-                let part_data: Vec<u8> = part_buffer.drain(..MIN_PART_SIZE).collect();
+            // Upload complete parts when we reach the chunk size threshold
+            while part_buffer.len() >= self.chunk_size {
+                let part_data: Vec<u8> = part_buffer.drain(..self.chunk_size).collect();
                 self.upload_multipart_part(&mut state, &data_key, part_data)
                     .await?;
             }

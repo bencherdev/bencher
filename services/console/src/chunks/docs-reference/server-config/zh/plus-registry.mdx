@@ -17,6 +17,8 @@ Bencher 可以作为符合 OCI 标准的容器/工件注册表运行。
     - `secret_access_key`：AWS 秘密访问密钥
     - `access_point`：带有可选路径前缀的 S3 访问点 ARN。
       格式：`arn:aws:s3:<region>:<account-id>:accesspoint/<access-point-name>[/<path-prefix>]`
+    - `chunk_size`：上传数据存储到 S3 之前缓冲的最小块大小（字节）（默认：5 MB）。
+      HTTP 请求正文以小型网络帧的形式到达（通常为 8–64 KB）。如果不进行缓冲，每个帧都会成为一个单独的 S3 对象，每层会创建数千个对象。此值也与 S3 分段上传的最小分段大小一致。
 
 |             名称             |                                示例                                 | 默认值 | 必需  |                             描述                              |
 | :--------------------------: | :-----------------------------------------------------------------: | :----: | :---: | :-----------------------------------------------------------: |
@@ -26,5 +28,6 @@ Bencher 可以作为符合 OCI 标准的容器/工件注册表运行。
 |   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |  ---   | 仅 aws_s3 |                       AWS 访问密钥 ID。                       |
 | data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |  ---   | 仅 aws_s3 |                      AWS 秘密访问密钥。                       |
 |   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |  ---   | 仅 aws_s3 |           S3 访问点 ARN。访问点名称后可选路径前缀。           |
+|   data_store.chunk_size      |                               5242880                                     | 5242880 | 仅 aws_s3 | 上传数据存储到 S3 之前缓冲的最小块大小（字节）。默认值：5 MB。 |
 |       upload_timeout         |                                3600                                 |  3600  |  否   | 上传会话超时时间（秒）。过期上传在启动新上传时被清理。 |
 |       max_body_size          |                            1073741824                               | 1073741824 |  否   | Blob 和清单上传的最大正文大小（字节）。超过此限制的请求将被拒绝并返回 413 Payload Too Large。默认值：1 GiB。 |

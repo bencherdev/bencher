@@ -8,7 +8,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_json::ProjectResourceId;
 use bencher_json::oci::{OCI_IMAGE_INDEX_MEDIA_TYPE, OciImageIndex, OciManifestDescriptor};
-use bencher_oci_storage::{Digest, OciError};
+use bencher_oci_storage::Digest;
 use bencher_schema::context::ApiContext;
 use dropshot::{Body, HttpError, Path, Query, RequestContext, endpoint};
 use http::Response;
@@ -16,6 +16,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::auth::{require_pull_access, resolve_project};
+use crate::error::storage_error;
 use crate::response::{OCI_FILTERS_APPLIED, oci_cors_headers};
 
 /// Path parameters for referrers endpoint
@@ -85,7 +86,7 @@ pub async fn oci_referrers_list(
     let referrers = storage
         .list_referrers(&project_uuid, &digest, query.artifact_type.as_deref())
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Build an OCI image index response
     // Per spec: returns application/vnd.oci.image.index.v1+json
