@@ -1,4 +1,6 @@
-use bencher_json::{DEV_BENCHER_API_URL, Jwt, LOCALHOST_BENCHER_API_URL, Url};
+use bencher_json::{
+    DEV_BENCHER_API_URL, DEV_BENCHER_REGISTRY_URL, Jwt, LOCALHOST_BENCHER_API_URL, Url,
+};
 use clap::Parser as _;
 
 use crate::{
@@ -81,7 +83,10 @@ impl Sub {
 }
 
 fn is_dev(url: Option<&Url>) -> bool {
-    url.is_some_and(|u| u.as_ref() == DEV_BENCHER_API_URL.as_ref())
+    url.is_some_and(|u| {
+        u.as_ref() == DEV_BENCHER_API_URL.as_ref()
+            || u.as_ref() == DEV_BENCHER_REGISTRY_URL.as_ref()
+    })
 }
 
 fn unwrap_url(url: Option<Url>) -> Url {
