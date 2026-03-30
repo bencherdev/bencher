@@ -16718,9 +16718,9 @@
               },
               "chunk_size": {
                 "nullable": true,
-                "description": "Minimum chunk size in bytes for buffering upload data before storing to S3. Defaults to 5 MB (5,242,880 bytes). See [`DEFAULT_CHUNK_SIZE`].",
+                "description": "Minimum chunk size in bytes for buffering upload data before storing to S3. Valid range: 5 MB–5 GB. Defaults to 5 MB (5,242,880 bytes). See [`DEFAULT_CHUNK_SIZE`] and [`MAX_CHUNK_SIZE`].",
                 "type": "integer",
-                "format": "uint32",
+                "format": "uint64",
                 "minimum": 0
               },
               "secret_access_key": {

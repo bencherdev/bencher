@@ -107,7 +107,7 @@ pub(crate) async fn stream_to_storage(
 ) -> Result<u64, HttpError> {
     match storage {
         bencher_oci_storage::OciStorage::S3(s3) => {
-            stream_to_s3(body, s3, upload_id, current_size, s3.chunk_size()).await
+            stream_to_s3(body, s3, upload_id, current_size).await
         },
         bencher_oci_storage::OciStorage::Local(local) => {
             stream_direct(body, local, upload_id, current_size).await
@@ -121,8 +121,8 @@ async fn stream_to_s3(
     s3: &bencher_oci_storage::OciS3Storage,
     upload_id: &UploadId,
     current_size: u64,
-    chunk_size: usize,
 ) -> Result<u64, HttpError> {
+    let chunk_size = s3.chunk_size();
     let (buffer, new_size) = body
         .into_stream()
         .try_fold(

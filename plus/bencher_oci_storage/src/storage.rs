@@ -605,12 +605,6 @@ fn is_s3_not_found<E>(err: &aws_sdk_s3::error::SdkError<E>) -> bool {
 }
 
 impl OciS3Storage {
-    /// Returns the configured chunk size for buffering upload data before
-    /// storing to S3. See [`bencher_json::system::config::DEFAULT_CHUNK_SIZE`].
-    pub fn chunk_size(&self) -> usize {
-        self.chunk_size
-    }
-
     /// Creates a new S3 storage instance
     #[expect(clippy::too_many_arguments)]
     fn new(
@@ -670,6 +664,12 @@ impl OciS3Storage {
             last_cleanup: AtomicI64::new(0),
             clock,
         })
+    }
+
+    /// Returns the configured chunk size for buffering upload data before
+    /// storing to S3. See [`bencher_json::system::config::DEFAULT_CHUNK_SIZE`].
+    pub fn chunk_size(&self) -> usize {
+        self.chunk_size
     }
 
     // ==================== S3 Error Helpers ====================
