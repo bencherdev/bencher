@@ -128,11 +128,11 @@ jobs:
         run: |
           docker build \
             --build-arg MOLD_VERSION=${{ inputs.mold-version }} \
-            -t registry.bencher.dev/bencher:${{ github.sha }} \
+            -t bench:ci \
             -f docker/bench.Dockerfile \
             .
       - name: Save image as tarball
-        run: docker save registry.bencher.dev/bencher:${{ github.sha }} -o bench_image.tar
+        run: docker save bench:ci -o bench_image.tar
       - name: Upload image tarball
         uses: actions/upload-artifact@v7
         with:

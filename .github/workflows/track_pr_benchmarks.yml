@@ -59,6 +59,7 @@ jobs:
         continue-on-error: true
         run: |
           docker load -i bench_image.tar
+          docker tag bench:ci registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
           echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
           docker push registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
       - uses: bencherdev/bencher@main
