@@ -15,27 +15,28 @@ jobs:
     env:
       PR_EVENT: event.json
     steps:
-      - name: Download Noise Results (ubuntu)
+      - name: Download Bench Image
+        id: download_bench
+        continue-on-error: true
         uses: dawidd6/action-download-artifact@v6
         with:
-          name: noise_results_ubuntu-22.04
-          run_id: ${{ github.event.workflow_run.id }}
-      - name: Download Noise Results (macos)
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          name: noise_results_macos-14
-          run_id: ${{ github.event.workflow_run.id }}
-      - name: Download Noise Results (windows)
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          name: noise_results_windows-2022
+          name: bench_image.tar
           run_id: ${{ github.event.workflow_run.id }}
       - name: Download PR Event
+        if: steps.download_bench.outcome == 'success'
         uses: dawidd6/action-download-artifact@v6
         with:
           name: ${{ env.PR_EVENT }}
           run_id: ${{ github.event.workflow_run.id }}
+      - name: Load and push image
+        if: steps.download_bench.outcome == 'success'
+        run: |
+          docker load -i bench_image.tar
+          docker tag bench:ci registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
+          echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
+          docker push registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
       - name: Read PR Event Data
+        if: steps.download_bench.outcome == 'success'
         uses: actions/github-script@v7
         with:
           script: |
@@ -46,82 +47,10 @@ jobs:
             core.exportVariable('PR_BASE', prEvent.pull_request.base.ref);
             core.exportVariable('PR_BASE_SHA', prEvent.pull_request.base.sha);
             core.exportVariable('PR_NUMBER', prEvent.number);
-      - name: Download Bench Image
-        id: download_bench
-        continue-on-error: true
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          name: bench_image.tar
-          run_id: ${{ github.event.workflow_run.id }}
-      - name: Load and push image
-        id: load_push
-        if: steps.download_bench.outcome == 'success'
-        continue-on-error: true
-        run: |
-          docker load -i bench_image.tar
-          docker tag bench:ci registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
-          echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
-          docker push registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
       - uses: bencherdev/bencher@main
-      - name: Track Noise (ubuntu)
-        env:
-          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-        run: |
-          bencher run \
-          --project bencher \
-          --token "$BENCHER_API_TOKEN" \
-          --branch "$PR_HEAD" \
-          --hash "$PR_HEAD_SHA" \
-          --start-point "$PR_BASE" \
-          --start-point-hash "$PR_BASE_SHA" \
-          --start-point-clone-thresholds \
-          --start-point-reset \
-          --testbed ubuntu-22.04 \
-          --adapter json \
-          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-          --ci-only-on-alert \
-          --ci-number "$PR_NUMBER" \
-          --file ./noise_results_ubuntu-22.04.json
-      - name: Track Noise (macos)
-        env:
-          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-        run: |
-          bencher run \
-          --project bencher \
-          --token "$BENCHER_API_TOKEN" \
-          --branch "$PR_HEAD" \
-          --hash "$PR_HEAD_SHA" \
-          --start-point "$PR_BASE" \
-          --start-point-hash "$PR_BASE_SHA" \
-          --start-point-clone-thresholds \
-          --start-point-reset \
-          --testbed macos-14 \
-          --adapter json \
-          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-          --ci-only-on-alert \
-          --ci-number "$PR_NUMBER" \
-          --file ./noise_results_macos-14.json
-      - name: Track Noise (windows)
-        env:
-          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-        run: |
-          bencher run \
-          --project bencher \
-          --token "$BENCHER_API_TOKEN" \
-          --branch "$PR_HEAD" \
-          --hash "$PR_HEAD_SHA" \
-          --start-point "$PR_BASE" \
-          --start-point-hash "$PR_BASE_SHA" \
-          --start-point-clone-thresholds \
-          --start-point-reset \
-          --testbed windows-2022 \
-          --adapter json \
-          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-          --ci-only-on-alert \
-          --ci-number "$PR_NUMBER" \
-          --file ./noise_results_windows-2022.json
+        if: steps.download_bench.outcome == 'success'
       - name: Track Benchmarks with Bencher
-        if: steps.load_push.outcome == 'success'
+        if: steps.download_bench.outcome == 'success'
         env:
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
         run: |
@@ -141,6 +70,3 @@ jobs:
           --error-on-alert \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
           --ci-number "$PR_NUMBER"
-      - name: Check image push
-        if: steps.download_bench.outcome == 'success' && steps.load_push.outcome != 'success'
-        run: exit 1
