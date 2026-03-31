@@ -18,13 +18,13 @@ jobs:
       - name: Download Bench Image
         id: download_bench
         continue-on-error: true
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v19
         with:
           name: bench_image.tar
           run_id: ${{ github.event.workflow_run.id }}
       - name: Download PR Event
         if: steps.download_bench.outcome == 'success'
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v19
         with:
           name: ${{ env.PR_EVENT }}
           run_id: ${{ github.event.workflow_run.id }}
