@@ -118,7 +118,6 @@ jobs:
   bench_image:
     name: Bench Image
     runs-on: ubuntu-22.04
-    continue-on-error: true
     steps:
       - uses: jlumbroso/free-disk-space@main
         with:
@@ -146,6 +145,7 @@ jobs:
 
   bencher_noise:
     name: Bencher Noise
+    if: ${{ github.ref == 'refs/heads/devel' }}
     strategy:
       fail-fast: false
       matrix:
@@ -173,7 +173,7 @@ jobs:
 
   track_benchmarks:
     name: Track Benchmarks
-    if: ${{ github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/devel' }}
     needs: [bench_image, bencher_noise]
     uses: ./.github/workflows/track_benchmarks.yml
     secrets:

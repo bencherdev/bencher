@@ -28,15 +28,10 @@ jobs:
         with:
           name: noise_results_windows-2022
       - name: Download Bench Image
-        id: download_bench
-        continue-on-error: true
         uses: actions/download-artifact@v8
         with:
           name: bench_image.tar
       - name: Load and push image
-        id: load_push
-        if: steps.download_bench.outcome == 'success'
-        continue-on-error: true
         run: |
           docker load -i bench_image.tar
           docker tag bench:ci registry.bencher.dev/bencher:${{ github.sha }}
@@ -95,7 +90,6 @@ jobs:
           --ci-only-on-alert \
           --file ./noise_results_windows-2022.json
       - name: Track benchmarks with Bencher
-        if: steps.load_push.outcome == 'success'
         run: |
           bencher run \
           --project bencher \
@@ -113,6 +107,3 @@ jobs:
           --error-on-alert \
           --adapter rust_criterion \
           --github-actions '${{ secrets.GITHUB_TOKEN }}'
-      - name: Check image push
-        if: steps.download_bench.outcome == 'success' && steps.load_push.outcome != 'success'
-        run: exit 1
