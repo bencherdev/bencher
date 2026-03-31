@@ -85,35 +85,28 @@ See [the `runner` documentation][runner] for a full overview.
 
 ## Job
 
-A Job runs benchmarks on a remote [Runner][runner],
-When you run <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> with the `--image` option,
-a Job is created and placed in the queue.
-A Runner with a matching Spec claims the Job, executes the benchmark container, and reports the results.
+A Job tracks the lifecycle of a remote benchmark execution request.
+A custom timeout can be requested per Job with the `--job-timeout` option.
+However, the following Job timeouts are always enforced:
 
-[runner]: #runner
+| [Tier][pricing] | Job Timeout                     |
+| --------------- | ------------------------------- |
+| Unclaimed       | 1 minute                        |
+| Free            | 5 minutes                       |
+| Team            | Unlimited (default: 60 minutes) |
+| Enterprise      | Unlimited (default: 60 minutes) |
+
+See [the Job documentation][job] for a full overview.
+
+[pricing]: /pricing
+[job]: /docs/bare-metal/job
 
 ## Image
 
 An Image is an [OCI container image][oci image] that contains your benchmark code and its dependencies.
-When a Runner executes a Job, it pulls the Image and runs it in an isolated container environment.
-See the [Image page][image page] for how to create an Image for your own project.
-
-## Bare Metal vs Local Execution
-
-With local execution, <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> executes benchmarks directly on the current machine
-and reports the results to the Bencher API.
-This is the default behavior and works well for CI environments and local development.
-
-With Bare Metal execution, <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> packages the benchmark command,
-submits it as a Job to the Bencher API, and waits for a remote Runner to execute it on dedicated hardware.
-The results are then reported back through the same pipeline.
-To use Bare Metal execution, add the `--image` and `--spec` options to your `bencher run` command.
-
-> 🐰 For more background, see [Benchmarking Overview][benchmarking overview], [Continuous Benchmarking][continuous benchmarking], and [bencher run][bencher run].
+When a Runner executes a Job, it pulls the Image, unpacks the Image, and runs the command specified in the [Job][job].
+See [the Image documentation][image] for how to create an Image for your own project.
 
 [oci image]: https://opencontainers.org/
-[spec page]: /docs/bare-metal/spec/
-[image page]: /docs/bare-metal/image/
-[benchmarking overview]: /docs/explanation/benchmarking/
-[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
-[bencher run]: /docs/explanation/bencher-run/
+[job]: #job
+[image]: /docs/bare-metal/image/
