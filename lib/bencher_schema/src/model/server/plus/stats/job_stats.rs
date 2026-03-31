@@ -14,17 +14,13 @@ use crate::{
 use super::{ProjectState, TOP_PROJECTS, median};
 
 pub(super) struct JobStats {
-    pub minutes: JsonCohort,
-    pub minutes_per_report: JsonCohortAvg,
+    pub seconds: JsonCohort,
+    pub seconds_per_report: JsonCohortAvg,
     pub top_projects: JsonTopJobCohort,
 }
 
 impl JobStats {
-    #[expect(
-        clippy::cast_sign_loss,
-        clippy::integer_division,
-        reason = "duration is always positive, integer division for seconds to minutes"
-    )]
+    #[expect(clippy::cast_sign_loss, reason = "duration is always positive")]
     pub fn new(
         conn: &mut DbConnection,
         this_week: i64,
@@ -46,16 +42,16 @@ impl JobStats {
         let total_median = median(&mut total_durations);
         let total_top = get_top_job_projects(conn, None, state)?;
 
-        let minutes = JsonCohort {
-            week: (weekly_total / 60) as u64,
-            month: (monthly_total / 60) as u64,
-            total: (total_total / 60) as u64,
+        let seconds = JsonCohort {
+            week: weekly_total as u64,
+            month: monthly_total as u64,
+            total: total_total as u64,
         };
 
-        let minutes_per_report = JsonCohortAvg {
-            week: weekly_median / 60.0,
-            month: monthly_median / 60.0,
-            total: total_median / 60.0,
+        let seconds_per_report = JsonCohortAvg {
+            week: weekly_median,
+            month: monthly_median,
+            total: total_median,
         };
 
         let top_projects = JsonTopJobCohort {
@@ -65,8 +61,8 @@ impl JobStats {
         };
 
         Ok(Self {
-            minutes,
-            minutes_per_report,
+            seconds,
+            seconds_per_report,
             top_projects,
         })
     }
@@ -267,18 +263,14 @@ fn get_top_job_projects(
     }
 }
 
-#[expect(
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::integer_division
-)]
+#[expect(clippy::cast_precision_loss, clippy::cast_sign_loss)]
 fn top_job_projects(project_durations: Vec<(QueryProject, i64)>, total: i64) -> JsonTopJobProjects {
     project_durations
         .into_iter()
         .map(|(project, duration)| JsonTopJobProject {
             name: project.name,
             uuid: project.uuid,
-            minutes: (duration / 60) as u64,
+            seconds: duration as u64,
             percentage: if total > 0 {
                 duration as f64 / total as f64
             } else {
