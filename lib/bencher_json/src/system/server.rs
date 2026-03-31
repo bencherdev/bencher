@@ -85,11 +85,15 @@ pub struct JsonServerStats {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonRunnerStats {
-    /// Total runner minutes
-    pub minutes: JsonRunnerStatsCohort<JsonCohort>,
-    /// Median runner minutes per report
-    pub minutes_per_report: JsonRunnerStatsCohort<JsonCohortAvg>,
-    /// Top 10 projects by runner minutes
+    /// Total runner seconds
+    // TODO remove in due time
+    #[serde(alias = "minutes")]
+    pub seconds: JsonRunnerStatsCohort<JsonCohort>,
+    /// Median runner seconds per report
+    // TODO remove in due time
+    #[serde(alias = "minutes_per_report")]
+    pub seconds_per_report: JsonRunnerStatsCohort<JsonCohortAvg>,
+    /// Top 10 projects by runner seconds
     pub top_projects: JsonRunnerStatsCohort<JsonTopJobCohort>,
 }
 
@@ -157,8 +161,10 @@ pub type JsonTopJobProjects = Vec<JsonTopJobProject>;
 pub struct JsonTopJobProject {
     pub name: ResourceName,
     pub uuid: ProjectUuid,
-    /// Total runner minutes
-    pub minutes: u64,
+    /// Total runner seconds
+    // TODO remove in due time
+    #[serde(alias = "minutes")]
+    pub seconds: u64,
     pub percentage: f64,
 }
 
@@ -293,5 +299,103 @@ mod tests {
         let param: BooleanParam<SelfHostedStartup> = BooleanParam::False;
         let json = serde_json::to_string(&param).unwrap();
         assert_eq!(json, "null");
+    }
+
+    #[test]
+    fn runner_stats_deserialize_old_minutes() {
+        use super::{
+            JsonCohort, JsonCohortAvg, JsonRunnerStats, JsonRunnerStatsCohort, JsonTopJobCohort,
+        };
+
+        let cohort = JsonRunnerStatsCohort {
+            total: JsonCohort {
+                week: 1,
+                month: 2,
+                total: 3,
+            },
+            unclaimed: JsonCohort {
+                week: 0,
+                month: 0,
+                total: 0,
+            },
+            claimed: JsonCohort {
+                week: 0,
+                month: 0,
+                total: 0,
+            },
+            plus: JsonCohort {
+                week: 0,
+                month: 0,
+                total: 0,
+            },
+        };
+        let avg_cohort = JsonRunnerStatsCohort {
+            total: JsonCohortAvg {
+                week: 1.0,
+                month: 2.0,
+                total: 3.0,
+            },
+            unclaimed: JsonCohortAvg {
+                week: 0.0,
+                month: 0.0,
+                total: 0.0,
+            },
+            claimed: JsonCohortAvg {
+                week: 0.0,
+                month: 0.0,
+                total: 0.0,
+            },
+            plus: JsonCohortAvg {
+                week: 0.0,
+                month: 0.0,
+                total: 0.0,
+            },
+        };
+        let top_cohort = JsonRunnerStatsCohort {
+            total: JsonTopJobCohort {
+                week: vec![],
+                month: vec![],
+                total: vec![],
+            },
+            unclaimed: JsonTopJobCohort {
+                week: vec![],
+                month: vec![],
+                total: vec![],
+            },
+            claimed: JsonTopJobCohort {
+                week: vec![],
+                month: vec![],
+                total: vec![],
+            },
+            plus: JsonTopJobCohort {
+                week: vec![],
+                month: vec![],
+                total: vec![],
+            },
+        };
+
+        // Serialize with new field names, then replace to simulate old format
+        let stats = JsonRunnerStats {
+            seconds: cohort,
+            seconds_per_report: avg_cohort,
+            top_projects: top_cohort,
+        };
+        let json = serde_json::to_string(&stats)
+            .unwrap()
+            .replace("\"seconds\"", "\"minutes\"")
+            .replace("\"seconds_per_report\"", "\"minutes_per_report\"");
+
+        let deserialized: JsonRunnerStats = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.seconds.total.week, 1);
+        assert!((deserialized.seconds_per_report.total.total - 3.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn top_job_project_deserialize_old_minutes() {
+        use super::JsonTopJobProject;
+
+        let json = r#"{"name":"test-project","uuid":"a1b2c3d4-e5f6-7890-abcd-ef1234567890","minutes":42,"percentage":0.5}"#;
+        let project: JsonTopJobProject = serde_json::from_str(json).unwrap();
+        assert_eq!(project.seconds, 42);
     }
 }

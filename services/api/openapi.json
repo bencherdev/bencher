@@ -14678,16 +14678,16 @@
         "description": "Runner stats",
         "type": "object",
         "properties": {
-          "minutes": {
-            "description": "Total runner minutes",
+          "seconds": {
+            "description": "Total runner seconds",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonRunnerStatsCohort_for_JsonCohort"
               }
             ]
           },
-          "minutes_per_report": {
-            "description": "Median runner minutes per report",
+          "seconds_per_report": {
+            "description": "Median runner seconds per report",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonRunnerStatsCohort_for_JsonCohortAvg"
@@ -14695,7 +14695,7 @@
             ]
           },
           "top_projects": {
-            "description": "Top 10 projects by runner minutes",
+            "description": "Top 10 projects by runner seconds",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonRunnerStatsCohort_for_JsonTopJobCohort"
@@ -14704,8 +14704,8 @@
           }
         },
         "required": [
-          "minutes",
-          "minutes_per_report",
+          "seconds",
+          "seconds_per_report",
           "top_projects"
         ]
       },
@@ -15836,12 +15836,6 @@
       "JsonTopJobProject": {
         "type": "object",
         "properties": {
-          "minutes": {
-            "description": "Total runner minutes",
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
           "name": {
             "$ref": "#/components/schemas/ResourceName"
           },
@@ -15849,14 +15843,20 @@
             "type": "number",
             "format": "double"
           },
+          "seconds": {
+            "description": "Total runner seconds",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
           "uuid": {
             "$ref": "#/components/schemas/ProjectUuid"
           }
         },
         "required": [
-          "minutes",
           "name",
           "percentage",
+          "seconds",
           "uuid"
         ]
       },
