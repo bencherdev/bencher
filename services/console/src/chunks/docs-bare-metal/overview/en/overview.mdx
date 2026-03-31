@@ -18,7 +18,7 @@ Once a Job is claimed, the Runner pulls the specified [Image][image] for the Job
 unpacks the Image, executes the benchmark command, and sends the results back to the Bencher API.
 Only one Job is executed at a time to ensure that the benchmarks are not affected by other workloads.
 
-| Runner                   | Platform            | Level        | Managed By | [Sandbox][sandbox] | [Tier][pricing]        |
+| Runner                   | Platform            | Scope        | Managed By | [Sandbox][sandbox] | [Tier][pricing]        |
 | ------------------------ | ------------------- | ------------ | ---------- | ------------------ | ---------------------- |
 | Standard                 | Bencher Cloud       | Server       | Bencher    | Required           | Free, Team, Enterprise |
 | Dedicated                | Bencher Cloud       | Organization | Bencher    | Optional           | Enterprise             |
@@ -34,7 +34,7 @@ Only one Job is executed at a time to ensure that the benchmarks are not affecte
 
 ## Spec
 
-A Spec is a hardware specification that describes the resources available on a Runner.
+A Spec is a hardware specification that describes the resources available to a [Runner][runner]:
 
 1. Operating System (OS)
    1. Linux
@@ -51,24 +51,46 @@ A Spec is a hardware specification that describes the resources available on a R
 6. Disk Size
 7. Network Access
 
+Specs are either server-scoped or organization-scoped,
+so the same Spec can be shared across multiple Testbeds on the same server or within the same organization respectively.
+
+The order of precedence for selecting the Spec for a [Testbed][testbed] when using <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> is as follows:
+1. The `--spec` option
+2. The default organization-scoped Spec
+3. The default server-scoped Spec
+
+The selected Spec determines the default Testbed name:
+
+| [`--image`](/docs/explanation/bencher-run/#--image-image) provided | [`--testbed`](/docs/explanation/bencher-run/#--testbed-testbed) provided | Testbed name source                              |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------ |
+| No                                                                 | No                                                                       | Context OS                                       |
+| No                                                                 | Yes                                                                      | User's explicit value                            |
+| Yes                                                                | No                                                                       | Resolved Spec's name (Spec assigned to Testbed)  |
+| Yes                                                                | Yes                                                                      | User's explicit value (Spec assigned to Testbed) |
+
+[runner]: #runner
 [sandbox]: #sandbox
+[testbed]: /docs/explanation/benchmarking/#testbed
 
 ## Sandbox
 
 A Sandbox is an isolation mechanism that allows for safe multi-tenancy on a Runner.
 Bencher Bare Metal uses [Firecracker][firecracker] microVMs as the default Sandbox implementation.
-Running without a Sandbox on Bencher Cloud requires a Dedicated or Custom Runner (contact <a href="mailto:plus@bencher.dev">Bencher Plus support</a> for more information) or Bencher Self-Hosted.
+Running without a Sandbox on requires a Dedicated or Custom Runner on Bencher Cloud (contact <a href="mailto:plus@bencher.dev">Bencher Plus support</a> for more information) or Bencher Self-Hosted.
 When a Runner is configured to use a Sandbox, each Job is executed within that Sandbox.
 See [the `runner` documentation][runner] for a full overview.
 
+[firecracker]: https://github.com/firecracker-microvm/firecracker
 [runner]: /docs/bare-metal/runner
 
 ## Job
 
-A Job is a benchmark execution unit.
-When you run <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> with the `--image` and `--spec` options,
+A Job runs benchmarks on a remote [Runner][runner],
+When you run <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> with the `--image` option,
 a Job is created and placed in the queue.
 A Runner with a matching Spec claims the Job, executes the benchmark container, and reports the results.
+
+[runner]: #runner
 
 ## Image
 
