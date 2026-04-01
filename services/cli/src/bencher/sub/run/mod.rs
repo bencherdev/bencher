@@ -280,6 +280,7 @@ impl Run {
         let (branch, hash, start_point) = self.branch.clone().into();
         Ok(Some(JsonNewRun {
             project: self.project.clone().map(Into::into),
+            idempotency_key: Some(uuid::Uuid::new_v4().into()),
             branch,
             hash,
             start_point,
@@ -313,6 +314,7 @@ impl Run {
         let (branch, hash, start_point) = self.branch.clone().into();
         JsonNewRun {
             project: self.project.clone().map(Into::into),
+            idempotency_key: Some(uuid::Uuid::new_v4().into()),
             branch,
             hash,
             start_point,

@@ -8,7 +8,7 @@ use crate::{
     BranchNameId, ProjectResourceId, TestbedNameId,
     project::{
         branch::JsonUpdateStartPoint,
-        report::{JsonReportSettings, JsonReportThresholds},
+        report::{JsonReportSettings, JsonReportThresholds, ReportIdempotencyKey},
     },
 };
 
@@ -27,6 +27,11 @@ pub struct JsonNewRun {
     /// Project UUID or slug.
     /// If the project is not provided or does not exist, it will be created.
     pub project: Option<ProjectResourceId>,
+    /// Optional idempotency key for deduplicating run submissions.
+    /// If provided, a duplicate submission with the same key within the same project
+    /// will return the existing report instead of creating a new one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idempotency_key: Option<ReportIdempotencyKey>,
     /// Branch UUID, slug, or name.
     /// If the branch is not provided or does not exist, it will be created.
     pub branch: Option<BranchNameId>,
@@ -78,6 +83,7 @@ impl From<JsonNewRun> for JsonNewReport {
     fn from(run: JsonNewRun) -> Self {
         let JsonNewRun {
             project: _,
+            idempotency_key: _,
             branch,
             hash,
             start_point,

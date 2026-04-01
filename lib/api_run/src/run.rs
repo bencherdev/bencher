@@ -75,7 +75,7 @@ async fn post_inner(
     context: &ApiContext,
     public_user: &PublicUser,
     #[cfg(feature = "plus")] headers: &http::HeaderMap,
-    #[cfg_attr(not(feature = "plus"), expect(unused_mut))] mut json_run: JsonNewRun,
+    mut json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
     match public_user {
         PublicUser::Public(remote_ip) => {
@@ -165,8 +165,11 @@ async fn post_inner(
 
     slog::info!(log, "New run requested"; "project" => ?query_project, "run" => ?json_run);
 
+    let idempotency_key = json_run.idempotency_key.take();
+
     let new_run_report = NewRunReport {
         report: json_run.into(),
+        idempotency_key,
         #[cfg(feature = "plus")]
         is_claimed,
         #[cfg(feature = "plus")]
