@@ -8,6 +8,8 @@ use http as _;
 use serde_json as _;
 #[cfg(test)]
 use tokio as _;
+#[cfg(test)]
+use uuid as _;
 
 mod run;
 

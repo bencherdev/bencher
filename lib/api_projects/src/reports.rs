@@ -308,6 +308,7 @@ async fn post_inner(
     )?;
     let new_run_report = NewRunReport {
         report: json_report,
+        idempotency_key: None,
         #[cfg(feature = "plus")]
         is_claimed: true,
         #[cfg(feature = "plus")]

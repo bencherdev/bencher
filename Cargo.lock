@@ -279,6 +279,7 @@ dependencies = [
  "serde_json",
  "slog",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -1180,6 +1181,7 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.26.4",
  "url",
+ "uuid",
 ]
 
 [[package]]

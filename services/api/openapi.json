@@ -12715,6 +12715,15 @@
               }
             ]
           },
+          "idempotency_key": {
+            "nullable": true,
+            "description": "Optional idempotency key for deduplicating run submissions. If provided, a duplicate submission with the same key within the same project will return the existing report instead of creating a new one.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReportIdempotencyKey"
+              }
+            ]
+          },
           "job": {
             "nullable": true,
             "description": "Runner job configuration. When present, the run is executed on a remote bare metal runner instead of locally.",
@@ -16746,6 +16755,10 @@
             ]
           }
         ]
+      },
+      "ReportIdempotencyKey": {
+        "type": "string",
+        "format": "uuid"
       },
       "ReportUuid": {
         "type": "string",

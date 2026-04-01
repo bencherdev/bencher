@@ -38,6 +38,7 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "process", "rt", "signal"] }
 tokio-rustls.workspace = true
 url.workspace = true
+uuid.workspace = true
 
 [lints]
 workspace = true
