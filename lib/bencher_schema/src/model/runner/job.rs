@@ -937,6 +937,8 @@ pub fn spawn_heartbeat_timeout(
 /// Recover jobs stuck in `Claimed` status that were claimed longer ago than the
 /// heartbeat timeout. These are orphaned: the runner claimed them but never
 /// transitioned them to `Running` (e.g., the runner crashed after claiming).
+/// If a job is marked `Failed` too early, the runner can still override with
+/// `Completed` when it sends results, since `Failed → Completed` is allowed.
 ///
 /// Returns the number of jobs recovered (transitioned to `Failed`).
 pub fn recover_orphaned_claimed_jobs(
@@ -1045,6 +1047,13 @@ fn check_job_timeout(
 ///
 /// Called when a Completed job has no stored output in OCI storage,
 /// meaning its results were lost. Transitions to Failed, preserving the original completed timestamp.
+///
+/// **Why Failed instead of leaving as Completed?**
+/// If the job stays in Completed, the runner's retry of the Completed message
+/// is silently dropped by `handle_completed()` as an "idempotent duplicate"
+/// (it sees Completed status and returns `Ok`). By marking as Failed, the
+/// runner's retry triggers a Failed→Completed transition, which goes through
+/// the full processing path (store output → process results → Processed).
 async fn mark_orphaned_completed_as_failed(log: &Logger, context: &ApiContext, job: &QueryJob) {
     let now = context.clock.now();
     let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
@@ -1107,11 +1116,17 @@ async fn reprocess_single_completed_job(log: &Logger, context: &ApiContext, job:
     {
         Ok(Some(output)) => output,
         Ok(None) => {
+            // Mark as Failed so the runner's retry (if still pending) triggers the
+            // Failed→Completed path in handle_completed() rather than being silently
+            // dropped as a duplicate. See mark_orphaned_completed_as_failed doc comment.
             slog::warn!(log, "No stored output for completed job, marking as Failed"; "job_id" => ?job.id);
             mark_orphaned_completed_as_failed(log, context, job).await;
             return;
         },
         Err(e) => {
+            // Mark as Failed so the runner's retry (if still pending) triggers the
+            // Failed→Completed path in handle_completed() rather than being silently
+            // dropped as a duplicate. See mark_orphaned_completed_as_failed doc comment.
             slog::error!(log, "Failed to fetch job output for reprocessing, marking as Failed"; "job_id" => ?job.id, "error" => %e);
             mark_orphaned_completed_as_failed(log, context, job).await;
             return;
