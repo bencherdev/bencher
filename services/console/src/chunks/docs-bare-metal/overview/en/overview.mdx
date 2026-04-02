@@ -5,26 +5,26 @@ you're unable to compare results between the two.
 
 Bencher Bare Metal allows you to have the best of both worlds.
 You can run benchmarks from your local machine and have them executed on dedicated hardware,
-and you can also run benchmarks from CI and have them executed on the _same_ dedicated hardware.
+and you can also run benchmarks from CI and have them executed on the _exact same_ dedicated hardware.
 This allows you to have a consistent benchmark execution environment regardless of where you run your benchmarks.
 
 Bencher Bare Metal runs on dedicated hardware to eliminate variability and provide more accurate and reliable benchmark results.
 
 ## Runner
 
-A Runner is a remote benchmark execution orchestrator that runs on dedicated, bare metal hardware.
-The Runner polls the Bencher API for pending [Jobs][job] based on its associated [Specs][spec].
+A Runner is a remote benchmark executor that runs on dedicated, bare metal hardware.
+The Runner polls the Bencher API server for pending [Jobs][job] based on its associated [Specs][spec].
 Once a Job is claimed, the Runner pulls the specified [Image][image] for the Job,
-unpacks the Image, executes the benchmark command, and sends the results back to the Bencher API.
+unpacks the Image, executes the benchmark command, and sends the results back to the Bencher API server.
 Only one Job is executed at a time to ensure that the benchmarks are not affected by other workloads.
 
-| Runner                   | Platform            | Scope        | Managed By | [Sandbox][sandbox] | [Tier][pricing]        |
-| ------------------------ | ------------------- | ------------ | ---------- | ------------------ | ---------------------- |
-| Standard                 | Bencher Cloud       | Server       | Bencher    | Required           | Free, Team, Enterprise |
-| Dedicated                | Bencher Cloud       | Organization | Bencher    | Optional           | Enterprise             |
-| Custom                   | Bencher Cloud       | Organization | User       | Optional           | Enterprise             |
-| Self-Hosted Server       | Bencher Self-Hosted | Server       | User       | Optional           | Free, Team, Enterprise |
-| Self-Hosted Organization | Bencher Self-Hosted | Organization | User       | Optional           | Enterprise             |
+| Runner                   | Platform            | Scope        | Managed By | [Sandbox][sandbox] | Network Access | [Tier][pricing]        |
+| ------------------------ | ------------------- | ------------ | ---------- | ------------------ | -------------- | ---------------------- |
+| Shared                   | Bencher Cloud       | Server       | Bencher    | Required           | No             | Free, Team, Enterprise |
+| Dedicated                | Bencher Cloud       | Organization | Bencher    | Optional           | No             | Enterprise             |
+| Custom                   | Bencher Cloud       | Organization | User       | Optional           | Optional       | Enterprise             |
+| Self-Hosted Server       | Bencher Self-Hosted | Server       | User       | Optional           | Optional       | Free, Team, Enterprise |
+| Self-Hosted Organization | Bencher Self-Hosted | Organization | User       | Optional           | Optional       | Enterprise             |
 
 [job]: #job
 [spec]: #spec
@@ -52,21 +52,15 @@ A Spec is a hardware specification that describes the resources available to a [
 7. Network Access
 
 Specs are either server-scoped or organization-scoped,
-so the same Spec can be shared across multiple Testbeds on the same server or within the same organization respectively.
+so the same Spec can be shared across multiple [Testbeds][testbed] on the same server or within the same organization respectively.
 
-The order of precedence for selecting the Spec for a [Testbed][testbed] when using <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> is as follows:
+The order of precedence for selecting the Spec when using <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> is as follows:
 1. The `--spec` option
-2. The default organization-scoped Spec
-3. The default server-scoped Spec
+2. The Spec assigned to the Testbed
+3. The default organization-scoped Spec
+4. The default server-scoped Spec
 
-The selected Spec determines the default Testbed name:
-
-| [`--image`](/docs/explanation/bencher-run/#--image-image) provided | [`--testbed`](/docs/explanation/bencher-run/#--testbed-testbed) provided | Testbed name source                              |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------ |
-| No                                                                 | No                                                                       | Context OS                                       |
-| No                                                                 | Yes                                                                      | User's explicit value                            |
-| Yes                                                                | No                                                                       | Resolved Spec's name (Spec assigned to Testbed)  |
-| Yes                                                                | Yes                                                                      | User's explicit value (Spec assigned to Testbed) |
+The selected Spec will then be assigned to the current [Testbed][testbed].
 
 [runner]: #runner
 [sandbox]: #sandbox
@@ -76,7 +70,7 @@ The selected Spec determines the default Testbed name:
 
 A Sandbox is an isolation mechanism that allows for safe multi-tenancy on a Runner.
 Bencher Bare Metal uses [Firecracker][firecracker] microVMs as the default Sandbox implementation.
-Running without a Sandbox on requires a Dedicated or Custom Runner on Bencher Cloud (contact <a href="mailto:plus@bencher.dev">Bencher Plus support</a> for more information) or Bencher Self-Hosted.
+Running without a Sandbox requires a Dedicated or Custom Runner on Bencher Cloud (contact <a href="mailto:plus@bencher.dev">Bencher Plus support</a> for more information) or Bencher Self-Hosted.
 When a Runner is configured to use a Sandbox, each Job is executed within that Sandbox.
 See [the `runner` documentation][runner] for a full overview.
 
@@ -104,7 +98,7 @@ See [the Job documentation][job] for a full overview.
 ## Image
 
 An Image is an [OCI container image][oci image] that contains your benchmark code and its dependencies.
-When a Runner executes a Job, it pulls the Image, unpacks the Image, and runs the command specified in the [Job][job].
+When a Runner executes a Job, it pulls the Image, unpacks the Image, and executes the benchmark command specified in the [Job][job].
 See [the Image documentation][image] for how to create an Image for your own project.
 
 [oci image]: https://opencontainers.org/
