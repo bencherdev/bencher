@@ -66,14 +66,27 @@ impl ReportComment {
 
     pub fn human(&self) -> String {
         let mut text = String::new();
+        self.human_report_link(&mut text);
+        self.human_no_benchmarks(&mut text);
         self.human_results_list(&mut text);
         self.human_alerts_list(&mut text);
         self.human_unclaimed(&mut text);
         text
     }
 
+    fn human_report_link(&self, text: &mut String) {
+        let url = self.resource_url_inner(Resource::Report(self.json_report.uuid), false);
+        text.push_str(&format!("View report: {url}"));
+    }
+
+    fn human_no_benchmarks(&self, text: &mut String) {
+        if self.benchmark_count == 0 {
+            text.push_str("\n\nWARNING: No benchmarks found!");
+        }
+    }
+
     fn human_results_list(&self, text: &mut String) {
-        text.push_str("View results:");
+        text.push_str("\n\nView results:");
         for (i, iteration) in self.json_report.results.iter().enumerate() {
             if self.multiple_iterations {
                 if i != 0 {
@@ -659,6 +672,10 @@ impl ReportComment {
     }
 
     fn resource_url(&self, resource: Resource) -> Url {
+        self.resource_url_inner(resource, true)
+    }
+
+    fn resource_url_inner(&self, resource: Resource, utm: bool) -> Url {
         let url = self.console_url.clone();
         let query_param = resource.query_param();
         let path = if self.public_links {
@@ -682,7 +699,7 @@ impl ReportComment {
             url.query_pairs_mut().append_pair(key, &value);
         }
 
-        if self.is_bencher_cloud() {
+        if utm && self.is_bencher_cloud() {
             url.query_pairs_mut()
                 .append_pair("utm_medium", "referral")
                 .append_pair("utm_source", &self.source)
