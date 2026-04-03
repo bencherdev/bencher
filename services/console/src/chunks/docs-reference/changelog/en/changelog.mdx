@@ -1,6 +1,8 @@
 ## Pending `v0.6.1`
 - Buffer OCI upload network frames into configurable S3 chunks (`registry.data_store.chunk_size`, default 5 MB) to reduce S3 operations during Docker push
 - Add `idempotency_key` to `bencher run` to deduplicate retried submissions
+- Rename `--poll-interval` to `--job-poll-interval` for `bencher run` (`--poll-interval` is still supported as a deprecated alias)
+- Add `--detach` flag to `bencher run` to skip waiting for remote job completion
 
 ## `v0.6.0`
 - **BREAKING CHANGE** Update Bencher Metric Format (BMF) to accept UUID, slug, or name for the Benchmark identifier
