@@ -6,10 +6,9 @@ use bencher_json::{
     BenchmarkName, DateTime, JsonNewReport, JsonReport, ReportUuid,
     project::report::{
         Adapter, Iteration, JsonReportAlerts, JsonReportMeasure, JsonReportResult,
-        JsonReportResults, JsonReportSettings,
+        JsonReportResults, JsonReportSettings, ReportIdempotencyKey,
     },
 };
-#[cfg(feature = "plus")]
 use diesel::OptionalExtension as _;
 use diesel::{
     Connection as _, ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _,
@@ -52,6 +51,7 @@ use crate::{
 /// Encapsulates all context from a run request for report creation.
 pub struct NewRunReport {
     pub report: JsonNewReport,
+    pub idempotency_key: Option<ReportIdempotencyKey>,
     #[cfg(feature = "plus")]
     pub is_claimed: bool,
     #[cfg(feature = "plus")]
@@ -98,6 +98,7 @@ crate::macros::typed_id::typed_id!(ReportId);
 pub struct QueryReport {
     pub id: ReportId,
     pub uuid: ReportUuid,
+    pub idempotency_key: Option<ReportIdempotencyKey>,
     pub user_id: Option<UserId>,
     pub project_id: ProjectId,
     pub head_id: HeadId,
@@ -146,19 +147,29 @@ impl QueryReport {
 
         let NewRunReport {
             report: mut json_report,
-            #[cfg(all(feature = "otel", feature = "plus"))]
-            is_claimed,
-            #[cfg(all(feature = "plus", not(all(feature = "otel", feature = "plus"))))]
-                is_claimed: _,
+            idempotency_key,
             #[cfg(feature = "plus")]
-                testbed: run_testbed,
+            is_claimed,
+            #[cfg(feature = "plus")]
+            testbed: run_testbed,
             #[cfg(feature = "plus")]
             spec_reset,
             #[cfg(feature = "plus")]
-                job: new_run_job,
+            job: new_run_job,
         } = new_run_report;
 
-        #[cfg(all(feature = "otel", feature = "plus"))]
+        // Idempotency check: if a key is provided, look for an existing report
+        if let Some(existing) = Self::check_idempotency(
+            public_conn!(context, public_user),
+            project_id,
+            idempotency_key,
+        )? {
+            return existing.into_json(log, public_conn!(context, public_user));
+        }
+
+        #[cfg(all(feature = "plus", not(feature = "otel")))]
+        let _ = is_claimed;
+        #[cfg(all(feature = "plus", feature = "otel"))]
         let priority = plan_kind.priority(is_claimed);
 
         #[cfg(all(feature = "otel", feature = "plus"))]
@@ -272,6 +283,7 @@ impl QueryReport {
 
                 // Create a new report and add it to the database
                 let insert_report = InsertReport::from_json(
+                    idempotency_key,
                     public_user.user_id(),
                     project_id,
                     head_id,
@@ -337,7 +349,7 @@ impl QueryReport {
                 json_settings,
                 #[cfg(feature = "plus")]
                 plan_kind,
-                #[cfg(all(feature = "otel", feature = "plus"))]
+                #[cfg(all(feature = "plus", feature = "otel"))]
                 priority,
                 #[cfg(feature = "plus")]
                 query_project,
@@ -354,6 +366,29 @@ impl QueryReport {
                 create_start,
             )
             .await
+    }
+
+    /// If an idempotency key is provided, check for an existing report with the same key.
+    fn check_idempotency(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        idempotency_key: Option<ReportIdempotencyKey>,
+    ) -> Result<Option<Self>, HttpError> {
+        let Some(idempotency_key) = idempotency_key else {
+            return Ok(None);
+        };
+        schema::report::table
+            .filter(schema::report::project_id.eq(project_id))
+            .filter(schema::report::idempotency_key.eq(idempotency_key))
+            .first::<Self>(conn)
+            .optional()
+            .map_err(|e| {
+                issue_error(
+                    "Failed to check idempotency key",
+                    "Failed to check report idempotency key",
+                    e,
+                )
+            })
     }
 
     async fn finish_create(
@@ -380,6 +415,7 @@ impl QueryReport {
         let Self {
             id,
             uuid,
+            idempotency_key: _,
             user_id,
             project_id,
             head_id,
@@ -438,7 +474,7 @@ impl QueryReport {
         adapter: Adapter,
         settings: JsonReportSettings,
         #[cfg(feature = "plus")] plan_kind: PlanKind,
-        #[cfg(all(feature = "otel", feature = "plus"))] priority: bencher_json::Priority,
+        #[cfg(all(feature = "plus", feature = "otel"))] priority: bencher_json::Priority,
         #[cfg(feature = "plus")] query_project: &QueryProject,
     ) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]
@@ -724,6 +760,7 @@ fn get_report_alerts(
 #[diesel(table_name = report_table)]
 pub struct InsertReport {
     pub uuid: ReportUuid,
+    pub idempotency_key: Option<ReportIdempotencyKey>,
     pub user_id: Option<UserId>,
     pub project_id: ProjectId,
     pub head_id: HeadId,
@@ -742,6 +779,7 @@ impl InsertReport {
 
     #[expect(clippy::too_many_arguments, reason = "report has many dimensions")]
     pub fn from_json(
+        idempotency_key: Option<ReportIdempotencyKey>,
         user_id: Option<UserId>,
         project_id: ProjectId,
         head_id: HeadId,
@@ -754,6 +792,7 @@ impl InsertReport {
     ) -> Self {
         Self {
             uuid: ReportUuid::new(),
+            idempotency_key,
             user_id,
             project_id,
             head_id,

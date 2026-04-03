@@ -231,6 +231,13 @@ impl RunnerTest {
             Ok(())
         };
 
+        // Run the detach runner test
+        let detach_result = if no_sandbox_result.is_ok() {
+            run_detach_runner_test(&self.url, &self.token)
+        } else {
+            Ok(())
+        };
+
         // Always kill runner daemons, even if the test failed
         if let Some((mut runner_child, reader_handle)) = runner_child_and_handle {
             let _kill = runner_child.kill();
@@ -243,6 +250,7 @@ impl RunnerTest {
 
         result?;
         no_sandbox_result?;
+        detach_result?;
         println!("=== Runner Daemon Test Passed ===");
         Ok(())
     }
@@ -282,7 +290,7 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> an
         ensure_insecure_registry(&docker_registry)?;
         docker_registry
     } else {
-        registry_host(host)?
+        registry_for_api(host)?
     };
 
     let local_ref = format!("{registry}/{PROJECT_SLUG}:{IMAGE_TAG}");
@@ -331,8 +339,8 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> an
         "--quiet",
         "--job-timeout",
         "120",
-        "--poll-interval",
-        "2",
+        "--job-poll-interval",
+        "1",
         "--exec",
         "mock",
     ];
@@ -389,8 +397,8 @@ fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
         "--quiet",
         "--job-timeout",
         "120",
-        "--poll-interval",
-        "2",
+        "--job-poll-interval",
+        "1",
         "--exec",
         "mock",
     ];
@@ -412,6 +420,112 @@ fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     );
 
     println!("No-sandbox runner smoke test passed!");
+    Ok(())
+}
+
+/// Run a detach runner smoke test: submit a job with `--detach` and verify
+/// it returns immediately with a `JsonReport` containing a job UUID,
+/// then poll `bencher job view` until the job reaches a terminal state.
+fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("Running detach runner smoke test against: {host}");
+
+    // Submit the job with --detach (returns immediately)
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
+    let args = [
+        "run",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        "--project",
+        PROJECT_SLUG,
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+        "--image",
+        &image_ref,
+        "--spec",
+        "no-sandbox-spec",
+        "--format",
+        "json",
+        "--quiet",
+        "--job-timeout",
+        "120",
+        "--detach",
+        "--exec",
+        "mock",
+    ];
+    cmd.args(args).current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run --detach failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(json.project.slug.to_string(), PROJECT_SLUG);
+    let job_uuid = json
+        .job
+        .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {json:?}"))?;
+
+    // Poll `bencher job view` until the job reaches a terminal state
+    let job_uuid_str = job_uuid.to_string();
+    let start = std::time::Instant::now();
+    let timeout = std::time::Duration::from_secs(240);
+
+    loop {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        if start.elapsed() > timeout {
+            anyhow::bail!("Timed out waiting for detached job {job_uuid} to complete");
+        }
+
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "job",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token.as_ref(),
+            PROJECT_SLUG,
+            &job_uuid_str,
+        ])
+        .current_dir(CLI_DIR);
+        let output = cmd.output()?;
+        anyhow::ensure!(
+            output.status.success(),
+            "bencher job view failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        let job: bencher_json::JsonJob = serde_json::from_slice(&output.stdout)?;
+        match job.status {
+            bencher_json::JobStatus::Processed => {
+                println!("Detached job {job_uuid} processed successfully");
+                break;
+            },
+            bencher_json::JobStatus::Failed => {
+                anyhow::bail!("Detached job {job_uuid} failed: {job:?}");
+            },
+            bencher_json::JobStatus::Canceled => {
+                anyhow::bail!("Detached job {job_uuid} was canceled: {job:?}");
+            },
+            bencher_json::JobStatus::Pending
+            | bencher_json::JobStatus::Claimed
+            | bencher_json::JobStatus::Running
+            | bencher_json::JobStatus::Completed => {},
+        }
+    }
+
+    println!("Detach runner smoke test passed!");
     Ok(())
 }
 
@@ -500,6 +614,22 @@ fn ensure_insecure_registry(registry: &str) -> anyhow::Result<()> {
             "Timed out waiting for Docker Desktop to restart"
         );
         std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+}
+
+/// Map an API URL to its corresponding registry host for Docker operations.
+///
+/// For known Bencher environments, returns the dedicated registry hostname.
+/// For other URLs (e.g. localhost), falls back to extracting the host from the URL.
+fn registry_for_api(api_url: &str) -> anyhow::Result<String> {
+    if api_url.starts_with(bencher_json::DEV_BENCHER_API_URL_STR) {
+        registry_host(bencher_json::DEV_BENCHER_REGISTRY_URL_STR)
+    } else if api_url.starts_with(bencher_json::TEST_BENCHER_API_URL_STR) {
+        registry_host(bencher_json::TEST_BENCHER_REGISTRY_URL_STR)
+    } else if api_url.starts_with(bencher_json::PROD_BENCHER_API_URL_STR) {
+        registry_host(bencher_json::PROD_BENCHER_REGISTRY_URL_STR)
+    } else {
+        registry_host(api_url)
     }
 }
 

@@ -42,6 +42,7 @@ use crate::auth::{check_oci_bandwidth, record_oci_bandwidth};
 use crate::auth::{
     require_pull_access, require_push_access, resolve_project, validate_push_access,
 };
+use crate::error::storage_error;
 use crate::response::{
     APPLICATION_OCTET_STREAM, DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers,
 };
@@ -131,7 +132,7 @@ pub async fn oci_blob_exists(
     let size = storage
         .get_blob_size(&project_uuid, &digest)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Build response with OCI-compliant headers (no body for HEAD)
     let response = oci_cors_headers(
@@ -195,7 +196,7 @@ pub async fn oci_blob_get(
     let (blob_body, size) = storage
         .get_blob_stream(&project_uuid, &digest)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Record bandwidth usage
     #[cfg(feature = "plus")]
@@ -260,7 +261,7 @@ pub async fn oci_blob_delete(
     let exists = storage
         .blob_exists(&project_uuid, &digest)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
     if !exists {
         return Err(crate::error::into_http_error(OciError::BlobUnknown {
             digest: digest.to_string(),
@@ -271,7 +272,7 @@ pub async fn oci_blob_delete(
     storage
         .delete_blob(&project_uuid, &digest)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // OCI spec requires 202 Accepted for DELETE
     let response = oci_cors_headers(
@@ -387,7 +388,7 @@ pub async fn oci_upload_start(
     let upload_id = storage
         .start_upload(&project_uuid)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Build 202 Accepted response
     let location = format!("/v2/{project_slug}/blobs/uploads/{upload_id}");
@@ -460,7 +461,7 @@ pub async fn oci_upload_monolithic(
     let upload_id = storage
         .start_upload(&project_uuid)
         .await
-        .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+        .map_err(storage_error)?;
 
     // Stream body to storage (storage enforces max_body_size incrementally)
     let result = async {
@@ -468,7 +469,7 @@ pub async fn oci_upload_monolithic(
         let digest = storage
             .complete_upload(&upload_id, &expected_digest)
             .await
-            .map_err(|e| crate::error::into_http_error(OciError::from(e)))?;
+            .map_err(storage_error)?;
         Ok::<(Digest, u64), HttpError>((digest, final_size))
     }
     .await;

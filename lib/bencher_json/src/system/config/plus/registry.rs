@@ -9,6 +9,26 @@ pub const DEFAULT_UPLOAD_TIMEOUT_SECS: u64 = 3600;
 /// Default maximum body size: 1 GiB (1,073,741,824 bytes)
 pub const DEFAULT_MAX_BODY_SIZE: u64 = 0x4000_0000;
 
+/// Default chunk size for S3 upload buffering: 5 MB (5,242,880 bytes).
+///
+/// HTTP request bodies arrive as small network frames (typically 8–64 KB).
+/// Without batching, each frame would be stored as a separate S3 object,
+/// creating thousands of objects per layer and making both upload
+/// (~3 S3 ops per frame) and completion (~1 S3 `GetObject` per chunk)
+/// extremely slow. This value controls the minimum batch size before
+/// flushing to S3.
+///
+/// 5 MB also matches the S3 multipart upload minimum part size,
+/// so chunks stored at this size can be efficiently assembled during
+/// upload completion.
+pub const DEFAULT_CHUNK_SIZE: u64 = 5 * 1024 * 1024;
+
+/// Maximum chunk size for S3 upload buffering: 5 GB (5,368,709,120 bytes).
+///
+/// The S3 multipart upload maximum part size is 5 GiB.
+/// We use 5 GB as a practical upper bound.
+pub const MAX_CHUNK_SIZE: u64 = 5 * 1024 * 1024 * 1024;
+
 /// Container registry configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -59,6 +79,10 @@ pub enum RegistryDataStore {
         /// S3 Access Point ARN with optional path prefix
         /// Format: arn:aws:s3:<region>:<account-id>:accesspoint/<bucket>[/path]
         access_point: String,
+        /// Minimum chunk size in bytes for buffering upload data before storing to S3.
+        /// Valid range: 5 MB–5 GB. Defaults to 5 MB (5,242,880 bytes).
+        /// See [`DEFAULT_CHUNK_SIZE`] and [`MAX_CHUNK_SIZE`].
+        chunk_size: Option<u64>,
     },
 }
 

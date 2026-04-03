@@ -2285,6 +2285,65 @@ async fn recover_orphaned_claimed_jobs_marks_as_failed() {
     );
 }
 
+/// Test that `recover_orphaned_claimed_jobs` does NOT fail recently-claimed jobs.
+/// A job claimed within the heartbeat timeout should survive into
+/// Phase 2 (`spawn_heartbeat_timeout`) rather than being prematurely failed.
+#[tokio::test]
+async fn recover_orphaned_claimed_jobs_spares_recently_claimed() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "recover-recent@example.com").await;
+    let org = server.create_org(&admin, "Recover Recent").await;
+    let project = server
+        .create_project(&admin, &org, "Recover Recent proj")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    // Set job to Claimed with a timestamp 3 seconds ago.
+    // With a 5-second heartbeat timeout, 3 seconds is within the
+    // timeout and should NOT be orphaned.
+    let recent_timestamp: i64 = base_timestamp().timestamp() - 3;
+    let recent_time: DateTime = recent_timestamp.try_into().expect("Invalid timestamp");
+    {
+        let mut conn = server.db_conn();
+        diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
+            .set((
+                schema::job::status.eq(JobStatus::Claimed),
+                schema::job::claimed.eq(Some(recent_time)),
+                schema::job::modified.eq(recent_time),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to set job to claimed");
+    }
+
+    // Use a custom clock pinned to base_timestamp so the cutoff is deterministic
+    let clock = bencher_json::Clock::Custom(Arc::new(base_timestamp));
+
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    let heartbeat_timeout = std::time::Duration::from_secs(5);
+    let mut conn = server.db_conn();
+    let recovered = recover_orphaned_claimed_jobs(&log, &mut conn, heartbeat_timeout, &clock);
+    assert_eq!(
+        recovered, 0,
+        "Recently claimed job should NOT be recovered (within heartbeat timeout)"
+    );
+
+    // Verify job is still Claimed
+    let status: JobStatus = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::status)
+        .first(&mut conn)
+        .expect("Failed to get job status");
+    assert_eq!(
+        status,
+        JobStatus::Claimed,
+        "Recently claimed job should still be Claimed"
+    );
+}
+
 /// Test that `spawn_heartbeat_timeout` marks a Running job as Failed after timeout.
 /// Simulates what `spawn_job_recovery` does for in-flight jobs on server restart.
 ///

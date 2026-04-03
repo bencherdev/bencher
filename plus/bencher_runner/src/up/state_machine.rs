@@ -17,7 +17,7 @@ use bencher_json::{
 const POLL_TIMEOUT_MARGIN_SECS: u64 = 30;
 
 /// Maximum number of times to retry sending a pending result before dropping it.
-const MAX_PENDING_RESULT_RETRIES: u32 = 3;
+const MAX_PENDING_RESULT_RETRIES: u32 = 5;
 
 /// Timeout for waiting for server ACK after sending terminal messages.
 const ACK_TIMEOUT: Duration = Duration::from_secs(5);

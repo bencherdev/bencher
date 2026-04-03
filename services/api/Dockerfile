@@ -5,8 +5,6 @@ RUN apt-get update \
     && apt-get install -y \
     # Linker
     clang \
-    # Database
-    sqlite3 libsqlite3-dev \
     # Plot
     pkg-config libfreetype6-dev libfontconfig1-dev \
     # Stipe
@@ -14,10 +12,11 @@ RUN apt-get update \
 
 WORKDIR /tmp/litestream
 ARG LITESTREAM_VERSION
-ARG LITESTREAM_ARCH
-ARG LITESTREAM_BIN=litestream-${LITESTREAM_VERSION}-linux-${LITESTREAM_ARCH}
-RUN wget https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/${LITESTREAM_BIN}.tar.gz
-RUN tar -xzf ${LITESTREAM_BIN}.tar.gz
+ARG TARGETARCH
+RUN LITESTREAM_ARCH=$(case "${TARGETARCH}" in amd64) echo "x86_64" ;; arm64) echo "arm64" ;; *) echo "${TARGETARCH}" ;; esac) && \
+    LITESTREAM_BIN="litestream-${LITESTREAM_VERSION}-linux-${LITESTREAM_ARCH}" && \
+    wget "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/${LITESTREAM_BIN}.tar.gz" && \
+    tar -xzf "${LITESTREAM_BIN}.tar.gz"
 
 WORKDIR /tmp/mold
 ARG MOLD_VERSION

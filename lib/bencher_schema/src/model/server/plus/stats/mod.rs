@@ -109,17 +109,17 @@ pub(super) fn get_stats(
         top_projects_unclaimed: Some(unclaimed_metrics_stats.top_projects),
         top_projects_claimed: Some(claimed_metrics_stats.top_projects),
         runner: Some(JsonRunnerStats {
-            minutes: JsonRunnerStatsCohort {
-                total: job_stats.minutes,
-                unclaimed: unclaimed_job_stats.minutes,
-                claimed: claimed_job_stats.minutes,
-                plus: plus_job_stats.minutes,
+            seconds: JsonRunnerStatsCohort {
+                total: job_stats.seconds,
+                unclaimed: unclaimed_job_stats.seconds,
+                claimed: claimed_job_stats.seconds,
+                plus: plus_job_stats.seconds,
             },
-            minutes_per_report: JsonRunnerStatsCohort {
-                total: job_stats.minutes_per_report,
-                unclaimed: unclaimed_job_stats.minutes_per_report,
-                claimed: claimed_job_stats.minutes_per_report,
-                plus: plus_job_stats.minutes_per_report,
+            seconds_per_report: JsonRunnerStatsCohort {
+                total: job_stats.seconds_per_report,
+                unclaimed: unclaimed_job_stats.seconds_per_report,
+                claimed: claimed_job_stats.seconds_per_report,
+                plus: plus_job_stats.seconds_per_report,
             },
             top_projects: JsonRunnerStatsCohort {
                 total: job_stats.top_projects,

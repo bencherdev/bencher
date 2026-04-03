@@ -89,6 +89,7 @@ struct Job {
     timeout: Option<bencher_json::Timeout>,
     build_time: bool,
     poll_interval: bencher_json::PollTimeout,
+    detach: bool,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -128,7 +129,8 @@ impl TryFrom<CliRun> for Run {
                 env: job.env.map(bencher_parser::parse_env),
                 timeout: job.job_timeout,
                 build_time,
-                poll_interval: job.poll_interval.unwrap_or(*DEFAULT_POLL_INTERVAL),
+                poll_interval: job.job_poll_interval.unwrap_or(*DEFAULT_POLL_INTERVAL),
+                detach: job.detach,
             })
         } else {
             None
@@ -227,6 +229,10 @@ impl Run {
 
         #[cfg(feature = "plus")]
         if let Some(job_uuid) = json_report.job {
+            if self.job.as_ref().is_some_and(|j| j.detach) {
+                cli_eprintln_quietable!(self.log, "Remote job submitted successfully: {job_uuid}");
+                return self.display_and_check_alerts(json_report).await;
+            }
             return self.poll_job(json_report, job_uuid).await;
         }
 
@@ -280,6 +286,7 @@ impl Run {
         let (branch, hash, start_point) = self.branch.clone().into();
         Ok(Some(JsonNewRun {
             project: self.project.clone().map(Into::into),
+            idempotency_key: Some(uuid::Uuid::new_v4().into()),
             branch,
             hash,
             start_point,
@@ -313,6 +320,7 @@ impl Run {
         let (branch, hash, start_point) = self.branch.clone().into();
         JsonNewRun {
             project: self.project.clone().map(Into::into),
+            idempotency_key: Some(uuid::Uuid::new_v4().into()),
             branch,
             hash,
             start_point,

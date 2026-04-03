@@ -6,10 +6,6 @@ services:
       args:
         MOLD_VERSION: 2.34.1
         LITESTREAM_VERSION: 0.5.10
-        # If you are calling `docker compose` directly, you can set the `ARCH` environment variable
-        # to the desired architecture.
-        # x64 example: `ARCH=x86_64 docker compose build`
-        LITESTREAM_ARCH: ${ARCH:-arm64}
     image: bencher-api
     container_name: bencher_api
     ports:

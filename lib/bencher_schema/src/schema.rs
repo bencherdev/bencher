@@ -274,6 +274,7 @@ diesel::table! {
     report (id) {
         id -> Integer,
         uuid -> Text,
+        idempotency_key -> Nullable<Text>,
         user_id -> Nullable<Integer>,
         project_id -> Integer,
         head_id -> Integer,
@@ -432,9 +433,9 @@ diesel::joinable!(branch -> project (project_id));
 diesel::joinable!(head_version -> version (version_id));
 diesel::joinable!(job -> organization (organization_id));
 diesel::joinable!(job -> report (report_id));
-diesel::joinable!(job_duration_by_report -> report (report_id));
 diesel::joinable!(job -> runner (runner_id));
 diesel::joinable!(job -> spec (spec_id));
+diesel::joinable!(job_duration_by_report -> report (report_id));
 diesel::joinable!(measure -> project (project_id));
 diesel::joinable!(metric -> measure (measure_id));
 diesel::joinable!(metric -> report_benchmark (report_benchmark_id));

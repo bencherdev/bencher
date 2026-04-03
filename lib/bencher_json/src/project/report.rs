@@ -16,6 +16,7 @@ use crate::{
 use super::{branch::JsonUpdateStartPoint, threshold::JsonThresholdModel};
 
 crate::typed_uuid::typed_uuid!(ReportUuid);
+crate::typed_uuid::typed_uuid!(ReportIdempotencyKey);
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

@@ -17,6 +17,8 @@ Il existe deux options de `service` de stockage :
     - `secret_access_key` : Clé d'accès secrète AWS
     - `access_point` : ARN du point d'accès S3 avec préfixe de chemin optionnel.
       Format : `arn:aws:s3:<region>:<account-id>:accesspoint/<access-point-name>[/<path-prefix>]`
+    - `chunk_size` : Taille minimale de fragment en octets pour la mise en tampon des données d'upload avant le stockage dans S3 (par défaut : 5 Mo).
+      Les corps de requête HTTP arrivent sous forme de petites trames réseau (typiquement 8–64 Ko). Sans mise en tampon, chaque trame devient un objet S3 séparé, créant des milliers d'objets par couche. Cette valeur correspond également à la taille minimale de partie pour les uploads multipart S3.
 
 |             Nom              |                               Exemple                               | Par défaut | Requis |                                              Description                                               |
 | :--------------------------: | :-----------------------------------------------------------------: | :--------: | :----: | :----------------------------------------------------------------------------------------------------: |
@@ -26,5 +28,6 @@ Il existe deux options de `service` de stockage :
 |   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |    ---     | aws_s3 uniquement |                                            ID de clé d'accès AWS.                                      |
 | data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |    ---     | aws_s3 uniquement |                                           Clé d'accès secrète AWS.                                     |
 |   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |    ---     | aws_s3 uniquement |              ARN du point d'accès S3. Préfixe de chemin optionnel après le nom du point d'accès.       |
+|   data_store.chunk_size      |                               5242880                                     | 5242880 | aws_s3 uniquement | Taille minimale de fragment en octets pour la mise en tampon des données d'upload avant le stockage dans S3. Par défaut : 5 Mo. |
 |       upload_timeout         |                                3600                                 |    3600    |  Non   | Délai d'expiration de la session d'upload en secondes. Les uploads obsolètes sont nettoyés au démarrage de nouveaux uploads. |
 |       max_body_size          |                            1073741824                               | 1073741824 |  Non   | Taille maximale du corps en octets pour les uploads de blobs et manifestes. Les requêtes dépassant cette limite sont rejetées avec 413 Payload Too Large. Par défaut : 1 Gio. |

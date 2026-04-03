@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.5.10"
+    "version": "0.6.0"
   },
   "paths": {
     "/": {
@@ -12732,6 +12732,15 @@
               }
             ]
           },
+          "idempotency_key": {
+            "nullable": true,
+            "description": "Optional idempotency key for deduplicating run submissions. If provided, a duplicate submission with the same key within the same project will return the existing report instead of creating a new one.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReportIdempotencyKey"
+              }
+            ]
+          },
           "job": {
             "nullable": true,
             "description": "Runner job configuration. When present, the run is executed on a remote bare metal runner instead of locally.",
@@ -14695,16 +14704,16 @@
         "description": "Runner stats",
         "type": "object",
         "properties": {
-          "minutes": {
-            "description": "Total runner minutes",
+          "seconds": {
+            "description": "Total runner seconds",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonRunnerStatsCohort_for_JsonCohort"
               }
             ]
           },
-          "minutes_per_report": {
-            "description": "Median runner minutes per report",
+          "seconds_per_report": {
+            "description": "Median runner seconds per report",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonRunnerStatsCohort_for_JsonCohortAvg"
@@ -14712,7 +14721,7 @@
             ]
           },
           "top_projects": {
-            "description": "Top 10 projects by runner minutes",
+            "description": "Top 10 projects by runner seconds",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonRunnerStatsCohort_for_JsonTopJobCohort"
@@ -14721,8 +14730,8 @@
           }
         },
         "required": [
-          "minutes",
-          "minutes_per_report",
+          "seconds",
+          "seconds_per_report",
           "top_projects"
         ]
       },
@@ -15853,12 +15862,6 @@
       "JsonTopJobProject": {
         "type": "object",
         "properties": {
-          "minutes": {
-            "description": "Total runner minutes",
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
           "name": {
             "$ref": "#/components/schemas/ResourceName"
           },
@@ -15866,14 +15869,20 @@
             "type": "number",
             "format": "double"
           },
+          "seconds": {
+            "description": "Total runner seconds",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
           "uuid": {
             "$ref": "#/components/schemas/ProjectUuid"
           }
         },
         "required": [
-          "minutes",
           "name",
           "percentage",
+          "seconds",
           "uuid"
         ]
       },
@@ -16741,6 +16750,13 @@
                 "description": "S3 Access Point ARN with optional path prefix Format: arn:aws:s3:<region>:<account-id>:accesspoint/<bucket>[/path]",
                 "type": "string"
               },
+              "chunk_size": {
+                "nullable": true,
+                "description": "Minimum chunk size in bytes for buffering upload data before storing to S3. Valid range: 5 MB–5 GB. Defaults to 5 MB (5,242,880 bytes). See [`DEFAULT_CHUNK_SIZE`] and [`MAX_CHUNK_SIZE`].",
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0
+              },
               "secret_access_key": {
                 "description": "AWS Secret Access Key with permissions to read/write the specified S3 bucket",
                 "allOf": [
@@ -16764,6 +16780,10 @@
             ]
           }
         ]
+      },
+      "ReportIdempotencyKey": {
+        "type": "string",
+        "format": "uuid"
       },
       "ReportUuid": {
         "type": "string",

@@ -4,6 +4,11 @@ use bencher_json::oci::{OCI_ERROR_SIZE_INVALID, OCI_ERROR_UNKNOWN, oci_error_bod
 use bencher_oci_storage::OciError;
 use dropshot::{ClientErrorStatusCode, ErrorStatusCode, HttpError};
 
+/// Converts an `OciStorageError` into an `HttpError` via `OciError`
+pub fn storage_error(error: bencher_oci_storage::OciStorageError) -> HttpError {
+    into_http_error(OciError::from(error))
+}
+
 /// Converts an `OciError` into an `HttpError` with OCI-compliant JSON error body
 #[expect(
     clippy::needless_pass_by_value,

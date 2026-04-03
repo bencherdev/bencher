@@ -1672,3 +1672,178 @@ async fn run_post_with_job_nonexistent_tag_fails() {
     // OCI digest resolution should fail for nonexistent tag
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }
+
+// POST /v0/run - idempotency key returns same report on retry
+#[tokio::test]
+async fn run_post_idempotency_key_returns_same_report() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "idempotency@example.com").await;
+    let org = server.create_org(&user, "Idempotency Org").await;
+    let project = server
+        .create_project(&user, &org, "Idempotency Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let idempotency_key = uuid::Uuid::new_v4().to_string();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "idempotency_key": idempotency_key,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()]
+    });
+
+    // First submission
+    let resp1 = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("First request failed");
+    assert_eq!(resp1.status(), StatusCode::CREATED);
+    let report1: JsonReport = resp1.json().await.expect("Failed to parse first response");
+
+    // Second submission with same idempotency key returns same report
+    let resp2 = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Second request failed");
+    assert_eq!(resp2.status(), StatusCode::CREATED);
+    let report2: JsonReport = resp2.json().await.expect("Failed to parse second response");
+
+    assert_eq!(report1.uuid, report2.uuid);
+}
+
+// POST /v0/run - different idempotency keys create different reports
+#[tokio::test]
+async fn run_post_different_idempotency_keys_create_different_reports() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "idempotency_diff@example.com")
+        .await;
+    let org = server.create_org(&user, "Idempotency Diff Org").await;
+    let project = server
+        .create_project(&user, &org, "Idempotency Diff Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let bmf = bmf_results().to_string();
+
+    let body1 = serde_json::json!({
+        "project": project_slug,
+        "idempotency_key": uuid::Uuid::new_v4().to_string(),
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf]
+    });
+
+    let body2 = serde_json::json!({
+        "project": project_slug,
+        "idempotency_key": uuid::Uuid::new_v4().to_string(),
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf]
+    });
+
+    let resp1 = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body1)
+        .send()
+        .await
+        .expect("First request failed");
+    assert_eq!(resp1.status(), StatusCode::CREATED);
+    let report1: JsonReport = resp1.json().await.expect("Failed to parse first response");
+
+    let resp2 = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body2)
+        .send()
+        .await
+        .expect("Second request failed");
+    assert_eq!(resp2.status(), StatusCode::CREATED);
+    let report2: JsonReport = resp2.json().await.expect("Failed to parse second response");
+
+    assert_ne!(report1.uuid, report2.uuid);
+}
+
+// POST /v0/run - no idempotency key always creates new reports
+#[tokio::test]
+async fn run_post_no_idempotency_key_creates_new_reports() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "no_idempotency@example.com")
+        .await;
+    let org = server.create_org(&user, "No Idempotency Org").await;
+    let project = server
+        .create_project(&user, &org, "No Idempotency Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()]
+    });
+
+    let resp1 = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("First request failed");
+    assert_eq!(resp1.status(), StatusCode::CREATED);
+    let report1: JsonReport = resp1.json().await.expect("Failed to parse first response");
+
+    let resp2 = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Second request failed");
+    assert_eq!(resp2.status(), StatusCode::CREATED);
+    let report2: JsonReport = resp2.json().await.expect("Failed to parse second response");
+
+    // Without idempotency key, each submission creates a new report
+    assert_ne!(report1.uuid, report2.uuid);
+}
