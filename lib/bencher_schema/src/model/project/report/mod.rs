@@ -151,11 +151,11 @@ impl QueryReport {
             #[cfg(feature = "plus")]
             is_claimed,
             #[cfg(feature = "plus")]
-            testbed: run_testbed,
+                testbed: run_testbed,
             #[cfg(feature = "plus")]
             spec_reset,
             #[cfg(feature = "plus")]
-            job: new_run_job,
+                job: new_run_job,
         } = new_run_report;
 
         // Idempotency check: if a key is provided, look for an existing report
