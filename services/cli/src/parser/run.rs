@@ -271,6 +271,11 @@ pub struct CliRunJob {
     pub job_timeout: Option<bencher_json::Timeout>,
 
     /// Poll interval in seconds when waiting for remote job completion (requires: --image)
-    #[clap(long, requires = "image")]
-    pub poll_interval: Option<bencher_json::PollTimeout>,
+    // TODO remove in due time
+    #[clap(long, alias = "poll-interval", requires = "image")]
+    pub job_poll_interval: Option<bencher_json::PollTimeout>,
+
+    /// Detach after submitting the remote job, without waiting for completion (requires: --image).
+    #[clap(long, requires = "image", conflicts_with = "job_poll_interval")]
+    pub detach: bool,
 }
