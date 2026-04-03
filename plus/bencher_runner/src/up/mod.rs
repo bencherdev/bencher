@@ -343,12 +343,22 @@ fn install_signal_handlers() {
 /// Uses `libc::signal()` directly since `nix` is not available on macOS.
 #[cfg(not(target_os = "linux"))]
 fn install_signal_handlers() {
+    #[expect(
+        unsafe_code,
+        clippy::fn_to_numeric_cast_any,
+        reason = "libc::signal expects sighandler_t; double cast satisfies function-casts-as-integer"
+    )]
     // SAFETY: `signal_handler` only performs `AtomicBool::store` with
     // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
-    #[expect(unsafe_code, clippy::fn_to_numeric_cast_any)]
     unsafe {
-        libc::signal(libc::SIGINT, signal_handler as libc::sighandler_t);
-        libc::signal(libc::SIGTERM, signal_handler as libc::sighandler_t);
+        libc::signal(
+            libc::SIGINT,
+            signal_handler as *const () as libc::sighandler_t,
+        );
+        libc::signal(
+            libc::SIGTERM,
+            signal_handler as *const () as libc::sighandler_t,
+        );
     }
 }
 

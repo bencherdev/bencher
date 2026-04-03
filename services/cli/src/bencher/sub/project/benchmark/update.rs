@@ -1,4 +1,4 @@
-use bencher_client::types::JsonUpdateBenchmark;
+use bencher_client::types::{BenchmarkName as ClientBenchmarkName, JsonUpdateBenchmark};
 use bencher_json::{BenchmarkName, BenchmarkResourceId, BenchmarkSlug, ProjectResourceId};
 
 use crate::{
@@ -14,6 +14,7 @@ pub struct Update {
     pub name: Option<BenchmarkName>,
     pub slug: Option<BenchmarkSlug>,
     pub archived: Option<bool>,
+    pub alias: Option<Vec<BenchmarkName>>,
     pub backend: AuthBackend,
 }
 
@@ -26,6 +27,7 @@ impl TryFrom<CliBenchmarkUpdate> for Update {
             benchmark,
             name,
             slug,
+            alias,
             archived,
             backend,
         } = create;
@@ -35,6 +37,7 @@ impl TryFrom<CliBenchmarkUpdate> for Update {
             name,
             slug,
             archived: archived.into(),
+            alias,
             backend: backend.try_into()?,
         })
     }
@@ -46,12 +49,25 @@ impl From<Update> for JsonUpdateBenchmark {
             name,
             slug,
             archived,
+            alias,
             ..
         } = update;
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
             archived,
+            aliases: alias.and_then(|values| {
+                if values.is_empty() {
+                    None
+                } else {
+                    Some(
+                        values
+                            .into_iter()
+                            .map(|a| ClientBenchmarkName(String::from(a.as_ref())))
+                            .collect(),
+                    )
+                }
+            }),
         }
     }
 }

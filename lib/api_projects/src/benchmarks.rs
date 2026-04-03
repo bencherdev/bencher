@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
     TotalCount,
@@ -15,7 +17,11 @@ use bencher_schema::{
     model::{
         project::{
             QueryProject,
-            benchmark::{QueryBenchmark, UpdateBenchmark},
+            benchmark::{
+                QueryBenchmark, UpdateBenchmark, aliases_by_benchmark_id,
+                list_aliases_for_benchmark, replace_benchmark_aliases,
+                validate_benchmark_aliases_uniqueness,
+            },
         },
         user::{
             auth::{AuthUser, BearerToken},
@@ -25,8 +31,8 @@ use bencher_schema::{
     public_conn, schema, write_conn,
 };
 use diesel::{
-    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, TextExpressionMethods as _,
+    BelongingToDsl as _, BoolExpressionMethods as _, Connection as _, ExpressionMethods as _,
+    QueryDsl as _, RunQueryDsl as _, TextExpressionMethods as _, dsl::exists,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
@@ -130,17 +136,28 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
+    let ids: Vec<_> = benchmarks.iter().map(|b| b.id).collect();
+    let alias_map =
+        aliases_by_benchmark_id(public_conn!(context, public_user), query_project.id, &ids)
+            .map_err(resource_not_found_err!(
+                Benchmark,
+                (&query_project, &pagination_params, &query_params)
+            ))?;
+
     // Drop connection lock before iterating
     let json_benchmarks = benchmarks
         .into_iter()
-        .map(|benchmark| benchmark.into_json_for_project(&query_project))
+        .map(|benchmark| {
+            let aliases = alias_map.get(&benchmark.id).cloned().unwrap_or_default();
+            benchmark.into_json_for_project_with_aliases(&query_project, aliases)
+        })
         .collect();
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
         .get_result::<i64>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
-            Plot,
+            Benchmark,
             (&query_project, &pagination_params, &query_params)
         ))?
         .try_into()?;
@@ -156,14 +173,27 @@ fn get_ls_query<'q>(
     let mut query = QueryBenchmark::belonging_to(&query_project).into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
-        query = query.filter(schema::benchmark::name.eq(name));
+        let alias_match = exists(
+            schema::benchmark_alias::table
+                .filter(schema::benchmark_alias::benchmark_id.eq(schema::benchmark::id))
+                .filter(schema::benchmark_alias::project_id.eq(query_project.id))
+                .filter(schema::benchmark_alias::alias.eq(name.as_ref())),
+        );
+        query = query.filter(schema::benchmark::name.eq(name).or(alias_match));
     }
     if let Some(search) = query_params.search.as_ref() {
+        let alias_search = exists(
+            schema::benchmark_alias::table
+                .filter(schema::benchmark_alias::benchmark_id.eq(schema::benchmark::id))
+                .filter(schema::benchmark_alias::project_id.eq(query_project.id))
+                .filter(schema::benchmark_alias::alias.like(search)),
+        );
         query = query.filter(
             schema::benchmark::name
                 .like(search)
                 .or(schema::benchmark::slug.like(search))
-                .or(schema::benchmark::uuid.like(search)),
+                .or(schema::benchmark::uuid.like(search))
+                .or(alias_search),
         );
     }
 
@@ -222,9 +252,8 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    QueryBenchmark::create(context, query_project.id, json_benchmark)
-        .await
-        .map(|benchmark| benchmark.into_json_for_project(&query_project))
+    let benchmark = QueryBenchmark::create(context, query_project.id, json_benchmark).await?;
+    benchmark.into_json_for_project(auth_conn!(context), &query_project)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -286,14 +315,15 @@ async fn get_one_inner(
         public_user,
     )?;
 
-    QueryBenchmark::belonging_to(&query_project)
+    let benchmark_param = path_params.benchmark.clone();
+    let benchmark = QueryBenchmark::belonging_to(&query_project)
         .filter(QueryBenchmark::eq_resource_id(&path_params.benchmark))
         .first::<QueryBenchmark>(public_conn!(context, public_user))
-        .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Benchmark,
-            (&query_project, path_params.benchmark)
-        ))
+            (&query_project, benchmark_param.clone())
+        ))?;
+    benchmark.into_json_for_project(public_conn!(context, public_user), &query_project)
 }
 
 /// Update a benchmark
@@ -342,18 +372,76 @@ async fn patch_inner(
         query_project.id,
         &path_params.benchmark,
     )?;
-    let update_benchmark = UpdateBenchmark::from(json_benchmark.clone());
-    diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
-        .set(&update_benchmark)
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(
-            Benchmark,
-            (&query_benchmark, &json_benchmark)
-        ))?;
 
-    QueryBenchmark::get(auth_conn!(context), query_benchmark.id)
-        .map(|benchmark| benchmark.into_json_for_project(&query_project))
-        .map_err(resource_not_found_err!(Benchmark, query_benchmark))
+    let effective_name = json_benchmark
+        .name
+        .clone()
+        .unwrap_or_else(|| query_benchmark.name.clone());
+
+    let update_benchmark = UpdateBenchmark::from(json_benchmark.clone());
+    let conn = write_conn!(context);
+    let validation_err: RefCell<Option<HttpError>> = RefCell::new(None);
+    let txn_result = conn.transaction(|conn| -> diesel::QueryResult<()> {
+        if let Some(list) = json_benchmark.aliases.as_ref() {
+            validate_benchmark_aliases_uniqueness(
+                conn,
+                query_project.id,
+                Some(query_benchmark.id),
+                &effective_name,
+                list,
+            )
+            .map_err(|e| {
+                *validation_err.borrow_mut() = Some(e);
+                diesel::result::Error::RollbackTransaction
+            })?;
+        } else if json_benchmark.name.is_some() {
+            let current = list_aliases_for_benchmark(conn, query_benchmark.id).map_err(|e| {
+                *validation_err.borrow_mut() =
+                    Some(resource_not_found_err!(Benchmark, &query_benchmark)(e));
+                diesel::result::Error::RollbackTransaction
+            })?;
+            validate_benchmark_aliases_uniqueness(
+                conn,
+                query_project.id,
+                Some(query_benchmark.id),
+                &effective_name,
+                &current,
+            )
+            .map_err(|e| {
+                *validation_err.borrow_mut() = Some(e);
+                diesel::result::Error::RollbackTransaction
+            })?;
+        }
+
+        diesel::update(
+            schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)),
+        )
+        .set(&update_benchmark)
+        .execute(conn)?;
+
+        if let Some(list) = json_benchmark.aliases.as_ref() {
+            replace_benchmark_aliases(conn, query_project.id, query_benchmark.id, list)?;
+        }
+
+        Ok(())
+    });
+
+    match txn_result {
+        Ok(()) => {},
+        Err(e) => {
+            if let Some(he) = validation_err.into_inner() {
+                return Err(he);
+            }
+            return Err(resource_conflict_err!(
+                Benchmark,
+                (&query_benchmark, &json_benchmark)
+            )(e));
+        },
+    }
+
+    let benchmark = QueryBenchmark::get(auth_conn!(context), query_benchmark.id)
+        .map_err(resource_not_found_err!(Benchmark, query_benchmark))?;
+    benchmark.into_json_for_project(auth_conn!(context), &query_project)
 }
 
 /// Delete a benchmark

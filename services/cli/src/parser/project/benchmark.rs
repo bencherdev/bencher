@@ -66,6 +66,10 @@ pub struct CliBenchmarkCreate {
     #[clap(long)]
     pub slug: Option<BenchmarkSlug>,
 
+    /// Additional exact-match alias (repeat for multiple)
+    #[clap(long = "alias")]
+    pub alias: Option<Vec<BenchmarkName>>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }
@@ -97,6 +101,10 @@ pub struct CliBenchmarkUpdate {
     /// Benchmark slug
     #[clap(long)]
     pub slug: Option<BenchmarkSlug>,
+
+    /// Replace additional aliases (repeat for multiple). Omit to leave aliases unchanged.
+    #[clap(long = "alias")]
+    pub alias: Option<Vec<BenchmarkName>>,
 
     #[clap(flatten)]
     pub archived: CliArchived,

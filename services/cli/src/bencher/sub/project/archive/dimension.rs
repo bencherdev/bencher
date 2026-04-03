@@ -220,6 +220,7 @@ impl Dimension {
             name: None,
             slug: None,
             archived: Some(action.into()),
+            aliases: None,
         };
         backend
             .send(|client| async move {

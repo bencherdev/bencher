@@ -11086,6 +11086,14 @@
       "JsonBenchmark": {
         "type": "object",
         "properties": {
+          "aliases": {
+            "description": "Additional exact-match strings (the primary [`Self::name`] is always a matcher).",
+            "default": [],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkName"
+            }
+          },
           "archived": {
             "nullable": true,
             "allOf": [
@@ -12225,6 +12233,15 @@
       "JsonNewBenchmark": {
         "type": "object",
         "properties": {
+          "aliases": {
+            "nullable": true,
+            "description": "Additional exact-match strings for this benchmark within the project.",
+            "default": null,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkName"
+            }
+          },
           "name": {
             "description": "The name of the benchmark. Maximum length is 1,024 characters.",
             "allOf": [
@@ -15912,6 +15929,14 @@
       "JsonUpdateBenchmark": {
         "type": "object",
         "properties": {
+          "aliases": {
+            "nullable": true,
+            "description": "When set, replaces all additional aliases for this benchmark (full replace).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkName"
+            }
+          },
           "archived": {
             "nullable": true,
             "description": "Set whether the benchmark is archived.",

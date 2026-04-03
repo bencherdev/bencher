@@ -204,6 +204,8 @@ export interface JsonBenchmark {
 	project: Uuid;
 	name: BenchmarkName;
 	slug: Slug;
+	/** Additional exact-match strings (the primary [`Self::name`] is always a matcher). */
+	aliases?: BenchmarkName[];
 	created: string;
 	modified: string;
 	archived?: string;
