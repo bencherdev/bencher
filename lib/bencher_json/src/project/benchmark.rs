@@ -48,12 +48,12 @@ pub struct JsonBenchmark {
     pub project: ProjectUuid,
     pub name: BenchmarkName,
     pub slug: BenchmarkSlug,
-    pub created: DateTime,
-    pub modified: DateTime,
-    pub archived: Option<DateTime>,
     /// Additional exact-match strings (the primary [`Self::name`] is always a matcher).
     #[serde(default)]
     pub aliases: Vec<BenchmarkName>,
+    pub created: DateTime,
+    pub modified: DateTime,
+    pub archived: Option<DateTime>,
 }
 
 impl fmt::Display for JsonBenchmark {

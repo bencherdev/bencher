@@ -12,7 +12,7 @@ pub struct Create {
     pub project: ProjectResourceId,
     pub name: BenchmarkName,
     pub slug: Option<BenchmarkSlug>,
-    pub aliases: Vec<BenchmarkName>,
+    pub alias: Option<Vec<BenchmarkName>>,
     pub backend: AuthBackend,
 }
 
@@ -24,14 +24,14 @@ impl TryFrom<CliBenchmarkCreate> for Create {
             project,
             name,
             slug,
-            aliases,
+            alias,
             backend,
         } = create;
         Ok(Self {
             project,
             name,
             slug,
-            aliases,
+            alias,
             backend: backend.try_into()?,
         })
     }
@@ -40,24 +40,23 @@ impl TryFrom<CliBenchmarkCreate> for Create {
 impl From<Create> for JsonNewBenchmark {
     fn from(create: Create) -> Self {
         let Create {
-            name,
-            slug,
-            aliases,
-            ..
+            name, slug, alias, ..
         } = create;
         Self {
             name: name.into(),
             slug: slug.map(Into::into),
-            aliases: if aliases.is_empty() {
-                None
-            } else {
-                Some(
-                    aliases
-                        .into_iter()
-                        .map(|a| ClientBenchmarkName(String::from(a.as_ref())))
-                        .collect(),
-                )
-            },
+            aliases: alias.and_then(|values| {
+                if values.is_empty() {
+                    None
+                } else {
+                    Some(
+                        values
+                            .into_iter()
+                            .map(|a| ClientBenchmarkName(String::from(a.as_ref())))
+                            .collect(),
+                    )
+                }
+            }),
         }
     }
 }

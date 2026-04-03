@@ -14,7 +14,7 @@ pub struct Update {
     pub name: Option<BenchmarkName>,
     pub slug: Option<BenchmarkSlug>,
     pub archived: Option<bool>,
-    pub aliases: Vec<BenchmarkName>,
+    pub alias: Option<Vec<BenchmarkName>>,
     pub backend: AuthBackend,
 }
 
@@ -27,7 +27,7 @@ impl TryFrom<CliBenchmarkUpdate> for Update {
             benchmark,
             name,
             slug,
-            aliases,
+            alias,
             archived,
             backend,
         } = create;
@@ -37,7 +37,7 @@ impl TryFrom<CliBenchmarkUpdate> for Update {
             name,
             slug,
             archived: archived.into(),
-            aliases,
+            alias,
             backend: backend.try_into()?,
         })
     }
@@ -49,23 +49,25 @@ impl From<Update> for JsonUpdateBenchmark {
             name,
             slug,
             archived,
-            aliases,
+            alias,
             ..
         } = update;
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
             archived,
-            aliases: if aliases.is_empty() {
-                None
-            } else {
-                Some(
-                    aliases
-                        .into_iter()
-                        .map(|a| ClientBenchmarkName(String::from(a.as_ref())))
-                        .collect(),
-                )
-            },
+            aliases: alias.and_then(|values| {
+                if values.is_empty() {
+                    None
+                } else {
+                    Some(
+                        values
+                            .into_iter()
+                            .map(|a| ClientBenchmarkName(String::from(a.as_ref())))
+                            .collect(),
+                    )
+                }
+            }),
         }
     }
 }

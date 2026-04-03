@@ -157,7 +157,7 @@ async fn get_ls_inner(
         .count()
         .get_result::<i64>(public_conn!(context, public_user))
         .map_err(resource_not_found_err!(
-            Plot,
+            Benchmark,
             (&query_project, &pagination_params, &query_params)
         ))?
         .try_into()?;

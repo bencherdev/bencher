@@ -19,7 +19,6 @@ use crate::{
     error::{BencherResource, assert_parentage, resource_conflict_err, resource_not_found_err},
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
-        name_id::fn_eq_name_id,
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
         sql::last_insert_rowid,
@@ -61,8 +60,6 @@ impl QueryBenchmark {
         BenchmarkResourceId
     );
 
-    fn_eq_name_id!(ResourceName, benchmark, BenchmarkNameId);
-
     fn_get!(benchmark, BenchmarkId);
     fn_get_id!(benchmark, BenchmarkId, BenchmarkUuid);
     fn_get_uuid!(benchmark, BenchmarkId, BenchmarkUuid);
@@ -74,21 +71,27 @@ impl QueryBenchmark {
         name_id: &BenchmarkNameId,
     ) -> Result<Self, HttpError> {
         match name_id {
-            NameId::Uuid(_) | NameId::Slug(_) => schema::benchmark::table
+            NameId::Uuid(uuid) => schema::benchmark::table
                 .filter(schema::benchmark::project_id.eq(project_id))
-                .filter(Self::eq_name_id(name_id))
+                .filter(schema::benchmark::uuid.eq(uuid.to_string()))
+                .first::<Self>(conn)
+                .map_err(resource_not_found_err!(Benchmark, (project_id, name_id))),
+            NameId::Slug(slug) => schema::benchmark::table
+                .filter(schema::benchmark::project_id.eq(project_id))
+                .filter(schema::benchmark::slug.eq(slug.to_string()))
                 .first::<Self>(conn)
                 .map_err(resource_not_found_err!(Benchmark, (project_id, name_id))),
             NameId::Name(name) => {
+                let primary = name.as_ref().to_owned();
                 let alias_match = exists(
                     schema::benchmark_alias::table
                         .filter(schema::benchmark_alias::benchmark_id.eq(schema::benchmark::id))
                         .filter(schema::benchmark_alias::project_id.eq(project_id))
-                        .filter(schema::benchmark_alias::alias.eq(name.as_ref())),
+                        .filter(schema::benchmark_alias::alias.eq(primary.clone())),
                 );
                 schema::benchmark::table
                     .filter(schema::benchmark::project_id.eq(project_id))
-                    .filter(schema::benchmark::name.eq(name.as_ref()).or(alias_match))
+                    .filter(schema::benchmark::name.eq(primary).or(alias_match))
                     .first::<Self>(conn)
                     .map_err(resource_not_found_err!(Benchmark, (project_id, name_id)))
             },
@@ -235,10 +238,10 @@ impl QueryBenchmark {
             project: project.uuid,
             name,
             slug,
+            aliases,
             created,
             modified,
             archived,
-            aliases,
         }
     }
 }
@@ -633,6 +636,44 @@ mod tests {
             .expect("resolve by alias");
         assert_eq!(found.id, benchmark_id);
         assert_eq!(found.name.as_ref(), "Primary");
+    }
+
+    #[test]
+    fn from_name_id_resolves_by_uuid() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let benchmark_id = create_benchmark(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000021",
+            "UuidBench",
+            "uuid-bench",
+        );
+        let name_id: BenchmarkNameId = "00000000-0000-0000-0000-000000000021"
+            .parse()
+            .expect("parse uuid name id");
+        let found = QueryBenchmark::from_name_id(&mut conn, base.project_id, &name_id)
+            .expect("resolve by uuid");
+        assert_eq!(found.id, benchmark_id);
+        assert_eq!(found.name.as_ref(), "UuidBench");
+    }
+
+    #[test]
+    fn from_name_id_resolves_by_slug() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let benchmark_id = create_benchmark(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000022",
+            "SlugBench",
+            "slug-bench",
+        );
+        let name_id: BenchmarkNameId = "slug-bench".parse().expect("parse slug name id");
+        let found = QueryBenchmark::from_name_id(&mut conn, base.project_id, &name_id)
+            .expect("resolve by slug");
+        assert_eq!(found.id, benchmark_id);
+        assert_eq!(found.name.as_ref(), "SlugBench");
     }
 
     #[test]

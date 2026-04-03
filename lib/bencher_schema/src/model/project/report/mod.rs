@@ -146,8 +146,10 @@ impl QueryReport {
 
         let NewRunReport {
             report: mut json_report,
-            #[cfg(feature = "plus")]
+            #[cfg(all(feature = "otel", feature = "plus"))]
             is_claimed,
+            #[cfg(all(feature = "plus", not(all(feature = "otel", feature = "plus"))))]
+                is_claimed: _,
             #[cfg(feature = "plus")]
                 testbed: run_testbed,
             #[cfg(feature = "plus")]
@@ -156,7 +158,7 @@ impl QueryReport {
                 job: new_run_job,
         } = new_run_report;
 
-        #[cfg(feature = "plus")]
+        #[cfg(all(feature = "otel", feature = "plus"))]
         let priority = plan_kind.priority(is_claimed);
 
         #[cfg(all(feature = "otel", feature = "plus"))]
@@ -335,7 +337,7 @@ impl QueryReport {
                 json_settings,
                 #[cfg(feature = "plus")]
                 plan_kind,
-                #[cfg(feature = "plus")]
+                #[cfg(all(feature = "otel", feature = "plus"))]
                 priority,
                 #[cfg(feature = "plus")]
                 query_project,
@@ -436,7 +438,7 @@ impl QueryReport {
         adapter: Adapter,
         settings: JsonReportSettings,
         #[cfg(feature = "plus")] plan_kind: PlanKind,
-        #[cfg(feature = "plus")] priority: bencher_json::Priority,
+        #[cfg(all(feature = "otel", feature = "plus"))] priority: bencher_json::Priority,
         #[cfg(feature = "plus")] query_project: &QueryProject,
     ) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]

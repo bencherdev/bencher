@@ -147,6 +147,7 @@ impl QueryJob {
                 query_report.adapter,
                 settings,
                 plan_kind,
+                #[cfg(all(feature = "otel", feature = "plus"))]
                 self.priority,
                 &query_project,
             )
