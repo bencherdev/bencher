@@ -75,7 +75,7 @@ impl ReportComment {
     }
 
     fn human_report_link(&self, text: &mut String) {
-        let url = self.resource_url_inner(Resource::Report(self.json_report.uuid), false);
+        let url = self.resource_url_human(Resource::Report(self.json_report.uuid));
         text.push_str(&format!("View report: {url}"));
     }
 
@@ -86,6 +86,9 @@ impl ReportComment {
     }
 
     fn human_results_list(&self, text: &mut String) {
+        if self.benchmark_count == 0 {
+            return;
+        }
         text.push_str("\n\nView results:");
         for (i, iteration) in self.json_report.results.iter().enumerate() {
             if self.multiple_iterations {
@@ -669,6 +672,10 @@ impl ReportComment {
         }
         #[cfg(not(feature = "plus"))]
         false
+    }
+
+    fn resource_url_human(&self, resource: Resource) -> Url {
+        self.resource_url_inner(resource, false)
     }
 
     fn resource_url(&self, resource: Resource) -> Url {
