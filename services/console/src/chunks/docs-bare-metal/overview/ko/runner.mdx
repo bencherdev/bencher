@@ -1,0 +1,21 @@
+## Runner
+
+Runner는 전용 Bare Metal 하드웨어에서 실행되는 원격 벤치마크 실행기입니다.
+Runner는 연결된 [Spec][spec]을 기반으로 대기 중인 [Job][job]을 Bencher API 서버에 폴링합니다.
+Job이 할당되면 Runner는 해당 Job에 지정된 [Image][image]를 가져오고,
+Image를 언패킹하고, 벤치마크 명령을 실행한 후, 결과를 Bencher API 서버로 전송합니다.
+벤치마크가 다른 워크로드의 영향을 받지 않도록 한 번에 하나의 Job만 실행됩니다.
+
+| Runner                   | 플랫폼              | 범위         | 관리 주체   | [Sandbox][sandbox] | 네트워크 접근 | [티어][pricing]        |
+| ------------------------ | ------------------- | ------------ | ---------- | ------------------ | -------------- | ---------------------- |
+| Shared                   | Bencher Cloud       | 서버         | Bencher    | 필수               | 불가           | Free, Team, Enterprise |
+| Dedicated                | Bencher Cloud       | 조직         | Bencher    | 선택               | 불가           | Enterprise             |
+| Custom                   | Bencher Cloud       | 조직         | 사용자     | 선택               | 선택           | Enterprise             |
+| Self-Hosted Server       | Bencher Self-Hosted | 서버         | 사용자     | 선택               | 선택           | Free, Team, Enterprise |
+| Self-Hosted Organization | Bencher Self-Hosted | 조직         | 사용자     | 선택               | 선택           | Enterprise             |
+
+[job]: #job
+[spec]: #spec
+[image]: #image
+[sandbox]: #sandbox
+[pricing]: /pricing

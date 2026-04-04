@@ -1,0 +1,21 @@
+## Runner
+
+Runner — это удалённый исполнитель бенчмарков, работающий на выделенном оборудовании bare metal.
+Runner опрашивает API-сервер Bencher на наличие ожидающих [Job][job] на основе связанных с ним [Spec][spec].
+Как только Job принят, Runner загружает указанный для Job [Image][image],
+распаковывает Image, выполняет команду бенчмарка и отправляет результаты обратно на API-сервер Bencher.
+В каждый момент времени выполняется только один Job, чтобы гарантировать, что бенчмарки не подвержены влиянию других рабочих нагрузок.
+
+| Runner                   | Платформа           | Область      | Управляется | [Sandbox][sandbox] | Доступ к сети  | [Тарифный план][pricing] |
+| ------------------------ | ------------------- | ------------ | ----------- | ------------------ | -------------- | ------------------------ |
+| Shared                   | Bencher Cloud       | Сервер       | Bencher     | Обязателен         | Нет            | Free, Team, Enterprise   |
+| Dedicated                | Bencher Cloud       | Организация  | Bencher     | Опционален         | Нет            | Enterprise               |
+| Custom                   | Bencher Cloud       | Организация  | Пользователь| Опционален         | Опционален     | Enterprise               |
+| Self-Hosted Server       | Bencher Self-Hosted | Сервер       | Пользователь| Опционален         | Опционален     | Free, Team, Enterprise   |
+| Self-Hosted Organization | Bencher Self-Hosted | Организация  | Пользователь| Опционален         | Опционален     | Enterprise               |
+
+[job]: #job
+[spec]: #spec
+[image]: #image
+[sandbox]: #sandbox
+[pricing]: /pricing

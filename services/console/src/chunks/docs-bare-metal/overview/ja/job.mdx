@@ -1,0 +1,17 @@
+## Job
+
+Jobは、リモートベンチマーク実行リクエストのライフサイクルを追跡します。
+`--job-timeout`オプションを使用して、Jobごとにカスタムタイムアウトをリクエストできます。
+ただし、以下のJobタイムアウトは常に適用されます：
+
+| [Tier][pricing] | Job Timeout                     |
+| --------------- | ------------------------------- |
+| Unclaimed       | 1 minute                        |
+| Free            | 5 minutes                       |
+| Team            | Unlimited (default: 60 minutes) |
+| Enterprise      | Unlimited (default: 60 minutes) |
+
+完全な概要については、[Jobドキュメント][job]を参照してください。
+
+[pricing]: /pricing
+[job]: /docs/bare-metal/job

@@ -1,0 +1,17 @@
+## Job
+
+A Job tracks the lifecycle of a remote benchmark execution request.
+A custom timeout can be requested per Job with the `--job-timeout` option.
+However, the following Job timeouts are always enforced:
+
+| [Tier][pricing] | Job Timeout                     |
+| --------------- | ------------------------------- |
+| Unclaimed       | 1 minute                        |
+| Free            | 5 minutes                       |
+| Team            | Unlimited (default: 60 minutes) |
+| Enterprise      | Unlimited (default: 60 minutes) |
+
+See [the Job documentation][job] for a full overview.
+
+[pricing]: /pricing
+[job]: /docs/bare-metal/job

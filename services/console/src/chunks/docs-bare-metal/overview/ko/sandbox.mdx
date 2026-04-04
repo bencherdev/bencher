@@ -1,0 +1,10 @@
+## Sandbox
+
+Sandbox는 Runner에서 안전한 멀티 테넌시를 가능하게 하는 격리 메커니즘입니다.
+Bencher Bare Metal은 기본 Sandbox 구현으로 [Firecracker][firecracker] microVM을 사용합니다.
+Sandbox 없이 실행하려면 Bencher Cloud의 Dedicated 또는 Custom Runner가 필요하거나 (자세한 내용은 <a href="mailto:plus@bencher.dev">Bencher Plus 지원</a>에 문의하세요) Bencher Self-Hosted가 필요합니다.
+Runner가 Sandbox를 사용하도록 구성된 경우, 각 Job은 해당 Sandbox 내에서 실행됩니다.
+전체 개요는 [`runner` 문서][runner]를 참조하세요.
+
+[firecracker]: https://github.com/firecracker-microvm/firecracker
+[runner]: /docs/bare-metal/runner
