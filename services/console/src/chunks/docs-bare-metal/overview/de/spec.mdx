@@ -1,0 +1,32 @@
+## Spec
+
+Eine Spec ist eine Hardware-Spezifikation, die die einem [Runner][runner] zur Verfügung stehenden Ressourcen beschreibt:
+
+1. Betriebssystem (OS)
+   1. Linux
+   2. macOS
+   3. Windows
+2. CPU-Architektur
+   1. x86_64
+   2. ARM64
+3. Sandbox
+   1. Firecracker microVM
+   2. Keine Sandbox
+4. CPU-Anzahl
+5. Speichergröße (RAM)
+6. Festplattengröße
+7. Netzwerkzugriff
+
+Specs sind entweder server- oder organisationsbezogen,
+sodass dieselbe Spec auf demselben Server über mehrere [Testumgebungen][testbed] hinweg bzw. innerhalb derselben Organisation geteilt werden kann.
+
+Die Rangfolge für die Auswahl der Spec bei Verwendung von <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> ist wie folgt:
+1. Die `--spec`-Option
+2. Die der Testumgebung zugewiesene Spec
+3. Die standardmäßige organisationsbezogene Spec
+4. Die standardmäßige serverbezogene Spec
+
+Die ausgewählte Spec wird dann der aktuellen [Testumgebung][testbed] zugewiesen.
+
+[runner]: #runner
+[testbed]: /docs/explanation/benchmarking/#testbed

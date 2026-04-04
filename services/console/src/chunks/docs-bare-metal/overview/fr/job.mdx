@@ -1,0 +1,17 @@
+## Job
+
+Un Job suit le cycle de vie d'une demande d'exécution de benchmark à distance.
+Un délai d'expiration personnalisé peut être demandé par Job avec l'option `--job-timeout`.
+Cependant, les délais d'expiration de Job suivants sont toujours appliqués :
+
+| [Niveau][pricing] | Délai d'expiration du Job       |
+| ----------------- | ------------------------------- |
+| Unclaimed         | 1 minute                        |
+| Free              | 5 minutes                       |
+| Team              | Illimité (par défaut : 60 minutes) |
+| Enterprise        | Illimité (par défaut : 60 minutes) |
+
+Consultez [la documentation du Job][job] pour un aperçu complet.
+
+[pricing]: /pricing
+[job]: /docs/bare-metal/job

@@ -1,0 +1,10 @@
+## Sandbox
+
+Eine Sandbox ist ein Isolationsmechanismus, der sicheres Multi-Tenancy auf einem Runner ermöglicht.
+Bencher Bare Metal verwendet [Firecracker][firecracker] microVMs als Standard-Sandbox-Implementierung.
+Der Betrieb ohne Sandbox erfordert einen Dedicated oder Custom Runner auf Bencher Cloud (kontaktieren Sie den <a href="mailto:plus@bencher.dev">Bencher Plus Support</a> für weitere Informationen) oder Bencher Self-Hosted.
+Wenn ein Runner für die Verwendung einer Sandbox konfiguriert ist, wird jeder Job innerhalb dieser Sandbox ausgeführt.
+Siehe [die `runner`-Dokumentation][runner] für eine vollständige Übersicht.
+
+[firecracker]: https://github.com/firecracker-microvm/firecracker
+[runner]: /docs/bare-metal/runner
