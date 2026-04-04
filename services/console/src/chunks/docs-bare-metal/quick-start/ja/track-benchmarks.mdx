@@ -1,0 +1,31 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## ベアメタルベンチマークを追跡する
+
+専用ハードウェアでベンチマーク結果を追跡する準備が整いました！
+これを行うには、[`bencher run` CLIサブコマンド][bencher run]を
+`--project`、`--image`、`--spec`オプションと一緒に使用して、
+Bare Metal Runnerでベンチマークを実行し結果を収集します。
+
+ベンチマークコマンドとして[`bencher noise`][bencher noise]サブコマンドを使用します。
+これはRunnerハードウェアの環境ノイズを測定し、
+`--format json`で[Bencher Metric Format (BMF)][bmf]形式の結果を出力します。
+
+Intel搭載のBare Metal Runnerをターゲットにするために、`intel-v1` [Spec][spec]を使用します。
+利用可能なSpecとそのハードウェア詳細の完全なリストは[Specページ][spec]を参照してください。
+`YOUR_PROJECT_SLUG`を前のステップで取得したプロジェクトスラッグに置き換えて、以下を実行します:
+
+<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest --spec intel-v1 bencher noise --format json" />
+
+`--project`オプションは結果を追跡するプロジェクトを選択し、
+`--image`オプションはリモート実行用のOCIイメージを設定し、
+`--spec`オプションはRunnerのハードウェアSpecを選択します。
+`bencher run`オプションの後のすべては、コンテナ内で実行されるベンチマークコマンドです。
+
+ブラウザで各ベンチマークの結果を確認できるようになりました。
+`View results`からリンクをクリックするかコピーして貼り付けてください。
+
+[bencher run]: /ja/docs/explanation/bencher-run/
+[bencher noise]: /ja/docs/reference/bencher-noise/
+[bmf]: /ja/docs/reference/bencher-metric-format/
+[spec]: /ja/docs/bare-metal/spec/

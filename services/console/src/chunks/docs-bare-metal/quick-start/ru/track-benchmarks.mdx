@@ -1,0 +1,31 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## Отслеживание бенчмарков Bare Metal
+
+Теперь вы готовы отслеживать результаты бенчмарков на выделенном оборудовании!
+Для этого вы будете использовать [CLI-подкоманду `bencher run`][bencher run]
+с опциями `--project`, `--image` и `--spec`,
+чтобы запустить бенчмарки на Bare Metal Runner и собрать результаты.
+
+Мы будем использовать подкоманду [`bencher noise`][bencher noise] в качестве команды бенчмарка.
+Она измеряет шум окружения на оборудовании Runner
+и выводит результаты в формате [Bencher Metric Format (BMF)][bmf] с помощью `--format json`.
+
+Мы будем использовать [Spec][spec] `intel-v1` для выбора Bare Metal Runner на базе Intel.
+Смотрите [страницу Spec][spec] для полного списка доступных Spec и характеристик их оборудования.
+Замените `YOUR_PROJECT_SLUG` на slug проекта из предыдущих шагов и выполните:
+
+<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest --spec intel-v1 bencher noise --format json" />
+
+Опция `--project` выбирает проект для отслеживания результатов,
+опция `--image` задаёт OCI-образ для удалённого выполнения,
+а опция `--spec` выбирает аппаратный Spec для Runner.
+Всё, что идёт после опций `bencher run`, является командой бенчмарка, которая выполняется внутри контейнера.
+
+Теперь вы можете просмотреть результаты каждого из ваших бенчмарков в браузере.
+Нажмите или скопируйте ссылки из `View results`.
+
+[bencher run]: /ru/docs/explanation/bencher-run/
+[bencher noise]: /ru/docs/reference/bencher-noise/
+[bmf]: /ru/docs/reference/bencher-metric-format/
+[spec]: /ru/docs/bare-metal/spec/

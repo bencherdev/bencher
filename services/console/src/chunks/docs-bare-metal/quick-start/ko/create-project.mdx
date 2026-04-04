@@ -1,0 +1,24 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## 프로젝트 생성
+
+벤치마크 이미지를 푸시하려면 먼저 Bencher 프로젝트가 필요합니다.
+가장 쉬운 방법은 [`bencher run` CLI 서브커맨드][bencher run]를
+[`bencher mock` 서브커맨드][bencher mock]와 함께 실행하는 것입니다. 다음을 실행하세요:
+
+<TerminalCommand code='bencher run "bencher mock --count 0"' />
+
+이렇게 하면 Bencher Cloud에 새 프로젝트가 생성됩니다.
+출력에서 `View report` URL을 확인하세요.
+프로젝트 슬러그는 URL에서 `/perf/` 다음에 오는 경로 세그먼트입니다.
+예를 들어, URL이 다음과 같다면:
+
+```
+https://bencher.dev/perf/my-project-abc1234/reports/...
+```
+
+프로젝트 슬러그는 `my-project-abc1234`입니다.
+다음 단계에서 이 프로젝트 슬러그가 필요합니다.
+
+[bencher run]: /ko/docs/explanation/bencher-run/
+[bencher mock]: /ko/docs/reference/bencher-metric-format/#bencher-mock

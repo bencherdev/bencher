@@ -1,0 +1,24 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## Crear un Proyecto
+
+Antes de poder subir una imagen de benchmark, necesitas un proyecto de Bencher.
+La forma más fácil de crear uno es ejecutar [el subcomando CLI `bencher run`][bencher run]
+con [el subcomando `bencher mock`][bencher mock]. Ejecuta:
+
+<TerminalCommand code='bencher run "bencher mock --count 0"' />
+
+Esto crea un nuevo proyecto en Bencher Cloud.
+Observa la URL de `View report` en la salida.
+Tu slug de proyecto es el segmento de ruta después de `/perf/` en la URL.
+Por ejemplo, si la URL es:
+
+```
+https://bencher.dev/perf/my-project-abc1234/reports/...
+```
+
+entonces tu slug de proyecto es `my-project-abc1234`.
+Necesitarás este slug de proyecto en los siguientes pasos.
+
+[bencher run]: /es/docs/explanation/bencher-run/
+[bencher mock]: /es/docs/reference/bencher-metric-format/#bencher-mock

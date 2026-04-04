@@ -2,14 +2,14 @@
 
 Un Job suit le cycle de vie d'une demande d'exécution de benchmark à distance.
 Un délai d'expiration personnalisé peut être demandé par Job avec l'option `--job-timeout`.
-Cependant, les délais d'expiration de Job suivants sont toujours appliqués :
+Cependant, les délais d'expiration de Job suivants sont toujours appliqués avec les limites de concurrence fournies :
 
-| [Niveau][pricing] | Délai d'expiration du Job       |
-| ----------------- | ------------------------------- |
-| Unclaimed         | 1 minute                        |
-| Free              | 5 minutes                       |
-| Team              | Illimité (par défaut : 60 minutes) |
-| Enterprise        | Illimité (par défaut : 60 minutes) |
+| [Niveau][pricing] | Délai d'expiration du Job          | Concurrence des Jobs |
+| ----------------- | ---------------------------------- | -------------------- |
+| Unclaimed         | 1 minute                           | 1 par IP source      |
+| Free              | 5 minutes                          | 1 par Organisation   |
+| Team              | Illimité (par défaut : 60 minutes) | Illimitée            |
+| Enterprise        | Illimité (par défaut : 60 minutes) | Illimitée            |
 
 Consultez [la documentation du Job][job] pour un aperçu complet.
 

@@ -1,16 +1,43 @@
 ---
-title: "Bare Metal Quick Start"
-description: "Get started with Bencher Bare Metal Runners using the bencher CLI Docker image and bencher noise"
-heading: "Bare Metal Quick Start"
+title: "裸机快速入门"
+description: "使用 Bencher 裸机 Runner 在专用硬件上运行基准测试"
+heading: "裸机快速入门"
 published: "2026-03-26T06:00:00Z"
-modified: "2026-03-26T06:00:00Z"
+modified: "2026-04-04T06:00:00Z"
 sortOrder: 2
 ---
 
-import QuickStart from "../../../chunks/docs-bare-metal/quick-start/zh/quick-start.mdx";
+import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
+import InstallBencherCli from "../../../chunks/docs-tutorial/quick-start/zh/install-bencher-cli.mdx";
+import CreateProject from "../../../chunks/docs-bare-metal/quick-start/zh/create-project.mdx";
+import PushImage from "../../../chunks/docs-bare-metal/quick-start/zh/push-image.mdx";
+import TrackBenchmarks from "../../../chunks/docs-bare-metal/quick-start/zh/track-benchmarks.mdx";
 
-<QuickStart />
+## 什么是 Bencher？
 
-<br/>
+<BencherIntro />
 
-<h2><a href="/zh/docs/bare-metal/image/">Keep Going: How to Create a Benchmark Image ➡</a></h2>
+<br />
+
+<InstallBencherCli />
+
+<br />
+
+<CreateProject />
+
+<br />
+
+<PushImage />
+
+<br />
+
+<TrackBenchmarks />
+
+<br />
+<br />
+
+> 🐰 恭喜！您已追踪了您的第一个裸机基准测试结果！ 🎉
+
+<br />
+
+<h2><a href="/zh/docs/bare-metal/image/">继续：如何创建基准测试镜像 ➡</a></h2>

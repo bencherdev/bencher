@@ -1,0 +1,28 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## ベンチマークイメージをプッシュする
+
+Bencher Bare Metalは、専用ハードウェア上でOCIコンテナイメージとしてパッケージされたベンチマークを実行します。
+このクイックスタートでは、ベンチマークイメージとして`bencher` CLI Dockerイメージを使用します。
+カスタムイメージは不要です。
+
+まず、GitHub Container Registryから`bencher` CLIイメージをプルします。
+以下を実行します:
+
+<TerminalCommand code="docker pull ghcr.io/bencherdev/bencher:latest" />
+
+次に、Bencher OCIレジストリ用にイメージをリタグします。
+`YOUR_PROJECT_SLUG`を前のステップで取得したプロジェクトスラッグに置き換えてください:
+
+<TerminalCommand code="docker tag ghcr.io/bencherdev/bencher:latest registry.bencher.dev/YOUR_PROJECT_SLUG:latest" />
+
+次に、Bencher OCIレジストリにログインしてイメージをプッシュします:
+
+<TerminalCommand code="docker login registry.bencher.dev" />
+
+<TerminalCommand code="docker push registry.bencher.dev/YOUR_PROJECT_SLUG:latest" />
+
+独自のカスタムイメージの作成方法の詳細については、
+[イメージドキュメント][image]を参照してください。
+
+[image]: /ja/docs/bare-metal/image/

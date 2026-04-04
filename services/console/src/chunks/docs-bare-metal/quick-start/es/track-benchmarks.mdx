@@ -1,0 +1,31 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## Rastrea tus Benchmarks en Bare Metal
+
+¡Ya estás listo para rastrear los resultados de tus benchmarks en hardware dedicado!
+Para hacerlo, usarás [el subcomando CLI `bencher run`][bencher run]
+con las opciones `--project`, `--image` y `--spec`
+para ejecutar tus benchmarks en un Runner Bare Metal y recopilar los resultados.
+
+Usaremos el subcomando [`bencher noise`][bencher noise] como el comando de benchmark.
+Este mide el ruido del entorno en el hardware del Runner
+y genera los resultados en [Bencher Metric Format (BMF)][bmf] con `--format json`.
+
+Usaremos el [Spec][spec] `intel-v1` para apuntar a un Runner Bare Metal basado en Intel.
+Consulta la [página de Spec][spec] para ver la lista completa de Specs disponibles y los detalles de su hardware.
+Reemplaza `YOUR_PROJECT_SLUG` con el slug de proyecto de los pasos anteriores y ejecuta:
+
+<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest --spec intel-v1 bencher noise --format json" />
+
+La opción `--project` selecciona el proyecto para rastrear los resultados,
+la opción `--image` establece la imagen OCI para la ejecución remota,
+y la opción `--spec` selecciona el Spec de hardware para el Runner.
+Todo lo que sigue después de las opciones de `bencher run` es el comando de benchmark que se ejecuta dentro del contenedor.
+
+Ahora puedes ver los resultados de cada uno de tus benchmarks en el navegador.
+Haz clic o copia y pega los enlaces de `View results`.
+
+[bencher run]: /es/docs/explanation/bencher-run/
+[bencher noise]: /es/docs/reference/bencher-noise/
+[bmf]: /es/docs/reference/bencher-metric-format/
+[spec]: /es/docs/bare-metal/spec/

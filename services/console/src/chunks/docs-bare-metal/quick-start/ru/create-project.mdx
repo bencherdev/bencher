@@ -1,0 +1,24 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## Создание проекта
+
+Прежде чем вы сможете отправить образ бенчмарка, вам нужен проект Bencher.
+Самый простой способ его создать -- выполнить [CLI-подкоманду `bencher run`][bencher run]
+с [подкомандой `bencher mock`][bencher mock]. Выполните:
+
+<TerminalCommand code='bencher run "bencher mock --count 0"' />
+
+Это создаст новый проект на Bencher Cloud.
+Обратите внимание на URL `View report` в выводе.
+Slug вашего проекта -- это сегмент пути после `/perf/` в URL.
+Например, если URL выглядит так:
+
+```
+https://bencher.dev/perf/my-project-abc1234/reports/...
+```
+
+тогда slug вашего проекта -- `my-project-abc1234`.
+Этот slug проекта понадобится вам на следующих шагах.
+
+[bencher run]: /ru/docs/explanation/bencher-run/
+[bencher mock]: /ru/docs/reference/bencher-metric-format/#bencher-mock

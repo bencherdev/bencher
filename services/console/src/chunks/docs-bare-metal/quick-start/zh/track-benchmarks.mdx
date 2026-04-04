@@ -1,0 +1,31 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## 追踪您的裸机基准测试
+
+您现在可以在专用硬件上追踪基准测试结果了！
+为此，您将使用 [`bencher run` CLI 子命令][bencher run]
+配合 `--project`、`--image` 和 `--spec` 选项
+在裸机 Runner 上运行基准测试并收集结果。
+
+我们将使用 [`bencher noise`][bencher noise] 子命令作为基准测试命令。
+它测量 Runner 硬件上的环境噪声，
+并通过 `--format json` 以 [Bencher Metric Format (BMF)][bmf] 格式输出结果。
+
+我们将使用 `intel-v1` [Spec][spec] 来指定基于 Intel 的裸机 Runner。
+请参阅 [Spec 页面][spec]获取可用 Spec 及其硬件详情的完整列表。
+将 `YOUR_PROJECT_SLUG` 替换为前面步骤中的项目 slug 并运行：
+
+<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest --spec intel-v1 bencher noise --format json" />
+
+`--project` 选项用于选择要追踪结果的项目，
+`--image` 选项用于设置远程执行的 OCI 镜像，
+`--spec` 选项用于选择 Runner 的硬件 Spec。
+`bencher run` 选项之后的所有内容都是在容器内执行的基准测试命令。
+
+您现在可以在浏览器中查看每个基准测试的结果。
+点击或复制粘贴 `View results` 中的链接。
+
+[bencher run]: /zh/docs/explanation/bencher-run/
+[bencher noise]: /zh/docs/reference/bencher-noise/
+[bmf]: /zh/docs/reference/bencher-metric-format/
+[spec]: /zh/docs/bare-metal/spec/
