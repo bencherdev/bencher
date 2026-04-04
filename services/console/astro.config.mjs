@@ -95,6 +95,8 @@ export default defineConfig({
 		// Redirects for old URLs
 		"/docs/how-to/quick-start": "/docs/tutorial/quick-start",
 		"/docs/how-to/branch-selection": "/docs/explanation/branch-selection",
+		"/docs/tutorial/docker": "/docs/tutorial/self-hosted",
+		"/[lang]/docs/tutorial/docker": "/[lang]/docs/tutorial/self-hosted",
 		// Docs
 		"/docs/[lang]": "/[lang]/docs",
 		// Tutorial
