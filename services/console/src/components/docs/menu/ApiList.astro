@@ -10,6 +10,7 @@ interface Props {
 }
 
 // Api
+const apiRunCollection = await getEnOnlyCollection(Collection.api_run);
 const apiOrganizationsCollection = await getEnOnlyCollection(
 	Collection.api_organizations,
 );
@@ -23,6 +24,11 @@ const { lang } = Astro.props;
 ---
 
 {[
+    {
+      label: "Run",
+      collection: Collection.api_run,
+      content: apiRunCollection,
+    },
     {
       label: "Organizations",
       collection: Collection.api_organizations,

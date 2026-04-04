@@ -1,0 +1,45 @@
+---
+export const prerender = true;
+
+import { getCollection } from "astro:content";
+import ApiLayout from "../../../../../layouts/docs/ApiLayout.astro";
+import Operation from "../../../../../components/docs/api/Operation.astro";
+import { otherLanguages } from "../../../../../i18n/ui";
+import Collection, { fmtPageId } from "../../../../../util/collection";
+import {
+	API_DOCS_MODIFIED,
+	API_DOCS_PUBLISHED,
+} from "../../../../../i18n/utils";
+
+const collection = Collection.api_run;
+
+export async function getStaticPaths() {
+	const collection = Collection.api_run;
+	const pages = await getCollection(collection);
+	return otherLanguages.flatMap((lang) => {
+		return pages.map((page) => ({
+			params: { lang, slug: fmtPageId(page.id) },
+			props: { page },
+		}));
+	});
+}
+
+const { page } = Astro.props;
+const { lang, slug } = Astro.params;
+---
+
+<ApiLayout
+  title={page.data.title}
+  titleFmt={(_title) => `🐰 ${page.data.heading}`}
+  description={page.data.description}
+  heading={page.data.heading}
+  published={API_DOCS_PUBLISHED}
+  modified={API_DOCS_MODIFIED}
+  collection={collection}
+  slug={slug}
+  lang={lang}
+>
+  {page.data.paths.map(({path, method, headers, cli}, index) =>
+    <Operation lang={lang} path={path} method={method} headers={headers} cli={cli} index={index} />
+  )}
+</ApiLayout>
