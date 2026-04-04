@@ -19,7 +19,8 @@ use serde::Deserialize;
 #[cfg(feature = "plus")]
 use crate::auth::{check_oci_bandwidth, record_oci_bandwidth};
 use crate::auth::{
-    require_pull_access, require_push_access, resolve_project, validate_push_access,
+    require_pull_access, require_push_access, resolve_project, validate_pull_access,
+    validate_push_access,
 };
 use crate::error::storage_error;
 use crate::response::{DOCKER_CONTENT_DIGEST, OCI_SUBJECT, oci_cors_headers};
@@ -104,12 +105,8 @@ pub async fn oci_manifest_exists(
     let context = rqctx.context();
     let path = path.into_inner();
 
-    // Authenticate and apply rate limiting
-    let name_str = path.name.to_string();
-    let _access = require_pull_access(&rqctx, &name_str).await?;
-
-    // Resolve project for stable storage paths
-    let project = resolve_project(context, &path.name).await?;
+    // Authenticate (optional for unclaimed projects) and resolve project
+    let project = validate_pull_access(&rqctx, &path.name).await?;
     let project_uuid = project.uuid;
 
     // Parse reference (pull operation: unparseable → 404 MANIFEST_UNKNOWN)

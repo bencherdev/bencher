@@ -146,6 +146,15 @@ async fn oci_base_unauthenticated_push_smoke() {
         .expect("Config upload failed");
     assert_eq!(resp.status(), StatusCode::CREATED);
 
+    // 2b. HEAD blob check (no auth) — Docker does this during push
+    let resp = server
+        .client
+        .head(server.api_url(&format!("/v2/{slug}/blobs/{config_digest}")))
+        .send()
+        .await
+        .expect("HEAD config blob failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+
     // 3. Upload layer blob (no auth)
     let layer_data = b"layer data";
     let layer_digest = compute_digest(layer_data);
@@ -158,6 +167,15 @@ async fn oci_base_unauthenticated_push_smoke() {
         .await
         .expect("Layer upload failed");
     assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // 3b. HEAD blob check (no auth)
+    let resp = server
+        .client
+        .head(server.api_url(&format!("/v2/{slug}/blobs/{layer_digest}")))
+        .send()
+        .await
+        .expect("HEAD layer blob failed");
+    assert_eq!(resp.status(), StatusCode::OK);
 
     // 4. Upload manifest (no auth)
     let manifest = create_oci_manifest(&config_digest, &layer_digest);

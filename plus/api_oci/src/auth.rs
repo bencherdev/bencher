@@ -232,6 +232,53 @@ pub async fn require_pull_access(
     Ok(OciPullAccess { identity })
 }
 
+/// Validate pull access for an OCI operation, allowing unauthenticated access for unclaimed projects
+///
+/// - If authenticated → validates token, applies rate limiting
+/// - If unauthenticated and project is unclaimed → allows access with public rate limiting
+/// - If unauthenticated and project is claimed → returns 401
+///
+/// Use this for read operations during push flows (e.g. HEAD blob checks)
+/// where Docker requires pull access but the project may be unclaimed.
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
+pub async fn validate_pull_access(
+    rqctx: &RequestContext<ApiContext>,
+    repository: &ProjectResourceId,
+) -> Result<QueryProject, HttpError> {
+    let context = rqctx.context();
+    let repository_str = repository.to_string();
+    let scope = format!("repository:{repository_str}:pull");
+
+    // Try to extract and validate token
+    if let Ok(token) = extract_oci_bearer_token(rqctx) {
+        let identity = validate_pull_identity(context, &token, &repository_str)
+            .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+
+        apply_auth_rate_limit(&rqctx.log, context, &identity).await?;
+    } else {
+        // No token — only allow for unclaimed projects
+        let conn = public_conn!(context);
+        let project = QueryProject::from_resource_id(conn, repository)
+            .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+        let organization = project.organization(conn).map_err(|e| {
+            HttpError::for_internal_error(format!("Failed to get organization: {e}"))
+        })?;
+        let is_claimed = organization.is_claimed(conn).map_err(|e| {
+            HttpError::for_internal_error(format!("Failed to check claimed status: {e}"))
+        })?;
+        if is_claimed {
+            return Err(unauthorized_with_www_authenticate(rqctx, Some(&scope)));
+        }
+
+        apply_public_rate_limit(&rqctx.log, context, rqctx)?;
+    }
+
+    resolve_project(context, repository).await
+}
+
 /// Require push access for an OCI operation (simple ops like delete, not project creation)
 ///
 /// Validates the bearer token and checks it grants push access to the specified repository.
