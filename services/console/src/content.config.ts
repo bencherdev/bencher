@@ -74,6 +74,7 @@ export const collections = {
 	docs_explanation: docs("explanation"),
 	docs_reference: docs("reference"),
 	// api
+	api_run: api("run"),
 	api_organizations: api("organizations"),
 	api_projects: api("projects"),
 	api_users: api("users"),

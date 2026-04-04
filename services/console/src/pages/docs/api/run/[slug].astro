@@ -1,0 +1,36 @@
+---
+export const prerender = true;
+
+import ApiLayout from "../../../../layouts/docs/ApiLayout.astro";
+import Operation from "../../../../components/docs/api/Operation.astro";
+import {
+	API_DOCS_MODIFIED,
+	API_DOCS_PUBLISHED,
+	getEnOnlyPaths,
+} from "../../../../i18n/utils";
+import Collection from "../../../../util/collection";
+
+const collection = Collection.api_run;
+
+export async function getStaticPaths() {
+	const collection = Collection.api_run;
+	return await getEnOnlyPaths(collection);
+}
+
+const { slug } = Astro.params;
+const page = Astro.props;
+---
+
+<ApiLayout
+  title={page.data.title}
+  description={page.data.description}
+  heading={page.data.heading}
+  published={API_DOCS_PUBLISHED}
+  modified={API_DOCS_MODIFIED}
+  collection={collection}
+  slug={slug}
+>
+  {page.data.paths.map(({path, method, headers, cli}, index) =>
+    <Operation path={path} method={method} headers={headers} cli={cli} index={index}/>
+  )}
+</ApiLayout>

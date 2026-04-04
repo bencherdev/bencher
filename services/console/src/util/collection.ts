@@ -9,6 +9,7 @@ enum Collection {
 	docs_explanation = "docs_explanation",
 	docs_reference = "docs_reference",
 	// API
+	api_run = "api_run",
 	api_organizations = "api_organizations",
 	api_projects = "api_projects",
 	api_users = "api_users",
@@ -27,6 +28,7 @@ enum Collection {
 }
 
 export const ApiCollections = [
+	Collection.api_run,
 	Collection.api_organizations,
 	Collection.api_projects,
 	Collection.api_users,
@@ -45,6 +47,8 @@ export const collectionPath = (collection: Collection) => {
 			return "explanation";
 		case Collection.docs_reference:
 			return "reference";
+		case Collection.api_run:
+			return "run";
 		case Collection.api_organizations:
 			return "organizations";
 		case Collection.api_projects:
