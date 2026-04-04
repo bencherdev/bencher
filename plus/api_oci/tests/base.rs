@@ -3,7 +3,7 @@
 //! Integration tests for OCI base endpoint (/v2/).
 
 use bencher_api_tests::TestServer;
-use bencher_api_tests::oci::compute_digest;
+use bencher_api_tests::oci::{compute_digest, create_oci_manifest};
 use bencher_json::RunnerUuid;
 use http::StatusCode;
 
@@ -118,27 +118,6 @@ async fn oci_base_options() {
     assert!(resp.headers().contains_key("access-control-allow-origin"));
 }
 
-/// Create a minimal OCI manifest JSON for testing
-fn create_test_manifest(config_digest: &str, layer_digest: &str) -> String {
-    serde_json::json!({
-        "schemaVersion": 2,
-        "mediaType": "application/vnd.oci.image.manifest.v1+json",
-        "config": {
-            "mediaType": "application/vnd.oci.image.config.v1+json",
-            "digest": config_digest,
-            "size": 11
-        },
-        "layers": [
-            {
-                "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
-                "digest": layer_digest,
-                "size": 10
-            }
-        ]
-    })
-    .to_string()
-}
-
 // Smoke test: full unauthenticated push flow to an unclaimed project
 #[tokio::test]
 async fn oci_base_unauthenticated_push_smoke() {
@@ -181,7 +160,7 @@ async fn oci_base_unauthenticated_push_smoke() {
     assert_eq!(resp.status(), StatusCode::CREATED);
 
     // 4. Upload manifest (no auth)
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{slug}/manifests/latest")))

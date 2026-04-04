@@ -1104,6 +1104,7 @@ dependencies = [
  "http 1.4.0",
  "libsqlite3-sys",
  "reqwest",
+ "serde_json",
  "sha2",
  "slog",
  "tempfile",

@@ -9936,7 +9936,7 @@
           "oci"
         ],
         "summary": "OCI API version check endpoint",
-        "description": "Returns 200 OK if authenticated and the registry implements the OCI Distribution Spec. Returns 401 Unauthorized with WWW-Authenticate header if not authenticated.",
+        "description": "Returns 200 OK to indicate this registry implements the OCI Distribution Spec. If a valid Bearer token is provided, user-level rate limiting is applied. If no token is provided, public IP-based rate limiting is applied. Actual authorization is enforced at the individual push/pull endpoints.",
         "operationId": "oci_base",
         "responses": {
           "default": {

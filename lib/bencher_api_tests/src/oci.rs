@@ -14,6 +14,63 @@ pub fn compute_digest(data: &[u8]) -> String {
     format!("sha256:{}", hex::encode(hash))
 }
 
+/// Create a minimal OCI image manifest JSON with one config and one layer.
+pub fn create_oci_manifest(config_digest: &str, layer_digest: &str) -> String {
+    serde_json::json!({
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.oci.image.manifest.v1+json",
+        "config": {
+            "mediaType": "application/vnd.oci.image.config.v1+json",
+            "digest": config_digest,
+            "size": 100
+        },
+        "layers": [
+            {
+                "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+                "digest": layer_digest,
+                "size": 200
+            }
+        ]
+    })
+    .to_string()
+}
+
+/// Create a minimal OCI image manifest JSON with only a config (no layers).
+pub fn create_oci_manifest_config_only(config_digest: &str) -> String {
+    serde_json::json!({
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.oci.image.manifest.v1+json",
+        "config": {
+            "mediaType": "application/vnd.oci.image.config.v1+json",
+            "digest": config_digest,
+            "size": 100
+        },
+        "layers": []
+    })
+    .to_string()
+}
+
+/// Create a Docker V2 manifest JSON with one config and one layer.
+pub fn create_docker_v2_manifest(config_digest: &str, layer_digest: &str) -> String {
+    serde_json::json!({
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+        "config": {
+            "mediaType": "application/vnd.docker.container.image.v1+json",
+            "digest": config_digest,
+            "size": 100
+        },
+        "layers": [
+            {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "digest": layer_digest,
+                "size": 200
+            }
+        ]
+    })
+    .to_string()
+}
+
 impl TestServer {
     /// Generate an OCI token for a user with the specified repository and actions.
     ///

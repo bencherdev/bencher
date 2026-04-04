@@ -56,7 +56,9 @@ impl RunnerTest {
         if self.with_daemon {
             self.exec_with_daemon()
         } else {
-            run_unauth_push_test(&self.url)?;
+            if docker_available() {
+                run_unauth_push_test(&self.url)?;
+            }
             let spec = if cfg!(target_os = "linux") {
                 "test-spec"
             } else {
