@@ -95,7 +95,7 @@ jobs:
     if: github.ref != 'refs/heads/cloud'
     uses: ./.github/workflows/cli.yml
     with:
-      bencher-version: "0.6.0"
+      bencher-version: "0.6.1"
       mold-version: "2.34.1"
       zig-build-version: "0.19.3"
       zig-version: "0.13.0"
