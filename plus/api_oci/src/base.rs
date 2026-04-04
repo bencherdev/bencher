@@ -1,6 +1,7 @@
 //! OCI Base Endpoint - GET /v2/
 //!
-//! Returns 200 OK if authenticated, 401 with WWW-Authenticate if not.
+//! Returns 200 OK to indicate this registry implements the OCI Distribution Spec.
+//! If a valid Bearer token is provided, rate limiting is applied.
 //! This is the first endpoint clients call to verify registry compatibility.
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
@@ -9,8 +10,7 @@ use dropshot::{Body, HttpError, RequestContext, endpoint};
 use http::Response;
 
 #[cfg(feature = "plus")]
-use crate::auth::apply_user_rate_limit;
-use crate::auth::{extract_oci_bearer_token, unauthorized_with_www_authenticate};
+use crate::auth::{apply_public_rate_limit, apply_user_rate_limit, extract_oci_bearer_token};
 use crate::response::{APPLICATION_JSON, EMPTY_JSON_BODY, oci_cors_headers};
 
 /// CORS preflight for OCI base endpoint
@@ -28,8 +28,10 @@ pub async fn oci_base_options(
 
 /// OCI API version check endpoint
 ///
-/// Returns 200 OK if authenticated and the registry implements the OCI Distribution Spec.
-/// Returns 401 Unauthorized with WWW-Authenticate header if not authenticated.
+/// Returns 200 OK to indicate this registry implements the OCI Distribution Spec.
+/// If a valid Bearer token is provided, user-level rate limiting is applied.
+/// If no token is provided, public IP-based rate limiting is applied.
+/// Actual authorization is enforced at the individual push/pull endpoints.
 #[expect(
     clippy::map_err_ignore,
     reason = "Intentionally discarding auth errors for security"
@@ -42,19 +44,18 @@ pub async fn oci_base_options(
 pub async fn oci_base(rqctx: RequestContext<ApiContext>) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
 
-    // Try to extract and validate bearer token
-    let token = extract_oci_bearer_token(&rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, None))?;
-
-    // Validate the OCI token (base endpoint only accepts user tokens)
-    let claims = context
-        .token_key
-        .validate_oci(&token)
-        .map_err(|_| unauthorized_with_www_authenticate(&rqctx, None))?;
-
-    // Apply rate limiting
+    // Apply rate limiting based on authentication status
     #[cfg(feature = "plus")]
-    apply_user_rate_limit(&rqctx.log, context, &claims).await?;
+    if let Ok(token) = extract_oci_bearer_token(&rqctx) {
+        // Token was provided — it MUST be valid; don't silently downgrade to public
+        let claims = context
+            .token_key
+            .validate_oci(&token)
+            .map_err(|_| crate::auth::unauthorized_with_www_authenticate(&rqctx, None))?;
+        apply_user_rate_limit(&rqctx.log, context, &claims).await?;
+    } else {
+        apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
+    }
 
     // Return 200 OK with empty JSON body
     oci_cors_headers(

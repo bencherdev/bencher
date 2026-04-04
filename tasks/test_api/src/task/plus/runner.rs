@@ -56,6 +56,7 @@ impl RunnerTest {
         if self.with_daemon {
             self.exec_with_daemon()
         } else {
+            run_unauth_push_test(&self.url)?;
             let spec = if cfg!(target_os = "linux") {
                 "test-spec"
             } else {
@@ -216,13 +217,20 @@ impl RunnerTest {
             std::time::Duration::from_secs(30),
         );
 
+        // Run unauthenticated push test (no docker login, unclaimed project)
+        let unauth_result = run_unauth_push_test(&self.url);
+
         // Run the actual runner test (use no-sandbox spec when KVM is unavailable)
         let spec = if has_kvm {
             "test-spec"
         } else {
             "no-sandbox-spec"
         };
-        let result = run_runner_test(&self.url, &self.username, &self.token, spec);
+        let result = if unauth_result.is_ok() {
+            run_runner_test(&self.url, &self.username, &self.token, spec)
+        } else {
+            Ok(())
+        };
 
         // Run the no-sandbox runner test
         let no_sandbox_result = if result.is_ok() {
@@ -248,6 +256,7 @@ impl RunnerTest {
         let _wait = no_sandbox_child.wait();
         let _join = no_sandbox_reader_handle.join();
 
+        unauth_result?;
         result?;
         no_sandbox_result?;
         detach_result?;
@@ -684,6 +693,44 @@ fn docker_login(registry: &str, username: &str, password: &str) -> anyhow::Resul
 fn docker_push(image: &str) -> anyhow::Result<()> {
     let status = Command::new("docker").args(["push", image]).status()?;
     anyhow::ensure!(status.success(), "docker push {image} failed: {status}");
+    Ok(())
+}
+
+/// Run an unauthenticated push test: pull a small image, tag it for the local
+/// registry under an unclaimed project slug, and push without `docker login`.
+fn run_unauth_push_test(url: &Url) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("Running unauthenticated push smoke test against: {host}");
+
+    let registry = if cfg!(target_os = "macos") {
+        let port = registry_host(host)?
+            .rsplit_once(':')
+            .and_then(|(_, p)| p.parse::<u16>().ok())
+            .unwrap_or(bencher_json::BENCHER_API_PORT);
+        let docker_registry = format!("host.docker.internal:{port}");
+        ensure_hosts_entry()?;
+        ensure_insecure_registry(&docker_registry)?;
+        docker_registry
+    } else {
+        registry_for_api(host)?
+    };
+
+    let slug = "unauth-smoke-test";
+    let local_ref = format!("{registry}/{slug}:latest");
+
+    println!("Step 1: Pulling busybox:latest...");
+    docker_pull("busybox:latest")?;
+
+    println!("Step 2: Tagging as {local_ref}...");
+    docker_tag("busybox:latest", &local_ref)?;
+
+    // Intentionally NO docker login
+
+    println!("Step 3: Pushing without auth...");
+    docker_push(&local_ref)?;
+
+    println!("Unauthenticated push smoke test passed!");
     Ok(())
 }
 
