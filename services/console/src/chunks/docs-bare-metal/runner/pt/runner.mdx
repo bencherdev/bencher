@@ -1,0 +1,113 @@
+All Bare Metal features are Bencher Plus features.
+
+## What is a Runner?
+
+A Runner is a remote benchmark executor that runs on dedicated, bare metal hardware.
+The Runner polls the Bencher API server for pending Jobs based on its associated Specs.
+Once a Job is claimed, the Runner pulls the specified Image for the Job,
+unpacks the Image, executes the benchmark command, and sends the results back to the Bencher API server.
+Only one Job is executed at a time to ensure that the benchmarks are not affected by other workloads.
+
+## Runner Types
+
+| Runner                   | Platform            | Scope        | Managed By | Sandbox            | Network Access | Tier                   |
+| ------------------------ | ------------------- | ------------ | ---------- | ------------------ | -------------- | ---------------------- |
+| Shared                   | Bencher Cloud       | Server       | Bencher    | Required           | No             | Free, Team, Enterprise |
+| Dedicated                | Bencher Cloud       | Organization | Bencher    | Optional           | No             | Enterprise             |
+| Custom                   | Bencher Cloud       | Organization | User       | Optional           | Optional       | Enterprise             |
+| Self-Hosted Server       | Bencher Self-Hosted | Server       | User       | Optional           | Optional       | Free, Team, Enterprise |
+| Self-Hosted Organization | Bencher Self-Hosted | Organization | User       | Optional           | Optional       | Enterprise             |
+
+- **Shared** Runners are available to all Bencher Cloud users. They run Jobs in a sandboxed environment with no network access.
+- **Dedicated** Runners are provisioned by Bencher for a specific organization. They offer consistent, isolated hardware managed by Bencher.
+- **Custom** Runners are organization-specific Runners on Bencher Cloud where the user provides and manages the hardware. They allow paid accounts (Enterprise tier) to register and operate their own Runner hardware while using the Bencher Cloud API for job scheduling, result processing, and regression detection.
+- **Self-Hosted** Runners are part of a Bencher Self-Hosted deployment, where the user manages both the API server and the Runner hardware.
+
+## Setting Up a Custom Runner
+
+Custom Runners let you bring your own hardware to Bencher Cloud.
+
+### 1. Register a Runner
+
+Create a Runner using the CLI or the [Runners REST API][runners api]:
+
+```
+bencher runner create --name my-runner
+```
+
+### 2. Save the Runner Token
+
+The create response includes a runner token. This token is only shown once.
+Store it securely -- you will need it to authenticate the Runner daemon.
+
+```json
+{
+  "uuid": "...",
+  "token": "br_..."
+}
+```
+
+### 3. Associate Specs
+
+A Runner must be associated with one or more Specs to claim Jobs.
+The Runner will only claim Jobs whose Spec matches one of its associated Specs.
+
+```
+bencher runner spec add my-runner --spec intel-v1
+```
+
+You can associate multiple Specs with a single Runner:
+
+```
+bencher runner spec add my-runner --spec intel-v1
+bencher runner spec add my-runner --spec amd-v1
+```
+
+List a Runner's associated Specs:
+
+```
+bencher runner spec list my-runner
+```
+
+Remove a Spec association:
+
+```
+bencher runner spec remove my-runner intel-v1
+```
+
+### 4. Start the Runner Daemon
+
+Start the Runner daemon on the host machine.
+The `runner` binary connects to Bencher Cloud via WebSocket and begins claiming Jobs:
+
+```
+bencher runner up --runner my-runner --token <TOKEN>
+```
+
+For non-sandboxed execution (no Firecracker), add the `--danger-allow-no-sandbox` flag:
+
+```
+bencher runner up --runner my-runner --token <TOKEN> --danger-allow-no-sandbox
+```
+
+The Runner will remain connected and continuously poll for new Jobs.
+
+## Token Management
+
+Runner tokens can be rotated at any time.
+Rotating a token invalidates the previous token and returns a new one.
+
+```
+bencher runner token my-runner
+```
+
+As with the initial token, the new token is only shown once.
+Store it securely and update any running Runner daemons with the new token.
+
+## Further Reading
+
+- [Runners REST API][runners api]
+- [Runner Specs REST API][runner specs api]
+
+[runners api]: /docs/api/server/#tag/runners
+[runner specs api]: /docs/api/server/#tag/runner-specs
