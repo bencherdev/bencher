@@ -25,9 +25,6 @@ const docsHowToCollection = await getLangCollection(Collection.docs_how_to);
 const docsExplanationCollection = await getLangCollection(
 	Collection.docs_explanation,
 );
-const docsBareMetalCollection = await getLangCollection(
-	Collection.docs_bare_metal,
-);
 const docsReferenceCollection = await getLangCollection(
 	Collection.docs_reference,
 );
@@ -103,8 +100,6 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
 					docsHowToCollection[lang]?.length +
 					1 +
 					docsExplanationCollection[lang]?.length +
-					1 +
-					docsBareMetalCollection[lang]?.length +
 					1 +
 					docsReferenceCollection[lang]?.length
 				);

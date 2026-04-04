@@ -1,8 +1,7 @@
 ---
 import {
 	architecture,
-	bareMetal,
-	schema,
+schema,
 	explanation,
 	howTo,
 	reference,
@@ -25,9 +24,6 @@ const docsTutorialCollection = await getLangCollection(
 const docsHowToCollection = await getLangCollection(Collection.docs_how_to);
 const docsExplanationCollection = await getLangCollection(
 	Collection.docs_explanation,
-);
-const docsBareMetalCollection = await getLangCollection(
-	Collection.docs_bare_metal,
 );
 const docsReferenceCollection = await getLangCollection(
 	Collection.docs_reference,
@@ -52,12 +48,7 @@ const { lang } = Astro.props;
     collection: Collection.docs_explanation,
     content: docsExplanationCollection[lang],
   },
-  {
-    label: bareMetal(lang),
-    collection: Collection.docs_bare_metal,
-    content: docsBareMetalCollection[lang],
-  },
-  {
+{
     label: reference(lang),
     collection: Collection.docs_reference,
     content: docsReferenceCollection[lang],
