@@ -1,0 +1,31 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## Track your Bare Metal Benchmarks
+
+You are now ready to track your benchmark results on dedicated hardware!
+To do so, you will use [the `bencher run` CLI subcommand][bencher run]
+with the `--project`, `--image`, and `--spec` options
+to run your benchmarks on a Bare Metal Runner and collect the results.
+
+We will use the [`bencher noise`][bencher noise] subcommand as the benchmark command.
+It measures environment noise on the Runner hardware
+and outputs results in [Bencher Metric Format (BMF)][bmf] with `--format json`.
+
+We will use the `intel-v1` [Spec][spec] to target an Intel-based Bare Metal Runner.
+See the [Spec page][spec] for a full list of available Specs and their hardware details.
+Replace `YOUR_PROJECT_SLUG` with the project slug from the previous steps and run:
+
+<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest --spec intel-v1 bencher noise --format json" />
+
+The `--project` option selects the project to track results for,
+the `--image` option sets the OCI image for remote execution,
+and the `--spec` option selects the hardware Spec for the Runner.
+Everything after the `bencher run` options is the benchmark command that executes inside the container.
+
+You can now view the results for each of your benchmarks in the browser.
+Click or copy and paste the links from `View results`.
+
+[bencher run]: /docs/explanation/bencher-run/
+[bencher noise]: /docs/reference/bencher-noise/
+[bmf]: /docs/reference/bencher-metric-format/
+[spec]: /docs/bare-metal/spec/
