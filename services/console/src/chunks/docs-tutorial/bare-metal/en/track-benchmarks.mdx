@@ -2,30 +2,36 @@ import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
 
 ## Track your Bare Metal Benchmarks
 
-You are now ready to track your benchmark results on dedicated hardware!
+You are now ready to track your benchmark results on bare metal hardware!
 To do so, you will use [the `bencher run` CLI subcommand][bencher run]
-with the `--project`, `--image`, and `--spec` options
-to run your benchmarks on a Bare Metal Runner and collect the results.
-
-We will use the [`bencher noise`][bencher noise] subcommand as the benchmark command.
-It measures environment noise on the Runner hardware
-and outputs results in [Bencher Metric Format (BMF)][bmf] with `--format json`.
-
-We will use the `intel-v1` [Spec][spec] to target an Intel-based Bare Metal Runner.
-See the [Spec page][spec] for a full list of available Specs and their hardware details.
+to run your benchmarks and collect the results.
 Replace `YOUR_PROJECT_SLUG` with the project slug from the previous steps and run:
 
 <TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest --spec intel-v1 bencher noise --format json" />
 
-The `--project` option selects the project to track results for,
-the `--image` option sets the OCI image for remote execution,
-and the `--spec` option selects the hardware Spec for the Runner.
-Everything after the `bencher run` options is the benchmark command that executes inside the container.
+We are using [the `bencher noise` subcommand][bencher noise] as our benchmark command to generate some sample data.
+It measures how noisy your benchmark environment is.
+When we use [the `--format json` option][format option] the results are output in [Bencher Metric Format (BMF)][bmf].
+If everything works as expected, the end of the output should look something like this:
+
+```
+View report: https://bencher.dev/perf/project-abc4567-wxyz123456789/reports/29d61b7c-5d80-4ac2-a118-f80bc5de431b
+
+View results:
+- bencher::noise::cache_jitter (Cache Jitter): https://bencher.dev/perf/project-abc4567-wxyz123456789?branches=88d5192d-5cd1-47c6-a817-056e5968737c&heads=657a8ee9-1f30-49d4-bd9b-ceed02576d7e&testbeds=f3a5db46-a57e-4caf-b96e-f0c1111eaa67&benchmarks=6bed122a-b0d1-42e6-93c1-8736a910ec9c&measures=fdee350f-f53a-44bc-af7c-2f4c51415ea8&start_time=1741390156000&end_time=1743982156000&report=29d61b7c-5d80-4ac2-a118-f80bc5de431b
+- bencher::noise::composite (Noise Score): https://bencher.dev/perf/project-abc4567-wxyz123456789?branches=88d5192d-5cd1-47c6-a817-056e5968737c&heads=657a8ee9-1f30-49d4-bd9b-ceed02576d7e&testbeds=f3a5db46-a57e-4caf-b96e-f0c1111eaa67&benchmarks=a5d0aea8-666f-4554-958a-9ad8acf1a20d&measures=995e8a26-58ee-46c4-8ce7-d0162b7d9d86&start_time=1741390156000&end_time=1743982156000&report=29d61b7c-5d80-4ac2-a118-f80bc5de431b
+- bencher::noise::compute_jitter (Compute Jitter): https://bencher.dev/perf/project-abc4567-wxyz123456789?branches=88d5192d-5cd1-47c6-a817-056e5968737c&heads=657a8ee9-1f30-49d4-bd9b-ceed02576d7e&testbeds=f3a5db46-a57e-4caf-b96e-f0c1111eaa67&benchmarks=489b1d60-5dbd-43cd-bb96-ba50bcba648a&measures=8b715d47-ed42-4ac5-a380-4fe4143aa159&start_time=1741390156000&end_time=1743982156000&report=29d61b7c-5d80-4ac2-a118-f80bc5de431b
+- bencher::noise::io_jitter (I/O Jitter): https://bencher.dev/perf/project-abc4567-wxyz123456789?branches=88d5192d-5cd1-47c6-a817-056e5968737c&heads=657a8ee9-1f30-49d4-bd9b-ceed02576d7e&testbeds=f3a5db46-a57e-4caf-b96e-f0c1111eaa67&benchmarks=0a3da391-2fe3-40ec-8a10-983e81231af8&measures=b34f6fd4-60ff-4866-a7a4-60396aab976a&start_time=1741390156000&end_time=1743982156000&report=29d61b7c-5d80-4ac2-a118-f80bc5de431b
+
+Claim this project: https://bencher.dev/auth/signup?claim=d4b0cd5a-8422-40af-9872-8e18d5d062c4
+```
 
 You can now view the results for each of your benchmarks in the browser.
 Click or copy and paste the links from `View results`.
+To [claim these results][claim], click or copy and paste the `Claim this project` link into your browser.
 
 [bencher run]: /docs/explanation/bencher-run/
 [bencher noise]: /docs/reference/bencher-noise/
+[format option]: /docs/reference/bencher-noise/#--format-format
 [bmf]: /docs/reference/bencher-metric-format/
-[spec]: /docs/bare-metal/spec/
+[claim]: /docs/how-to/claim/
