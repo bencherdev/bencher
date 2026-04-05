@@ -13,11 +13,12 @@ use bencher_json::RunnerUuid;
 
 #[cfg(feature = "plus")]
 use crate::RunnerOciClaims;
+use crate::claims::PublicOciTokenClaims;
 #[cfg(feature = "plus")]
 use crate::claims::RunnerOciTokenClaims;
 use crate::{
-    Audience, Claims, InviteClaims, OAuthClaims, OciAction, OciClaims, OciScopeClaims, OrgClaims,
-    StateClaims, TokenError,
+    Audience, AuthOciClaims, Claims, InviteClaims, OAuthClaims, OciAction, OciScopeClaims,
+    OrgClaims, PublicOciClaims, StateClaims, TokenError,
 };
 
 static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
@@ -85,7 +86,31 @@ impl TokenKey {
         self.new_jwt(Audience::OAuth, email, ttl, None, Some(state), None)
     }
 
-    pub fn new_oci(
+    pub fn new_oci_public(
+        &self,
+        ttl: u32,
+        repository: Option<String>,
+        actions: Vec<OciAction>,
+    ) -> Result<Jwt, TokenError> {
+        let now = Utc::now().timestamp();
+        let claims = PublicOciTokenClaims {
+            aud: Audience::OciPublic.into(),
+            exp: now.checked_add(i64::from(ttl)).unwrap_or(now),
+            iat: now,
+            iss: self.issuer.clone(),
+            oci: Some(OciScopeClaims {
+                repository,
+                actions,
+            }),
+        };
+        Jwt::from_str(
+            &encode(&HEADER, &claims, &self.encoding)
+                .map_err(|e| TokenError::Encode { error: e })?,
+        )
+        .map_err(TokenError::Parse)
+    }
+
+    pub fn new_oci_auth(
         &self,
         email: Email,
         ttl: u32,
@@ -96,7 +121,7 @@ impl TokenKey {
             repository,
             actions,
         };
-        self.new_jwt(Audience::Oci, email, ttl, None, None, Some(oci_claims))
+        self.new_jwt(Audience::OciAuth, email, ttl, None, None, Some(oci_claims))
     }
 
     #[cfg(feature = "plus")]
@@ -109,7 +134,7 @@ impl TokenKey {
     ) -> Result<Jwt, TokenError> {
         let now = Utc::now().timestamp();
         let claims = RunnerOciTokenClaims {
-            aud: Audience::Oci.into(),
+            aud: Audience::OciRunner.into(),
             exp: now.checked_add(i64::from(ttl)).unwrap_or(now),
             iat: now,
             iss: self.issuer.clone(),
@@ -173,14 +198,39 @@ impl TokenKey {
         self.validate(token, &[Audience::OAuth])?.claims.try_into()
     }
 
-    pub fn validate_oci(&self, token: &Jwt) -> Result<OciClaims, TokenError> {
-        self.validate(token, &[Audience::Oci])?.claims.try_into()
+    pub fn validate_oci_public(&self, token: &Jwt) -> Result<PublicOciClaims, TokenError> {
+        let mut validation = Validation::new(ALGORITHM);
+        validation.set_audience(&[Audience::OciPublic]);
+        validation.set_issuer(&[self.issuer.as_str()]);
+        // No "sub" required — anonymous tokens have no identity
+        validation.set_required_spec_claims(&["aud", "exp", "iss"]);
+
+        let token_data: TokenData<PublicOciTokenClaims> =
+            decode(token.as_ref(), &self.decoding, &validation)
+                .map_err(|error| TokenError::Decode { error })?;
+        let exp = token_data.claims.exp;
+        let now = Utc::now().timestamp();
+        if exp < now {
+            Err(TokenError::Expired {
+                exp,
+                now,
+                error: JsonWebTokenErrorKind::ExpiredSignature.into(),
+            })
+        } else {
+            token_data.claims.try_into()
+        }
+    }
+
+    pub fn validate_oci_auth(&self, token: &Jwt) -> Result<AuthOciClaims, TokenError> {
+        self.validate(token, &[Audience::OciAuth])?
+            .claims
+            .try_into()
     }
 
     #[cfg(feature = "plus")]
     pub fn validate_oci_runner(&self, token: &Jwt) -> Result<RunnerOciClaims, TokenError> {
         let mut validation = Validation::new(ALGORITHM);
-        validation.set_audience(&[Audience::Oci]);
+        validation.set_audience(&[Audience::OciRunner]);
         validation.set_issuer(&[self.issuer.as_str()]);
         validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
 
@@ -323,38 +373,6 @@ mod tests {
     }
 
     #[test]
-    fn jwt_oci() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let repository = Some("test-org/test-project".to_owned());
-        let actions = vec![OciAction::Pull, OciAction::Push];
-
-        let token = secret_key
-            .new_oci(EMAIL.clone(), TTL, repository.clone(), actions.clone())
-            .unwrap();
-
-        let claims = secret_key.validate_oci(&token).unwrap();
-
-        assert_eq!(claims.aud, Audience::Oci.to_string());
-        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
-        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
-        assert_eq!(claims.sub, *EMAIL);
-        assert_eq!(claims.oci.repository, repository);
-        assert_eq!(claims.oci.actions, actions);
-    }
-
-    #[test]
-    fn jwt_oci_expired() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let oci = OciScopeClaims {
-            repository: None,
-            actions: vec![OciAction::Pull],
-        };
-        let token = make_expired_token(&secret_key, Audience::Oci, None, Some(oci));
-        assert!(secret_key.validate_oci(&token).is_err());
-    }
-
-    #[test]
     fn jwt_invite_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let org = OrgClaims {
@@ -365,49 +383,98 @@ mod tests {
         assert!(secret_key.validate_invite(&token).is_err());
     }
 
+    // --- OCI Public tokens ---
+
     #[test]
-    fn jwt_oci_empty_actions() {
+    fn jwt_oci_public() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let repository = Some("test-project".to_owned());
+        let actions = vec![OciAction::Push];
+
+        let token = secret_key
+            .new_oci_public(TTL, repository.clone(), actions.clone())
+            .unwrap();
+
+        let claims = secret_key.validate_oci_public(&token).unwrap();
+
+        assert_eq!(claims.oci.repository, repository);
+        assert_eq!(claims.oci.actions, actions);
+    }
+
+    #[test]
+    fn jwt_oci_public_expired() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let now = chrono::Utc::now().timestamp();
+        let claims = crate::claims::PublicOciTokenClaims {
+            aud: Audience::OciPublic.to_string(),
+            exp: now - 100,
+            iat: now - 200,
+            iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
+            oci: Some(OciScopeClaims {
+                repository: None,
+                actions: vec![],
+            }),
+        };
+        let token = Jwt::from_str(
+            &jsonwebtoken::encode(&super::HEADER, &claims, &secret_key.encoding).unwrap(),
+        )
+        .unwrap();
+
+        assert!(secret_key.validate_oci_public(&token).is_err());
+    }
+
+    // --- OCI Auth tokens ---
+
+    #[test]
+    fn jwt_oci_auth() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+
+        let repository = Some("test-org/test-project".to_owned());
+        let actions = vec![OciAction::Pull, OciAction::Push];
+
+        let token = secret_key
+            .new_oci_auth(EMAIL.clone(), TTL, repository.clone(), actions.clone())
+            .unwrap();
+
+        let claims = secret_key.validate_oci_auth(&token).unwrap();
+
+        assert_eq!(claims.aud, Audience::OciAuth.to_string());
+        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
+        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
+        assert_eq!(claims.sub, *EMAIL);
+        assert_eq!(claims.oci.repository, repository);
+        assert_eq!(claims.oci.actions, actions);
+    }
+
+    #[test]
+    fn jwt_oci_auth_expired() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let oci = OciScopeClaims {
+            repository: None,
+            actions: vec![OciAction::Pull],
+        };
+        let token = make_expired_token(&secret_key, Audience::OciAuth, None, Some(oci));
+        assert!(secret_key.validate_oci_auth(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_oci_auth_empty_actions() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key
-            .new_oci(EMAIL.clone(), TTL, None, vec![])
+            .new_oci_auth(EMAIL.clone(), TTL, None, vec![])
             .unwrap();
 
-        let claims = secret_key.validate_oci(&token).unwrap();
-        assert_eq!(claims.aud, Audience::Oci.to_string());
+        let claims = secret_key.validate_oci_auth(&token).unwrap();
+        assert_eq!(claims.aud, Audience::OciAuth.to_string());
         assert_eq!(claims.sub, *EMAIL);
         assert!(claims.oci.actions.is_empty());
         assert!(claims.oci.repository.is_none());
     }
 
-    #[test]
-    fn jwt_auth_token_rejected_as_oci() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
-
-        assert!(secret_key.validate_oci(&token).is_err());
-    }
-
-    #[test]
-    fn jwt_api_key_rejected_as_oci() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
-
-        assert!(secret_key.validate_oci(&token).is_err());
-    }
-
-    #[test]
-    fn jwt_oci_token_rejected_as_auth() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key
-            .new_oci(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
-            .unwrap();
-
-        assert!(secret_key.validate_auth(&token).is_err());
-    }
+    // --- OCI Runner tokens ---
 
     #[cfg(feature = "plus")]
     #[test]
@@ -424,7 +491,7 @@ mod tests {
 
         let claims = secret_key.validate_oci_runner(&token).unwrap();
 
-        assert_eq!(claims.aud, Audience::Oci.to_string());
+        assert_eq!(claims.aud, Audience::OciRunner.to_string());
         assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
         assert_eq!(claims.iat, claims.exp - i64::from(TTL));
         assert_eq!(claims.sub, runner_uuid);
@@ -441,7 +508,7 @@ mod tests {
         let runner_uuid = bencher_json::RunnerUuid::new();
         let now = chrono::Utc::now().timestamp();
         let claims = crate::claims::RunnerOciTokenClaims {
-            aud: Audience::Oci.to_string(),
+            aud: Audience::OciRunner.to_string(),
             exp: now - 100,
             iat: now - 200,
             iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
@@ -459,33 +526,77 @@ mod tests {
         assert!(secret_key.validate_oci_runner(&token).is_err());
     }
 
+    // --- Cross-type rejection: each OCI token type rejected by the other two ---
+
+    #[test]
+    fn jwt_auth_token_rejected_as_oci_auth() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
+        assert!(secret_key.validate_oci_auth(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_oci_auth_token_rejected_as_auth() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let token = secret_key
+            .new_oci_auth(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
+            .unwrap();
+        assert!(secret_key.validate_auth(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_oci_public_rejected_as_oci_auth() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let token = secret_key.new_oci_public(TTL, None, vec![]).unwrap();
+        assert!(secret_key.validate_oci_auth(&token).is_err());
+    }
+
+    #[test]
+    fn jwt_oci_auth_rejected_as_oci_public() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let token = secret_key
+            .new_oci_auth(EMAIL.clone(), TTL, None, vec![])
+            .unwrap();
+        assert!(secret_key.validate_oci_public(&token).is_err());
+    }
+
     #[cfg(feature = "plus")]
     #[test]
-    fn jwt_user_oci_rejected_as_runner_oci() {
+    fn jwt_oci_public_rejected_as_oci_runner() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        // Create a user OCI token (sub is Email)
-        let token = secret_key
-            .new_oci(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
-            .unwrap();
-
-        // Should fail to validate as runner OCI (Email is not a valid UUID)
+        let token = secret_key.new_oci_public(TTL, None, vec![]).unwrap();
         assert!(secret_key.validate_oci_runner(&token).is_err());
     }
 
     #[cfg(feature = "plus")]
     #[test]
-    fn jwt_runner_oci_rejected_as_user_oci() {
+    fn jwt_oci_runner_rejected_as_oci_public() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
         let runner_uuid = bencher_json::RunnerUuid::new();
-
-        // Create a runner OCI token (sub is RunnerUuid)
         let token = secret_key
             .new_oci_runner(runner_uuid, TTL, None, vec![OciAction::Pull])
             .unwrap();
+        assert!(secret_key.validate_oci_public(&token).is_err());
+    }
 
-        // Should fail to validate as user OCI (UUID is not a valid Email)
-        assert!(secret_key.validate_oci(&token).is_err());
+    #[cfg(feature = "plus")]
+    #[test]
+    fn jwt_oci_auth_rejected_as_oci_runner() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let token = secret_key
+            .new_oci_auth(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
+            .unwrap();
+        assert!(secret_key.validate_oci_runner(&token).is_err());
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn jwt_oci_runner_rejected_as_oci_auth() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let runner_uuid = bencher_json::RunnerUuid::new();
+        let token = secret_key
+            .new_oci_runner(runner_uuid, TTL, None, vec![OciAction::Pull])
+            .unwrap();
+        assert!(secret_key.validate_oci_auth(&token).is_err());
     }
 }

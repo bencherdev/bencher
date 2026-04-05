@@ -161,9 +161,46 @@ impl TryFrom<Claims> for OAuthClaims {
     }
 }
 
-/// Validated OCI token claims
+/// Raw JWT claims for public (anonymous) OCI tokens (used for encoding/decoding).
+///
+/// Has no `sub` field — anonymous tokens have no identity.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct PublicOciTokenClaims {
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub iss: String,
+    pub oci: Option<OciScopeClaims>,
+}
+
+/// Validated public OCI token claims.
+///
+/// Guarantees that the `oci` scope is present (not `Option`).
+/// Has no identity — used for anonymous/unauthenticated access.
 #[derive(Debug, Clone)]
-pub struct OciClaims {
+pub struct PublicOciClaims {
+    pub oci: OciScopeClaims,
+}
+
+impl TryFrom<PublicOciTokenClaims> for PublicOciClaims {
+    type Error = TokenError;
+
+    fn try_from(claims: PublicOciTokenClaims) -> Result<Self, Self::Error> {
+        match claims.oci {
+            Some(oci) => Ok(Self { oci }),
+            None => Err(TokenError::OciPublic {
+                error: JsonWebTokenErrorKind::MissingRequiredClaim("oci".into()).into(),
+            }),
+        }
+    }
+}
+
+/// Validated authenticated OCI token claims.
+///
+/// Guarantees that the `oci` scope is present (not `Option`).
+/// Contains a user email as the subject.
+#[derive(Debug, Clone)]
+pub struct AuthOciClaims {
     pub aud: String,
     pub exp: i64,
     pub iat: i64,
@@ -172,7 +209,7 @@ pub struct OciClaims {
     pub oci: OciScopeClaims,
 }
 
-impl TryFrom<Claims> for OciClaims {
+impl TryFrom<Claims> for AuthOciClaims {
     type Error = TokenError;
 
     fn try_from(claims: Claims) -> Result<Self, Self::Error> {
@@ -185,14 +222,14 @@ impl TryFrom<Claims> for OciClaims {
                 sub: claims.sub,
                 oci,
             }),
-            None => Err(TokenError::Oci {
+            None => Err(TokenError::OciAuth {
                 error: JsonWebTokenErrorKind::MissingRequiredClaim("oci".into()).into(),
             }),
         }
     }
 }
 
-impl OciClaims {
+impl AuthOciClaims {
     pub fn email(&self) -> &Email {
         &self.sub
     }

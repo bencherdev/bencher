@@ -22,16 +22,17 @@ use bencher_schema::{
     },
     public_conn,
 };
-use bencher_token::{OciAction, OciClaims, OciScopeClaims, RunnerOciClaims};
+use bencher_token::{AuthOciClaims, OciAction, OciScopeClaims, RunnerOciClaims};
 use dropshot::{ClientErrorStatusCode, HttpError, RequestContext};
 use slog::Logger;
 
 /// Identity that can pull from the OCI registry.
 ///
-/// Pull endpoints accept both user OCI tokens (sub: `Email`) and
-/// runner OCI tokens (sub: `RunnerUuid`).
+/// Pull endpoints accept public OCI tokens (anonymous),
+/// user OCI tokens (sub: `Email`), and runner OCI tokens (sub: `RunnerUuid`).
 pub enum OciPullIdentity {
-    User(OciClaims),
+    Public,
+    Auth(AuthOciClaims),
     Runner(RunnerOciClaims),
 }
 
@@ -86,8 +87,8 @@ pub fn validate_oci_access(
     token: &Jwt,
     repository: &str,
     required_action: &OciAction,
-) -> Result<OciClaims, HttpError> {
-    let claims = context.token_key.validate_oci(token).map_err(|_err| {
+) -> Result<AuthOciClaims, HttpError> {
+    let claims = context.token_key.validate_oci_auth(token).map_err(|_err| {
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::UNAUTHORIZED,
@@ -162,12 +163,12 @@ fn validate_oci_scope(
     Ok(())
 }
 
-/// Try to validate a bearer token as either a runner OCI token or a user OCI token,
+/// Try to validate a bearer token as a runner, user, or public OCI token,
 /// then check that it grants pull access to the specified repository.
 ///
 /// Runner tokens are tried first because in production the vast majority of OCI pull
 /// requests come from runners. Only server admins pull otherwise, so we optimise for
-/// the common case.
+/// the common case. Public tokens are tried last.
 fn validate_pull_identity(
     context: &ApiContext,
     token: &Jwt,
@@ -179,16 +180,23 @@ fn validate_pull_identity(
         return Ok(OciPullIdentity::Runner(runner_claims));
     }
 
-    // Fall back to user token
-    let user_claims = context.token_key.validate_oci(token).map_err(|_err| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::UNAUTHORIZED,
-            oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid or expired token"),
-        )
-    })?;
-    validate_oci_scope(&user_claims.oci, repository, &OciAction::Pull)?;
-    Ok(OciPullIdentity::User(user_claims))
+    // Try user token
+    if let Ok(user_claims) = context.token_key.validate_oci_auth(token) {
+        validate_oci_scope(&user_claims.oci, repository, &OciAction::Pull)?;
+        return Ok(OciPullIdentity::Auth(user_claims));
+    }
+
+    // Try public token
+    if let Ok(public_claims) = context.token_key.validate_oci_public(token) {
+        validate_oci_scope(&public_claims.oci, repository, &OciAction::Pull)?;
+        return Ok(OciPullIdentity::Public);
+    }
+
+    Err(HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::UNAUTHORIZED,
+        oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid or expired token"),
+    ))
 }
 
 /// Result of pull access validation
@@ -202,7 +210,7 @@ pub struct OciPullAccess {
 pub struct OciAccess {
     /// The validated OCI claims
     #[expect(dead_code, reason = "May be used in the future for audit logging")]
-    pub claims: OciClaims,
+    pub claims: AuthOciClaims,
 }
 
 /// Require pull access for an OCI operation
@@ -227,7 +235,7 @@ pub async fn require_pull_access(
 
     // Apply rate limiting
     #[cfg(feature = "plus")]
-    apply_auth_rate_limit(&rqctx.log, context, &identity).await?;
+    apply_pull_rate_limit(&rqctx.log, context, rqctx, &identity).await?;
 
     Ok(OciPullAccess { identity })
 }
@@ -252,29 +260,31 @@ pub async fn validate_pull_access(
     let repository_str = repository.to_string();
     let scope = format!("repository:{repository_str}:pull");
 
-    // Try to extract and validate token
-    if let Ok(token) = extract_oci_bearer_token(rqctx) {
-        let identity = validate_pull_identity(context, &token, &repository_str)
-            .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+    let token = extract_oci_bearer_token(rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+    let identity = validate_pull_identity(context, &token, &repository_str)
+        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
 
-        apply_auth_rate_limit(&rqctx.log, context, &identity).await?;
-    } else {
-        // No token — only allow for unclaimed projects
+    // Public tokens can only pull from unclaimed projects
+    if matches!(identity, OciPullIdentity::Public) {
         let conn = public_conn!(context);
-        let project = QueryProject::from_resource_id(conn, repository)
-            .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
-        let organization = project.organization(conn).map_err(|e| {
-            HttpError::for_internal_error(format!("Failed to get organization: {e}"))
-        })?;
-        let is_claimed = organization.is_claimed(conn).map_err(|e| {
-            HttpError::for_internal_error(format!("Failed to check claimed status: {e}"))
-        })?;
-        if is_claimed {
-            return Err(unauthorized_with_www_authenticate(rqctx, Some(&scope)));
+        if let Ok(project) = QueryProject::from_resource_id(conn, repository) {
+            let is_claimed = project
+                .organization(conn)
+                .map_err(|e| {
+                    HttpError::for_internal_error(format!("Failed to get organization: {e}"))
+                })?
+                .is_claimed(conn)
+                .map_err(|e| {
+                    HttpError::for_internal_error(format!("Failed to check claimed status: {e}"))
+                })?;
+            if is_claimed {
+                return Err(unauthorized_with_www_authenticate(rqctx, Some(&scope)));
+            }
         }
-
-        apply_public_rate_limit(&rqctx.log, context, rqctx)?;
     }
+
+    apply_pull_rate_limit(&rqctx.log, context, rqctx, &identity).await?;
 
     resolve_project(context, repository).await
 }
@@ -312,7 +322,7 @@ pub struct PushAccess {
     pub project: QueryProject,
     /// OCI claims if authenticated, None if unauthenticated push to unclaimed project
     #[expect(dead_code, reason = "May be used in the future for audit logging")]
-    pub claims: Option<OciClaims>,
+    pub claims: Option<AuthOciClaims>,
 }
 
 /// Validate push access for OCI operations and get or create the project
@@ -383,7 +393,7 @@ async fn handle_existing_project(
     context: &ApiContext,
     project: QueryProject,
     public_user: &PublicUser,
-    claims: Option<OciClaims>,
+    claims: Option<AuthOciClaims>,
 ) -> Result<PushAccess, HttpError> {
     let conn = public_conn!(context);
     let organization = project
@@ -412,7 +422,7 @@ fn handle_claimed_project(
     context: &ApiContext,
     project: QueryProject,
     public_user: &PublicUser,
-    claims: Option<OciClaims>,
+    claims: Option<AuthOciClaims>,
 ) -> Result<PushAccess, HttpError> {
     let scope = format!("repository:{}:push", project.slug);
 
@@ -454,7 +464,7 @@ async fn handle_unclaimed_project(
     project: QueryProject,
     organization: QueryOrganization,
     public_user: &PublicUser,
-    claims: Option<OciClaims>,
+    claims: Option<AuthOciClaims>,
 ) -> Result<PushAccess, HttpError> {
     slog::info!(
         log,
@@ -492,7 +502,7 @@ async fn handle_nonexistent_project(
     context: &ApiContext,
     repository: &ProjectResourceId,
     public_user: &PublicUser,
-    claims: Option<OciClaims>,
+    claims: Option<AuthOciClaims>,
 ) -> Result<PushAccess, HttpError> {
     match repository {
         ProjectResourceId::Uuid(uuid) => {
@@ -534,19 +544,21 @@ async fn handle_nonexistent_project(
     }
 }
 
-/// Apply rate limiting for authenticated OCI pull requests
+/// Apply rate limiting for OCI pull requests based on identity type.
 ///
-/// - `User` identity: looks up the user by email and applies `user_request` rate limiting.
+/// - `Public` identity: applies IP-based public rate limiting.
+/// - `Auth` identity: looks up the user by email and applies `user_request` rate limiting.
 /// - `Runner` identity: skips rate limiting (runners already have per-runner rate limiting
 ///   on the claim endpoint).
-#[cfg(feature = "plus")]
-async fn apply_auth_rate_limit(
+async fn apply_pull_rate_limit(
     log: &Logger,
     context: &ApiContext,
+    rqctx: &RequestContext<ApiContext>,
     identity: &OciPullIdentity,
 ) -> Result<(), HttpError> {
     match identity {
-        OciPullIdentity::User(claims) => apply_user_rate_limit(log, context, claims).await,
+        OciPullIdentity::Public => apply_public_rate_limit(log, context, rqctx),
+        OciPullIdentity::Auth(claims) => apply_user_rate_limit(log, context, claims).await,
         OciPullIdentity::Runner(claims) => {
             slog::debug!(log, "Skipping rate limit for runner OCI pull"; "runner_uuid" => %claims.sub);
             Ok(())
@@ -562,7 +574,7 @@ async fn apply_auth_rate_limit(
 pub(crate) async fn apply_user_rate_limit(
     log: &Logger,
     context: &ApiContext,
-    claims: &OciClaims,
+    claims: &AuthOciClaims,
 ) -> Result<(), HttpError> {
     let query_user =
         QueryUser::get_with_email(public_conn!(context), claims.email()).map_err(|_err| {
@@ -618,22 +630,24 @@ pub async fn resolve_project(
 
 /// Build a `PublicUser` from OCI authentication
 ///
-/// Returns (`PublicUser`, `Option<OciClaims>`) where claims is Some if authenticated.
-/// For unauthenticated users, extracts the remote IP from headers for rate limiting.
+/// Returns (`PublicUser`, `Option<AuthOciClaims>`) where claims is Some if authenticated.
+/// Public OCI tokens (anonymous) are treated as public users.
 async fn build_public_user(
     log: &Logger,
     context: &ApiContext,
     rqctx: &RequestContext<ApiContext>,
     token: Option<Jwt>,
     repository_str: &str,
-) -> Result<(PublicUser, Option<OciClaims>), HttpError> {
-    if let Some(token) = token {
-        // Token was provided -- it MUST be valid; don't silently downgrade to public
-        let claims = validate_oci_access(context, &token, repository_str, &OciAction::Push)
-            .map_err(|e| {
-                slog::warn!(log, "OCI push with invalid token"; "error" => %e);
-                e
-            })?;
+) -> Result<(PublicUser, Option<AuthOciClaims>), HttpError> {
+    let Some(token) = token else {
+        // No token provided -- treat as public user (for unclaimed projects)
+        let remote_ip = RateLimiting::remote_ip(log, rqctx.request.headers());
+        slog::debug!(log, "OCI push without authentication (public user)"; "remote_ip" => ?remote_ip);
+        return Ok((PublicUser::Public(remote_ip), None));
+    };
+
+    // Try as authenticated user token first
+    if let Ok(claims) = validate_oci_access(context, &token, repository_str, &OciAction::Push) {
         let email = claims.email().clone();
         let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, &email).map_err(|_err| {
@@ -655,13 +669,23 @@ async fn build_public_user(
             "OCI push with valid authentication";
             "user" => %auth_user.user.uuid
         );
-        Ok((PublicUser::Auth(Box::new(auth_user)), Some(claims)))
-    } else {
-        // No token provided -- treat as public user (for unclaimed projects)
-        let remote_ip = RateLimiting::remote_ip(log, rqctx.request.headers());
-        slog::debug!(log, "OCI push without authentication (public user)"; "remote_ip" => ?remote_ip);
-        Ok((PublicUser::Public(remote_ip), None))
+        return Ok((PublicUser::Auth(Box::new(auth_user)), Some(claims)));
     }
+
+    // Try as public OCI token (anonymous push)
+    if context.token_key.validate_oci_public(&token).is_ok() {
+        let remote_ip = RateLimiting::remote_ip(log, rqctx.request.headers());
+        slog::debug!(log, "OCI push with public token (anonymous)"; "remote_ip" => ?remote_ip);
+        return Ok((PublicUser::Public(remote_ip), None));
+    }
+
+    // Token provided but invalid as both auth and public
+    slog::warn!(log, "OCI push with invalid token");
+    Err(HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::UNAUTHORIZED,
+        oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid or expired token"),
+    ))
 }
 
 /// Check bandwidth limit for a project's organization. Call BEFORE data transfer.

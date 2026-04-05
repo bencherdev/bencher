@@ -78,7 +78,7 @@ impl TestServer {
     #[expect(clippy::expect_used)]
     pub fn oci_token(&self, user: &TestUser, repository: &str, actions: &[OciAction]) -> String {
         self.token_key()
-            .new_oci(
+            .new_oci_auth(
                 user.email.clone(),
                 u32::MAX,
                 Some(repository.to_owned()),
@@ -105,6 +105,15 @@ impl TestServer {
             project.slug.as_ref(),
             &[OciAction::Pull, OciAction::Push],
         )
+    }
+
+    /// Generate a public (anonymous) OCI token with the specified repository and actions.
+    #[expect(clippy::expect_used)]
+    pub fn oci_public_token(&self, repository: &str, actions: &[OciAction]) -> String {
+        self.token_key()
+            .new_oci_public(u32::MAX, Some(repository.to_owned()), actions.to_vec())
+            .expect("Failed to create public OCI token")
+            .to_string()
     }
 
     /// Generate a runner OCI token for pull access to a project.

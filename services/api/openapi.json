@@ -695,7 +695,7 @@
           "oci"
         ],
         "summary": "OCI token endpoint",
-        "description": "Authenticates users via Basic auth (email:bencher-api-token) and returns a short-lived JWT for OCI operations.",
+        "description": "Authenticates users via Basic auth (email:bencher-api-token) and returns a short-lived JWT for OCI operations. If no Basic auth credentials are provided, issues a public (anonymous) OCI token.",
         "operationId": "auth_oci_token_get",
         "parameters": [
           {
@@ -9936,7 +9936,7 @@
           "oci"
         ],
         "summary": "OCI API version check endpoint",
-        "description": "Returns 200 OK to indicate this registry implements the OCI Distribution Spec. If a valid Bearer token is provided, user-level rate limiting is applied. If no token is provided, public IP-based rate limiting is applied. Actual authorization is enforced at the individual push/pull endpoints.",
+        "description": "Returns 200 OK if a valid Bearer token is provided. Returns 401 Unauthorized with WWW-Authenticate header if not authenticated. Accepts all three OCI token types: public (anonymous), auth (user), and runner.",
         "operationId": "oci_base",
         "responses": {
           "default": {
