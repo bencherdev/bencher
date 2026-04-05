@@ -637,16 +637,18 @@ async fn manifest_options() {
 // Tests for validate_push_access branches (manifest endpoints)
 // =============================================================================
 
-// Manifest upload to UNCLAIMED project (unauthenticated) should succeed
+// Manifest upload to UNCLAIMED project with public token should succeed
 #[tokio::test]
 async fn manifest_put_unclaimed() {
     let server = TestServer::new().await;
+    let slug = "unclaimed-manifest-project";
+    let public_token = server.oci_public_token(slug, &[OciAction::Push]);
 
-    // Upload blobs without auth (auto-creates unclaimed project)
+    // Upload blobs with public token (auto-creates unclaimed project)
     let (config_digest, layer_digest) = upload_test_blobs(
         &server,
-        "unclaimed-manifest-project",
-        None,
+        slug,
+        Some(&public_token),
         b"config for unclaimed manifest",
         b"layer for unclaimed manifest",
     )
@@ -656,7 +658,11 @@ async fn manifest_put_unclaimed() {
     // Push manifest to the unclaimed project
     let resp = server
         .client
-        .put(server.api_url("/v2/unclaimed-manifest-project/manifests/latest"))
+        .put(server.api_url(&format!("/v2/{slug}/manifests/latest")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&public_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -666,6 +672,28 @@ async fn manifest_put_unclaimed() {
     assert_eq!(resp.status(), StatusCode::CREATED);
     assert!(resp.headers().contains_key("location"));
     assert!(resp.headers().contains_key("docker-content-digest"));
+}
+
+// Manifest upload with no Bearer token → 401
+#[tokio::test]
+async fn manifest_put_no_token_rejected() {
+    let server = TestServer::new().await;
+    let manifest = create_oci_manifest(
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    );
+
+    let resp = server
+        .client
+        .put(server.api_url("/v2/some-project/manifests/latest"))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
 }
 
 // Manifest upload to CLAIMED project without auth should fail with 401
@@ -710,13 +738,14 @@ async fn manifest_put_unauthenticated_to_claimed() {
 async fn manifest_put_authenticated_to_unclaimed() {
     let server = TestServer::new().await;
 
-    // First, create an unclaimed project by pushing without authentication
+    // First, create an unclaimed project by pushing with a public token
     let unclaimed_slug = "unclaimed-manifest-to-claim";
+    let public_token = server.oci_public_token(unclaimed_slug, &[OciAction::Push]);
 
     let (config_digest1, layer_digest1) = upload_test_blobs(
         &server,
         unclaimed_slug,
-        None,
+        Some(&public_token),
         b"config for unclaimed claim v1",
         b"layer for unclaimed claim v1",
     )
@@ -726,6 +755,10 @@ async fn manifest_put_authenticated_to_unclaimed() {
     let create_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/v1", unclaimed_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&public_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest1)
         .send()
@@ -766,22 +799,26 @@ async fn manifest_put_authenticated_to_unclaimed() {
 
     assert_eq!(resp.status(), StatusCode::CREATED);
 
-    // Verify the project is now claimed by trying unauthenticated push again
+    // Verify the project is now claimed by trying a public-token push again
     let manifest3 = create_oci_manifest(
         "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
         "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
     );
 
-    let unauth_resp = server
+    let public_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/v3", unclaimed_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&public_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest3)
         .send()
         .await
         .expect("Request failed");
 
-    assert_eq!(unauth_resp.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(public_resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // Manifest upload to non-existent project by UUID should return 404

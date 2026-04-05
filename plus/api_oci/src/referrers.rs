@@ -70,7 +70,7 @@ pub async fn oci_referrers_list(
 
     // Authenticate and apply rate limiting
     let name_str = path.name.to_string();
-    let _access = require_pull_access(&rqctx, &name_str).await?;
+    require_pull_access(&rqctx, &name_str).await?;
 
     // Resolve project for stable storage paths
     let project = resolve_project(context, &path.name).await?;

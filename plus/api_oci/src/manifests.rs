@@ -160,7 +160,7 @@ pub async fn oci_manifest_get(
 
     // Authenticate and apply rate limiting
     let name_str = path.name.to_string();
-    let _access = require_pull_access(&rqctx, &name_str).await?;
+    require_pull_access(&rqctx, &name_str).await?;
 
     // Resolve project for stable storage paths
     let project = resolve_project(context, &path.name).await?;
@@ -419,7 +419,7 @@ pub async fn oci_manifest_delete(
 
     // Authenticate and apply rate limiting (delete requires push permission)
     let name_str = path.name.to_string();
-    let _access = require_push_access(&rqctx, &name_str).await?;
+    require_push_access(&rqctx, &name_str).await?;
 
     // Resolve project for stable storage paths
     let project = resolve_project(context, &path.name).await?;

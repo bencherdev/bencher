@@ -81,54 +81,9 @@ pub fn extract_oci_bearer_token(rqctx: &RequestContext<ApiContext>) -> Result<Jw
     })
 }
 
-/// Validate OCI token and check it grants access to the specified repository and action
-pub fn validate_oci_access(
-    context: &ApiContext,
-    token: &Jwt,
-    repository: &str,
-    required_action: &OciAction,
-) -> Result<AuthOciClaims, HttpError> {
-    let claims = context.token_key.validate_oci_auth(token).map_err(|_err| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::UNAUTHORIZED,
-            oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid or expired token"),
-        )
-    })?;
-
-    // Check repository matches (if token has a specific repository)
-    if let Some(token_repo) = &claims.oci.repository
-        && token_repo != repository
-    {
-        return Err(HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::FORBIDDEN,
-            oci_error_body(
-                OCI_ERROR_DENIED,
-                &format!("Token not valid for repository: {repository}"),
-            ),
-        ));
-    }
-
-    // Check action is allowed
-    if !claims.oci.actions.contains(required_action) {
-        return Err(HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::FORBIDDEN,
-            oci_error_body(
-                OCI_ERROR_DENIED,
-                &format!("Token does not permit {required_action:?} action"),
-            ),
-        ));
-    }
-
-    Ok(claims)
-}
-
 /// Validate that OCI scope claims grant access to the specified repository and action.
 ///
-/// This is the shared logic between user and runner OCI tokens: both carry an
-/// [`OciScopeClaims`] with an optional repository and a list of actions.
+/// Shared scope-checking logic for all OCI token types (auth, runner, public).
 fn validate_oci_scope(
     oci: &OciScopeClaims,
     repository: &str,
@@ -199,24 +154,10 @@ fn validate_pull_identity(
     ))
 }
 
-/// Result of pull access validation
-pub struct OciPullAccess {
-    /// The validated pull identity (user or runner)
-    #[expect(dead_code, reason = "May be used in the future for audit logging")]
-    pub identity: OciPullIdentity,
-}
-
-/// Result of pull/push access validation (for simple operations that don't need project info)
-pub struct OciAccess {
-    /// The validated OCI claims
-    #[expect(dead_code, reason = "May be used in the future for audit logging")]
-    pub claims: AuthOciClaims,
-}
-
-/// Require pull access for an OCI operation
+/// Require pull access for an OCI operation.
 ///
 /// Validates the bearer token and checks it grants pull access to the specified repository.
-/// Accepts both user OCI tokens and runner OCI tokens.
+/// Accepts public, auth, and runner OCI tokens.
 /// Use this for simple read operations that don't need project info.
 #[expect(
     clippy::map_err_ignore,
@@ -225,29 +166,24 @@ pub struct OciAccess {
 pub async fn require_pull_access(
     rqctx: &RequestContext<ApiContext>,
     repository: &str,
-) -> Result<OciPullAccess, HttpError> {
+) -> Result<(), HttpError> {
     let context = rqctx.context();
     let scope = format!("repository:{repository}:pull");
     let token = extract_oci_bearer_token(rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
-    let identity = validate_pull_identity(context, &token, repository)
-        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+    let identity = validate_pull_identity(context, &token, repository)?;
 
-    // Apply rate limiting
-    #[cfg(feature = "plus")]
-    apply_pull_rate_limit(&rqctx.log, context, rqctx, &identity).await?;
+    apply_pull_rate_limit(rqctx, &identity).await?;
 
-    Ok(OciPullAccess { identity })
+    Ok(())
 }
 
-/// Validate pull access for an OCI operation, allowing unauthenticated access for unclaimed projects
+/// Validate pull access for an OCI operation, allowing public tokens for unclaimed projects.
 ///
-/// - If authenticated → validates token, applies rate limiting
-/// - If unauthenticated and project is unclaimed → allows access with public rate limiting
-/// - If unauthenticated and project is claimed → returns 401
+/// Requires a Bearer token (runner, auth, or public). Public tokens are restricted
+/// to unclaimed projects; runner and auth tokens have normal pull access.
 ///
-/// Use this for read operations during push flows (e.g. HEAD blob checks)
-/// where Docker requires pull access but the project may be unclaimed.
+/// Use this for read operations during push flows (e.g. HEAD blob checks).
 #[expect(
     clippy::map_err_ignore,
     reason = "Intentionally discarding auth errors for security"
@@ -262,8 +198,7 @@ pub async fn validate_pull_access(
 
     let token = extract_oci_bearer_token(rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
-    let identity = validate_pull_identity(context, &token, &repository_str)
-        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+    let identity = validate_pull_identity(context, &token, &repository_str)?;
 
     // Public tokens can only pull from unclaimed projects
     if matches!(identity, OciPullIdentity::Public) {
@@ -284,14 +219,14 @@ pub async fn validate_pull_access(
         }
     }
 
-    apply_pull_rate_limit(&rqctx.log, context, rqctx, &identity).await?;
+    apply_pull_rate_limit(rqctx, &identity).await?;
 
     resolve_project(context, repository).await
 }
 
-/// Require push access for an OCI operation (simple ops like delete, not project creation)
+/// Require push access for an OCI operation (simple ops like delete, not project creation).
 ///
-/// Validates the bearer token and checks it grants push access to the specified repository.
+/// Validates the bearer token as an authenticated user OCI token and checks push scope.
 /// Use this for simple write operations that don't need the full project creation flow.
 /// For operations that may create projects, use `validate_push_access` instead.
 #[expect(
@@ -301,19 +236,26 @@ pub async fn validate_pull_access(
 pub async fn require_push_access(
     rqctx: &RequestContext<ApiContext>,
     repository: &str,
-) -> Result<OciAccess, HttpError> {
+) -> Result<(), HttpError> {
     let context = rqctx.context();
     let scope = format!("repository:{repository}:push");
     let token = extract_oci_bearer_token(rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
-    let claims = validate_oci_access(context, &token, repository, &OciAction::Push)
-        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+    let claims = context
+        .token_key
+        .validate_oci_auth(&token)
+        .map_err(|_err| {
+            HttpError::for_client_error(
+                None,
+                ClientErrorStatusCode::UNAUTHORIZED,
+                oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid or expired token"),
+            )
+        })?;
+    validate_oci_scope(&claims.oci, repository, &OciAction::Push)?;
 
-    // Apply rate limiting (push is always a user token)
-    #[cfg(feature = "plus")]
     apply_user_rate_limit(&rqctx.log, context, &claims).await?;
 
-    Ok(OciAccess { claims })
+    Ok(())
 }
 
 /// Result of push access validation (for operations that may create projects)
@@ -328,13 +270,18 @@ pub struct PushAccess {
 /// Validate push access for OCI operations and get or create the project
 ///
 /// This function implements the claimed/unclaimed project logic with auto-creation:
-/// - If the project exists and is claimed → requires valid authentication with Create permission
-/// - If the project exists and is unclaimed → allows unauthenticated push
+/// - If the project exists and is claimed → requires auth token with Create permission
+/// - If the project exists and is unclaimed → allows public or auth tokens
 /// - If the project doesn't exist:
 ///   - If UUID is used → returns `NOT_FOUND` error (UUIDs must reference existing projects)
-///   - If slug is used → creates the project (under user's org if authenticated, new unclaimed org if not)
+///   - If slug is used → creates the project (under user's org if authenticated, new unclaimed org if public)
 ///
-/// Returns the project and optional claims, or an error if access is denied.
+/// Requires a Bearer token (auth or public). Returns the project and optional claims,
+/// or an error if access is denied.
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding auth errors for security"
+)]
 pub async fn validate_push_access(
     log: &Logger,
     rqctx: &RequestContext<ApiContext>,
@@ -342,9 +289,11 @@ pub async fn validate_push_access(
 ) -> Result<PushAccess, HttpError> {
     let context = rqctx.context();
     let repository_str = repository.to_string();
+    let scope = format!("repository:{repository_str}:push");
 
-    // Build authentication context (optional for unclaimed projects)
-    let token = extract_oci_bearer_token(rqctx).ok();
+    // Bearer token is required (Docker obtains one from the token endpoint)
+    let token = extract_oci_bearer_token(rqctx)
+        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
     let (public_user, claims) =
         build_public_user(log, context, rqctx, token, &repository_str).await?;
 
@@ -551,11 +500,11 @@ async fn handle_nonexistent_project(
 /// - `Runner` identity: skips rate limiting (runners already have per-runner rate limiting
 ///   on the claim endpoint).
 async fn apply_pull_rate_limit(
-    log: &Logger,
-    context: &ApiContext,
     rqctx: &RequestContext<ApiContext>,
     identity: &OciPullIdentity,
 ) -> Result<(), HttpError> {
+    let log = &rqctx.log;
+    let context = rqctx.context();
     match identity {
         OciPullIdentity::Public => apply_public_rate_limit(log, context, rqctx),
         OciPullIdentity::Auth(claims) => apply_user_rate_limit(log, context, claims).await,
@@ -628,26 +577,21 @@ pub async fn resolve_project(
     })
 }
 
-/// Build a `PublicUser` from OCI authentication
+/// Build a `PublicUser` from an OCI Bearer token.
 ///
-/// Returns (`PublicUser`, `Option<AuthOciClaims>`) where claims is Some if authenticated.
-/// Public OCI tokens (anonymous) are treated as public users.
+/// Returns `PublicUser::Auth` for auth tokens (with claims), or `PublicUser::Public`
+/// for public (anonymous) tokens. Returns 401 if the token is neither.
 async fn build_public_user(
     log: &Logger,
     context: &ApiContext,
     rqctx: &RequestContext<ApiContext>,
-    token: Option<Jwt>,
+    token: Jwt,
     repository_str: &str,
 ) -> Result<(PublicUser, Option<AuthOciClaims>), HttpError> {
-    let Some(token) = token else {
-        // No token provided -- treat as public user (for unclaimed projects)
-        let remote_ip = RateLimiting::remote_ip(log, rqctx.request.headers());
-        slog::debug!(log, "OCI push without authentication (public user)"; "remote_ip" => ?remote_ip);
-        return Ok((PublicUser::Public(remote_ip), None));
-    };
-
-    // Try as authenticated user token first
-    if let Ok(claims) = validate_oci_access(context, &token, repository_str, &OciAction::Push) {
+    // If the token decodes as an auth OCI token, it IS an auth token — propagate
+    // scope errors (403) rather than falling through to try as a public token.
+    if let Ok(claims) = context.token_key.validate_oci_auth(&token) {
+        validate_oci_scope(&claims.oci, repository_str, &OciAction::Push)?;
         let email = claims.email().clone();
         let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, &email).map_err(|_err| {
@@ -672,8 +616,9 @@ async fn build_public_user(
         return Ok((PublicUser::Auth(Box::new(auth_user)), Some(claims)));
     }
 
-    // Try as public OCI token (anonymous push)
-    if context.token_key.validate_oci_public(&token).is_ok() {
+    // Try as public OCI token (anonymous push) — must validate scope too.
+    if let Ok(public_claims) = context.token_key.validate_oci_public(&token) {
+        validate_oci_scope(&public_claims.oci, repository_str, &OciAction::Push)?;
         let remote_ip = RateLimiting::remote_ip(log, rqctx.request.headers());
         slog::debug!(log, "OCI push with public token (anonymous)"; "remote_ip" => ?remote_ip);
         return Ok((PublicUser::Public(remote_ip), None));
