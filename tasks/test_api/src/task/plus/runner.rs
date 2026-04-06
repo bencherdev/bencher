@@ -700,18 +700,16 @@ fn docker_push(image: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Push-only smoke test for unclaimed projects.
+/// Prepare an OCI image for unclaimed project testing.
 ///
-/// Builds/pulls an image and pushes it without `docker login`.
-/// Does NOT run `bencher run --image` — use `run_unclaimed_test` for the full
-/// push + run test (requires a running runner daemon).
-fn run_unclaimed_push_test(url: &Url) -> anyhow::Result<()> {
-    let host = url.as_ref();
-
-    println!("=== Unclaimed Push Smoke Test ===");
+/// Resolves the registry for the given API URL, pulls/builds the Docker image,
+/// and tags it for the target registry under the given project slug.
+/// Returns `(host, local_ref)` for use by push-only or push+run tests.
+fn prepare_unclaimed_image(url: &Url, slug: &str) -> anyhow::Result<(String, String)> {
+    let host = url.as_ref().to_owned();
 
     let registry = if cfg!(target_os = "macos") {
-        let port = registry_host(host)?
+        let port = registry_host(&host)?
             .rsplit_once(':')
             .and_then(|(_, p)| p.parse::<u16>().ok())
             .unwrap_or(bencher_json::BENCHER_API_PORT);
@@ -720,10 +718,9 @@ fn run_unclaimed_push_test(url: &Url) -> anyhow::Result<()> {
         ensure_insecure_registry(&docker_registry)?;
         docker_registry
     } else {
-        registry_for_api(host)?
+        registry_for_api(&host)?
     };
 
-    let slug = "unclaimed-push-test";
     let local_ref = format!("{registry}/{slug}:latest");
 
     if cfg!(target_os = "macos") {
@@ -735,6 +732,19 @@ fn run_unclaimed_push_test(url: &Url) -> anyhow::Result<()> {
         println!("Tagging as {local_ref}...");
         docker_tag(DOCKER_IMAGE, &local_ref)?;
     }
+
+    Ok((host, local_ref))
+}
+
+/// Push-only smoke test for unclaimed projects.
+///
+/// Builds/pulls an image and pushes it without `docker login`.
+/// Does NOT run `bencher run --image` — use `run_unclaimed_test` for the full
+/// push + run test (requires a running runner daemon).
+fn run_unclaimed_push_test(url: &Url) -> anyhow::Result<()> {
+    println!("=== Unclaimed Push Smoke Test ===");
+
+    let (_host, local_ref) = prepare_unclaimed_image(url, "unclaimed-push-test")?;
 
     // Intentionally NO docker login
     println!("Pushing without auth...");
@@ -750,41 +760,16 @@ fn run_unclaimed_push_test(url: &Url) -> anyhow::Result<()> {
 /// `bencher run --image` without a token. Repeats the push + run sequence
 /// twice to verify the project stays unclaimed.
 fn run_unclaimed_test(url: &Url) -> anyhow::Result<()> {
-    let host = url.as_ref();
-
     println!("=== Unclaimed Project Smoke Test ===");
 
-    let registry = if cfg!(target_os = "macos") {
-        let port = registry_host(host)?
-            .rsplit_once(':')
-            .and_then(|(_, p)| p.parse::<u16>().ok())
-            .unwrap_or(bencher_json::BENCHER_API_PORT);
-        let docker_registry = format!("host.docker.internal:{port}");
-        ensure_hosts_entry()?;
-        ensure_insecure_registry(&docker_registry)?;
-        docker_registry
-    } else {
-        registry_for_api(host)?
-    };
-
     let slug = "unclaimed-smoke-test";
-    let local_ref = format!("{registry}/{slug}:latest");
-
-    if cfg!(target_os = "macos") {
-        println!("Building local Docker image from macOS bencher binary...");
-        docker_build_local_image(&local_ref)?;
-    } else {
-        println!("Pulling Docker image {DOCKER_IMAGE}...");
-        docker_pull(DOCKER_IMAGE)?;
-        println!("Tagging as {local_ref}...");
-        docker_tag(DOCKER_IMAGE, &local_ref)?;
-    }
+    let (host, local_ref) = prepare_unclaimed_image(url, slug)?;
 
     // Intentionally NO docker login
 
     // Run the full push + run sequence twice to verify the project stays unclaimed
-    run_unclaimed_push_and_run(host, &local_ref, slug, 1)?;
-    run_unclaimed_push_and_run(host, &local_ref, slug, 2)?;
+    run_unclaimed_push_and_run(&host, &local_ref, slug, 1)?;
+    run_unclaimed_push_and_run(&host, &local_ref, slug, 2)?;
 
     println!("=== Unclaimed Project Smoke Test Passed ===");
     Ok(())
