@@ -274,7 +274,6 @@ pub async fn validate_push_access(
         build_public_user(log, context, rqctx, token, &repository_str).await?;
 
     // Apply rate limiting based on authentication status
-    #[cfg(feature = "plus")]
     apply_push_rate_limit(log, context, &public_user)?;
 
     // Try to find existing project, or create if using a slug
@@ -288,7 +287,6 @@ pub async fn validate_push_access(
 }
 
 /// Apply rate limiting for push operations based on authentication status
-#[cfg(feature = "plus")]
 fn apply_push_rate_limit(
     log: &Logger,
     context: &ApiContext,
@@ -495,7 +493,6 @@ async fn apply_pull_rate_limit(
 ///
 /// Looks up the user by email and applies `user_request` rate limiting.
 /// Used by push endpoints and the base endpoint which only accept user tokens.
-#[cfg(feature = "plus")]
 pub(crate) async fn apply_user_rate_limit(
     log: &Logger,
     context: &ApiContext,
@@ -518,7 +515,6 @@ pub(crate) async fn apply_user_rate_limit(
 ///
 /// Uses `public_request` rate limiting based on the client's IP address.
 /// This is used for upload session operations where the session ID serves as authentication.
-#[cfg(feature = "plus")]
 pub fn apply_public_rate_limit(
     log: &Logger,
     context: &ApiContext,
@@ -612,7 +608,6 @@ async fn build_public_user(
 /// Check bandwidth limit for a project's organization. Call BEFORE data transfer.
 ///
 /// Returns the organization ID for use in `record_oci_bandwidth` without a second DB lookup.
-#[cfg(feature = "plus")]
 pub(crate) async fn check_oci_bandwidth(
     context: &ApiContext,
     project: &QueryProject,
@@ -627,7 +622,6 @@ pub(crate) async fn check_oci_bandwidth(
 }
 
 /// Record bytes transferred. Call AFTER successful data transfer.
-#[cfg(feature = "plus")]
 pub(crate) fn record_oci_bandwidth(context: &ApiContext, org_id: OrganizationId, bytes: u64) {
     context.rate_limiting.record_oci_bandwidth(org_id, bytes);
 }

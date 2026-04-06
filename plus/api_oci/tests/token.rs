@@ -1,5 +1,9 @@
 #![cfg(feature = "plus")]
-#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    clippy::indexing_slicing
+)]
 //! Integration tests for the OCI token endpoint (GET /v0/auth/oci/token).
 
 use bencher_api_tests::TestServer;

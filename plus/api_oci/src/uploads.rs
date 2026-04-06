@@ -28,9 +28,9 @@
 //! are unguessable UUIDs. This matches OCI spec behavior and is required
 //! for conformance test compatibility.
 
-use crate::auth::resolve_project;
-#[cfg(feature = "plus")]
-use crate::auth::{apply_public_rate_limit, check_oci_bandwidth, record_oci_bandwidth};
+use crate::auth::{
+    apply_public_rate_limit, check_oci_bandwidth, record_oci_bandwidth, resolve_project,
+};
 use crate::blobs::UPLOADS_REF;
 use crate::error::storage_error;
 use crate::response::{DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers};
@@ -213,7 +213,6 @@ pub async fn oci_upload_status(
     // (obtained only via authenticated POST to start upload)
 
     // Apply public rate limiting based on IP
-    #[cfg(feature = "plus")]
     apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
 
     let repository_name = path.name.to_string();
@@ -287,7 +286,6 @@ pub async fn oci_upload_chunk(
     // (obtained only via authenticated POST to start upload)
 
     // Apply public rate limiting based on IP
-    #[cfg(feature = "plus")]
     apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
 
     let repository_name = path.name.to_string();
@@ -297,7 +295,6 @@ pub async fn oci_upload_chunk(
     let project_uuid = project.uuid;
 
     // Check bandwidth limit before transfer
-    #[cfg(feature = "plus")]
     let org_id = check_oci_bandwidth(context, &project).await?;
 
     // Parse upload ID
@@ -384,7 +381,6 @@ pub async fn oci_upload_chunk(
     let new_size = stream_to_storage(body, storage, &upload_id, current_size).await?;
 
     // Record bandwidth usage for this chunk
-    #[cfg(feature = "plus")]
     record_oci_bandwidth(context, org_id, new_size - current_size);
 
     // Post-stream validation: verify bytes received matches Content-Range expected length.
@@ -449,7 +445,6 @@ pub async fn oci_upload_complete(
     // (obtained only via authenticated POST to start upload)
 
     // Apply public rate limiting based on IP
-    #[cfg(feature = "plus")]
     apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
 
     let query = query.into_inner();
@@ -460,7 +455,6 @@ pub async fn oci_upload_complete(
     let project_uuid = project.uuid;
 
     // Check bandwidth limit before transfer
-    #[cfg(feature = "plus")]
     let org_id = check_oci_bandwidth(context, &project).await?;
 
     // Parse upload ID and expected digest
@@ -504,7 +498,6 @@ pub async fn oci_upload_complete(
     };
 
     // Record bandwidth usage for the final chunk
-    #[cfg(feature = "plus")]
     record_oci_bandwidth(context, org_id, final_size - current_size);
 
     // Record metric
@@ -545,7 +538,6 @@ pub async fn oci_upload_cancel(
     // (obtained only via authenticated POST to start upload)
 
     // Apply public rate limiting based on IP
-    #[cfg(feature = "plus")]
     apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
 
     // Resolve project for stable storage paths
