@@ -1,8 +1,11 @@
 //! OCI Base Endpoint - GET /v2/
 //!
-//! Returns 200 OK if a valid OCI Bearer token is provided (public, auth, or runner).
+//! Returns 200 OK if a valid OCI Bearer token is provided (auth or public).
 //! Returns 401 with WWW-Authenticate if no token or invalid token.
 //! This is the first endpoint clients call to verify registry compatibility.
+//!
+//! Runner tokens are not accepted here — the runner's OCI client
+//! pulls directly from manifest/blob endpoints without hitting `/v2/`.
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_schema::context::ApiContext;
@@ -32,7 +35,7 @@ pub async fn oci_base_options(
 ///
 /// Returns 200 OK if a valid Bearer token is provided.
 /// Returns 401 Unauthorized with WWW-Authenticate header if not authenticated.
-/// Accepts all three OCI token types: public (anonymous), auth (user), and runner.
+/// Accepts auth (user) and public (anonymous) OCI tokens.
 #[expect(
     clippy::map_err_ignore,
     reason = "Intentionally discarding auth errors for security"
@@ -49,13 +52,11 @@ pub async fn oci_base(rqctx: RequestContext<ApiContext>) -> Result<Response<Body
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, None))?;
 
-    // Try each OCI token type and apply appropriate rate limiting
+    // Auth tokens (most common — authenticated Docker users), then public tokens
     if let Ok(claims) = context.token_key.validate_oci_auth(&token) {
         apply_user_rate_limit(&rqctx.log, context, &claims).await?;
     } else if context.token_key.validate_oci_public(&token).is_ok() {
         apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
-    } else if context.token_key.validate_oci_runner(&token).is_ok() {
-        // Runner tokens skip rate limiting (per-runner rate limit on claim endpoint)
     } else {
         return Err(unauthorized_with_www_authenticate(&rqctx, None));
     }

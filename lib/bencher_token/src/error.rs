@@ -21,5 +21,5 @@ pub enum TokenError {
     #[error("Invalid authenticated OCI token: {error}")]
     OciAuth { error: jsonwebtoken::errors::Error },
     #[error("Invalid runner OCI token: {error}")]
-    RunnerOci { error: jsonwebtoken::errors::Error },
+    OciRunner { error: jsonwebtoken::errors::Error },
 }

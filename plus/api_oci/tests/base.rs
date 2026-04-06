@@ -69,9 +69,9 @@ async fn oci_base_auth_token() {
     assert_eq!(resp.status(), StatusCode::OK);
 }
 
-// GET /v2/ - runner OCI token → 200
+// GET /v2/ - runner OCI token → 401 (runners don't use /v2/)
 #[tokio::test]
-async fn oci_base_runner_token() {
+async fn oci_base_runner_token_rejected() {
     let server = TestServer::new().await;
     let user = server.signup("OCI User", "ocirunner@example.com").await;
     let org = server.create_org(&user, "OCI Org").await;
@@ -93,7 +93,7 @@ async fn oci_base_runner_token() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // GET /v2/ - invalid JWT → 401

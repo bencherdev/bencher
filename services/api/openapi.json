@@ -9936,7 +9936,7 @@
           "oci"
         ],
         "summary": "OCI API version check endpoint",
-        "description": "Returns 200 OK if a valid Bearer token is provided. Returns 401 Unauthorized with WWW-Authenticate header if not authenticated. Accepts all three OCI token types: public (anonymous), auth (user), and runner.",
+        "description": "Returns 200 OK if a valid Bearer token is provided. Returns 401 Unauthorized with WWW-Authenticate header if not authenticated. Accepts auth (user) and public (anonymous) OCI tokens.",
         "operationId": "oci_base",
         "responses": {
           "default": {

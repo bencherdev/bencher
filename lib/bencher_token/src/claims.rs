@@ -278,7 +278,7 @@ impl TryFrom<RunnerOciTokenClaims> for RunnerOciClaims {
                 sub: claims.sub,
                 oci,
             }),
-            None => Err(TokenError::RunnerOci {
+            None => Err(TokenError::OciRunner {
                 error: JsonWebTokenErrorKind::MissingRequiredClaim("oci".into()).into(),
             }),
         }
