@@ -9,22 +9,8 @@
 //! Integration tests for OCI tags endpoint.
 
 use bencher_api_tests::TestServer;
+use bencher_api_tests::oci::create_oci_manifest_config_only;
 use http::StatusCode;
-
-/// Create a minimal OCI manifest JSON for testing
-fn create_test_manifest(config_digest: &str) -> String {
-    serde_json::json!({
-        "schemaVersion": 2,
-        "mediaType": "application/vnd.oci.image.manifest.v1+json",
-        "config": {
-            "mediaType": "application/vnd.oci.image.config.v1+json",
-            "digest": config_digest,
-            "size": 100
-        },
-        "layers": []
-    })
-    .to_string()
-}
 
 /// Upload a config blob and create a manifest referencing it. Returns the manifest JSON string.
 async fn upload_blob_and_create_manifest(
@@ -40,7 +26,7 @@ async fn upload_blob_and_create_manifest(
             format!("config-{suffix}").as_bytes(),
         )
         .await;
-    create_test_manifest(&config_digest)
+    create_oci_manifest_config_only(&config_digest)
 }
 
 // GET /v2/{name}/tags/list - List tags (empty)

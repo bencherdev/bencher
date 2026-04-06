@@ -695,7 +695,7 @@
           "oci"
         ],
         "summary": "OCI token endpoint",
-        "description": "Authenticates users via Basic auth (email:bencher-api-token) and returns a short-lived JWT for OCI operations.",
+        "description": "Authenticates users via Basic auth (email:bencher-api-token) and returns a short-lived JWT for OCI operations. If no Basic auth credentials are provided, issues a public (anonymous) OCI token.",
         "operationId": "auth_oci_token_get",
         "parameters": [
           {
@@ -9936,7 +9936,7 @@
           "oci"
         ],
         "summary": "OCI API version check endpoint",
-        "description": "Returns 200 OK if authenticated and the registry implements the OCI Distribution Spec. Returns 401 Unauthorized with WWW-Authenticate header if not authenticated.",
+        "description": "Returns 200 OK if a valid Bearer token is provided. Returns 401 Unauthorized with WWW-Authenticate header if not authenticated. Accepts auth (user) and public (anonymous) OCI tokens.",
         "operationId": "oci_base",
         "responses": {
           "default": {

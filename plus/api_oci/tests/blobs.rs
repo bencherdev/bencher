@@ -42,21 +42,44 @@ async fn blob_upload_start() {
     assert!(resp.headers().contains_key("docker-upload-uuid"));
 }
 
-// POST /v2/{name}/blobs/uploads - Start upload (unauthenticated, unclaimed project)
+// POST /v2/{name}/blobs/uploads - Start upload (public token, unclaimed project)
 #[tokio::test]
 async fn blob_upload_start_unclaimed() {
     let server = TestServer::new().await;
+    let slug = "unclaimed-blob-project";
+
+    let public_token = server.oci_public_token(slug, &[OciAction::Push]);
 
     // Push to a new project slug (will auto-create unclaimed project)
     let resp = server
         .client
-        .post(server.api_url("/v2/unclaimed-blob-project/blobs/uploads"))
+        .post(server.api_url(&format!("/v2/{slug}/blobs/uploads")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&public_token),
+        )
         .send()
         .await
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::ACCEPTED);
     assert!(resp.headers().contains_key("location"));
+}
+
+// POST /v2/{name}/blobs/uploads - Start upload with no Bearer token → 401
+#[tokio::test]
+async fn blob_upload_no_token_rejected() {
+    let server = TestServer::new().await;
+
+    let resp = server
+        .client
+        .post(server.api_url("/v2/some-project/blobs/uploads"))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
 }
 
 // PUT /v2/{name}/blobs/uploads - Monolithic upload
@@ -340,12 +363,17 @@ async fn blob_upload_unauthenticated_to_claimed_project() {
 async fn blob_upload_authenticated_to_unclaimed_project() {
     let server = TestServer::new().await;
 
-    // First, create an unclaimed project by pushing without authentication
+    // First, create an unclaimed project by pushing with a public token
     let unclaimed_slug = "unclaimed-to-claim-project";
+    let public_token = server.oci_public_token(unclaimed_slug, &[OciAction::Push]);
 
     let create_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", unclaimed_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&public_token),
+        )
         .send()
         .await
         .expect("Request failed");
@@ -370,42 +398,33 @@ async fn blob_upload_authenticated_to_unclaimed_project() {
 
     assert_eq!(resp.status(), StatusCode::ACCEPTED);
 
-    // Verify the project is now claimed by trying unauthenticated push again
+    // Verify the project is now claimed by trying a public-token push again
     // It should now be rejected since the org was claimed
-    let unauth_resp = server
+    let public_resp = server
         .client
         .post(server.api_url(&format!("/v2/{}/blobs/uploads", unclaimed_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&public_token),
+        )
         .send()
         .await
         .expect("Request failed");
 
-    assert_eq!(unauth_resp.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(public_resp.status(), StatusCode::UNAUTHORIZED);
 }
 
-// A structurally valid but wrongly-signed JWT should NOT silently downgrade
-// to public access. Even on an unclaimed project, a bad signature must be rejected.
+// A structurally valid but wrongly-signed JWT must be rejected with 401.
 #[tokio::test]
-async fn blob_upload_invalid_token_no_downgrade() {
+async fn blob_upload_tampered_token_rejected() {
     let server = TestServer::new().await;
-
-    // First, create an unclaimed project (unauthenticated push succeeds)
-    let unclaimed_slug = "auth-downgrade-test-project";
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v2/{}/blobs/uploads", unclaimed_slug)))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(create_resp.status(), StatusCode::ACCEPTED);
+    let unclaimed_slug = "tampered-token-test-project";
 
     // Get a valid token, then tamper with it to create a structurally valid
     // but wrongly-signed JWT (flip a char in the middle of the signature).
     // We must preserve valid JWT structure (3 dot-separated base64url parts)
-    // so that Jwt::parse() succeeds; otherwise the token is silently treated
-    // as absent and the unclaimed project allows unauthenticated push.
-    let user = server
-        .signup("Downgrade User", "downgrade@example.com")
-        .await;
+    // so that Jwt::parse() succeeds.
+    let user = server.signup("Tampered User", "tampered@example.com").await;
     let valid_token = server.oci_token(&user, unclaimed_slug, &[OciAction::Push]);
     // Split into header.payload.signature and flip a char in the signature middle
     let parts: Vec<&str> = valid_token.split('.').collect();
@@ -432,7 +451,7 @@ async fn blob_upload_invalid_token_no_downgrade() {
     assert_eq!(
         resp.status(),
         StatusCode::UNAUTHORIZED,
-        "Tampered JWT must be rejected, not silently downgraded to public access"
+        "Tampered JWT must be rejected with 401"
     );
 }
 
@@ -498,21 +517,24 @@ async fn blob_upload_nonexistent_slug_authenticated() {
     assert_eq!(unauth_resp.status(), StatusCode::UNAUTHORIZED);
 }
 
-// Monolithic upload (PUT /blobs/uploads?digest=) to unclaimed project
+// Monolithic upload (PUT /blobs/uploads?digest=) to unclaimed project with public token
 #[tokio::test]
 async fn blob_monolithic_upload_unclaimed() {
     let server = TestServer::new().await;
+    let slug = "unclaimed-monolithic-project";
 
     let blob_data = b"unclaimed monolithic blob content";
     let digest = compute_digest(blob_data);
+    let public_token = server.oci_public_token(slug, &[OciAction::Push]);
 
     // Push to a new project slug (will auto-create unclaimed project)
     let resp = server
         .client
-        .put(server.api_url(&format!(
-            "/v2/unclaimed-monolithic-project/blobs/uploads?digest={}",
-            digest
-        )))
+        .put(server.api_url(&format!("/v2/{slug}/blobs/uploads?digest={digest}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&public_token),
+        )
         .header("Content-Type", "application/octet-stream")
         .body(blob_data.to_vec())
         .send()
@@ -970,12 +992,10 @@ async fn blob_head_push_only_token_rejected() {
         .await
         .expect("Request failed");
 
-    // require_pull_access intentionally maps all auth errors (including wrong action)
-    // to 401 with WWW-Authenticate to avoid leaking whether the token was invalid
-    // or just lacked the correct scope
+    // Token is valid but lacks pull scope — 403 FORBIDDEN
     assert_eq!(
         resp.status(),
-        StatusCode::UNAUTHORIZED,
+        StatusCode::FORBIDDEN,
         "Push-only token should not be able to read a blob"
     );
 }
@@ -1160,10 +1180,10 @@ async fn blob_get_runner_oci_token_wrong_repo() {
         .await
         .expect("Request failed");
 
-    // require_pull_access maps all auth/scope errors to 401 with WWW-Authenticate
+    // Token is valid but scoped to wrong repository — 403 FORBIDDEN
     assert_eq!(
         resp.status(),
-        StatusCode::UNAUTHORIZED,
+        StatusCode::FORBIDDEN,
         "Runner token scoped to wrong repository should be rejected"
     );
 }
@@ -1222,10 +1242,10 @@ async fn blob_get_runner_oci_token_push_only() {
         .await
         .expect("Request failed");
 
-    // require_pull_access maps all auth/scope errors to 401 with WWW-Authenticate
+    // Token is valid but lacks pull action — 403 FORBIDDEN
     assert_eq!(
         resp.status(),
-        StatusCode::UNAUTHORIZED,
+        StatusCode::FORBIDDEN,
         "Runner token with only Push action should be rejected for pull"
     );
 }

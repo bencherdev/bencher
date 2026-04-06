@@ -10,30 +10,9 @@
 //! Integration tests for OCI manifest endpoints.
 
 use bencher_api_tests::TestServer;
-use bencher_api_tests::oci::compute_digest;
+use bencher_api_tests::oci::{compute_digest, create_docker_v2_manifest, create_oci_manifest};
 use bencher_token::OciAction;
 use http::StatusCode;
-
-/// Create a minimal OCI manifest JSON for testing
-fn create_test_manifest(config_digest: &str, layer_digest: &str) -> String {
-    serde_json::json!({
-        "schemaVersion": 2,
-        "mediaType": "application/vnd.oci.image.manifest.v1+json",
-        "config": {
-            "mediaType": "application/vnd.oci.image.config.v1+json",
-            "digest": config_digest,
-            "size": 100
-        },
-        "layers": [
-            {
-                "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
-                "digest": layer_digest,
-                "size": 200
-            }
-        ]
-    })
-    .to_string()
-}
 
 // PUT /v2/{name}/manifests/{reference} - Upload manifest with tag
 #[tokio::test]
@@ -87,7 +66,7 @@ async fn manifest_put_with_tag() {
         .expect("Layer upload failed");
 
     // Upload manifest with tag
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
     let resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/latest", project_slug)))
@@ -129,7 +108,7 @@ async fn manifest_put_by_digest() {
         b"layer for digest put",
     )
     .await;
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
 
     let resp = server
@@ -175,7 +154,7 @@ async fn manifest_exists() {
         b"layer for exists test",
     )
     .await;
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
 
     let upload_resp = server
         .client
@@ -262,7 +241,7 @@ async fn manifest_get_by_tag() {
         b"layer for get by tag",
     )
     .await;
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
 
     server
         .client
@@ -322,7 +301,7 @@ async fn manifest_get_by_digest() {
         b"layer for get by digest",
     )
     .await;
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
 
     server
@@ -381,7 +360,7 @@ async fn manifest_delete_by_tag() {
         b"layer for delete by tag",
     )
     .await;
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
 
     let upload_resp = server
@@ -473,7 +452,7 @@ async fn manifest_delete_by_digest() {
         b"layer for delete by digest",
     )
     .await;
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
 
     let upload_resp = server
@@ -552,7 +531,7 @@ async fn manifest_delete_by_digest_cleans_multiple_tags() {
         b"layer for multi-tag delete",
     )
     .await;
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
     let manifest_digest = compute_digest(manifest.as_bytes());
 
     // Push with tag "alpha"
@@ -658,26 +637,32 @@ async fn manifest_options() {
 // Tests for validate_push_access branches (manifest endpoints)
 // =============================================================================
 
-// Manifest upload to UNCLAIMED project (unauthenticated) should succeed
+// Manifest upload to UNCLAIMED project with public token should succeed
 #[tokio::test]
 async fn manifest_put_unclaimed() {
     let server = TestServer::new().await;
+    let slug = "unclaimed-manifest-project";
+    let public_token = server.oci_public_token(slug, &[OciAction::Push]);
 
-    // Upload blobs without auth (auto-creates unclaimed project)
+    // Upload blobs with public token (auto-creates unclaimed project)
     let (config_digest, layer_digest) = upload_test_blobs(
         &server,
-        "unclaimed-manifest-project",
-        None,
+        slug,
+        Some(&public_token),
         b"config for unclaimed manifest",
         b"layer for unclaimed manifest",
     )
     .await;
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
 
     // Push manifest to the unclaimed project
     let resp = server
         .client
-        .put(server.api_url("/v2/unclaimed-manifest-project/manifests/latest"))
+        .put(server.api_url(&format!("/v2/{slug}/manifests/latest")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&public_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest)
         .send()
@@ -687,6 +672,28 @@ async fn manifest_put_unclaimed() {
     assert_eq!(resp.status(), StatusCode::CREATED);
     assert!(resp.headers().contains_key("location"));
     assert!(resp.headers().contains_key("docker-content-digest"));
+}
+
+// Manifest upload with no Bearer token → 401
+#[tokio::test]
+async fn manifest_put_no_token_rejected() {
+    let server = TestServer::new().await;
+    let manifest = create_oci_manifest(
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    );
+
+    let resp = server
+        .client
+        .put(server.api_url("/v2/some-project/manifests/latest"))
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
 }
 
 // Manifest upload to CLAIMED project without auth should fail with 401
@@ -710,7 +717,7 @@ async fn manifest_put_unauthenticated_to_claimed() {
 
     let config_digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111";
     let layer_digest = "sha256:2222222222222222222222222222222222222222222222222222222222222222";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    let manifest = create_oci_manifest(config_digest, layer_digest);
 
     // Try to push without authentication - should fail
     let resp = server
@@ -731,22 +738,27 @@ async fn manifest_put_unauthenticated_to_claimed() {
 async fn manifest_put_authenticated_to_unclaimed() {
     let server = TestServer::new().await;
 
-    // First, create an unclaimed project by pushing without authentication
+    // First, create an unclaimed project by pushing with a public token
     let unclaimed_slug = "unclaimed-manifest-to-claim";
+    let public_token = server.oci_public_token(unclaimed_slug, &[OciAction::Push]);
 
     let (config_digest1, layer_digest1) = upload_test_blobs(
         &server,
         unclaimed_slug,
-        None,
+        Some(&public_token),
         b"config for unclaimed claim v1",
         b"layer for unclaimed claim v1",
     )
     .await;
-    let manifest1 = create_test_manifest(&config_digest1, &layer_digest1);
+    let manifest1 = create_oci_manifest(&config_digest1, &layer_digest1);
 
     let create_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/v1", unclaimed_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&public_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest1)
         .send()
@@ -770,7 +782,7 @@ async fn manifest_put_authenticated_to_unclaimed() {
         b"layer for unclaimed claim v2",
     )
     .await;
-    let manifest2 = create_test_manifest(&config_digest2, &layer_digest2);
+    let manifest2 = create_oci_manifest(&config_digest2, &layer_digest2);
 
     let resp = server
         .client
@@ -787,22 +799,26 @@ async fn manifest_put_authenticated_to_unclaimed() {
 
     assert_eq!(resp.status(), StatusCode::CREATED);
 
-    // Verify the project is now claimed by trying unauthenticated push again
-    let manifest3 = create_test_manifest(
+    // Verify the project is now claimed by trying a public-token push again
+    let manifest3 = create_oci_manifest(
         "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
         "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
     );
 
-    let unauth_resp = server
+    let public_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/v3", unclaimed_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&public_token),
+        )
         .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
         .body(manifest3)
         .send()
         .await
         .expect("Request failed");
 
-    assert_eq!(unauth_resp.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(public_resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // Manifest upload to non-existent project by UUID should return 404
@@ -820,7 +836,7 @@ async fn manifest_put_nonexistent_uuid() {
 
     let config_digest = "sha256:1234567890123456789012345678901234567890123456789012345678901234";
     let layer_digest = "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    let manifest = create_oci_manifest(config_digest, layer_digest);
 
     let resp = server
         .client
@@ -860,7 +876,7 @@ async fn manifest_put_nonexistent_slug_authenticated() {
         b"layer for auto-create slug",
     )
     .await;
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
 
     let resp = server
         .client
@@ -879,7 +895,7 @@ async fn manifest_put_nonexistent_slug_authenticated() {
 
     // The project should now exist and be claimed by the user
     // Verify by trying unauthenticated push - should be rejected
-    let manifest2 = create_test_manifest(
+    let manifest2 = create_oci_manifest(
         "sha256:3333333333333333333333333333333333333333333333333333333333333333",
         "sha256:4444444444444444444444444444444444444444444444444444444444444444",
     );
@@ -971,7 +987,7 @@ async fn manifest_tag_overwrite() {
     .await;
 
     // Upload first manifest as "latest"
-    let manifest1 = create_test_manifest(&config1, &layer1);
+    let manifest1 = create_oci_manifest(&config1, &layer1);
     let digest1 = compute_digest(manifest1.as_bytes());
 
     let resp1 = server
@@ -999,7 +1015,7 @@ async fn manifest_tag_overwrite() {
     .await;
 
     // Upload second manifest as "latest" (overwrite)
-    let manifest2 = create_test_manifest(&config2, &layer2);
+    let manifest2 = create_oci_manifest(&config2, &layer2);
     let digest2 = compute_digest(manifest2.as_bytes());
 
     let resp2 = server
@@ -1069,7 +1085,7 @@ async fn manifest_content_type_round_trip() {
         b"layer for ct round trip",
     )
     .await;
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
 
     let upload_resp = server
         .client
@@ -1204,27 +1220,6 @@ async fn upload_test_blobs(
     }
 
     (config_digest, layer_digest)
-}
-
-/// Create a Docker V2 manifest JSON for testing
-fn create_docker_v2_manifest(config_digest: &str, layer_digest: &str) -> String {
-    serde_json::json!({
-        "schemaVersion": 2,
-        "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
-        "config": {
-            "mediaType": "application/vnd.docker.container.image.v1+json",
-            "digest": config_digest,
-            "size": 100
-        },
-        "layers": [
-            {
-                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
-                "digest": layer_digest,
-                "size": 200
-            }
-        ]
-    })
-    .to_string()
 }
 
 // PUT Docker V2 manifest with correct Content-Type, verify 201, GET back and verify content-type round-trip
@@ -1718,7 +1713,7 @@ async fn manifest_put_content_type_mismatch() {
     let project_slug: &str = project.slug.as_ref();
 
     // Body contains OCI mediaType
-    let manifest = create_test_manifest(
+    let manifest = create_oci_manifest(
         "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
         "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
     );
@@ -1766,7 +1761,7 @@ async fn manifest_put_missing_blobs() {
     // Reference digests for blobs that were NEVER uploaded
     let config_digest = "sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
     let layer_digest = "sha256:cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe";
-    let manifest = create_test_manifest(config_digest, layer_digest);
+    let manifest = create_oci_manifest(config_digest, layer_digest);
 
     let resp = server
         .client
@@ -1887,7 +1882,7 @@ async fn manifest_put_digest_mismatch() {
         .await
         .expect("Layer upload failed");
 
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
 
     // Use a completely wrong digest in the URL
     let wrong_digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
@@ -1969,8 +1964,8 @@ async fn concurrent_manifest_tag_overwrite() {
     }
 
     // Create two distinct manifests with different config digests
-    let manifest1 = create_test_manifest(&config1_digest, &layer1_digest);
-    let manifest2 = create_test_manifest(&config2_digest, &layer2_digest);
+    let manifest1 = create_oci_manifest(&config1_digest, &layer1_digest);
+    let manifest2 = create_oci_manifest(&config2_digest, &layer2_digest);
     let digest1 = compute_digest(manifest1.as_bytes());
     let digest2 = compute_digest(manifest2.as_bytes());
 
@@ -2084,7 +2079,7 @@ async fn manifest_put_exceeds_max_body_size() {
     let project_slug: &str = project.slug.as_ref();
 
     // A typical test manifest is ~300 bytes, exceeding the 100-byte limit
-    let manifest = create_test_manifest(
+    let manifest = create_oci_manifest(
         "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     );
@@ -2157,7 +2152,7 @@ async fn manifest_read_after_storage_deleted() {
         assert_eq!(resp.status(), StatusCode::CREATED);
     }
 
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
     let upload_resp = server
         .client
         .put(server.api_url(&format!("/v2/{}/manifests/storage-fail-tag", project_slug)))
@@ -2268,7 +2263,7 @@ async fn manifest_put_within_server_default() {
         .await;
 
     // Create and upload manifest (typical small size)
-    let manifest = create_test_manifest(&config_digest, &layer_digest);
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
 
     let resp = server
         .client

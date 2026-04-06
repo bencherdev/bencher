@@ -37,10 +37,9 @@ use serde::Deserialize;
 /// Path segment distinguishing upload endpoints from blob digest endpoints.
 pub const UPLOADS_REF: &str = "uploads";
 
-#[cfg(feature = "plus")]
-use crate::auth::{check_oci_bandwidth, record_oci_bandwidth};
 use crate::auth::{
-    require_pull_access, require_push_access, resolve_project, validate_push_access,
+    check_oci_bandwidth, record_oci_bandwidth, require_push_access, resolve_project,
+    validate_pull_access, validate_push_access,
 };
 use crate::error::storage_error;
 use crate::response::{
@@ -114,12 +113,8 @@ pub async fn oci_blob_exists(
         ));
     }
 
-    // Authenticate and apply rate limiting
-    let name_str = path.name.to_string();
-    let _access = require_pull_access(&rqctx, &name_str).await?;
-
-    // Resolve project for stable storage paths
-    let project = resolve_project(context, &path.name).await?;
+    // Authenticate (optional for unclaimed projects) and resolve project
+    let project = validate_pull_access(&rqctx, &path.name).await?;
     let project_uuid = project.uuid;
 
     // Parse digest
@@ -174,16 +169,11 @@ pub async fn oci_blob_get(
         ));
     }
 
-    // Authenticate and apply rate limiting
-    let name_str = path.name.to_string();
-    let _access = require_pull_access(&rqctx, &name_str).await?;
-
-    // Resolve project for stable storage paths
-    let project = resolve_project(context, &path.name).await?;
+    // Authenticate (public tokens restricted to unclaimed projects) and resolve project
+    let project = validate_pull_access(&rqctx, &path.name).await?;
     let project_uuid = project.uuid;
 
     // Check bandwidth limit before transfer
-    #[cfg(feature = "plus")]
     let org_id = check_oci_bandwidth(context, &project).await?;
 
     // Parse digest
@@ -199,7 +189,6 @@ pub async fn oci_blob_get(
         .map_err(storage_error)?;
 
     // Record bandwidth usage
-    #[cfg(feature = "plus")]
     record_oci_bandwidth(context, org_id, size);
 
     // Record metric
@@ -245,7 +234,7 @@ pub async fn oci_blob_delete(
 
     // Authenticate and apply rate limiting (delete requires push permission)
     let name_str = path.name.to_string();
-    let _access = require_push_access(&rqctx, &name_str).await?;
+    require_push_access(&rqctx, &name_str).await?;
 
     // Resolve project for stable storage paths
     let project = resolve_project(context, &path.name).await?;
@@ -322,7 +311,6 @@ pub async fn oci_upload_start(
     let storage = context.oci_storage();
 
     // Check bandwidth limit before any potential data transfer (mount)
-    #[cfg(feature = "plus")]
     let org_id = check_oci_bandwidth(context, &push_access.project).await?;
 
     // Handle cross-repository mount if requested
@@ -337,46 +325,39 @@ pub async fn oci_upload_start(
         // Only attempt mount if caller has pull access to source repository.
         // If pull access is denied, fall through to normal upload
         // to avoid revealing whether the source repository exists.
-        let from_repo_str = from_repo.to_string();
-        let pull_result = require_pull_access(&rqctx, &from_repo_str).await;
-        if pull_result.is_ok() {
-            // Resolve source repository — fall through on failure
-            // to avoid revealing whether the source repository exists.
-            if let Ok(from_project) = resolve_project(context, &from_repo).await {
-                // Try to mount the blob — fall through on failure
-                if let Ok(true) = storage
-                    .mount_blob(&from_project.uuid, &project_uuid, &digest)
-                    .await
-                {
-                    // Record bandwidth for the mounted blob
-                    #[cfg(feature = "plus")]
-                    if let Ok(size) = storage.get_blob_size(&project_uuid, &digest).await {
-                        record_oci_bandwidth(context, org_id, size);
-                    }
-
-                    // Mount successful - return 201 Created
-                    let location = format!("/v2/{project_slug}/blobs/{digest}");
-                    let response = oci_cors_headers(
-                        Response::builder()
-                            .status(http::StatusCode::CREATED)
-                            .header(http::header::LOCATION, location)
-                            .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
-                        &[http::Method::POST],
-                    )
-                    .body(Body::empty())
-                    .map_err(|e| {
-                        HttpError::for_internal_error(format!("Failed to build response: {e}"))
-                    })?;
-                    return Ok(response);
+        if let Ok(from_project) = validate_pull_access(&rqctx, &from_repo).await {
+            // Try to mount the blob — fall through on failure
+            if let Ok(true) = storage
+                .mount_blob(&from_project.uuid, &project_uuid, &digest)
+                .await
+            {
+                // Record bandwidth for the mounted blob
+                if let Ok(size) = storage.get_blob_size(&project_uuid, &digest).await {
+                    record_oci_bandwidth(context, org_id, size);
                 }
+
+                // Mount successful - return 201 Created
+                let location = format!("/v2/{project_slug}/blobs/{digest}");
+                let response = oci_cors_headers(
+                    Response::builder()
+                        .status(http::StatusCode::CREATED)
+                        .header(http::header::LOCATION, location)
+                        .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
+                    &[http::Method::POST],
+                )
+                .body(Body::empty())
+                .map_err(|e| {
+                    HttpError::for_internal_error(format!("Failed to build response: {e}"))
+                })?;
+                return Ok(response);
             }
         } else {
             slog::info!(rqctx.log, "Cross-repository mount access denied, falling through to upload";
-                "from_repo" => &from_repo_str, "to_repo" => %path.name, "digest" => %digest);
+                "from_repo" => %from_repo, "to_repo" => %path.name, "digest" => %digest);
             #[cfg(feature = "sentry")]
             sentry::capture_message(
                 &format!(
-                    "OCI cross-repo mount denied: from={from_repo_str} to={} digest={digest}",
+                    "OCI cross-repo mount denied: from={from_repo} to={} digest={digest}",
                     path.name
                 ),
                 sentry::Level::Warning,
@@ -448,7 +429,6 @@ pub async fn oci_upload_monolithic(
     let project_uuid = push_access.project.uuid;
 
     // Check bandwidth limit before transfer
-    #[cfg(feature = "plus")]
     let org_id = check_oci_bandwidth(context, &push_access.project).await?;
 
     // Get storage
@@ -486,7 +466,6 @@ pub async fn oci_upload_monolithic(
     };
 
     // Record bandwidth usage
-    #[cfg(feature = "plus")]
     record_oci_bandwidth(context, org_id, final_size);
 
     // Record metric

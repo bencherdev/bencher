@@ -14,7 +14,8 @@ pub use audience::Audience;
 #[cfg(feature = "plus")]
 pub use claims::RunnerOciClaims;
 pub use claims::{
-    Claims, InviteClaims, OAuthClaims, OciAction, OciClaims, OciScopeClaims, OrgClaims, StateClaims,
+    AuthOciClaims, Claims, InviteClaims, OAuthClaims, OciAction, OciScopeClaims, OrgClaims,
+    PublicOciClaims, StateClaims,
 };
 pub use error::TokenError;
 pub use key::TokenKey;
