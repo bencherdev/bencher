@@ -11,7 +11,7 @@ use http::Response;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::auth::{require_pull_access, resolve_project};
+use crate::auth::validate_pull_access;
 use crate::error::storage_error;
 use crate::response::{APPLICATION_JSON, oci_cors_headers};
 
@@ -79,12 +79,9 @@ pub async fn oci_tags_list(
     let path = path.into_inner();
     let query = query.into_inner();
 
-    // Authenticate and apply rate limiting
+    // Authenticate (public tokens restricted to unclaimed projects) and resolve project
     let name_str = path.name.to_string();
-    require_pull_access(&rqctx, &name_str).await?;
-
-    // Resolve project for stable storage paths
-    let project = resolve_project(context, &path.name).await?;
+    let project = validate_pull_access(&rqctx, &path.name).await?;
     let project_uuid = project.uuid;
 
     // Get storage

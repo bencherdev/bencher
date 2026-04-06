@@ -154,31 +154,7 @@ fn validate_pull_identity(
     ))
 }
 
-/// Require pull access for an OCI operation.
-///
-/// Validates the bearer token and checks it grants pull access to the specified repository.
-/// Accepts public, auth, and runner OCI tokens.
-/// Use this for simple read operations that don't need project info.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
-pub async fn require_pull_access(
-    rqctx: &RequestContext<ApiContext>,
-    repository: &str,
-) -> Result<(), HttpError> {
-    let context = rqctx.context();
-    let scope = format!("repository:{repository}:pull");
-    let token = extract_oci_bearer_token(rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
-    let identity = validate_pull_identity(context, &token, repository)?;
-
-    apply_pull_rate_limit(rqctx, &identity).await?;
-
-    Ok(())
-}
-
-/// Validate pull access for an OCI operation, allowing public tokens for unclaimed projects.
+/// Validate pull access for an OCI operation.
 ///
 /// Requires a Bearer token (runner, auth, or public). Public tokens are restricted
 /// to unclaimed projects; runner and auth tokens have normal pull access.
