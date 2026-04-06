@@ -57,7 +57,9 @@ impl RunnerTest {
             self.exec_with_daemon()
         } else {
             if docker_available() {
-                run_unauth_push_test(&self.url)?;
+                // Only test the unauthenticated push (no `bencher run --image`)
+                // since there is no runner daemon to execute the remote job.
+                run_unclaimed_push_test(&self.url)?;
             }
             let spec = if cfg!(target_os = "linux") {
                 "test-spec"
@@ -219,8 +221,8 @@ impl RunnerTest {
             std::time::Duration::from_secs(30),
         );
 
-        // Run unauthenticated push test (no docker login, unclaimed project)
-        let unauth_result = run_unauth_push_test(&self.url);
+        // Run unclaimed project test (no docker login, no token)
+        let unclaimed_result = run_unclaimed_test(&self.url);
 
         // Run the actual runner test (use no-sandbox spec when KVM is unavailable)
         let spec = if has_kvm {
@@ -228,7 +230,7 @@ impl RunnerTest {
         } else {
             "no-sandbox-spec"
         };
-        let result = if unauth_result.is_ok() {
+        let result = if unclaimed_result.is_ok() {
             run_runner_test(&self.url, &self.username, &self.token, spec)
         } else {
             Ok(())
@@ -258,7 +260,7 @@ impl RunnerTest {
         let _wait = no_sandbox_child.wait();
         let _join = no_sandbox_reader_handle.join();
 
-        unauth_result?;
+        unclaimed_result?;
         result?;
         no_sandbox_result?;
         detach_result?;
@@ -698,15 +700,16 @@ fn docker_push(image: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Run an unauthenticated push test: pull a small image, tag it for the local
-/// registry under an unclaimed project slug, and push without `docker login`.
-fn run_unauth_push_test(url: &Url) -> anyhow::Result<()> {
-    let host = url.as_ref();
-
-    println!("Running unauthenticated push smoke test against: {host}");
+/// Prepare an OCI image for unclaimed project testing.
+///
+/// Resolves the registry for the given API URL, pulls/builds the Docker image,
+/// and tags it for the target registry under the given project slug.
+/// Returns `(host, local_ref)` for use by push-only or push+run tests.
+fn prepare_unclaimed_image(url: &Url, slug: &str) -> anyhow::Result<(String, String)> {
+    let host = url.as_ref().to_owned();
 
     let registry = if cfg!(target_os = "macos") {
-        let port = registry_host(host)?
+        let port = registry_host(&host)?
             .rsplit_once(':')
             .and_then(|(_, p)| p.parse::<u16>().ok())
             .unwrap_or(bencher_json::BENCHER_API_PORT);
@@ -715,24 +718,115 @@ fn run_unauth_push_test(url: &Url) -> anyhow::Result<()> {
         ensure_insecure_registry(&docker_registry)?;
         docker_registry
     } else {
-        registry_for_api(host)?
+        registry_for_api(&host)?
     };
 
-    let slug = "unauth-smoke-test";
     let local_ref = format!("{registry}/{slug}:latest");
 
-    println!("Step 1: Pulling busybox:latest...");
-    docker_pull("busybox:latest")?;
+    if cfg!(target_os = "macos") {
+        println!("Building local Docker image from macOS bencher binary...");
+        docker_build_local_image(&local_ref)?;
+    } else {
+        println!("Pulling Docker image {DOCKER_IMAGE}...");
+        docker_pull(DOCKER_IMAGE)?;
+        println!("Tagging as {local_ref}...");
+        docker_tag(DOCKER_IMAGE, &local_ref)?;
+    }
 
-    println!("Step 2: Tagging as {local_ref}...");
-    docker_tag("busybox:latest", &local_ref)?;
+    Ok((host, local_ref))
+}
+
+/// Push-only smoke test for unclaimed projects.
+///
+/// Builds/pulls an image and pushes it without `docker login`.
+/// Does NOT run `bencher run --image` — use `run_unclaimed_test` for the full
+/// push + run test (requires a running runner daemon).
+fn run_unclaimed_push_test(url: &Url) -> anyhow::Result<()> {
+    println!("=== Unclaimed Push Smoke Test ===");
+
+    let (_host, local_ref) = prepare_unclaimed_image(url, "unclaimed-push-test")?;
+
+    // Intentionally NO docker login
+    println!("Pushing without auth...");
+    docker_push(&local_ref)?;
+
+    println!("=== Unclaimed Push Smoke Test Passed ===");
+    Ok(())
+}
+
+/// Run the unclaimed project smoke test.
+///
+/// Builds/pulls an image, pushes it without `docker login`, then runs
+/// `bencher run --image` without a token. Repeats the push + run sequence
+/// twice to verify the project stays unclaimed.
+fn run_unclaimed_test(url: &Url) -> anyhow::Result<()> {
+    println!("=== Unclaimed Project Smoke Test ===");
+
+    let slug = "unclaimed-smoke-test";
+    let (host, local_ref) = prepare_unclaimed_image(url, slug)?;
 
     // Intentionally NO docker login
 
-    println!("Step 3: Pushing without auth...");
-    docker_push(&local_ref)?;
+    // Run the full push + run sequence twice to verify the project stays unclaimed
+    run_unclaimed_push_and_run(&host, &local_ref, slug, 1)?;
+    run_unclaimed_push_and_run(&host, &local_ref, slug, 2)?;
 
-    println!("Unauthenticated push smoke test passed!");
+    println!("=== Unclaimed Project Smoke Test Passed ===");
+    Ok(())
+}
+
+/// Push an image without auth and run `bencher run --image` without a token.
+fn run_unclaimed_push_and_run(
+    host: &str,
+    local_ref: &str,
+    slug: &str,
+    run: u32,
+) -> anyhow::Result<()> {
+    println!("--- Run {run}/2 ---");
+
+    println!("Pushing without auth...");
+    docker_push(local_ref)?;
+
+    println!("Running bencher run --image without token...");
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    let image_ref = format!("{slug}:latest");
+    let args = [
+        "run",
+        HOST_ARG,
+        host,
+        // No TOKEN_ARG — fully unauthenticated
+        "--project",
+        slug,
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+        "--image",
+        &image_ref,
+        "--spec",
+        "no-sandbox-spec",
+        "--format",
+        "json",
+        "--quiet",
+        "--job-timeout",
+        "120",
+        "--job-poll-interval",
+        "1",
+        "--exec",
+        "mock",
+    ];
+    cmd.args(args).current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run (unclaimed, run {run}) failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(json.project.slug.to_string(), slug);
+    println!("Run {run}/2 passed!");
     Ok(())
 }
 

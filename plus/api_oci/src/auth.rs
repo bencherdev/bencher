@@ -286,7 +286,12 @@ pub async fn validate_push_access(
     }
 }
 
-/// Apply rate limiting for push operations based on authentication status
+/// Apply rate limiting for push operations based on authentication status.
+///
+/// OCI pushes use the general request rate limiter rather than the run rate
+/// limiter so that multi-layer Docker pushes (which hit this for each blob
+/// upload start and manifest PUT) don't exhaust the run quota before the
+/// actual `bencher run` request.
 fn apply_push_rate_limit(
     log: &Logger,
     context: &ApiContext,
@@ -295,13 +300,13 @@ fn apply_push_rate_limit(
     match public_user {
         PublicUser::Public(remote_ip) => {
             if let Some(remote_ip) = remote_ip {
-                slog::debug!(log, "Applying unclaimed OCI push rate limit"; "remote_ip" => ?remote_ip);
-                context.rate_limiting.unclaimed_run(*remote_ip)?;
+                slog::debug!(log, "Applying public OCI push rate limit"; "remote_ip" => ?remote_ip);
+                context.rate_limiting.public_request(*remote_ip)?;
             }
         },
         PublicUser::Auth(auth_user) => {
             slog::debug!(log, "Applying claimed OCI push rate limit"; "user_uuid" => %auth_user.user.uuid);
-            context.rate_limiting.claimed_run(auth_user.user.uuid)?;
+            context.rate_limiting.user_request(auth_user.user.uuid)?;
         },
     }
     Ok(())
