@@ -57,7 +57,9 @@ impl RunnerTest {
             self.exec_with_daemon()
         } else {
             if docker_available() {
-                run_unclaimed_test(&self.url)?;
+                // Only test the unauthenticated push (no `bencher run --image`)
+                // since there is no runner daemon to execute the remote job.
+                run_unclaimed_push_test(&self.url)?;
             }
             let spec = if cfg!(target_os = "linux") {
                 "test-spec"
@@ -695,6 +697,50 @@ fn docker_login(registry: &str, username: &str, password: &str) -> anyhow::Resul
 fn docker_push(image: &str) -> anyhow::Result<()> {
     let status = Command::new("docker").args(["push", image]).status()?;
     anyhow::ensure!(status.success(), "docker push {image} failed: {status}");
+    Ok(())
+}
+
+/// Push-only smoke test for unclaimed projects.
+///
+/// Builds/pulls an image and pushes it without `docker login`.
+/// Does NOT run `bencher run --image` — use `run_unclaimed_test` for the full
+/// push + run test (requires a running runner daemon).
+fn run_unclaimed_push_test(url: &Url) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("=== Unclaimed Push Smoke Test ===");
+
+    let registry = if cfg!(target_os = "macos") {
+        let port = registry_host(host)?
+            .rsplit_once(':')
+            .and_then(|(_, p)| p.parse::<u16>().ok())
+            .unwrap_or(bencher_json::BENCHER_API_PORT);
+        let docker_registry = format!("host.docker.internal:{port}");
+        ensure_hosts_entry()?;
+        ensure_insecure_registry(&docker_registry)?;
+        docker_registry
+    } else {
+        registry_for_api(host)?
+    };
+
+    let slug = "unclaimed-push-test";
+    let local_ref = format!("{registry}/{slug}:latest");
+
+    if cfg!(target_os = "macos") {
+        println!("Building local Docker image from macOS bencher binary...");
+        docker_build_local_image(&local_ref)?;
+    } else {
+        println!("Pulling Docker image {DOCKER_IMAGE}...");
+        docker_pull(DOCKER_IMAGE)?;
+        println!("Tagging as {local_ref}...");
+        docker_tag(DOCKER_IMAGE, &local_ref)?;
+    }
+
+    // Intentionally NO docker login
+    println!("Pushing without auth...");
+    docker_push(&local_ref)?;
+
+    println!("=== Unclaimed Push Smoke Test Passed ===");
     Ok(())
 }
 
