@@ -45,6 +45,7 @@ OciRegistry --> Api
 Api --> Db
 Db --> Litestream
 Litestream ---> Storage
+OciRegistry ---> Storage
 Api -----> Smtp
 subgraph API Container
     OciRegistry
