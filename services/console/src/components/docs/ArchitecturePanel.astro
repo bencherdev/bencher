@@ -11,6 +11,9 @@ Storage[[Object Storage]]
 Smtp[[SMTP Server]]
 CiCd[[CI/CD]]
 BenchmarkHarness[/Benchmark Harness/]
+Runner[/Bencher Runner/]
+OciRegistry[/OCI Registry/]
+Sandbox[/Sandbox/]
 
 Console ---> Api
 subgraph Console Container
@@ -25,6 +28,16 @@ subgraph BenchmarkingServer[Benchmarking Server]
     BenchmarkHarness --> Results{'{{Results}}'}
 end
 
+Runner <--->|WebSocket| Api
+Runner ---> OciRegistry
+Runner -.-> Sandbox
+Sandbox -.-> RunnerResults{'{{Results}}'}
+subgraph BareMetalServer[Bare Metal Server]
+    Runner
+    Sandbox
+    RunnerResults
+end
+
 Api --> Db
 Db --> Litestream
 Litestream ---> Storage
@@ -33,6 +46,7 @@ subgraph API Container
     Api
     Db
     Litestream
+    OciRegistry
 end
 </pre>
 <script>
