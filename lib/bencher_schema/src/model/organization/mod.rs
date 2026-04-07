@@ -81,22 +81,42 @@ impl QueryOrganization {
     ) -> Result<Self, HttpError> {
         // The user's organization should be created with the user's UUID.
         let user_uuid = auth_user.user.uuid;
-        if let Ok(query_organization) = Self::from_uuid(auth_conn!(context), user_uuid.into()) {
-            query_organization
-                .try_allowed(&context.rbac, auth_user, Permission::View)
-                .map_err(|err| {
-                    issue_error(
-                        "User cannot view own organization",
-                        &format!("User ({user_uuid}) cannot view own organization."),
-                        err,
-                    )
-                })?;
+        if let Ok(query_organization) =
+            Self::find_user_organization(context, auth_user, user_uuid).await
+        {
             return Ok(query_organization);
         }
 
         let insert_organization =
             InsertOrganization::from_user(auth_conn!(context), &auth_user.user);
-        Self::create(context, auth_user, insert_organization).await
+        match Self::create(context, auth_user, insert_organization).await {
+            Ok(org) => Ok(org),
+            Err(e) if crate::error::is_conflict(&e) => {
+                // Another concurrent request created this org — re-lookup
+                Self::find_user_organization(context, auth_user, user_uuid)
+                    .await
+                    .map_err(|_lookup_err| e)
+            },
+            Err(e) => Err(e),
+        }
+    }
+
+    async fn find_user_organization(
+        context: &ApiContext,
+        auth_user: &AuthUser,
+        user_uuid: bencher_json::UserUuid,
+    ) -> Result<Self, HttpError> {
+        let query_organization = Self::from_uuid(auth_conn!(context), user_uuid.into())?;
+        query_organization
+            .try_allowed(&context.rbac, auth_user, Permission::View)
+            .map_err(|err| {
+                issue_error(
+                    "User cannot view own organization",
+                    &format!("User ({user_uuid}) cannot view own organization."),
+                    err,
+                )
+            })?;
+        Ok(query_organization)
     }
 
     pub async fn get_or_create_from_project(
@@ -105,24 +125,42 @@ impl QueryOrganization {
         project_slug: &ProjectSlug,
     ) -> Result<Self, HttpError> {
         // The project organization should be created with the project's slug.
-        if let Ok(query_organization) = Self::from_resource_id(
-            public_conn!(context),
-            &OrganizationSlug::from(project_slug.clone()).into_resource_id(),
-        ) {
-            // If the project is part of an organization that is claimed,
-            // then the project can not have anonymous reports.
-            return if query_organization.is_claimed(public_conn!(context))? {
-                Err(unauthorized_error(format!(
-                    "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
-                )))
-            } else {
-                Ok(query_organization)
-            };
+        if let Ok(query_organization) =
+            Self::find_unclaimed_project_organization(context, project_slug).await
+        {
+            return Ok(query_organization);
         }
 
         let insert_organization =
             InsertOrganization::new(project_name.clone(), project_slug.clone().into());
-        Self::create_from_project(context, insert_organization).await
+        match Self::create_from_project(context, insert_organization).await {
+            Ok(org) => Ok(org),
+            Err(e) if crate::error::is_conflict(&e) => {
+                // Another concurrent request created this org — re-lookup
+                Self::find_unclaimed_project_organization(context, project_slug)
+                    .await
+                    .map_err(|_lookup_err| e)
+            },
+            Err(e) => Err(e),
+        }
+    }
+
+    async fn find_unclaimed_project_organization(
+        context: &ApiContext,
+        project_slug: &ProjectSlug,
+    ) -> Result<Self, HttpError> {
+        let query_organization = Self::from_resource_id(
+            public_conn!(context),
+            &OrganizationSlug::from(project_slug.clone()).into_resource_id(),
+        )?;
+        // If the project is part of an organization that is claimed,
+        // then the project can not have anonymous reports.
+        if query_organization.is_claimed(public_conn!(context))? {
+            return Err(unauthorized_error(format!(
+                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
+            )));
+        }
+        Ok(query_organization)
     }
 
     pub async fn create(

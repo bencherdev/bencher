@@ -128,7 +128,7 @@ impl QueryBranch {
             Err(e) => e,
         };
 
-        let branch = match branch.clone() {
+        let json_branch = match branch.clone() {
             NameId::Uuid(_) => return Err(http_error),
             NameId::Slug(slug) => JsonNewBranch {
                 name: slug.clone().into(),
@@ -141,7 +141,18 @@ impl QueryBranch {
                 start_point: start_point.cloned().and_then(Into::into),
             },
         };
-        Self::create_with_head(log, context, project_id, branch).await
+        match Self::create_with_head(log, context, project_id, json_branch).await {
+            Ok(result) => Ok(result),
+            Err(e) if crate::error::is_conflict(&e) => {
+                // Another concurrent request created this branch — re-lookup
+                let query_branch = Self::from_name_id(auth_conn!(context), project_id, branch)
+                    .map_err(|_lookup_err| e)?;
+                query_branch
+                    .update_start_point_if_changed(log, context, project_id, start_point)
+                    .await
+            },
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn create(

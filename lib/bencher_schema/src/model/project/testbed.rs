@@ -282,7 +282,15 @@ impl QueryTestbed {
             },
         };
 
-        Self::create(context, project_id, json_testbed).await
+        match Self::create(context, project_id, json_testbed).await {
+            Ok(testbed) => Ok(testbed),
+            Err(e) if crate::error::is_conflict(&e) => {
+                // Another concurrent request created this testbed — re-lookup
+                Self::from_name_id(auth_conn!(context), project_id, testbed)
+                    .map_err(|_lookup_err| e)
+            },
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn create(
