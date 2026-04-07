@@ -16,12 +16,27 @@ docker push registry.bencher.dev/YOUR_PROJECT_SLUG:my-tag
 ```sh
 bencher run --image YOUR_PROJECT_SLUG:my-tag
 ```
-4. Bencher API server creates a [Job][job] for the benchmark execution, using the provided Image and [Spec][spec]
+4. Bencher API server creates a pending [Job][job] for the benchmark execution, using the provided Image and [Spec][spec]
+5. Bencher API server creates a [Report][report] connected to the pending Job
+6. Bencher [Runner][runner] polls for any Jobs matching its assigned Specs
+7. Bencher API server assigns the Job to the Runner
+8. Bencher Runner receives the Job
+9. Bencher Runner pulls the Image for the Job
+10. Bencher Runner unpacks the Image
+11. Bencher Runner executes the benchmark command for the Job
+12. Bencher Runner awaits the benchmark command to complete
+13. Bencher Runner collects the benchmark command results and sends them to the Bencher API server
+14. Bencher API server receives the benchmark command results
+15. Bencher API server parses the benchmark command results using a [benchmark harness adapter][adapter]
+16. Bencher API server attaches the benchmark results to the Report
+17. User `bencher run` detects the completed Job and displays the complete Report
 
 [image]: /docs/explanation/bencher-run/#--image-image
 [job]: /docs/explanation/bare-metal/#job
 [spec]: /docs/explanation/bare-metal/#spec
-
+[report]: /docs/explanation/benchmarking/#report
+[runner]: /docs/explanation/bare-metal/#runner
+[adapter]: /docs/explanation/adapters/
 
 Then the Bencher API server parses the [benchmark command][benchmark command] output
 using a [benchmark harness adapter][adapters].
@@ -84,7 +99,7 @@ even if the tag is updated afterward.
 
 ## Entrypoint and CMD Overrides
 
-You can override the container entrypoint with the [`--entrypoint`][entrypoint] flag on `bencher run`:
+You can override the container entrypoint with the [`--entrypoint`][entrypoint] option on `bencher run`:
 
 ```bash
 bencher run --image my-image:tag --entrypoint /bin/sh -- -c "./run-benchmarks.sh"
