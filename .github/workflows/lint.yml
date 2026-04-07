@@ -68,6 +68,14 @@ jobs:
         run: cargo gen-installer runner
       - name: Check Runner install script for changes
         run: git diff --exit-code
+      - uses: ./.github/actions/setup-node
+        with:
+          working-directory: services/console
+      - name: Generate Diagram SVGs
+        working-directory: services/console
+        run: npm run diagrams
+      - name: Check Diagram SVGs for changes
+        run: git diff --exit-code
 
   cargo_deny:
     name: Cargo Deny
