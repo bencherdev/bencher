@@ -1,1 +1,3 @@
 text eol=lf
+
+services/console/diagrams/output/*.svg linguist-generated=true

@@ -93,7 +93,7 @@ COPY services/console/adapter.js adapter.js
 COPY services/console/site.js site.js
 COPY services/console/tsconfig.json tsconfig.json
 COPY services/console/.env.runtime .env.runtime
-COPY services/console/diagrams diagrams
+COPY services/console/diagrams/output diagrams/output
 
 RUN npm run node
 

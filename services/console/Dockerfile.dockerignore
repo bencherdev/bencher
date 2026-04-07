@@ -18,4 +18,4 @@
 !services/console/tsconfig.json
 !services/console/.env.runtime
 !services/console/build_wasm.sh
-!services/console/diagrams
+!services/console/diagrams/output
