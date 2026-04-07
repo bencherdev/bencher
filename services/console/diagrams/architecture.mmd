@@ -10,7 +10,9 @@ Smtp[[SMTP Server]]
 CiCd[[CI/CD]]
 BenchmarkHarness[/Benchmark Harness/]
 Runner[/Bencher Runner/]
-OciRegistry[/OCI Registry/]
+OciRegistry(OCI Registry)
+OciClient[/OCI Client/]
+BmCli[/Bencher CLI/]
 Sandbox[/Sandbox/]
 
 Console ---> Api
@@ -24,6 +26,13 @@ subgraph BenchmarkingServer[Benchmarking Server]
     direction LR
     Cli --> BenchmarkHarness
     BenchmarkHarness --> Results{{Results}}
+end
+
+OciClient ---> OciRegistry
+BmCli ---> Api
+subgraph BencherBareMetal[Bencher Bare Metal]
+    OciClient
+    BmCli
 end
 
 Runner <--->|WebSocket| Api
