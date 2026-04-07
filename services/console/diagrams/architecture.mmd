@@ -52,13 +52,14 @@ subgraph BareMetalServer[Bare Metal Server]
     RunnerResults
 end
 
+OciRegistry --> Api
 Api --> Db
 Db --> Litestream
 Litestream ---> Storage
 Api -----> Smtp
 subgraph API Container
+    OciRegistry
     Api
     Db
     Litestream
-    OciRegistry
 end
