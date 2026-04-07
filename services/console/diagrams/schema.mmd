@@ -1,0 +1,378 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#ECECFF', 'primaryBorderColor': '#9370DB', 'primaryTextColor': '#333', 'lineColor': '#333333', 'secondaryColor': '#ffffde', 'tertiaryColor': '#fff', 'clusterBkg': '#fde0c8', 'clusterBorder': '#e26000'}}}%%
+erDiagram
+server {
+    id INTEGER
+    uuid TEXT
+    created BIGINT
+}
+user {
+    id INTEGER
+    uuid TEXT
+    name TEXT
+    slug TEXT
+    email TEXT
+    admin BOOLEAN
+    locked BOOLEAN
+    created BIGINT
+    modified BIGINT
+}
+token {
+    id INTEGER
+    uuid TEXT
+    user_id INTEGER
+    name TEXT
+    jwt TEXT
+    creation BIGINT
+    expiration BIGINT
+}
+organization {
+    id INTEGER
+    uuid TEXT
+    name TEXT
+    slug TEXT
+    license TEXT
+    created BIGINT
+    modified BIGINT
+    deleted BIGINT
+}
+organization_role {
+    id INTEGER
+    user_id INTEGER
+    organization_id INTEGER
+    role TEXT
+    created BIGINT
+    modified BIGINT
+}
+plan {
+    id INTEGER
+    organization_id INTEGER
+    metered_plan TEXT
+    licensed_plan TEXT
+    license TEXT
+    created BIGINT
+    modified BIGINT
+}
+sso {
+    id INTEGER
+    uuid TEXT
+    organization_id INTEGER
+    domain TEXT
+    created BIGINT
+}
+project {
+    id INTEGER
+    uuid TEXT
+    organization_id INTEGER
+    name TEXT
+    slug TEXT
+    url TEXT
+    visibility INTEGER
+    created BIGINT
+    modified BIGINT
+    deleted BIGINT
+}
+project_role {
+    id INTEGER
+    user_id INTEGER
+    project_id INTEGER
+    role TEXT
+    created BIGINT
+    modified BIGINT
+}
+branch {
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    name TEXT
+    slug TEXT
+    head_id INTEGER
+    created BIGINT
+    modified BIGINT
+    archived BIGINT
+}
+head {
+    id INTEGER
+    uuid TEXT
+    branch_id INTEGER
+    start_point_id INTEGER
+    created BIGINT
+    replaced BIGINT
+}
+version {
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    number INTEGER
+    hash TEXT
+}
+head_version {
+    id INTEGER
+    head_id INTEGER
+    version_id INTEGER
+}
+testbed {
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    name TEXT
+    slug TEXT
+    spec_id INTEGER
+    created BIGINT
+    modified BIGINT
+    archived BIGINT
+}
+spec {
+    id INTEGER
+    uuid TEXT
+    name TEXT
+    slug TEXT
+    os TEXT
+    architecture TEXT
+    sandbox TEXT
+    cpu INTEGER
+    memory BIGINT
+    disk BIGINT
+    network BOOLEAN
+    fallback BIGINT
+    created BIGINT
+    modified BIGINT
+    archived BIGINT
+}
+benchmark {
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    name TEXT
+    slug TEXT
+    created BIGINT
+    modified BIGINT
+    archived BIGINT
+}
+measure {
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    name TEXT
+    slug TEXT
+    units TEXT
+    created BIGINT
+    modified BIGINT
+    archived BIGINT
+}
+report {
+    id INTEGER
+    uuid TEXT
+    idempotency_key TEXT
+    user_id INTEGER
+    project_id INTEGER
+    head_id INTEGER
+    version_id INTEGER
+    testbed_id INTEGER
+    spec_id INTEGER
+    adapter INTEGER
+    start_time BIGINT
+    end_time BIGINT
+    created BIGINT
+}
+report_benchmark {
+    id INTEGER
+    uuid TEXT
+    report_id INTEGER
+    iteration INTEGER
+    benchmark_id INTEGER
+}
+metric {
+    id INTEGER
+    uuid TEXT
+    report_benchmark_id INTEGER
+    measure_id INTEGER
+    value DOUBLE
+    lower_value DOUBLE
+    upper_value DOUBLE
+}
+threshold {
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    branch_id INTEGER
+    testbed_id INTEGER
+    measure_id INTEGER
+    model_id INTEGER
+    created BIGINT
+    modified BIGINT
+}
+model {
+    id INTEGER
+    uuid TEXT
+    threshold_id INTEGER
+    test INTEGER
+    min_sample_size BIGINT
+    max_sample_size BIGINT
+    window BIGINT
+    lower_boundary DOUBLE
+    upper_boundary DOUBLE
+    created BIGINT
+    replaced BIGINT
+}
+boundary {
+    id INTEGER
+    uuid TEXT
+    metric_id INTEGER
+    threshold_id INTEGER
+    model_id INTEGER
+    baseline DOUBLE
+    lower_limit DOUBLE
+    upper_limit DOUBLE
+}
+alert {
+    id INTEGER
+    uuid TEXT
+    boundary_id INTEGER
+    boundary_limit BOOLEAN
+    status INTEGER
+    modified BIGINT
+}
+plot {
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    rank BIGINT
+    title TEXT
+    lower_value BOOLEAN
+    upper_value BOOLEAN
+    lower_boundary BOOLEAN
+    upper_boundary BOOLEAN
+    x_axis INTEGER
+    window BIGINT
+    created BIGINT
+    modified BIGINT
+}
+plot_branch {
+    plot_id INTEGER
+    branch_id INTEGER
+    rank BIGINT
+}
+plot_benchmark {
+    plot_id INTEGER
+    benchmark_id INTEGER
+    rank BIGINT
+}
+plot_testbed {
+    plot_id INTEGER
+    testbed_id INTEGER
+    rank BIGINT
+}
+plot_measure {
+    plot_id INTEGER
+    measure_id INTEGER
+    rank BIGINT
+}
+runner {
+    id INTEGER
+    uuid TEXT
+    name TEXT
+    slug TEXT
+    token_hash TEXT
+    last_heartbeat BIGINT
+    created BIGINT
+    modified BIGINT
+    archived BIGINT
+}
+runner_spec {
+    id INTEGER
+    runner_id INTEGER
+    spec_id INTEGER
+}
+job {
+    id INTEGER
+    uuid TEXT
+    report_id INTEGER
+    organization_id INTEGER
+    source_ip TEXT
+    spec_id INTEGER
+    config TEXT
+    timeout INTEGER
+    priority INTEGER
+    status INTEGER
+    runner_id INTEGER
+    claimed BIGINT
+    started BIGINT
+    completed BIGINT
+    last_heartbeat BIGINT
+    last_billed_minute INTEGER
+    created BIGINT
+    modified BIGINT
+}
+metric_count_by_report {
+    report_id INTEGER
+    metric_count INTEGER
+}
+job_duration_by_report {
+    report_id INTEGER
+    job_duration INTEGER
+}
+
+user ||--o{ token : "has"
+user ||--o{ organization_role : "has"
+user ||--o{ project_role : "has"
+user ||--o{ report : "writes"
+
+organization ||--o{ organization_role : "assigns"
+organization ||--o{ project : "owns"
+organization ||--o{ plan : "has"
+organization ||--o{ sso : "has"
+organization ||--o{ job : "has"
+
+project ||--o{ project_role : "assigns"
+project ||--o{ version : "has"
+project ||--o{ threshold : "has"
+project ||--o{ testbed : "has"
+project ||--o{ benchmark : "has"
+project ||--o{ measure : "has"
+project ||--o{ branch : "has"
+project ||--o{ plot : "has"
+
+threshold ||--o{ model : "uses"
+threshold ||--o{ metric : "relates"
+threshold ||--o{ boundary : "has"
+model ||--o{ boundary : "has"
+
+benchmark ||--o{ plot_benchmark : "part of"
+
+measure ||--o{ plot_measure : "visualized"
+measure ||--o{ metric : "measured"
+measure ||--o{ threshold : "used"
+
+testbed ||--o{ plot_testbed : "analyzed"
+testbed ||--o{ report : "used in"
+testbed }o--|| spec : "uses"
+
+branch ||--o{ plot_branch : "analyzed"
+branch ||--o{ head : "tracks"
+
+head ||--o{ head_version : "links"
+head_version ||--o{ version : "includes"
+
+report ||--o{ metric : "generates"
+report ||--o{ plot : "visualizes"
+report ||--o{ version : "reports on"
+report ||--o{ testbed : "runs on"
+report ||--o{ report_benchmark : "has"
+report ||--|| metric_count_by_report : "has"
+report ||--o| job : "has"
+report ||--o| job_duration_by_report : "has"
+
+alert ||--o{ metric : "monitors"
+metric ||--o{ report_benchmark : "derived from"
+metric ||--o{ boundary : "has"
+
+plot ||--o{ plot_branch : "uses"
+plot ||--o{ plot_testbed : "uses"
+plot ||--o{ plot_benchmark : "uses"
+plot ||--o{ plot_measure : "uses"
+
+runner ||--o{ runner_spec : "supports"
+runner ||--o{ job : "runs"
+runner_spec }o--|| spec : "references"
+
+job }o--|| spec : "requires"
