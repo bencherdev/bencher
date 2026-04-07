@@ -9,16 +9,15 @@ Db[(SQLite Database)]
 Litestream[/Litestream/]
 Storage[[Object Storage]]
 Smtp[[SMTP Server]]
-CiCd[[CI/CD]]
 BenchmarkHarness[/Benchmark Harness/]
 Runner[/Bencher Runner/]
 OciRegistry(OCI Registry)
 OciClient[/OCI Client/]
 BmCli[/Bencher CLI/]
 Sandbox[/Sandbox/]
+RunnerHarness[/Benchmark Harness/]
 
 User --> Console
-User --> CiCd
 User --> OciClient
 User --> BmCli
 
@@ -27,9 +26,9 @@ subgraph Console Container
     Console
 end
 
-CiCd --> BenchmarkingServer
-BenchmarkingServer ---> Api
-subgraph BenchmarkingServer[Benchmarking Server]
+User --> Cli
+Cli ---> Api
+subgraph CiCdServer[CI/CD Server]
     direction LR
     Cli --> BenchmarkHarness
     BenchmarkHarness --> Results{{Results}}
@@ -42,16 +41,6 @@ subgraph BencherBareMetal[Bencher Bare Metal]
     BmCli
 end
 
-Runner <--->|WebSocket| Api
-Runner ---> OciRegistry
-Runner -.-> Sandbox
-Sandbox -.-> RunnerResults{{Results}}
-subgraph BareMetalServer[Bare Metal Server]
-    Runner
-    Sandbox
-    RunnerResults
-end
-
 OciRegistry --> Api
 Api --> Db
 Db --> Litestream
@@ -62,4 +51,17 @@ subgraph API Container
     Api
     Db
     Litestream
+end
+
+Runner <--->|WebSocket| Api
+Runner ---> OciRegistry
+Runner -.-> Sandbox
+Runner -.-> RunnerHarness
+Sandbox --> RunnerHarness
+RunnerHarness --> RunnerResults{{Results}}
+subgraph BareMetalServer[Bare Metal Server]
+    Runner
+    Sandbox
+    RunnerHarness
+    RunnerResults
 end
