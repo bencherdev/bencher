@@ -99,7 +99,15 @@ impl QueryBenchmark {
             NameId::Name(name) => JsonNewBenchmark { name, slug: None },
         };
 
-        Self::create(context, project_id, json_benchmark).await
+        match Self::create(context, project_id, json_benchmark).await {
+            Ok(benchmark) => Ok(benchmark),
+            Err(e) if crate::error::is_conflict(&e) => {
+                // Another concurrent request created this benchmark — re-lookup
+                Self::from_name_id(auth_conn!(context), project_id, benchmark)
+                    .map_err(|_lookup_err| e)
+            },
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn create(

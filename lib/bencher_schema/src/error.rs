@@ -170,6 +170,10 @@ where
     ))
 }
 
+pub fn is_conflict(error: &HttpError) -> bool {
+    error.status_code == ClientErrorStatusCode::CONFLICT
+}
+
 pub fn locked_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,
@@ -395,5 +399,35 @@ pub fn assert_siblings<Id>(
         debug_assert!(false, "{err}");
         #[cfg(feature = "sentry")]
         sentry::capture_error(&err);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_conflict_true_for_conflict_error() {
+        let error = conflict_error("duplicate resource");
+        assert!(is_conflict(&error));
+    }
+
+    #[test]
+    fn is_conflict_false_for_not_found_error() {
+        let error = not_found_error("missing");
+        assert!(!is_conflict(&error));
+    }
+
+    #[test]
+    fn is_conflict_false_for_bad_request_error() {
+        let error = bad_request_error("bad input");
+        assert!(!is_conflict(&error));
+    }
+
+    #[test]
+    fn is_conflict_true_for_resource_conflict_error() {
+        let error =
+            resource_conflict_error(BencherResource::Project, "test-project", "UNIQUE failed");
+        assert!(is_conflict(&error));
     }
 }

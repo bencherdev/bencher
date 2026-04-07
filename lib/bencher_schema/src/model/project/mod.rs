@@ -32,6 +32,7 @@ use crate::{
         organization::QueryOrganization,
         user::{auth::AuthUser, public::PublicUser},
     },
+    public_conn,
     schema::{self, project as project_table},
     write_conn,
 };
@@ -172,9 +173,17 @@ impl QueryProject {
                 let insert_project = InsertProject::from_organization(
                     &query_organization,
                     project_name,
-                    project_slug,
+                    project_slug.clone(),
                 );
-                Self::create_inner(log, context, insert_project).await
+                match Self::create_inner(log, context, insert_project).await {
+                    Ok(project) => Ok(project),
+                    Err(e) if crate::error::is_conflict(&e) => {
+                        // Another concurrent request created this project — re-lookup
+                        Self::from_slug(public_conn!(context), &project_slug)
+                            .map_err(|_lookup_err| e)
+                    },
+                    Err(e) => Err(e),
+                }
             },
             PublicUser::Auth(auth_user) => {
                 let query_organization =
