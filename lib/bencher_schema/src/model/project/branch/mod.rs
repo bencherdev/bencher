@@ -15,7 +15,7 @@ use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
     error::{
-        BencherResource, assert_parentage, issue_error, resource_conflict_err,
+        BencherResource, assert_parentage, is_not_found, issue_error, resource_conflict_err,
         resource_not_found_err,
     },
     macros::{
@@ -401,9 +401,11 @@ impl InsertBranch {
         let branch_start_point = if let Some(start_point) = start_point {
             // It is okay if the start point does not exist.
             // This prevents a race condition when creating both the branch and start point in CI.
-            StartPoint::from_new_json(context, project_id, start_point)
-                .await
-                .ok()
+            match StartPoint::from_new_json(context, project_id, start_point).await {
+                Ok(start_point) => Some(start_point),
+                Err(err) if is_not_found(&err) => None,
+                Err(err) => return Err(err),
+            }
         } else {
             None
         };

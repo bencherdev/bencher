@@ -116,9 +116,11 @@ impl StartPoint {
         };
         // If updating the start point, it is okay if it does not exist.
         // This avoids a race condition when creating both the branch and start point in CI.
-        let Ok(query_branch) = QueryBranch::from_name_id(auth_conn!(context), project_id, branch)
-        else {
-            return Ok(None);
+        let query_branch = match QueryBranch::from_name_id(auth_conn!(context), project_id, branch)
+        {
+            Ok(query_branch) => query_branch,
+            Err(err) if is_not_found(&err) => return Ok(None),
+            Err(err) => return Err(err),
         };
         // If updating the start point, it is okay if it does not exist.
         // https://github.com/bencherdev/bencher/issues/774
