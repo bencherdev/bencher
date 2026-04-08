@@ -1,5 +1,6 @@
 ## Pending `v0.6.2`
 - Allow unauthenticated `docker push` to unclaimed projects
+- Fix URL fragment placed before query string per RFC 3986 (Thank you [@ricardoboss](https://github.com/ricardoboss))
 
 ## `v0.6.1`
 - Buffer OCI upload network frames into configurable S3 chunks (`registry.data_store.chunk_size`, default 5 MB) to reduce S3 operations during Docker push
