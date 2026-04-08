@@ -7,8 +7,10 @@
 - `branch`が存在しない場合は、指定されたハッシュで`start-point`から作成されます。
 - `branch`が存在し、`start-point`と指定されたハッシュが同じ場合、このオプションは無視されます。
 - `branch`が存在し、`start-point`または指定されたハッシュが異なる場合、新しい`branch`[Head][head]が指定されたハッシュで`start-point`から作成されます。
-- `branch`が存在せず、指定されたハッシュで`start-point`が存在しない場合、`branch`は履歴データなしで作成されます。
-- `branch`が存在し、指定されたハッシュで`start-point`が存在しない場合、このオプションは無視されます。
+- `branch`が存在せず、指定されたハッシュで`start-point`が存在しない場合、`branch`は`start-point`の最新バージョンから作成されます。
+  `start-point`が存在しない場合、`branch`は履歴データなしで作成されます。
+- `branch`が存在し、指定されたハッシュで`start-point`が存在しない場合、新しい`branch`[Head][head]が`start-point`の最新バージョンから作成されます。
+  `start-point`が存在しない場合、このオプションは無視されます。
 
 スタートポイントで新しい`branch`が作成された場合、指定されたハッシュで`start-point`からの最新データおよび任意でスレッショルドもコピーされます。詳細は[`--start-point-max-versions`オプション][start point max version option]および[`--start-point-clone-thresholds`オプション][start point clone thresholds option]を参照してください。
 

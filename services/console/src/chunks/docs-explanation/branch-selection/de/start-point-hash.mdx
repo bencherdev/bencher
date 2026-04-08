@@ -10,9 +10,11 @@ Verwenden Sie den angegebenen vollständigen Git-Hash als [Startpunkt][start poi
 - Wenn `branch` existiert und entweder der `start-point` oder der angegebene Hash unterschiedlich sind,
   wird ein neuer `branch`-[Head][head] vom `start-point` aus mit dem angegebenen Hash erstellt.
 - Wenn `branch` nicht existiert und der `start-point` am angegebenen Hash nicht existiert,
-  wird der `branch` ohne historische Daten erstellt.
+  wird der `branch` aus der neuesten `start-point`-Version erstellt.
+  Wenn `start-point` nicht existiert, wird der `branch` ohne historische Daten erstellt.
 - Wenn `branch` existiert und der `start-point` am angegebenen Hash nicht existiert,
-  wird diese Option ignoriert.
+  wird ein neuer `branch`-[Head][head] aus der neuesten `start-point`-Version erstellt.
+  Wenn `start-point` nicht existiert, wird diese Option ignoriert.
 
 Wenn ein neuer `branch` mit einem Startpunkt erstellt wird,
 dann werden alle jüngsten Daten und optional Schwellenwerte vom `start-point` zum angegebenen Hash kopiert.

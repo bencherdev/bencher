@@ -1380,8 +1380,9 @@ impl SeedTest {
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 
-        // If the start point is missing, then the branch should just be reset
+        // If the start point hash is missing, fall back to the start point branch's latest version
         // https://github.com/bencherdev/bencher/issues/450
+        // https://github.com/bencherdev/bencher/issues/774
         // cargo run -- run --host http://localhost:61016 --token $BENCHER_API_TOKEN --project the-computer --branch feature-hash --branch-start-point master --branch-start-point-hash badbadbadbadbadbadbadbadbadbadbadbadbad1 --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
@@ -1414,7 +1415,8 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert!(json.branch.head.start_point.is_none(), "{json:?}");
+        // The hash doesn't exist, so it falls back to the start point branch's latest version
+        assert!(json.branch.head.start_point.is_some(), "{json:?}");
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 
@@ -1460,6 +1462,82 @@ impl SeedTest {
                 .as_ref(),
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         );
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // If the start point hash does not exist, fall back to the start point branch's latest version
+        // https://github.com/bencherdev/bencher/issues/774
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            BRANCH_ARG,
+            "feature-hash",
+            HASH_ARG,
+            &hash.next(),
+            "--start-point",
+            BRANCH_SLUG,
+            "--start-point-hash",
+            "badbadbadbadbadbadbadbadbadbadbadbadbad2",
+            TESTBED_ARG,
+            TESTBED_SLUG,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+            "--seed",
+            PERFECT_SEED,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        // The hash doesn't exist, so it falls back to the start point branch's latest version
+        assert!(json.branch.head.start_point.is_some(), "{json:?}");
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        // If the start point branch does not exist, fall back to no start point
+        // https://github.com/bencherdev/bencher/issues/774
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            BRANCH_ARG,
+            "feature-hash-no-sp",
+            HASH_ARG,
+            &hash.next(),
+            "--start-point",
+            "non-existent-branch",
+            "--start-point-hash",
+            "badbadbadbadbadbadbadbadbadbadbadbadbad3",
+            TESTBED_ARG,
+            TESTBED_SLUG,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+            "--seed",
+            PERFECT_SEED,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        // The start point branch doesn't exist, so there is no start point
+        assert!(json.branch.head.start_point.is_none(), "{json:?}");
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 

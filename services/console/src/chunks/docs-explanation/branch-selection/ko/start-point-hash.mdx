@@ -11,9 +11,11 @@
 - `branch`가 존재하고 `start-point` 또는 지정된 해시가 다르면,
   지정된 해시의 `start-point`에서 새로운 `branch` [헤드][head]가 생성됩니다.
 - `branch`가 존재하지 않고 지정된 해시의 `start-point`가 존재하지 않으면,
-  `branch`는 아무런 기록 데이터 없이 생성됩니다.
+  `branch`는 `start-point`의 최신 버전에서 생성됩니다.
+  `start-point`가 존재하지 않으면, `branch`는 아무런 기록 데이터 없이 생성됩니다.
 - `branch`가 존재하고 지정된 해시에 `start-point`가 존재하지 않으면,
-  이 옵션은 무시됩니다.
+  `start-point`의 최신 버전에서 새로운 `branch` [헤드][head]가 생성됩니다.
+  `start-point`가 존재하지 않으면, 이 옵션은 무시됩니다.
 
 새로운 `branch`가 시작 지점과 함께 생성되면,
 모든 최신 데이터와 선택적으로 지정 해시의 `start-point`에서의 THresholds가 복사됩니다.
