@@ -4,12 +4,7 @@ use bencher_json::{
 };
 use dropshot::HttpError;
 
-use crate::{
-    auth_conn,
-    context::ApiContext,
-    error::{is_not_found, issue_error},
-    model::project::ProjectId,
-};
+use crate::{auth_conn, context::ApiContext, error::is_not_found, model::project::ProjectId};
 
 use super::{
     QueryBranch,
@@ -139,14 +134,7 @@ impl StartPoint {
         {
             Ok(start_point) => Ok(Some(start_point)),
             Err(err) if is_not_found(&err) => Ok(None),
-            Err(err) => {
-                let _issue = issue_error(
-                    "Failed to find start point for branch update",
-                    &format!("Unexpected error finding start point: {err}"),
-                    &err,
-                );
-                Ok(None)
-            },
+            Err(err) => Err(err),
         }
     }
 
