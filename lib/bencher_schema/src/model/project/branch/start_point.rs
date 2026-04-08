@@ -4,7 +4,12 @@ use bencher_json::{
 };
 use dropshot::HttpError;
 
-use crate::{auth_conn, context::ApiContext, model::project::ProjectId};
+use crate::{
+    auth_conn,
+    context::ApiContext,
+    error::{is_not_found, issue_error},
+    model::project::ProjectId,
+};
 
 use super::{
     QueryBranch,
@@ -54,7 +59,7 @@ impl StartPoint {
                 .await
             {
                 Ok(hv) => hv,
-                Err(_) if hash.is_some() => {
+                Err(err) if hash.is_some() && is_not_found(&err) => {
                     QueryHeadVersion::get_latest_for_branch(
                         context,
                         project_id,
@@ -122,7 +127,7 @@ impl StartPoint {
         };
         // If updating the start point, it is okay if it does not exist.
         // https://github.com/bencherdev/bencher/issues/774
-        Ok(Self::latest_for_branch(
+        match Self::latest_for_branch(
             context,
             project_id,
             query_branch,
@@ -131,7 +136,18 @@ impl StartPoint {
             *clone_thresholds,
         )
         .await
-        .ok())
+        {
+            Ok(start_point) => Ok(Some(start_point)),
+            Err(err) if is_not_found(&err) => Ok(None),
+            Err(err) => {
+                let _issue = issue_error(
+                    "Failed to find start point for branch update",
+                    &format!("Unexpected error finding start point: {err}"),
+                    &err,
+                );
+                Ok(None)
+            },
+        }
     }
 
     pub fn head_version_id(&self) -> HeadVersionId {

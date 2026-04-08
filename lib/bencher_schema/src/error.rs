@@ -170,6 +170,10 @@ where
     ))
 }
 
+pub fn is_not_found(error: &HttpError) -> bool {
+    error.status_code == ClientErrorStatusCode::NOT_FOUND
+}
+
 pub fn is_conflict(error: &HttpError) -> bool {
     error.status_code == ClientErrorStatusCode::CONFLICT
 }
