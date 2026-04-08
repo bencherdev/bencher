@@ -10,9 +10,11 @@ Utiliza el hash completo de Git especificado como el [Punto de Inicio][start poi
 - Si `branch` existe y ya sea el `start-point` o el hash especificado son diferentes,
   se creará un nuevo [Head][head] del `branch` desde `start-point` en el hash especificado.
 - Si `branch` no existe y el `start-point` no existe en el hash especificado,
-  entonces el `branch` se creará sin ningún dato histórico.
+  entonces el `branch` se creará a partir de la versión más reciente de `start-point`.
+  Si `start-point` no existe, entonces el `branch` se creará sin ningún dato histórico.
 - Si `branch` existe y el `start-point` no existe en el hash especificado,
-  entonces esta opción se ignora.
+  se creará un nuevo [Head][head] del `branch` a partir de la versión más reciente de `start-point`.
+  Si `start-point` no existe, entonces esta opción se ignora.
 
 Si se crea un nuevo `branch` con un Punto de Inicio,
 entonces se copian todos los datos más recientes y opcionalmente los Umbrales desde el `start-point` en el hash especificado.

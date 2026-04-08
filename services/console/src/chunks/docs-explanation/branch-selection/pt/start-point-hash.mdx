@@ -7,8 +7,10 @@ Use o hash completo do Git especificado como o [Ponto de Início][start point] p
 - Se `branch` não existir, ele será criado a partir de `start-point` no hash especificado.
 - Se `branch` existir e tanto `start-point` quanto o hash especificado forem os mesmos, então esta opção é ignorada.
 - Se `branch` existir e ou o `start-point` ou o hash especificado forem diferentes, um novo [Cabeçalho][head] de `branch` será criado a partir de `start-point` no hash especificado.
-- Se `branch` não existir e o `start-point` não existir no hash especificado, então o `branch` será criado sem nenhum dado histórico.
-- Se `branch` existir e o `start-point` não existir no hash especificado, então esta opção é ignorada.
+- Se `branch` não existir e o `start-point` não existir no hash especificado, então o `branch` será criado a partir da versão mais recente de `start-point`.
+  Se `start-point` não existir, então o `branch` será criado sem nenhum dado histórico.
+- Se `branch` existir e o `start-point` não existir no hash especificado, um novo [Cabeçalho][head] de `branch` será criado a partir da versão mais recente de `start-point`.
+  Se `start-point` não existir, então esta opção é ignorada.
 
 Se um novo `branch` for criado com um Ponto de Início, todos os dados mais recentes e, opcionalmente, Limiares do `start-point` no hash especificado serão copiados. Veja a [opção `--start-point-max-versions`][start point max version option] e a [opção `--start-point-clone-thresholds`][start point clone thresholds option] para mais detalhes.
 

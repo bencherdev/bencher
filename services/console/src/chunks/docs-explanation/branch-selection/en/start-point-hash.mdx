@@ -11,10 +11,12 @@ This option requires [the `--start-point` option][start point option] to be set.
   then this option is ignored.
 - If `branch` does exist and either the `start-point` or the specified hash are different,
   a new `branch` [Head][head] will be created from `start-point` at the specified hash.
-- If `branch` does not exist and the `start-point` does not exist at the specified hash,
-  then the `branch` will be created without any historical data.
-- If `branch` does exist and the `start-point` does not exist at the specified hash,
-  then this option is ignored.
+- If `branch` does not exist and `start-point` does not exist at the specified hash,
+  then the `branch` will be created from the latest `start-point` version.
+  If `start-point` does not exist, then the `branch` will be created without any historical data.
+- If `branch` does exist and `start-point` does not exist at the specified hash,
+  a new `branch` [Head][head] will be created from the latest `start-point` version.
+  If `start-point` does not exist, then this option is ignored.
 
 If a new `branch` is created with a Start Point,
 then all the most recent data and optionally Thresholds from the `start-point` at the specified hash are copied over.

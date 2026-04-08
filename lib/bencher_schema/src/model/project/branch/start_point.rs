@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use dropshot::HttpError;
 
-use crate::{auth_conn, context::ApiContext, model::project::ProjectId};
+use crate::{auth_conn, context::ApiContext, error::is_not_found, model::project::ProjectId};
 
 use super::{
     QueryBranch,
@@ -47,9 +47,24 @@ impl StartPoint {
         max_versions: Option<u32>,
         clone_thresholds: Option<bool>,
     ) -> Result<Self, HttpError> {
+        // If a hash is specified but not found, fall back to the latest version without the hash.
+        // https://github.com/bencherdev/bencher/issues/774
         let head_version =
-            QueryHeadVersion::get_latest_for_branch(context, project_id, &query_branch, hash)
-                .await?;
+            match QueryHeadVersion::get_latest_for_branch(context, project_id, &query_branch, hash)
+                .await
+            {
+                Ok(hv) => hv,
+                Err(err) if hash.is_some() && is_not_found(&err) => {
+                    QueryHeadVersion::get_latest_for_branch(
+                        context,
+                        project_id,
+                        &query_branch,
+                        None,
+                    )
+                    .await?
+                },
+                Err(err) => return Err(err),
+            };
         Self::new(
             context,
             query_branch,
@@ -105,7 +120,9 @@ impl StartPoint {
         else {
             return Ok(None);
         };
-        Self::latest_for_branch(
+        // If updating the start point, it is okay if it does not exist.
+        // https://github.com/bencherdev/bencher/issues/774
+        match Self::latest_for_branch(
             context,
             project_id,
             query_branch,
@@ -114,7 +131,11 @@ impl StartPoint {
             *clone_thresholds,
         )
         .await
-        .map(Some)
+        {
+            Ok(start_point) => Ok(Some(start_point)),
+            Err(err) if is_not_found(&err) => Ok(None),
+            Err(err) => Err(err),
+        }
     }
 
     pub fn head_version_id(&self) -> HeadVersionId {

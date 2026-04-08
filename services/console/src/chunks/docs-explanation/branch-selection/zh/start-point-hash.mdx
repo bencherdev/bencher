@@ -7,8 +7,10 @@
 - 如果`branch`不存在，它将从指定哈希的`start-point`创建。
 - 如果`branch`存在且`start-point`与指定的哈希相同，则忽略此选项。
 - 如果`branch`存在并且`start-point`或指定的哈希不同，将从指定哈希的`start-point`创建新的`branch`[分支头][head]。
-- 如果`branch`不存在且`start-point`在指定哈希处不存在，则该`branch`将在没有任何历史数据的情况下创建。
-- 如果`branch`存在且`start-point`在指定的哈希处不存在，则忽略此选项。
+- 如果`branch`不存在且`start-point`在指定哈希处不存在，则该`branch`将从`start-point`的最新版本创建。
+  如果`start-point`不存在，则该`branch`将在没有任何历史数据的情况下创建。
+- 如果`branch`存在且`start-point`在指定的哈希处不存在，将从`start-point`的最新版本创建新的`branch`[分支头][head]。
+  如果`start-point`不存在，则忽略此选项。
 
 如果通过起始点创建了新的`branch`，那么来自指定哈希的`start-point`的所有最新数据和可选的阈值将被复制。有关更多细节，请参见[`--start-point-max-versions` 选项][start point max version option]和[`--start-point-clone-thresholds` 选项][start point clone thresholds option]。
 
