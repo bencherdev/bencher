@@ -298,7 +298,7 @@ export const encodePath = (fragment?: string | undefined) => {
 	try {
 		const location = useLocation();
 		const back = encodeBase64(
-			`${location.pathname}${fragment ? `#${fragment}` : ""}${location.search}`,
+			`${location.pathname}${location.search}${fragment ? `#${fragment}` : ""}`,
 		);
 		return back;
 	} catch (e) {
