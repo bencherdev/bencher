@@ -19,4 +19,4 @@ runs:
     - name: Install dependencies
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: npm install --include=dev
+      run: npm ci

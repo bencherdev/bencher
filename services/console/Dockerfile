@@ -86,6 +86,7 @@ COPY services/console/package.json package.json
 
 RUN npm ci
 
+COPY services/console/diagrams/output diagrams/output
 COPY services/console/public public
 COPY services/console/src src
 COPY services/console/astro.config.mjs astro.config.mjs
