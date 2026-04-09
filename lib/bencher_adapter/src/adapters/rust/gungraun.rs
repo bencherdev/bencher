@@ -103,7 +103,31 @@ fn single_benchmark<'a>()
         |(benchmark_name, measures)| {
             // trim here to avoid loose `\r` chars at the end of the string because of the
             // `not_benchmark_name_end` parser. It's maybe not a bad idea anyways.
-            let benchmark_name = benchmark_name.trim().parse().ok()?;
+            let trimmed = benchmark_name.trim();
+
+            // As of v0.18.0, the possible values and cases to handle for the first line(s) are
+            //
+            // `file::group::func`, No id (which is fine, the module path is unique in this case)
+            // `file::group::func :description`, No/Empty id
+            // `file::group::func (rest`, No id, the description in this case starts with a `(`
+            // `file::group::func id`, No description, (also fine)
+            // `file::group::func id:`, This was a possibility but not in recent releases
+            // `file::group::func id:description`, The standard case
+            let (module_path, rest) = trimmed.split_once(' ').unwrap_or((trimmed, ""));
+            let id_end = rest
+                .chars()
+                .position(|c| !(c.is_ascii_alphanumeric() || c == '_'))
+                .or(Some(rest.len()))
+                .and_then(|c| (c > 0).then_some(c));
+
+            let benchmark_name = if let Some(id_end) = id_end {
+                // The `None` case should not happen and would be a hard error
+                trimmed.get(0..module_path.len() + 1 + id_end)?
+            } else {
+                module_path
+            };
+
+            let benchmark_name = benchmark_name.parse().ok()?;
             let measures = measures.into_iter().flatten().collect();
 
             Some((benchmark_name, measures))
@@ -514,7 +538,7 @@ pub(crate) mod test_rust_gungraun {
             compare_benchmark(
                 &expected,
                 &results,
-                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short:10",
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short",
             );
         }
 
@@ -531,7 +555,7 @@ pub(crate) mod test_rust_gungraun {
             compare_benchmark(
                 &expected,
                 &results,
-                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long:30",
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long",
             );
         }
     }
@@ -593,7 +617,7 @@ pub(crate) mod test_rust_gungraun {
             compare_benchmark(
                 &expected,
                 &results,
-                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short:10",
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short",
             );
         }
 
@@ -603,7 +627,7 @@ pub(crate) mod test_rust_gungraun {
             compare_benchmark(
                 &expected,
                 &results,
-                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long:30",
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long",
             );
         }
     }
@@ -1011,7 +1035,7 @@ pub(crate) mod test_rust_gungraun {
             compare_benchmark(
                 &expected,
                 &results,
-                "rust_iai_callgrind::bench::multiple_lines id:string with two\nlines",
+                "rust_iai_callgrind::bench::multiple_lines id_0",
             );
         }
 
@@ -1030,7 +1054,7 @@ pub(crate) mod test_rust_gungraun {
             compare_benchmark(
                 &expected,
                 &results,
-                "rust_iai_callgrind::bench::multiple_lines id:string with multiple\nlines\nand one more",
+                "rust_iai_callgrind::bench::multiple_lines id_1",
             );
         }
     }
@@ -1060,7 +1084,7 @@ pub(crate) mod test_rust_gungraun {
             compare_benchmark(
                 &expected,
                 &results,
-                "rust_iai_callgrind::bench::multiple_lines id:first with one line",
+                "rust_iai_callgrind::bench::multiple_lines id_0",
             );
         }
 
@@ -1079,7 +1103,7 @@ pub(crate) mod test_rust_gungraun {
             compare_benchmark(
                 &expected,
                 &results,
-                "rust_iai_callgrind::bench::multiple_lines id:two\nlines",
+                "rust_iai_callgrind::bench::multiple_lines id_1",
             );
         }
 
@@ -1098,9 +1122,60 @@ pub(crate) mod test_rust_gungraun {
             compare_benchmark(
                 &expected,
                 &results,
-                "rust_iai_callgrind::bench::multiple_lines id:last with one line",
+                "rust_iai_callgrind::bench::multiple_lines id_2",
             );
         }
+    }
+
+    #[test]
+    fn name_with_valid_benchmark_ids() {
+        use gungraun::*;
+
+        let results =
+            convert_file_path::<AdapterRustGungraun>("./tool_output/rust/gungraun/valid_ids.txt");
+
+        let mut expected = HashMap::new();
+        expected.extend([(Instructions::SLUG_STR, 1734.0)]);
+
+        assert_eq!(results.inner.len(), 9);
+
+        compare_benchmark(&expected, &results, "rust_gungraun::some_group::no_id");
+        compare_benchmark(
+            &expected,
+            &results,
+            "rust_gungraun::some_group::no_id_but_description_0",
+        );
+        compare_benchmark(
+            &expected,
+            &results,
+            "rust_gungraun::some_group::no_id_but_description_1",
+        );
+        compare_benchmark(
+            &expected,
+            &results,
+            "rust_gungraun::some_group::no_id_multiline_description",
+        );
+        compare_benchmark(&expected, &results, "rust_gungraun::some_group::just_id id");
+        compare_benchmark(
+            &expected,
+            &results,
+            "rust_gungraun::some_group::id_with_alnum id_123_xyz",
+        );
+        compare_benchmark(
+            &expected,
+            &results,
+            "rust_gungraun::some_group::id_with_empty_description id_0",
+        );
+        compare_benchmark(
+            &expected,
+            &results,
+            "rust_gungraun::some_group::id_with_description id_with_description",
+        );
+        compare_benchmark(
+            &expected,
+            &results,
+            "rust_gungraun::some_group::id_with_description id_space_after_color",
+        );
     }
 
     #[derive(Default)]
@@ -1147,7 +1222,7 @@ pub(crate) mod test_rust_gungraun {
             compare_benchmark(
                 &expected,
                 results,
-                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short:10",
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short",
             );
         }
 
@@ -1183,7 +1258,7 @@ pub(crate) mod test_rust_gungraun {
             compare_benchmark(
                 &expected,
                 results,
-                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long:30",
+                "rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long",
             );
         }
     }
