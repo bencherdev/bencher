@@ -496,10 +496,20 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
             }
 
             // If we get here, exec failed
-            eprintln!("exec failed: {}", io::Error::last_os_error());
+            let err = io::Error::last_os_error();
+            eprintln!("exec failed: {err}");
+            // POSIX shell convention:
+            //   126 = command found but not executable (EACCES, ENOEXEC)
+            //   127 = command not found (ENOENT) — also the default for any
+            //         other exec failure, preserving disambiguation from
+            //         normal program exit codes.
+            let code = match err.raw_os_error() {
+                Some(libc::EACCES | libc::ENOEXEC) => 126,
+                _ => 127,
+            };
             // SAFETY: Immediate termination of forked child after exec failure.
             unsafe {
-                libc::_exit(127);
+                libc::_exit(code);
             }
         },
         child_pid => {
