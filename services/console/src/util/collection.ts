@@ -7,7 +7,7 @@ enum Collection {
 	docs_tutorial = "docs_tutorial",
 	docs_how_to = "docs_how_to",
 	docs_explanation = "docs_explanation",
-docs_reference = "docs_reference",
+	docs_reference = "docs_reference",
 	// API
 	api_run = "api_run",
 	api_organizations = "api_organizations",
@@ -45,7 +45,7 @@ export const collectionPath = (collection: Collection) => {
 			return "how-to";
 		case Collection.docs_explanation:
 			return "explanation";
-case Collection.docs_reference:
+		case Collection.docs_reference:
 			return "reference";
 		case Collection.api_run:
 			return "run";

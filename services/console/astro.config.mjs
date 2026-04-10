@@ -109,7 +109,7 @@ export default defineConfig({
 		// Explanation
 		"/docs/[lang]/explanation": "/[lang]/docs/explanation",
 		"/docs/[lang]/explanation/[slug]": "/[lang]/docs/explanation/[slug]",
-// Reference
+		// Reference
 		"/docs/[lang]/reference": "/[lang]/docs/reference",
 		"/docs/[lang]/reference/api": "/[lang]/docs/reference/api",
 		"/docs/[lang]/reference/architecture":
