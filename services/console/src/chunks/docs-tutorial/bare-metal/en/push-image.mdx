@@ -9,7 +9,7 @@ No custom image is needed.
 First, pull the `bencher` CLI image from GitHub Container Registry.
 Run:
 
-<TerminalCommand code="docker pull ghcr.io/bencherdev/bencher:latest" />
+<TerminalCommand code="docker pull --platform linux/amd64 ghcr.io/bencherdev/bencher:latest" />
 
 Next, retag the image for the Bencher OCI registry.
 Replace `YOUR_PROJECT_SLUG` with the project slug from the previous step:
@@ -23,4 +23,4 @@ Then, push the image to the Bencher OCI registry:
 For more details on creating your own custom image,
 see [the Image documentation][image].
 
-[image]: /docs/bare-metal/image/
+[image]: /docs/explanation/images/

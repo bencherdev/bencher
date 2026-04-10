@@ -1,31 +1,28 @@
 import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherRunOutput from "../bencher-run-output.mdx";
 
 ## Rastrear seus Benchmarks Bare Metal
 
 Agora voce esta pronto para rastrear seus resultados de benchmark em hardware dedicado!
 Para isso, voce usara [o subcomando CLI `bencher run`][bencher run]
-com as opcoes `--project`, `--image` e `--spec`
-para executar seus benchmarks em um Runner Bare Metal e coletar os resultados.
-
-Usaremos o subcomando [`bencher noise`][bencher noise] como o comando de benchmark.
-Ele mede o ruido do ambiente no hardware do Runner
-e gera resultados no [Bencher Metric Format (BMF)][bmf] com `--format json`.
-
-Usaremos o [Spec][spec] `intel-v1` para direcionar a um Runner Bare Metal baseado em Intel.
-Consulte a [pagina de Spec][spec] para uma lista completa de Specs disponiveis e seus detalhes de hardware.
+para executar seus benchmarks e coletar os resultados.
 Substitua `YOUR_PROJECT_SLUG` pelo slug do projeto dos passos anteriores e execute:
 
-<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest --spec intel-v1 bencher noise --format json" />
+<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest noise --format json" />
 
-A opcao `--project` seleciona o projeto para rastrear os resultados,
-a opcao `--image` define a imagem OCI para execucao remota,
-e a opcao `--spec` seleciona o Spec de hardware para o Runner.
-Tudo apos as opcoes do `bencher run` e o comando de benchmark que e executado dentro do container.
+Estamos usando [o subcomando `bencher noise`][bencher noise] como nosso comando de benchmark para gerar alguns dados de amostra.
+Ele mede quao ruidoso e o seu ambiente de benchmark.
+Quando usamos [a opcao `--format json`][format option], os resultados sao gerados no [Bencher Metric Format (BMF)][bmf].
+Se tudo funcionar como esperado, o final da saida deve se parecer com isto:
+
+<BencherRunOutput />
 
 Agora voce pode visualizar os resultados de cada um dos seus benchmarks no navegador.
 Clique ou copie e cole os links de `View results`.
+Para [reivindicar esses resultados][claim], clique ou copie e cole o link `Claim this project` em seu navegador.
 
 [bencher run]: /pt/docs/explanation/bencher-run/
 [bencher noise]: /pt/docs/reference/bencher-noise/
+[format option]: /pt/docs/reference/bencher-noise/#--format-format
 [bmf]: /pt/docs/reference/bencher-metric-format/
-[spec]: /pt/docs/bare-metal/spec/
+[claim]: /pt/docs/how-to/claim/

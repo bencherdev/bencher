@@ -1,31 +1,28 @@
 import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherRunOutput from "../bencher-run-output.mdx";
 
 ## 베어 메탈 벤치마크 추적
 
 이제 전용 하드웨어에서 벤치마크 결과를 추적할 준비가 되었습니다!
-이를 위해 [`bencher run` CLI 서브커맨드][bencher run]를
-`--project`, `--image`, `--spec` 옵션과 함께 사용하여
-베어 메탈 Runner에서 벤치마크를 실행하고 결과를 수집합니다.
-
-벤치마크 커맨드로 [`bencher noise`][bencher noise] 서브커맨드를 사용합니다.
-이 커맨드는 Runner 하드웨어의 환경 노이즈를 측정하고
-`--format json`을 사용하여 [Bencher Metric Format (BMF)][bmf]으로 결과를 출력합니다.
-
-Intel 기반 베어 메탈 Runner를 대상으로 `intel-v1` [Spec][spec]을 사용합니다.
-사용 가능한 Spec 전체 목록과 하드웨어 세부 사항은 [Spec 페이지][spec]를 참조하세요.
+이를 위해 [`bencher run` CLI 서브커맨드][bencher run]를 사용하여
+벤치마크를 실행하고 결과를 수집합니다.
 `YOUR_PROJECT_SLUG`를 이전 단계의 프로젝트 슬러그로 교체하고 다음을 실행하세요:
 
-<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest --spec intel-v1 bencher noise --format json" />
+<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest noise --format json" />
 
-`--project` 옵션은 결과를 추적할 프로젝트를 선택하고,
-`--image` 옵션은 원격 실행을 위한 OCI 이미지를 설정하며,
-`--spec` 옵션은 Runner의 하드웨어 Spec을 선택합니다.
-`bencher run` 옵션 뒤에 오는 모든 것은 컨테이너 내부에서 실행되는 벤치마크 커맨드입니다.
+샘플 데이터를 생성하기 위한 벤치마크 커맨드로 [`bencher noise` 서브커맨드][bencher noise]를 사용합니다.
+이는 벤치마크 환경의 노이즈가 얼마나 되는지를 측정합니다.
+[`--format json` 옵션][format option]을 사용하면 결과가 [Bencher Metric Format (BMF)][bmf]로 출력됩니다.
+모든 것이 예상대로 동작하면, 출력의 마지막 부분은 다음과 같이 표시되어야 합니다:
+
+<BencherRunOutput />
 
 이제 브라우저에서 각 벤치마크의 결과를 볼 수 있습니다.
 `View results`의 링크를 클릭하거나 복사하여 붙여넣으세요.
+[이 결과를 청구][claim]하려면, `Claim this project` 링크를 클릭하거나 브라우저에 복사하여 붙여넣으세요.
 
 [bencher run]: /ko/docs/explanation/bencher-run/
 [bencher noise]: /ko/docs/reference/bencher-noise/
+[format option]: /ko/docs/reference/bencher-noise/#--format-format
 [bmf]: /ko/docs/reference/bencher-metric-format/
-[spec]: /ko/docs/bare-metal/spec/
+[claim]: /ko/docs/how-to/claim/

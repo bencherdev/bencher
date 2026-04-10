@@ -9,7 +9,7 @@ Bencher 베어 메탈은 전용 하드웨어에서 OCI 컨테이너 이미지로
 먼저, GitHub Container Registry에서 `bencher` CLI 이미지를 풀합니다.
 다음을 실행하세요:
 
-<TerminalCommand code="docker pull ghcr.io/bencherdev/bencher:latest" />
+<TerminalCommand code="docker pull --platform linux/amd64 ghcr.io/bencherdev/bencher:latest" />
 
 다음으로, Bencher OCI 레지스트리용으로 이미지를 리태깅합니다.
 `YOUR_PROJECT_SLUG`를 이전 단계의 프로젝트 슬러그로 교체하세요:
@@ -25,4 +25,4 @@ Bencher 베어 메탈은 전용 하드웨어에서 OCI 컨테이너 이미지로
 커스텀 이미지를 직접 만드는 방법에 대한 자세한 내용은
 [이미지 문서][image]를 참조하세요.
 
-[image]: /ko/docs/bare-metal/image/
+[image]: /ko/docs/explanation/images/

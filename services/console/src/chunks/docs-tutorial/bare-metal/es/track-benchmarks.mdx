@@ -1,31 +1,28 @@
 import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherRunOutput from "../bencher-run-output.mdx";
 
 ## Rastrea tus Benchmarks en Bare Metal
 
 ¡Ya estás listo para rastrear los resultados de tus benchmarks en hardware dedicado!
 Para hacerlo, usarás [el subcomando CLI `bencher run`][bencher run]
-con las opciones `--project`, `--image` y `--spec`
-para ejecutar tus benchmarks en un Runner Bare Metal y recopilar los resultados.
-
-Usaremos el subcomando [`bencher noise`][bencher noise] como el comando de benchmark.
-Este mide el ruido del entorno en el hardware del Runner
-y genera los resultados en [Bencher Metric Format (BMF)][bmf] con `--format json`.
-
-Usaremos el [Spec][spec] `intel-v1` para apuntar a un Runner Bare Metal basado en Intel.
-Consulta la [página de Spec][spec] para ver la lista completa de Specs disponibles y los detalles de su hardware.
+para ejecutar tus benchmarks y recopilar los resultados.
 Reemplaza `YOUR_PROJECT_SLUG` con el slug de proyecto de los pasos anteriores y ejecuta:
 
-<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest --spec intel-v1 bencher noise --format json" />
+<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest noise --format json" />
 
-La opción `--project` selecciona el proyecto para rastrear los resultados,
-la opción `--image` establece la imagen OCI para la ejecución remota,
-y la opción `--spec` selecciona el Spec de hardware para el Runner.
-Todo lo que sigue después de las opciones de `bencher run` es el comando de benchmark que se ejecuta dentro del contenedor.
+Estamos usando [el subcomando `bencher noise`][bencher noise] como nuestro comando de benchmark para generar algunos datos de muestra.
+Mide qué tan ruidoso es tu entorno de benchmark.
+Cuando usamos [la opción `--format json`][format option], los resultados se generan en [Bencher Metric Format (BMF)][bmf].
+Si todo funciona como se espera, el final de la salida debería verse algo así:
+
+<BencherRunOutput />
 
 Ahora puedes ver los resultados de cada uno de tus benchmarks en el navegador.
 Haz clic o copia y pega los enlaces de `View results`.
+Para [reclamar estos resultados][claim], haz clic o copia y pega el enlace `Claim this project` en tu navegador.
 
 [bencher run]: /es/docs/explanation/bencher-run/
 [bencher noise]: /es/docs/reference/bencher-noise/
+[format option]: /es/docs/reference/bencher-noise/#--format-format
 [bmf]: /es/docs/reference/bencher-metric-format/
-[spec]: /es/docs/bare-metal/spec/
+[claim]: /es/docs/how-to/claim/

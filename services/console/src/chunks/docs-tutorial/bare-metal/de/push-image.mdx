@@ -9,7 +9,7 @@ Es wird kein benutzerdefiniertes Image benötigt.
 Ziehen Sie zunächst das `bencher` CLI-Image aus der GitHub Container Registry.
 Führen Sie aus:
 
-<TerminalCommand code="docker pull ghcr.io/bencherdev/bencher:latest" />
+<TerminalCommand code="docker pull --platform linux/amd64 ghcr.io/bencherdev/bencher:latest" />
 
 Taggen Sie als Nächstes das Image für die Bencher OCI-Registry um.
 Ersetzen Sie `YOUR_PROJECT_SLUG` durch den Projekt-Slug aus dem vorherigen Schritt:
@@ -25,4 +25,4 @@ Melden Sie sich dann bei der Bencher OCI-Registry an und pushen Sie das Image:
 Weitere Details zum Erstellen Ihres eigenen benutzerdefinierten Images finden Sie
 in [der Image-Dokumentation][image].
 
-[image]: /de/docs/bare-metal/image/
+[image]: /de/docs/explanation/images/
