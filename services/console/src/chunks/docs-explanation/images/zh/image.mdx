@@ -1,0 +1,12 @@
+### `--image <IMAGE>`
+
+<br />
+
+设置用于远程[裸机 Runner][runner]执行的 OCI 镜像引用
+（例如 `my-image:tag`、`registry.bencher.dev/my-image:tag`，
+或对于 Bencher Self-Hosted 实例，使用 `localhost:61016/my-image:tag`）。
+仅支持 Bencher API 服务器的 OCI 注册表。
+当设置了 `--image` 时，基准测试命令会在远程裸机 Runner 上运行，
+而不是在本地运行。
+
+[runner]: /zh/docs/explanation/bare-metal/#runner

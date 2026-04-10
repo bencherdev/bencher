@@ -1,0 +1,15 @@
+Os Runners em hardware dedicado executam benchmarks empacotados no [Formato de Imagem OCI][oci].
+Ao usar o subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>,
+selecione uma Image com a opção `--image` para habilitar a execução remota em hardware dedicado.
+
+Ao fazer [Benchmarking Contínuo][continuous benchmarking], que é o benchmarking no CI,
+o uso de runners em hardware dedicado pode reduzir drasticamente a quantidade de ruído nos resultados dos seus benchmarks.
+Além disso, o Bencher Bare Metal pode ser executado fora do CI usando os _exatos mesmos_ runners em hardware dedicado.
+Isso permite que tanto desenvolvedores quanto agentes verifiquem o desempenho das suas alterações de código
+sem terem que passar por um fluxo de trabalho de CI inteiro.
+Veja o [Fluxo de trabalho em hardware dedicado][workflow] para uma visão geral completa.
+
+[oci]: https://github.com/opencontainers/image-spec
+[continuous benchmarking]: /pt/docs/explanation/continuous-benchmarking/
+[workflow]: /pt/docs/explanation/bare-metal/#bare-metal-workflow
+

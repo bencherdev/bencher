@@ -1,0 +1,11 @@
+### `--image <IMAGE>`
+
+<br />
+
+원격 [베어 메탈 Runner][runner] 실행을 위한 OCI 이미지 참조를 설정합니다
+(예: `my-image:tag`, `registry.bencher.dev/my-image:tag`,
+또는 Bencher Self-Hosted 인스턴스의 경우 `localhost:61016/my-image:tag`).
+Bencher API 서버의 OCI 레지스트리만 지원됩니다.
+`--image`가 설정되면, 벤치마크 명령은 로컬 대신 원격 베어 메탈 Runner에서 실행됩니다.
+
+[runner]: /ko/docs/explanation/bare-metal/#runner

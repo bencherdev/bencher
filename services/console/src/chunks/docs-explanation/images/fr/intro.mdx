@@ -1,0 +1,15 @@
+Les Runners sur matériel dédié exécutent des benchmarks empaquetés au [format d'image OCI][oci].
+Lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>,
+sélectionnez une Image avec l'option `--image` pour activer l'exécution distante sur matériel dédié.
+
+Lors de [l'évaluation continue][continuous benchmarking], c'est-à-dire l'évaluation en CI,
+l'utilisation de runners sur matériel dédié peut réduire considérablement le bruit dans vos résultats de benchmarks.
+De plus, Bencher Bare Metal peut être exécuté en dehors de la CI en utilisant _exactement les mêmes_ runners sur matériel dédié.
+Cela permet aux développeurs comme aux agents de vérifier la performance de leurs modifications de code
+sans avoir à passer par un workflow CI complet.
+Consultez le [Flux de travail sur matériel dédié][workflow] pour un aperçu complet.
+
+[oci]: https://github.com/opencontainers/image-spec
+[continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/
+[workflow]: /fr/docs/explanation/bare-metal/#bare-metal-workflow
+
