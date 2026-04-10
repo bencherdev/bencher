@@ -10,11 +10,13 @@ import * as CliPreBuiltBins from "../../chunks/general/cli-pre-built-bins.mdx";
 import * as CliPackages from "../../chunks/general/cli-packages.mdx";
 import * as ConsoleImages from "../../chunks/general/console-images.mdx";
 import * as ApiImages from "../../chunks/general/api-images.mdx";
+import * as RunnerBins from "../../chunks/general/runner-bins.mdx";
 
 const PreBuiltBins = CliPreBuiltBins.Content;
 const Packages = CliPackages.Content;
 const ConsoleImgs = ConsoleImages.Content;
 const ApiImgs = ApiImages.Content;
+const RunnerPreBuiltBins = RunnerBins.Content;
 ---
 
 <LegalLayout
@@ -33,4 +35,7 @@ const ApiImgs = ApiImages.Content;
 
     <h2 id="api-server" class="title is-2">API Server<LinkFragment fragment="api-server"/></h2>
     <ApiImgs />
+
+    <h2 id="bare-metal-runner" class="title is-2">Bare Metal Runner<LinkFragment fragment="bare-metal-runner"/></h2>
+    <RunnerPreBuiltBins />
 </LegalLayout>
