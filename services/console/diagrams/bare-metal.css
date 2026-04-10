@@ -1,0 +1,4 @@
+.actor { fill: #fde0c8 !important; stroke: #e26000 !important; }
+.actor-man line, .actor-man circle { fill: #fde0c8 !important; stroke: #e26000 !important; }
+.actor-line { stroke: #333333 !important; }
+.note { fill: #ffffde !important; stroke: #e26000 !important; }
