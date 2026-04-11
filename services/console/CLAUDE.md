@@ -70,7 +70,7 @@ npm run wasm
 
 Architecture and schema diagrams are defined as Mermaid `.mmd` files in `diagrams/` and pre-rendered to SVGs in `diagrams/output/` using `@mermaid-js/mermaid-cli`.
 
-When modifying `.mmd` files, run `npm run diagrams` and commit the updated SVGs.
+`npm run diagrams` is **not** run automatically by `npm run dev` or `npm run setup` because `mmdc` output is not deterministic and would produce noisy diffs on every dev startup. When modifying `.mmd` files, run `npm run diagrams` manually and commit the updated SVGs.
 
 ## Documentation
 
