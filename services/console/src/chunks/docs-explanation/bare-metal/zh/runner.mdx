@@ -1,0 +1,21 @@
+## Runner
+
+Runner 是一个在专用裸金属硬件上运行的远程基准测试执行器。
+Runner 根据其关联的 [Specs][spec] 轮询 Bencher API 服务器以获取待处理的 [Jobs][job]。
+一旦认领了一个 Job，Runner 会拉取该 Job 指定的 [Image][image]，
+解包 Image，执行基准测试命令，并将结果发送回 Bencher API 服务器。
+每次只执行一个 Job，以确保基准测试不受其他工作负载的影响。
+
+| Runner                   | 平台                | 范围         | 管理者     | [Sandbox][sandbox] | 网络访问       | [层级][pricing]        |
+| ------------------------ | ------------------- | ------------ | ---------- | ------------------ | -------------- | ---------------------- |
+| 共享                     | Bencher Cloud       | 服务器       | Bencher    | 必需               | 否             | Free, Team, Enterprise |
+| 专用                     | Bencher Cloud       | 组织         | Bencher    | 可选               | 否             | Enterprise             |
+| 自定义                   | Bencher Cloud       | 组织         | 用户       | 可选               | 可选           | Enterprise             |
+| 自托管服务器             | Bencher Self-Hosted | 服务器       | 用户       | 可选               | 可选           | Free, Team, Enterprise |
+| 自托管组织               | Bencher Self-Hosted | 组织         | 用户       | 可选               | 可选           | Enterprise             |
+
+[job]: #job
+[spec]: #spec
+[image]: #image
+[sandbox]: #sandbox
+[pricing]: /pricing

@@ -1,0 +1,20 @@
+Un [banc d'essai][testbed] est le nom de l'environnement de test utilisé lors de l'exécution d'un [rapport][report].
+Lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>,
+sélectionnez un banc d'essai avec l'option `--testbed` ou la variable d'environnement `BENCHER_TESTBED`.
+Si aucun n'est spécifié, `Linux`, `macOS` ou `Windows` est utilisé par défaut en fonction du système d'exploitation hôte.
+Si la CLI `bencher` a été compilée pour un système d'exploitation différent, alors `localhost` est utilisé.
+
+Un banc d'essai se voit attribuer une [Spec][spec] lorsqu'il est utilisé pour du benchmarking sur [matériel dédié][bare metal].
+Si ni l'option `--testbed` ni la variable d'environnement `BENCHER_TESTBED` ne sont définies pendant le benchmarking sur matériel dédié, alors le nom de la Spec est utilisé.
+Lorsqu'un rapport est créé, la Spec actuelle du banc d'essai à ce moment est enregistrée avec le rapport.
+Seuls les résultats du même banc d'essai et de la même Spec sont utilisés pour les [Seuils][thresholds].
+Cela vous permet de suivre comment les résultats des benchmarks sont liés au matériel sous-jacent,
+même si la Spec du banc d'essai change au fil du temps.
+Utilisez l'option `--spec` pour définir ou mettre à jour la Spec d'un banc d'essai,
+ou le drapeau `--spec-reset` pour la réinitialiser.
+
+[testbed]: /fr/docs/explanation/benchmarking/#testbed
+[report]: /fr/docs/explanation/benchmarking/#report
+[spec]: /fr/docs/explanation/bare-metal/#spec
+[bare metal]: /fr/docs/explanation/bare-metal/
+[thresholds]: /fr/docs/explanation/thresholds/

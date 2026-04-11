@@ -10,21 +10,22 @@ import * as CliPreBuiltBins from "../../chunks/general/cli-pre-built-bins.mdx";
 import * as CliPackages from "../../chunks/general/cli-packages.mdx";
 import * as ConsoleImages from "../../chunks/general/console-images.mdx";
 import * as ApiImages from "../../chunks/general/api-images.mdx";
-import * as RunnerBins from "../../chunks/general/runner-bins.mdx";
+import * as RunnerBinaries from "../../chunks/general/runner-bins.mdx";
 
 const PreBuiltBins = CliPreBuiltBins.Content;
 const Packages = CliPackages.Content;
 const ConsoleImgs = ConsoleImages.Content;
 const ApiImgs = ApiImages.Content;
-const RunnerPreBuiltBins = RunnerBins.Content;
+const RunnerBins = RunnerBinaries.Content;
 ---
 
 <LegalLayout
   title="Download"
   description="Download Bencher software"
-  heading={`Bencher Download (v${BENCHER_VERSION})`}
+  heading={`Bencher v${BENCHER_VERSION} Download`}
 >
-    <h2 id="cli" class="title is-2">CLI <LinkFragment fragment="cli"/></h2>
+    <Fragment slot="heading">Bencher <code>v{BENCHER_VERSION}</code> Download</Fragment>
+    <h2 id="cli" class="title is-2">Bencher CLI <LinkFragment fragment="cli"/></h2>
     <h3 id="cli-bins" class="title is-3">Pre-Built Binaries <LinkFragment fragment="cli-bins"/></h3>
     <PreBuiltBins />
     <h3 id="cli-packages" class="title is-3">Packages <LinkFragment fragment="cli-packages"/></h3>
@@ -36,6 +37,6 @@ const RunnerPreBuiltBins = RunnerBins.Content;
     <h2 id="api-server" class="title is-2">API Server<LinkFragment fragment="api-server"/></h2>
     <ApiImgs />
 
-    <h2 id="bare-metal-runner" class="title is-2">Bare Metal Runner<LinkFragment fragment="bare-metal-runner"/></h2>
-    <RunnerPreBuiltBins />
+    <h2 id="runner" class="title is-2">Bare Metal Runner<LinkFragment fragment="runner"/></h2>
+    <RunnerBins />
 </LegalLayout>

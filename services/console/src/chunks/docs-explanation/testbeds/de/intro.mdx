@@ -1,0 +1,20 @@
+Eine [Testumgebung][testbed] ist der Name der Testumgebung, die beim Ausführen eines [Berichts][report] verwendet wird.
+Bei Verwendung des <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehls
+wählen Sie eine Testumgebung mit der Option `--testbed` oder der Umgebungsvariablen `BENCHER_TESTBED` aus.
+Wenn keine von beiden angegeben ist, wird `Linux`, `macOS` oder `Windows` basierend auf dem Host-Betriebssystem als Standard verwendet.
+Wenn das bencher CLI für ein anderes Betriebssystem kompiliert wurde, wird `localhost` verwendet.
+
+Einer Testumgebung wird eine [Spec][spec] zugewiesen, wenn sie für [Bare-Metal][bare metal]-Benchmarking verwendet wird.
+Wenn beim Bare-Metal-Benchmarking weder die Option `--testbed` noch die Umgebungsvariable `BENCHER_TESTBED` gesetzt sind, wird der Name der Spec verwendet.
+Wenn ein Bericht erstellt wird, wird die aktuelle Spec der Testumgebung zu diesem Zeitpunkt mit dem Bericht aufgezeichnet.
+Für [Schwellenwerte][thresholds] werden nur Ergebnisse derselben Testumgebung und Spec verwendet.
+So können Sie nachverfolgen, wie Benchmark-Ergebnisse mit der zugrunde liegenden Hardware zusammenhängen,
+auch wenn sich die Spec der Testumgebung im Laufe der Zeit ändert.
+Verwenden Sie die Option `--spec`, um die Spec einer Testumgebung festzulegen oder zu aktualisieren,
+oder das Flag `--spec-reset`, um sie zu löschen.
+
+[testbed]: /de/docs/explanation/benchmarking/#testbed
+[report]: /de/docs/explanation/benchmarking/#report
+[spec]: /de/docs/explanation/bare-metal/#spec
+[bare metal]: /de/docs/explanation/bare-metal/
+[thresholds]: /de/docs/explanation/thresholds/

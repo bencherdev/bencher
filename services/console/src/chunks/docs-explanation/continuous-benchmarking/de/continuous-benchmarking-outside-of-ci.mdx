@@ -1,0 +1,12 @@
+## Kontinuierliches Benchmarking außerhalb von CI
+
+CI ist als abschließende Kontrolle gedacht,
+nicht als der einzige Ort, an dem Tests durchgeführt werden.
+Bencher ist das erste Werkzeug für Kontinuierliches Benchmarking, mit dem Sie Ihre Benchmarks sowohl lokal als auch in CI auf _exakt derselben_ dedizierten Hardware ausführen können.
+Damit können Entwickler und Agenten ihre laufende lokale Arbeit mit jedem beliebigen Punkt der Leistungshistorie ihres Projekts vergleichen.
+
+Wenn Bencher auf lokaler Hardware läuft, erlaubt Ihnen die dedizierte Hardware von Bencher, parallel weiterzuarbeiten.
+Sie müssen nicht alles andere auf Ihrem System anhalten, einen alten Branch auschecken und einen Vergleich ausführen.
+
+Wenn Bencher in einer Cloud-Umgebung läuft, erlaubt Ihnen die dedizierte Hardware von Bencher, den Ergebnissen zu vertrauen.
+Keine Sorge mehr wegen lauter Nachbarn, Throttling oder spontaner Hostwechsel mitten im Lauf.

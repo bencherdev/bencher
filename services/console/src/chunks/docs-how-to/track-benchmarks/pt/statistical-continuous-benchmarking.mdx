@@ -12,7 +12,7 @@ vamos adicionar o [Benchmarking Contínuo][continuous benchmarking] Estatístico
 > antes de continuar!
 
 [quick start]: /pt/docs/tutorial/quick-start/
-[docker self-hosted]: /pt/docs/tutorial/docker/
+[docker self-hosted]: /pt/docs/tutorial/self-hosted/
 [continuous benchmarking]: /pt/docs/explanation/continuous-benchmarking/
 [create an api token]: /pt/docs/how-to/claim/#create-an-api-token
 
@@ -77,8 +77,8 @@ O Limite especificado será então usado para detectar regressões de desempenho
 
 [bencher run]: /pt/docs/explanation/bencher-run/
 [project option]: /pt/docs/explanation/bencher-run/#--project-project
-[branch option]: /pt/docs/explanation/branch-selection/#--branch-branch
-[testbed option]: /pt/docs/explanation/bencher-run/#--testbed-testbed
+[branch option]: /pt/docs/explanation/branches/#--branch-branch
+[testbed option]: /pt/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /pt/docs/explanation/thresholds/#--threshold-measure-measure
 [threshold test option]: /pt/docs/explanation/thresholds/#--threshold-test-test
 [threshold max sample size]: /pt/docs/explanation/thresholds/#--threshold-max-sample-size-size
@@ -140,8 +140,8 @@ do Branch `main` para comparar os resultados de `bencher mock`.
 Em todas as execuções subsequentes, o Bencher irá redefinir o Branch `feature-branch` para o ponto de início,
 e usará os dados e Limites do Branch `main` para detectar regressões de desempenho.
 
-[start point]: /pt/docs/explanation/branch-selection/#--start-point-branch
-[start point hash]: /pt/docs/explanation/branch-selection/#--start-point-hash-hash
-[start point clone thresholds]: /pt/docs/explanation/branch-selection/#--start-point-clone-thresholds
-[start point reset]: /pt/docs/explanation/branch-selection/#--start-point-reset
+[start point]: /pt/docs/explanation/branches/#--start-point-branch
+[start point hash]: /pt/docs/explanation/branches/#--start-point-hash-hash
+[start point clone thresholds]: /pt/docs/explanation/branches/#--start-point-clone-thresholds
+[start point reset]: /pt/docs/explanation/branches/#--start-point-reset
 [thresholds]: /pt/docs/explanation/thresholds/

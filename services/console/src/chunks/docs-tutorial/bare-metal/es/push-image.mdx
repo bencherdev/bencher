@@ -1,0 +1,28 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## Sube tu Imagen de Benchmark
+
+Bencher Bare Metal ejecuta benchmarks empaquetados como imágenes de contenedor OCI en hardware dedicado.
+Para este inicio rápido, usaremos la imagen Docker de la CLI de `bencher` como nuestra imagen de benchmark.
+No se necesita una imagen personalizada.
+
+Primero, descarga la imagen de la CLI de `bencher` desde GitHub Container Registry.
+Ejecuta:
+
+<TerminalCommand code="docker pull --platform linux/amd64 ghcr.io/bencherdev/bencher:latest" />
+
+A continuación, reetiqueta la imagen para el registro OCI de Bencher.
+Reemplaza `YOUR_PROJECT_SLUG` con el slug de proyecto del paso anterior:
+
+<TerminalCommand code="docker tag ghcr.io/bencherdev/bencher:latest registry.bencher.dev/YOUR_PROJECT_SLUG:latest" />
+
+Luego, inicia sesión en el registro OCI de Bencher y sube la imagen:
+
+<TerminalCommand code="docker login registry.bencher.dev" />
+
+<TerminalCommand code="docker push registry.bencher.dev/YOUR_PROJECT_SLUG:latest" />
+
+Para más detalles sobre cómo crear tu propia imagen personalizada,
+consulta [la documentación de Imagen][image].
+
+[image]: /es/docs/explanation/images/

@@ -1,0 +1,12 @@
+### `--image <IMAGE>`
+
+<br />
+
+Define a referência da imagem OCI para a execução remota no [Runner em hardware dedicado][runner]
+(por exemplo, `my-image:tag`, `registry.bencher.dev/my-image:tag`,
+ou para instâncias do Bencher Self-Hosted `localhost:61016/my-image:tag`).
+Apenas o registry OCI do servidor da API do Bencher é suportado.
+Quando `--image` é definido, o comando de benchmark é executado em um Runner em hardware dedicado remoto
+em vez de localmente.
+
+[runner]: /pt/docs/explanation/bare-metal/#runner

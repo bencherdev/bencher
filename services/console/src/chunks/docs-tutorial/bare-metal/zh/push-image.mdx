@@ -1,0 +1,27 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## 推送您的基准测试镜像
+
+Bencher 裸机在专用硬件上运行打包为 OCI 容器镜像的基准测试。
+在本快速入门中，我们将使用 `bencher` CLI Docker 镜像作为基准测试镜像。
+无需自定义镜像。
+
+首先，从 GitHub Container Registry 拉取 `bencher` CLI 镜像。运行：
+
+<TerminalCommand code="docker pull --platform linux/amd64 ghcr.io/bencherdev/bencher:latest" />
+
+接下来，为 Bencher OCI 注册表重新标记镜像。
+将 `YOUR_PROJECT_SLUG` 替换为上一步中的项目 slug：
+
+<TerminalCommand code="docker tag ghcr.io/bencherdev/bencher:latest registry.bencher.dev/YOUR_PROJECT_SLUG:latest" />
+
+然后，登录 Bencher OCI 注册表并推送镜像：
+
+<TerminalCommand code="docker login registry.bencher.dev" />
+
+<TerminalCommand code="docker push registry.bencher.dev/YOUR_PROJECT_SLUG:latest" />
+
+有关创建自定义镜像的更多详情，
+请参阅[镜像文档][image]。
+
+[image]: /zh/docs/explanation/images/

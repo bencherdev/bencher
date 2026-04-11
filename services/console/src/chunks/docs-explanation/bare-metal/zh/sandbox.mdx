@@ -1,0 +1,10 @@
+## Sandbox
+
+Sandbox 是一种隔离机制，允许在 Runner 上安全地实现多租户。
+Bencher Bare Metal 使用 [Firecracker][firecracker] microVM 作为默认的 Sandbox 实现。
+不使用 Sandbox 运行需要在 Bencher Cloud 上使用专用或自定义 Runner（请联系 <a href="mailto:plus@bencher.dev">Bencher Plus 支持</a>获取更多信息）或使用 Bencher Self-Hosted。
+当 Runner 配置为使用 Sandbox 时，每个 Job 都在该 Sandbox 中执行。
+请参阅 [`runner` 文档][runner]了解完整概述。
+
+[firecracker]: https://github.com/firecracker-microvm/firecracker
+[runner]: #runner

@@ -1,0 +1,44 @@
+### `--spec <SPEC>`
+
+<br />
+
+Specのスラグまたは UUID を指定します。
+Specは、[Runner][runner]が利用できるリソースを記述するハードウェア仕様です:
+
+1. オペレーティングシステム (OS)
+   1. Linux
+   2. macOS
+   3. Windows
+2. CPUアーキテクチャ
+   1. x86_64
+   2. ARM64
+3. Sandbox
+   1. Firecracker microVM
+   2. Sandboxなし
+4. CPU数
+5. メモリサイズ (RAM)
+6. ディスクサイズ
+7. ネットワークアクセス
+
+現在、[Bencher Cloud][bencher cloud] では以下の Spec が利用可能です:
+
+|   名前   |   スラグ   |  OS   | アーキテクチャ |       Sandbox       | CPU |  メモリ  | ディスク  | ネットワーク |
+| :------: | :--------: | :---: | :------------: | :-----------------: | :-: | :------: | :-------: | :----------: |
+| Intel v1 | `intel-v1` | Linux |     x86_64     | Firecracker microVM |  4  | 48.0 GiB | 128.0 GiB |     なし     |
+
+Specはサーバースコープまたは組織スコープのいずれかであり、
+同じSpecを同じサーバー上の複数のテストベッドまたは同じ組織内で共有できます。
+
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>を使用する際のSpec選択の優先順位は次のとおりです:
+1. `--spec` オプション
+2. テストベッドに割り当てられたSpec
+3. デフォルトの組織スコープのSpec
+4. デフォルトのサーバースコープのSpec
+
+選択されたSpecは現在の[テストベッド][testbed]に割り当てられます。
+このオプションには [`--image` オプション][image]の設定が必要です。
+
+[runner]: /ja/docs/explanation/bare-metal/#runner
+[image]: /ja/docs/explanation/images/#--image-image
+[testbed]: /ja/docs/explanation/benchmarking/#testbed
+[bencher cloud]: https://bencher.dev

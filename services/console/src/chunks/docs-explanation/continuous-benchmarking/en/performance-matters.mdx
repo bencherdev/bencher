@@ -1,0 +1,41 @@
+## Performance Matters
+
+Myth: You can't notice 100ms of latency
+
+It's common to hear people claim that humans can't perceive 100ms of latency.
+A [Nielsen Group article on response times](https://www.nngroup.com/articles/response-times-3-important-limits/) is often cited for this claim.
+
+> **0.1 second** is about the limit for having the user feel that the system is **reacting instantaneously**, meaning that no special feedback is necessary except to display the result.
+>
+> - Jakob Nielsen, 1 Jan __*1993*__
+
+But that simply is not true.
+On some tasks, people can perceive [as little as 2ms of latency](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf).
+An easy way to prove this is an [experiment from Dan Luu](https://danluu.com/input-lag/#appendix-why-measure-latency): open your terminal and run `sleep 0; echo "ping"` and then run `sleep 0.1; echo "pong"`. You noticed the difference right‽
+
+Another common point of confusion is the distinction between the perception of latency and human reaction times. Even though it takes [around 200ms to respond to a visual stimulus](https://humanbenchmark.com/tests/reactiontime), that is independent from the perception of the event itself. By analogy, you can notice that your train is two minutes late (perceived latency) even though the train ride takes two hours (reaction time).
+
+Performance matters! [Performance is a feature](https://blog.codinghorror.com/performance-is-a-feature)!
+
+- Every 100ms faster → 1% more conversions ([Mobify](https://web.dev/why-speed-matters/), earning +$380,000/yr)
+- 50% faster → 12% more sales ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 20% faster → 10% more conversions ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- 40% faster → 15% more sign-ups ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 850ms faster → 7% more conversions ([COOK](https://web.dev/why-speed-matters/))
+- Every 1 second slower → 10% fewer users ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+With the death of Moore's Law, workloads that can run in parallel will need to parallelized.
+However, most workloads need to run in series,
+and simply throwing more compute at the problem is quickly becoming an intractable and expensive solution.
+
+Continuous Benchmarking is a key component to developing and maintaining
+performant modern software in the face of this change.
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/docs/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Moore's Law from https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>

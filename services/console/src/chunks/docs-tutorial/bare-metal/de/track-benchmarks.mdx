@@ -1,0 +1,28 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherRunOutput from "../bencher-run-output.mdx";
+
+## Ihre Bare Metal Benchmarks verfolgen
+
+Sie sind jetzt bereit, Ihre Benchmark-Ergebnisse auf dedizierter Hardware zu verfolgen!
+Dazu verwenden Sie [den `bencher run` CLI-Unterbefehl][bencher run],
+um Ihre Benchmarks auszuführen und die Ergebnisse zu erfassen.
+Ersetzen Sie `YOUR_PROJECT_SLUG` durch den Projekt-Slug aus den vorherigen Schritten und führen Sie aus:
+
+<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest noise --format json" />
+
+Wir verwenden [den `bencher noise`-Unterbefehl][bencher noise] als unseren Benchmark-Befehl, um einige Beispieldaten zu generieren.
+Er misst, wie verrauscht Ihre Benchmark-Umgebung ist.
+Wenn wir [die Option `--format json`][format option] verwenden, werden die Ergebnisse im [Bencher Metric Format (BMF)][bmf] ausgegeben.
+Wenn alles wie erwartet funktioniert, sollte das Ende der Ausgabe etwa so aussehen:
+
+<BencherRunOutput />
+
+Sie können nun die Ergebnisse für jeden Ihrer Benchmarks im Browser ansehen.
+Klicken Sie auf die Links unter `View results` oder kopieren Sie sie.
+Um [diese Ergebnisse zu beanspruchen][claim], klicken Sie auf den `Claim this project`-Link oder kopieren Sie ihn in Ihren Browser.
+
+[bencher run]: /de/docs/explanation/bencher-run/
+[bencher noise]: /de/docs/reference/bencher-noise/
+[format option]: /de/docs/reference/bencher-noise/#--format-format
+[bmf]: /de/docs/reference/bencher-metric-format/
+[claim]: /de/docs/how-to/claim/

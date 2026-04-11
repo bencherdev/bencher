@@ -1,0 +1,12 @@
+## Benchmarking Continuo Fuera de CI
+
+CI está pensado como una verificación final,
+no como el único lugar donde se realizan las pruebas.
+Bencher es la primera herramienta de Benchmarking Continuo que te permite ejecutar tus benchmarks sobre el _exacto mismo_ hardware dedicado tanto localmente como en CI.
+Esto permite que tanto desarrolladores como agentes comparen su trabajo local en curso contra cualquier punto del historial de rendimiento del proyecto.
+
+Al ejecutarse en hardware local, Bencher Bare Metal te permite seguir haciendo otras tareas en paralelo.
+No necesitas detener todo lo demás en tu sistema, traer una rama antigua y ejecutar una comparación.
+
+Al ejecutarse en un entorno en la nube, Bencher Bare Metal te permite confiar en los resultados.
+No tienes que preocuparte por vecinos ruidosos, limitaciones de recursos, ni por cambios de host a mitad de la ejecución.

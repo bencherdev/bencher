@@ -1,0 +1,17 @@
+## Job
+
+Un Job rastrea el ciclo de vida de una solicitud de ejecución remota de benchmark.
+Se puede solicitar un tiempo de espera personalizado por Job con la opción `--job-timeout`.
+Sin embargo, los siguientes tiempos de espera de Job siempre se aplican con los límites de concurrencia proporcionados:
+
+| [Nivel][pricing] | Tiempo de espera del Job               | Concurrencia de Jobs |
+| ---------------- | -------------------------------------- | -------------------- |
+| Sin reclamar     | 1 minuto                               | 1 por IP de origen   |
+| Free             | 5 minutos                              | 1 por Organización   |
+| Team             | Ilimitado (predeterminado: 60 minutos) | Ilimitada            |
+| Enterprise       | Ilimitado (predeterminado: 60 minutos) | Ilimitada            |
+
+Consulta [la documentación del Job][job] para una descripción completa.
+
+[pricing]: /pricing
+[job]: /docs/bare-metal/job

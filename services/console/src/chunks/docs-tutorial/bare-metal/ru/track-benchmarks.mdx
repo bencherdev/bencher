@@ -1,0 +1,28 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+import BencherRunOutput from "../bencher-run-output.mdx";
+
+## Отслеживание бенчмарков Bare Metal
+
+Теперь вы готовы отслеживать результаты бенчмарков на выделенном оборудовании!
+Для этого вы будете использовать [CLI-подкоманду `bencher run`][bencher run],
+чтобы запустить бенчмарки и собрать результаты.
+Замените `YOUR_PROJECT_SLUG` на slug проекта из предыдущих шагов и выполните:
+
+<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest noise --format json" />
+
+Мы используем [подкоманду `bencher noise`][bencher noise] в качестве команды бенчмарка для генерации примеров данных.
+Она измеряет, насколько шумным является ваше окружение бенчмарка.
+Когда мы используем [опцию `--format json`][format option], результаты выводятся в [Bencher Metric Format (BMF)][bmf].
+Если всё работает как ожидается, конец вывода должен выглядеть примерно так:
+
+<BencherRunOutput />
+
+Теперь вы можете просмотреть результаты каждого из ваших бенчмарков в браузере.
+Нажмите или скопируйте ссылки из `View results`.
+Чтобы [заявить права на эти результаты][claim], нажмите или скопируйте ссылку `Claim this project` в свой браузер.
+
+[bencher run]: /ru/docs/explanation/bencher-run/
+[bencher noise]: /ru/docs/reference/bencher-noise/
+[format option]: /ru/docs/reference/bencher-noise/#--format-format
+[bmf]: /ru/docs/reference/bencher-metric-format/
+[claim]: /ru/docs/how-to/claim/

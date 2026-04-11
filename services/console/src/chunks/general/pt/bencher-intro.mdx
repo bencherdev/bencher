@@ -1,10 +1,10 @@
-[Bencher](/pricing) é um conjunto de ferramentas de benchmarking contínuas.
+[Bencher](/pricing) é um conjunto de ferramentas de [benchmarking contínuo](/docs/explanation/continuous-benchmarking/).
 Já teve algum impacto de regressão de desempenho nos seus usuários?
 Bencher poderia ter prevenido isso.
-Bencher permite que você detecte e previna regressões de desempenho _antes_ que cheguem à produção.
+Bencher permite que você detecte e previna regressões de desempenho _antes_ que sejam mescladas.
 
-- **Execute**: Execute seus benchmarks localmente ou no CI usando suas ferramentas de benchmarking favoritas. O CLI `bencher` simplesmente envolve seu harness de benchmark existente e armazena seus resultados.
+- **Execute**: Execute seus benchmarks localmente ou no CI usando os _exatos mesmos_ runners bare metal e suas ferramentas de benchmarking favoritas. O CLI `bencher` orquestra a execução dos seus benchmarks em bare metal e armazena seus resultados.
 - **Rastreie**: Acompanhe os resultados de seus benchmarks ao longo do tempo. Monitore, consulte e faça gráficos dos resultados usando o console web do Bencher baseado na branch de origem, testbed e medida.
-- **Capture**: Capture regressões de desempenho no CI. Bencher usa análises personalizáveis e de última geração para detectar regressões de desempenho antes que elas cheguem à produção.
+- **Capture**: Capture regressões de desempenho localmente ou no CI usando o _exato mesmo_ hardware bare metal. Bencher usa análises personalizáveis e de última geração para detectar regressões de desempenho antes que sejam mescladas.
 
-Pelos mesmos motivos que os testes de unidade são executados no CI para prevenir regressões de funcionalidades, benchmarks deveriam ser executados no CI com o Bencher para prevenir regressões de desempenho. Bugs de desempenho são bugs!
+Pelos mesmos motivos que os testes de unidade são executados para prevenir regressões de funcionalidades, benchmarks deveriam ser executados com o Bencher para prevenir regressões de desempenho. Bugs de desempenho são bugs!

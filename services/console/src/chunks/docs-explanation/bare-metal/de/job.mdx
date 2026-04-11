@@ -1,0 +1,17 @@
+## Job
+
+Ein Job verfolgt den Lebenszyklus einer entfernten Benchmark-Ausführungsanfrage.
+Ein benutzerdefiniertes Timeout kann pro Job mit der `--job-timeout`-Option angefordert werden.
+Allerdings werden die folgenden Job-Timeouts immer mit den angegebenen Parallelitätslimits durchgesetzt:
+
+| [Tarif][pricing] | Job-Timeout                          | Job-Parallelität        |
+| ---------------- | ------------------------------------ | ----------------------- |
+| Unclaimed        | 1 Minute                             | 1 pro Quell-IP          |
+| Free             | 5 Minuten                            | 1 pro Organisation      |
+| Team             | Unbegrenzt (Standard: 60 Minuten)    | Unbegrenzt              |
+| Enterprise       | Unbegrenzt (Standard: 60 Minuten)    | Unbegrenzt              |
+
+Siehe [die Job-Dokumentation][job] für eine vollständige Übersicht.
+
+[pricing]: /pricing
+[job]: /docs/bare-metal/job

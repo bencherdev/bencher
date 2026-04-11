@@ -1,0 +1,23 @@
+%%{init: {'theme': 'base'}}%%
+sequenceDiagram
+    actor User
+    participant Registry as OCI Registry
+    participant API as API Server
+    participant Runner as Bare Metal Runner
+
+    User->>User: docker build --tag image:tag
+    User->>Registry: docker push image:tag
+    User->>API: bencher run --image image:tag
+    API->>API: Create pending Job
+    API->>API: Create Report linked to Job
+    Runner->>API: Poll for Jobs matching Specs
+    API-->>Runner: Assign Job
+    Runner->>Registry: Pull Image
+    Registry-->>Runner: Image layers
+    Runner->>Runner: Unpack Image
+    Runner->>Runner: Run benchmark command
+    Runner->>API: Submit benchmark results
+    API->>API: Parse via benchmark harness adapter
+    API->>API: Attach results to Report
+    User->>API: Poll for Job completion
+    API-->>User: Completed Report

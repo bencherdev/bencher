@@ -1,0 +1,24 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## 创建项目
+
+在推送基准测试镜像之前，您需要一个 Bencher 项目。
+最简单的方法是运行 [`bencher run` CLI 子命令][bencher run]
+配合 [`bencher mock` 子命令][bencher mock]。运行：
+
+<TerminalCommand code='bencher run "bencher mock --count 0"' />
+
+这会在 Bencher Cloud 上创建一个新项目。
+查看输出中的 `View report` URL。
+您的项目 slug 是 URL 中 `/perf/` 后面的路径段。
+例如，如果 URL 是：
+
+```
+https://bencher.dev/perf/my-project-abc1234/reports/709d3476-51a4-4939-9584-75d9a2c04c54
+```
+
+那么您的项目 slug 就是 `my-project-abc1234`。
+在后续步骤中您将需要这个项目 slug。
+
+[bencher run]: /zh/docs/explanation/bencher-run/
+[bencher mock]: /zh/docs/reference/bencher-metric-format/#bencher-mock

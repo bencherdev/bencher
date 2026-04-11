@@ -1,0 +1,27 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## Отправка образа бенчмарка
+
+Bencher Bare Metal запускает бенчмарки, упакованные как OCI-образы контейнеров, на выделенном оборудовании.
+Для этого быстрого старта мы будем использовать Docker-образ CLI `bencher` в качестве образа бенчмарка.
+Пользовательский образ не требуется.
+
+Сначала загрузите образ CLI `bencher` из GitHub Container Registry. Выполните:
+
+<TerminalCommand code="docker pull --platform linux/amd64 ghcr.io/bencherdev/bencher:latest" />
+
+Затем перетегируйте образ для OCI-реестра Bencher.
+Замените `YOUR_PROJECT_SLUG` на slug проекта из предыдущего шага:
+
+<TerminalCommand code="docker tag ghcr.io/bencherdev/bencher:latest registry.bencher.dev/YOUR_PROJECT_SLUG:latest" />
+
+После этого войдите в OCI-реестр Bencher и отправьте образ:
+
+<TerminalCommand code="docker login registry.bencher.dev" />
+
+<TerminalCommand code="docker push registry.bencher.dev/YOUR_PROJECT_SLUG:latest" />
+
+Для получения подробной информации о создании собственного пользовательского образа
+смотрите [документацию по образам][image].
+
+[image]: /ru/docs/explanation/images/

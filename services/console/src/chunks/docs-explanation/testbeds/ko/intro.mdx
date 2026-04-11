@@ -1,0 +1,20 @@
+[테스트베드][testbed]는 [리포트][report]를 실행할 때 사용되는 테스트 환경의 이름입니다.
+<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어를 사용할 때,
+`--testbed` 옵션 또는 `BENCHER_TESTBED` 환경 변수로 테스트베드를 선택하세요.
+둘 다 지정되지 않은 경우, 호스트 운영 체제를 기준으로 `Linux`, `macOS`, 또는 `Windows`가 기본값으로 사용됩니다.
+`bencher` CLI가 다른 운영 체제용으로 컴파일되었다면, `localhost`가 사용됩니다.
+
+테스트베드가 [베어 메탈][bare metal] 벤치마킹에 사용될 때 [Spec][spec]이 할당됩니다.
+베어 메탈 벤치마킹 중에 `--testbed` 옵션과 `BENCHER_TESTBED` 환경 변수가 모두 설정되지 않은 경우, Spec의 이름이 사용됩니다.
+리포트가 생성되면, 해당 시점의 테스트베드의 현재 Spec이 리포트에 기록됩니다.
+동일한 테스트베드와 Spec의 결과만 [임계값][thresholds]에 사용됩니다.
+이를 통해 테스트베드의 Spec이 시간이 지남에 따라 변경되더라도
+벤치마크 결과가 기반 하드웨어와 어떻게 관련되는지 추적할 수 있습니다.
+`--spec` 옵션을 사용하여 테스트베드의 Spec을 설정하거나 업데이트하고,
+`--spec-reset` 플래그를 사용하여 초기화하세요.
+
+[testbed]: /ko/docs/explanation/benchmarking/#testbed
+[report]: /ko/docs/explanation/benchmarking/#report
+[spec]: /ko/docs/explanation/bare-metal/#spec
+[bare metal]: /ko/docs/explanation/bare-metal/
+[thresholds]: /ko/docs/explanation/thresholds/

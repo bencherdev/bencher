@@ -10,7 +10,7 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 > 🐰 确保您已[创建 API 令牌并将其设置为`BENCHER_API_TOKEN`环境变量][create an api token]后再继续！
 
 [quick start]: /zh/docs/tutorial/quick-start/
-[docker self-hosted]: /zh/docs/tutorial/docker/
+[docker self-hosted]: /zh/docs/tutorial/self-hosted/
 [continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
 [create an api token]: /zh/docs/how-to/claim/#create-an-api-token
 
@@ -39,9 +39,9 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 
 [bencher run]: /zh/docs/explanation/bencher-run/
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
-[branch option]: /zh/docs/explanation/branch-selection/#--branch-branch
-[start point reset]: /zh/docs/explanation/branch-selection/#--start-point-reset
-[testbed option]: /zh/docs/explanation/bencher-run/#--testbed-testbed
+[branch option]: /zh/docs/explanation/branches/#--branch-branch
+[start point reset]: /zh/docs/explanation/branches/#--start-point-reset
+[testbed option]: /zh/docs/explanation/testbeds/#--testbed-testbed
 [bmf]: /zh/docs/reference/bencher-metric-format/
 [adapter json]: /zh/docs/explanation/adapters/#-json
 [command argument]: /zh/docs/explanation/bencher-run/#benchmark-command
@@ -73,8 +73,8 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 
 每次在 CI 中运行此命令时，它都将`feature-branch`的结果与`main`的最新结果进行比较。然后使用指定的阈值检测性能回归。
 
-[start point]: /zh/docs/explanation/branch-selection/#--start-point-branch
-[start point reset]: /zh/docs/explanation/branch-selection/#--start-point-reset
+[start point]: /zh/docs/explanation/branches/#--start-point-branch
+[start point reset]: /zh/docs/explanation/branches/#--start-point-reset
 [threshold measure option]: /zh/docs/explanation/thresholds/#--threshold-measure-measure
 [threshold test option]: /zh/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /zh/docs/explanation/thresholds/#--threshold-upper-boundary-boundary

@@ -10,7 +10,7 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 > [APIトークンを作成して`BENCHER_API_TOKEN`環境変数として設定したことを確認してください][create an api token]！
 
 [quick start]: /ja/docs/tutorial/quick-start/
-[docker self-hosted]: /ja/docs/tutorial/docker/
+[docker self-hosted]: /ja/docs/tutorial/self-hosted/
 [continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
 [create an api token]: /ja/docs/how-to/claim/#create-an-api-token
 
@@ -74,8 +74,8 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 
 [bencher run]: /ja/docs/explanation/bencher-run/
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
-[branch option]: /ja/docs/explanation/branch-selection/#--branch-branch
-[testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
+[branch option]: /ja/docs/explanation/branches/#--branch-branch
+[testbed option]: /ja/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /ja/docs/explanation/thresholds/#--threshold-measure-measure
 [threshold test option]: /ja/docs/explanation/thresholds/#--threshold-test-test
 [threshold max sample size]: /ja/docs/explanation/thresholds/#--threshold-max-sample-size-size
@@ -138,8 +138,8 @@ Bencherは`feature-branch`ブランチを作成します（まだ存在してい
 その後のすべての実行では、Bencherは`feature-branch`ブランチを開始点にリセットし、
 `main`ブランチのデータとしきい値を使用してパフォーマンスの低下を検出します。
 
-[start point]: /ja/docs/explanation/branch-selection/#--start-point-branch
-[start point hash]: /ja/docs/explanation/branch-selection/#--start-point-hash-hash
-[start point clone thresholds]: /ja/docs/explanation/branch-selection/#--start-point-clone-thresholds
-[start point reset]: /ja/docs/explanation/branch-selection/#--start-point-reset
+[start point]: /ja/docs/explanation/branches/#--start-point-branch
+[start point hash]: /ja/docs/explanation/branches/#--start-point-hash-hash
+[start point clone thresholds]: /ja/docs/explanation/branches/#--start-point-clone-thresholds
+[start point reset]: /ja/docs/explanation/branches/#--start-point-reset
 [thresholds]: /ja/docs/explanation/thresholds/

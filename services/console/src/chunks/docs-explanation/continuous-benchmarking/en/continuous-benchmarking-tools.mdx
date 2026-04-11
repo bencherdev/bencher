@@ -1,0 +1,14 @@
+## Continuous Benchmarking Tools
+
+Before creating Bencher, we set out to find a tool that could:
+
+- Execute benchmarks on the _exact same_ bare metal hardware both locally and in CI
+- Track benchmarks across multiple languages
+- Seamlessly ingest language standard benchmark harness output
+- Extensible for custom benchmark harness output
+- Open source and able to self-host
+- Work with multiple CI hosts
+- User authentication and authorization
+
+Unfortunately, nothing that met all of these criteria existed.
+See [prior art](/docs/reference/prior-art/) from a comprehensive list of the existing benchmarking tools that we took inspiration from.

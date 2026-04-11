@@ -1,0 +1,21 @@
+## Runner
+
+Ein Runner ist ein entfernter Benchmark-Executor, der auf dedizierter Bare-Metal-Hardware läuft.
+Der Runner fragt den Bencher API-Server nach ausstehenden [Jobs][job] ab, basierend auf seinen zugeordneten [Specs][spec].
+Sobald ein Job beansprucht wird, lädt der Runner das angegebene [Image][image] für den Job herunter,
+entpackt das Image, führt den Benchmark-Befehl aus und sendet die Ergebnisse an den Bencher API-Server zurück.
+Es wird immer nur ein Job gleichzeitig ausgeführt, um sicherzustellen, dass die Benchmarks nicht von anderen Workloads beeinflusst werden.
+
+| Runner                   | Plattform           | Bereich      | Verwaltet von | [Sandbox][sandbox] | Netzwerkzugriff | [Tarif][pricing]       |
+| ------------------------ | ------------------- | ------------ | ------------- | ------------------ | --------------- | ---------------------- |
+| Shared                   | Bencher Cloud       | Server       | Bencher       | Erforderlich       | Nein            | Free, Team, Enterprise |
+| Dedicated                | Bencher Cloud       | Organisation | Bencher       | Optional           | Nein            | Enterprise             |
+| Custom                   | Bencher Cloud       | Organisation | Benutzer      | Optional           | Optional        | Enterprise             |
+| Self-Hosted Server       | Bencher Self-Hosted | Server       | Benutzer      | Optional           | Optional        | Free, Team, Enterprise |
+| Self-Hosted Organisation | Bencher Self-Hosted | Organisation | Benutzer      | Optional           | Optional        | Enterprise             |
+
+[job]: #job
+[spec]: #spec
+[image]: #image
+[sandbox]: #sandbox
+[pricing]: /pricing

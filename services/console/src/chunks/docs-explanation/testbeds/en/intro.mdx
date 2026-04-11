@@ -1,0 +1,22 @@
+A [Testbed][testbed] is the name of the testing environment used when running a [Report][report].
+When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
+select a Testbed with the `--testbed` option or the `BENCHER_TESTBED` environment variable.
+If neither is specified, `Linux`, `macOS`, or `Windows` is used as the default based on the host operating system.
+If the bencher CLI has been compiled for a different operating system, then `localhost` is used.
+
+A Testbed will have a [Spec][spec] assigned when it is used for [Bare Metal][bare metal] benchmarking.
+If neither the `--testbed` option nor the `BENCHER_TESTBED` environment variable are set during Bare Metal benchmarking, then the Spec's name is used.
+When a Report is created, the Testbed's current Spec at that point in time is recorded with the Report.
+Only results from the same Testbed and Spec are used for [Thresholds][thresholds].
+This lets you track how benchmark results relate to the underlying hardware,
+even if the Testbed's Spec changes over time.
+Use the `--spec` option to set or update a Testbed's Spec,
+or the `--spec-reset` flag to clear it.
+
+
+
+[testbed]: /docs/explanation/benchmarking/#testbed
+[report]: /docs/explanation/benchmarking/#report
+[spec]: /docs/explanation/bare-metal/#spec
+[bare metal]: /docs/explanation/bare-metal/
+[thresholds]: /docs/explanation/thresholds/

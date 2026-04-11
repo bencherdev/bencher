@@ -1,0 +1,10 @@
+## Sandbox
+
+Sandboxは、Runner上で安全なマルチテナンシーを実現する分離メカニズムです。
+Bencher Bare Metalは、デフォルトのSandbox実装として[Firecracker][firecracker] microVMを使用します。
+Sandboxなしでの実行には、Bencher CloudのDedicatedまたはCustom Runner（詳細は<a href="mailto:plus@bencher.dev">Bencher Plusサポート</a>にお問い合わせください）またはBencher Self-Hostedが必要です。
+RunnerがSandboxを使用するように設定されている場合、各Jobはそのサンドボックス内で実行されます。
+完全な概要については、[`runner`ドキュメント][runner]を参照してください。
+
+[firecracker]: https://github.com/firecracker-microvm/firecracker
+[runner]: #runner

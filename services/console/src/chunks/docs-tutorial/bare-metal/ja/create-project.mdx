@@ -1,0 +1,24 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## プロジェクトを作成する
+
+ベンチマークイメージをプッシュする前に、Bencherプロジェクトが必要です。
+プロジェクトを作成する最も簡単な方法は、[`bencher run` CLIサブコマンド][bencher run]を
+[`bencher mock`サブコマンド][bencher mock]と一緒に実行することです。以下を実行します:
+
+<TerminalCommand code='bencher run "bencher mock --count 0"' />
+
+これにより、Bencher Cloud上に新しいプロジェクトが作成されます。
+出力の`View report` URLを確認してください。
+プロジェクトスラッグは、URL内の`/perf/`の後のパスセグメントです。
+例えば、URLが以下の場合:
+
+```
+https://bencher.dev/perf/my-project-abc1234/reports/709d3476-51a4-4939-9584-75d9a2c04c54
+```
+
+プロジェクトスラッグは`my-project-abc1234`です。
+このプロジェクトスラッグは次のステップで必要になります。
+
+[bencher run]: /ja/docs/explanation/bencher-run/
+[bencher mock]: /ja/docs/reference/bencher-metric-format/#bencher-mock

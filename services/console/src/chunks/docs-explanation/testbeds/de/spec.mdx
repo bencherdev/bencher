@@ -1,0 +1,44 @@
+### `--spec <SPEC>`
+
+<br />
+
+Geben Sie den Slug oder die UUID einer Spec an.
+Eine Spec ist eine Hardware-Spezifikation, die die Ressourcen beschreibt, die einem [Runner][runner] zur Verfügung stehen:
+
+1. Betriebssystem (OS)
+   1. Linux
+   2. macOS
+   3. Windows
+2. CPU-Architektur
+   1. x86_64
+   2. ARM64
+3. Sandbox
+   1. Firecracker microVM
+   2. Keine Sandbox
+4. CPU-Anzahl
+5. Speichergröße (RAM)
+6. Festplattengröße
+7. Netzwerkzugriff
+
+Die folgenden Specs sind derzeit in [Bencher Cloud][bencher cloud] verfügbar:
+
+|   Name   |    Slug    |  OS   | Architektur  |       Sandbox       | CPU | Speicher | Festplatte | Netzwerk |
+| :------: | :--------: | :---: | :----------: | :-----------------: | :-: | :------: | :--------: | :------: |
+| Intel v1 | `intel-v1` | Linux |    x86_64    | Firecracker microVM |  4  | 48.0 GiB | 128.0 GiB  |   Nein   |
+
+Specs sind entweder serverweit oder organisationsweit,
+sodass dieselbe Spec von mehreren Testumgebungen auf demselben Server bzw. innerhalb derselben Organisation gemeinsam genutzt werden kann.
+
+Die Auswahlreihenfolge der Spec bei der Verwendung von <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> lautet wie folgt:
+1. Die Option `--spec`
+2. Die der Testumgebung zugewiesene Spec
+3. Die organisationsweite Standard-Spec
+4. Die serverweite Standard-Spec
+
+Die ausgewählte Spec wird dann der aktuellen [Testumgebung][testbed] zugewiesen.
+Diese Option erfordert, dass [die Option `--image`][image] gesetzt ist.
+
+[runner]: /de/docs/explanation/bare-metal/#runner
+[image]: /de/docs/explanation/images/#--image-image
+[testbed]: /de/docs/explanation/benchmarking/#testbed
+[bencher cloud]: https://bencher.dev

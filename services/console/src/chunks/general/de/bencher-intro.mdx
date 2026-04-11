@@ -1,10 +1,10 @@
-[Bencher](/pricing) ist eine Suite von kontinuierlichen Benchmarking-Tools.
+[Bencher](/pricing) ist eine Suite von Tools für [kontinuierliches Benchmarking](/docs/explanation/continuous-benchmarking/).
 Hatten Sie jemals eine Performance Regression, die Ihre Nutzer beeinflusste?
 Bencher hätte das verhindern können.
-Bencher ermöglicht es Ihnen, Leistungsregressionen _vorher_ zu erkennen und zu verhindern, bevor sie in die Produktion gelangen.
+Bencher ermöglicht es Ihnen, Leistungsregressionen zu erkennen und zu verhindern, _bevor_ sie gemergt werden.
 
-- **Ausführen**: Führen Sie Ihre Benchmarks lokal oder in CI mit Ihren bevorzugten Benchmarking-Tools aus. Das `bencher` CLI umfasst einfach Ihr vorhandenes Benchmark-Harness und speichert die Ergebnisse.
+- **Ausführen**: Führen Sie Ihre Benchmarks lokal oder in CI mit _exakt denselben_ Bare-Metal-Runnern und Ihren bevorzugten Benchmarking-Tools aus. Das `bencher` CLI orchestriert die Ausführung Ihrer Benchmarks auf Bare Metal und speichert die Ergebnisse.
 - **Verfolgen**: Verfolgen Sie die Ergebnisse Ihrer Benchmarks im Laufe der Zeit. Überwachen, abfragen und grafisch darstellen der Ergebnisse mit der Bencher Web Konsole auf Basis des Quellzweigs, Testbetts und Maßnahme.
-- **Auffangen**: Fangen Sie Leistungsregressionen in CI ab. Bencher verwendet modernste, anpassbare Analysen, um Leistungsregressionen zu erkennen, bevor sie in die Produktion gelangen.
+- **Auffangen**: Fangen Sie Leistungsregressionen lokal oder in CI mit _exakt derselben_ Bare-Metal-Hardware ab. Bencher verwendet modernste, anpassbare Analysen, um Leistungsregressionen zu erkennen, bevor sie gemergt werden.
 
-Aus denselben Gründen, warum Unit Tests in CI laufen, um Feature Regressionen zu verhindern, sollten Benchmarks in CI mit Bencher ausgeführt werden, um Leistungsregressionen zu verhindern. Performance-Bugs sind Fehler!
+Aus denselben Gründen, warum Unit Tests laufen, um Feature Regressionen zu verhindern, sollten Benchmarks mit Bencher ausgeführt werden, um Leistungsregressionen zu verhindern. Performance-Bugs sind Fehler!

@@ -1,0 +1,28 @@
+import TerminalCommand from "../../../../components/os/TerminalCommand.astro";
+
+## 벤치마크 이미지 푸시
+
+Bencher 베어 메탈은 전용 하드웨어에서 OCI 컨테이너 이미지로 패키징된 벤치마크를 실행합니다.
+이 빠른 시작에서는 `bencher` CLI Docker 이미지를 벤치마크 이미지로 사용합니다.
+커스텀 이미지는 필요하지 않습니다.
+
+먼저, GitHub Container Registry에서 `bencher` CLI 이미지를 풀합니다.
+다음을 실행하세요:
+
+<TerminalCommand code="docker pull --platform linux/amd64 ghcr.io/bencherdev/bencher:latest" />
+
+다음으로, Bencher OCI 레지스트리용으로 이미지를 리태깅합니다.
+`YOUR_PROJECT_SLUG`를 이전 단계의 프로젝트 슬러그로 교체하세요:
+
+<TerminalCommand code="docker tag ghcr.io/bencherdev/bencher:latest registry.bencher.dev/YOUR_PROJECT_SLUG:latest" />
+
+그런 다음, Bencher OCI 레지스트리에 로그인하고 이미지를 푸시합니다:
+
+<TerminalCommand code="docker login registry.bencher.dev" />
+
+<TerminalCommand code="docker push registry.bencher.dev/YOUR_PROJECT_SLUG:latest" />
+
+커스텀 이미지를 직접 만드는 방법에 대한 자세한 내용은
+[이미지 문서][image]를 참조하세요.
+
+[image]: /ko/docs/explanation/images/

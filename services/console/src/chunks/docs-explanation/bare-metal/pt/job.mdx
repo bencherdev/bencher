@@ -1,0 +1,17 @@
+## Job
+
+Um Job rastreia o ciclo de vida de uma solicitação de execução remota de benchmark.
+Um timeout personalizado pode ser solicitado por Job com a opção `--job-timeout`.
+No entanto, os seguintes timeouts de Job são sempre aplicados com os limites de concorrência fornecidos:
+
+| [Plano][pricing] | Timeout do Job                       | Concorrência de Jobs |
+| ----------------- | ------------------------------------ | -------------------- |
+| Não reivindicado  | 1 minuto                             | 1 por IP de origem   |
+| Free              | 5 minutos                            | 1 por Organização    |
+| Team              | Ilimitado (padrão: 60 minutos)       | Ilimitada            |
+| Enterprise        | Ilimitado (padrão: 60 minutos)       | Ilimitada            |
+
+Consulte [a documentação do Job][job] para uma visão geral completa.
+
+[pricing]: /pricing
+[job]: /docs/bare-metal/job

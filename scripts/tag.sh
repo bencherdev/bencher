@@ -37,8 +37,10 @@ git add ./package.json
 git add ./package-lock.json
 sed -i '' "s/version: [0-9]*\.[0-9]*\.[0-9]*/version: $VERSION/" ./src/chunks/docs-how-to/install-cli/cli-github-actions-version.mdx
 git add ./src/chunks/docs-how-to/install-cli/cli-github-actions-version.mdx
-sed -i '' "s/Bencher API Server v[0-9]*\.[0-9]*\.[0-9]*/Bencher API Server v$VERSION/" ./src/chunks/docs-tutorial/docker/bencher-up-output.mdx
-git add ./src/chunks/docs-tutorial/docker/bencher-up-output.mdx
+sed -i '' "s|bencher:v[0-9]*\.[0-9]*\.[0-9]*|bencher:v$VERSION|" ./src/chunks/docs-how-to/install-cli/cli-docker-version.mdx
+git add ./src/chunks/docs-how-to/install-cli/cli-docker-version.mdx
+sed -i '' "s/Bencher API Server v[0-9]*\.[0-9]*\.[0-9]*/Bencher API Server v$VERSION/" ./src/chunks/docs-tutorial/self-hosted/bencher-up-output.mdx
+git add ./src/chunks/docs-tutorial/self-hosted/bencher-up-output.mdx
 sed -i '' "s/bencher [0-9]*\.[0-9]*\.[0-9]*/bencher $VERSION/" ./src/chunks/docs-tutorial/quick-start/bencher-version-output.mdx
 git add ./src/chunks/docs-tutorial/quick-start/bencher-version-output.mdx
 sed -i '' "s/export BENCHER_VERSION=[0-9]*\.[0-9]*\.[0-9]*/export BENCHER_VERSION=$VERSION/" ./src/chunks/general/cli-unix-script-version.mdx

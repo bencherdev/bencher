@@ -1,0 +1,20 @@
+Um [Testbed][testbed] é o nome do ambiente de teste usado ao executar um [Relatório][report].
+Ao usar o subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>,
+selecione um Testbed com a opção `--testbed` ou a variável de ambiente `BENCHER_TESTBED`.
+Se nenhum for especificado, `Linux`, `macOS` ou `Windows` é usado como padrão com base no sistema operacional do host.
+Se o CLI `bencher` foi compilado para um sistema operacional diferente, então `localhost` é usado.
+
+Um Testbed terá uma [Spec][spec] atribuída quando for usado para benchmarking em [hardware dedicado][bare metal].
+Se nem a opção `--testbed` nem a variável de ambiente `BENCHER_TESTBED` estiverem definidas durante o benchmarking em hardware dedicado, então o nome da Spec é usado.
+Quando um Relatório é criado, a Spec atual do Testbed naquele momento é registrada com o Relatório.
+Apenas resultados do mesmo Testbed e Spec são usados para os [Limites][thresholds].
+Isso permite rastrear como os resultados de benchmark se relacionam com o hardware subjacente,
+mesmo que a Spec do Testbed mude ao longo do tempo.
+Use a opção `--spec` para definir ou atualizar a Spec de um Testbed,
+ou a flag `--spec-reset` para limpá-la.
+
+[testbed]: /pt/docs/explanation/benchmarking/#testbed
+[report]: /pt/docs/explanation/benchmarking/#report
+[spec]: /pt/docs/explanation/bare-metal/#spec
+[bare metal]: /pt/docs/explanation/bare-metal/
+[thresholds]: /pt/docs/explanation/thresholds/

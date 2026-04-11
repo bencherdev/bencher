@@ -1,0 +1,20 @@
+import PerfImg from "../perf-img.mdx";
+
+## Benchmarking in CI
+
+Myth: You can't run benchmarks in CI
+
+Most benchmarking harnesses use the [system wall-clock](https://en.wikipedia.org/wiki/Elapsed_real_time) to measure latency or throughput.
+This is very helpful, as these are the exact metrics that we as developers care the most about.
+However, general purpose CI environments are often noisy and inconsistent when measuring wall clock time.
+When performing Continuous Benchmarking, this volatility adds unwanted noise into the results.
+
+There are a few options for handling this:
+1. [Bare Metal Runners](/pricing/#bare-metal)
+2. [Relative Continuous Benchmarking](/docs/how-to/track-benchmarks/#relative-continuous-benchmarking)
+3. Switching to a benchmark harnesses that counts instructions as opposed to wall-clock time
+
+By far, Bare Metal Runners are the best option in nearly every case.
+Bencher offers Bare Metal Runners with less than 2% variance.
+Compare this to GitHub Action Runners, which can see greater than 30% variance between runs.
+Reducing the volatility and thus the noise in your Continuous Benchmarking environment will allow you to detect ever finer performance regressions.

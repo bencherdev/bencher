@@ -1,0 +1,15 @@
+Runner'ы на выделенном оборудовании выполняют бенчмарки, упакованные в [формат OCI Image][oci].
+При использовании подкоманды CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+выберите Image с помощью опции `--image`, чтобы включить удалённое выполнение на выделенном оборудовании.
+
+При [непрерывном бенчмаркинге][continuous benchmarking], то есть при бенчмаркинге в CI,
+использование runner'ов на выделенном оборудовании может значительно снизить уровень шума в результатах ваших бенчмарков.
+Более того, Bencher Bare Metal можно запускать вне CI на _точно тех же_ runner'ах на выделенном оборудовании.
+Это позволяет как разработчикам, так и агентам проверять производительность изменений в коде,
+не проходя через весь CI-процесс.
+Смотрите [Рабочий процесс на выделенном оборудовании][workflow] для полного обзора.
+
+[oci]: https://github.com/opencontainers/image-spec
+[continuous benchmarking]: /ru/docs/explanation/continuous-benchmarking/
+[workflow]: /ru/docs/explanation/bare-metal/#bare-metal-workflow
+

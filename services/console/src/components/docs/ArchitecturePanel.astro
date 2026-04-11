@@ -1,1 +1,9 @@
-<img src="/diagrams/architecture.svg" alt="Diagram of the Bencher Architecture showing Console Container, Benchmarking Server, Bare Metal Server, and API Container" />
+---
+import { Diagram } from "./diagram";
+import MermaidDiagram from "./MermaidDiagram.astro";
+---
+
+<MermaidDiagram
+	diagram={Diagram.Architecture}
+	alt="Diagram of the Bencher Architecture showing Console Container, Benchmarking Server, Bare Metal Server, and API Container"
+/>

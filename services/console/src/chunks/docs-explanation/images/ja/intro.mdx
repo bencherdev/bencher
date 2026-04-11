@@ -1,0 +1,15 @@
+ベアメタルRunnerは、[OCI Imageフォーマット][oci]でパッケージ化されたベンチマークを実行します。
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用する際、
+`--image`オプションでImageを選択すると、リモートのベアメタル実行が有効になります。
+
+[継続的ベンチマーク][continuous benchmarking]、つまりCIでのベンチマークを行う際に、
+ベアメタルRunnerを使用すると、ベンチマーク結果のノイズを大幅に削減できます。
+さらに、Bencher Bare MetalはCIの外でも、_まったく同じ_ベアメタルRunnerを使って実行できます。
+これにより、開発者とエージェントの両方が、CIワークフロー全体を経由することなく、
+コード変更のパフォーマンスを確認できます。
+全体の概要については、[ベアメタルワークフロー][workflow]を参照してください。
+
+[oci]: https://github.com/opencontainers/image-spec
+[continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
+[workflow]: /ja/docs/explanation/bare-metal/#bare-metal-workflow
+

@@ -10,7 +10,7 @@ En reprenant là où nous nous étions arrêtés dans les tutoriels [Démarrage 
 > 🐰 Assurez-vous d'avoir [créé un jeton API et de l'avoir défini comme variable d'environnement `BENCHER_API_TOKEN`][create an api token] avant de continuer !
 
 [quick start]: /fr/docs/tutorial/quick-start/
-[docker self-hosted]: /fr/docs/tutorial/docker/
+[docker self-hosted]: /fr/docs/tutorial/self-hosted/
 [continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/
 [create an api token]: /fr/docs/how-to/claim/#create-an-api-token
 
@@ -39,9 +39,9 @@ La première fois que cette commande est exécutée dans CI, elle créera la Bra
 
 [bencher run]: /fr/docs/explanation/bencher-run/
 [project option]: /fr/docs/explanation/bencher-run/#--project-project
-[branch option]: /fr/docs/explanation/branch-selection/#--branch-branch
-[start point reset]: /fr/docs/explanation/branch-selection/#--start-point-reset
-[testbed option]: /fr/docs/explanation/bencher-run/#--testbed-testbed
+[branch option]: /fr/docs/explanation/branches/#--branch-branch
+[start point reset]: /fr/docs/explanation/branches/#--start-point-reset
+[testbed option]: /fr/docs/explanation/testbeds/#--testbed-testbed
 [bmf]: /fr/docs/reference/bencher-metric-format/
 [adapter json]: /fr/docs/explanation/adapters/#-json
 [command argument]: /fr/docs/explanation/bencher-run/#benchmark-command
@@ -73,8 +73,8 @@ Enfin, nous sommes prêts à exécuter nos benchmarks de `feature-branch` dans C
 
 Chaque fois que cette commande est exécutée dans CI, elle compare les résultats de `feature-branch` uniquement avec les résultats les plus récents de `main`. Le Seuil spécifié est alors utilisé pour détecter les régressions de performance.
 
-[start point]: /fr/docs/explanation/branch-selection/#--start-point-branch
-[start point reset]: /fr/docs/explanation/branch-selection/#--start-point-reset
+[start point]: /fr/docs/explanation/branches/#--start-point-branch
+[start point reset]: /fr/docs/explanation/branches/#--start-point-reset
 [threshold measure option]: /fr/docs/explanation/thresholds/#--threshold-measure-measure
 [threshold test option]: /fr/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /fr/docs/explanation/thresholds/#--threshold-upper-boundary-boundary

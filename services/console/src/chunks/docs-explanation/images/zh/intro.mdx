@@ -1,0 +1,15 @@
+裸机 Runner 执行以 [OCI 镜像格式][oci]打包的基准测试。
+使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令时，
+通过 `--image` 选项选择一个 Image 以启用远程裸机执行。
+
+进行[持续基准测试][continuous benchmarking]时，也就是在 CI 中进行基准测试时，
+使用裸机 Runner 可以大幅减少基准测试结果中的噪声。
+此外，Bencher Bare Metal 可以在 CI 之外使用_完全相同_的裸机 Runner 运行。
+这使开发者和 agent 都可以检查其代码变更的性能，
+而无需走完整的 CI 工作流程。
+请参阅[裸机工作流程][workflow]以获得完整概述。
+
+[oci]: https://github.com/opencontainers/image-spec
+[continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
+[workflow]: /zh/docs/explanation/bare-metal/#bare-metal-workflow
+
