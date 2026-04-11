@@ -24,6 +24,10 @@ impl TryFrom<TaskIndexUpdate> for Update {
 }
 
 impl Update {
+    pub fn new(engine: Option<SearchEngine>, url: Vec<url::Url>) -> Self {
+        Self { engine, url }
+    }
+
     pub async fn exec(&self) -> anyhow::Result<()> {
         for url in &self.url {
             if let Some(engine) = self.engine {

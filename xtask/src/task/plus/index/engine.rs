@@ -47,7 +47,7 @@ impl SearchEngine {
     }
 
     fn google() -> anyhow::Result<GoogleIndex> {
-        let service_key = std::fs::read_to_string("./plus/bencher_google/google.json")?;
+        let service_key = std::fs::read_to_string("./plus/bencher_google_index/google.json")?;
         GoogleIndex::from_str(&service_key).map_err(Into::into)
     }
 }

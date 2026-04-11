@@ -1,6 +1,7 @@
 use crate::parser::TaskIndex;
 
 mod delete;
+mod docs;
 mod engine;
 mod update;
 
@@ -8,6 +9,7 @@ mod update;
 pub enum Index {
     Update(update::Update),
     Delete(delete::Delete),
+    Docs(docs::Docs),
 }
 
 impl TryFrom<TaskIndex> for Index {
@@ -17,6 +19,7 @@ impl TryFrom<TaskIndex> for Index {
         Ok(match index {
             TaskIndex::Update(update) => Self::Update(update.try_into()?),
             TaskIndex::Delete(delete) => Self::Delete(delete.try_into()?),
+            TaskIndex::Docs(docs) => Self::Docs(docs.try_into()?),
         })
     }
 }
@@ -26,6 +29,7 @@ impl Index {
         match self {
             Self::Update(update) => update.exec().await,
             Self::Delete(delete) => delete.exec().await,
+            Self::Docs(docs) => docs.exec().await,
         }
     }
 }
