@@ -1,0 +1,14 @@
+## Continuous Benchmarking vs Local Benchmark Comparison
+
+There are several benchmark harnesses that allow you to compare results locally.
+Local comparison is great for iterating quickly when performance tuning.
+However, it should not be relied on to catch performance regressions on an ongoing basis.
+Just as being able to run unit tests locally doesn't obviate the need for CI,
+being able to run and compare benchmarks locally doesn't obviate the need for CB.
+
+There are several features Bencher offers that local benchmark comparison tools cannot:
+- Comparison of the same benchmark between different testbeds
+- Comparison of benchmarks across languages and harnesses
+- Collaboration and sharing of benchmark results
+- Running benchmarks on dedicated testbeds to minimize noise
+- No more copypasta
