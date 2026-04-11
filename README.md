@@ -50,7 +50,8 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
 
 - Tutorial
   - [Quick Start](https://bencher.dev/docs/tutorial/quick-start/)
-  - [Self-Hosted Quick Start](https://bencher.dev/docs/tutorial/docker/)
+  - [Bare Metal Quick Start](https://bencher.dev/docs/tutorial/bare-metal/)
+  - [Self-Hosted Quick Start](https://bencher.dev/docs/tutorial/self-hosted/)
 - How To
   - [Install CLI](https://bencher.dev/docs/how-to/install-cli/)
   - [Claim Benchmark Results](https://bencher.dev/docs/how-to/claim/)
@@ -61,24 +62,31 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
   - [Track Build Time](https://bencher.dev/docs/how-to/track-build-time/)
   - [Track File Size](https://bencher.dev/docs/how-to/track-file-size/)
   - [Self-Hosted GitHub App](https://bencher.dev/docs/how-to/github-app/)
+  - [Self-Hosted Google OAuth](https://bencher.dev/docs/how-to/google-oauth/)
 - Explanation
   - [Benchmarking Overview](https://bencher.dev/docs/explanation/benchmarking/)
+  - [Bare Metal Overview](https://bencher.dev/docs/explanation/bare-metal/)
   - [`bencher run`](https://bencher.dev/docs/explanation/bencher-run/)
-  - [Branch Selection](https://bencher.dev/docs/explanation/branches/)
+  - [Bare Metal Images](https://bencher.dev/docs/explanation/images/)
+  - [Branches & Start Points](https://bencher.dev/docs/explanation/branches/)
+  - [Testbeds & Specs](https://bencher.dev/docs/explanation/testbeds/)
   - [Thresholds & Alerts](https://bencher.dev/docs/explanation/thresholds/)
   - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters/)
   - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking/)
   - [Bencher Self-Hosted](https://bencher.dev/docs/explanation/bencher-self-hosted/)
-  - [Talks](https://bencher.dev/docs/explanation/talks/)
+  - [Bencher Talks](https://bencher.dev/docs/explanation/talks/)
 - Reference
   - [REST API](https://bencher.dev/docs/api/)
-  - [Architecture](https://bencher.dev/docs/reference/architecture/)
+  - [Bencher Metric Format](https://bencher.dev/docs/reference/bencher-metric-format/)
+  - [Bencher Compose](https://bencher.dev/docs/reference/bencher-compose/)
+  - [`bencher noise`](https://bencher.dev/docs/reference/bencher-noise/)
   - [Console Server Config](https://bencher.dev/docs/reference/console-config/)
   - [API Server Config](https://bencher.dev/docs/reference/server-config/)
-  - [Bencher Metric Format](https://bencher.dev/docs/reference/bencher-metric-format/)
-  - [Prior Art](https://bencher.dev/docs/reference/prior-art/)
-  - [Roadmap](https://bencher.dev/docs/reference/roadmap/)
   - [Changelog](https://bencher.dev/docs/reference/changelog/)
+  - [Roadmap](https://bencher.dev/docs/reference/roadmap/)
+  - [Prior Art](https://bencher.dev/docs/reference/prior-art/)
+  - [Architecture](https://bencher.dev/docs/reference/architecture/)
+  - [Database Schema](https://bencher.dev/docs/reference/schema/)
 
 🌐 Also available in:
 
