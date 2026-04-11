@@ -2,9 +2,18 @@
 
 <br />
 
-Set the maximum job execution time in seconds.
-See [the Job documentation][job] for more details.
+Request a maximum [Job][job] execution time in seconds.
+However, the following Job timeouts are always enforced with the provided concurrency limits:
+
+| [Tier][pricing] | Job Timeout                     | Job Concurrency    |
+| --------------- | ------------------------------- | ------------------ |
+| Unclaimed       | 1 minute                        | 1 per source IP    |
+| Free            | 5 minutes                       | 1 per Organization |
+| Team            | Unlimited (default: 60 minutes) | Unlimited          |
+| Enterprise      | Unlimited (default: 60 minutes) | Unlimited          |
+
 This option requires [the `--image` option][image] to be set.
 
 [job]: /docs/explanation/bare-metal/#job
+[pricing]: /pricing
 [image]: #--image-image

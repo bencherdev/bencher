@@ -1,14 +1,7 @@
 ### `--testbed <TESTBED>`
+### `--spec <SPEC>`
+### `--spec-reset`
 
 <br />
 
-Opcional: Se puede establecer la opción `--testbed` o la variable de entorno `BENCHER_TESTBED` al nombre, slug o UUID de un [Testbed][testbed].
-Si el valor especificado es un nombre o slug y el Testbed no existe ya, se creará para usted.
-Sin embargo, si el valor especificado es un UUID, entonces el Testbed debe existir ya.
-Si ambos son especificados, la opción `--testbed` tiene prioridad sobre la variable de entorno `BENCHER_TESTBED`.
-Si ninguno es especificado, entonces se usa `Linux`, `macOS` o `Windows`,
-basado en el sistema operativo del host.
-Si el CLI de `bencher` ha sido compilado para un sistema operativo diferente,
-entonces se usa `localhost` como el Testbed predeterminado.
-
-[testbed]: /es/docs/explanation/benchmarking/#testbed
+Consulta [bancos de pruebas & specs](/es/docs/explanation/testbeds/) para una descripción completa.

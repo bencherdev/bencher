@@ -1,0 +1,46 @@
+---
+import architectureSvg from "../../../diagrams/output/architecture.svg?raw";
+import bareMetalSvg from "../../../diagrams/output/bare-metal.svg?raw";
+import schemaSvg from "../../../diagrams/output/schema.svg?raw";
+import { Diagram } from "./diagram";
+
+interface Props {
+	diagram: Diagram;
+	alt: string;
+}
+
+const { diagram, alt } = Astro.props;
+
+const svgs: Record<Diagram, string> = {
+	[Diagram.BareMetal]: bareMetalSvg,
+	[Diagram.Architecture]: architectureSvg,
+	[Diagram.Schema]: schemaSvg,
+};
+
+const escapeAttr = (value: string) =>
+	value
+		.replace(/&/g, "&amp;")
+		.replace(/"/g, "&quot;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
+
+// Every mermaid SVG ships with `id="my-svg"` and internal `<style>` rules
+// keyed off `#my-svg`; rewriting the id keeps two diagrams on the same page
+// from colliding while preserving the internal stylesheet.
+const uniqueId = `mermaid-${diagram}`;
+const rewriteId = (svg: string) => svg.replaceAll("my-svg", uniqueId);
+
+// Inline `style="background-color: white"` beats CSS without `!important`,
+// so strip it and let Bulma's theme cascade paint the background.
+const stripBackground = (svg: string) =>
+	svg.replace(/background-color:\s*white;?\s*/i, "");
+
+const injectA11y = (svg: string) =>
+	svg.replace(/<svg\b/, `<svg role="img" aria-label="${escapeAttr(alt)}"`);
+
+const processedSvg = injectA11y(stripBackground(rewriteId(svgs[diagram])));
+---
+
+<figure class="mermaid-diagram">
+	<Fragment set:html={processedSvg} />
+</figure>

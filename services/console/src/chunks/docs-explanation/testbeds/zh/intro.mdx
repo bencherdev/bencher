@@ -1,0 +1,20 @@
+[Testbed][testbed] 是运行[报告][report]时使用的测试环境的名称。
+使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令时，
+通过 `--testbed` 选项或 `BENCHER_TESTBED` 环境变量选择一个 Testbed。
+如果两者都未指定，将根据主机操作系统默认使用 `Linux`、`macOS` 或 `Windows`。
+如果 `bencher` CLI 已为不同的操作系统编译，则使用 `localhost`。
+
+当 Testbed 用于[裸机][bare metal]基准测试时，将为其分配一个 [Spec][spec]。
+在裸机基准测试期间，如果 `--testbed` 选项和 `BENCHER_TESTBED` 环境变量都未设置，则使用 Spec 的名称。
+创建报告时，Testbed 当时的当前 Spec 会被记录到报告中。
+[阈值][thresholds]只使用来自相同 Testbed 和 Spec 的结果。
+这使您可以追踪基准测试结果与底层硬件之间的关系，
+即使 Testbed 的 Spec 随时间发生变化。
+使用 `--spec` 选项设置或更新 Testbed 的 Spec，
+或使用 `--spec-reset` 标志将其清除。
+
+[testbed]: /zh/docs/explanation/benchmarking/#testbed
+[report]: /zh/docs/explanation/benchmarking/#report
+[spec]: /zh/docs/explanation/bare-metal/#spec
+[bare metal]: /zh/docs/explanation/bare-metal/
+[thresholds]: /zh/docs/explanation/thresholds/

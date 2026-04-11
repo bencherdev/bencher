@@ -42,3 +42,166 @@ $disabled: #fdb07e;
   flex-direction: column;
   height: 100%;
 }
+
+// Mermaid diagrams track Bulma's [data-theme] cascade by overriding the
+// hardcoded hex colors mermaid bakes into each SVG's inline <style> block.
+// Scoping under `.mermaid-diagram` is required: mermaid and Bulma both use
+// class names like `.label` and `.note`, so unscoped overrides would clobber
+// Bulma form labels and notifications site-wide. `!important` is required
+// because mermaid prefixes its own rules with `#mermaid-<name>`, and an id
+// selector otherwise wins on specificity.
+.mermaid-diagram {
+  svg {
+    background-color: var(--bulma-scheme-main);
+    max-width: 100%;
+    height: auto;
+  }
+
+  // Mermaid puts flowchart labels as HTML inside a <foreignObject> and
+  // pre-computes their widths with `trebuchet ms` at 16px. Bulma's body
+  // font (`Inter`) cascades into the foreignObject and renders ~12% wider,
+  // clipping every label. Force mermaid's font + size + weight onto the HTML
+  // descendants with a specificity high enough to beat `.content p`, and
+  // reset margins so Bulma's `p { margin-bottom: 1em }` doesn't push text
+  // out of the pre-sized vertical box.
+  foreignObject,
+  foreignObject div,
+  foreignObject span,
+  foreignObject p,
+  .nodeLabel,
+  .nodeLabel p,
+  .edgeLabel,
+  .edgeLabel p,
+  .cluster-label,
+  .cluster-label p {
+    font-family: "trebuchet ms", verdana, arial, sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 400 !important;
+    line-height: 1.5 !important;
+    letter-spacing: normal !important;
+  }
+  foreignObject p {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  // Sequence diagram (bare-metal)
+  .actor,
+  .actor-top,
+  .actor-bottom,
+  .actor-man line,
+  .actor-man circle,
+  .labelBox,
+  .activation0,
+  .activation1,
+  .activation2 {
+    fill: var(--bulma-background) !important;
+    stroke: var(--bulma-border) !important;
+  }
+  .note {
+    fill: var(--bulma-scheme-main-bis) !important;
+    stroke: var(--bulma-border) !important;
+  }
+  .actor-line,
+  .messageLine0,
+  .messageLine1,
+  .loopLine {
+    stroke: var(--bulma-text) !important;
+  }
+  text.actor > tspan,
+  .loopText,
+  .loopText > tspan,
+  .noteText,
+  .noteText > tspan {
+    fill: var(--bulma-text) !important;
+    stroke: none !important;
+  }
+  // Sequence message labels ride directly over the lifelines and arrows.
+  // `paint-order: stroke fill` paints the stroke first and the fill on top,
+  // so a thick scheme-colored stroke acts as a knockout halo that keeps the
+  // text legible over the arrow — same visual effect as the flowchart
+  // `.labelBkg` rect, but doable in CSS because these are SVG <text> nodes.
+  .messageText {
+    fill: var(--bulma-text) !important;
+    stroke: var(--bulma-scheme-main) !important;
+    stroke-width: 6px !important;
+    stroke-linejoin: round !important;
+    paint-order: stroke fill !important;
+  }
+  .labelText,
+  .labelText > tspan {
+    fill: var(--bulma-text-strong) !important;
+    stroke: none !important;
+  }
+  .sequenceNumber {
+    fill: var(--bulma-primary-invert) !important;
+  }
+  #arrowhead path,
+  .marker,
+  .marker.cross {
+    fill: var(--bulma-text) !important;
+    stroke: var(--bulma-text) !important;
+  }
+
+  // Flowchart (architecture)
+  .cluster rect,
+  .node.default rect,
+  .node.default circle,
+  .node.default polygon,
+  .node.default path {
+    fill: var(--bulma-background) !important;
+    stroke: var(--bulma-border) !important;
+  }
+  .cluster-label,
+  .nodeLabel,
+  .edgeLabel,
+  .label {
+    color: var(--bulma-text) !important;
+    fill: var(--bulma-text) !important;
+  }
+  // Edge labels are an HTML <div> inside a <foreignObject>, so their
+  // background is painted via `background-color`, not `fill`.
+  .edgeLabel,
+  .edgeLabel p,
+  .labelBkg {
+    background-color: var(--bulma-scheme-main) !important;
+  }
+  .edgeLabel rect {
+    fill: var(--bulma-scheme-main) !important;
+    opacity: 1 !important;
+  }
+  .edgePath .path,
+  .flowchart-link {
+    stroke: var(--bulma-text) !important;
+  }
+  .arrowMarkerPath,
+  .marker.flowchart-v2,
+  .marker.cross.flowchart-v2 {
+    fill: var(--bulma-text) !important;
+    stroke: var(--bulma-text) !important;
+  }
+
+  // ER diagram (schema)
+  .er.entityBox,
+  .er.attributeBoxOdd {
+    fill: var(--bulma-background) !important;
+    stroke: var(--bulma-border) !important;
+  }
+  .er.attributeBoxEven {
+    fill: var(--bulma-scheme-main-bis) !important;
+    stroke: var(--bulma-border) !important;
+  }
+  .er.entityLabel {
+    fill: var(--bulma-text-strong) !important;
+  }
+  .er.relationshipLabel {
+    fill: var(--bulma-text) !important;
+  }
+  .er.relationshipLabelBox {
+    fill: var(--bulma-scheme-main) !important;
+    stroke: none !important;
+  }
+  .er.relationshipLine {
+    stroke: var(--bulma-text) !important;
+  }
+}

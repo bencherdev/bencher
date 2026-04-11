@@ -1,0 +1,20 @@
+Un [banco de pruebas][testbed] es el nombre del entorno de pruebas utilizado al ejecutar un [informe][report].
+Al usar el subcomando de CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>,
+selecciona un banco de pruebas con la opción `--testbed` o la variable de entorno `BENCHER_TESTBED`.
+Si no se especifica ninguno, se utiliza `Linux`, `macOS` o `Windows` como predeterminado según el sistema operativo del host.
+Si el CLI `bencher` ha sido compilado para un sistema operativo diferente, entonces se utiliza `localhost`.
+
+A un banco de pruebas se le asignará una [Spec][spec] cuando se use para benchmarking en [hardware dedicado][bare metal].
+Si ni la opción `--testbed` ni la variable de entorno `BENCHER_TESTBED` están configuradas durante el benchmarking en hardware dedicado, entonces se usa el nombre de la Spec.
+Cuando se crea un informe, la Spec actual del banco de pruebas en ese momento se registra con el informe.
+Solo los resultados del mismo banco de pruebas y Spec se usan para los [Umbrales][thresholds].
+Esto permite rastrear cómo los resultados de los benchmarks se relacionan con el hardware subyacente,
+incluso si la Spec del banco de pruebas cambia con el tiempo.
+Usa la opción `--spec` para establecer o actualizar la Spec de un banco de pruebas,
+o el indicador `--spec-reset` para borrarla.
+
+[testbed]: /es/docs/explanation/benchmarking/#testbed
+[report]: /es/docs/explanation/benchmarking/#report
+[spec]: /es/docs/explanation/bare-metal/#spec
+[bare metal]: /es/docs/explanation/bare-metal/
+[thresholds]: /es/docs/explanation/thresholds/

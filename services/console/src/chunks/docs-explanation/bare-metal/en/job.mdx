@@ -1,17 +1,11 @@
 ## Job
 
 A Job tracks the lifecycle of a remote benchmark execution request.
-A custom timeout can be requested per Job with the `--job-timeout` option.
-However, the following Job timeouts are always enforced with the provided concurrency limits:
+The Job must specify the [benchmark command][benchmark command] and which [Spec][spec] it wants to use.
+The Job is then assigned to a [Runner][runner] that supports the specified Spec.
+See [Bare Metal images][image] for a full overview.
 
-| [Tier][pricing] | Job Timeout                     | Job Concurrency      |
-| --------------- | ------------------------------- | -------------------- |
-| Unclaimed       | 1 minute                        | 1 per source IP      |
-| Free            | 5 minutes                       | 1 per Organization   |
-| Team            | Unlimited (default: 60 minutes) | Unlimited            |
-| Enterprise      | Unlimited (default: 60 minutes) | Unlimited            |
-
-See [the Job documentation][job] for a full overview.
-
-[pricing]: /pricing
-[job]: /docs/bare-metal/job
+[benchmark command]: /docs/explanation/bencher-run/#benchmark-command
+[spec]: #spec
+[runner]: #runner
+[image]: /docs/explanation/images/

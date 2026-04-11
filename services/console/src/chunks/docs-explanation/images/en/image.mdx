@@ -9,4 +9,8 @@ Only the OCI registry for the Bencher API server is supported.
 When `--image` is set, the benchmark command runs on a remote Bare Metal Runner
 instead of locally.
 
+> 🐰 [Shared Bare Metal Runners][runner] do **not** have network access.
+> That is, you cannot pull down any dependencies while executing your benchmarks.
+> Your Image must be entirely self-contained.
+
 [runner]: /docs/explanation/bare-metal/#runner

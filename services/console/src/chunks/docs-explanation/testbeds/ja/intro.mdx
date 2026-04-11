@@ -1,0 +1,20 @@
+[テストベッド][testbed]とは、[レポート][report]を実行する際に使用されるテスト環境の名称です。
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用する場合、
+`--testbed` オプションまたは `BENCHER_TESTBED` 環境変数でテストベッドを選択します。
+どちらも指定されていない場合、ホストオペレーティングシステムに基づいて `Linux`、`macOS`、または `Windows` がデフォルトとして使用されます。
+`bencher` CLI が異なるオペレーティングシステム用にコンパイルされている場合は、`localhost` が使用されます。
+
+テストベッドが[ベアメタル][bare metal]ベンチマーキングに使用される際には、[Spec][spec]が割り当てられます。
+ベアメタルベンチマーキング中に `--testbed` オプションも `BENCHER_TESTBED` 環境変数も設定されていない場合、Specの名前が使用されます。
+レポートが作成されると、その時点でのテストベッドの現在のSpecがレポートに記録されます。
+[閾値][thresholds]には同じテストベッドとSpecの結果のみが使用されます。
+これにより、テストベッドのSpecが時間の経過とともに変更されても、
+ベンチマーク結果が基盤となるハードウェアとどのように関連しているかを追跡できます。
+`--spec` オプションを使用してテストベッドのSpecを設定または更新し、
+`--spec-reset` フラグを使用してクリアします。
+
+[testbed]: /ja/docs/explanation/benchmarking/#testbed
+[report]: /ja/docs/explanation/benchmarking/#report
+[spec]: /ja/docs/explanation/bare-metal/#spec
+[bare metal]: /ja/docs/explanation/bare-metal/
+[thresholds]: /ja/docs/explanation/thresholds/

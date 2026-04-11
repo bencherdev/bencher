@@ -1,1 +1,9 @@
-<img src="/diagrams/schema.svg" alt="Entity-relationship diagram of the Bencher SQLite database schema" />
+---
+import { Diagram } from "./diagram";
+import MermaidDiagram from "./MermaidDiagram.astro";
+---
+
+<MermaidDiagram
+	diagram={Diagram.Schema}
+	alt="Entity-relationship diagram of the Bencher SQLite database schema"
+/>

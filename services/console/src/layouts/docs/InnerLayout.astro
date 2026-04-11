@@ -38,10 +38,13 @@ const {
 	author,
 	canonical,
 } = Astro.props;
+
+const headingText = heading?.replaceAll("`", "");
+const headingParts = heading?.split("`") ?? [];
 ---
 
 <BaseLayout
-  title={heading ?? title}
+  title={headingText ?? title}
   titleFmt={titleFmt}
   description={description}
   published={published}
@@ -67,7 +70,9 @@ const {
             {
               heading ? (
                 <div class="content">
-                  <h1 class="title is-1">{heading}</h1>
+                  <h1 class="title is-1">
+                  {headingParts.map((part, i) => (i % 2 === 0 ? part : <code>{part}</code>))}
+                </h1>
                   { author === Author.everett &&
                     <a class="subtitle level" href="/author/everett-pompeii">
                       <div class="level-left">
