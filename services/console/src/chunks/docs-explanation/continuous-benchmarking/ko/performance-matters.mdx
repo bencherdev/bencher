@@ -1,0 +1,41 @@
+## 성능의 중요성
+
+속설: 100ms의 지연 시간은 느낄 수 없다
+
+사람들이 100ms의 지연 시간을 인지할 수 없다고 주장하는 것은 흔한 일입니다.
+이러한 주장의 근거로 [Nielsen Group의 응답 시간에 관한 기사](https://www.nngroup.com/articles/response-times-3-important-limits/)가 자주 인용됩니다.
+
+> **0.1초**는 사용자가 시스템이 **즉각적으로 반응하고 있다**고 느끼게 하는 한계이며, 이는 결과를 표시하는 것 외에는 특별한 피드백이 필요하지 않음을 의미합니다.
+>
+> - Jakob Nielsen, 1 Jan __*1993*__
+
+그러나 이것은 사실이 아닙니다.
+어떤 작업에서는 사람들이 [단 2ms의 지연 시간도 인지](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf)할 수 있습니다.
+이를 쉽게 증명하는 방법은 [Dan Luu의 실험](https://danluu.com/input-lag/#appendix-why-measure-latency)입니다. 터미널을 열고 `sleep 0; echo "ping"`을 실행한 다음 `sleep 0.1; echo "pong"`을 실행해 보세요. 차이점을 알아차리셨죠‽
+
+또 다른 흔한 혼동은 지연 시간의 인지와 인간의 반응 시간 사이의 구분입니다. 시각 자극에 반응하는 데 [약 200ms가 걸리지만](https://humanbenchmark.com/tests/reactiontime), 이것은 사건 자체의 인지와는 별개입니다. 비유하자면, 기차 여행이 두 시간 걸리더라도(반응 시간) 기차가 2분 늦었다는 것(인지된 지연 시간)을 알아차릴 수 있는 것과 같습니다.
+
+성능이 중요합니다! [성능은 기능입니다](https://blog.codinghorror.com/performance-is-a-feature)!
+
+- 100ms 더 빠를 때마다 → 전환율 1% 증가 ([Mobify](https://web.dev/why-speed-matters/), 연간 +$380,000 수익)
+- 50% 더 빠름 → 매출 12% 증가 ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 20% 더 빠름 → 전환율 10% 증가 ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- 40% 더 빠름 → 가입자 15% 증가 ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 850ms 더 빠름 → 전환율 7% 증가 ([COOK](https://web.dev/why-speed-matters/))
+- 1초 더 느릴 때마다 → 사용자 10% 감소 ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+무어의 법칙이 종말을 맞으면서, 병렬로 실행 가능한 워크로드는 병렬화되어야 할 것입니다.
+그러나 대부분의 워크로드는 직렬로 실행되어야 하며,
+문제에 단순히 더 많은 연산 자원을 투입하는 것은 빠르게 해결하기 어렵고 비용이 많이 드는 해결책이 되고 있습니다.
+
+지속적인 벤치마킹은 이러한 변화 속에서
+성능이 뛰어난 현대 소프트웨어를 개발하고 유지하는 데 핵심적인 구성 요소입니다.
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/docs/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Moore's Law from https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>

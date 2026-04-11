@@ -1,0 +1,41 @@
+## El Rendimiento Importa
+
+Mito: No puedes notar 100ms de latencia
+
+Es común escuchar a la gente afirmar que los humanos no pueden percibir 100ms de latencia.
+A menudo se cita un [artículo del Nielsen Group sobre tiempos de respuesta](https://www.nngroup.com/articles/response-times-3-important-limits/) para respaldar esta afirmación.
+
+> **0.1 segundos** es aproximadamente el límite para que el usuario sienta que el sistema está **reaccionando de forma instantánea**, lo que significa que no es necesaria ninguna retroalimentación especial aparte de mostrar el resultado.
+>
+> - Jakob Nielsen, 1 de enero de __*1993*__
+
+Pero eso simplemente no es verdad.
+En algunas tareas, las personas pueden percibir [tan solo 2ms de latencia](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf).
+Una manera fácil de comprobarlo es un [experimento de Dan Luu](https://danluu.com/input-lag/#appendix-why-measure-latency): abre tu terminal y ejecuta `sleep 0; echo "ping"` y después ejecuta `sleep 0.1; echo "pong"`. ¿Notaste la diferencia verdad‽
+
+Otro punto común de confusión es la distinción entre la percepción de la latencia y los tiempos de reacción humanos. A pesar de que tarda [alrededor de 200ms en responder a un estímulo visual](https://humanbenchmark.com/tests/reactiontime), eso es independiente de la percepción del evento en sí. Por analogía, puedes darte cuenta de que tu tren lleva dos minutos de retraso (latencia percibida) aunque el viaje en tren dure dos horas (tiempo de reacción).
+
+¡El rendimiento importa! ¡[El rendimiento es una característica](https://blog.codinghorror.com/performance-is-a-feature)!
+
+- Cada 100ms más rápido → 1% más de conversiones ([Mobify](https://web.dev/why-speed-matters/), generando +$380,000 al año)
+- 50% más rápido → 12% más de ventas ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 20% más rápido → 10% más de conversiones ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- 40% más rápido → 15% más de registros ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 850ms más rápido → 7% más de conversiones ([COOK](https://web.dev/why-speed-matters/))
+- Cada 1 segundo más lento → 10% menos usuarios ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+Con la muerte de la Ley de Moore, las cargas de trabajo que se pueden ejecutar en paralelo tendrán que paralelizarse.
+Sin embargo, la mayoría de las cargas de trabajo necesitan ejecutarse en serie,
+y simplemente lanzar más cómputo al problema se está convirtiendo rápidamente en una solución intratable y costosa.
+
+El Benchmarking Continuo es un componente clave para desarrollar y mantener
+software moderno de alto rendimiento frente a este cambio.
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/docs/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="La Ley de Moore desde https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>

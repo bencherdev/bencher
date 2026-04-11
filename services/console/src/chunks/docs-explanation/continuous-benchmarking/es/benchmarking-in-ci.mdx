@@ -1,0 +1,20 @@
+import PerfImg from "../perf-img.mdx";
+
+## Benchmarking en CI
+
+Mito: No puedes ejecutar benchmarks en CI
+
+La mayoría de los arneses de benchmarks usan el [reloj del sistema](https://es.wikipedia.org/wiki/Tiempo_real_transcurrido) para medir la latencia o el rendimiento.
+Esto es muy útil, ya que son precisamente las métricas que más nos importan como desarrolladores.
+Sin embargo, los entornos de CI de propósito general suelen ser ruidosos e inconsistentes a la hora de medir el tiempo de reloj.
+Al hacer Benchmarking Continuo, esa volatilidad agrega ruido no deseado a los resultados.
+
+Existen varias opciones para lidiar con esto:
+1. [Runners en Hardware Dedicado](/pricing/#bare-metal)
+2. [Benchmarking Continuo Relativo](/es/docs/how-to/track-benchmarks/#relative-continuous-benchmarking)
+3. Cambiar a un arnés de benchmarks que cuente instrucciones en lugar de tiempo de reloj
+
+Con diferencia, los Runners en Hardware Dedicado son la mejor opción en prácticamente todos los casos.
+Bencher ofrece Runners en Hardware Dedicado con menos del 2% de variación.
+Compáralo con los Runners de GitHub Actions, que pueden presentar más del 30% de variación entre ejecuciones.
+Reducir la volatilidad, y por lo tanto el ruido, en tu entorno de Benchmarking Continuo te permitirá detectar regresiones de rendimiento cada vez más finas.

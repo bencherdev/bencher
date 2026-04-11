@@ -1,0 +1,20 @@
+import PerfImg from "../perf-img.mdx";
+
+## Benchmarking en CI
+
+Mythe : Vous ne pouvez pas exécuter de benchmarks en CI
+
+La plupart des harnais de benchmarking utilisent [l'horloge murale du système](https://fr.wikipedia.org/wiki/Temps_r%C3%A9el_%C3%A9coul%C3%A9) pour mesurer la latence ou le débit.
+Ceci est très utile, car ce sont précisément les métriques qui nous importent le plus en tant que développeurs.
+Cependant, les environnements de CI à usage général sont souvent bruyants et inconsistants lors de la mesure du temps d'horloge murale.
+Lors du Benchmarking Continu, cette volatilité ajoute un bruit indésirable dans les résultats.
+
+Il existe plusieurs options pour gérer cela :
+1. [Exécutants sur Machine Dédiée](/pricing/#bare-metal)
+2. [Benchmarking Continu Relatif](/fr/docs/how-to/track-benchmarks/#relative-continuous-benchmarking)
+3. Passer à un harnais de benchmarking qui compte les instructions plutôt que le temps d'horloge murale
+
+De loin, les Exécutants sur Machine Dédiée sont la meilleure option dans presque tous les cas.
+Bencher propose des Exécutants sur Machine Dédiée avec moins de 2% de variance.
+Comparez cela aux exécutants de GitHub Action, qui peuvent présenter plus de 30% de variance entre les exécutions.
+Réduire la volatilité et donc le bruit dans votre environnement de Benchmarking Continu vous permettra de détecter des régressions de performance toujours plus fines.

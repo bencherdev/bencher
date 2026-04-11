@@ -1,0 +1,41 @@
+## Производительность имеет значение
+
+Миф: Вы не заметите 100 мс задержки
+
+Часто можно услышать утверждение, что люди не способны воспринимать 100 мс задержки.
+В поддержку этого утверждения обычно цитируют [статью Nielsen Group о времени отклика](https://www.nngroup.com/articles/response-times-3-important-limits/).
+
+> **0,1 секунды** — это примерно тот предел, при котором пользователь ощущает, что система **реагирует мгновенно**, то есть никакой особой обратной связи не требуется, кроме отображения результата.
+>
+> — Якоб Нильсен, 1 января __*1993*__
+
+Но это попросту не так.
+В некоторых задачах люди способны воспринимать [всего лишь 2 мс задержки](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf).
+Лёгкий способ это доказать — [эксперимент Дэна Лу](https://danluu.com/input-lag/#appendix-why-measure-latency): откройте терминал и выполните `sleep 0; echo "ping"`, а затем `sleep 0.1; echo "pong"`. Вы же заметили разницу‽
+
+Ещё один распространённый источник путаницы — различие между восприятием задержки и временем реакции человека. Хотя на ответ на визуальный стимул уходит [около 200 мс](https://humanbenchmark.com/tests/reactiontime), это никак не связано с восприятием самого события. По аналогии, вы можете заметить, что ваш поезд опаздывает на две минуты (воспринимаемая задержка), даже если сама поездка занимает два часа (время реакции).
+
+Производительность имеет значение! [Производительность — это фича](https://blog.codinghorror.com/performance-is-a-feature)!
+
+- Каждые 100 мс быстрее → на 1% больше конверсий ([Mobify](https://web.dev/why-speed-matters/), что приносит +380 000 $/год)
+- На 50% быстрее → на 12% больше продаж ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- На 20% быстрее → на 10% больше конверсий ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- На 40% быстрее → на 15% больше регистраций ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- На 850 мс быстрее → на 7% больше конверсий ([COOK](https://web.dev/why-speed-matters/))
+- Каждая секунда медленнее → на 10% меньше пользователей ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+С угасанием закона Мура рабочие нагрузки, которые можно выполнять параллельно, придётся распараллеливать.
+Однако большинство нагрузок должны выполняться последовательно,
+и простое наращивание вычислительных ресурсов быстро становится неподъёмным и дорогим решением.
+
+Непрерывный бенчмаркинг — ключевой компонент для разработки и поддержки
+производительного современного программного обеспечения в условиях этих изменений.
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/docs/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Закон Мура из https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>

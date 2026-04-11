@@ -1,0 +1,41 @@
+## Leistung zählt
+
+Mythos: Man kann 100 ms Latenz nicht wahrnehmen
+
+Es ist üblich zu hören, dass Menschen behaupten, 100 ms Latenz nicht wahrnehmen zu können.
+Ein [Artikel der Nielsen Group zu Antwortzeiten](https://www.nngroup.com/articles/response-times-3-important-limits/) wird für diese Behauptung häufig zitiert.
+
+> **0,1 Sekunden** sind ungefähr die Grenze, bei der der Nutzer das Gefühl hat, dass das System **unmittelbar reagiert**, d. h. dass keine besondere Rückmeldung erforderlich ist, außer das Ergebnis anzuzeigen.
+>
+> - Jakob Nielsen, 1. Januar __*1993*__
+
+Aber das stimmt einfach nicht.
+Bei einigen Aufgaben können Menschen [bereits 2 ms Latenz wahrnehmen](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf).
+Ein einfacher Weg, das zu belegen, ist ein [Experiment von Dan Luu](https://danluu.com/input-lag/#appendix-why-measure-latency): Öffnen Sie Ihr Terminal und führen Sie `sleep 0; echo "ping"` aus und anschließend `sleep 0.1; echo "pong"`. Sie haben den Unterschied bemerkt, oder‽
+
+Ein weiterer häufiger Verwirrungspunkt ist der Unterschied zwischen der Wahrnehmung von Latenz und menschlichen Reaktionszeiten. Obwohl es [etwa 200 ms dauert, auf einen visuellen Reiz zu reagieren](https://humanbenchmark.com/tests/reactiontime), ist dies unabhängig von der Wahrnehmung des Ereignisses selbst. Analog dazu können Sie bemerken, dass Ihr Zug zwei Minuten Verspätung hat (wahrgenommene Latenz), obwohl die Zugfahrt zwei Stunden dauert (Reaktionszeit).
+
+Leistung zählt! [Performance ist ein Feature](https://blog.codinghorror.com/performance-is-a-feature)!
+
+- Jede 100 ms schneller → 1 % mehr Conversions ([Mobify](https://web.dev/why-speed-matters/), verdient +380.000 $/Jahr)
+- 50 % schneller → 12 % mehr Umsatz ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 20 % schneller → 10 % mehr Conversions ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- 40 % schneller → 15 % mehr Anmeldungen ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 850 ms schneller → 7 % mehr Conversions ([COOK](https://web.dev/why-speed-matters/))
+- Jede 1 Sekunde langsamer → 10 % weniger Nutzer ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+Mit dem Ende des Mooreschen Gesetzes müssen Arbeitslasten, die parallel laufen können, parallelisiert werden.
+Die meisten Arbeitslasten müssen jedoch seriell ausgeführt werden,
+und einfach mehr Rechenleistung auf das Problem zu werfen, wird schnell zu einer unlösbaren und teuren Lösung.
+
+Kontinuierliches Benchmarking ist ein entscheidender Baustein für die Entwicklung und Pflege
+leistungsfähiger moderner Software angesichts dieses Wandels.
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/docs/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Mooresches Gesetz aus https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>

@@ -1,0 +1,14 @@
+## Kontinuierliches Benchmarking vs. Lokaler Benchmark-Vergleich
+
+Es gibt mehrere Benchmark-Harnische, mit denen Sie Ergebnisse lokal vergleichen können.
+Lokale Vergleiche sind ideal für schnelle Iterationen beim Tuning der Leistung.
+Man sollte sich jedoch nicht darauf verlassen, um Leistungsregressionen fortlaufend aufzuspüren.
+Genauso wie die Möglichkeit, Unit-Tests lokal auszuführen, die Notwendigkeit für CI nicht überflüssig macht,
+macht die Möglichkeit, Benchmarks lokal auszuführen und zu vergleichen, die Notwendigkeit für Kontinuierliches Benchmarking nicht überflüssig.
+
+Es gibt mehrere Funktionen, die Bencher bietet und die lokale Benchmark-Vergleichswerkzeuge nicht können:
+- Vergleich desselben Benchmarks zwischen verschiedenen Testumgebungen
+- Vergleich von Benchmarks über Sprachen und Harnische hinweg
+- Zusammenarbeit und Teilen von Benchmark-Ergebnissen
+- Ausführen von Benchmarks auf dedizierten Testumgebungen, um Rauschen zu minimieren
+- Kein Copy-and-Paste mehr

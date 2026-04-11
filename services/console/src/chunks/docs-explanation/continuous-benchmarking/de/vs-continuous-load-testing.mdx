@@ -1,0 +1,21 @@
+## Kontinuierliches Benchmarking vs. Kontinuierliches Lasttesting
+
+Um den Unterschied zwischen Kontinuierlichem Benchmarking und Kontinuierlichem Lasttesting zu verstehen,
+müssen Sie den Unterschied zwischen
+[Benchmarking](https://de.wikipedia.org/wiki/Benchmark_(Computer)) und
+[Lasttesting](https://de.wikipedia.org/wiki/Lasttest_(Computer)) verstehen.
+
+|   Testart    |    Testumfang     | Testbenutzer |
+| :----------: | :---------------: | :----------: |
+| Benchmarking | Funktion - Dienst | Ein - Viele  |
+| Lasttesting  |      Dienst       |    Viele     |
+
+Benchmarking kann die Leistung von Software von der Funktionsebene (Mikro-Benchmarks) bis hin zur Dienstebene (Makro-Benchmarks) testen.
+Benchmarks sind ideal, um die Leistung eines bestimmten Teils Ihres Codes isoliert zu testen.
+Lasttests prüfen die Leistung von Software ausschließlich auf der Dienstebene und simulieren mehrere gleichzeitige Benutzer.
+Lasttests sind ideal, um die Leistung des gesamten Dienstes unter einer bestimmten Last zu testen.
+
+🍦 Stellen Sie sich vor, wir wollten die Leistung eines Eiswagens verfolgen.
+Benchmarking könnte verwendet werden, um zu messen, wie lange es dauert, eine Eiskugel in eine Waffel zu füllen (Mikro-Benchmark), und
+Benchmarking könnte auch verwendet werden, um zu messen, wie lange es dauert, bis ein einzelner Kunde bestellt, sein Eis erhält und bezahlt (Makro-Benchmark).
+Lasttests könnten verwendet werden, um zu sehen, wie gut der Eiswagen 100 Kunden an einem heißen Sommertag bedient.

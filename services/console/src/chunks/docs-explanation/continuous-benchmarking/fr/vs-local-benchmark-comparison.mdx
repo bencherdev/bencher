@@ -1,0 +1,14 @@
+## Le Benchmarking Continu vs Comparaison de Benchmarks Locale
+
+Il existe plusieurs harnais de benchmarking qui vous permettent de comparer les résultats localement.
+La comparaison locale est excellente pour itérer rapidement lors de l'optimisation des performances.
+Cependant, elle ne doit pas être utilisée pour détecter les régressions de performance de manière continue.
+Tout comme le fait de pouvoir exécuter des tests unitaires localement n'élimine pas le besoin de CI,
+le fait de pouvoir exécuter et comparer des benchmarks localement n'élimine pas le besoin de Benchmarking Continu.
+
+Bencher offre plusieurs fonctionnalités que les outils de comparaison de benchmarks locaux ne peuvent pas offrir :
+- Comparaison du même benchmark entre différents bancs d'essai
+- Comparaison de benchmarks à travers différents langages et harnais
+- Collaboration et partage des résultats de benchmark
+- Exécution des benchmarks sur des bancs d'essai dédiés pour minimiser le bruit
+- Fini les copier-coller

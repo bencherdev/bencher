@@ -1,0 +1,41 @@
+## パフォーマンスは重要
+
+俗説：100msのレイテンシには気付けない
+
+人間は100msのレイテンシを知覚できない、という主張をよく耳にします。
+この主張の根拠として[Nielsen Groupの応答時間に関する記事](https://www.nngroup.com/articles/response-times-3-important-limits/)がしばしば引用されます。
+
+> **0.1秒**は、ユーザーがシステムは**瞬時に反応している**と感じられる限界であり、結果を表示する以外に特別なフィードバックは必要ないことを意味します。
+>
+> - Jakob Nielsen、1993年1月1日
+
+しかし、これは単純に正しくありません。
+タスクによっては、人は[わずか2msのレイテンシ](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf)まで知覚できます。
+これを証明する簡単な方法は、[Dan Luu氏の実験](https://danluu.com/input-lag/#appendix-why-measure-latency)です。ターミナルを開いて `sleep 0; echo "ping"` を実行し、続いて `sleep 0.1; echo "pong"` を実行してみてください。違いに気付きましたよね‽
+
+もう一つのよくある混同は、レイテンシの知覚と人間の反応時間との区別です。視覚的刺激に反応するには[およそ200msかかる](https://humanbenchmark.com/tests/reactiontime)とはいえ、それは出来事そのものの知覚とは独立しています。例えるなら、電車に2時間乗ることになる（反応時間）としても、電車が2分遅れている（知覚されるレイテンシ）ことには気付けるのです。
+
+パフォーマンスは重要です！[パフォーマンスは機能です](https://blog.codinghorror.com/performance-is-a-feature)！
+
+- 100msごとに高速化 → コンバージョン1%増（[Mobify](https://web.dev/why-speed-matters/)、年間+$380,000の収益）
+- 50%高速化 → 売上12%増（[AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/)）
+- 20%高速化 → コンバージョン10%増（[Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/)）
+- 40%高速化 → サインアップ15%増（[Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7)）
+- 850ms高速化 → コンバージョン7%増（[COOK](https://web.dev/why-speed-matters/)）
+- 1秒遅くなるごとに → ユーザー10%減（[BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale)）
+
+ムーアの法則の終焉とともに、並列化可能なワークロードは並列化する必要が生じます。
+しかし、ほとんどのワークロードは直列で実行する必要があり、
+単により多くの計算資源を問題に投入することは、もはや手に負えない高コストな解決策になりつつあります。
+
+継続的ベンチマーキングは、この変化に直面しながら
+パフォーマンスの高い現代のソフトウェアを開発・維持するための重要な構成要素です。
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/docs/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Moore's Law from https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>

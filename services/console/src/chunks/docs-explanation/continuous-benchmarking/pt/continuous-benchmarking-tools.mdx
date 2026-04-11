@@ -1,0 +1,14 @@
+## Ferramentas de Benchmarking Contínuo
+
+Antes de criar o Bencher, procuramos uma ferramenta que pudesse:
+
+- Executar benchmarks no _exato mesmo_ hardware dedicado, tanto localmente quanto em CI
+- Rastrear benchmarks em várias linguagens
+- Ingerir sem problemas a saída padrão do arnês de benchmark da linguagem
+- Ser extensível para saídas personalizadas de arnês de benchmark
+- Código aberto e capaz de ser auto-hospedado
+- Funcionar com múltiplos hosts de CI
+- Autenticação e autorização de usuários
+
+Infelizmente, nada que atendesse a todos esses critérios existia.
+Veja a [arte anterior](/pt/docs/reference/prior-art/) para uma lista abrangente das ferramentas de benchmarking existentes que nos inspiraram.

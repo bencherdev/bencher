@@ -1,0 +1,14 @@
+## Benchmarking Continuo vs Comparación Local de Benchmarks
+
+Hay varios arneses de benchmarks que te permiten comparar resultados localmente.
+La comparación local es excelente para iterar rápidamente cuando se ajusta el rendimiento.
+Sin embargo, no debería ser la vía en la que se confíe para detectar regresiones de rendimiento de forma continua.
+Al igual que poder ejecutar pruebas unitarias localmente no elimina la necesidad de CI,
+poder ejecutar y comparar benchmarks localmente no elimina la necesidad del Benchmarking Continuo.
+
+Existen varias características que Bencher ofrece y que las herramientas de comparación local de benchmarks no pueden ofrecer:
+- Comparación del mismo benchmark entre distintos bancos de pruebas
+- Comparación de benchmarks entre lenguajes y arneses
+- Colaboración y compartición de resultados de benchmarks
+- Ejecución de benchmarks en bancos de pruebas dedicados para minimizar el ruido
+- Adiós al copia y pega

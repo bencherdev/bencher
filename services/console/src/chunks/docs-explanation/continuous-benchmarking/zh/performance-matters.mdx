@@ -1,0 +1,35 @@
+## 性能很重要
+
+误区：你无法察觉到 100 毫秒的延迟
+
+经常能听到有人声称人类无法感知 100 毫秒的延迟。人们常常援引一篇 [Nielsen Group 关于响应时间的文章](https://www.nngroup.com/articles/response-times-3-important-limits/)来支持这一说法。
+
+> **0.1 秒**大约是让用户感觉系统**即时响应**的极限，这意味着除了显示结果之外不需要任何特别的反馈。
+>
+> - Jakob Nielsen，__*1993*__ 年 1 月 1 日
+
+但事实并非如此。在某些任务中，人类可以察觉到[低至 2 毫秒的延迟](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf)。一个简单的证明方法就是 [Dan Luu 的一个实验](https://danluu.com/input-lag/#appendix-why-measure-latency)：打开终端，先运行 `sleep 0; echo "ping"`，然后再运行 `sleep 0.1; echo "pong"`。你注意到差别了吧‽
+
+另一个常见的混淆点是延迟的感知与人类反应时间之间的区别。尽管人对视觉刺激做出反应[大约需要 200 毫秒](https://humanbenchmark.com/tests/reactiontime)，但这与对事件本身的感知是两码事。打个比方，你可以察觉到你的火车晚点了两分钟（感知到的延迟），尽管整趟火车行程要两个小时（反应时间）。
+
+性能很重要！[性能本身就是一个特性](https://blog.codinghorror.com/performance-is-a-feature)！
+
+- 每快 100 毫秒 → 转化率提升 1%（[Mobify](https://web.dev/why-speed-matters/)，每年收入增加 +$380,000）
+- 快 50% → 销售额提升 12%（[AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/)）
+- 快 20% → 转化率提升 10%（[Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/)）
+- 快 40% → 注册量提升 15%（[Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7)）
+- 快 850 毫秒 → 转化率提升 7%（[COOK](https://web.dev/why-speed-matters/)）
+- 每慢 1 秒 → 用户减少 10%（[BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale)）
+
+随着摩尔定律的终结，可以并行运行的工作负载将需要被并行化。然而，大多数工作负载仍需要串行运行，而仅仅靠堆砌更多的算力来解决问题正迅速变成一种棘手且昂贵的方案。
+
+面对这样的变化，持续基准测试是开发和维护高性能现代软件的关键一环。
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/docs/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Moore's Law from https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>

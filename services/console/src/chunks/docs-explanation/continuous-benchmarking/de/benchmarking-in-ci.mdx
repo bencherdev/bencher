@@ -1,0 +1,20 @@
+import PerfImg from "../perf-img.mdx";
+
+## Benchmarking in CI
+
+Mythos: Benchmarks lassen sich nicht in CI ausführen
+
+Die meisten Benchmark-Harnische verwenden die [System-Wanduhr](https://de.wikipedia.org/wiki/Echtzeit_(Informationsverarbeitung)) zur Messung von Latenz oder Durchsatz.
+Das ist sehr hilfreich, denn das sind genau die Metriken, die uns als Entwickler am meisten interessieren.
+Allgemeine CI-Umgebungen sind jedoch beim Messen der Wanduhrzeit oft verrauscht und inkonsistent.
+Beim Kontinuierlichen Benchmarking fügt diese Volatilität unerwünschtes Rauschen in die Ergebnisse ein.
+
+Es gibt einige Möglichkeiten, damit umzugehen:
+1. [Dedizierte Hardware-Runner](/pricing/#bare-metal)
+2. [Relatives Kontinuierliches Benchmarking](/de/docs/how-to/track-benchmarks/#relative-continuous-benchmarking)
+3. Der Wechsel zu einem Benchmark-Harnisch, der Instruktionen anstelle der Wanduhrzeit zählt
+
+Mit Abstand sind dedizierte Hardware-Runner in nahezu jedem Fall die beste Option.
+Bencher bietet dedizierte Hardware-Runner mit einer Varianz von unter 2 %.
+Vergleichen Sie das mit GitHub-Action-Runnern, bei denen die Varianz zwischen einzelnen Läufen über 30 % betragen kann.
+Wenn Sie die Volatilität und damit das Rauschen in Ihrer Umgebung für Kontinuierliches Benchmarking reduzieren, können Sie immer feinere Leistungsregressionen erkennen.

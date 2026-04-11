@@ -1,0 +1,21 @@
+## Le Benchmarking Continu vs Tests de Charge Continus
+
+Afin de comprendre la différence entre le Benchmarking Continu et les Tests de Charge Continus,
+vous devez comprendre la différence entre
+[le benchmarking](https://fr.wikipedia.org/wiki/Test_de_performance) et
+[les tests de charge](https://fr.wikipedia.org/wiki/Test_de_performance).
+
+|  Type de Test  |   Portée du Test   | Utilisateurs du Test |
+| :------------: | :----------------: | :------------------: |
+|  Benchmarking  | Fonction - Service |    Un - Plusieurs    |
+| Test de Charge |      Service       |      Plusieurs       |
+
+Le benchmarking peut tester la performance d'un logiciel, du niveau fonction (micro-benchmarks) jusqu'au niveau service (macro-benchmarks).
+Les benchmarks sont excellents pour tester la performance d'une partie spécifique de votre code de manière isolée.
+Les tests de charge ne testent la performance des logiciels qu'au niveau du service et simulent plusieurs utilisateurs simultanés.
+Les tests de charge sont excellents pour tester la performance de l'ensemble du service sous une charge spécifique.
+
+🍦 Imaginez que nous voulions suivre la performance d'un camion de crème glacée.
+Le benchmarking pourrait être utilisé pour mesurer combien de temps il faut pour servir une boule de glace (micro-benchmark), et
+le benchmarking pourrait également être utilisé pour mesurer combien de temps il faut à un seul client pour commander, obtenir sa glace et payer (macro-benchmark).
+Les tests de charge pourraient être utilisés pour voir comment le camion de glace sert 100 clients par une chaude journée d'été.
