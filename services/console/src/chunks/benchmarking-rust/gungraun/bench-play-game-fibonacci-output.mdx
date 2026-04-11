@@ -1,0 +1,14 @@
+```
+$ cargo bench
+    Finished `bench` profile [optimized + debuginfo] target(s) in 0.73s
+     Running benches/play_game.rs (target/release/deps/play_game-84c12f98b1991829)
+play_game::bench_play_game_group::bench_play_game_100
+  Instructions:                      331835|17902                (+1753.62%) [+18.5362x]
+  L1 Hits:                           338828|24984                (+1256.18%) [+13.5618x]
+  LL Hits:                                2|1                    (+100.000%) [+2.00000x]
+  RAM Hits:                              22|20                   (+10.0000%) [+1.10000x]
+  Total read+write:                  338852|25005                (+1255.14%) [+13.5514x]
+  Estimated Cycles:                  339608|25689                (+1222.00%) [+13.2200x]
+
+Gungraun result: Ok. 1 without regressions; 0 regressed; 0 filtered; 1 benchmarks finished in 0.15254s
+```

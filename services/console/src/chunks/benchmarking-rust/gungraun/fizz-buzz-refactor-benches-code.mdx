@@ -1,0 +1,19 @@
+```rust
+use gungraun::prelude::*;
+use std::hint::black_box;
+use game::play_game;
+
+#[library_benchmark]
+fn bench_play_game() {
+    for i in 1..=100 {
+        play_game(black_box(i), black_box(false))
+    }
+}
+
+library_benchmark_group!(
+    name = bench_play_game_group,
+    benchmarks = [bench_play_game]
+);
+
+main!(library_benchmark_groups = bench_play_game_group);
+```

@@ -1,0 +1,17 @@
+[workspace]
+
+[package]
+name = "game"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dev-dependencies]
+gungraun = "0.18.0"
+
+[[bench]]
+name = "play_game"
+harness = false
+
+[profile.bench]
+debug = true
