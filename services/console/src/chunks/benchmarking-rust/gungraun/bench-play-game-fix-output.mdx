@@ -1,0 +1,28 @@
+```
+$ cargo bench
+    Finished `bench` profile [optimized + debuginfo] target(s) in 0.73s
+     Running benches/play_game.rs (target/release/deps/play_game-84c12f98b1991829)
+play_game::bench_play_game_group::bench_play_game_100
+  Instructions:                       23679|331835               (-92.8642%) [-14.0139x]
+  L1 Hits:                            30675|338831               (-90.9468%) [-11.0458x]
+  LL Hits:                                2|1                    (+100.000%) [+2.00000x]
+  RAM Hits:                              19|20                   (-5.00000%) [-1.05263x]
+  Total read+write:                   30696|338852               (-90.9412%) [-11.0390x]
+  Estimated Cycles:                   31350|339536               (-90.7668%) [-10.8305x]
+play_game::bench_play_game_group::bench_play_game play_0:(100)
+  Instructions:                         218|7072                 (-96.9174%) [-32.4404x]
+  L1 Hits:                              273|7128                 (-96.1700%) [-26.1099x]
+  LL Hits:                                1|1                    (No change)
+  RAM Hits:                              10|9                    (+11.1111%) [+1.11111x]
+  Total read+write:                     284|7138                 (-96.0213%) [-25.1338x]
+  Estimated Cycles:                     628|7448                 (-91.5682%) [-11.8599x]
+play_game::bench_play_game_group::bench_play_game play_1:(1_000_000)
+  Instructions:                         332|183930316            (-99.9998%) [ -554007x]
+  L1 Hits:                              387|183930372            (-99.9998%) [ -475272x]
+  LL Hits:                                1|1                    (No change)
+  RAM Hits:                              10|9                    (+11.1111%) [+1.11111x]
+  Total read+write:                     398|183930382            (-99.9998%) [ -462137x]
+  Estimated Cycles:                     742|183930692            (-99.9996%) [ -247885x]
+
+Gungraun result: Ok. 3 without regressions; 0 regressed; 0 filtered; 3 benchmarks finished in 0.45459s
+```

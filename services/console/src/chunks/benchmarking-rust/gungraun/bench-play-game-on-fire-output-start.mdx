@@ -1,0 +1,28 @@
+```
+$ cargo bench
+    Finished `bench` profile [optimized + debuginfo] target(s) in 0.73s
+     Running benches/play_game.rs (target/release/deps/play_game-84c12f98b1991829)
+play_game::bench_play_game_group::bench_play_game_100
+  Instructions:                      331835|331835               (No change)
+  L1 Hits:                           338831|338828               (+0.00089%) [+1.00001x]
+  LL Hits:                                1|2                    (-50.0000%) [-2.00000x]
+  RAM Hits:                              20|22                   (-9.09091%) [-1.10000x]
+  Total read+write:                  338852|338852               (No change)
+  Estimated Cycles:                  339536|339608               (-0.02120%) [-1.00021x]
+play_game::bench_play_game_group::bench_play_game play_0:(100)
+  Instructions:                        7072|N/A                  (*********)
+  L1 Hits:                             7128|N/A                  (*********)
+  LL Hits:                                1|N/A                  (*********)
+  RAM Hits:                               9|N/A                  (*********)
+  Total read+write:                    7138|N/A                  (*********)
+  Estimated Cycles:                    7448|N/A                  (*********)
+play_game::bench_play_game_group::bench_play_game play_1:(1_000_000)
+  Instructions:                   183930316|N/A                  (*********)
+  L1 Hits:                        183930372|N/A                  (*********)
+  LL Hits:                                1|N/A                  (*********)
+  RAM Hits:                               9|N/A                  (*********)
+  Total read+write:               183930382|N/A                  (*********)
+  Estimated Cycles:               183930692|N/A                  (*********)
+
+Gungraun result: Ok. 3 without regressions; 0 regressed; 0 filtered; 3 benchmarks finished in 1.45441s
+```
