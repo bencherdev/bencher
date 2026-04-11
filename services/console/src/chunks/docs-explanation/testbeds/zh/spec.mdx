@@ -2,8 +2,43 @@
 
 <br />
 
-用于远程运行器执行的硬件 [Spec][spec] slug 或 UUID。
-Spec 决定了可用的硬件资源和默认的 Testbed 名称。
-要求：`--image`
+指定 Spec 的 slug 或 UUID。
+Spec 是一种硬件规范，描述了 [Runner][runner] 可用的资源：
 
-[spec]: /zh/docs/explanation/benchmarking/#spec
+1. 操作系统 (OS)
+   1. Linux
+   2. macOS
+   3. Windows
+2. CPU 架构
+   1. x86_64
+   2. ARM64
+3. Sandbox
+   1. Firecracker microVM
+   2. 无 Sandbox
+4. CPU 数量
+5. 内存大小 (RAM)
+6. 磁盘大小
+7. 网络访问
+
+以下 Spec 目前在 [Bencher Cloud][bencher cloud] 上可用：
+
+|   名称   |    Slug    |  OS   |  架构  |       Sandbox       | CPU |   内存   |   磁盘    | 网络 |
+| :------: | :--------: | :---: | :----: | :-----------------: | :-: | :------: | :-------: | :--: |
+| Intel v1 | `intel-v1` | Linux | x86_64 | Firecracker microVM |  4  | 48.0 GiB | 128.0 GiB |  无  |
+
+Spec 可以是服务器级别的或组织级别的，
+因此同一 Spec 可以在同一服务器上的多个 Testbed 之间或在同一组织内共享。
+
+使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 时选择 Spec 的优先级顺序如下：
+1. `--spec` 选项
+2. 分配给 Testbed 的 Spec
+3. 默认的组织级别 Spec
+4. 默认的服务器级别 Spec
+
+所选的 Spec 将分配给当前的 [Testbed][testbed]。
+此选项要求设置 [`--image` 选项][image]。
+
+[runner]: /zh/docs/explanation/bare-metal/#runner
+[image]: /zh/docs/explanation/images/#--image-image
+[testbed]: /zh/docs/explanation/benchmarking/#testbed
+[bencher cloud]: https://bencher.dev
