@@ -1,0 +1,34 @@
+---
+title: "Gungraun"
+description: "A step-by-step guide on how to track Rust Gungraun benchmarks in CI"
+heading: "How to track Rust Gungraun benchmarks in CI"
+published: "2026-04-12T00:00:00Z"
+modified: "2026-04-12T00:00:00Z"
+sortOrder: 3
+---
+
+import Intro from "../../../chunks/track-in-ci/en/intro.mdx";
+import BencherIntro from "../../../chunks/general/en/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/en/steps.mdx";
+import RustGungraun from "../../../chunks/docs-explanation/adapters/en/rust-gungraun.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  text="how to benchmark Rust code with Gungraun"
+  url="/learn/benchmarking/rust/gungraun/"
+  name="Gungraun"
+/>
+
+## What is Bencher?
+
+<BencherIntro />
+
+<Steps
+  adapter="rust_gungraun"
+  url="/docs/explanation/adapters/#-rust-gungraun"
+/>
+
+<RustGungraun />
+
+<CallToAction lang={Language.en} />
