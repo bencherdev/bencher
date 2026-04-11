@@ -1,10 +1,10 @@
-[Bencher](/fr/pricing) est une suite d'outils de benchmarking continu.
+[Bencher](/pricing) est une suite d'outils de [benchmarking continu](/docs/explanation/continuous-benchmarking/).
 Avez-vous déjà eu une régression de performance qui a impacté vos utilisateurs ?
 Bencher aurait pu empêcher cela de se produire.
-Bencher vous permet de détecter et de prévenir les régressions de performance _avant_ qu'elles n'arrivent en production.
+Bencher vous permet de détecter et de prévenir les régressions de performance _avant_ qu'elles ne soient fusionnées.
 
-- **Exécuter**: Exécutez vos benchmarks localement ou en CI en utilisant vos outils de benchmarking préférés. La CLI `bencher` enveloppe simplement votre harnais de benchmarking existant et stocke ses résultats.
+- **Exécuter**: Exécutez vos benchmarks localement ou en CI en utilisant _exactement les mêmes_ runners bare metal et vos outils de benchmarking préférés. La CLI `bencher` orchestre l'exécution de vos benchmarks sur bare metal et stocke ses résultats.
 - **Suivre**: Suivez les résultats de vos benchmarks au fil du temps. Surveillez, interrogez et graphiquez les résultats à l'aide de la console web Bencher en fonction de la branche source, du banc d'essai et de la mesure.
-- **Détecter**: Détectez les régressions de performances en CI. Bencher utilise des analyses de pointe et personnalisables pour détecter les régressions de performances avant qu'elles n'arrivent en production.
+- **Détecter**: Détectez les régressions de performances localement ou en CI en utilisant _exactement le même_ matériel bare metal. Bencher utilise des analyses de pointe et personnalisables pour détecter les régressions de performances avant qu'elles ne soient fusionnées.
 
-Pour les mêmes raisons que les tests unitaires sont exécutés en CI pour prévenir les régressions de fonctionnalités, les benchmarks devraient être exécutés en CI avec Bencher pour prévenir les régressions de performance. Les bugs de performance sont des bugs !
+Pour les mêmes raisons que les tests unitaires sont exécutés pour prévenir les régressions de fonctionnalités, les benchmarks devraient être exécutés avec Bencher pour prévenir les régressions de performance. Les bugs de performance sont des bugs !

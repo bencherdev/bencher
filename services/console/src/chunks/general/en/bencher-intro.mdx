@@ -1,10 +1,10 @@
-[Bencher](/pricing) is a suite of continuous benchmarking tools.
+[Bencher](/pricing) is a suite of [continuous benchmarking](/docs/explanation/continuous-benchmarking/) tools.
 Have you ever had a performance regression impact your users?
 Bencher could have prevented that from happening.
-Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
+Bencher allows you to detect and prevent performance regressions _before_ they merge.
 
-- **Run**: Run your benchmarks locally or in CI using your favorite benchmarking tools. The `bencher` CLI simply wraps your existing benchmark harness and stores its results.
+- **Run**: Run your benchmarks locally or in CI using the _exact same_ bare metal runners and your favorite benchmarking tools. The `bencher` CLI orchestrates running your benchmarks on bare metal and stores its results.
 - **Track**: Track the results of your benchmarks over time. Monitor, query, and graph the results using the Bencher web console based on the source branch, testbed, benchmark, and measure.
-- **Catch**: Catch performance regressions in CI. Bencher uses state of the art, customizable analytics to detect performance regressions before they make it to production.
+- **Catch**: Catch performance regressions locally or in CI using the _exact same_ bare metal hardware. Bencher uses state of the art, customizable analytics to detect performance regressions before they merge.
 
-For the same reasons that unit tests are run in CI to prevent feature regressions, benchmarks should be run in CI with Bencher to prevent performance regressions. Performance bugs are bugs!
+For the same reasons that unit tests are run to prevent feature regressions, benchmarks should be run with Bencher to prevent performance regressions. Performance bugs are bugs!
