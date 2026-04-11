@@ -1,5 +1,10 @@
 import * as Sentry from "@sentry/astro";
-import { type Accessor, createResource, createSignal } from "solid-js";
+import {
+	type Accessor,
+	createEffect,
+	createResource,
+	createSignal,
+} from "solid-js";
 import { createStore } from "solid-js/store";
 import { PLOT_FIELDS } from "../../../../config/project/plot";
 import type {
@@ -36,6 +41,14 @@ export interface Props {
 }
 
 const PinModal = (props: Props) => {
+	createEffect(() => {
+		if (props.pin()) {
+			document.documentElement.classList.add("is-clipped");
+		} else {
+			document.documentElement.classList.remove("is-clipped");
+		}
+	});
+
 	const [bencher_valid] = createResource(init_valid);
 	const navigate = useNavigate();
 

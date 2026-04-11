@@ -9,6 +9,7 @@ import Collection from "../../../util/collection.ts";
 import DocsList from "./DocsList.astro";
 import ApiList from "./ApiList.astro";
 import LearnList from "./LearnList.astro";
+import DocsSearch from "../search/DocsSearch.astro";
 
 interface Props {
 	tab: DocsTab;
@@ -144,6 +145,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
 ---
 
 <aside class="menu is-sticky" style={{ maxWidth: "300px" }}>
+	<DocsSearch lang={lang} />
 	<LangButton lang={lang} tab={tab} collection={collection} slug={slug} />
 	<!-- Docs -->
 	<div class="tabs is-centered">

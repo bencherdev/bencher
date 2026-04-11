@@ -1,5 +1,11 @@
 import { debounce } from "@solid-primitives/scheduled";
-import { type Accessor, Show, createMemo, createSignal } from "solid-js";
+import {
+	type Accessor,
+	Show,
+	createEffect,
+	createMemo,
+	createSignal,
+} from "solid-js";
 import { embedHeight } from "../../../../config/types";
 import type {
 	JsonAuthUser,
@@ -29,6 +35,14 @@ export interface Props {
 }
 
 const ShareModal = (props: Props) => {
+	createEffect(() => {
+		if (props.share()) {
+			document.documentElement.classList.add("is-clipped");
+		} else {
+			document.documentElement.classList.remove("is-clipped");
+		}
+	});
+
 	const location = window.location;
 	const [searchParams, _setSearchParams] = useSearchParams();
 

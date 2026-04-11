@@ -307,3 +307,187 @@ export const engineering = (lang: Language) => {
 			return "工程";
 	}
 };
+
+export const search = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Search documentation";
+		case Language.de:
+			return "Dokumentation durchsuchen";
+		case Language.es:
+			return "Buscar en la documentación";
+		case Language.fr:
+			return "Rechercher dans la documentation";
+		case Language.ja:
+			return "ドキュメントを検索";
+		case Language.ko:
+			return "문서 검색";
+		case Language.pt:
+			return "Pesquisar na documentação";
+		case Language.ru:
+			return "Поиск в документации";
+		case Language.zh:
+			return "搜索文档";
+	}
+};
+
+export const selectLanguage = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Select a language";
+		case Language.de:
+			return "Sprache auswählen";
+		case Language.es:
+			return "Seleccionar un idioma";
+		case Language.fr:
+			return "Choisir une langue";
+		case Language.ja:
+			return "言語を選択";
+		case Language.ko:
+			return "언어 선택";
+		case Language.pt:
+			return "Selecionar um idioma";
+		case Language.ru:
+			return "Выберите язык";
+		case Language.zh:
+			return "选择语言";
+	}
+};
+
+export const searchPlaceholder = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Search…";
+		case Language.de:
+			return "Suchen…";
+		case Language.es:
+			return "Buscar…";
+		case Language.fr:
+			return "Rechercher…";
+		case Language.ja:
+			return "検索…";
+		case Language.ko:
+			return "검색…";
+		case Language.pt:
+			return "Pesquisar…";
+		case Language.ru:
+			return "Поиск…";
+		case Language.zh:
+			return "搜索…";
+	}
+};
+
+export const searchNoResults = (lang: Language, query: string) => {
+	switch (lang) {
+		case Language.en:
+			return `No results found for "${query}"`;
+		case Language.de:
+			return `Keine Ergebnisse für „${query}" gefunden`;
+		case Language.es:
+			return `No se encontraron resultados para "${query}"`;
+		case Language.fr:
+			return `Aucun résultat trouvé pour « ${query} »`;
+		case Language.ja:
+			return `"${query}" の結果が見つかりません`;
+		case Language.ko:
+			return `"${query}"에 대한 결과가 없습니다`;
+		case Language.pt:
+			return `Nenhum resultado encontrado para "${query}"`;
+		case Language.ru:
+			return `Результаты по запросу «${query}» не найдены`;
+		case Language.zh:
+			return `未找到 "${query}" 的结果`;
+	}
+};
+
+export const searchLoading = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Searching…";
+		case Language.de:
+			return "Suche läuft…";
+		case Language.es:
+			return "Buscando…";
+		case Language.fr:
+			return "Recherche en cours…";
+		case Language.ja:
+			return "検索中…";
+		case Language.ko:
+			return "검색 중…";
+		case Language.pt:
+			return "Pesquisando…";
+		case Language.ru:
+			return "Поиск…";
+		case Language.zh:
+			return "搜索中…";
+	}
+};
+
+export const searchEmpty = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Start typing to search the docs.";
+		case Language.de:
+			return "Beginnen Sie mit der Eingabe, um die Dokumentation zu durchsuchen.";
+		case Language.es:
+			return "Empieza a escribir para buscar en la documentación.";
+		case Language.fr:
+			return "Commencez à taper pour rechercher dans la documentation.";
+		case Language.ja:
+			return "入力してドキュメントを検索してください。";
+		case Language.ko:
+			return "문서를 검색하려면 입력을 시작하세요.";
+		case Language.pt:
+			return "Comece a digitar para pesquisar na documentação.";
+		case Language.ru:
+			return "Начните вводить текст для поиска в документации.";
+		case Language.zh:
+			return "开始输入以搜索文档。";
+	}
+};
+
+export const searchError = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Search is temporarily unavailable.";
+		case Language.de:
+			return "Die Suche ist vorübergehend nicht verfügbar.";
+		case Language.es:
+			return "La búsqueda no está disponible temporalmente.";
+		case Language.fr:
+			return "La recherche est temporairement indisponible.";
+		case Language.ja:
+			return "検索は一時的に利用できません。";
+		case Language.ko:
+			return "검색을 일시적으로 사용할 수 없습니다.";
+		case Language.pt:
+			return "A pesquisa está temporariamente indisponível.";
+		case Language.ru:
+			return "Поиск временно недоступен.";
+		case Language.zh:
+			return "搜索暂时不可用。";
+	}
+};
+
+export const searchDevStub = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Search is only available in production builds. Run `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`.";
+		case Language.de:
+			return "Die Suche ist nur in Produktions-Builds verfügbar. Führen Sie `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview` aus.";
+		case Language.es:
+			return "La búsqueda solo está disponible en compilaciones de producción. Ejecuta `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`.";
+		case Language.fr:
+			return "La recherche n'est disponible que dans les builds de production. Exécutez `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`.";
+		case Language.ja:
+			return "検索は本番ビルドでのみ利用できます。`IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview` を実行してください。";
+		case Language.ko:
+			return "검索은 프로덕션 빌드에서만 사용할 수 있습니다. `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`를 실행하세요.";
+		case Language.pt:
+			return "A pesquisa só está disponível em builds de produção. Execute `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`.";
+		case Language.ru:
+			return "Поиск доступен только в производственных сборках. Запустите `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`.";
+		case Language.zh:
+			return "搜索仅在生产构建中可用。请运行 `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`。";
+	}
+};

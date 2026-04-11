@@ -8,6 +8,7 @@ import {
 	langBoxId,
 	langButtonId,
 	languageName,
+	selectLanguage,
 } from "./ui";
 import { langPath } from "./utils";
 
@@ -52,7 +53,8 @@ const tabPath = () => {
     <button
       class="button is-small is-fullwidth"
       type="button"
-      title="View Project Perf"
+      title={selectLanguage(lang)}
+      aria-label={selectLanguage(lang)}
     >
       <span class="icon is-small">
         <i class="fas fa-globe" />
