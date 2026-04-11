@@ -117,7 +117,7 @@ async fn test_ui_version(console_url: &str, user_agent: Option<&str>) -> anyhow:
     let url = format!("{console_url}/download");
     println!("Testing UI deploy is version {API_VERSION} at {url}");
 
-    let heading = format!("Bencher Download (v{API_VERSION})");
+    let heading = format!("Bencher <code>v{API_VERSION}</code> Download");
 
     fetch_and_check(&url, user_agent, &heading).await
 }
