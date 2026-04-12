@@ -7,7 +7,7 @@ pub use live::TaskLive;
 #[cfg(feature = "plus")]
 pub use plus::{
     email_list::TaskEmailList,
-    index::{TaskIndex, TaskIndexDelete, TaskIndexUpdate, TaskSearchEngine},
+    index::{TaskIndex, TaskIndexDelete, TaskIndexDocs, TaskIndexUpdate, TaskSearchEngine},
     license::{TaskBillingCycle, TaskLicense, TaskLicenseGenerate, TaskLicenseValidate},
     stats::TaskStats,
 };
