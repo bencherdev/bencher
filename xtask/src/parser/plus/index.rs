@@ -2,9 +2,9 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Subcommand, Debug)]
 pub enum TaskIndex {
-    /// Generate a license key
+    /// Submit URLs to search engine indexes
     Update(TaskIndexUpdate),
-    /// Validate a license key
+    /// Remove URLs from search engine indexes
     Delete(TaskIndexDelete),
     /// Submit an English page path and all 8 translated variants
     Docs(TaskIndexDocs),
