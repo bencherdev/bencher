@@ -8,6 +8,7 @@ import AuthRedirect from "../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
 import TrustedBy from "../components/landing/TrustedBy.astro";
+import RegressionChart from "../components/landing/RegressionChart.astro";
 import HowItWorks from "../components/landing/HowItWorks.astro";
 import Showcase from "../components/landing/Showcase.astro";
 import Toolbox from "../components/landing/Toolbox.astro";
@@ -25,8 +26,8 @@ import CallToAction from "../components/landing/CallToAction.astro";
   />
   <AuthRedirect client:only="solid-js" path="/console" />
   <section class="hero-landing">
-    <div class="columns">
-      <div class="column is-10">
+    <div class="columns is-vcentered">
+      <div class="column is-6">
         <div class="content">
           <p class="hero-eyebrow">CONTINUOUS BENCHMARKING</p>
           <h1 class="title is-1">
@@ -52,11 +53,14 @@ import CallToAction from "../components/landing/CallToAction.astro";
             </a>
           </div>
         </div>
-
-        <div style="margin-top: 2rem;">
-          <TrustedBy />
-        </div>
       </div>
+      <div class="column is-6 hero-chart-col">
+        <RegressionChart />
+      </div>
+    </div>
+
+    <div class="trusted-by-wrap">
+      <TrustedBy />
     </div>
   </section>
 
@@ -98,21 +102,31 @@ import CallToAction from "../components/landing/CallToAction.astro";
     margin-top: 0 !important;
   }
 
+  .trusted-by-wrap {
+    margin-top: 4rem;
+  }
+
+  @media screen and (max-width: 768px) {
+    .hero-chart-col {
+      margin-top: 2rem;
+    }
+  }
+
   @media screen and (min-width: 769px) {
     .hero-landing {
-      padding: 6rem 4rem 2rem;
+      padding: 6rem 2rem 2rem;
     }
   }
 
   @media screen and (min-width: 1024px) {
     .hero-landing {
-      padding: 6rem 8rem 2rem;
+      padding: 6rem 4rem 2rem;
     }
   }
 
   @media screen and (min-width: 1216px) {
     .hero-landing {
-      padding: 6rem 12rem 2rem;
+      padding: 6rem 6rem 2rem;
     }
   }
 </style>

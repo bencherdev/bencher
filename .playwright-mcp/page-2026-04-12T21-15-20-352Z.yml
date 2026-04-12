@@ -1,0 +1,381 @@
+- generic [active] [ref=e1]:
+  - navigation "main navigation" [ref=e2]:
+    - generic [ref=e3]:
+      - link "🐰 Bencher" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "🐰 Bencher" [ref=e6]
+      - button "menu" [ref=e7] [cursor=pointer]
+  - main [ref=e12]:
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e16]:
+          - paragraph [ref=e17]: CONTINUOUS BENCHMARKING
+          - heading "Catch performance regressions before they merge" [level=1] [ref=e18]
+          - heading "Bencher runs on bare metal to eliminate noise and deliver benchmark results you can actually trust." [level=2] [ref=e19]
+          - generic [ref=e20]:
+            - link "Start benchmarking free" [ref=e21] [cursor=pointer]:
+              - /url: /auth/signup
+            - link "Read the docs" [ref=e22] [cursor=pointer]:
+              - /url: /docs/tutorial/bare-metal/
+        - img "Animated chart showing benchmark results with a performance regression spike that triggers an alert, followed by recovery" [ref=e27]:
+          - generic [ref=e29]: "0"
+          - generic [ref=e30]: "5"
+          - generic [ref=e31]: "10"
+          - generic [ref=e32]: "15"
+          - generic [ref=e33]: "20"
+          - generic [ref=e34]: "25"
+          - generic [ref=e35]: ↑ microseconds (μs)
+          - generic [ref=e36]: limit
+          - generic [ref=e52]: "!"
+      - generic [ref=e54]:
+        - paragraph [ref=e55]: TRUSTED BY ENGINEERING TEAMS AT
+        - generic [ref=e56]:
+          - generic "Google" [ref=e57]:
+            - img [ref=e58]
+          - generic "Microsoft" [ref=e65]:
+            - img [ref=e66]
+          - generic "GitLab" [ref=e72]:
+            - img [ref=e73]
+          - generic "NVIDIA" [ref=e83]:
+            - img [ref=e84]
+    - generic [ref=e89]:
+      - generic [ref=e93]:
+        - heading "How It Works" [level=2] [ref=e94]
+        - generic [ref=e95]:
+          - img [ref=e97]
+          - heading "Run your benchmarks" [level=3] [ref=e99]
+        - paragraph [ref=e101]:
+          - text: Run your benchmarks locally or in CI using your favorite benchmarking tools. The
+          - code [ref=e102]: bencher
+          - text: CLI simply wraps your existing benchmark harness and stores its results.
+        - generic [ref=e103]:
+          - img [ref=e105]
+          - heading "Track your benchmarks" [level=3] [ref=e107]
+        - paragraph [ref=e109]: Track the results of your benchmarks over time. Monitor, query, and graph the results using the Bencher web console based on the source branch and testbed.
+        - generic [ref=e110]:
+          - img [ref=e112]
+          - heading "Catch performance regressions" [level=3] [ref=e114]
+        - paragraph [ref=e116]: Catch performance regressions in CI. Bencher uses state of the art, customizable analytics to detect performance regressions before they make it to production.
+      - generic [ref=e117]:
+        - heading "You are in good company" [level=2] [ref=e119]
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - link "Microsoft CCF" [ref=e124] [cursor=pointer]:
+              - /url: https://bencher.dev/perf/ccf?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=d5004f0a-5dbe-42bb-a821-1f55704d6ec2&testbeds=1e6f6a27-eb58-4f16-8d01-0148fbaed70e&benchmarks=3bae8305-29e0-4e5f-8157-01f8f471b408&measures=bc9fb376-9a85-478a-97fd-ebd7703c9663&start_time=1715185355000&end_time=1717777355000&clear=true&tab=benchmarks
+              - img "Microsoft CCF" [ref=e125]
+            - link "Google Sedpack" [ref=e127] [cursor=pointer]:
+              - /url: https://bencher.dev/perf/sedpack?branches=e27f4617-5c19-4a91-a3f5-ca006bde2dd8&heads=e0f3701a-7886-4317-bf5c-ff04e2d0ccd1&testbeds=c83cc96a-a3b8-4c8e-88d3-d86c49caa12e&benchmarks=2fed029b-b64d-40ac-9d37-e4582ac6ad6b%2C7c8dfdfe-cc70-4928-8d09-841d7864984b&measures=37d645e6-8e9a-4731-8f16-28f12c22bd1c&upper_boundary=true&end_time=1754265600000&key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=3&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&start_time=1741996800000&lower_boundary=false&upper_value=false&lower_value=false&tab=branches&clear=true&branches_search=main
+              - img "Google Sedpack" [ref=e128]
+            - link "GitLab Git" [ref=e130] [cursor=pointer]:
+              - /url: https://bencher.dev/perf/git?lower_value=false&upper_value=false&lower_boundary=false&upper_boundary=true&x_axis=date_time&branches=595859eb-071c-48e9-97cf-195e0a3d6ed1&testbeds=02dcb8ad-6873-494c-aabc-9a6237601308&benchmarks=5e5c6ae1-ec8e-4c25-b27d-dcf773d33a51%2C0eb509fd-c4a8-45f3-baca-2e7e4a89b0e8&measures=63dafffb-98c4-4c27-ba43-7112cae627fc&tab=plots&plots_search=0d7f6186-f80a-4fbe-9022-75b6caf5164e&key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&end_time=1745971200000&start_time=1740787200000&utm_medium=share&utm_source=bencher&utm_content=img&utm_campaign=perf%2Bimg&utm_term=git
+              - img "GitLab Git" [ref=e131]
+          - generic [ref=e132]:
+            - link "Servo" [ref=e134] [cursor=pointer]:
+              - /url: https://bencher.dev/perf/servo?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=52e1e9bb-959c-4171-a53d-e06bd694a6c1&heads=3dbe3681-11b1-4e30-b482-4ee72dc0960c&testbeds=d742c702-3842-4108-9d0c-2db74e57599a&measures=678e4118-c8a5-494d-8799-08abc3021cd5&start_time=1734048000000&end_time=1735236203000&lower_boundary=false&upper_boundary=false&clear=true&tab=benchmarks&benchmarks=c4da10d8-9539-4943-95ca-5e08df0cd6f9&benchmarks_search=servo
+              - img "Servo" [ref=e135]
+            - link "Mozilla Neqo" [ref=e137] [cursor=pointer]:
+              - /url: https://bencher.dev/perf/neqo?branches=1c3aa454-5e63-4a34-bc7e-a86c397661fe&heads=a5e4e812-c619-44d3-844e-ee795a2b26e9&testbeds=f8b47e59-8dac-4a95-aec4-5bfb9756e749&measures=8bfeb966-6e8a-4719-9705-23fe985d6e40&upper_boundary=true&start_time=1762992000000&end_time=1765152000000&key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&tab=benchmarks&benchmarks_search=decode+1048576+bytes&benchmarks=66a0e29f-9d91-4656-903e-d4c0c817387c%2C9c88c263-c57e-45b8-89c9-34e3a5f196cb%2C0258133c-8223-4b76-a76c-9e92a1a60f60&clear=true
+              - img "Mozilla Neqo" [ref=e138]
+            - link "GreptimeDB" [ref=e140] [cursor=pointer]:
+              - /url: https://bencher.dev/perf/greptimedb?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&report=8dcbda4a-c239-4a9e-8399-4fc699f775b4&branches=3b46708f-b87f-4f52-b1bb-1d9cc7bfee2d&testbeds=6d3be02f-9efe-4e47-8a5d-e389c228172d&benchmarks=da5c8cbe-9aef-431e-9168-11ef0821c8db%2Cbb7ce469-5c34-4a69-ab2f-d9769ca5be2a&measures=a2f1689d-44d5-4d5e-863f-47d285cedf97&start_time=1707524593000&end_time=1710116593000&clear=true
+              - img "GreptimeDB" [ref=e141]
+          - generic [ref=e142]:
+            - link "Diesel" [ref=e144] [cursor=pointer]:
+              - /url: https://bencher.dev/perf/diesel?key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=benchmarks&measures=2d3bd4cd-c4d4-4aa1-9e60-47e51e2b9dde&branches=bf9a5209-6524-45e3-af26-b8f98eee3bad&testbeds=4e5c3c90-920c-4741-8cf7-aaed4e16e9a5&benchmarks=5dfa78a5-7785-4d33-a336-aab5fff43372%2Cf65ec533-abf5-443e-a0d8-e4a583c5779e%2C0c1bcad9-2100-4170-9bc7-96a3b89071b9%2Ccee41d01-30db-4acc-8727-0d0b4ccbe216%2C6d23685f-e082-4913-8c22-14311030d130&notify_kind=alert&notify_text=Learn%20more%20about%20continuous%20benchmarking%20for%20the%20Diesel%20project.&notify_timeout=2147483647&notify_link_url=https%3A%2F%2Fbencher.dev%2Flearn%2Fcase-study%2Fdiesel%2F&notify_link_text=Read%20the%20case%20study
+              - img "Diesel" [ref=e145]
+            - link "clap" [ref=e147] [cursor=pointer]:
+              - /url: https://bencher.dev/perf/clap-rs-clap?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=b920383c-b9ee-4bd6-94ea-8d101b55286a&heads=5eeccfee-4fdd-405a-8554-90cd945ee1c1&testbeds=551ebdbf-b50a-4813-9064-286d2e66888f&benchmarks=b0a8ca01-4418-485e-9446-81d2a9c62774&measures=04ff075b-dc09-4c77-909a-634352fd5b02&end_time=1767052800000&lower_boundary=false&upper_boundary=false&clear=true&start_time=1748908800000&tab=branches&branches_search=master
+              - img "clap" [ref=e148]
+            - link "Rustls" [ref=e150] [cursor=pointer]:
+              - /url: https://bencher.dev/perf/rustls-821705769?key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&measures=013468de-9c37-4605-b363-aebbbf63268d&branches=28fae530-2b53-4482-acd4-47e16030d54f&testbeds=62ed31c3-8a58-479c-b828-52521ed67bee&benchmarks=bd25f73c-b2b9-4188-91b4-f632287c0a1b%2C8d443816-7a23-40a1-a54c-59de911eb517%2C42edb37f-ca91-4984-8835-445514575c85&start_time=1704067200000&notify_kind=alert&notify_text=Learn%20more%20about%20continuous%20benchmarking%20for%20the%20Rustls%20project.&notify_timeout=2147483647&notify_link_url=https%3A%2F%2Fbencher.dev%2Flearn%2Fcase-study%2Frustls%2F&notify_link_text=Read%20the%20case%20study
+              - img "Rustls" [ref=e151]
+      - generic [ref=e153]:
+        - heading "Get Performance Insights Directly in Your Workflow" [level=2] [ref=e157]
+        - generic [ref=e160]:
+          - heading "🐰 Bencher Report" [level=2] [ref=e161]:
+            - link "🐰 Bencher Report" [ref=e162] [cursor=pointer]:
+              - /url: https://bencher.dev/perf/bencher/reports/36a1eeff-57f5-4b99-b058-8c9c240a9f2c?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher
+              - img "🐰" [ref=e163]
+              - text: Bencher Report
+          - table [ref=e164]:
+            - rowgroup [ref=e165]:
+              - row "Branch 254/merge" [ref=e166]:
+                - cell "Branch" [ref=e167]
+                - cell "254/merge" [ref=e168]:
+                  - link "254/merge" [ref=e169] [cursor=pointer]:
+                    - /url: https://bencher.dev/perf/bencher/branches/254-merge?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher
+              - row "Testbed ubuntu-latest" [ref=e170]:
+                - cell "Testbed" [ref=e171]
+                - cell "ubuntu-latest" [ref=e172]:
+                  - link "ubuntu-latest" [ref=e173] [cursor=pointer]:
+                    - /url: https://bencher.dev/perf/bencher/testbeds/ubuntu-latest?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher
+          - blockquote [ref=e174]: "🚨 1 ALERT: Threshold Boundary Limit exceeded!"
+          - table [ref=e176]:
+            - rowgroup [ref=e177]:
+              - row "Benchmark Measure Units View Benchmark Result (Result Δ%) Upper Boundary (Limit %)" [ref=e178]:
+                - columnheader "Benchmark" [ref=e179]
+                - columnheader "Measure Units" [ref=e180]:
+                  - text: Measure
+                  - text: Units
+                - columnheader "View" [ref=e181]
+                - columnheader "Benchmark Result (Result Δ%)" [ref=e182]:
+                  - text: Benchmark Result
+                  - text: (Result Δ%)
+                - columnheader "Upper Boundary (Limit %)" [ref=e183]:
+                  - text: Upper Boundary
+                  - text: (Limit %)
+            - rowgroup [ref=e184]:
+              - row "Adapter::Json Latency microseconds (µs) 📈 plot 🚨 alert 🚷 threshold 3.45 (+1.52%) 3.36 (102.48%)" [ref=e185]:
+                - cell "Adapter::Json" [ref=e186]:
+                  - link "Adapter::Json" [ref=e187] [cursor=pointer]:
+                    - /url: https://bencher.dev/perf/bencher/benchmarks/e93b3d71-8499-4fae-bb7c-4e540b775714?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher
+                - cell "Latency microseconds (µs)" [ref=e188]:
+                  - link "Latency microseconds (µs)" [ref=e189] [cursor=pointer]:
+                    - /url: http://localhost:3000/perf/the-computer/measures/latency?utm_medium=referral&utm_source=cli&utm_content=comment&utm_campaign=pr+comments&utm_term=the-computer
+                    - text: Latency
+                    - text: microseconds (µs)
+                - cell "📈 plot 🚨 alert 🚷 threshold" [ref=e190]:
+                  - text: 📈
+                  - link "plot" [ref=e191] [cursor=pointer]:
+                    - /url: https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=e93b3d71-8499-4fae-bb7c-4e540b775714&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true
+                  - text: 🚨
+                  - link "alert" [ref=e192] [cursor=pointer]:
+                    - /url: https://bencher.dev/perf/bencher/alerts/91ee27a7-2aee-41fe-b037-80b786f26cd5?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher
+                  - text: 🚷
+                  - link "threshold" [ref=e193] [cursor=pointer]:
+                    - /url: https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher
+                - cell "3.45 (+1.52%)" [ref=e194]:
+                  - generic [ref=e195]:
+                    - text: "3.45"
+                    - text: (+1.52%)
+                - cell "3.36 (102.48%)" [ref=e196]:
+                  - generic [ref=e197]:
+                    - text: "3.36"
+                    - text: (102.48%)
+          - group [ref=e198]:
+            - generic "Click to view all benchmark results" [ref=e199]
+          - link "🐰 View full continuous benchmarking report in Bencher" [ref=e200] [cursor=pointer]:
+            - /url: https://bencher.dev/perf/bencher/reports/36a1eeff-57f5-4b99-b058-8c9c240a9f2c?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher
+      - generic [ref=e202]:
+        - heading "Use Your Favorite Benchmark Harness" [level=2] [ref=e203]
+        - generic [ref=e204]:
+          - generic [ref=e206]:
+            - generic [ref=e209]: 
+            - generic [ref=e212]: 
+          - generic [ref=e214]:
+            - generic [ref=e217]: 
+            - generic [ref=e220]: 
+          - generic [ref=e222]:
+            - generic [ref=e225]: 
+            - generic [ref=e228]: 
+          - generic [ref=e230]:
+            - generic [ref=e233]: 
+            - generic [ref=e236]: 
+        - generic [ref=e239]:
+          - generic [ref=e240]:
+            - button "Linux" [ref=e241] [cursor=pointer]:
+              - img [ref=e243]
+              - generic [ref=e245]: Linux
+            - button "macOS" [ref=e246] [cursor=pointer]:
+              - img [ref=e248]
+              - generic [ref=e250]: macOS
+            - button "Windows" [ref=e251] [cursor=pointer]:
+              - img [ref=e253]
+              - generic [ref=e255]: Windows
+            - button "Other" [ref=e256] [cursor=pointer]:
+              - img [ref=e258]
+              - generic [ref=e260]: Other
+          - figure "Terminal window" [ref=e263]:
+            - generic [ref=e266]: Terminal window
+            - code [ref=e268]:
+              - generic [ref=e270]: curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+            - button "Copy to clipboard" [ref=e272] [cursor=pointer]
+        - link "Learn More" [ref=e276] [cursor=pointer]:
+          - /url: /docs/tutorial/quick-start/
+      - generic [ref=e279]:
+        - generic [ref=e280]:
+          - generic [ref=e282]:
+            - paragraph [ref=e284]: Bencher is like CodeCov for performance metrics.
+            - generic [ref=e285]:
+              - figure [ref=e287]:
+                - link "GitHub" [ref=e288] [cursor=pointer]:
+                  - /url: https://github.com/JonathanWoollett-Light
+                  - img "Jonathan Woollett-Light" [ref=e289]
+              - generic [ref=e290]:
+                - paragraph [ref=e291]: Jonathan Woollett-Light
+                - link "@JonathanWoollett-Light" [ref=e292] [cursor=pointer]:
+                  - /url: https://github.com/JonathanWoollett-Light
+          - generic [ref=e294]:
+            - paragraph [ref=e296]: I think I'm in heaven. Now that I'm starting to see graphs of performance over time automatically from tests I'm running in CI. It's like this whole branch of errors can be caught and noticed sooner.
+            - generic [ref=e297]:
+              - figure [ref=e299]:
+                - link "GitHub" [ref=e300] [cursor=pointer]:
+                  - /url: https://github.com/gpwclark
+                  - img "Price Clark" [ref=e301]
+              - generic [ref=e302]:
+                - paragraph [ref=e303]: Price Clark
+                - link "@gpwclark" [ref=e304] [cursor=pointer]:
+                  - /url: https://github.com/gpwclark
+        - generic [ref=e305]:
+          - generic [ref=e307]:
+            - paragraph [ref=e309]: 95% of the time I don't want to think about my benchmarks. But when I need to, Bencher ensures that I have the detailed historical record waiting there for me. It's fire-and-forget.
+            - generic [ref=e310]:
+              - figure [ref=e312]:
+                - link "GitHub" [ref=e313] [cursor=pointer]:
+                  - /url: https://github.com/jneem
+                  - img "Joe Neeman" [ref=e314]
+              - generic [ref=e315]:
+                - paragraph [ref=e316]: Joe Neeman
+                - link "@jneem" [ref=e317] [cursor=pointer]:
+                  - /url: https://github.com/jneem
+          - generic [ref=e319]:
+            - paragraph [ref=e321]: I've been looking for a public service like Bencher for about 10 years :)
+            - generic [ref=e322]:
+              - figure [ref=e324]:
+                - link "GitHub" [ref=e325] [cursor=pointer]:
+                  - /url: https://github.com/jaqx0r
+                  - img "Jamie Wilkinson" [ref=e326]
+              - generic [ref=e327]:
+                - paragraph [ref=e328]: Jamie Wilkinson
+                - link "@jaqx0r" [ref=e329] [cursor=pointer]:
+                  - /url: https://github.com/jaqx0r
+        - generic [ref=e330]:
+          - generic [ref=e332]:
+            - paragraph [ref=e334]: I'm happy with how quickly I was able to get Bencher configured and working.
+            - generic [ref=e335]:
+              - figure [ref=e337]:
+                - link "GitHub" [ref=e338] [cursor=pointer]:
+                  - /url: https://github.com/westonpace
+                  - img "Weston Pace" [ref=e339]
+              - generic [ref=e340]:
+                - paragraph [ref=e341]: Weston Pace
+                - link "@westonpace" [ref=e342] [cursor=pointer]:
+                  - /url: https://github.com/westonpace
+          - generic [ref=e344]:
+            - paragraph [ref=e346]: Bencher's main ideas and concepts are really well designed.
+            - generic [ref=e347]:
+              - figure [ref=e349]:
+                - link "GitHub" [ref=e350] [cursor=pointer]:
+                  - /url: https://github.com/freeekanayaka
+                  - img "Free Ekanayaka" [ref=e351]
+              - generic [ref=e352]:
+                - paragraph [ref=e353]: Free Ekanayaka
+                - link "@freeekanayaka" [ref=e354] [cursor=pointer]:
+                  - /url: https://github.com/freeekanayaka
+      - generic [ref=e356]:
+        - heading "Hosting" [level=2] [ref=e359]
+        - generic [ref=e360]:
+          - generic [ref=e363]:
+            - generic [ref=e364]:
+              - heading "Self-Hosted" [level=3] [ref=e365]
+              - img [ref=e367]
+            - paragraph [ref=e370]: Run Bencher on-prem or in your own cloud. Bencher can be deployed on a standalone server, in a Docker container, or as part of a Kubernetes cluster.
+            - link "Learn More" [ref=e371] [cursor=pointer]:
+              - /url: /docs/tutorial/self-hosted
+          - generic [ref=e374]:
+            - generic [ref=e375]:
+              - heading "Bencher Cloud" [level=3] [ref=e376]
+              - img [ref=e378]
+            - paragraph [ref=e381]: It's 2026, who wants to manage yet another service‽ Let us take care of that for you. All of the same great features with none of the hassle.
+            - link "Get Started" [ref=e382] [cursor=pointer]:
+              - /url: /auth/signup
+      - generic [ref=e387]:
+        - generic [ref=e388]:
+          - heading "Track your benchmarks in CI" [level=2] [ref=e389]
+          - paragraph [ref=e390]: Have you ever had a performance regression impact your users? Bencher could have prevented that from happening with continuous benchmarking.
+        - link "Try Bencher for Free" [ref=e394] [cursor=pointer]:
+          - /url: /auth/signup
+  - contentinfo [ref=e395]:
+    - generic [ref=e396]:
+      - generic [ref=e397]:
+        - generic [ref=e399]:
+          - heading "🐰 Bencher" [level=2] [ref=e400]:
+            - link "🐰 Bencher" [ref=e401] [cursor=pointer]:
+              - /url: /
+              - img "🐰 Bencher" [ref=e403]
+          - heading "Continuous Benchmarking" [level=3] [ref=e404]:
+            - link "Continuous Benchmarking" [ref=e405] [cursor=pointer]:
+              - /url: /docs/explanation/continuous-benchmarking/
+        - navigation [ref=e407]:
+          - link "GitHub" [ref=e409] [cursor=pointer]:
+            - /url: https://github.com/bencherdev/bencher
+            - img [ref=e411]
+          - link "Discord" [ref=e414] [cursor=pointer]:
+            - /url: https://discord.gg/yGEsdUh7R4
+            - img [ref=e416]
+          - link "LinkedIn" [ref=e419] [cursor=pointer]:
+            - /url: https://www.linkedin.com/company/bencher
+            - img [ref=e421]
+          - link "Reddit" [ref=e424] [cursor=pointer]:
+            - /url: https://www.reddit.com/r/bencher
+            - img [ref=e426]
+      - generic [ref=e428]:
+        - navigation [ref=e429]:
+          - generic [ref=e430]:
+            - paragraph [ref=e432]:
+              - link "Docs" [ref=e433] [cursor=pointer]:
+                - /url: /docs/
+            - paragraph [ref=e435]:
+              - link "Pricing" [ref=e436] [cursor=pointer]:
+                - /url: /pricing/
+            - paragraph [ref=e438]:
+              - link "Help" [ref=e439] [cursor=pointer]:
+                - /url: /help/
+            - paragraph [ref=e441]:
+              - link "API" [ref=e442] [cursor=pointer]:
+                - /url: /docs/api/
+            - paragraph [ref=e444]:
+              - link "Learn" [ref=e445] [cursor=pointer]:
+                - /url: /learn/
+        - navigation [ref=e446]:
+          - generic [ref=e447]:
+            - paragraph [ref=e449]:
+              - link "Explore" [ref=e450] [cursor=pointer]:
+                - /url: /explore/
+            - paragraph [ref=e452]:
+              - link "Public Projects" [ref=e453] [cursor=pointer]:
+                - /url: /perf/
+            - paragraph [ref=e455]:
+              - link "Play" [ref=e456] [cursor=pointer]:
+                - /url: /play/
+        - navigation [ref=e457]:
+          - generic [ref=e458]:
+            - paragraph [ref=e460]:
+              - link "Download" [ref=e461] [cursor=pointer]:
+                - /url: /download/
+            - paragraph [ref=e463]:
+              - link "Legal" [ref=e464] [cursor=pointer]:
+                - /url: /legal/
+            - paragraph [ref=e466]:
+              - link "Brand" [ref=e467] [cursor=pointer]:
+                - /url: /brand/
+            - paragraph [ref=e469]:
+              - link "Sitemap" [ref=e470] [cursor=pointer]:
+                - /url: /sitemap-index.xml
+        - navigation [ref=e471]:
+          - generic [ref=e472]:
+            - paragraph [ref=e474]:
+              - link "Terms of Use" [ref=e475] [cursor=pointer]:
+                - /url: /legal/terms-of-use/
+            - paragraph [ref=e477]:
+              - link "Privacy Policy" [ref=e478] [cursor=pointer]:
+                - /url: /legal/privacy/
+            - paragraph [ref=e480]:
+              - link "License Agreement" [ref=e481] [cursor=pointer]:
+                - /url: /legal/license/
+      - paragraph [ref=e482]: © 2026 Bencher
+  - generic [ref=e485]:
+    - button "Menu" [ref=e486]:
+      - img [ref=e488]
+      - generic: Menu
+    - button "Inspect" [ref=e492]:
+      - img [ref=e494]
+      - generic: Inspect
+    - button "Audit" [ref=e496]:
+      - generic [ref=e497]:
+        - img [ref=e498]
+        - img [ref=e501]
+      - generic: Audit
+    - button "Settings" [ref=e504]:
+      - img [ref=e506]
+      - generic: Settings
