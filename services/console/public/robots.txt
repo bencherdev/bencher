@@ -5,5 +5,6 @@ Disallow: /chat$
 Disallow: /demo$
 Disallow: /repo$
 Disallow: /perf/*/*
+Disallow: /pagefind/
 
 Sitemap: https://bencher.dev/sitemap-index.xml

@@ -81,6 +81,22 @@ Available locally at [`services/console/src/content/`](./src/content/) or online
 When adding a new documentation update the chunks in all 9 language directories
 (`en`, `de`, `es`, `fr`, `ja`, `ko`, `pt`, `ru`, `zh`)
 
+### Docs Search (Pagefind)
+
+Docs search uses [Pagefind](https://pagefind.app) and is **Bencher Cloud only**.
+Pagefind runs as a post-build step against `dist/` and writes a static index into
+`dist/pagefind/`. It is gated on `IS_BENCHER_CLOUD` so self-hosted builds skip it.
+
+- In `npm run dev`, the search button renders but shows a stub message — the
+  dev server does not build the Pagefind index.
+- To exercise real search locally, build and serve:
+  ```bash
+  IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview
+  ```
+- Pages are indexed via `data-pagefind-body` on the content column in
+  [`src/layouts/docs/InnerLayout.astro`](./src/layouts/docs/InnerLayout.astro).
+  Any page that does not go through `InnerLayout` is automatically excluded.
+
 ### Changelog
 
 The changelog lives at [`services/console/src/chunks/docs-reference/changelog/en/changelog.mdx`](./src/chunks/docs-reference/changelog/en/changelog.mdx).

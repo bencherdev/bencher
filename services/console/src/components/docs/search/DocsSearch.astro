@@ -1,0 +1,17 @@
+---
+import { IS_BENCHER_CLOUD } from "astro:env/client";
+import { type Language, defaultLang } from "../../../i18n/ui";
+import DocsSearchInner from "./DocsSearch.tsx";
+
+interface Props {
+	lang?: undefined | Language;
+}
+
+const lang: Language = Astro.props.lang ?? defaultLang;
+---
+
+{
+	IS_BENCHER_CLOUD && (
+		<DocsSearchInner client:idle lang={lang} />
+	)
+}

@@ -206,6 +206,7 @@ export default defineConfig({
 					properties: {
 						style: "padding-left: 0.3em; color: #fdb07e;",
 						"aria-label": "Link to section",
+						"data-pagefind-ignore": "",
 					},
 					content: fromHtmlIsomorphic(
 						'<small><i class="fas fa-link" /></small>',

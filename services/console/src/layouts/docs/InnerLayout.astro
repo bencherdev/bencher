@@ -56,7 +56,7 @@ const headingParts = heading?.split("`") ?? [];
   <!-- https://bulma.io/documentation/helpers/spacing-helpers/ -->
   <section class="section p-3">
     <div class="columns is-reverse-mobile">
-      <div class="column is-narrow">
+      <div class="column is-narrow" data-pagefind-ignore="all">
         <DocsMenu
           tab={tab ?? DocsTab.Docs}
           lang={lang}
@@ -64,7 +64,10 @@ const headingParts = heading?.split("`") ?? [];
           slug={slug}
         />
       </div>
-      <div class="column is-two-thirds">
+      <div
+        class="column is-two-thirds"
+        data-pagefind-body
+      >
         <section class="section">
           <div class="continer">
             {
@@ -97,11 +100,13 @@ const headingParts = heading?.split("`") ?? [];
               )
             }
             {published &&
-              <br />
-              <hr />
-              <p>Published: {fmtDateTime(published)}
-              {modified && modified !== published && <>| Last Updated: {fmtDateTime(modified)}</>}
-              </p>
+              <div data-pagefind-ignore="all">
+                <br />
+                <hr />
+                <p>Published: {fmtDateTime(published)}
+                {modified && modified !== published && <>| Last Updated: {fmtDateTime(modified)}</>}
+                </p>
+              </div>
             }
           </div>
         </section>

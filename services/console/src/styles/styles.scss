@@ -205,3 +205,18 @@ $disabled: #fdb07e;
     stroke: var(--bulma-text) !important;
   }
 }
+
+// Docs search modal
+.docs-search-results {
+  mark {
+    background-color: rgba($disabled, 0.2);
+    color: inherit;
+  }
+  a.is-active {
+    background-color: rgba($disabled, 0.15);
+    color: inherit;
+  }
+  li + li {
+    margin-top: 0.5rem;
+  }
+}
