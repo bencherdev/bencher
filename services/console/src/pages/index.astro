@@ -7,6 +7,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import AuthRedirect from "../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
+import RegressionChart from "../components/landing/RegressionChart.astro";
+import TrustedBy from "../components/landing/TrustedBy.astro";
 import HowItWorks from "../components/landing/HowItWorks.astro";
 import Showcase from "../components/landing/Showcase.astro";
 import Toolbox from "../components/landing/Toolbox.astro";
@@ -23,45 +25,43 @@ import CallToAction from "../components/landing/CallToAction.astro";
     path="/console"
   />
   <AuthRedirect client:only="solid-js" path="/console" />
-  <section class="hero is-large">
-    <div class="hero-body">
-      <div class="columns is-centered is-vcentered">
-        <div class="column is-three-quarters">
-          <div class="content has-text-centered">
-            <h1 class="title is-1">Catch Performance Regressions in CI</h1>
-            <h2 class="subtitle is-4">
-              Detect and prevent performance regressions before they make it to
-              production with continuous benchmarking
-            </h2>
+  <section class="hero-landing">
+    <div class="columns">
+      <div class="column is-10">
+        <div class="content">
+          <p class="hero-eyebrow">CONTINUOUS BENCHMARKING</p>
+          <h1 class="title is-1">
+            Catch performance regressions before they merge
+          </h1>
+          <h2 class="subtitle is-4">
+            Bencher runs on bare metal to eliminate noise and deliver
+            benchmark results you can actually trust.
+          </h2>
 
-            <div class="columns is-centered">
-              <div class="column is-one-fourth"></div>
-
-              <div class="column is-one-fourth">
-                <a
-                  class="button is-primary is-large is-responsive is-fullwidth"
-                  href="/auth/signup"
-                >
-                  Start Now
-                </a>
-              </div>
-
-              <div class="column is-one-fourth">
-                <a
-                  class="button is-large is-responsive is-fullwidth"
-                  href="/docs/tutorial/quickstart/"
-                >
-                  Learn More
-                </a>
-              </div>
-
-              <div class="column is-one-fourth"></div>
-            </div>
+          <div class="buttons">
+            <a
+              class="button is-primary is-medium is-responsive"
+              href="/auth/signup"
+            >
+              Start benchmarking free
+            </a>
+            <a
+              class="button is-medium is-responsive"
+              href="/docs/tutorial/bare-metal/"
+            >
+              Read the docs
+            </a>
           </div>
+        </div>
+
+        <div style="margin-top: 2rem;">
+          <TrustedBy />
         </div>
       </div>
     </div>
   </section>
+
+  <RegressionChart />
 
   <!-- https://bulma.io/documentation/helpers/spacing-helpers/ -->
   <section class="section p-3">
@@ -80,3 +80,41 @@ import CallToAction from "../components/landing/CallToAction.astro";
     <CallToAction />
   </section>
 </BaseLayout>
+
+<style>
+  .hero-landing {
+    padding: 4rem 1.5rem 2rem;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: #888;
+    margin-bottom: 1.5rem !important;
+    padding-bottom: 0 !important;
+    line-height: 1;
+  }
+
+  .hero-eyebrow + .title {
+    margin-top: 0 !important;
+  }
+
+  @media screen and (min-width: 769px) {
+    .hero-landing {
+      padding: 6rem 4rem 2rem;
+    }
+  }
+
+  @media screen and (min-width: 1024px) {
+    .hero-landing {
+      padding: 6rem 8rem 2rem;
+    }
+  }
+
+  @media screen and (min-width: 1216px) {
+    .hero-landing {
+      padding: 6rem 12rem 2rem;
+    }
+  }
+</style>
