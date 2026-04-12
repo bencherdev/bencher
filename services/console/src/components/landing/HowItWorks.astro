@@ -1,56 +1,127 @@
 ---
+const steps = [
+  {
+    n: "01",
+    title: "Run your benchmarks",
+    body: "Run your benchmarks locally or in CI using the <em>exact same</em> bare metal runners and your favorite benchmarking tools. The <code>bencher</code> CLI orchestrates running your benchmarks on bare metal and stores the results.",
+  },
+  {
+    n: "02",
+    title: "Track your benchmarks",
+    body: "Track the results of your benchmarks over time. Monitor, query, and graph the results using the <code>bencher</code> CLI and the Bencher web console based on the source branch and testbed.",
+  },
+  {
+    n: "03",
+    title: "Catch performance regressions",
+    body: "Catch performance regressions locally or in CI using the <em>exact same</em> bare metal hardware. Bencher uses state of the art, customizable analytics to detect performance regressions before they merge.",
+  },
+];
 ---
 
-<div class="columns is-centered">
-  <div class="column is-8">
-    <div class="columns is-centered is-mobile">
-      <div class="column is-10" style="margin-bottom: 1rem;">
-        <h2 class="title is-1" >How It Works</h2>
-        <br />
-        <div class="content has-text-centered">
-        <span class="icon has-text-primary">
-            <i class="fas fa-tachometer-alt fa-5x" />
-        </span>
-        <h3 class="title is-4">Run your benchmarks</h3>
-        </div>
-        <div class="content">
-        <p>
-            Run your benchmarks locally or in CI using your favorite
-            benchmarking tools. The <code>bencher</code> CLI simply
-            wraps your existing benchmark harness and stores its
-            results.
-        </p>
-        <br />
-        </div>
-        <br />
-        <div class="content has-text-centered">
-        <span class="icon has-text-primary">
-            <i class="fas fa-chart-line fa-5x" />
-        </span>
-        <h3 class="title is-4">Track your benchmarks</h3>
-        </div>
-        <div class="content">
-        <p>
-            Track the results of your benchmarks over time. Monitor,
-            query, and graph the results using the Bencher web console
-            based on the source branch and testbed.
-        </p>
-        </div>
-        <br />
-        <div class="content has-text-centered">
-        <span class="icon has-text-primary">
-            <i class="fas fa-bell fa-5x" />
-        </span>
-        <h3 class="title is-4">Catch performance regressions</h3>
-        </div>
-        <div class="content">
-        <p>
-            Catch performance regressions in CI. Bencher uses state of
-            the art, customizable analytics to detect performance
-            regressions before they make it to production.
-        </p>
-        </div>
+<section class="how-section">
+  <p class="how-eyebrow">HOW IT WORKS</p>
+  <h2 class="title is-1 how-title">
+    Run locally. Run in CI. Same bare metal every time.
+  </h2>
+
+  <div class="columns how-steps">
+    {steps.map((step) => (
+      <div class="column is-4 how-step">
+        <p class="how-step-number">{step.n}</p>
+        <h3 class="title is-5 how-step-title">{step.title}</h3>
+        <p class="how-step-body" set:html={step.body} />
       </div>
-    </div>
+    ))}
   </div>
-</div>
+</section>
+
+<style>
+  .how-section {
+    padding: 4rem 1.5rem;
+  }
+
+  @media screen and (min-width: 769px) {
+    .how-section {
+      padding: 5rem 2rem;
+    }
+  }
+
+  @media screen and (min-width: 1024px) {
+    .how-section {
+      padding: 5rem 4rem;
+    }
+  }
+
+  @media screen and (min-width: 1216px) {
+    .how-section {
+      padding: 5rem 6rem;
+    }
+  }
+
+  .how-eyebrow {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: #888;
+    margin-bottom: 1.25rem;
+    line-height: 1;
+  }
+
+  .how-title {
+    margin-bottom: 3rem !important;
+    max-width: 900px;
+  }
+
+  .how-steps {
+    margin-top: 0;
+  }
+
+  .how-step {
+    padding: 0.5rem 2rem;
+  }
+
+  @media screen and (min-width: 769px) {
+    .how-step + .how-step {
+      border-left: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    :global([data-theme="dark"]) .how-step + .how-step {
+      border-left-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  .how-step-number {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #888;
+    margin-bottom: 1rem;
+    line-height: 1;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+      monospace;
+  }
+
+  .how-step-title {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .how-step-body {
+    color: #666;
+    line-height: 1.6;
+  }
+
+  .how-step-body :global(code) {
+    font-size: 0.9em;
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  :global([data-theme="dark"]) .how-step-body {
+    color: #a0a0a0;
+  }
+
+  :global([data-theme="dark"]) .how-step-body :global(code) {
+    background: rgba(255, 255, 255, 0.08);
+    color: #d4d4d4;
+  }
+</style>
