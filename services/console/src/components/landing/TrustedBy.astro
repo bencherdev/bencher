@@ -1,34 +1,25 @@
 ---
-const LOGOS = [
-  {
-    name: "Google",
-    src: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/google.svg",
-  },
-  {
-    name: "Microsoft",
-    src: "https://s3.amazonaws.com/public.bencher.dev/case-study/microsoft.png",
-  },
-  {
-    name: "GitLab",
-    src: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/gitlab.svg",
-  },
-  {
-    name: "NVIDIA",
-    src: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/nvidia.svg",
-  },
-];
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const dir = dirname(fileURLToPath(import.meta.url));
+const logos = [
+  { name: "Google", file: "google.svg", height: "2.25rem" },
+  { name: "Microsoft", file: "microsoft.svg", height: "1.75rem" },
+  { name: "GitLab", file: "gitlab.svg", height: "1.5rem" },
+  { name: "NVIDIA", file: "nvidia.svg", height: "1.5rem" },
+].map((logo) => ({
+  ...logo,
+  svg: readFileSync(join(dir, "logos", logo.file), "utf-8"),
+}));
 ---
 
 <div style="padding-top: 0; padding-bottom: 1rem;">
   <p class="trusted-by-label">TRUSTED BY ENGINEERING TEAMS AT</p>
   <div class="trusted-by-logos">
-    {LOGOS.map((logo) => (
-      <img
-        class="trusted-by-logo"
-        src={logo.src}
-        alt={logo.name}
-        loading="lazy"
-      />
+    {logos.map((logo) => (
+      <div class="trusted-by-logo" style={`height: ${logo.height};`} aria-label={logo.name} set:html={logo.svg} />
     ))}
   </div>
 </div>
@@ -45,20 +36,23 @@ const LOGOS = [
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 1.5rem;
+    gap: 2.5rem;
     margin-top: 0.75rem;
   }
 
   .trusted-by-logo {
-    height: 1.5rem;
-    max-width: 6rem;
-    object-fit: contain;
-    filter: grayscale(100%);
-    opacity: 0.7;
+    height: 2rem;
+    opacity: 0.5;
     transition: opacity 0.2s ease;
+    color: var(--bulma-text);
   }
 
   .trusted-by-logo:hover {
-    opacity: 1;
+    opacity: 0.8;
+  }
+
+  .trusted-by-logo :global(svg) {
+    height: 100%;
+    width: auto;
   }
 </style>

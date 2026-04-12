@@ -7,7 +7,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import AuthRedirect from "../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
-import RegressionChart from "../components/landing/RegressionChart.astro";
 import TrustedBy from "../components/landing/TrustedBy.astro";
 import HowItWorks from "../components/landing/HowItWorks.astro";
 import Showcase from "../components/landing/Showcase.astro";
@@ -61,8 +60,6 @@ import CallToAction from "../components/landing/CallToAction.astro";
     </div>
   </section>
 
-  <RegressionChart />
-
   <!-- https://bulma.io/documentation/helpers/spacing-helpers/ -->
   <section class="section p-3">
     <HowItWorks />
@@ -84,6 +81,7 @@ import CallToAction from "../components/landing/CallToAction.astro";
 <style>
   .hero-landing {
     padding: 4rem 1.5rem 2rem;
+    margin-bottom: 8rem;
   }
 
   .hero-eyebrow {
