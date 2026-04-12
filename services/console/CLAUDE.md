@@ -91,7 +91,7 @@ Pagefind runs as a post-build step against `dist/` and writes a static index int
   dev server does not build the Pagefind index.
 - To exercise real search locally, build and serve:
   ```bash
-  IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview
+  IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview
   ```
 - Pages are indexed via `data-pagefind-body` on the content column in
   [`src/layouts/docs/InnerLayout.astro`](./src/layouts/docs/InnerLayout.astro).

@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/astro";
 import { debounce } from "@solid-primitives/scheduled";
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
+import { Portal } from "solid-js/web";
 import {
 	type Language,
 	defaultLang,
@@ -183,6 +184,7 @@ const DocsSearch = (props: Props) => {
 					</span>
 				</button>
 			</div>
+			<Portal>
 			<Show when={isOpen()}>
 				<div class="modal is-active" onKeyDown={onModalKey}>
 					<div
@@ -254,7 +256,7 @@ const DocsSearch = (props: Props) => {
 								</p>
 							</Show>
 							<Show when={!isDev && results().length > 0}>
-								<ul class="menu-list mt-4">
+								<ul class="menu-list mt-4 docs-search-results">
 									<For each={results()}>
 										{(result, index) => (
 											<li>
@@ -275,6 +277,7 @@ const DocsSearch = (props: Props) => {
 					</div>
 				</div>
 			</Show>
+			</Portal>
 		</>
 	);
 };

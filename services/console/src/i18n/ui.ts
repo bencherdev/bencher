@@ -472,22 +472,22 @@ export const searchError = (lang: Language) => {
 export const searchDevStub = (lang: Language) => {
 	switch (lang) {
 		case Language.en:
-			return "Search is only available in production builds. Run `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`.";
+			return "Search is only available in production builds. Run `IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview`.";
 		case Language.de:
-			return "Die Suche ist nur in Produktions-Builds verfügbar. Führen Sie `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview` aus.";
+			return "Die Suche ist nur in Produktions-Builds verfügbar. Führen Sie `IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview` aus.";
 		case Language.es:
-			return "La búsqueda solo está disponible en compilaciones de producción. Ejecuta `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`.";
+			return "La búsqueda solo está disponible en compilaciones de producción. Ejecuta `IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview`.";
 		case Language.fr:
-			return "La recherche n'est disponible que dans les builds de production. Exécutez `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`.";
+			return "La recherche n'est disponible que dans les builds de production. Exécutez `IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview`.";
 		case Language.ja:
-			return "検索は本番ビルドでのみ利用できます。`IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview` を実行してください。";
+			return "検索は本番ビルドでのみ利用できます。`IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview` を実行してください。";
 		case Language.ko:
-			return "검索은 프로덕션 빌드에서만 사용할 수 있습니다. `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`를 실행하세요.";
+			return "검索은 프로덕션 빌드에서만 사용할 수 있습니다. `IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview`를 실행하세요.";
 		case Language.pt:
-			return "A pesquisa só está disponível em builds de produção. Execute `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`.";
+			return "A pesquisa só está disponível em builds de produção. Execute `IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview`.";
 		case Language.ru:
-			return "Поиск доступен только в производственных сборках. Запустите `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`.";
+			return "Поиск доступен только в производственных сборках. Запустите `IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview`.";
 		case Language.zh:
-			return "搜索仅在生产构建中可用。请运行 `IS_BENCHER_CLOUD=true npm run build && npm run pagefind && npm run preview`。";
+			return "搜索仅在生产构建中可用。请运行 `IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview`。";
 	}
 };
