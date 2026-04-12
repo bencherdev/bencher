@@ -63,7 +63,6 @@ const DocsSearch = (props: Props) => {
 		setIsOpen(true);
 		setErrored(false);
 		document.documentElement.classList.add("is-clipped");
-		void loadPagefind();
 		requestAnimationFrame(() => inputRef?.focus());
 	};
 
@@ -83,7 +82,7 @@ const DocsSearch = (props: Props) => {
 			setLoading(false);
 			return;
 		}
-		const pf = pagefind();
+		const pf = await loadPagefind();
 		if (!pf) {
 			setLoading(false);
 			return;
@@ -165,7 +164,10 @@ const DocsSearch = (props: Props) => {
 
 	onMount(() => {
 		window.addEventListener("keydown", onGlobalKey);
-		onCleanup(() => window.removeEventListener("keydown", onGlobalKey));
+		onCleanup(() => {
+			window.removeEventListener("keydown", onGlobalKey);
+			document.documentElement.classList.remove("is-clipped");
+		});
 	});
 
 	return (
@@ -185,98 +187,98 @@ const DocsSearch = (props: Props) => {
 				</button>
 			</div>
 			<Portal>
-			<Show when={isOpen()}>
-				<div class="modal is-active" onKeyDown={onModalKey}>
-					<div
-						class="modal-background"
-						onMouseDown={(event) => {
-							event.preventDefault();
-							close();
-						}}
-					/>
-					<div class="modal-card">
-						<header class="modal-card-head">
-							<p class="modal-card-title">{searchLabel(lang())}</p>
-							<button
-								class="delete"
-								type="button"
-								aria-label="close"
-								onMouseDown={(event) => {
-									event.preventDefault();
-									close();
-								}}
-							/>
-						</header>
-						<section class="modal-card-body">
-							<div class="field">
-								<div class="control has-icons-left">
-									<input
-										ref={inputRef}
-										class="input"
-										type="search"
-										autofocus
-										placeholder={searchPlaceholder(lang())}
-										value={query()}
-										onInput={onInput}
-									/>
-									<span class="icon is-small is-left">
-										<i class="fas fa-search" />
-									</span>
+				<Show when={isOpen()}>
+					<div class="modal is-active" onKeyDown={onModalKey}>
+						<div
+							class="modal-background"
+							onMouseDown={(event) => {
+								event.preventDefault();
+								close();
+							}}
+						/>
+						<div class="modal-card">
+							<header class="modal-card-head">
+								<p class="modal-card-title">{searchLabel(lang())}</p>
+								<button
+									class="delete"
+									type="button"
+									aria-label="close"
+									onMouseDown={(event) => {
+										event.preventDefault();
+										close();
+									}}
+								/>
+							</header>
+							<section class="modal-card-body">
+								<div class="field">
+									<div class="control has-icons-left">
+										<input
+											ref={inputRef}
+											class="input"
+											type="search"
+											autofocus
+											placeholder={searchPlaceholder(lang())}
+											value={query()}
+											onInput={onInput}
+										/>
+										<span class="icon is-small is-left">
+											<i class="fas fa-search" />
+										</span>
+									</div>
 								</div>
-							</div>
-							<Show when={isDev}>
-								<div class="notification is-warning is-light mt-4">
-									{searchDevStub(lang())}
-								</div>
-							</Show>
-							<Show when={!isDev && errored()}>
-								<p class="has-text-danger mt-4">{searchError(lang())}</p>
-							</Show>
-							<Show when={!isDev && !errored() && !query().trim()}>
-								<p class="has-text-grey mt-4">{searchEmpty(lang())}</p>
-							</Show>
-							<Show
-								when={
-									!isDev && !errored() && query().trim() !== "" && loading()
-								}
-							>
-								<p class="has-text-grey mt-4">{searchLoading(lang())}</p>
-							</Show>
-							<Show
-								when={
-									!isDev &&
-									!errored() &&
-									query().trim() !== "" &&
-									!loading() &&
-									results().length === 0
-								}
-							>
-								<p class="has-text-grey mt-4">
-									{searchNoResults(lang(), query().trim())}
-								</p>
-							</Show>
-							<Show when={!isDev && results().length > 0}>
-								<ul class="menu-list mt-4 docs-search-results">
-									<For each={results()}>
-										{(result, index) => (
-											<li>
-												<a
-													href={result.url}
-													class={selected() === index() ? "is-active" : ""}
-													onMouseEnter={() => setSelected(index())}
-												>
-													<strong>{result.meta?.title ?? result.url}</strong>
-													<p class="is-size-7" innerHTML={result.excerpt} />
-												</a>
-											</li>
-										)}
-									</For>
-								</ul>
-							</Show>
-						</section>
+								<Show when={isDev}>
+									<div class="notification is-warning is-light mt-4">
+										{searchDevStub(lang())}
+									</div>
+								</Show>
+								<Show when={!isDev && errored()}>
+									<p class="has-text-danger mt-4">{searchError(lang())}</p>
+								</Show>
+								<Show when={!isDev && !errored() && !query().trim()}>
+									<p class="has-text-grey mt-4">{searchEmpty(lang())}</p>
+								</Show>
+								<Show
+									when={
+										!isDev && !errored() && query().trim() !== "" && loading()
+									}
+								>
+									<p class="has-text-grey mt-4">{searchLoading(lang())}</p>
+								</Show>
+								<Show
+									when={
+										!isDev &&
+										!errored() &&
+										query().trim() !== "" &&
+										!loading() &&
+										results().length === 0
+									}
+								>
+									<p class="has-text-grey mt-4">
+										{searchNoResults(lang(), query().trim())}
+									</p>
+								</Show>
+								<Show when={!isDev && results().length > 0}>
+									<ul class="menu-list mt-4 docs-search-results">
+										<For each={results()}>
+											{(result, index) => (
+												<li>
+													<a
+														href={result.url}
+														class={selected() === index() ? "is-active" : ""}
+														onMouseEnter={() => setSelected(index())}
+													>
+														<strong>{result.meta?.title ?? result.url}</strong>
+														<p class="is-size-7" innerHTML={result.excerpt} />
+													</a>
+												</li>
+											)}
+										</For>
+									</ul>
+								</Show>
+							</section>
+						</div>
 					</div>
-				</div>
-			</Show>
+				</Show>
 			</Portal>
 		</>
 	);
