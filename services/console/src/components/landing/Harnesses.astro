@@ -1,0 +1,147 @@
+---
+const groups = [
+  { language: "Rust", harnesses: ["Criterion", "libtest bench", "Iai", "Gungraun"] },
+  { language: "C++", harnesses: ["Google Benchmark", "Catch2"] },
+  { language: "Python", harnesses: ["pytest-benchmark", "airspeed velocity"] },
+  { language: "Java", harnesses: ["JMH"] },
+  { language: "C#", harnesses: ["BenchmarkDotNet"] },
+  { language: "JavaScript", harnesses: ["Benchmark.js"] },
+  { language: "Go", harnesses: ["go test -bench"] },
+  { language: "Ruby", harnesses: ["Benchmark"] },
+  { language: "Dart", harnesses: ["benchmark_harness"] },
+  { language: "Shell", harnesses: ["Hyperfine"] },
+];
+---
+
+<section class="harness-section">
+  <p class="harness-eyebrow">BENCHMARK HARNESSES</p>
+  <h2 class="title is-1 harness-title">
+    Bring your own benchmark harness
+  </h2>
+
+  <div class="harness-grid">
+    {groups.map((g) => (
+      <div class="harness-group">
+        <p class="harness-lang">{g.language}</p>
+        <ul class="harness-list">
+          {g.harnesses.map((h) => (
+            <li class="harness-item">{h}</li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+
+  <p class="harness-cta-wrap">
+    Don't see your harness?{" "}
+    <a
+      class="harness-cta-link"
+      href="https://github.com/bencherdev/bencher/issues/new?labels=adapter&title=Adapter%20request%3A%20"
+      target="_blank"
+      rel="noreferrer"
+    >
+      Open an issue &rarr;
+    </a>
+  </p>
+</section>
+
+<style>
+  .harness-section {
+    padding: 4rem 1.5rem;
+  }
+
+  @media screen and (min-width: 769px) {
+    .harness-section {
+      padding: 5rem 2rem;
+    }
+  }
+
+  @media screen and (min-width: 1024px) {
+    .harness-section {
+      padding: 5rem 4rem;
+    }
+  }
+
+  @media screen and (min-width: 1216px) {
+    .harness-section {
+      padding: 5rem 6rem;
+    }
+  }
+
+  .harness-eyebrow {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: #888;
+    margin-bottom: 1.25rem;
+    line-height: 1;
+  }
+
+  .harness-title {
+    margin-bottom: 2.5rem !important;
+  }
+
+  .harness-grid {
+    display: grid;
+    gap: 1.5rem 2rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media screen and (min-width: 769px) {
+    .harness-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media screen and (min-width: 1024px) {
+    .harness-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+
+  .harness-group {
+    min-width: 0;
+  }
+
+  .harness-lang {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: #888;
+    margin-bottom: 0.6rem !important;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .harness-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .harness-item {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: inherit;
+  }
+
+  .harness-cta-wrap {
+    margin-top: 2.5rem !important;
+    font-size: 0.95rem;
+    color: #666;
+  }
+
+  :global([data-theme="dark"]) .harness-cta-wrap {
+    color: #a0a0a0;
+  }
+
+  .harness-cta-link {
+    color: #ed6704;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .harness-cta-link:hover {
+    text-decoration: underline;
+  }
+</style>
