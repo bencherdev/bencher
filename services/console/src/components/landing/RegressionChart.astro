@@ -141,7 +141,7 @@ const keyframes = [
         aria-label="Animated chart showing benchmark results with a performance regression spike that triggers an alert, followed by a fix back to baseline"
       >
         <!-- Background -->
-        <rect width={WIDTH} height={HEIGHT} rx="12" fill="#1e1e1e" />
+        <rect width={WIDTH} height={HEIGHT} rx="6" fill="#1e1e1e" />
 
         <!-- Grid lines -->
         {yLabels.map((v) => (
@@ -244,14 +244,11 @@ const keyframes = [
     width: 100%;
     max-width: 800px;
     height: auto;
-    border-radius: 12px;
+    border-radius: 6px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
   }
 
   :global([data-theme="dark"]) .regression-chart {
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.22),
-      0 10px 40px rgba(0, 0, 0, 0.75),
-      0 0 60px rgba(255, 122, 26, 0.18);
+    box-shadow: 0 0 48px rgba(255, 122, 26, 0.18);
   }
 </style>
