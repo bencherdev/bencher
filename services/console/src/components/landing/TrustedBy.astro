@@ -1,9 +1,13 @@
 ---
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+// Inline SVG source at build time so the component works in both dev and
+// production builds (Netlify output bundles the compiled component to a
+// different directory than the source, so `readFileSync` at runtime fails).
+const logoModules = import.meta.glob("./logos/*.svg", {
+	query: "?raw",
+	import: "default",
+	eager: true,
+}) as Record<string, string>;
 
-const dir = dirname(fileURLToPath(import.meta.url));
 const logos = [
 	{ name: "Google", file: "google.svg", height: "2.25rem" },
 	{ name: "Microsoft", file: "microsoft.svg", height: "1.75rem" },
@@ -11,7 +15,7 @@ const logos = [
 	{ name: "NVIDIA", file: "nvidia.svg", height: "1.5rem" },
 ].map((logo) => ({
 	...logo,
-	svg: readFileSync(join(dir, "logos", logo.file), "utf-8"),
+	svg: logoModules[`./logos/${logo.file}`],
 }));
 ---
 
