@@ -94,6 +94,7 @@ export default defineConfig({
 		"/repo": BENCHER_GITHUB_URL,
 		// Redirects for old URLs
 		"/docs/how-to/quick-start": "/docs/tutorial/quickstart",
+		"/[lang]/docs/how-to/quick-start": "/[lang]/docs/tutorial/quickstart",
 		"/docs/tutorial/quick-start": "/docs/tutorial/quickstart",
 		"/[lang]/docs/tutorial/quick-start": "/[lang]/docs/tutorial/quickstart",
 		"/docs/how-to/branch-selection": "/docs/explanation/branches",
