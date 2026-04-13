@@ -9,10 +9,17 @@ const CHART_W = WIDTH - PADDING.left - PADDING.right;
 const CHART_H = HEIGHT - PADDING.top - PADDING.bottom;
 
 const dataPoints = [
-  5.0, 5.2, 4.9, 5.1, 5.3, 4.8, 5.0, 5.1, // steady baseline
-  22.0, // regression spike
-  5.0, // fix back below the limit
-  5.2, // final steady
+	5.0,
+	5.2,
+	4.9,
+	5.1,
+	5.3,
+	4.8,
+	5.0,
+	5.1, // steady baseline
+	22.0, // regression spike
+	5.0, // fix back below the limit
+	5.2, // final steady
 ];
 const spikeIndex = 8;
 const fixIndex = 9;
@@ -22,13 +29,13 @@ const yMax = 25;
 const boundaryY = 15;
 
 const scaleX = (i: number) =>
-  PADDING.left + (i / (dataPoints.length - 1)) * CHART_W;
+	PADDING.left + (i / (dataPoints.length - 1)) * CHART_W;
 const scaleY = (v: number) =>
-  PADDING.top + CHART_H - ((v - yMin) / (yMax - yMin)) * CHART_H;
+	PADDING.top + CHART_H - ((v - yMin) / (yMax - yMin)) * CHART_H;
 
 const linePoints = dataPoints
-  .map((v, i) => `${scaleX(i)},${scaleY(v)}`)
-  .join(" ");
+	.map((v, i) => `${scaleX(i)},${scaleY(v)}`)
+	.join(" ");
 
 const boundaryYPos = scaleY(boundaryY);
 const alertX = scaleX(spikeIndex);
@@ -39,9 +46,9 @@ const yLabels = [0, 5, 10, 15, 20, 25];
 // Cumulative polyline length for time-accurate per-dot scheduling.
 const cumLen: number[] = [0];
 for (let i = 1; i < dataPoints.length; i++) {
-  const dx = scaleX(i) - scaleX(i - 1);
-  const dy = scaleY(dataPoints[i]) - scaleY(dataPoints[i - 1]);
-  cumLen.push(cumLen[i - 1] + Math.sqrt(dx * dx + dy * dy));
+	const dx = scaleX(i) - scaleX(i - 1);
+	const dy = scaleY(dataPoints[i]) - scaleY(dataPoints[i - 1]);
+	cumLen.push(cumLen[i - 1] + Math.sqrt(dx * dx + dy * dy));
 }
 const totalLength = cumLen[cumLen.length - 1];
 const strokeLen = Math.ceil(totalLength);
@@ -60,16 +67,16 @@ const total = fadeStart + fade;
 
 // When the line reaches each dot (accounting for the spike pause).
 const lineReaches = (i: number) => {
-  const base = lineStart + (cumLen[i] / totalLength) * lineDraw;
-  return i > spikeIndex ? base + spikePause : base;
+	const base = lineStart + (cumLen[i] / totalLength) * lineDraw;
+	return i > spikeIndex ? base + spikePause : base;
 };
 
 // Dots after index 1 appear `lead` seconds before the line reaches them.
 const lead = 0.2;
 const dotAppear = (i: number) => {
-  if (i === 0) return dot0At;
-  if (i === 1) return dot1At;
-  return lineReaches(i) - lead;
+	if (i === 0) return dot0At;
+	if (i === 1) return dot1At;
+	return lineReaches(i) - lead;
 };
 
 const spikeLineT = lineReaches(spikeIndex);
@@ -87,15 +94,15 @@ const pct = (t: number) => ((t / total) * 100).toFixed(3);
 // Keyframes are baked as percentages so the loop is stable
 // (CSS animation-delay only applies to the first iteration).
 const dotKeyframes = dataPoints
-  .map((_, i) => {
-    const a = dotAppear(i);
-    return `@keyframes dot-${i} {
+	.map((_, i) => {
+		const a = dotAppear(i);
+		return `@keyframes dot-${i} {
   0%, ${pct(a)}% { opacity: 0; }
   ${pct(a + 0.15)}%, ${pct(fadeStart)}% { opacity: 1; }
   100% { opacity: 0; }
 }`;
-  })
-  .join("\n");
+	})
+	.join("\n");
 
 const alertKeyframes = `@keyframes alert-show {
   0%, ${pct(alertIn)}% { opacity: 0; transform: scale(0.4); }
@@ -117,10 +124,10 @@ const boundaryKeyframes = `@keyframes boundary-show {
 }`;
 
 const keyframes = [
-  lineKeyframes,
-  alertKeyframes,
-  boundaryKeyframes,
-  dotKeyframes,
+	lineKeyframes,
+	alertKeyframes,
+	boundaryKeyframes,
+	dotKeyframes,
 ].join("\n");
 ---
 

@@ -1,24 +1,24 @@
 ---
 const cards = [
-  {
-    title: "CI runners are shared and unpredictable",
-    body: "Shared CPU, memory contention, and scheduler jitter mean two identical benchmark runs can return wildly different results.",
-  },
-  {
-    title: "Noisy results train you to ignore alerts",
-    body: "When benchmarks cry wolf on every PR, engineers stop looking. By the time a real performance regression lands, nobody catches it.",
-  },
-  {
-    title: "Performance regressions silently ship",
-    body: "Without trustworthy benchmark results in the PR workflow, performance regressions reach production. You find out when users do.",
-  },
+	{
+		title: "CI runners are shared and unpredictable",
+		body: "Shared CPU, memory contention, and scheduler jitter mean two identical benchmark runs can return wildly different results.",
+	},
+	{
+		title: "Noisy results train you to ignore alerts",
+		body: "When benchmarks cry wolf on every PR, engineers stop looking. By the time a real performance regression lands, nobody catches it.",
+	},
+	{
+		title: "Performance regressions silently ship",
+		body: "Without trustworthy benchmark results in the PR workflow, performance regressions reach production. You find out when users do.",
+	},
 ];
 ---
 
-<section class="problem-section">
+<section class="landing-section problem-section">
   <div class="columns is-centered">
     <div class="column is-10">
-      <p class="problem-eyebrow">THE PROBLEM</p>
+      <p class="landing-eyebrow">THE PROBLEM</p>
       <h2 class="title is-1 problem-title">
         CI benchmarks are too noisy to trust
       </h2>
@@ -43,34 +43,29 @@ const cards = [
 
 <style>
   .problem-section {
-    padding: 3rem 1.5rem 5rem;
+    padding-top: 3rem;
+    padding-bottom: 5rem;
   }
 
   @media screen and (min-width: 769px) {
     .problem-section {
-      padding: 3rem 2rem 6rem;
+      padding-top: 3rem;
+      padding-bottom: 6rem;
     }
   }
 
   @media screen and (min-width: 1024px) {
     .problem-section {
-      padding: 3rem 4rem 6rem;
+      padding-top: 3rem;
+      padding-bottom: 6rem;
     }
   }
 
   @media screen and (min-width: 1216px) {
     .problem-section {
-      padding: 3rem 6rem 6rem;
+      padding-top: 3rem;
+      padding-bottom: 6rem;
     }
-  }
-
-  .problem-eyebrow {
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    color: #888;
-    margin-bottom: 1.5rem;
-    line-height: 1;
   }
 
   .problem-title {
@@ -79,7 +74,7 @@ const cards = [
 
   .problem-sub {
     max-width: 720px;
-    color: #888;
+    color: var(--landing-muted);
   }
 
   .problem-cards {
@@ -89,8 +84,8 @@ const cards = [
   .problem-card {
     padding: 1.75rem;
     border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid var(--landing-card-border);
+    background: var(--landing-card-bg);
     height: 100%;
   }
 
@@ -99,20 +94,7 @@ const cards = [
   }
 
   .problem-card-body {
-    color: #666;
+    color: var(--landing-muted);
     line-height: 1.55;
-  }
-
-  :global([data-theme="dark"]) .problem-card {
-    background: rgba(255, 255, 255, 0.025);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  :global([data-theme="dark"]) .problem-card-body {
-    color: #a0a0a0;
-  }
-
-  :global([data-theme="dark"]) .problem-sub {
-    color: #a0a0a0;
   }
 </style>

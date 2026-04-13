@@ -1,24 +1,24 @@
 ---
 const options = [
-  {
-    title: "Self-Hosted",
-    badge: "Open Source",
-    body: "Deploy Bencher on your own infrastructure. Bare metal, Docker, or Kubernetes. Full control, no data leaving your environment.",
-    cta: { label: "Deploy in 60 seconds", href: "/docs/tutorial/self-hosted/" },
-    recommended: false,
-  },
-  {
-    title: "Bencher Cloud",
-    badge: "Recommended",
-    body: "Zero infrastructure to manage. Benchmark tracking, regression alerts, PR comments, and bare metal runners, without running a server.",
-    cta: { label: "Start free", href: "/auth/signup" },
-    recommended: true,
-  },
+	{
+		title: "Self-Hosted",
+		badge: "Open Source",
+		body: "Deploy Bencher on your own infrastructure. Bare metal, Docker, or Kubernetes. Full control, no data leaving your environment.",
+		cta: { label: "Deploy in 60 seconds", href: "/docs/tutorial/self-hosted/" },
+		recommended: false,
+	},
+	{
+		title: "Bencher Cloud",
+		badge: "Recommended",
+		body: "Zero infrastructure to manage. Benchmark tracking, regression alerts, PR comments, and bare metal runners, without running a server.",
+		cta: { label: "Start free", href: "/auth/signup" },
+		recommended: true,
+	},
 ];
 ---
 
-<section class="deploy-section">
-  <p class="deploy-eyebrow">DEPLOYMENT</p>
+<section class="landing-section">
+  <p class="landing-eyebrow">DEPLOYMENT</p>
   <h2 class="title is-1 deploy-title">Your infrastructure, or ours.</h2>
 
   <div class="columns is-variable is-6 deploy-grid">
@@ -38,37 +38,6 @@ const options = [
 </section>
 
 <style>
-  .deploy-section {
-    padding: 4rem 1.5rem;
-  }
-
-  @media screen and (min-width: 769px) {
-    .deploy-section {
-      padding: 5rem 2rem;
-    }
-  }
-
-  @media screen and (min-width: 1024px) {
-    .deploy-section {
-      padding: 5rem 4rem;
-    }
-  }
-
-  @media screen and (min-width: 1216px) {
-    .deploy-section {
-      padding: 5rem 6rem;
-    }
-  }
-
-  .deploy-eyebrow {
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    color: #888;
-    margin-bottom: 1.25rem;
-    line-height: 1;
-  }
-
   .deploy-title {
     margin-bottom: 2.5rem !important;
   }
@@ -81,16 +50,11 @@ const options = [
     position: relative;
     padding: 2rem;
     border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid var(--landing-card-border);
+    background: var(--landing-card-bg);
     height: 100%;
     display: flex;
     flex-direction: column;
-  }
-
-  :global([data-theme="dark"]) .deploy-card {
-    background: rgba(255, 255, 255, 0.025);
-    border-color: rgba(255, 255, 255, 0.1);
   }
 
   .deploy-card-recommended {
@@ -120,12 +84,11 @@ const options = [
 
   .deploy-badge-muted {
     background: transparent;
-    color: #888;
+    color: var(--landing-muted);
     border: 1px solid rgba(0, 0, 0, 0.2);
   }
 
   :global([data-theme="dark"]) .deploy-badge-muted {
-    color: #a0a0a0;
     border-color: rgba(255, 255, 255, 0.2);
   }
 
@@ -135,13 +98,9 @@ const options = [
 
   .deploy-card-body {
     flex: 1;
-    color: #666;
+    color: var(--landing-muted);
     line-height: 1.6;
     margin-bottom: 1.5rem !important;
-  }
-
-  :global([data-theme="dark"]) .deploy-card-body {
-    color: #a0a0a0;
   }
 
   .deploy-cta {

@@ -1,25 +1,25 @@
 ---
 const steps = [
-  {
-    n: "01",
-    title: "Run your benchmarks",
-    body: "Run your benchmarks locally or in CI using the <em>exact same</em> bare metal runners and your favorite benchmarking tools. The <code>bencher</code> CLI orchestrates running your benchmarks on bare metal and stores the results.",
-  },
-  {
-    n: "02",
-    title: "Track your benchmarks",
-    body: "Track the results of your benchmarks over time. Monitor, query, and graph the results using the <code>bencher</code> CLI and the Bencher web console based on the source branch and testbed.",
-  },
-  {
-    n: "03",
-    title: "Catch performance regressions",
-    body: "Catch performance regressions locally or in CI using the <em>exact same</em> bare metal hardware. Bencher uses state of the art, customizable analytics to detect performance regressions before they merge.",
-  },
+	{
+		n: "01",
+		title: "Run your benchmarks",
+		body: "Run your benchmarks locally or in CI using the <em>exact same</em> bare metal runners and your favorite benchmarking tools. The <code>bencher</code> CLI orchestrates running your benchmarks on bare metal and stores the results.",
+	},
+	{
+		n: "02",
+		title: "Track your benchmarks",
+		body: "Track the results of your benchmarks over time. Monitor, query, and graph the results using the <code>bencher</code> CLI and the Bencher web console based on the source branch and testbed.",
+	},
+	{
+		n: "03",
+		title: "Catch performance regressions",
+		body: "Catch performance regressions locally or in CI using the <em>exact same</em> bare metal hardware. Bencher uses state of the art, customizable analytics to detect performance regressions before they merge.",
+	},
 ];
 ---
 
-<section class="how-section">
-  <p class="how-eyebrow">HOW IT WORKS</p>
+<section class="landing-section">
+  <p class="landing-eyebrow">HOW IT WORKS</p>
   <h2 class="title is-1 how-title">
     Run locally. Run in CI. Same bare metal every time.
   </h2>
@@ -36,37 +36,6 @@ const steps = [
 </section>
 
 <style>
-  .how-section {
-    padding: 4rem 1.5rem;
-  }
-
-  @media screen and (min-width: 769px) {
-    .how-section {
-      padding: 5rem 2rem;
-    }
-  }
-
-  @media screen and (min-width: 1024px) {
-    .how-section {
-      padding: 5rem 4rem;
-    }
-  }
-
-  @media screen and (min-width: 1216px) {
-    .how-section {
-      padding: 5rem 6rem;
-    }
-  }
-
-  .how-eyebrow {
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    color: #888;
-    margin-bottom: 1.25rem;
-    line-height: 1;
-  }
-
   .how-title {
     margin-bottom: 3rem !important;
     max-width: 900px;
@@ -82,18 +51,14 @@ const steps = [
 
   @media screen and (min-width: 769px) {
     .how-step + .how-step {
-      border-left: 1px solid rgba(0, 0, 0, 0.08);
-    }
-
-    :global([data-theme="dark"]) .how-step + .how-step {
-      border-left-color: rgba(255, 255, 255, 0.1);
+      border-left: 1px solid var(--landing-card-border);
     }
   }
 
   .how-step-number {
     font-size: 0.8rem;
     font-weight: 500;
-    color: #888;
+    color: var(--landing-eyebrow);
     margin-bottom: 1rem;
     line-height: 1;
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
@@ -105,7 +70,7 @@ const steps = [
   }
 
   .how-step-body {
-    color: #666;
+    color: var(--landing-muted);
     line-height: 1.6;
   }
 
@@ -114,10 +79,6 @@ const steps = [
     padding: 0.1em 0.35em;
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.06);
-  }
-
-  :global([data-theme="dark"]) .how-step-body {
-    color: #a0a0a0;
   }
 
   :global([data-theme="dark"]) .how-step-body :global(code) {

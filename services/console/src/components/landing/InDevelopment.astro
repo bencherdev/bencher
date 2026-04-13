@@ -6,41 +6,40 @@ const jobUuid = "e2215f33-824c-4aa9-925b-8056526b1a07";
 
 // Criterion time lines: [low mean high] — baseline ~5 µs, Adapter::Json spike ~22 µs.
 const criterionLines = [
-  { name: "Adapter::Magic (JSON)", low: "5.02", mean: "5.03", high: "5.04" },
-  { name: "Adapter::Json", low: "21.82", mean: "21.83", high: "21.84" },
-  { name: "Adapter::Magic (Rust)", low: "4.97", mean: "4.98", high: "4.99" },
-  { name: "Adapter::Rust", low: "5.01", mean: "5.02", high: "5.03" },
-  { name: "Adapter::RustBench", low: "4.98", mean: "4.99", high: "5.00" },
+	{ name: "Adapter::Magic (JSON)", low: "5.02", mean: "5.03", high: "5.04" },
+	{ name: "Adapter::Json", low: "21.82", mean: "21.83", high: "21.84" },
+	{ name: "Adapter::Magic (Rust)", low: "4.97", mean: "4.98", high: "4.99" },
+	{ name: "Adapter::Rust", low: "5.01", mean: "5.02", high: "5.03" },
+	{ name: "Adapter::RustBench", low: "4.98", mean: "4.99", high: "5.00" },
 ];
 
-const reportUrl =
-  "https://bencher.dev/perf/bencher/reports/d6c084df";
+const reportUrl = "https://bencher.dev/perf/bencher/reports/d6c084df";
 
 const resultsBase = "https://bencher.dev/perf/bencher/";
 
 const viewResults = [
-  "Adapter::Json",
-  "Adapter::Magic (JSON)",
-  "Adapter::Magic (Rust)",
-  "Adapter::Rust",
-  "Adapter::RustBench",
+	"Adapter::Json",
+	"Adapter::Magic (JSON)",
+	"Adapter::Magic (Rust)",
+	"Adapter::Rust",
+	"Adapter::RustBench",
 ].map((name, i) => ({
-  name,
-  url: `${resultsBase}${["e93b3d71", "3bfd5887", "3525f177", "5655ed2a", "1db23e93"][i]}`,
+	name,
+	url: `${resultsBase}${["e93b3d71", "3bfd5887", "3525f177", "5655ed2a", "1db23e93"][i]}`,
 }));
 
 const viewAlerts = [
-  {
-    name: "Adapter::Json",
-    url: "https://bencher.dev/perf/bencher/alerts/91ee27a7",
-  },
+	{
+		name: "Adapter::Json",
+		url: "https://bencher.dev/perf/bencher/alerts/91ee27a7",
+	},
 ];
 ---
 
-<section class="development-section">
+<section class="landing-section">
   <div class="columns is-centered">
     <div class="column is-10">
-      <p class="development-eyebrow">IN DEVELOPMENT</p>
+      <p class="landing-eyebrow">IN DEVELOPMENT</p>
       <h2 class="title is-1 development-title">
         Catch performance regressions before you even push
       </h2>
@@ -112,62 +111,18 @@ Job status: <span class="term-status-done">Processed</span>
 </section>
 
 <script>
-  // Auto-size the SVG to the terminal's real content height.
-  const mocks = document.querySelectorAll<SVGSVGElement>(".term-svg");
-  for (const svg of mocks) {
-    const fo = svg.querySelector("foreignObject");
-    const content = fo?.firstElementChild as HTMLElement | null;
-    if (!fo || !content) continue;
-    const update = () => {
-      const h = Math.ceil(content.offsetHeight);
-      if (!h) return;
-      svg.setAttribute("viewBox", `0 0 1040 ${h}`);
-      fo.setAttribute("height", String(h));
-    };
-    requestAnimationFrame(update);
-    new ResizeObserver(update).observe(content);
-  }
+  import { autoSizeSvgForeignObject } from "./autoSizeSvg";
+  autoSizeSvgForeignObject(".term-svg");
 </script>
 
 <style>
-  .development-section {
-    padding: 4rem 1.5rem;
-  }
-
-  @media screen and (min-width: 769px) {
-    .development-section {
-      padding: 5rem 2rem;
-    }
-  }
-
-  @media screen and (min-width: 1024px) {
-    .development-section {
-      padding: 5rem 4rem;
-    }
-  }
-
-  @media screen and (min-width: 1216px) {
-    .development-section {
-      padding: 5rem 6rem;
-    }
-  }
-
-  .development-eyebrow {
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    color: #888;
-    margin-bottom: 1.25rem;
-    line-height: 1;
-  }
-
   .development-title {
     margin-bottom: 1.25rem !important;
   }
 
   .development-sub {
     max-width: 720px;
-    color: #666;
+    color: var(--landing-muted);
     margin-bottom: 2.5rem !important;
   }
 
@@ -176,10 +131,6 @@ Job status: <span class="term-status-done">Processed</span>
     padding: 0.1em 0.35em;
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.06);
-  }
-
-  :global([data-theme="dark"]) .development-sub {
-    color: #a0a0a0;
   }
 
   :global([data-theme="dark"]) .development-sub code {

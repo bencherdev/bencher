@@ -1,32 +1,32 @@
 ---
 const testimonials = [
-  {
-    quote: "Bencher is like CodeCov for performance metrics.",
-    name: "Jonathan Woollett-Light",
-    github: "JonathanWoollett-Light",
-    icon: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/JonathanWoollett-Light.jpg",
-  },
-  {
-    quote:
-      "Now that I'm starting to see graphs of performance over time automatically from tests running in CI — it's like a whole branch of errors can be caught and noticed sooner.",
-    name: "Price Clark",
-    github: "gpwclark",
-    icon: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/gpwclark.jpg",
-  },
-  {
-    quote:
-      "95% of the time I don't want to think about my benchmarks. But when I need to, Bencher ensures the detailed historical record is waiting for me. It's fire-and-forget.",
-    name: "Joe Neeman",
-    github: "jneem",
-    icon: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/jneem.jpg",
-  },
+	{
+		quote: "Bencher is like CodeCov for performance metrics.",
+		name: "Jonathan Woollett-Light",
+		github: "JonathanWoollett-Light",
+		icon: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/JonathanWoollett-Light.jpg",
+	},
+	{
+		quote:
+			"Now that I'm starting to see graphs of performance over time automatically from tests running in CI — it's like a whole branch of errors can be caught and noticed sooner.",
+		name: "Price Clark",
+		github: "gpwclark",
+		icon: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/gpwclark.jpg",
+	},
+	{
+		quote:
+			"95% of the time I don't want to think about my benchmarks. But when I need to, Bencher ensures the detailed historical record is waiting for me. It's fire-and-forget.",
+		name: "Joe Neeman",
+		github: "jneem",
+		icon: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/jneem.jpg",
+	},
 ];
 ---
 
-<section class="engineers-section">
+<section class="landing-section engineers-section">
   <div class="columns is-centered">
     <div class="column is-10">
-      <p class="engineers-eyebrow">WHAT ENGINEERS SAY</p>
+      <p class="landing-eyebrow">WHAT ENGINEERS SAY</p>
       <h2 class="title is-1 engineers-title">
         Performance coverage for your PRs
       </h2>
@@ -65,35 +65,9 @@ const testimonials = [
 </section>
 
 <style>
+  /* Tight pair after PRComment → testimonials read as a single beat. */
   .engineers-section {
-    padding: 1rem 1.5rem 4rem;
-  }
-
-  @media screen and (min-width: 769px) {
-    .engineers-section {
-      padding: 1rem 2rem 5rem;
-    }
-  }
-
-  @media screen and (min-width: 1024px) {
-    .engineers-section {
-      padding: 1rem 4rem 5rem;
-    }
-  }
-
-  @media screen and (min-width: 1216px) {
-    .engineers-section {
-      padding: 1rem 6rem 5rem;
-    }
-  }
-
-  .engineers-eyebrow {
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    color: #888;
-    margin-bottom: 1.25rem;
-    line-height: 1;
+    padding-top: 1rem;
   }
 
   .engineers-title {
@@ -107,17 +81,12 @@ const testimonials = [
   .engineers-card {
     padding: 1.75rem;
     border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid var(--landing-card-border);
+    background: var(--landing-card-bg);
     height: 100%;
     display: flex;
     flex-direction: column;
     margin: 0;
-  }
-
-  :global([data-theme="dark"]) .engineers-card {
-    background: rgba(255, 255, 255, 0.025);
-    border-color: rgba(255, 255, 255, 0.1);
   }
 
   .engineers-quote {
@@ -136,11 +105,7 @@ const testimonials = [
     align-items: center;
     gap: 0.5rem;
     font-size: 0.9rem;
-    color: #666;
-  }
-
-  :global([data-theme="dark"]) .engineers-attribution {
-    color: #a0a0a0;
+    color: var(--landing-muted);
   }
 
   .engineers-avatar {

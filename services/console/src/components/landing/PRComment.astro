@@ -1,58 +1,58 @@
 ---
 const alertRow = {
-  benchmark: "Adapter::Json",
-  measure: "Latency",
-  units: "microseconds (µs)",
-  result: "21.83",
-  delta: "+336.60%",
-  boundary: "15.00",
-  limit: "145.53%",
+	benchmark: "Adapter::Json",
+	measure: "Latency",
+	units: "microseconds (µs)",
+	result: "21.83",
+	delta: "+336.60%",
+	boundary: "15.00",
+	limit: "145.53%",
 };
 
 const allRows = [
-  {
-    benchmark: "Adapter::Json",
-    result: "21.83",
-    delta: "+336.60%",
-    boundary: "15.00",
-    limit: "145.53%",
-    alerted: true,
-  },
-  {
-    benchmark: "Adapter::Magic (JSON)",
-    result: "5.03",
-    delta: "+0.60%",
-    boundary: "6.00",
-    limit: "83.83%",
-  },
-  {
-    benchmark: "Adapter::Magic (Rust)",
-    result: "4.98",
-    delta: "-0.40%",
-    boundary: "6.00",
-    limit: "83.00%",
-  },
-  {
-    benchmark: "Adapter::Rust",
-    result: "5.02",
-    delta: "+0.40%",
-    boundary: "6.00",
-    limit: "83.67%",
-  },
-  {
-    benchmark: "Adapter::RustBench",
-    result: "4.99",
-    delta: "-0.20%",
-    boundary: "6.00",
-    limit: "83.17%",
-  },
+	{
+		benchmark: "Adapter::Json",
+		result: "21.83",
+		delta: "+336.60%",
+		boundary: "15.00",
+		limit: "145.53%",
+		alerted: true,
+	},
+	{
+		benchmark: "Adapter::Magic (JSON)",
+		result: "5.03",
+		delta: "+0.60%",
+		boundary: "6.00",
+		limit: "83.83%",
+	},
+	{
+		benchmark: "Adapter::Magic (Rust)",
+		result: "4.98",
+		delta: "-0.40%",
+		boundary: "6.00",
+		limit: "83.00%",
+	},
+	{
+		benchmark: "Adapter::Rust",
+		result: "5.02",
+		delta: "+0.40%",
+		boundary: "6.00",
+		limit: "83.67%",
+	},
+	{
+		benchmark: "Adapter::RustBench",
+		result: "4.99",
+		delta: "-0.20%",
+		boundary: "6.00",
+		limit: "83.17%",
+	},
 ];
 ---
 
-<section class="practice-section">
+<section class="landing-section practice-section">
   <div class="columns is-centered">
     <div class="column is-10">
-      <p class="practice-eyebrow">IN REVIEW</p>
+      <p class="landing-eyebrow">IN REVIEW</p>
       <h2 class="title is-1 practice-title">
         Catch performance regressions in code review, not in production
       </h2>
@@ -248,54 +248,16 @@ const allRows = [
 </section>
 
 <script>
-  // Size the SVG wrapper to match the mock's actual content height so the
-  // `<details>` expand/collapse doesn't leave empty space or clip.
-  const mocks = document.querySelectorAll<SVGSVGElement>(".gh-svg");
-  for (const svg of mocks) {
-    const fo = svg.querySelector("foreignObject");
-    const content = fo?.firstElementChild as HTMLElement | null;
-    if (!fo || !content) continue;
-    const update = () => {
-      const h = Math.ceil(content.offsetHeight);
-      if (!h) return;
-      svg.setAttribute("viewBox", `0 0 1040 ${h}`);
-      fo.setAttribute("height", String(h));
-    };
-    requestAnimationFrame(update);
-    new ResizeObserver(update).observe(content);
-  }
+  import { autoSizeSvgForeignObject } from "./autoSizeSvg";
+  autoSizeSvgForeignObject(".gh-svg");
 </script>
 
 <style>
+  /* Override the default landing-section top padding for the InDevelopment
+     → PRComment pair (they read as one beat, so the gap is intentionally
+     tighter than the rest of the page cadence). */
   .practice-section {
-    padding: 1rem 1.5rem 4rem;
-  }
-
-  @media screen and (min-width: 769px) {
-    .practice-section {
-      padding: 1rem 2rem 5rem;
-    }
-  }
-
-  @media screen and (min-width: 1024px) {
-    .practice-section {
-      padding: 1rem 4rem 5rem;
-    }
-  }
-
-  @media screen and (min-width: 1216px) {
-    .practice-section {
-      padding: 1rem 6rem 5rem;
-    }
-  }
-
-  .practice-eyebrow {
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    color: #888;
-    margin-bottom: 1.25rem;
-    line-height: 1;
+    padding-top: 1rem;
   }
 
   .practice-title {
@@ -304,12 +266,8 @@ const allRows = [
 
   .practice-sub {
     max-width: 720px;
-    color: #666;
+    color: var(--landing-muted);
     margin-bottom: 2.5rem !important;
-  }
-
-  :global([data-theme="dark"]) .practice-sub {
-    color: #a0a0a0;
   }
 
   /* ---------- GitHub comment mock (SVG wrapped) ---------- */

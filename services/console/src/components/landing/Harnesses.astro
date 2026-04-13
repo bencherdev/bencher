@@ -1,20 +1,23 @@
 ---
 const groups = [
-  { language: "Rust", harnesses: ["Criterion", "libtest bench", "Iai", "Gungraun"] },
-  { language: "C++", harnesses: ["Google Benchmark", "Catch2"] },
-  { language: "Python", harnesses: ["pytest-benchmark", "airspeed velocity"] },
-  { language: "Java", harnesses: ["JMH"] },
-  { language: "C#", harnesses: ["BenchmarkDotNet"] },
-  { language: "JavaScript", harnesses: ["Benchmark.js"] },
-  { language: "Go", harnesses: ["go test -bench"] },
-  { language: "Ruby", harnesses: ["Benchmark"] },
-  { language: "Dart", harnesses: ["benchmark_harness"] },
-  { language: "Shell", harnesses: ["Hyperfine"] },
+	{
+		language: "Rust",
+		harnesses: ["Criterion", "libtest bench", "Iai", "Gungraun"],
+	},
+	{ language: "C++", harnesses: ["Google Benchmark", "Catch2"] },
+	{ language: "Python", harnesses: ["pytest-benchmark", "airspeed velocity"] },
+	{ language: "Java", harnesses: ["JMH"] },
+	{ language: "C#", harnesses: ["BenchmarkDotNet"] },
+	{ language: "JavaScript", harnesses: ["Benchmark.js"] },
+	{ language: "Go", harnesses: ["go test -bench"] },
+	{ language: "Ruby", harnesses: ["Benchmark"] },
+	{ language: "Dart", harnesses: ["benchmark_harness"] },
+	{ language: "Shell", harnesses: ["Hyperfine"] },
 ];
 ---
 
-<section class="harness-section">
-  <p class="harness-eyebrow">BENCHMARK HARNESSES</p>
+<section class="landing-section">
+  <p class="landing-eyebrow">BENCHMARK HARNESSES</p>
   <h2 class="title is-1 harness-title">
     Bring your own benchmark harness
   </h2>
@@ -46,37 +49,6 @@ const groups = [
 </section>
 
 <style>
-  .harness-section {
-    padding: 4rem 1.5rem;
-  }
-
-  @media screen and (min-width: 769px) {
-    .harness-section {
-      padding: 5rem 2rem;
-    }
-  }
-
-  @media screen and (min-width: 1024px) {
-    .harness-section {
-      padding: 5rem 4rem;
-    }
-  }
-
-  @media screen and (min-width: 1216px) {
-    .harness-section {
-      padding: 5rem 6rem;
-    }
-  }
-
-  .harness-eyebrow {
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    color: #888;
-    margin-bottom: 1.25rem;
-    line-height: 1;
-  }
-
   .harness-title {
     margin-bottom: 2.5rem !important;
   }
@@ -107,7 +79,7 @@ const groups = [
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.14em;
-    color: #888;
+    color: var(--landing-eyebrow);
     margin-bottom: 0.6rem !important;
     line-height: 1;
     text-transform: uppercase;
@@ -128,11 +100,7 @@ const groups = [
   .harness-cta-wrap {
     margin-top: 2.5rem !important;
     font-size: 0.95rem;
-    color: #666;
-  }
-
-  :global([data-theme="dark"]) .harness-cta-wrap {
-    color: #a0a0a0;
+    color: var(--landing-muted);
   }
 
   .harness-cta-link {

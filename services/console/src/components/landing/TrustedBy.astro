@@ -5,13 +5,13 @@ import { dirname, join } from "node:path";
 
 const dir = dirname(fileURLToPath(import.meta.url));
 const logos = [
-  { name: "Google", file: "google.svg", height: "2.25rem" },
-  { name: "Microsoft", file: "microsoft.svg", height: "1.75rem" },
-  { name: "GitLab", file: "gitlab.svg", height: "1.5rem" },
-  { name: "NVIDIA", file: "nvidia.svg", height: "1.5rem" },
+	{ name: "Google", file: "google.svg", height: "2.25rem" },
+	{ name: "Microsoft", file: "microsoft.svg", height: "1.75rem" },
+	{ name: "GitLab", file: "gitlab.svg", height: "1.5rem" },
+	{ name: "NVIDIA", file: "nvidia.svg", height: "1.5rem" },
 ].map((logo) => ({
-  ...logo,
-  svg: readFileSync(join(dir, "logos", logo.file), "utf-8"),
+	...logo,
+	svg: readFileSync(join(dir, "logos", logo.file), "utf-8"),
 }));
 ---
 

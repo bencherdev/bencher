@@ -1,5 +1,5 @@
 ---
-import { defaultLang, Language } from "../../i18n/ui";
+import { Language, defaultLang } from "../../i18n/ui";
 
 const { lang } = Astro.props;
 const language = lang ?? defaultLang;
@@ -72,7 +72,6 @@ const primaryCta = (lang: Language) => {
 			return "免费开始基准测试";
 	}
 };
-
 ---
 
 <section class="cta-section">
@@ -116,11 +115,7 @@ const primaryCta = (lang: Language) => {
 	.cta-sub {
 		max-width: 640px;
 		margin: 0 auto 2.5rem !important;
-		color: #666;
-	}
-
-	:global([data-theme="dark"]) .cta-sub {
-		color: #a0a0a0;
+		color: var(--landing-muted);
 	}
 
 	.cta-buttons {

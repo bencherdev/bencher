@@ -1,24 +1,24 @@
 ---
 const stats = [
-  {
-    eyebrow: "TYPICAL CI RUNNER VARIANCE",
-    value: ">30%",
-    tone: "bad",
-    body: "Noisy shared CI runners hide real performance regressions.",
-  },
-  {
-    eyebrow: "BENCHER BARE METAL VARIANCE",
-    value: "<2%",
-    tone: "good",
-    body: "Dedicated bare metal hardware. When a number moves, it's real.",
-  },
+	{
+		eyebrow: "TYPICAL CI RUNNER VARIANCE",
+		value: ">30%",
+		tone: "bad",
+		body: "Noisy shared CI runners hide real performance regressions.",
+	},
+	{
+		eyebrow: "BENCHER BARE METAL VARIANCE",
+		value: "<2%",
+		tone: "good",
+		body: "Dedicated bare metal hardware. When a number moves, it's real.",
+	},
 ];
 ---
 
-<section class="bare-metal-section">
+<section class="landing-section">
   <div class="columns is-vcentered is-variable is-8">
     <div class="column is-6">
-      <p class="bare-eyebrow">WHY BARE METAL</p>
+      <p class="landing-eyebrow">WHY BARE METAL</p>
       <h2 class="title is-1 bare-title">All signal. No noise.</h2>
       <p class="subtitle is-5 bare-sub">
         CI runners introduce enough noise to mask real performance regressions.
@@ -39,71 +39,31 @@ const stats = [
 </section>
 
 <style>
-  .bare-metal-section {
-    padding: 4rem 1.5rem;
-  }
-
-  @media screen and (min-width: 769px) {
-    .bare-metal-section {
-      padding: 5rem 2rem;
-    }
-  }
-
-  @media screen and (min-width: 1024px) {
-    .bare-metal-section {
-      padding: 5rem 4rem;
-    }
-  }
-
-  @media screen and (min-width: 1216px) {
-    .bare-metal-section {
-      padding: 5rem 6rem;
-    }
-  }
-
-  .bare-eyebrow {
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    color: #888;
-    margin-bottom: 1.25rem;
-    line-height: 1;
-  }
-
   .bare-title {
     margin-bottom: 1.25rem !important;
   }
 
   .bare-sub {
     max-width: 520px;
-    color: #666;
-  }
-
-  :global([data-theme="dark"]) .bare-sub {
-    color: #a0a0a0;
+    color: var(--landing-muted);
   }
 
   .stat-card {
     padding: 1.5rem 1.75rem;
     border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid var(--landing-card-border);
+    background: var(--landing-card-bg);
   }
 
   .stat-card + .stat-card {
     margin-top: 1.25rem;
   }
 
-  :global([data-theme="dark"]) .stat-card {
-    background: rgba(255, 255, 255, 0.025);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
   .stat-eyebrow {
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.14em;
-    color: #888;
+    color: var(--landing-eyebrow);
     margin-bottom: 0.5rem;
     line-height: 1;
   }
@@ -126,12 +86,8 @@ const stats = [
   }
 
   .stat-body {
-    color: #666;
+    color: var(--landing-muted);
     line-height: 1.55;
     margin: 0;
-  }
-
-  :global([data-theme="dark"]) .stat-body {
-    color: #a0a0a0;
   }
 </style>
