@@ -15,7 +15,7 @@ const collection = Collection.docs_tutorial;
 export async function getStaticPaths() {
 	const collection = Collection.docs_tutorial;
 	const pages = await getLangPaths(collection);
-	return pages.filter((page) => page.params.slug === "quick-start");
+	return pages.filter((page) => page.params.slug === "quickstart");
 }
 
 const lang = Astro.params.lang as Language;
@@ -44,7 +44,7 @@ const signupText = () => {
 const page = Astro.props;
 const { Content } = await render(page);
 
-const slug = "quick-start";
+const slug = "quickstart";
 ---
 
 <DocsLayout

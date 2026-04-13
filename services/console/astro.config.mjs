@@ -93,7 +93,10 @@ export default defineConfig({
 		"/demo": BENCHER_CALENDLY_URL,
 		"/repo": BENCHER_GITHUB_URL,
 		// Redirects for old URLs
-		"/docs/how-to/quick-start": "/docs/tutorial/quick-start",
+		"/docs/how-to/quick-start": "/docs/tutorial/quickstart",
+		"/[lang]/docs/how-to/quick-start": "/[lang]/docs/tutorial/quickstart",
+		"/docs/tutorial/quick-start": "/docs/tutorial/quickstart",
+		"/[lang]/docs/tutorial/quick-start": "/[lang]/docs/tutorial/quickstart",
 		"/docs/how-to/branch-selection": "/docs/explanation/branches",
 		"/docs/explanation/branch-selection": "/docs/explanation/branches",
 		"/[lang]/docs/explanation/branch-selection":
@@ -104,7 +107,7 @@ export default defineConfig({
 		"/docs/[lang]": "/[lang]/docs",
 		// Tutorial
 		"/docs/[lang]/tutorial": "/[lang]/docs/tutorial",
-		"/docs/[lang]/tutorial/quick-start": "/[lang]/docs/tutorial/quick-start",
+		"/docs/[lang]/tutorial/quick-start": "/[lang]/docs/tutorial/quickstart",
 		"/docs/[lang]/tutorial/[slug]": "/[lang]/docs/tutorial/[slug]",
 		// How To
 		"/docs/[lang]/how-to": "/[lang]/docs/how-to",

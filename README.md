@@ -32,11 +32,11 @@ Bencher consists of:
 
 Though Bencher is open source, there is also a hosted version available [Bencher Cloud](https://bencher.dev/).
 
-The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tutorial/quick-start/) tutorial.
+The best place to start is the [Bencher Quickstart](https://bencher.dev/docs/tutorial/quickstart/) tutorial.
 
 <br />
 <p align="center">
-  <a href="https://bencher.dev/docs/tutorial/quick-start/">
+  <a href="https://bencher.dev/docs/tutorial/quickstart/">
     <img
       src="https://s3.amazonaws.com/public.bencher.dev/github/continuous-benchmarking.png"
       alt="Start Continuous Benchmarking"
@@ -49,9 +49,9 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
 ## Documentation
 
 - Tutorial
-  - [Quick Start](https://bencher.dev/docs/tutorial/quick-start/)
-  - [Bare Metal Quick Start](https://bencher.dev/docs/tutorial/bare-metal/)
-  - [Self-Hosted Quick Start](https://bencher.dev/docs/tutorial/self-hosted/)
+  - [Quickstart](https://bencher.dev/docs/tutorial/quickstart/)
+  - [Bare Metal Quickstart](https://bencher.dev/docs/tutorial/bare-metal/)
+  - [Self-Hosted Quickstart](https://bencher.dev/docs/tutorial/self-hosted/)
 - How To
   - [Install CLI](https://bencher.dev/docs/how-to/install-cli/)
   - [Claim Benchmark Results](https://bencher.dev/docs/how-to/claim/)
