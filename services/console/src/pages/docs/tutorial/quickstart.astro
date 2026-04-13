@@ -2,8 +2,8 @@
 export const prerender = true;
 
 import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
-import { Content } from "../../../content/docs-tutorial/en/quick-start.mdx";
-import * as quickStart from "../../../content/docs-tutorial/en/quick-start.mdx";
+import { Content } from "../../../content/docs-tutorial/en/quickstart.mdx";
+import * as quickStart from "../../../content/docs-tutorial/en/quickstart.mdx";
 import AuthOverride from "../../../components/auth/AuthOverride";
 import { signupId } from "../../../i18n/ui";
 import Collection from "../../../util/collection";
@@ -18,7 +18,7 @@ const collection = Collection.docs_tutorial;
   published={quickStart.frontmatter.published}
   modified={quickStart.frontmatter.modified}
   collection={collection}
-  slug="quick-start"
+  slug="quickstart"
 >
   <Content />
   <AuthOverride client:only="solid-js" elementId={signupId}>
