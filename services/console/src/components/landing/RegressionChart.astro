@@ -79,7 +79,7 @@ const spikeDashoffset = Math.round(strokeLen - cumLen[spikeIndex]);
 // 🚨 window: appear slightly after the spike dot, disappear when the fix dot shows up.
 const spikeT = dotAppear(spikeIndex);
 const fixT = dotAppear(fixIndex);
-const alertIn = spikeT + 0.25;
+const alertIn = spikeT + 0.333;
 const alertOut = fixT;
 
 const pct = (t: number) => ((t / total) * 100).toFixed(3);
@@ -208,16 +208,23 @@ const keyframes = [
           />
         ))}
 
-        <!-- Alert emoji at the spike -->
-        <text
-          x={alertX}
-          y={alertY - 22}
-          text-anchor="middle"
-          font-size="26"
+        <!-- Alert indicator at the spike -->
+        <g
           style={`opacity: 0; transform-box: fill-box; transform-origin: center; animation: alert-show ${total}s linear infinite;`}
         >
-          🚨
-        </text>
+          <circle cx={alertX} cy={alertY - 26} r="12" fill="#e26000" />
+          <text
+            x={alertX}
+            y={alertY - 22}
+            text-anchor="middle"
+            fill="white"
+            font-size="16"
+            font-weight="bold"
+            font-family="system-ui, sans-serif"
+          >
+            !
+          </text>
+        </g>
       </svg>
     </div>
   </div>
