@@ -219,6 +219,12 @@ $disabled: #fdb07e;
   --landing-card-border: rgba(0, 0, 0, 0.08);
   --landing-card-border-strong: rgba(0, 0, 0, 0.25);
   --landing-card-bg: rgba(0, 0, 0, 0.02);
+
+  // Brand / semantic colors used across landing components.
+  --brand-orange: #ed6704;
+  --brand-orange-hover: #d25a00;
+  --brand-alert: #ef4444;
+  --brand-success: #22c55e;
 }
 
 [data-theme="dark"] {

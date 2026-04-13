@@ -19,7 +19,7 @@ const logos = [
   <p class="trusted-by-label">TRUSTED BY ENGINEERING TEAMS AT</p>
   <div class="trusted-by-logos">
     {logos.map((logo) => (
-      <div class="trusted-by-logo" style={`height: ${logo.height};`} aria-label={logo.name} set:html={logo.svg} />
+      <div class="trusted-by-logo" style={`height: ${logo.height};`} role="img" aria-label={logo.name} set:html={logo.svg} />
     ))}
   </div>
 </div>
