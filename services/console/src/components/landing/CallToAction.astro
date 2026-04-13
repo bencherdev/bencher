@@ -2,106 +2,172 @@
 import { defaultLang, Language } from "../../i18n/ui";
 
 const { lang } = Astro.props;
-
 const language = lang ?? defaultLang;
 
 const title = (lang: Language) => {
 	switch (lang) {
 		case Language.de:
-			return "Verfolgen Sie Ihre Benchmarks in CI";
+			return "Ihre nächste Performance-Regression kündigt sich nicht selbst an";
 		case Language.en:
-			return "Track your benchmarks in CI";
+			return "Your next performance regression won't announce itself";
 		case Language.es:
-			return "Realiza un seguimiento de tus benchmarks en CI";
+			return "Tu próxima regresión de rendimiento no se anunciará sola";
 		case Language.fr:
-			return "Suivez vos benchmarks dans CI";
+			return "Votre prochaine régression de performance ne s'annoncera pas toute seule";
 		case Language.ja:
-			return "CIでベンチマークを追跡する";
+			return "あなたの次のパフォーマンス回帰は自ら知らせてはくれません";
 		case Language.ko:
-			return "CI에서 벤치마크를 추적하다";
+			return "당신의 다음 성능 회귀는 스스로 알리지 않습니다";
 		case Language.pt:
-			return "Acompanhe seus benchmarks no CI";
+			return "Sua próxima regressão de desempenho não vai se anunciar";
 		case Language.ru:
-			return "Отслеживайте свои бенчмарки в CI";
+			return "Ваша следующая регрессия производительности не объявит о себе";
 		case Language.zh:
-			return "在CI中跟踪您的基准";
+			return "你的下一次性能回归不会自己提醒你";
 	}
 };
 
 const description = (lang: Language) => {
 	switch (lang) {
 		case Language.en:
-			return "Have you ever had a performance regression impact your users? Bencher could have prevented that from happening with continuous benchmarking.";
+			return "Catch performance regressions in your CI. Free to start.";
 		case Language.es:
-			return "¿Alguna vez ha tenido una regresión de rendimiento que afecte a sus usuarios? Bencher podría haber evitado que eso sucediera con el benchmarking continuo.";
+			return "Detecta regresiones de rendimiento en tu CI. Gratis para empezar.";
 		case Language.fr:
-			return "Avez-vous déjà eu une régression de performance impactant vos utilisateurs ? Bencher aurait pu empêcher cela de se produire avec le benchmarking continu.";
+			return "Attrapez les régressions de performance dans votre CI. Gratuit pour commencer.";
 		case Language.de:
-			return "Hatten Sie jemals eine Leistungsregression, die sich auf Ihre Benutzer auswirkte? Bencher hätte dies mit kontinuierlichem Benchmarking verhindern können.";
+			return "Fangen Sie Performance-Regressionen in Ihrer CI ab. Kostenlos starten.";
 		case Language.ja:
-			return "ユーザーに影響を与えるパフォーマンスの回帰が発生したことがありますか？ Bencherは継続的なベンチマークでそれを防ぐことができました。";
+			return "CIでパフォーマンス回帰をキャッチ。無料で始められます。";
 		case Language.ko:
-			return "성능 하락이 사용자에게 영향을 미친 적이 있나요? Bencher는 지속적인 벤치마킹으로 그것을 방지할 수 있었습니다.";
+			return "CI에서 성능 회귀를 잡으세요. 무료로 시작.";
 		case Language.pt:
-			return "Alguma vez teve uma regressão de desempenho que afetou seus usuários? O Bencher poderia ter evitado que isso acontecesse com o benchmarking contínuo.";
+			return "Capture regressões de desempenho no seu CI. Grátis para começar.";
 		case Language.ru:
-			return "Когда-либо ли у вас была регрессия производительности, повлиявшая на ваших пользователей? Bencher мог бы предотвратить это с помощью н kontinuierlichem Benchmarking.";
+			return "Ловите регрессии производительности в вашем CI. Бесплатно для старта.";
 		case Language.zh:
-			return "您是否曾经遇到过影响用户的性能回归？Bencher可以通过持续的基准测试来防止这种情况发生。";
+			return "在您的 CI 中捕捉性能回归。免费开始。";
 	}
 };
 
-const button = (lang: Language) => {
+const primaryCta = (lang: Language) => {
 	switch (lang) {
 		case Language.de:
-			return "Probieren Sie Bencher kostenlos aus";
+			return "Kostenlos mit Benchmarking starten";
 		case Language.en:
-			return "Try Bencher for Free";
+			return "Start benchmarking free";
 		case Language.es:
-			return "Prueba Bencher gratis";
+			return "Empieza a hacer benchmarking gratis";
 		case Language.fr:
-			return "Essayez Bencher gratuitement";
+			return "Commencez le benchmarking gratuitement";
 		case Language.ja:
-			return "Bencherを無料でお試しください";
+			return "無料でベンチマークを開始";
 		case Language.ko:
-			return "Bencher를 무료로 사용해보세요";
+			return "무료로 벤치마킹 시작";
 		case Language.pt:
-			return "Experimente o Bencher gratuitamente";
+			return "Comece a fazer benchmarking grátis";
 		case Language.ru:
-			return "Попробуйте Bencher бесплатно";
+			return "Начать бенчмаркинг бесплатно";
 		case Language.zh:
-			return "免费试用Bencher";
+			return "免费开始基准测试";
 	}
 };
+
 ---
 
-<section class="section" style="margin-top: 4rem; margin-bottom: 6rem;">
-  <div id="bare-metal" class="container" >
-    <div class="columns is-centered">
-      <div class="column is-fullwidth" style="background-color: #ed6704;">
-        <div class="box">
-          <div class="content has-text-centered">
-            <h2 class="title is-2">
-              {title(language)}
-            </h2>
-            <p>
-              {description(language)}
-            </p>
-          </div>
-          <div class="columns is-centered">
-            <div class="column">
-              <div class="content has-text-centered">
-                <a
-                  class="button is-primary is-large is-responsive"
-                  href="/auth/signup"
-                >
-                  {button(language)}
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<section class="cta-section">
+	<div class="columns is-centered">
+		<div class="column is-10 has-text-centered">
+			<h2 class="title is-1 cta-title">{title(language)}</h2>
+			<p class="subtitle is-5 cta-sub">{description(language)}</p>
+			<div class="cta-buttons">
+				<a class="cta-primary" href="/auth/signup">
+					{primaryCta(language)}
+				</a>
+			</div>
+		</div>
+	</div>
 </section>
+
+<style>
+	.cta-section {
+		padding: 6rem 1.5rem 8rem;
+	}
+
+	@media screen and (min-width: 769px) {
+		.cta-section {
+			padding: 7rem 2rem 9rem;
+		}
+	}
+
+	@media screen and (min-width: 1024px) {
+		.cta-section {
+			padding: 8rem 4rem 10rem;
+		}
+	}
+
+	.cta-title {
+		margin-bottom: 1.25rem !important;
+		max-width: 900px;
+		margin-left: auto !important;
+		margin-right: auto !important;
+	}
+
+	.cta-sub {
+		max-width: 640px;
+		margin: 0 auto 2.5rem !important;
+		color: #666;
+	}
+
+	:global([data-theme="dark"]) .cta-sub {
+		color: #a0a0a0;
+	}
+
+	.cta-buttons {
+		display: flex;
+		justify-content: center;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.cta-primary,
+	.cta-secondary {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.75rem 1.4rem;
+		border-radius: 8px;
+		font-size: 1rem;
+		font-weight: 500;
+		text-decoration: none;
+		transition: background 0.15s, border-color 0.15s, color 0.15s;
+	}
+
+	.cta-primary {
+		background: #ed6704;
+		color: #ffffff;
+		border: 1px solid #ed6704;
+	}
+
+	.cta-primary:hover {
+		background: #d25a00;
+		border-color: #d25a00;
+	}
+
+	.cta-secondary {
+		background: transparent;
+		color: inherit;
+		border: 1px solid rgba(0, 0, 0, 0.2);
+	}
+
+	.cta-secondary:hover {
+		background: rgba(0, 0, 0, 0.04);
+	}
+
+	:global([data-theme="dark"]) .cta-secondary {
+		border-color: rgba(255, 255, 255, 0.2);
+	}
+
+	:global([data-theme="dark"]) .cta-secondary:hover {
+		background: rgba(255, 255, 255, 0.05);
+	}
+</style>
