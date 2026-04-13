@@ -89,6 +89,8 @@ import CallToAction from "../components/landing/CallToAction.astro";
   .hero-landing {
     padding: 4rem 1.5rem 2rem;
     margin-bottom: 4rem;
+    min-height: 100vh;
+    box-sizing: border-box;
   }
 
   .hero-eyebrow {
@@ -117,19 +119,19 @@ import CallToAction from "../components/landing/CallToAction.astro";
 
   @media screen and (min-width: 769px) {
     .hero-landing {
-      padding: 6rem 2rem 2rem;
+      padding: max(6rem, 15vh) 2rem 2rem;
     }
   }
 
   @media screen and (min-width: 1024px) {
     .hero-landing {
-      padding: 6rem 4rem 2rem;
+      padding: max(6rem, 15vh) 4rem 2rem;
     }
   }
 
   @media screen and (min-width: 1216px) {
     .hero-landing {
-      padding: 6rem 6rem 2rem;
+      padding: max(6rem, 15vh) 6rem 2rem;
     }
   }
 </style>
