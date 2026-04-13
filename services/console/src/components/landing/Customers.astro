@@ -1,71 +1,171 @@
 ---
-import { Image } from "astro:assets";
-import { CUSTOMERS } from "./customers.tsx";
-
-const padQuote = (quote: string) => {
-	const MAX = CUSTOMERS.reduce((acc, customers) => {
-		const max = customers.reduce((acc, customer) => {
-			return Math.max(acc, customer.quote.length);
-		}, 0);
-		return Math.max(acc, max);
-	}, 0);
-	const padding = [];
-	const quoteLength = quote.length;
-	if (quoteLength < MAX) {
-		for (let i = 0; i < MAX - quoteLength; i++) {
-			padding.push(null);
-		}
-	}
-	return padding;
-};
+const testimonials = [
+  {
+    quote: "Bencher is like CodeCov for performance metrics.",
+    name: "Jonathan Woollett-Light",
+    github: "JonathanWoollett-Light",
+    icon: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/JonathanWoollett-Light.jpg",
+  },
+  {
+    quote:
+      "Now that I'm starting to see graphs of performance over time automatically from tests running in CI — it's like a whole branch of errors can be caught and noticed sooner.",
+    name: "Price Clark",
+    github: "gpwclark",
+    icon: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/gpwclark.jpg",
+  },
+  {
+    quote:
+      "95% of the time I don't want to think about my benchmarks. But when I need to, Bencher ensures the detailed historical record is waiting for me. It's fire-and-forget.",
+    name: "Joe Neeman",
+    github: "jneem",
+    icon: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/jneem.jpg",
+  },
+];
 ---
 
-<section class="section" style="margin-top: 4rem;">
-  <div class="columns is-centered is-vcentered">
-    <div class="column">
-      {CUSTOMERS.map((customers) => (
-        <div class="columns is-centered">
-          {customers.map((customer) => (
-            <div class="column is-5">
-              <div class="box">
-                <div class="content">
-                  <p style="word-break: break-word;">
-                  {customer.quote}
-                  {padQuote(customer.quote).map(() => (
-                    <>&nbsp;</>
-                  ))}
-                  </p>
-                </div>
-                <div class="media">
-                  <div class="media-left">
-                    <figure class="image is-48x48">
-                      <a
-							          href={`https://github.com/${customer.github}`}
-                        target="_blank"
-                        aria-label="GitHub"
-                        rel="noreferrer"
-						          >
-							          <Image
-                          class="is-rounded"
-                          src={customer.icon}
-                          alt={customer.name}
-                          width="48"
-                          height="48"
-                        />
-						          </a>
-                    </figure>
-                  </div>
-                  <div class="media-content">
-                      <p class="title is-4">{customer.name}</p>
-                      <a class="subtitle is-6 is-link" href={`https://github.com/${customer.github}`}>@{customer.github}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ))}
+<section class="engineers-section">
+  <div class="columns is-centered">
+    <div class="column is-10">
+      <p class="engineers-eyebrow">WHAT ENGINEERS SAY</p>
+      <h2 class="title is-1 engineers-title">
+        Used by teams who care about performance
+      </h2>
+
+      <div class="columns is-multiline engineers-grid">
+        {testimonials.map((t) => (
+          <div class="column is-4">
+            <figure class="engineers-card">
+              <blockquote class="engineers-quote">"{t.quote}"</blockquote>
+              <figcaption class="engineers-attribution">
+                <img
+                  class="engineers-avatar"
+                  src={t.icon}
+                  alt={t.name}
+                  width="28"
+                  height="28"
+                  loading="lazy"
+                />
+                <span class="engineers-name">{t.name}</span>
+                <span class="engineers-sep">·</span>
+                <a
+                  class="engineers-handle"
+                  href={`https://github.com/${t.github}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  @{t.github}
+                </a>
+              </figcaption>
+            </figure>
+          </div>
+        ))}
+      </div>
     </div>
   </div>
 </section>
 
+<style>
+  .engineers-section {
+    padding: 1rem 1.5rem 4rem;
+  }
+
+  @media screen and (min-width: 769px) {
+    .engineers-section {
+      padding: 1rem 2rem 5rem;
+    }
+  }
+
+  @media screen and (min-width: 1024px) {
+    .engineers-section {
+      padding: 1rem 4rem 5rem;
+    }
+  }
+
+  @media screen and (min-width: 1216px) {
+    .engineers-section {
+      padding: 1rem 6rem 5rem;
+    }
+  }
+
+  .engineers-eyebrow {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: #888;
+    margin-bottom: 1.25rem;
+    line-height: 1;
+  }
+
+  .engineers-title {
+    margin-bottom: 2.5rem !important;
+  }
+
+  .engineers-grid {
+    margin-top: 0;
+  }
+
+  .engineers-card {
+    padding: 1.75rem;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.02);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+
+  :global([data-theme="dark"]) .engineers-card {
+    background: rgba(255, 255, 255, 0.025);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .engineers-quote {
+    flex: 1;
+    margin: 0 0 1.5rem !important;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: inherit;
+    border: none;
+    padding: 0;
+    background: transparent;
+  }
+
+  .engineers-attribution {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+  }
+
+  :global([data-theme="dark"]) .engineers-attribution {
+    color: #a0a0a0;
+  }
+
+  .engineers-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: 0 0 28px;
+  }
+
+  .engineers-name {
+    color: inherit;
+  }
+
+  .engineers-sep {
+    color: inherit;
+    opacity: 0.6;
+  }
+
+  .engineers-handle {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .engineers-handle:hover {
+    text-decoration: underline;
+  }
+</style>
