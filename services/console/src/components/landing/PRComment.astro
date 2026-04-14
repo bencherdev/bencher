@@ -50,27 +50,18 @@ const allRows = [
 ---
 
 <section class="landing-section practice-section">
-  <div class="columns is-centered">
-    <div class="column is-10">
-      <p class="landing-eyebrow">IN REVIEW</p>
-      <h2 class="title is-1 practice-title">
-        Catch performance regressions in code review, not in production
-      </h2>
-      <p class="subtitle is-5 practice-sub">
-        No dashboards to remember to check. No manual benchmark runs. Every
-        benchmark run lands as a PR comment. Regressions fail the build.
-      </p>
-
+  <div class="columns is-vcentered is-variable is-6 is-reverse-mobile">
+    <div class="column is-5">
       <div class="gh-wrap">
         <svg
           class="gh-svg"
-          viewBox="0 0 1040 560"
+          viewBox="0 0 720 560"
           xmlns="http://www.w3.org/2000/svg"
           preserveAspectRatio="xMidYMin meet"
           role="img"
           aria-label="Example GitHub pull request comment from github-actions bot showing a Bencher Report with a performance regression alert"
         >
-          <foreignObject x="0" y="0" width="1040" height="560">
+          <foreignObject x="0" y="0" width="720" height="560">
             <div
               xmlns="http://www.w3.org/1999/xhtml"
               class="gh-comment"
@@ -244,6 +235,16 @@ const allRows = [
         </svg>
       </div>
     </div>
+    <div class="column is-7">
+      <p class="landing-eyebrow">IN REVIEW</p>
+      <h2 class="title is-1 practice-title">
+        Catch performance regressions in code review, not in production
+      </h2>
+      <p class="subtitle is-5 practice-sub">
+        No dashboards to remember to check. No manual benchmark runs. Every
+        benchmark run lands as a PR comment. Regressions fail the build.
+      </p>
+    </div>
   </div>
 </section>
 
@@ -274,6 +275,7 @@ const allRows = [
 
   .gh-wrap {
     max-width: 1000px;
+    min-width: 0;
     --gh-bg: #ffffff;
     --gh-border: #d0d7de;
     --gh-text: #1f2328;

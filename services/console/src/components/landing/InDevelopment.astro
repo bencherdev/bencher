@@ -13,9 +13,10 @@ const criterionLines = [
 	{ name: "Adapter::RustBench", low: "4.98", mean: "4.99", high: "5.00" },
 ];
 
-const reportUrl = "https://bencher.dev/perf/bencher/reports/d6c084df";
+const reportUrl =
+	"https://bencher.dev/perf/bencher/reports/d6c084df-fc99-4bad-a881-e5474b17906b";
 
-const resultsBase = "https://bencher.dev/perf/bencher/";
+const resultsBase = "https://bencher.dev/perf/bencher/benchmarks/";
 
 const viewResults = [
 	"Adapter::Json",
@@ -25,20 +26,20 @@ const viewResults = [
 	"Adapter::RustBench",
 ].map((name, i) => ({
 	name,
-	url: `${resultsBase}${["e93b3d71", "3bfd5887", "3525f177", "5655ed2a", "1db23e93"][i]}`,
+	url: `${resultsBase}${["e93b3d71-8499-4fae-bb7c-4e540b775714", "3bfd5887-83ec-4e62-8690-02855a38fbc9", "3525f177-fc8f-4a92-bd2f-dda7c4e15699", "5655ed2a-3e45-4622-bdbd-39cdd9837af8", "1db23e93-f909-40aa-bf42-838cc7ae05f5"][i]}`,
 }));
 
 const viewAlerts = [
 	{
 		name: "Adapter::Json",
-		url: "https://bencher.dev/perf/bencher/alerts/91ee27a7",
+		url: "https://bencher.dev/perf/bencher/alerts/91ee27a7-2aee-41fe-b037-80b786f26cd5",
 	},
 ];
 ---
 
 <section class="landing-section">
-  <div class="columns is-centered">
-    <div class="column is-10">
+  <div class="columns is-vcentered">
+    <div class="column is-7">
       <p class="landing-eyebrow">IN DEVELOPMENT</p>
       <h2 class="title is-1 development-title">
         Catch performance regressions before you even push
@@ -49,7 +50,8 @@ const viewAlerts = [
         are agent-ready, your coding agents can benchmark on bare metal without
         you in the loop.
       </p>
-
+    </div>
+    <div class="column is-5">
       <div class="term-wrap">
         <svg
           class="term-svg"
@@ -142,6 +144,7 @@ Job status: <span class="term-status-done">Processed</span>
 
   .term-wrap {
     max-width: 1000px;
+    min-width: 0;
     --term-bg: #1a1d23;
     --term-chrome-bg: #2a2e35;
     --term-border: #3d434d;
