@@ -20,14 +20,15 @@ Una Spec es una especificación de hardware que describe los recursos disponible
 6. Tamaño de disco
 7. Acceso a la red
 
-Las siguientes Specs están actualmente disponibles en [Bencher Cloud][bencher cloud]:
-
-|  Nombre  |    Slug    |  SO   | Arquitectura |       Sandbox       | CPU | Memoria  |   Disco   |   Red   |
-| :------: | :--------: | :---: | :----------: | :-----------------: | :-: | :------: | :-------: | :-----: |
-| Intel v1 | `intel-v1` | Linux |    x86_64    | Firecracker microVM |  4  | 48.0 GiB | 128.0 GiB |   No    |
-
 Las Specs tienen alcance de servidor o alcance de organización,
 de modo que la misma Spec puede compartirse entre varios bancos de pruebas en el mismo servidor o dentro de la misma organización, respectivamente.
+
+Las siguientes Specs están actualmente disponibles para [Runners bajo demanda][runner] en [Bencher Cloud][bencher cloud]:
+
+|  Nombre  |    Slug    |  SO   | Arquitectura |   Sandbox   | CPU | Memoria  |   Disco   |   Red   |
+| :------: | :--------: | :---: | :----------: | :---------: | :-: | :------: | :-------: | :-----: |
+| Intel v1 | `intel-v1` | Linux |    x86_64    | Firecracker |  4  | 48.0 GiB | 128.0 GiB |   No    |
+
 
 El orden de precedencia para seleccionar la Spec al usar <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> es el siguiente:
 1. La opción `--spec`

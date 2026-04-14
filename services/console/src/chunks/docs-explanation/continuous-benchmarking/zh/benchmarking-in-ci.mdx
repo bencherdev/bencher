@@ -7,7 +7,7 @@ import PerfImg from "../perf-img.mdx";
 大多数基准测试工具使用[系统挂钟时间](https://en.wikipedia.org/wiki/Elapsed_real_time)来测量延迟或吞吐量。这非常有用，因为这些正是我们开发者最关心的指标。然而，通用的 CI 环境在测量挂钟时间时往往噪声较大且不稳定。在进行持续基准测试时，这种波动会给结果带来不必要的噪声。
 
 有几种方式可以处理这个问题：
-1. [裸金属运行器](/pricing/#bare-metal)
+1. [裸金属运行器](/pricing/)
 2. [相对持续基准测试](/zh/docs/how-to/track-benchmarks/#relative-continuous-benchmarking)
 3. 切换到以指令数而非挂钟时间为测量标准的基准测试工具
 

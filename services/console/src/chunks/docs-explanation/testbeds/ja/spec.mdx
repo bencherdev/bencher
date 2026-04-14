@@ -20,14 +20,15 @@ Specは、[Runner][runner]が利用できるリソースを記述するハード
 6. ディスクサイズ
 7. ネットワークアクセス
 
-現在、[Bencher Cloud][bencher cloud] では以下の Spec が利用可能です:
-
-|   名前   |   スラグ   |  OS   | アーキテクチャ |       Sandbox       | CPU |  メモリ  | ディスク  | ネットワーク |
-| :------: | :--------: | :---: | :------------: | :-----------------: | :-: | :------: | :-------: | :----------: |
-| Intel v1 | `intel-v1` | Linux |     x86_64     | Firecracker microVM |  4  | 48.0 GiB | 128.0 GiB |     なし     |
-
 Specはサーバースコープまたは組織スコープのいずれかであり、
 同じSpecを同じサーバー上の複数のテストベッドまたは同じ組織内で共有できます。
+
+現在、[Bencher Cloud][bencher cloud] の[オンデマンド Runner][runner] では以下の Spec が利用可能です:
+
+|   名前   |   スラグ   |  OS   | アーキテクチャ |   Sandbox   | CPU |  メモリ  | ディスク  | ネットワーク |
+| :------: | :--------: | :---: | :------------: | :---------: | :-: | :------: | :-------: | :----------: |
+| Intel v1 | `intel-v1` | Linux |     x86_64     | Firecracker |  4  | 48.0 GiB | 128.0 GiB |     なし     |
+
 
 <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>を使用する際のSpec選択の優先順位は次のとおりです:
 1. `--spec` オプション
