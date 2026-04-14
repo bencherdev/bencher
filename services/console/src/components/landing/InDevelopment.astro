@@ -38,7 +38,7 @@ const viewAlerts = [
 ---
 
 <section class="landing-section">
-  <div class="columns is-vcentered">
+  <div class="columns is-vcentered development-columns">
     <div class="column is-7">
       <p class="landing-eyebrow">IN DEVELOPMENT</p>
       <h2 class="title is-1 development-title">
@@ -51,18 +51,13 @@ const viewAlerts = [
         you in the loop.
       </p>
     </div>
-    <div class="column is-5">
-      <div class="term-wrap">
-        <svg
-          class="term-svg"
-          viewBox="0 0 1040 540"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="xMidYMin meet"
-          role="img"
-          aria-label="Example terminal running bencher run locally and printing benchmark results plus a regression alert"
-        >
-          <foreignObject x="0" y="0" width="1040" height="540">
-            <div xmlns="http://www.w3.org/1999/xhtml" class="term-card">
+    <div class="column is-5" style="min-width: 0;">
+      <div
+        class="term-wrap"
+        role="img"
+        aria-label="Example terminal running bencher run locally and printing benchmark results plus a regression alert"
+      >
+        <div class="term-scale"><div class="term-card">
               <div class="term-chrome">
                 <span class="term-dot term-dot-red"></span>
                 <span class="term-dot term-dot-yellow"></span>
@@ -104,17 +99,15 @@ Job status: <span class="term-status-done">Processed</span>
   <>- <span class="term-alert-bench">{a.name}</span> (<span class="term-alert-dim">Latency</span>): <span class="term-alert-link">{a.url}</span>
 </>
 ))}</code></pre>
-            </div>
-          </foreignObject>
-        </svg>
+        </div></div>
       </div>
     </div>
   </div>
 </section>
 
 <script>
-  import { autoSizeSvgForeignObject } from "./autoSizeSvg";
-  autoSizeSvgForeignObject(".term-svg");
+  import { scaleMock } from "./mockScale";
+  scaleMock(".term-wrap");
 </script>
 
 <style>
@@ -143,8 +136,11 @@ Job status: <span class="term-status-done">Processed</span>
   /* ---------- Terminal mock (SVG wrapped) ---------- */
 
   .term-wrap {
-    max-width: 1000px;
+    width: 100%;
+    max-width: 1040px;
     min-width: 0;
+    overflow: hidden;
+    position: relative;
     --term-bg: #1a1d23;
     --term-chrome-bg: #2a2e35;
     --term-border: #3d434d;
@@ -167,10 +163,27 @@ Job status: <span class="term-status-done">Processed</span>
     --term-chrome-bg: #151b23;
   }
 
-  .term-svg {
-    width: 100%;
-    height: auto;
-    display: block;
+  .term-scale {
+    width: 1040px;
+    transform-origin: 0 0;
+    transform: scale(var(--mock-scale, 1));
+  }
+
+  @media screen and (max-width: 768px) {
+    .term-scale {
+      width: 100%;
+    }
+
+    /* Override Bulma's is-vcentered cross-axis centering on mobile so
+       columns fill the full width instead of being centered around their
+       intrinsic content width. */
+    .development-columns {
+      align-items: stretch;
+    }
+    .development-columns > .column {
+      width: 100%;
+      max-width: 100%;
+    }
   }
 
   .term-card {

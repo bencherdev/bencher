@@ -50,22 +50,14 @@ const allRows = [
 ---
 
 <section class="landing-section practice-section">
-  <div class="columns is-vcentered is-variable is-6 is-reverse-mobile">
-    <div class="column is-5">
-      <div class="gh-wrap">
-        <svg
-          class="gh-svg"
-          viewBox="0 0 720 560"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="xMidYMin meet"
-          role="img"
-          aria-label="Example GitHub pull request comment from github-actions bot showing a Bencher Report with a performance regression alert"
-        >
-          <foreignObject x="0" y="0" width="720" height="560">
-            <div
-              xmlns="http://www.w3.org/1999/xhtml"
-              class="gh-comment"
-            >
+  <div class="columns is-vcentered is-variable is-6 practice-columns">
+    <div class="column is-5" style="min-width: 0;">
+      <div
+        class="gh-wrap"
+        role="img"
+        aria-label="Example GitHub pull request comment from github-actions bot showing a Bencher Report with a performance regression alert"
+      >
+        <div class="gh-scale"><div class="gh-comment">
               <div class="gh-avatar" aria-hidden="true">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -230,9 +222,7 @@ const allRows = [
                   <span class="gh-reaction" aria-hidden="true">☺</span>
                 </div>
               </div>
-            </div>
-          </foreignObject>
-        </svg>
+            </div></div>
       </div>
     </div>
     <div class="column is-7">
@@ -249,8 +239,8 @@ const allRows = [
 </section>
 
 <script>
-  import { autoSizeSvgForeignObject } from "./autoSizeSvg";
-  autoSizeSvgForeignObject(".gh-svg");
+  import { scaleMock } from "./mockScale";
+  scaleMock(".gh-wrap");
 </script>
 
 <style>
@@ -273,9 +263,28 @@ const allRows = [
 
   /* ---------- GitHub comment mock (SVG wrapped) ---------- */
 
+  /* On mobile stack the mock below the text (opposite of desktop order),
+     and override Bulma's is-vcentered cross-axis centering so each column
+     fills the full width instead of being centered around its intrinsic
+     content width (which on narrow viewports pulls left and cuts off). */
+  @media screen and (max-width: 768px) {
+    .practice-columns {
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+    .practice-columns > .column {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
   .gh-wrap {
-    max-width: 1000px;
+    width: 100%;
+    max-width: 720px;
     min-width: 0;
+    overflow: hidden;
+    position: relative;
     --gh-bg: #ffffff;
     --gh-border: #d0d7de;
     --gh-text: #1f2328;
@@ -288,6 +297,20 @@ const allRows = [
     --gh-avatar-bg: #1f2328;
     --gh-avatar-fg: #ffffff;
     --gh-badge-border: #d0d7de;
+  }
+
+  .gh-scale {
+    width: 720px;
+    transform-origin: 0 0;
+    transform: scale(var(--mock-scale, 1));
+  }
+
+  /* On mobile, drop the design width so content is naturally responsive.
+     scaleMock detects this and skips scaling. */
+  @media screen and (max-width: 768px) {
+    .gh-scale {
+      width: 100%;
+    }
   }
 
   :global([data-theme="dark"]) .gh-wrap {
@@ -303,12 +326,6 @@ const allRows = [
     --gh-avatar-bg: #ffffff;
     --gh-avatar-fg: #0d1117;
     --gh-badge-border: #3d444d;
-  }
-
-  .gh-svg {
-    width: 100%;
-    height: auto;
-    display: block;
   }
 
   .gh-comment {
