@@ -8,45 +8,6 @@ const alertRow = {
 	boundary: "15.00",
 	limit: "145.53%",
 };
-
-const allRows = [
-	{
-		benchmark: "Adapter::Json",
-		result: "21.83",
-		delta: "+336.60%",
-		boundary: "15.00",
-		limit: "145.53%",
-		alerted: true,
-	},
-	{
-		benchmark: "Adapter::Magic (JSON)",
-		result: "5.03",
-		delta: "+0.60%",
-		boundary: "6.00",
-		limit: "83.83%",
-	},
-	{
-		benchmark: "Adapter::Magic (Rust)",
-		result: "4.98",
-		delta: "-0.40%",
-		boundary: "6.00",
-		limit: "83.00%",
-	},
-	{
-		benchmark: "Adapter::Rust",
-		result: "5.02",
-		delta: "+0.40%",
-		boundary: "6.00",
-		limit: "83.67%",
-	},
-	{
-		benchmark: "Adapter::RustBench",
-		result: "4.99",
-		delta: "-0.20%",
-		boundary: "6.00",
-		limit: "83.17%",
-	},
-];
 ---
 
 <section class="landing-section practice-section">
@@ -151,57 +112,11 @@ const allRows = [
                     </table>
                   </div>
 
-                  <details class="gh-details">
+                  <details
+                    class="gh-details"
+                    onclick="event.preventDefault()"
+                  >
                     <summary>Click to view all benchmark results</summary>
-                    <div class="gh-table-wrap">
-                      <table class="gh-alert-table">
-                        <thead>
-                          <tr>
-                            <th>Benchmark</th>
-                            <th><span class="gh-link">Latency</span></th>
-                            <th>
-                              Benchmark Results<br />microseconds (µs)<br />(Result Δ%)
-                            </th>
-                            <th>
-                              Upper Boundary<br />microseconds (µs)<br />(Limit %)
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {allRows.map((row) => (
-                            <tr>
-                              <td>
-                                <span class="gh-link">{row.benchmark}</span>
-                              </td>
-                              <td class="gh-view-cell">
-                                📈 <span class="gh-link">view plot</span><br />
-                                {row.alerted && (
-                                  <span>
-                                    🚨 <span class="gh-link">view alert</span>
-                                    <br />
-                                  </span>
-                                )}
-                                🚷 <span class="gh-link">view threshold</span>
-                              </td>
-                              <td>
-                                {row.alerted ? (
-                                  <b>{row.result}<br />({row.delta})</b>
-                                ) : (
-                                  <>{row.result}<br />({row.delta})</>
-                                )}
-                              </td>
-                              <td>
-                                {row.alerted ? (
-                                  <b>{row.boundary}<br />({row.limit})</b>
-                                ) : (
-                                  <>{row.boundary}<br />({row.limit})</>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
                   </details>
 
                   <p class="gh-full-link">
@@ -301,6 +216,8 @@ const allRows = [
 
   .gh-scale {
     width: 720px;
+    box-sizing: border-box;
+    padding: 0 2px 2px 0;
     transform-origin: 0 0;
     transform: scale(var(--mock-scale, 1));
   }

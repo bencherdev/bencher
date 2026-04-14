@@ -38,7 +38,9 @@ export function scaleMock(selector: string) {
 
 				const ratio = wrapWidth / scaleWidth;
 				scale.style.setProperty("--mock-scale", String(ratio));
-				wrap.style.height = `${scale.offsetHeight * ratio}px`;
+				// Ceil so sub-pixel rounding never crops the scaled content's
+				// bottom edge / border.
+				wrap.style.height = `${Math.ceil(scale.offsetHeight * ratio)}px`;
 			};
 
 			update();
