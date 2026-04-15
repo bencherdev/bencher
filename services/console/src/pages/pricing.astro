@@ -8,12 +8,107 @@ import PricingTable from "../components/pricing/PricingTable";
 import FallbackPricingTable from "../components/pricing/FallbackPricingTable";
 import { BENCHER_CALENDLY_URL } from "../util/ext";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
-import LinkFragment from "../components/site/LinkFragment.astro";
 import CallToAction from "../components/landing/CallToAction.astro";
 
 const title = "Pricing";
 const description =
 	"Free for all public projects. Use Bencher to setup Continuous Benchmarking and catch performance regressions before they merge.";
+
+const billingFaqs = [
+	{
+		id: "faq-benchmark-result",
+		q: "What is a benchmark result?",
+		a: `A benchmark result, called a Metric, is a single point-in-time measurement. Each benchmark run produces one Metric. If you have 5 benchmarks and run them 10 times, you'll have 50 Metrics. A benchmark with multiple measures, like latency and throughput, creates one Metric per measure. Even if your harness samples a benchmark 1,000 times internally for accuracy, that still counts as 1 Metric per run.`,
+	},
+	{
+		id: "faq-public-private",
+		q: "What is a Public vs. Private Project?",
+		a: `A Public Project is visible to anyone who can reach your Bencher instance. On Bencher Cloud, <a href="/perf" target="_blank" rel="noreferrer">all Public Projects are listed here</a>. A Private Project is only visible to members of your organization and requires an active Bencher Plus plan (Team or Enterprise).`,
+	},
+	{
+		id: "faq-metrics-billing",
+		q: "How are Metrics billed?",
+		a: `On Bencher Cloud, Metrics are billed either monthly based on metered usage or annually based on a licensed quantity. If you create 5,280 Metrics in a month with metered usage, you're billed for 5,280 Metrics. Bencher Self-Hosted Metrics are always billed annually based on a licensed quantity.`,
+	},
+	{
+		id: "faq-metrics-public-projects",
+		q: "Are Metrics for Public Projects counted?",
+		a: `Yes. If you have a valid Bencher Plus plan, Metrics from both your Public and Private Projects are counted against your plan.`,
+	},
+	{
+		id: "faq-license-quantity-limit",
+		q: "What happens if I reach my licensed quantity?",
+		a: `New Metrics stop being accepted once you hit your licensed quantity limit. You can increase your licensed quantity at any time. We recommend setting your quantity with an extra margin to avoid interruption.`,
+	},
+	{
+		id: "faq-self-hosted-license",
+		q: "How does the Bencher License work for Self-Hosted?",
+		a: `The <a href="/legal/license/">Bencher License</a> is heavily inspired by the <a href="https://gitlab.com/gitlab-org/gitlab/-/blob/master/LICENSE" target="_blank" rel="noreferrer">GitLab License</a>. You can use Bencher Self-Hosted in development, testing, and production without a Bencher Plus license. This is equivalent to using Bencher Cloud on the Free plan. For Bencher Plus features (Team or Enterprise), you need to purchase a Bencher Plus license.`,
+	},
+	{
+		id: "faq-rate-limiting",
+		q: "Is there rate limiting?",
+		a: `<ul><li><code>unclaimed</code> Project: <code>255</code> Metrics per day</li><li>Free plan: <code>65,535</code> Metrics per day</li><li>Bencher Plus plan: No rate limit</li></ul>`,
+	},
+	{
+		id: "faq-support",
+		q: "What support do I get with each plan?",
+		a: `<p><strong>Community support</strong> (Free): GitHub issues and our Discord community.</p><p><strong>Customer support</strong> (Team): Email support with responses within 1 business day.</p><p><strong>Priority support</strong> (Enterprise): Dedicated Slack channel with direct access to Bencher engineering, priority on bug fixes and feature requests, and dedicated onboarding.</p>`,
+	},
+	{
+		id: "faq-change-plan",
+		q: "Can I change or cancel my plan?",
+		a: `Yes. You can upgrade, downgrade, or cancel your plan at any time. Metered monthly plans stop billing at the end of the current period. Licensed annual plans aren't refunded mid-term, but you can downgrade or cancel before your next renewal.`,
+	},
+	{
+		id: "faq-data-on-cancel",
+		q: "What happens to my data if I cancel?",
+		a: `Your Projects and Metrics remain accessible after cancellation, subject to Free plan limits. Public Projects stay publicly visible unless you delete them, and Private Projects stay private. You can export your data via the <a href="/docs/api/">Bencher API</a> at any time.`,
+	},
+];
+
+const bareMetalFaqs = [
+	{
+		id: "faq-bare-metal-why",
+		q: "Why run benchmarks on bare metal instead of CI?",
+		a: `CI environments share resources. CPUs get throttled, memory pressure varies, and timing results shift from run to run. That makes it difficult to know if a regression is real or just environment noise. Bencher Bare Metal runners are dedicated machines tuned for low-noise execution. Wall-clock variance stays consistently below 2%, so you can detect even subtle regressions with confidence.`,
+	},
+	{
+		id: "faq-bare-metal-hardware",
+		q: "What hardware do Bencher Bare Metal runners use?",
+		a: `Bencher On-Demand runners use the <code>intel-v1</code> spec: Linux on x86_64 with 4 CPUs, 48 GiB of memory, and 128 GiB of disk. Code runs in a Firecracker microVM sandbox for isolation. See the full <a href="/docs/explanation/testbeds/#--spec-spec">Spec reference</a> for details. Enterprise customers can request Dedicated and Custom runners.`,
+	},
+	{
+		id: "faq-bare-metal-os",
+		q: "What OSes and architectures does Bencher Bare Metal support?",
+		a: `Bencher On-Demand runners support Linux x86_64 and (coming soon) ARM64, sandboxed in Firecracker. Dedicated and Custom runners can run without the Firecracker sandbox on Linux (x86_64 or ARM64), macOS, and Windows. See the <a href="/docs/explanation/bare-metal/#runner">bare metal runner reference</a> for details.`,
+	},
+	{
+		id: "faq-bare-metal-account",
+		q: "Do I need an account to try Bencher Bare Metal?",
+		a: `No. You can run benchmarks right away without creating an account, which gets a 1 minute timeout per run. A Free account raises the timeout to 5 minutes and increases your <a href="#faq-rate-limiting">daily rate limits</a>. No credit card required either way. Check out the <a href="/docs/tutorial/bare-metal/">Bencher Bare Metal Quickstart</a> to run your first benchmark in minutes.`,
+	},
+	{
+		id: "faq-bare-metal-minimums",
+		q: "Is there a minimum commitment for Bencher Bare Metal?",
+		a: `No minimums, no monthly fees. For On-Demand runners, Team and Enterprise plans are only billed for the minutes your benchmarks are actively running. Dedicated runner pricing is a flat monthly rate, and Custom runner pricing is usage based. <a href="${BENCHER_CALENDLY_URL}" target="_blank" rel="noreferrer">Contact us</a> for more details.`,
+	},
+	{
+		id: "faq-bare-metal-billing",
+		q: "Are Bencher Bare Metal minutes billed separately from Metrics?",
+		a: `Yes. Metrics are billed per result as described above. Bencher Bare Metal runner time is billed separately at $1.00/hr ($0.01666/min) and covers the compute used to execute your benchmarks. You're only billed for runner time when benchmarks are actively running.`,
+	},
+	{
+		id: "faq-bare-metal-free-tier",
+		q: "What's included in the Free tier?",
+		a: `Free users get one concurrent job on Bencher Bare Metal hardware with a 5 minute timeout and Standard queue priority. You're running on the same bare metal machines as Team and Enterprise customers, just with lower queue position during busy periods. Bencher Bare Metal runners only execute your already-compiled benchmark binary. Compilation happens locally or in your CI pipeline and is typically the longest step, so most benchmark suites fit well under the 5 minute timeout.`,
+	},
+	{
+		id: "faq-queue-priority",
+		q: "How does queue priority work between Free, Team, and Enterprise?",
+		a: `Team and Enterprise jobs are prioritized ahead of Free jobs in the runner queue and share equal priority with each other. All On-Demand jobs run on the same Bencher Bare Metal hardware. During idle periods Free jobs run immediately. During busy periods paid jobs are scheduled first and Free jobs wait for the next available slot.`,
+	},
+];
 ---
 
 <BaseLayout title={title} description={description}>
@@ -25,12 +120,23 @@ const description =
           <div class="columns is-mobile">
             <div class="column">
               <div class="content has-text-centered">
-                <h1 class="title is-1">Pricing</h1>
-                <h2 class="subtitle is-3">
-                  Start catching performance regressions for free
+                <p class="hero-eyebrow">PRICING</p>
+                <h1 class="title is-1">Continuous benchmarking on bare metal</h1>
+                <h2 class="subtitle is-5" style="font-weight: 400;">
+                  When a benchmark moves, it means something. Free forever for open source.
                 </h2>
-                <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">
-                  🐰 Schedule a free demo
+              </div>
+              <div class="has-text-centered">
+                <a
+                  class="button is-medium is-responsive"
+                  href={BENCHER_CALENDLY_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span class="icon is-small">
+                    <img src="/favicon.svg" alt="Bencher" width="16" height="16" />
+                  </span>
+                  <span>Schedule a free demo</span>
                 </a>
               </div>
             </div>
@@ -38,314 +144,142 @@ const description =
         </div>
       </div>
     </section>
-    <hr />
     <section class="section">
       <PricingTable client:only="solid-js" >
         <FallbackPricingTable slot="fallback" />
       </PricingTable>
     </section>
 
-    <br />
-    <br />
-    <br />
-    <hr />
-
-    <section class="section">
-      <div id="bare-metal" class="container" >
-        <div class="columns is-centered">
-          <div class="column is-fullwidth" style="background-color: #ed6704;">
-            <div class="box">
-              <div class="content">
-                <h2 class="title is-2">
-                  Bencher Bare Metal
-                  <LinkFragment fragment="bare-metal"/>
-                </h2>
-                <p>
-                  Bencher Bare Metal delivers bare metal continuous benchmarking servers as a service (CBaaS).
-                  These servers are tuned by performance experts to eliminate noise and get wall-clock time variance to less than 1%!
-                  Take your performance engineering to the next level
-                  and start catching even subtler performance regressions in CI.
-                </p>
-              </div>
-              <div class="columns is-centered">
-                <div class="column">
-                  <div class="content has-text-centered">
-                    <h3 class="title is-3">Starting at $100/month</h3>
-                    <a
-                      class="button is-primary is-large is-responsive"
-                      href={BENCHER_CALENDLY_URL}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Schedule a Demo
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <section class="pricing-callout-section">
+      <div class="pricing-callout">
+        <span class="pricing-callout-icon" aria-hidden="true">💡</span>
+        <p class="pricing-callout-body">
+          <strong>What counts as a benchmark result?</strong>
+          Each benchmark run produces one result called a Metric.
+          5 benchmarks × 10 runs = 50 Metrics.
+          Even if your harness runs each benchmark 1,000 times internally for accuracy,
+          that's still 1 Metric per run.
+          Bencher Bare Metal runner time is billed separately.
+        </p>
       </div>
     </section>
 
-    <br />
-    <br />
-    <br />
-    <hr />
-
-    <section class="section">
-      <div class="container">
-        <div class="columns is-centered">
-          <div id="faq" class="column">
-            <h2 class="title is-2">
-              FAQ
-              <LinkFragment fragment="faq"/>
-            </h2>
-          </div>
-        </div>
-        <div id="faq-benchmark-result" class="box">
-          <div class="content">
-            <h3 class="subtitle is-3">
-              What is a benchmark result?
-              <LinkFragment fragment="faq-benchmark-result"/>
-            </h3>
-            <p>A benchmark result is referred to as a <a href="#faq-metrics">Metric</a>.</p>
-          </div>
-        </div>
-        <div id="faq-metrics" class="box">
-          <div class="content">
-            <h3 class="subtitle is-3">
-              What is a Metric?
-              <LinkFragment fragment="faq-metrics"/>
-            </h3>
-            <p>
-              A Metric is a single, point-in-time benchmark result.
-              Each time a benchmark is run, it creates at least one new Metric.
-            </p>
-            <p>
-              For example, if you have <code>5</code> benchmarks that measure latency
-              then they would create <code>5</code> Metrics each time they run.
-              If you ran your benchmarks <code>10</code> times,
-              you would then have <code>50</code> Metrics:
-            </p>
-            <p>
-              <code>5</code> benchmarks x <code>10</code> runs = <code>50</code> Metrics
-            </p>
-            <p>
-              Even if your benchmark harness runs your benchmarks 1,000 times to get a more accurate result,
-              you would still only have <code>50</code> Metrics.
-            </p>
-            <p>
-              Some benchmarks may create more than one new Metric per run.
-            </p>
-            <p>
-              For example, if you have <code>5</code> benchmarks that each have <code>2</code> measures, latency and throughput,
-              then they would create <code>10</code> Metrics each time they run.
-              If you ran your benchmarks <code>10</code> times,
-              you would then have <code>100</code> Metrics:
-            </p>
-            <p>
-              <code>5</code> benchmarks x <code>2</code> measures x <code>10</code> runs = <code>100</code> Metrics
-          </div>
-        </div>
-        <div id="faq-metrics-billing" class="box">
-          <div class="content">
-            <h3 class="subtitle is-3">
-              How are Metrics billed?
-              <LinkFragment fragment="faq-metrics-billing"/>
-            </h3>
-            <p>
-              On Bencher Cloud, Metrics are billed either:
-              <ul>
-                <li>Monthly based on metered usage</li>
-                <li>Annually based on a licensed quantity</li>
-              </ul>
-            </p>
-            <p>
-              For example, if you create <code>5,280</code> Metrics in a particular calendar
-              month with metered usage then you would be billed for <code>5,280</code> Metrics that month.
-            </p>
-            <p>
-							Bencher Self-Hosted Metrics are always billed annually based on a licensed quantity.
-						</p>
-						<p>
-							For example, if you create <code>5,280</code> Metrics within a given year,
-              then you would need to have a licensed quantity of say <code>6,000</code> Metrics.
-						</p>
-          </div>
-        </div>
-        <div id="faq-public-projects" class="box">
-          <div class="content">
-            <h3 class="subtitle is-3">
-              What is a Public Project?
-              <LinkFragment fragment="faq-public-projects"/>
-            </h3>
-            <p>
-              A Public Project is visible to anyone who has access to your
-              Bencher instance.
-            </p>
-            <p>
-              On Bencher Cloud,{" "}
-              <a href="/perf" target="_blank" rel="noreferrer">
-                all Public Projects are available here
-              </a>.
-              If you are using Bencher Self-Hosted, then anyone with access
-              to your network will likewise be able to see all Public Projects.
-            </p>
-          </div>
-        </div>
-        <div id="faq-private-projects" class="box">
-          <div class="content">
-            <h3 class="subtitle is-3">
-              What is a Private Project?
-              <LinkFragment fragment="faq-private-projects"/>
-            </h3>
-            <p>
-              A Private Project is only visible to members of your organization.
-            </p>
-            <p>
-              In order to create and use Private Projects, your organization
-              must have an active Bencher Plus plan.
-            </p>
-          </div>
-        </div>
-        <div id="faq-metrics-public-projects" class="box">
-          <div class="content">
-            <h3 class="subtitle is-3">
-              Are Metrics for Public Projects counted?
-              <LinkFragment fragment="faq-metrics-public-projects"/>
-            </h3>
-            <p>
-              Yes, if you have a valid Bencher Plus plan then Metrics from both
-              your Public Projects and Private Projects are counted.
-            </p>
-          </div>
-        </div>
-        <div id="faq-license-quantity-limit" class="box">
-					<div class="content">
-						<h3 class="subtitle is-3">
-							What happens if I reach my licensed quantity limit?
-              <LinkFragment fragment="faq-license-quantity-limit"/>
-						</h3>
-						<p>
-							Once you reach your licensed quantity limit, no new Metrics will be
-							accepted.
-						</p>
-						<p>
-							No need to panic, you can always increase your licensed quantity.
-              It is best to give yourself an extra margin when setting your licensed quantity though.
-						</p>
-					</div>
-				</div>
-        <div id="faq-self-hosted-license" class="box">
-          <div class="content">
-            <h3 class="subtitle is-3">
-              How does the Bencher License work for Bencher Self-Hosted?
-              <LinkFragment fragment="faq-self-hosted-license"/>
-            </h3>
-            <p>
-              The <a href="/legal/license/">Bencher License</a> is heavily inspired by the
-              <a href="https://gitlab.com/gitlab-org/gitlab/-/blob/master/LICENSE">GitLab License</a>.
-              You can use Bencher Self-Hosted in development, testing, and production without a Bencher Plus license.
-              This is equivalent to using Bencher Cloud on the Free plan.
-              If you would like access to any of the Bencher Plus features (Team or Enterprise),
-              then you will need to purchase a Bencher Plus license.
-            </p>
-          </div>
-        </div>
-        <div id="faq-rate-limiting" class="box">
-					<div class="content">
-						<h3 class="subtitle is-3">
-							Is there rate limiting?
-              <LinkFragment fragment="faq-rate-limiting"/>
-						</h3>
-						<ul>
-              <li><code>unclaimed</code> Project: <code>255</code> Metrics per day</li>
-              <li>Free plan: <code>65,535</code> Metrics per day</li>
-              <li>Bencher Plus plan: No rate limit</li>
-            </ul>
-					</div>
-				</div>
-      </div>
-    </div>
-    </section>
-
-    <br />
-    <br />
-    <br />
-    <hr />
-
-    <section class="section">
-      <div class="container">
-        <div class="columns is-centered">
-          <div id="stewardship" class="column">
-            <h2 class="title is-2">
-              Stewardship
-              <LinkFragment fragment="stewardship"/>
-            </h2>
-          </div>
-        </div>
-        <div class="content">
-          Bencher is a for profit company that balances the need to improve the
-          open source code of Bencher with the need to add source-available
-          features in order to generate income. We have an{" "}
-          <a
-            href="https://en.wikipedia.org/wiki/Open-core_model"
-            target="_blank"
-            rel="noreferrer"
-          >
-            open core
-          </a>{" "}
-           business model and generate almost all our revenue with subscriptions
-          to paid tiers. We recognize that we must balance the need to generate
-          income with the needs of the open source project.
-          <h3 id="stewardship-commitments" class="title is-3">
-            Commitments
-            <LinkFragment fragment="stewardship-commitments"/>
-          </h3>
-          <ul>
-            <li>
-              When a feature is open source we won't move that feature to a paid
-              tier. Features might be removed from the open source codebase in
-              other cases, for example when combining features from multiple
-              tiers into one new feature. To be clear, this promise only applies
-              to open sourced features, features in paid tiers might move to a
-              higher tier.
-            </li>
-            <li>
-              We won't introduce features into the open source codebase with a
-              fixed delay, if a feature is planned to land in both it will be
-              released simultaneously in both.
-            </li>
-            <li>
-              We will always release and open source all tests that we have for
-              an open source feature.
-            </li>
-            <li>
-              The open source codebase will have all the essential features for
-              tracking the performance of a large open source project.
-            </li>
-            <li>
-              The open source codebase will not contain any artificial limits
-              (projects, users, metrics, etc.).
-            </li>
-            <li>
-              We will always allow you to benchmark the performance of Bencher.
-            </li>
-          </ul>
-          <h3 id="stewardship-saas" class="title is-3">
-            Software as a Service
-            <LinkFragment fragment="stewardship-saas"/>
-          </h3>
-          <p>
-            Our stewardship promise applies only to the Bencher open source
-            codebase, not to services such as Bencher Cloud. For Bencher Cloud,
-            we may add limits around usage (e.g., storage, compute, traffic) or
-            proxies for usage (e.g., number of users in a project) as we seek to
-            optimize costs and revenues.
+    <section class="pricing-enterprise-section">
+      <div id="bare-metal" class="pricing-enterprise">
+        <div class="pricing-enterprise-text">
+          <h2 class="pricing-enterprise-title">Need dedicated or custom runners?</h2>
+          <p class="pricing-enterprise-body">
+            Enterprise plans include dedicated and self-managed, custom runners for teams that require:
           </p>
+          <ul class="pricing-enterprise-bullets">
+            <li>→ Dedicated hardware</li>
+            <li>→ Single tenancy</li>
+            <li>→ Self-managed</li>
+            <li>→ No sandbox overhead</li>
+            <li>→ Full network access</li>
+            <li>→ Custom hardware</li>
+          </ul>
+        </div>
+        <a
+          class="pricing-enterprise-cta"
+          href={BENCHER_CALENDLY_URL}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Contact us →
+        </a>
+      </div>
+    </section>
+
+    <br />
+    <br />
+    <br />
+
+    <section class="pricing-faq-section">
+      <h2 id="faq" class="pricing-faq-title">FAQ</h2>
+
+      <div class="pricing-faq-category">
+        <div class="pricing-faq-eyebrow">BENCHMARK METRICS & BILLING</div>
+        <div class="pricing-faq-grid">
+          {billingFaqs.map((faq) => (
+            <details class="pricing-faq-item" id={faq.id}>
+              <summary class="pricing-faq-question">
+                <span>{faq.q}</span>
+                <span class="pricing-faq-icon" aria-hidden="true"></span>
+              </summary>
+              <div class="pricing-faq-answer" set:html={faq.a} />
+            </details>
+          ))}
         </div>
       </div>
+
+      <div class="pricing-faq-category">
+        <div class="pricing-faq-eyebrow">BENCHER BARE METAL</div>
+        <div class="pricing-faq-grid">
+          {bareMetalFaqs.map((faq) => (
+            <details class="pricing-faq-item" id={faq.id}>
+              <summary class="pricing-faq-question">
+                <span>{faq.q}</span>
+                <span class="pricing-faq-icon" aria-hidden="true"></span>
+              </summary>
+              <div class="pricing-faq-answer" set:html={faq.a} />
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <script is:inline>
+      (() => {
+        const items = document.querySelectorAll(".pricing-faq-item");
+        const openFromHash = () => {
+          const hash = window.location.hash.slice(1);
+          if (!hash) return;
+          const target = document.getElementById(hash);
+          if (target && target.tagName === "DETAILS") {
+            target.open = true;
+            target.scrollIntoView({ block: "start", behavior: "smooth" });
+          }
+        };
+        openFromHash();
+        window.addEventListener("hashchange", openFromHash);
+        items.forEach((item) => {
+          item.addEventListener("toggle", () => {
+            if (item.open) {
+              history.replaceState(null, "", `#${item.id}`);
+            }
+          });
+        });
+      })();
+    </script>
+
+    <br />
+    <br />
+    <br />
+
+    <section class="pricing-stewardship-section">
+      <h2 id="stewardship" class="pricing-stewardship-title">Stewardship</h2>
+      <p class="pricing-stewardship-lede">
+        Bencher is a commercially-backed <a href="https://en.wikipedia.org/wiki/Open-core_model" target="_blank" rel="noreferrer">open core</a> project.
+        Paid tiers fund continued open source development. Here's what we commit to keeping open.
+      </p>
+
+      <div class="pricing-stewardship-card">
+        <div class="pricing-stewardship-eyebrow" id="stewardship-commitments">OUR COMMITMENTS</div>
+        <ul class="pricing-stewardship-list">
+          <li><span class="pricing-stewardship-mark" aria-hidden="true">→</span><div><strong>Open source stays open source.</strong> Once a feature is open sourced, it won't be moved to a paid tier.</div></li>
+          <li><span class="pricing-stewardship-mark" aria-hidden="true">→</span><div><strong>No delayed releases.</strong> If a feature ships in both, it ships to both on the same day.</div></li>
+          <li><span class="pricing-stewardship-mark" aria-hidden="true">→</span><div><strong>All tests stay open.</strong> Every test for an open source feature is public.</div></li>
+          <li><span class="pricing-stewardship-mark" aria-hidden="true">→</span><div><strong>No artificial limits.</strong> The open source codebase has no caps on projects, users, or Metrics.</div></li>
+          <li><span class="pricing-stewardship-mark" aria-hidden="true">→</span><div><strong>Enough to run a large project.</strong> The open source edition has every essential feature for tracking performance at scale.</div></li>
+          <li><span class="pricing-stewardship-mark" aria-hidden="true">→</span><div><strong>Always benchmark-able.</strong> You can always use Bencher to benchmark Bencher itself.</div></li>
+        </ul>
+      </div>
+
+      <p id="stewardship-saas" class="pricing-stewardship-footer">
+        These commitments cover the open source codebase.
+        Bencher Cloud, our hosted service, may evolve its usage limits and pricing the way any SaaS does.
+      </p>
     </section>
   </div>
 
@@ -355,3 +289,19 @@ const description =
 
   <CallToAction />
 </BaseLayout>
+
+<style>
+  .hero-eyebrow {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: #888;
+    margin-bottom: 1.5rem !important;
+    padding-bottom: 0 !important;
+    line-height: 1;
+  }
+
+  .hero-eyebrow + .title {
+    margin-top: 0 !important;
+  }
+</style>

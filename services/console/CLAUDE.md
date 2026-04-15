@@ -66,6 +66,10 @@ npm run typeshare
 npm run wasm
 ```
 
+## Playwright MCP Screenshots
+
+When using the Playwright MCP tools, always write screenshots to the `.playwright-mcp/` directory at the repo root so they stay out of the working tree.
+
 ## Diagrams
 
 Architecture and schema diagrams are defined as Mermaid `.mmd` files in `diagrams/` and pre-rendered to SVGs in `diagrams/output/` using `@mermaid-js/mermaid-cli`.
