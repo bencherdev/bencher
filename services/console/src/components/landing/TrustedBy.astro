@@ -1,0 +1,62 @@
+---
+// Inline SVG source at build time so the component works in both dev and
+// production builds (Netlify output bundles the compiled component to a
+// different directory than the source, so `readFileSync` at runtime fails).
+const logoModules = import.meta.glob("./logos/*.svg", {
+	query: "?raw",
+	import: "default",
+	eager: true,
+}) as Record<string, string>;
+
+const logos = [
+	{ name: "Google", file: "google.svg", height: "2.25rem" },
+	{ name: "Microsoft", file: "microsoft.svg", height: "1.75rem" },
+	{ name: "GitLab", file: "gitlab.svg", height: "1.5rem" },
+	{ name: "NVIDIA", file: "nvidia.svg", height: "1.5rem" },
+].map((logo) => ({
+	...logo,
+	svg: logoModules[`./logos/${logo.file}`],
+}));
+---
+
+<div style="padding-top: 0; padding-bottom: 1rem;">
+  <p class="trusted-by-label">TRUSTED BY ENGINEERING TEAMS AT</p>
+  <div class="trusted-by-logos">
+    {logos.map((logo) => (
+      <div class="trusted-by-logo" style={`height: ${logo.height};`} role="img" aria-label={logo.name} set:html={logo.svg} />
+    ))}
+  </div>
+</div>
+
+<style>
+  .trusted-by-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: #888;
+  }
+
+  .trusted-by-logos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .trusted-by-logo {
+    height: 2rem;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+    color: var(--bulma-text);
+  }
+
+  .trusted-by-logo:hover {
+    opacity: 0.8;
+  }
+
+  .trusted-by-logo :global(svg) {
+    height: 100%;
+    width: auto;
+  }
+</style>

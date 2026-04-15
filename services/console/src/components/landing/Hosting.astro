@@ -1,69 +1,141 @@
 ---
+const options = [
+	{
+		title: "Self-Hosted",
+		badge: "Open Source",
+		body: "Deploy Bencher on your own infrastructure. Bare metal, Docker, or Kubernetes. Full control, no data leaving your environment.",
+		cta: { label: "Deploy in 60 seconds", href: "/docs/tutorial/self-hosted/" },
+		recommended: false,
+	},
+	{
+		title: "Bencher Cloud",
+		badge: "Recommended",
+		body: "Zero infrastructure to manage. On-demand bare metal runners, billed by the minute. Pay for your benchmark runs, not idle servers.",
+		cta: { label: "Benchmark for free", href: "/auth/signup" },
+		recommended: true,
+	},
+];
 ---
 
-<section class="section" style="margin-top: 4rem">
-    <div class="container">
-      <div class="columns is-centered">
-        <div class="column">
-          <h2 class="title is-1">Hosting</h2>
+<section class="landing-section">
+  <p class="landing-eyebrow">DEPLOYMENT</p>
+  <h2 class="title is-1 deploy-title">Your infrastructure, or ours.</h2>
+
+  <div class="columns is-variable is-6 deploy-grid">
+    {options.map((opt) => (
+      <div class="column is-6">
+        <div class={`deploy-card${opt.recommended ? " deploy-card-recommended" : ""}`}>
+          <span class={`deploy-badge${opt.recommended ? "" : " deploy-badge-muted"}`}>
+            {opt.badge}
+          </span>
+          <h3 class="title is-5 deploy-card-title">{opt.title}</h3>
+          <p class="deploy-card-body">{opt.body}</p>
+          <a class="deploy-cta" href={opt.cta.href}>{opt.cta.label}</a>
         </div>
       </div>
-      <br />
-      <br />
-      <div class="columns is-centered">
-        <div class="column">
-          <div class="columns">
-            <div class="column">
-              <div class="content has-text-centered">
-                <h3 class="subtitle is-2">Self-Hosted</h3>
-                <br />
-                <br />
-                <br />
-                <span class="icon has-text-primary">
-                  <i class="fas fa-server fa-10x" />
-                </span>
-              </div>
-              <div class="content">
-                <p>
-                  Run Bencher on-prem or in your own cloud. Bencher can be
-                  deployed on a standalone server, in a Docker container, or
-                  as part of a Kubernetes cluster.
-                </p>
-                <br />
-              </div>
-              <a class="button is-fullwidth" href="/docs/tutorial/self-hosted">
-                Learn More
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <div class="is-divider-vertical" data-content="OR"></div>
-
-        <div class="column">
-          <div class="columns">
-            <div class="column">
-              <div class="content has-text-centered">
-                <h3 class="subtitle is-2">Bencher Cloud</h3>
-                <br />
-                <br />
-                <br />
-                <span class="icon has-text-primary">
-                  <i class="fas fa-cloud fa-10x" />
-                </span>
-              </div>
-              <div class="content">
-                <p>
-                  It's {new Date().getFullYear()}, who wants to manage yet
-                  another service‽ Let us take care of that for you. All of
-                  the same great features with none of the hassle.
-                </p>
-                <br />
-              </div>
-              <a class="button is-fullwidth" href="/auth/signup"> Get Started</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    ))}
+  </div>
 </section>
+
+<style>
+  .deploy-title {
+    margin-bottom: 2.5rem !important;
+  }
+
+  .deploy-grid {
+    margin-top: 0;
+  }
+
+  .deploy-card {
+    position: relative;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--landing-card-border);
+    background: var(--landing-card-bg);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .deploy-card-recommended {
+    border-color: rgba(237, 103, 4, 0.55);
+  }
+
+  :global([data-theme="dark"]) .deploy-card-recommended {
+    border-color: rgba(237, 103, 4, 0.7);
+    box-shadow:
+      0 0 0 1px rgba(237, 103, 4, 0.15),
+      0 0 40px rgba(237, 103, 4, 0.1);
+  }
+
+  .deploy-badge {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 0.15rem 0.6rem;
+    margin-bottom: 0.85rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--brand-orange);
+    border: 1px solid rgba(237, 103, 4, 0.5);
+  }
+
+  .deploy-badge-muted {
+    background: transparent;
+    color: var(--landing-muted);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+  }
+
+  :global([data-theme="dark"]) .deploy-badge-muted {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .deploy-card-title {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .deploy-card-body {
+    flex: 1;
+    color: var(--landing-muted);
+    line-height: 1.6;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .deploy-cta {
+    align-self: flex-start;
+    padding: 0.55rem 1.1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    background: transparent;
+    color: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .deploy-cta:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  :global([data-theme="dark"]) .deploy-cta {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  :global([data-theme="dark"]) .deploy-cta:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .deploy-card-recommended .deploy-cta {
+    background: var(--brand-orange);
+    color: #ffffff;
+    border-color: var(--brand-orange);
+  }
+
+  .deploy-card-recommended .deploy-cta:hover {
+    background: var(--brand-orange-hover);
+    border-color: var(--brand-orange-hover);
+  }
+</style>

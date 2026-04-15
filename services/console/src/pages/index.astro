@@ -7,11 +7,15 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import AuthRedirect from "../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
+import TrustedBy from "../components/landing/TrustedBy.astro";
+import RegressionChart from "../components/landing/RegressionChart.astro";
+import Problem from "../components/landing/Problem.astro";
+import BareMetal from "../components/landing/BareMetal.astro";
 import HowItWorks from "../components/landing/HowItWorks.astro";
-import Showcase from "../components/landing/Showcase.astro";
-import Toolbox from "../components/landing/Toolbox.astro";
+import InDevelopment from "../components/landing/InDevelopment.astro";
 import PRComment from "../components/landing/PRComment.astro";
 import Customers from "../components/landing/Customers.astro";
+import Harnesses from "../components/landing/Harnesses.astro";
 import Hosting from "../components/landing/Hosting.astro";
 import CallToAction from "../components/landing/CallToAction.astro";
 ---
@@ -23,60 +27,111 @@ import CallToAction from "../components/landing/CallToAction.astro";
     path="/console"
   />
   <AuthRedirect client:only="solid-js" path="/console" />
-  <section class="hero is-large">
-    <div class="hero-body">
-      <div class="columns is-centered is-vcentered">
-        <div class="column is-three-quarters">
-          <div class="content has-text-centered">
-            <h1 class="title is-1">Catch Performance Regressions in CI</h1>
-            <h2 class="subtitle is-4">
-              Detect and prevent performance regressions before they make it to
-              production with continuous benchmarking
-            </h2>
+  <section class="hero-landing">
+    <div class="columns is-vcentered">
+      <div class="column is-6">
+        <div class="content">
+          <p class="hero-eyebrow">CONTINUOUS BENCHMARKING</p>
+          <h1 class="title is-1">
+            Catch performance regressions before they merge
+          </h1>
+          <h2 class="subtitle is-4">
+            Bencher runs on bare metal to eliminate noise and deliver
+            benchmark results you can actually trust.
+          </h2>
 
-            <div class="columns is-centered">
-              <div class="column is-one-fourth"></div>
-
-              <div class="column is-one-fourth">
-                <a
-                  class="button is-primary is-large is-responsive is-fullwidth"
-                  href="/auth/signup"
-                >
-                  Start Now
-                </a>
-              </div>
-
-              <div class="column is-one-fourth">
-                <a
-                  class="button is-large is-responsive is-fullwidth"
-                  href="/docs/tutorial/quickstart/"
-                >
-                  Learn More
-                </a>
-              </div>
-
-              <div class="column is-one-fourth"></div>
-            </div>
+          <div class="buttons">
+            <a
+              class="button is-primary is-medium is-responsive"
+              href="/auth/signup"
+            >
+              Benchmark for free
+            </a>
+            <a
+              class="button is-medium is-responsive"
+              href="/docs/tutorial/bare-metal/"
+            >
+              Quickstart
+            </a>
           </div>
         </div>
       </div>
+      <div class="column is-6 hero-chart-col">
+        <RegressionChart />
+      </div>
+    </div>
+
+    <div class="trusted-by-wrap">
+      <TrustedBy />
     </div>
   </section>
 
-  <!-- https://bulma.io/documentation/helpers/spacing-helpers/ -->
-  <section class="section p-3">
-    <HowItWorks />
+  <Problem />
 
-    <Showcase />
+  <BareMetal />
 
-    <PRComment />
+  <HowItWorks />
 
-    <Toolbox />
+  <InDevelopment />
 
-    <Customers />
+  <PRComment />
 
-    <Hosting />
+  <Customers />
 
-    <CallToAction />
-  </section>
+  <Harnesses />
+
+  <Hosting />
+
+  <CallToAction />
 </BaseLayout>
+
+<style>
+  .hero-landing {
+    padding: 4rem 1.5rem 2rem;
+    margin-bottom: 0;
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: #888;
+    margin-bottom: 1.5rem !important;
+    padding-bottom: 0 !important;
+    line-height: 1;
+  }
+
+  .hero-eyebrow + .title {
+    margin-top: 0 !important;
+  }
+
+  .trusted-by-wrap {
+    margin-top: 4rem;
+  }
+
+  @media screen and (max-width: 768px) {
+    .hero-chart-col {
+      margin-top: 2rem;
+    }
+  }
+
+  @media screen and (min-width: 769px) {
+    .hero-landing {
+      padding: max(6rem, 15vh) 2rem 2rem;
+    }
+  }
+
+  @media screen and (min-width: 1024px) {
+    .hero-landing {
+      padding: max(6rem, 15vh) 4rem 2rem;
+    }
+  }
+
+  @media screen and (min-width: 1216px) {
+    .hero-landing {
+      padding: max(6rem, 15vh) 6rem 2rem;
+    }
+  }
+</style>

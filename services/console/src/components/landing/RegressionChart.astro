@@ -1,0 +1,254 @@
+---
+// Animated chart: blank → dot 0 → dot 1 → line chases the dots →
+// regression spike (🚨 appears) → fix dot (🚨 disappears) → steady → clear → loop.
+
+const WIDTH = 800;
+const HEIGHT = 320;
+const PADDING = { top: 40, right: 60, bottom: 50, left: 60 };
+const CHART_W = WIDTH - PADDING.left - PADDING.right;
+const CHART_H = HEIGHT - PADDING.top - PADDING.bottom;
+
+const dataPoints = [
+	5.0,
+	5.2,
+	4.9,
+	5.1,
+	5.3,
+	4.8,
+	5.0,
+	5.1, // steady baseline
+	22.0, // regression spike
+	5.0, // fix back below the limit
+	5.2, // final steady
+];
+const spikeIndex = 8;
+const fixIndex = 9;
+
+const yMin = 0;
+const yMax = 25;
+const boundaryY = 15;
+
+const scaleX = (i: number) =>
+	PADDING.left + (i / (dataPoints.length - 1)) * CHART_W;
+const scaleY = (v: number) =>
+	PADDING.top + CHART_H - ((v - yMin) / (yMax - yMin)) * CHART_H;
+
+const linePoints = dataPoints
+	.map((v, i) => `${scaleX(i)},${scaleY(v)}`)
+	.join(" ");
+
+const boundaryYPos = scaleY(boundaryY);
+const alertX = scaleX(spikeIndex);
+const alertY = scaleY(dataPoints[spikeIndex]);
+
+const yLabels = [0, 5, 10, 15, 20, 25];
+
+// Cumulative polyline length for time-accurate per-dot scheduling.
+const cumLen: number[] = [0];
+for (let i = 1; i < dataPoints.length; i++) {
+	const dx = scaleX(i) - scaleX(i - 1);
+	const dy = scaleY(dataPoints[i]) - scaleY(dataPoints[i - 1]);
+	cumLen.push(cumLen[i - 1] + Math.sqrt(dx * dx + dy * dy));
+}
+const totalLength = cumLen[cumLen.length - 1];
+const strokeLen = Math.ceil(totalLength);
+
+// Timeline (seconds).
+const dot0At = 0.0;
+const dot1At = 0.45;
+const lineStart = 0.95;
+const lineDraw = 3.0;
+const spikePause = 1.0; // line pauses at the regression before continuing to the fix
+const lineEnd = lineStart + lineDraw + spikePause;
+const hold = 1.4;
+const fade = 0.35;
+const fadeStart = lineEnd + hold;
+const total = fadeStart + fade;
+
+// When the line reaches each dot (accounting for the spike pause).
+const lineReaches = (i: number) => {
+	const base = lineStart + (cumLen[i] / totalLength) * lineDraw;
+	return i > spikeIndex ? base + spikePause : base;
+};
+
+// Dots after index 1 appear `lead` seconds before the line reaches them.
+const lead = 0.2;
+const dotAppear = (i: number) => {
+	if (i === 0) return dot0At;
+	if (i === 1) return dot1At;
+	return lineReaches(i) - lead;
+};
+
+const spikeLineT = lineReaches(spikeIndex);
+const resumeT = spikeLineT + spikePause;
+const spikeDashoffset = Math.round(strokeLen - cumLen[spikeIndex]);
+
+// 🚨 window: appear slightly after the spike dot, disappear when the fix dot shows up.
+const spikeT = dotAppear(spikeIndex);
+const fixT = dotAppear(fixIndex);
+const alertIn = spikeT + 0.333;
+const alertOut = fixT;
+
+const pct = (t: number) => ((t / total) * 100).toFixed(3);
+
+// Keyframes are baked as percentages so the loop is stable
+// (CSS animation-delay only applies to the first iteration).
+const dotKeyframes = dataPoints
+	.map((_, i) => {
+		const a = dotAppear(i);
+		return `@keyframes dot-${i} {
+  0%, ${pct(a)}% { opacity: 0; }
+  ${pct(a + 0.15)}%, ${pct(fadeStart)}% { opacity: 1; }
+  100% { opacity: 0; }
+}`;
+	})
+	.join("\n");
+
+const alertKeyframes = `@keyframes alert-show {
+  0%, ${pct(alertIn)}% { opacity: 0; transform: scale(0.4); }
+  ${pct(alertIn + 0.15)}% { opacity: 1; transform: scale(1.25); }
+  ${pct(alertIn + 0.3)}%, ${pct(alertOut)}% { opacity: 1; transform: scale(1); }
+  ${pct(alertOut + 0.2)}%, 100% { opacity: 0; transform: scale(0.6); }
+}`;
+
+const lineKeyframes = `@keyframes line-draw {
+  0%, ${pct(lineStart)}% { stroke-dashoffset: ${strokeLen}; opacity: 1; }
+  ${pct(spikeLineT)}%, ${pct(resumeT)}% { stroke-dashoffset: ${spikeDashoffset}; opacity: 1; }
+  ${pct(lineEnd)}%, ${pct(fadeStart)}% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}`;
+
+const boundaryKeyframes = `@keyframes boundary-show {
+  0%, ${pct(fadeStart)}% { opacity: 0.95; }
+  100% { opacity: 0; }
+}`;
+
+const keyframes = [
+	lineKeyframes,
+	alertKeyframes,
+	boundaryKeyframes,
+	dotKeyframes,
+].join("\n");
+---
+
+<section class="section" style="padding: 0;">
+  <div class="columns is-centered">
+    <div class="column has-text-centered">
+      <svg
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        class="regression-chart"
+        role="img"
+        aria-label="Animated chart showing benchmark results with a performance regression spike that triggers an alert, followed by a fix back to baseline"
+      >
+        <!-- Background -->
+        <rect width={WIDTH} height={HEIGHT} rx="6" fill="#1e1e1e" />
+
+        <!-- Grid lines -->
+        {yLabels.map((v) => (
+          <line
+            x1={PADDING.left}
+            y1={scaleY(v)}
+            x2={WIDTH - PADDING.right}
+            y2={scaleY(v)}
+            stroke="#333"
+            stroke-width="0.5"
+          />
+        ))}
+
+        <!-- Y-axis labels -->
+        {yLabels.map((v) => (
+          <text
+            x={PADDING.left - 10}
+            y={scaleY(v) + 4}
+            text-anchor="end"
+            fill="#888"
+            font-size="11"
+            font-family="system-ui, sans-serif"
+          >
+            {v}
+          </text>
+        ))}
+
+        <!-- Y-axis title -->
+        <text
+          x="15"
+          y={PADDING.top - 12}
+          fill="#888"
+          font-size="11"
+          font-family="system-ui, sans-serif"
+        >
+          ↑ microseconds (μs)
+        </text>
+
+        <!-- Upper boundary (dashed) -->
+        <line
+          x1={PADDING.left}
+          y1={boundaryYPos}
+          x2={WIDTH - PADDING.right}
+          y2={boundaryYPos}
+          stroke="#ff7a1a"
+          stroke-width="2.5"
+          stroke-dasharray="10,6"
+          stroke-linecap="round"
+          style={`opacity: 0.95; animation: boundary-show ${total}s linear infinite;`}
+        />
+
+        <!-- Data line (chases the dots) -->
+        <polyline
+          points={linePoints}
+          fill="none"
+          stroke="#6bbfcf"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          style={`stroke-dasharray: ${strokeLen}; stroke-dashoffset: ${strokeLen}; animation: line-draw ${total}s linear infinite;`}
+        />
+
+        <!-- Data points -->
+        {dataPoints.map((v, i) => (
+          <circle
+            cx={scaleX(i)}
+            cy={scaleY(v)}
+            r="4"
+            fill={i === spikeIndex ? "#e26000" : "#6bbfcf"}
+            style={`opacity: 0; animation: dot-${i} ${total}s linear infinite;`}
+          />
+        ))}
+
+        <!-- Alert indicator at the spike -->
+        <g
+          style={`opacity: 0; transform-box: fill-box; transform-origin: center; animation: alert-show ${total}s linear infinite;`}
+        >
+          <circle cx={alertX} cy={alertY - 26} r="12" fill="#e26000" />
+          <text
+            x={alertX}
+            y={alertY - 22}
+            text-anchor="middle"
+            fill="white"
+            font-size="16"
+            font-weight="bold"
+            font-family="system-ui, sans-serif"
+          >
+            !
+          </text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<style is:global set:html={keyframes}></style>
+
+<style>
+  .regression-chart {
+    width: 100%;
+    max-width: 800px;
+    height: auto;
+    border-radius: 6px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  :global([data-theme="dark"]) .regression-chart {
+    box-shadow: 0 0 48px rgba(255, 122, 26, 0.18);
+  }
+</style>

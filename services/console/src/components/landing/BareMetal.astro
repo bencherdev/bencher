@@ -1,0 +1,93 @@
+---
+const stats = [
+	{
+		eyebrow: "TYPICAL CI RUNNER VARIANCE",
+		value: ">30%",
+		tone: "bad",
+		body: "Noisy shared CI runners hide real performance regressions.",
+	},
+	{
+		eyebrow: "BENCHER BARE METAL VARIANCE",
+		value: "<2%",
+		tone: "good",
+		body: "Dedicated bare metal hardware. When a number moves, it's real.",
+	},
+];
+---
+
+<section class="landing-section">
+  <div class="columns is-vcentered is-variable is-0-mobile is-8-tablet">
+    <div class="column is-6">
+      <p class="landing-eyebrow">WHY BARE METAL</p>
+      <h2 class="title is-1 bare-title">All signal. No noise.</h2>
+      <p class="subtitle is-5 bare-sub">
+        CI runners introduce enough noise to mask real performance regressions.
+        Bencher Bare Metal isolates your benchmarks on dedicated bare metal
+        hardware, so when a number changes, it means something.
+      </p>
+    </div>
+    <div class="column is-6">
+      {stats.map((stat) => (
+        <div class="stat-card">
+          <p class="stat-eyebrow">{stat.eyebrow}</p>
+          <p class={`stat-number stat-${stat.tone}`}>{stat.value}</p>
+          <p class="stat-body">{stat.body}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .bare-title {
+    margin-bottom: 1.25rem !important;
+  }
+
+  .bare-sub {
+    max-width: 520px;
+    color: var(--landing-muted);
+  }
+
+  .stat-card {
+    padding: 1.5rem 1.75rem;
+    border-radius: 12px;
+    border: 1px solid var(--landing-card-border);
+    background: var(--landing-card-bg);
+  }
+
+  .stat-card + .stat-card {
+    margin-top: 1.25rem;
+  }
+
+  .stat-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--landing-eyebrow);
+    margin-bottom: 0.5rem;
+    line-height: 1;
+  }
+
+  .stat-number {
+    font-size: 2.25rem;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+      monospace;
+    margin-bottom: 0.75rem;
+    line-height: 1.1;
+  }
+
+  .stat-bad {
+    color: var(--brand-alert);
+  }
+
+  .stat-good {
+    color: var(--brand-success);
+  }
+
+  .stat-body {
+    color: var(--landing-muted);
+    line-height: 1.55;
+    margin: 0;
+  }
+</style>

@@ -69,3 +69,6 @@ oci-conformance-results/
 # Nix and direnv related
 .direnv/
 result
+
+# Playwright MCP artifacts
+.playwright-mcp/

@@ -1,0 +1,86 @@
+---
+const cards = [
+	{
+		title: "CI runners are shared and unpredictable",
+		body: "Shared CPU, memory contention, and scheduler jitter mean two identical benchmark runs can return wildly different results.",
+	},
+	{
+		title: "Noisy results train you to ignore alerts",
+		body: "When benchmarks cry wolf on every PR, engineers stop looking. By the time a real performance regression lands, nobody catches it.",
+	},
+	{
+		title: "Performance regressions silently ship",
+		body: "Without trustworthy benchmark results in the PR workflow, performance regressions reach production. You find out when users do.",
+	},
+];
+---
+
+<section class="landing-section problem-section">
+  <div class="columns is-centered">
+    <div class="column is-10">
+      <p class="landing-eyebrow">THE PROBLEM</p>
+      <h2 class="title is-1 problem-title">
+        CI benchmarks are too noisy to trust
+      </h2>
+      <p class="subtitle is-4 problem-sub">
+        If you can't tell a real regression from noise, the data is worthless.
+        So teams stop looking, and performance regressions silently ship.
+      </p>
+
+      <div class="columns is-multiline problem-cards">
+        {cards.map((card) => (
+          <div class="column is-4">
+            <div class="problem-card">
+              <h3 class="title is-5 problem-card-title">{card.title}</h3>
+              <p class="problem-card-body">{card.body}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .problem-section {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+  }
+
+  @media screen and (min-width: 769px) {
+    .problem-section {
+      padding-top: 0;
+      padding-bottom: 6rem;
+    }
+  }
+
+  .problem-title {
+    margin-bottom: 1.5rem !important;
+  }
+
+  .problem-sub {
+    max-width: 720px;
+    color: var(--landing-muted);
+  }
+
+  .problem-cards {
+    margin-top: 2.5rem;
+  }
+
+  .problem-card {
+    padding: 1.75rem;
+    border-radius: 12px;
+    border: 1px solid var(--landing-card-border);
+    background: var(--landing-card-bg);
+    height: 100%;
+  }
+
+  .problem-card-title {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .problem-card-body {
+    color: var(--landing-muted);
+    line-height: 1.55;
+  }
+</style>

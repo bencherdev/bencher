@@ -1,0 +1,280 @@
+---
+// Terminal mock based on real `bencher run --image` output from the
+// bare-metal CI workflow (services/api github action logs). Benchmark names
+// match the PRComment section so the two mocks tell the same story.
+const jobUuid = "e2215f33-824c-4aa9-925b-8056526b1a07";
+
+// Criterion time lines: [low mean high] — baseline ~5 µs, Adapter::Json spike ~22 µs.
+const criterionLines = [
+	{ name: "Adapter::Magic (JSON)", low: "5.02", mean: "5.03", high: "5.04" },
+	{ name: "Adapter::Json", low: "21.82", mean: "21.83", high: "21.84" },
+	{ name: "Adapter::Magic (Rust)", low: "4.97", mean: "4.98", high: "4.99" },
+	{ name: "Adapter::Rust", low: "5.01", mean: "5.02", high: "5.03" },
+	{ name: "Adapter::RustBench", low: "4.98", mean: "4.99", high: "5.00" },
+];
+
+const reportUrl =
+	"https://bencher.dev/perf/bencher/reports/36a1eeff-57f5-4b99-b058-8c9c240a9f2c";
+
+const resultsBase = "https://bencher.dev/perf/bencher/benchmarks/";
+
+const viewResults = [
+	"Adapter::Json",
+	"Adapter::Magic (JSON)",
+	"Adapter::Magic (Rust)",
+	"Adapter::Rust",
+	"Adapter::RustBench",
+].map((name, i) => ({
+	name,
+	url: `${resultsBase}${["e93b3d71-8499-4fae-bb7c-4e540b775714", "3bfd5887-83ec-4e62-8690-02855a38fbc9", "3525f177-fc8f-4a92-bd2f-dda7c4e15699", "5655ed2a-3e45-4622-bdbd-39cdd9837af8", "1db23e93-f909-40aa-bf42-838cc7ae05f5"][i]}`,
+}));
+
+const viewAlerts = [
+	{
+		name: "Adapter::Json",
+		url: "https://bencher.dev/perf/bencher/alerts/91ee27a7-2aee-41fe-b037-80b786f26cd5",
+	},
+];
+---
+
+<section class="landing-section">
+  <div class="columns is-vcentered development-columns">
+    <div class="column is-7">
+      <p class="landing-eyebrow">IN DEVELOPMENT</p>
+      <h2 class="title is-1 development-title">
+        Catch performance regressions before you even push
+      </h2>
+      <p class="subtitle is-5 development-sub">
+        The <code>bencher</code> CLI runs anywhere your code does. Catch
+        regressions at the source, before you even open a PR. The CLI and API
+        are agent-ready, your coding agents can benchmark on bare metal without
+        you in the loop.
+      </p>
+    </div>
+    <div class="column is-5" style="min-width: 0;">
+      <div
+        class="term-wrap"
+        role="img"
+        aria-label="Example terminal running bencher run locally and printing benchmark results plus a regression alert"
+      >
+        <div class="term-scale"><div class="term-card">
+              <div class="term-chrome">
+                <span class="term-dot term-dot-red"></span>
+                <span class="term-dot term-dot-yellow"></span>
+                <span class="term-dot term-dot-green"></span>
+                <span class="term-chrome-title">
+                  ~/code/bencher
+                </span>
+              </div>
+
+              <pre class="term-body"><code
+><span class="term-prompt">$</span> <span class="term-cmd">bencher run</span> \
+    <span class="term-flag">--project</span> bencher \
+    <span class="term-flag">--image</span> bench:latest \
+    <span class="term-flag">--branch</span> main \
+    <span class="term-flag">--testbed</span> intel-v1 \
+    <span class="term-flag">--spec</span> intel-v1 \
+    <span class="term-flag">--adapter</span> rust_criterion \
+    <span class="term-flag">--error-on-alert</span>
+
+Waiting for remote job <span class="term-dim">{jobUuid}</span> to complete...
+<span class="term-muted">Note: If you interrupt (Ctrl+C), the remote job will continue running.</span>
+Job status: <span class="term-status">Running</span>
+Job status: <span class="term-status-done">Processed</span>
+
+<span class="term-label">Job stdout:</span>
+{criterionLines.map((b) => (
+  <>{b.name.padEnd(22)} time:   [<span class="term-number">{b.low} µs</span> <span class="term-number">{b.mean} µs</span> <span class="term-number">{b.high} µs</span>]
+</>
+))}
+<span class="term-label">View report:</span> <span class="term-link">{reportUrl}</span>
+
+<span class="term-label">View results:</span>
+{viewResults.map((r) => (
+  <>- <span class="term-bench">{r.name}</span> (<span class="term-dim">Latency</span>): <span class="term-link">{r.url}</span>
+</>
+))}
+<span class="term-alert-label">View alerts:</span>
+{viewAlerts.map((a) => (
+  <>- <span class="term-alert-bench">{a.name}</span> (<span class="term-alert-dim">Latency</span>): <span class="term-alert-link">{a.url}</span>
+</>
+))}</code></pre>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { scaleMock } from "./mockScale";
+  scaleMock(".term-wrap");
+</script>
+
+<style>
+  .development-title {
+    margin-bottom: 1.25rem !important;
+  }
+
+  .development-sub {
+    max-width: 720px;
+    color: var(--landing-muted);
+    margin-bottom: 2.5rem !important;
+  }
+
+  .development-sub code {
+    font-size: 0.9em;
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  :global([data-theme="dark"]) .development-sub code {
+    background: rgba(255, 255, 255, 0.08);
+    color: #d4d4d4;
+  }
+
+  /* ---------- Terminal mock (SVG wrapped) ---------- */
+
+  .term-wrap {
+    width: 100%;
+    max-width: 1040px;
+    min-width: 0;
+    overflow: hidden;
+    position: relative;
+    --term-bg: #1a1d23;
+    --term-chrome-bg: #2a2e35;
+    --term-border: #3d434d;
+    --term-text: #e6edf3;
+    --term-muted: #7a828f;
+    --term-dim: #9ba4b0;
+    --term-prompt: #6bbfcf;
+    --term-cmd: #e6edf3;
+    --term-flag: #c9a76a;
+    --term-bench: #c9a76a;
+    --term-number: #7bd88f;
+    --term-label: #9ba4b0;
+    --term-link: #6bbfcf;
+    --term-alert: var(--brand-alert);
+    --term-chrome-title: #9ba4b0;
+  }
+
+  :global([data-theme="dark"]) .term-wrap {
+    --term-bg: #0d1117;
+    --term-chrome-bg: #151b23;
+  }
+
+  .term-scale {
+    width: 1040px;
+    transform-origin: 0 0;
+    transform: scale(var(--mock-scale, 1));
+  }
+
+  @media screen and (max-width: 768px) {
+    .term-scale {
+      width: 100%;
+    }
+
+    /* Override Bulma's is-vcentered cross-axis centering on mobile so
+       columns fill the full width instead of being centered around their
+       intrinsic content width. */
+    .development-columns {
+      align-items: stretch;
+    }
+    .development-columns > .column {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  .term-card {
+    background: var(--term-bg);
+    border: 1px solid var(--term-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+  }
+
+  :global([data-theme="dark"]) .term-card {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 10px 40px rgba(0, 0, 0, 0.7);
+  }
+
+  .term-chrome {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.65rem 0.9rem;
+    background: var(--term-chrome-bg);
+    border-bottom: 1px solid var(--term-border);
+  }
+
+  .term-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .term-dot-red { background: #ff5f57; }
+  .term-dot-yellow { background: #febc2e; }
+  .term-dot-green { background: #28c840; }
+
+  .term-chrome-title {
+    margin-left: 0.6rem;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+      monospace;
+    font-size: 12px;
+    color: var(--term-chrome-title);
+  }
+
+  .term-body {
+    margin: 0 !important;
+    padding: 1.25rem 1.4rem 1.5rem;
+    background: var(--term-bg);
+    color: var(--term-text);
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+      monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .term-body code {
+    font: inherit;
+    background: transparent;
+    padding: 0;
+    color: inherit;
+  }
+
+  .term-prompt { color: var(--term-prompt); font-weight: 600; }
+  .term-cmd { color: var(--term-cmd); font-weight: 600; }
+  .term-flag { color: var(--term-flag); }
+  .term-muted { color: var(--term-muted); }
+  .term-bench { color: var(--term-bench); }
+  .term-number { color: var(--term-number); font-weight: 600; }
+  .term-label { color: var(--term-label); font-weight: 600; }
+  .term-dim { color: var(--term-dim); }
+  .term-status { color: var(--term-bench); }
+  .term-status-done { color: var(--term-number); font-weight: 600; }
+  .term-link { color: var(--term-link); text-decoration: underline; text-decoration-color: rgba(107, 191, 207, 0.35); text-underline-offset: 2px; }
+
+  .term-alert-label,
+  .term-alert-bench {
+    color: var(--term-alert);
+    font-weight: 600;
+  }
+
+  .term-alert-dim {
+    color: var(--term-alert);
+    opacity: 0.75;
+  }
+
+  .term-alert-link {
+    color: var(--term-alert);
+    text-decoration: underline;
+    text-decoration-color: rgba(239, 68, 68, 0.4);
+    text-underline-offset: 2px;
+  }
+</style>
