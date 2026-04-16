@@ -2,7 +2,6 @@ import { For, Show } from "solid-js";
 import { PlanLevel } from "../../types/bencher";
 
 interface Props {
-	themeColor: string;
 	handleFree: () => void;
 	handleTeam: () => void;
 	handleEnterprise: () => void;
@@ -100,9 +99,9 @@ const TIERS: Tier[] = [
 	},
 ];
 
-const ctaTextFor = (plan: PlanLevel, popular: boolean | undefined): string => {
+const ctaTextFor = (plan: PlanLevel): string => {
 	if (plan === PlanLevel.Free) {
-		return "Sign up for free";
+		return "Sign up for Free";
 	}
 	if (plan === PlanLevel.Team) {
 		return "Continue with Team";
@@ -126,9 +125,7 @@ const InnerPricingTable = (props: Props) => {
 		<div class="pricing-grid">
 			<For each={TIERS}>
 				{(tier) => (
-					<div
-						class={`pricing-card${tier.popular ? " is-popular" : ""}`}
-					>
+					<div class={`pricing-card${tier.popular ? " is-popular" : ""}`}>
 						<Show when={tier.popular}>
 							<div class="pricing-ribbon">MOST POPULAR</div>
 						</Show>
@@ -138,20 +135,15 @@ const InnerPricingTable = (props: Props) => {
 						</div>
 						<div class="pricing-price-row">
 							<span class="pricing-price">{tier.price}</span>
-							<span class="pricing-price-unit">
-								{" "}/ benchmark result
-							</span>
+							<span class="pricing-price-unit"> / benchmark result</span>
 						</div>
 						<div class="pricing-projects">{tier.projectsNote}</div>
 						<button
 							type="button"
 							class={`pricing-cta pricing-cta-${tier.ctaStyle}`}
-							onMouseDown={(e) => {
-								e.preventDefault();
-								handlerFor(tier.plan, props)();
-							}}
+							onClick={() => handlerFor(tier.plan, props)()}
 						>
-							{ctaTextFor(tier.plan, tier.popular)}
+							{ctaTextFor(tier.plan)}
 						</button>
 						<div class="pricing-section-label">BENCHMARK METRICS</div>
 						<ul class="pricing-feature-list">
@@ -193,9 +185,7 @@ const InnerPricingTable = (props: Props) => {
 							</div>
 						</dl>
 						<Show when={tier.billingFooter}>
-							<div class="pricing-billing-footer">
-								{tier.billingFooter}
-							</div>
+							<div class="pricing-billing-footer">{tier.billingFooter}</div>
 						</Show>
 					</div>
 				)}

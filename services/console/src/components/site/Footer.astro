@@ -6,175 +6,310 @@ import {
 	BENCHER_REDDIT_URL,
 } from "../../util/ext";
 import ThemeWordmark from "../navbar/theme/ThemeWordmark.astro";
+
+const year = new Date().getFullYear();
+
+const columns = [
+	{
+		label: "Product",
+		links: [
+			{ href: "/docs/", text: "Docs" },
+			{ href: "/pricing/", text: "Pricing" },
+			{ href: "/download/", text: "Download" },
+		],
+	},
+	{
+		label: "Learn",
+		links: [
+			{ href: "/learn/", text: "Learn" },
+			{ href: "/docs/api/", text: "API" },
+			{ href: "/docs/tutorial/bare-metal/", text: "Bare Metal" },
+		],
+	},
+	{
+		label: "Community",
+		links: [
+			{ href: "/explore/", text: "Explore" },
+			{ href: "/perf/", text: "Public Projects" },
+			{ href: "/play/", text: "Play" },
+		],
+	},
+	{
+		label: "Company",
+		links: [
+			{ href: "/help/", text: "Help" },
+			{ href: "/brand/", text: "Brand" },
+			{ href: "/legal/", text: "Legal" },
+		],
+	},
+];
+
+const finePrint = [
+	{ href: "/legal/terms-of-use/", text: "Terms" },
+	{ href: "/legal/privacy/", text: "Privacy" },
+	{ href: "/legal/license/", text: "License" },
+	{ href: "/sitemap-index.xml", text: "Sitemap" },
+];
+
+const socials = [
+	{ href: BENCHER_GITHUB_URL, label: "GitHub", icon: "fa-github" },
+	{ href: BENCHER_CHAT_URL, label: "Discord", icon: "fa-discord" },
+	{ href: BENCHER_LINKEDIN_URL, label: "LinkedIn", icon: "fa-linkedin" },
+	{ href: BENCHER_REDDIT_URL, label: "Reddit", icon: "fa-reddit-alien" },
+];
 ---
 
-<footer
-	class="footer"
-	style="margin-top: 1rem;"
-	data-pagefind-ignore="all"
->
-	<div class="container">
-		<div class="columns is-vcentered">
-			<div class="column">
-				<div class="content">
-					<h2 class="title is-4">
-						<a class="navbar-item" title="🐰 Bencher" href="/">
-							<ThemeWordmark />
-						</a>
-					</h2>
-					<h3 class="is-5"><a href="/docs/explanation/continuous-benchmarking/">Continuous Benchmarking</a></h3>
-				</div>
+<footer class="site-footer" data-pagefind-ignore="all">
+	<div class="site-footer-inner">
+		<div class="site-footer-top">
+			<div class="site-footer-brand">
+				<a class="site-footer-wordmark" title="🐰 Bencher" href="/">
+					<ThemeWordmark />
+				</a>
+				<p class="site-footer-tagline">
+					Catch performance regressions before they merge
+				</p>
 			</div>
-			<div class="column is-narrow">
-				<nav class="level is-mobile">
-					<div class="level-item has-text-centered">
-						<a
-							class="navbar-item"
-							href={BENCHER_GITHUB_URL}
-							target="_blank"
-							aria-label="GitHub"
-							rel="noreferrer"
-						>
-							<span class="icon has-text-primary">
-								<i class="fab fa-github fa-2x" />
-							</span>
-						</a>
-					</div>
-					<div class="level-item has-text-centered">
-						<a
-							class="navbar-item"
-							href={BENCHER_CHAT_URL}
-							target="_blank"
-							aria-label="Discord"
-							rel="noreferrer"
-						>
-							<span class="icon has-text-primary">
-								<i class="fab fa-discord fa-2x" />
-							</span>
-						</a>
-					</div>
-					<div class="level-item has-text-centered">
-						<a
-							class="navbar-item"
-							href={BENCHER_LINKEDIN_URL}
-							target="_blank"
-							aria-label="LinkedIn"
-							rel="noreferrer"
-						>
-							<span class="icon has-text-primary">
-								<i class="fab fa-linkedin fa-2x" />
-							</span>
-						</a>
-					</div>
-					<div class="level-item has-text-centered">
-						<a
-							class="navbar-item"
-							href={BENCHER_REDDIT_URL}
-							target="_blank"
-							aria-label="Reddit"
-							rel="noreferrer"
-						>
-							<span class="icon has-text-primary">
-								<i class="fab fa-reddit-alien fa-2x" />
-							</span>
-						</a>
-					</div>
-				</nav>
-			</div>
-		</div>
-		<div class="content">
-			<nav class="level">
-				<div class="level-left">
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/docs/">Docs</a>
-						</p>
-					</div>
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/pricing/">Pricing</a>
-						</p>
-					</div>
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/help/">Help</a>
-						</p>
-					</div>
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/docs/api/">API</a>
-						</p>
-					</div>
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/learn/">Learn</a>
-						</p>
-					</div>
-				</div>
-			</nav>
-			<nav class="level">
-				<div class="level-left">
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/explore/">Explore</a>
-						</p>
-					</div>
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/perf/">Public Projects</a>
-						</p>
-					</div>
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/play/">Play</a>
-						</p>
-					</div>
-				</div>
-			</nav>
-			<nav class="level">
-				<div class="level-left">
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/download/">Download</a>
-						</p>
-					</div>
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/legal/">Legal</a>
-						</p>
-					</div>
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/brand/">Brand</a>
-						</p>
-					</div>
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/sitemap-index.xml">Sitemap</a>
-						</p>
-					</div>
-				</div>
-			</nav>
-			<nav class="level">
-				<div class="level-left">
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/legal/terms-of-use/">Terms of Use</a>
-						</p>
-					</div>
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/legal/privacy/">Privacy Policy</a>
-						</p>
-					</div>
-					<div class="level-item has-text-centered">
-						<p>
-							<a href="/legal/license/">License Agreement</a>
-						</p>
-					</div>
-				</div>
+			<nav class="site-footer-social" aria-label="Social links">
+				{socials.map((s) => (
+					<a
+						class="site-footer-social-link"
+						href={s.href}
+						target="_blank"
+						aria-label={s.label}
+						rel="noreferrer"
+					>
+						<i class={`fab ${s.icon}`} aria-hidden="true"></i>
+					</a>
+				))}
 			</nav>
 		</div>
-		<p>© {new Date().getFullYear()} Bencher</p>
+
+		<hr class="site-footer-rule" />
+
+		<div class="site-footer-grid">
+			{columns.map((col) => (
+				<div class="site-footer-col">
+					<div class="landing-eyebrow site-footer-eyebrow">{col.label}</div>
+					<ul class="site-footer-links">
+						{col.links.map((link) => (
+							<li>
+								<a href={link.href}>{link.text}</a>
+							</li>
+						))}
+					</ul>
+				</div>
+			))}
+		</div>
+
+		<hr class="site-footer-rule" />
+
+		<div class="site-footer-fineprint">
+			<p class="site-footer-copy">© {year} Bencher</p>
+			<ul class="site-footer-fineprint-links">
+				{finePrint.map((link) => (
+					<li>
+						<a href={link.href}>{link.text}</a>
+					</li>
+				))}
+			</ul>
+		</div>
 	</div>
 </footer>
+
+<style>
+	.site-footer {
+		padding: 4rem 1.5rem 2.5rem;
+	}
+
+	@media screen and (min-width: 769px) {
+		.site-footer {
+			padding: 5rem 2rem 2.5rem;
+		}
+	}
+
+	@media screen and (min-width: 1024px) {
+		.site-footer {
+			padding: 5rem 4rem 3rem;
+		}
+	}
+
+	@media screen and (min-width: 1216px) {
+		.site-footer {
+			padding: 5rem 6rem 3rem;
+		}
+	}
+
+	.site-footer-inner {
+		max-width: 1200px;
+		margin: 0 auto;
+	}
+
+	.site-footer-top {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+
+	@media screen and (min-width: 600px) {
+		.site-footer-top {
+			flex-direction: row;
+			align-items: flex-start;
+			justify-content: space-between;
+			gap: 2rem;
+		}
+	}
+
+	.site-footer-brand {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		max-width: 32rem;
+	}
+
+	.site-footer-wordmark {
+		display: inline-flex;
+		align-items: center;
+		color: inherit;
+	}
+
+	.site-footer-tagline {
+		margin: 0;
+		color: var(--landing-muted);
+		font-size: 0.95rem;
+		line-height: 1.5;
+	}
+
+	.site-footer-social {
+		display: flex;
+		align-items: center;
+		gap: 1.25rem;
+	}
+
+	.site-footer-social-link {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--landing-muted);
+		font-size: 1.25rem;
+		line-height: 1;
+		transition: color 0.15s ease;
+	}
+
+	.site-footer-social-link:hover,
+	.site-footer-social-link:focus-visible {
+		color: var(--brand-orange);
+	}
+
+	.site-footer-rule {
+		border: 0;
+		border-top: 1px solid var(--landing-card-border);
+		margin: 2.5rem 0;
+		height: 0;
+	}
+
+	.site-footer-grid {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 2.5rem 2rem;
+	}
+
+	@media screen and (min-width: 600px) {
+		.site-footer-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+
+	@media screen and (min-width: 900px) {
+		.site-footer-grid {
+			grid-template-columns: repeat(4, 1fr);
+		}
+	}
+
+	.site-footer-col {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.site-footer-eyebrow {
+		margin-bottom: 1rem;
+		text-transform: uppercase;
+	}
+
+	.site-footer-links {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	.site-footer-links li {
+		margin: 0;
+	}
+
+	.site-footer-links a {
+		display: block;
+		padding: 0.35rem 0;
+		color: inherit;
+		text-decoration: none;
+		font-size: 0.95rem;
+		transition: color 0.15s ease;
+	}
+
+	.site-footer-links a:hover,
+	.site-footer-links a:focus-visible {
+		color: var(--brand-orange);
+	}
+
+	.site-footer-fineprint {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		font-size: 0.85rem;
+		color: var(--landing-muted);
+	}
+
+	@media screen and (min-width: 600px) {
+		.site-footer-fineprint {
+			flex-direction: row;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1.5rem;
+		}
+	}
+
+	.site-footer-copy {
+		margin: 0;
+	}
+
+	.site-footer-fineprint-links {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem 1rem;
+		align-items: center;
+	}
+
+	.site-footer-fineprint-links li {
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.site-footer-fineprint-links li + li::before {
+		content: "·";
+		margin-right: 1rem;
+		color: var(--landing-muted);
+	}
+
+	.site-footer-fineprint-links a {
+		color: inherit;
+		text-decoration: none;
+		transition: color 0.15s ease;
+	}
+
+	.site-footer-fineprint-links a:hover,
+	.site-footer-fineprint-links a:focus-visible {
+		color: var(--brand-orange);
+	}
+</style>

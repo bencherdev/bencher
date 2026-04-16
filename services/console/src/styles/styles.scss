@@ -229,6 +229,7 @@ $disabled: #fdb07e;
 
 [data-theme="dark"] {
   --landing-muted: #a0a0a0;
+  --landing-eyebrow: #aaa;
   --landing-card-border: rgba(255, 255, 255, 0.1);
   --landing-card-border-strong: rgba(255, 255, 255, 0.32);
   --landing-card-bg: rgba(255, 255, 255, 0.025);
@@ -777,6 +778,33 @@ $disabled: #fdb07e;
 }
 
 .pricing-faq-answer a:hover {
+  color: var(--brand-orange-hover);
+}
+
+.pricing-trusted-by-section {
+  max-width: 1200px;
+  margin: 2rem auto 0;
+  padding: 0 1.5rem;
+  text-align: center;
+}
+
+.pricing-trusted-by-section .trusted-by-logos {
+  justify-content: center;
+}
+
+.pricing-faq-closer {
+  margin: 2.5rem 0 0;
+  text-align: center;
+  color: var(--landing-muted);
+  font-size: 0.95rem;
+}
+
+.pricing-faq-closer a {
+  color: var(--brand-orange);
+  text-decoration: underline;
+}
+
+.pricing-faq-closer a:hover {
   color: var(--brand-orange-hover);
 }
 
