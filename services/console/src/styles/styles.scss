@@ -4,6 +4,8 @@ $disabled: #fdb07e;
 
 // Path to Bulma's sass folder
 @use "bulma/sass" with ($primary: $orange, $link: $orange);
+@use "landing";
+@use "pricing";
 
 // https://bulma.io/documentation/start/responsiveness/#breakpoints
 @mixin mobile {
@@ -204,69 +206,6 @@ $disabled: #fdb07e;
   .er.relationshipLine {
     stroke: var(--bulma-text) !important;
   }
-}
-
-// ---------------------------------------------------------------------------
-// Landing page primitives
-// ---------------------------------------------------------------------------
-// Shared tokens + utility classes for marketing landing sections so each
-// component can avoid re-declaring the same eyebrow, padding, and muted text
-// colors in its own scoped style block.
-
-:root {
-  --landing-muted: #666;
-  --landing-eyebrow: #888;
-  --landing-card-border: rgba(0, 0, 0, 0.08);
-  --landing-card-border-strong: rgba(0, 0, 0, 0.25);
-  --landing-card-bg: rgba(0, 0, 0, 0.02);
-
-  // Brand / semantic colors used across landing components.
-  --brand-orange: #ed6704;
-  --brand-orange-hover: #d25a00;
-  --brand-alert: #ef4444;
-  --brand-success: #22c55e;
-}
-
-[data-theme="dark"] {
-  --landing-muted: #a0a0a0;
-  --landing-card-border: rgba(255, 255, 255, 0.1);
-  --landing-card-border-strong: rgba(255, 255, 255, 0.32);
-  --landing-card-bg: rgba(255, 255, 255, 0.025);
-}
-
-.landing-section {
-  padding: 4rem 1.5rem;
-}
-
-@media screen and (min-width: 769px) {
-  .landing-section {
-    padding: 5rem 2rem;
-  }
-}
-
-@media screen and (min-width: 1024px) {
-  .landing-section {
-    padding: 5rem 4rem;
-  }
-}
-
-@media screen and (min-width: 1216px) {
-  .landing-section {
-    padding: 5rem 6rem;
-  }
-}
-
-.landing-eyebrow {
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.15em;
-  color: var(--landing-eyebrow);
-  margin-bottom: 1.25rem;
-  line-height: 1;
-}
-
-.landing-muted {
-  color: var(--landing-muted);
 }
 
 // Docs search modal
