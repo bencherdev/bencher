@@ -26,7 +26,7 @@ const stats = [
         hardware, so when a number changes, it means something.
       </p>
     </div>
-    <div class="column is-6">
+    <div class="column is-6 bare-stats">
       {stats.map((stat) => (
         <div class="stat-card">
           <p class="stat-eyebrow">{stat.eyebrow}</p>
@@ -46,6 +46,12 @@ const stats = [
   .bare-sub {
     max-width: 520px;
     color: var(--landing-muted);
+  }
+
+  @media screen and (max-width: 768px) {
+    .bare-stats {
+      margin-top: 2rem;
+    }
   }
 
   .stat-card {
