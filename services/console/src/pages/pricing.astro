@@ -10,106 +10,11 @@ import { BENCHER_CALENDLY_URL } from "../util/ext";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import CallToAction from "../components/landing/CallToAction.astro";
 import TrustedBy from "../components/landing/TrustedBy.astro";
+import FaqItem from "../components/pricing/FaqItem.astro";
 
 const title = "Pricing";
 const description =
 	"Free forever for open source. Continuous benchmarking on bare metal, catch performance regressions before they merge.";
-
-const billingFaqs = [
-	{
-		id: "faq-benchmark-result",
-		q: "What is a benchmark result?",
-		a: "A benchmark result (called a Metric) is a single point-in-time measurement. Each benchmark run produces one Metric, so 5 benchmarks × 10 runs = 50 Metrics. Even if your harness samples a benchmark 1,000 times internally for accuracy, that still counts as 1 Metric per run. A benchmark with multiple measures (like latency and throughput) creates one Metric per measure per run, so 5 benchmarks × 2 measures × 10 runs = 100 Metrics.",
-	},
-	{
-		id: "faq-public-private",
-		q: "What is a Public vs. Private Project?",
-		a: `A Public Project is visible to anyone who can reach your Bencher instance. On Bencher Cloud, <a href="/perf" target="_blank" rel="noreferrer">all Public Projects are listed here</a>. A Private Project is only visible to members of your organization and requires an active Bencher Plus plan (Team or Enterprise).`,
-	},
-	{
-		id: "faq-billing",
-		q: "How are benchmark results billed?",
-		a: `On Bencher Cloud, benchmark results (called Metrics) are billed monthly based on metered usage. If you create 5,280 Metrics in a month, you're billed for 5,280 Metrics. Bencher Self-Hosted Metrics are billed annually based on a licensed quantity.`,
-	},
-	{
-		id: "faq-public-projects",
-		q: "Are benchmark results for Public Projects counted?",
-		a: `Yes. On Team or Enterprise, benchmark results (called Metrics) from both Public and Private Projects count toward your plan. The Free plan isn't billed for Metrics, but <a href="#faq-rate-limiting">daily rate limits</a> apply.`,
-	},
-	{
-		id: "faq-rate-limiting",
-		q: "Is there rate limiting?",
-		a: "<ul><li>Unclaimed Project: 255 Metrics per day</li><li>Free plan: 65,535 Metrics per day</li><li>Bencher Plus plan: No rate limit</li></ul>",
-	},
-	{
-		id: "faq-support",
-		q: "What support do I get with each plan?",
-		a: "<p><strong>Community support</strong> (Free): GitHub issues and our Discord community.</p><p><strong>Customer support</strong> (Team): Email support with responses within 1 business day.</p><p><strong>Priority support</strong> (Enterprise): Dedicated Slack channel with direct access to Bencher engineering, priority on bug fixes and feature requests, and dedicated onboarding.</p>",
-	},
-	{
-		id: "faq-change-plan",
-		q: "Can I change or cancel my plan?",
-		a: `Yes. You can upgrade, downgrade, or cancel your plan at any time. On Bencher Cloud, metered billing stops at the end of the current period. Bencher Self-Hosted licenses aren't refunded mid-term, but you can downgrade or cancel before your next renewal.`,
-	},
-	{
-		id: "faq-data-on-cancel",
-		q: "What happens to my data if I cancel?",
-		a: `Your Projects and benchmark results (called Metrics) remain accessible after cancellation. Public Projects stay publicly visible unless you delete them, and Private Projects stay private. You can export your data via the <a href="/docs/api/">Bencher API</a> at any time.`,
-	},
-	{
-		id: "faq-self-hosted-license",
-		q: "How does the Bencher License work for Self-Hosted?",
-		a: `<p>The <a href="/legal/license/">Bencher License</a> is heavily inspired by the <a href="https://gitlab.com/gitlab-org/gitlab/-/blob/master/LICENSE" target="_blank" rel="noreferrer">GitLab License</a>. You can use Bencher Self-Hosted in development, testing, and production without a Bencher Plus license, equivalent to Bencher Cloud on the Free plan.</p><p>For Bencher Plus features (Team or Enterprise), you need to purchase a Bencher Plus license.</p>`,
-	},
-	{
-		id: "faq-license-quantity-limit",
-		q: "What happens if I reach my licensed quantity on Self-Hosted?",
-		a: "On Bencher Self-Hosted, new Metrics stop being accepted once you hit your licensed quantity limit. You can increase your licensed quantity at any time. We recommend setting your quantity with an extra margin to avoid interruption.",
-	},
-];
-
-const bareMetalFaqs = [
-	{
-		id: "faq-bare-metal",
-		q: "Why run benchmarks on Bencher Bare Metal?",
-		a: `<p>Bencher is the first Continuous Benchmarking tool that runs your benchmarks on the <em>exact same</em> bare metal hardware both locally and in CI. Developers and agents can compare work in progress against any commit in your project's history.</p><p><strong>Locally</strong>, keep multitasking. No stopping what you're doing, pulling an old branch, and waiting on a comparison.</p><p><strong>In CI</strong>, trust the numbers. No noisy neighbors, throttling, or host migrations.</p>`,
-	},
-	{
-		id: "faq-bare-metal-account",
-		q: "Do I need an account to try Bencher Bare Metal?",
-		a: `No. You can run benchmarks right away without creating an account, with a 1 minute timeout per run. A Free account raises that timeout to 5 minutes and increases your <a href="#faq-rate-limiting">daily rate limits</a>. No credit card required either way. Check out the <a href="/docs/tutorial/bare-metal/">Bencher Bare Metal Quickstart</a> to run your first benchmark in minutes.`,
-	},
-	{
-		id: "faq-bare-metal-hardware",
-		q: "What hardware do Bencher Bare Metal runners use?",
-		a: `<p>Bencher Cloud On-Demand runners use the <code>intel-v1</code> Spec: Linux on x86_64 with 4 CPUs, 48 GiB of memory, and 128 GiB of disk. Code runs in a Firecracker microVM sandbox for isolation. See the full <a href="/docs/explanation/testbeds/#--spec-spec">Spec reference</a> for details. Bencher Cloud Enterprise customers can request Dedicated and Custom runners. <a href="${BENCHER_CALENDLY_URL}" target="_blank" rel="noreferrer">Contact us</a> for more details.</p><p>On Bencher Self-Hosted, Free and Team users can create server-scoped Bare Metal runners, and Enterprise users can also create organization-scoped runners.</p>`,
-	},
-	{
-		id: "faq-bare-metal-os",
-		q: "What OSes and architectures does Bencher Bare Metal support?",
-		a: `<p>Bencher Cloud On-Demand runners support Linux x86_64 and (coming soon) ARM64, sandboxed in Firecracker. Dedicated and Custom runners can run without the Firecracker sandbox on Linux (x86_64 or ARM64), macOS, and Windows. <a href="${BENCHER_CALENDLY_URL}" target="_blank" rel="noreferrer">Contact us</a> for more details.</p><p>Bencher Self-Hosted runners can run on Linux (x86_64 or ARM64), macOS, and Windows.</p><p>See the <a href="/docs/explanation/bare-metal/#runner">bare metal runner reference</a> for details.</p>`,
-	},
-	{
-		id: "faq-bare-metal-billing",
-		q: "Are Bencher Bare Metal minutes billed separately from Metrics?",
-		a: `<p>Yes. Metrics are billed per result as described above. On Bencher Cloud, Bare Metal runner time is billed separately at $1.00/hr ($0.01666/min) and covers the compute used to execute your benchmarks. You're only billed for the minutes your benchmarks are actively running.</p><p>Bencher Self-Hosted users do not pay for runner minutes.</p>`,
-	},
-	{
-		id: "faq-bare-metal-minimums",
-		q: "Is there a minimum commitment for Bencher Bare Metal?",
-		a: `<p>No minimums, no monthly fees.</p><ul><li><strong>On-Demand</strong> (Team, Enterprise): billed for the minutes your benchmarks are actively running</li><li><strong>Dedicated</strong> (Enterprise): flat monthly rate</li><li><strong>Custom</strong> (Enterprise): usage-based</li></ul><p>Bencher Self-Hosted users do not pay for runner minutes. <a href="${BENCHER_CALENDLY_URL}" target="_blank" rel="noreferrer">Contact us</a> for more details.</p>`,
-	},
-	{
-		id: "faq-bare-metal-free-tier",
-		q: "What's included in the Free tier?",
-		a: `<p>Free users get one concurrent Bare Metal job with a 5 minute timeout and Standard queue priority. This is the same for both Bencher Cloud and Bencher Self-Hosted.</p><p>For Bencher Cloud On-Demand runners, you're running on the same Bare Metal machines as Team and Enterprise customers, just with lower queue position during busy periods.</p><p>Bencher Bare Metal runners usually execute your already-compiled benchmark binaries. Compilation happens locally or in your CI pipeline and is typically the longest step, so most benchmark suites fit well under the 5 minute timeout.</p>`,
-	},
-	{
-		id: "faq-queue-priority",
-		q: "How does queue priority work between Free, Team, and Enterprise?",
-		a: "Team and Enterprise jobs are prioritized ahead of Free jobs in the runner queue and share equal priority with each other. All Bencher Cloud On-Demand jobs run on the same Bare Metal hardware. During idle periods Free jobs run immediately. During busy periods paid jobs are scheduled first, and Free jobs wait for the next available slot.",
-	},
-];
 ---
 
 <BaseLayout title={title} description={description}>
@@ -201,32 +106,89 @@ const bareMetalFaqs = [
       <h2 id="faq" class="pricing-faq-title">FAQ</h2>
 
       <div class="pricing-faq-category">
-        <div class="pricing-faq-eyebrow">BENCHMARK METRICS & BILLING</div>
+        <div class="pricing-faq-eyebrow">METRICS & BILLING</div>
         <div class="pricing-faq-grid">
-          {billingFaqs.map((faq) => (
-            <details class="pricing-faq-item" id={faq.id}>
-              <summary class="pricing-faq-question">
-                <span>{faq.q}</span>
-                <span class="pricing-faq-icon" aria-hidden="true"></span>
-              </summary>
-              <div class="pricing-faq-answer" set:html={faq.a} />
-            </details>
-          ))}
+          <FaqItem id="faq-benchmark-result" q="What is a benchmark result?">
+            A benchmark result (called a Metric) is a single point-in-time measurement. Each benchmark run produces one Metric, so 5 benchmarks × 10 runs = 50 Metrics. Even if your harness samples a benchmark 1,000 times internally for accuracy, that still counts as 1 Metric per run. A benchmark with multiple measures (like latency and throughput) creates one Metric per measure per run, so 5 benchmarks × 2 measures × 10 runs = 100 Metrics.
+          </FaqItem>
+          <FaqItem id="faq-public-private" q="What is a Public vs. Private Project?">
+            A Public Project is visible to anyone who can reach your Bencher instance. On Bencher Cloud, <a href="/perf" target="_blank" rel="noreferrer">all Public Projects are listed here</a>. A Private Project is only visible to members of your organization and requires an active Bencher Plus plan (Team or Enterprise).
+          </FaqItem>
+          <FaqItem id="faq-billing" q="How are benchmark results billed?">
+            On Bencher Cloud, benchmark results (called Metrics) are billed monthly based on metered usage. If you create 5,280 Metrics in a month, you're billed for 5,280 Metrics. Bencher Self-Hosted Metrics are billed annually based on a licensed quantity.
+          </FaqItem>
+          <FaqItem id="faq-public-projects" q="Are benchmark results for Public Projects counted?">
+            Yes. On Team or Enterprise, benchmark results (called Metrics) from both Public and Private Projects count toward your plan. The Free plan isn't billed for Metrics, but <a href="#faq-rate-limiting">daily rate limits</a> apply.
+          </FaqItem>
+          <FaqItem id="faq-rate-limiting" q="Is there rate limiting?">
+            <ul>
+              <li>Unclaimed Project: 255 Metrics per day</li>
+              <li>Free plan: 65,535 Metrics per day</li>
+              <li>Bencher Plus plan: No rate limit</li>
+            </ul>
+          </FaqItem>
+          <FaqItem id="faq-support" q="What support do I get with each plan?">
+            <p><strong>Community support</strong> (Free): GitHub issues and our Discord community.</p>
+            <p><strong>Customer support</strong> (Team): Email support with responses within 1 business day.</p>
+            <p><strong>Priority support</strong> (Enterprise): Dedicated Slack channel with direct access to Bencher engineering, priority on bug fixes and feature requests, and dedicated onboarding.</p>
+          </FaqItem>
+          <FaqItem id="faq-change-plan" q="Can I change or cancel my plan?">
+            Yes. You can upgrade, downgrade, or cancel your plan at any time. On Bencher Cloud, metered billing stops at the end of the current period. Bencher Self-Hosted licenses aren't refunded mid-term, but you can downgrade or cancel before your next renewal.
+          </FaqItem>
+          <FaqItem id="faq-data-on-cancel" q="What happens to my data if I cancel?">
+            Your Projects and benchmark results (called Metrics) remain accessible after cancellation. Public Projects stay publicly visible unless you delete them, and Private Projects stay private. You can export your data via the <a href="/docs/api/">Bencher API</a> at any time.
+          </FaqItem>
+          <FaqItem id="faq-self-hosted-license" q="How does the Bencher License work for Self-Hosted?">
+            <p>The <a href="/legal/license/">Bencher License</a> is heavily inspired by the <a href="https://gitlab.com/gitlab-org/gitlab/-/blob/master/LICENSE" target="_blank" rel="noreferrer">GitLab License</a>. You can use Bencher Self-Hosted in development, testing, and production without a Bencher Plus license, equivalent to Bencher Cloud on the Free plan.</p>
+            <p>For Bencher Plus features (Team or Enterprise), you need to purchase a Bencher Plus license.</p>
+          </FaqItem>
+          <FaqItem id="faq-license-quantity-limit" q="What happens if I reach my licensed quantity on Self-Hosted?">
+            On Bencher Self-Hosted, new Metrics stop being accepted once you hit your licensed quantity limit. You can increase your licensed quantity at any time. We recommend setting your quantity with an extra margin to avoid interruption.
+          </FaqItem>
         </div>
       </div>
 
       <div class="pricing-faq-category">
         <div class="pricing-faq-eyebrow">BENCHER BARE METAL</div>
         <div class="pricing-faq-grid">
-          {bareMetalFaqs.map((faq) => (
-            <details class="pricing-faq-item" id={faq.id}>
-              <summary class="pricing-faq-question">
-                <span>{faq.q}</span>
-                <span class="pricing-faq-icon" aria-hidden="true"></span>
-              </summary>
-              <div class="pricing-faq-answer" set:html={faq.a} />
-            </details>
-          ))}
+          <FaqItem id="faq-bare-metal" q="Why run benchmarks on Bencher Bare Metal?">
+            <p>Bencher is the first Continuous Benchmarking tool that runs your benchmarks on the <em>exact same</em> bare metal hardware both locally and in CI. Developers and agents can compare work in progress against any commit in your project's history.</p>
+            <p><strong>Locally</strong>, keep multitasking. No stopping what you're doing, pulling an old branch, and waiting on a comparison.</p>
+            <p><strong>In CI</strong>, trust the numbers. No noisy neighbors, throttling, or host migrations.</p>
+          </FaqItem>
+          <FaqItem id="faq-bare-metal-account" q="Do I need an account to try Bencher Bare Metal?">
+            No. You can run benchmarks right away without creating an account, with a 1 minute timeout per run. A Free account raises that timeout to 5 minutes and increases your <a href="#faq-rate-limiting">daily rate limits</a>. No credit card required either way. Check out the <a href="/docs/tutorial/bare-metal/">Bencher Bare Metal Quickstart</a> to run your first benchmark in minutes.
+          </FaqItem>
+          <FaqItem id="faq-bare-metal-hardware" q="What hardware do Bencher Bare Metal runners use?">
+            <p>Bencher Cloud On-Demand runners use the <code>intel-v1</code> Spec: Linux on x86_64 with 4 CPUs, 48 GiB of memory, and 128 GiB of disk. Code runs in a Firecracker microVM sandbox for isolation. See the full <a href="/docs/explanation/testbeds/#--spec-spec">Spec reference</a> for details. Bencher Cloud Enterprise customers can request Dedicated and Custom runners. <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">Contact us</a> for more details.</p>
+            <p>On Bencher Self-Hosted, Free and Team users can create server-scoped Bare Metal runners, and Enterprise users can also create organization-scoped runners.</p>
+          </FaqItem>
+          <FaqItem id="faq-bare-metal-os" q="What OSes and architectures does Bencher Bare Metal support?">
+            <p>Bencher Cloud On-Demand runners support Linux x86_64 and (coming soon) ARM64, sandboxed in Firecracker. Dedicated and Custom runners can run without the Firecracker sandbox on Linux (x86_64 or ARM64), macOS, and Windows. <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">Contact us</a> for more details.</p>
+            <p>Bencher Self-Hosted runners can run on Linux (x86_64 or ARM64), macOS, and Windows.</p>
+            <p>See the <a href="/docs/explanation/bare-metal/#runner">bare metal runner reference</a> for details.</p>
+          </FaqItem>
+          <FaqItem id="faq-bare-metal-billing" q="Are Bencher Bare Metal minutes billed separately from Metrics?">
+            <p>Yes. Metrics are billed per result as described above. On Bencher Cloud, Bare Metal runner time is billed separately at $1.00/hr ($0.01666/min) and covers the compute used to execute your benchmarks. You're only billed for the minutes your benchmarks are actively running.</p>
+            <p>Bencher Self-Hosted users do not pay for runner minutes.</p>
+          </FaqItem>
+          <FaqItem id="faq-bare-metal-minimums" q="Is there a minimum commitment for Bencher Bare Metal?">
+            <p>No minimums, no monthly fees.</p>
+            <ul>
+              <li><strong>On-Demand</strong> (Team, Enterprise): billed for the minutes your benchmarks are actively running</li>
+              <li><strong>Dedicated</strong> (Enterprise): flat monthly rate</li>
+              <li><strong>Custom</strong> (Enterprise): usage-based</li>
+            </ul>
+            <p>Bencher Self-Hosted users do not pay for runner minutes. <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">Contact us</a> for more details.</p>
+          </FaqItem>
+          <FaqItem id="faq-bare-metal-free-tier" q="What's included in the Free tier?">
+            <p>Free users get one concurrent Bare Metal job with a 5 minute timeout and Standard queue priority. This is the same for both Bencher Cloud and Bencher Self-Hosted.</p>
+            <p>For Bencher Cloud On-Demand runners, you're running on the same Bare Metal machines as Team and Enterprise customers, just with lower queue position during busy periods.</p>
+            <p>Bencher Bare Metal runners usually execute your already-compiled benchmark binaries. Compilation happens locally or in your CI pipeline and is typically the longest step, so most benchmark suites fit well under the 5 minute timeout.</p>
+          </FaqItem>
+          <FaqItem id="faq-queue-priority" q="How does queue priority work between Free, Team, and Enterprise?">
+            Team and Enterprise jobs are prioritized ahead of Free jobs in the runner queue and share equal priority with each other. All Bencher Cloud On-Demand jobs run on the same Bare Metal hardware. During idle periods Free jobs run immediately. During busy periods paid jobs are scheduled first, and Free jobs wait for the next available slot.
+          </FaqItem>
         </div>
       </div>
 

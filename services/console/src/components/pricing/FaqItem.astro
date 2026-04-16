@@ -1,0 +1,16 @@
+---
+interface Props {
+	id: string;
+	q: string;
+}
+const { id, q } = Astro.props;
+---
+<details class="pricing-faq-item" id={id}>
+  <summary class="pricing-faq-question">
+    <span>{q}</span>
+    <span class="pricing-faq-icon" aria-hidden="true"></span>
+  </summary>
+  <div class="pricing-faq-answer">
+    <slot />
+  </div>
+</details>
