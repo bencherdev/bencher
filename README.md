@@ -13,6 +13,16 @@
 
 [Bencher](https://bencher.dev) catches performance regressions before they merge.
 
+<p align="center">
+  <a href="https://bencher.dev">
+    <img
+      src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/github/regression-chart.svg"
+      alt="Animated chart showing benchmark results with a performance regression spike that triggers an alert, followed by a fix back to baseline"
+      width="800"
+    />
+  </a>
+</p>
+
 Typical CI runners have **>30% variance**. Bencher Bare Metal runners have **<2%**. When a number moves, it means something.
 
 <p>
