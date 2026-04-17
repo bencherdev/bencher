@@ -5,7 +5,7 @@ use bencher_json::{
         built_in::{self, BuiltInMeasure},
     },
 };
-use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{
@@ -21,7 +21,7 @@ use crate::{
     },
     model::project::QueryProject,
     schema::{self, measure as measure_table},
-    write_conn,
+    write_conn, write_transaction,
 };
 
 use super::ProjectId;
@@ -212,8 +212,7 @@ impl QueryMeasure {
         let insert_measure =
             InsertMeasure::from_json(auth_conn!(context), project_id, json_measure);
 
-        let conn = write_conn!(context);
-        conn.transaction(|conn| {
+        write_transaction!(context, |conn| {
             diesel::insert_into(schema::measure::table)
                 .values(&insert_measure)
                 .execute(conn)?;
@@ -360,7 +359,7 @@ impl UpdateMeasure {
 
 #[cfg(test)]
 mod tests {
-    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use bencher_json::DateTime;
 
@@ -378,7 +377,7 @@ mod tests {
         let uuid = "00000000-0000-0000-0000-000000000010";
 
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::measure::table)
                     .values((
                         schema::measure::uuid.eq(uuid),
@@ -426,7 +425,7 @@ mod tests {
         // Insert second + verify
         let second_uuid = "00000000-0000-0000-0000-000000000011";
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::measure::table)
                     .values((
                         schema::measure::uuid.eq(second_uuid),
@@ -467,7 +466,7 @@ mod tests {
 
         // Insert and read back within same transaction
         let (inserted_id, readback_name) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::measure::table)
                     .values((
                         schema::measure::uuid.eq(uuid),

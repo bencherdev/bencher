@@ -13,7 +13,7 @@ use bencher_json::{
 use bencher_rbac::{Organization, organization::Permission};
 #[cfg(feature = "plus")]
 use diesel::BelongingToDsl as _;
-use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, Queryable, RunQueryDsl as _};
+use diesel::{ExpressionMethods as _, QueryDsl as _, Queryable, RunQueryDsl as _};
 use dropshot::HttpError;
 use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 #[cfg(feature = "plus")]
@@ -36,7 +36,7 @@ use crate::{
     model::user::auth::AuthUser,
     public_conn, resource_conflict_err, resource_not_found_err,
     schema::{self, organization as organization_table},
-    write_conn,
+    write_conn, write_transaction,
 };
 
 use super::user::QueryUser;
@@ -176,28 +176,25 @@ impl QueryOrganization {
         let timestamp = DateTime::now();
         let user_id = auth_user.id;
 
-        let query_organization = {
-            let conn = write_conn!(context);
-            conn.transaction(|conn| {
-                let id = Self::insert(conn, &insert_organization)?;
+        let query_organization = write_transaction!(context, |conn| {
+            let id = Self::insert(conn, &insert_organization)?;
 
-                // Connect the user to the organization as a `Leader`
-                let insert_org_role = InsertOrganizationRole {
-                    user_id,
-                    organization_id: id,
-                    role: OrganizationRole::Leader,
-                    created: timestamp,
-                    modified: timestamp,
-                };
-                diesel::insert_into(schema::organization_role::table)
-                    .values(&insert_org_role)
-                    .execute(conn)?;
+            // Connect the user to the organization as a `Leader`
+            let insert_org_role = InsertOrganizationRole {
+                user_id,
+                organization_id: id,
+                role: OrganizationRole::Leader,
+                created: timestamp,
+                modified: timestamp,
+            };
+            diesel::insert_into(schema::organization_role::table)
+                .values(&insert_org_role)
+                .execute(conn)?;
 
-                diesel::QueryResult::Ok(id)
-            })
-            .map_err(resource_conflict_err!(Organization, &insert_organization))
-            .map(|id| insert_organization.into_query(id))?
-        };
+            diesel::QueryResult::Ok(id)
+        })
+        .map_err(resource_conflict_err!(Organization, &insert_organization))
+        .map(|id| insert_organization.into_query(id))?;
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
@@ -209,12 +206,10 @@ impl QueryOrganization {
         context: &ApiContext,
         insert_organization: InsertOrganization,
     ) -> Result<Self, HttpError> {
-        let query_organization = {
-            let conn = write_conn!(context);
-            conn.transaction(|conn| Self::insert(conn, &insert_organization))
+        let query_organization =
+            write_transaction!(context, |conn| Self::insert(conn, &insert_organization))
                 .map_err(resource_conflict_err!(Organization, &insert_organization))
-                .map(|id| insert_organization.into_query(id))?
-        };
+                .map(|id| insert_organization.into_query(id))?;
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
@@ -703,7 +698,7 @@ impl From<&QueryOrganization> for Organization {
 
 #[cfg(test)]
 mod tests {
-    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use bencher_json::DateTime;
 
@@ -716,7 +711,7 @@ mod tests {
         let uuid = "00000000-0000-0000-0000-000000000010";
 
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::organization::table)
                     .values((
                         schema::organization::uuid.eq(uuid),
@@ -760,7 +755,7 @@ mod tests {
         // Insert second + verify
         let second_uuid = "00000000-0000-0000-0000-000000000011";
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::organization::table)
                     .values((
                         schema::organization::uuid.eq(second_uuid),

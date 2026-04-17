@@ -392,7 +392,7 @@ mod tests {
     #[test]
     fn increment_creates_first_version() {
         use bencher_json::project::head::VersionNumber;
-        use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+        use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
@@ -406,7 +406,7 @@ mod tests {
         );
 
         let version_id = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 super::InsertVersion::increment(conn, base.project_id, branch.head_id, None)
             })
             .expect("Failed to increment version");
@@ -432,7 +432,7 @@ mod tests {
     #[test]
     fn increment_increments_version_number() {
         use bencher_json::project::head::VersionNumber;
-        use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+        use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
@@ -446,14 +446,14 @@ mod tests {
         );
 
         // First increment — version number should be 0
-        conn.transaction(|conn| {
+        conn.immediate_transaction(|conn| {
             super::InsertVersion::increment(conn, base.project_id, branch.head_id, None)
         })
         .expect("Failed to increment first version");
 
         // Second increment — version number should be 1
         let version_id = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 super::InsertVersion::increment(conn, base.project_id, branch.head_id, None)
             })
             .expect("Failed to increment second version");

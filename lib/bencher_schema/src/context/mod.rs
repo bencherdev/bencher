@@ -121,6 +121,23 @@ macro_rules! write_conn {
     };
 }
 
+// `BEGIN IMMEDIATE` (not the diesel default `BEGIN` deferred): take the writer lock at
+// transaction start. Deferred begins as a reader and fails the read→write upgrade with
+// `SQLITE_BUSY_SNAPSHOT` (which bypasses `busy_timeout`) when the WAL has advanced since
+// `BEGIN` — e.g. between a Litestream PASSIVE checkpoint and the first `INSERT`.
+// `BEGIN IMMEDIATE` has no read-snapshot to invalidate, so contention waits via `busy_timeout`.
+//
+// Does NOT compose: nested calls fail with "cannot start a transaction within a transaction"
+// (unlike `transaction()`, which auto-savepoints when nested). Helper functions called from
+// inside an outer transaction must keep `transaction()`.
+#[macro_export]
+macro_rules! write_transaction {
+    ($context:expr, |$conn:ident| $body:expr) => {{
+        let mut __guard = $context.database.connection.lock().await;
+        __guard.immediate_transaction(|$conn| $body)
+    }};
+}
+
 impl ApiContext {
     #[cfg(feature = "plus")]
     pub fn biller(&self) -> Result<&Biller, HttpError> {

@@ -8,7 +8,7 @@ use bencher_json::{
     BenchmarkName, BenchmarkNameId, JsonNewMetric, MeasureNameId, Slug,
     project::report::{Adapter, Iteration, JsonReportSettings},
 };
-use diesel::{Connection as _, RunQueryDsl as _};
+use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
 
@@ -27,7 +27,7 @@ use crate::{
         report::report_benchmark::{InsertReportBenchmark, ReportBenchmarkId},
         testbed::TestbedId,
     },
-    schema, write_conn,
+    schema, write_transaction,
 };
 
 pub mod detector;
@@ -164,49 +164,46 @@ impl ReportResults {
         #[cfg(feature = "otel")]
         let write_start = context.clock.now();
 
-        {
-            let conn = write_conn!(context);
-            conn.transaction(|conn| {
-                for prepared in prepared_benchmarks {
-                    // Insert report_benchmark
-                    diesel::insert_into(schema::report_benchmark::table)
-                        .values(&prepared.insert_report_benchmark)
+        write_transaction!(context, |conn| {
+            for prepared in prepared_benchmarks {
+                // Insert report_benchmark
+                diesel::insert_into(schema::report_benchmark::table)
+                    .values(&prepared.insert_report_benchmark)
+                    .execute(conn)?;
+                let report_benchmark_id: ReportBenchmarkId =
+                    diesel::select(last_insert_rowid()).get_result(conn)?;
+
+                // Insert all metrics for this benchmark
+                for prepared_metric in prepared.metrics {
+                    let insert_metric = InsertMetric::from_json(
+                        report_benchmark_id,
+                        prepared_metric.measure_id,
+                        prepared_metric.metric,
+                    );
+                    diesel::insert_into(schema::metric::table)
+                        .values(&insert_metric)
                         .execute(conn)?;
-                    let report_benchmark_id: ReportBenchmarkId =
-                        diesel::select(last_insert_rowid()).get_result(conn)?;
 
-                    // Insert all metrics for this benchmark
-                    for prepared_metric in prepared.metrics {
-                        let insert_metric = InsertMetric::from_json(
-                            report_benchmark_id,
-                            prepared_metric.measure_id,
-                            prepared_metric.metric,
-                        );
-                        diesel::insert_into(schema::metric::table)
-                            .values(&insert_metric)
-                            .execute(conn)?;
-
-                        // If there's a prepared detection, write boundary + optional alert
-                        if let Some(prepared_detection) = prepared_metric.detection {
-                            let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
-                            prepared_detection.write(conn, metric_id)?;
-                        }
+                    // If there's a prepared detection, write boundary + optional alert
+                    if let Some(prepared_detection) = prepared_metric.detection {
+                        let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
+                        prepared_detection.write(conn, metric_id)?;
                     }
                 }
+            }
 
-                // Upsert metric count summary (count computed before acquiring write lock)
-                super::upsert_metric_count(conn, self.report_id, iteration_metric_count)?;
+            // Upsert metric count summary (count computed before acquiring write lock)
+            super::upsert_metric_count(conn, self.report_id, iteration_metric_count)?;
 
-                diesel::QueryResult::Ok(())
-            })
-            .map_err(|e| {
-                issue_error(
-                    "Failed to write report results",
-                    "Failed to write report results in batch transaction:",
-                    e,
-                )
-            })?;
-        }
+            diesel::QueryResult::Ok(())
+        })
+        .map_err(|e| {
+            issue_error(
+                "Failed to write report results",
+                "Failed to write report results in batch transaction:",
+                e,
+            )
+        })?;
 
         #[cfg(feature = "otel")]
         {

@@ -2,7 +2,7 @@ use bencher_json::{
     BenchmarkName, BenchmarkNameId, BenchmarkSlug, BenchmarkUuid, DateTime, JsonBenchmark, NameId,
     project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark},
 };
-use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
@@ -18,7 +18,7 @@ use crate::{
         sql::last_insert_rowid,
     },
     schema::{self, benchmark as benchmark_table},
-    write_conn,
+    write_conn, write_transaction,
 };
 
 crate::macros::typed_id::typed_id!(BenchmarkId);
@@ -121,8 +121,7 @@ impl QueryBenchmark {
         let insert_benchmark =
             InsertBenchmark::from_json(auth_conn!(context), project_id, json_benchmark);
 
-        let conn = write_conn!(context);
-        conn.transaction(|conn| {
+        write_transaction!(context, |conn| {
             diesel::insert_into(schema::benchmark::table)
                 .values(&insert_benchmark)
                 .execute(conn)?;
@@ -259,7 +258,7 @@ impl UpdateBenchmark {
 
 #[cfg(test)]
 mod tests {
-    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use bencher_json::DateTime;
 
@@ -277,7 +276,7 @@ mod tests {
         let uuid = "00000000-0000-0000-0000-000000000010";
 
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::benchmark::table)
                     .values((
                         schema::benchmark::uuid.eq(uuid),
@@ -323,7 +322,7 @@ mod tests {
         // Insert second + verify
         let second_uuid = "00000000-0000-0000-0000-000000000011";
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::benchmark::table)
                     .values((
                         schema::benchmark::uuid.eq(second_uuid),
@@ -363,7 +362,7 @@ mod tests {
 
         // Insert and read back within same transaction
         let (inserted_id, readback_name) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::benchmark::table)
                     .values((
                         schema::benchmark::uuid.eq(uuid),

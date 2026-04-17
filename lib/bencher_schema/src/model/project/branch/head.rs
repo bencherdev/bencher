@@ -3,8 +3,8 @@ use bencher_json::{
     project::head::{JsonVersion, VersionNumber},
 };
 use diesel::{
-    Connection as _, ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _,
-    QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableHelper as _,
 };
 
 use dropshot::HttpError;
@@ -26,7 +26,7 @@ use crate::{
         threshold::{InsertThreshold, alert::QueryAlert},
     },
     schema::{self, head as head_table},
-    write_conn,
+    write_conn, write_transaction,
 };
 
 crate::macros::typed_id::typed_id!(HeadId);
@@ -276,44 +276,39 @@ impl InsertHead {
         let old_head_id = query_branch.head_id;
 
         // Phase 2: Batch all writes in a single transaction
-        let (new_head_id, silenced_alerts) = {
-            let conn = write_conn!(context);
-            conn.transaction(|conn| {
-                // Insert the new head
-                diesel::insert_into(schema::head::table)
-                    .values(&insert_head)
-                    .execute(conn)?;
-                let new_head_id: HeadId = diesel::select(last_insert_rowid()).get_result(conn)?;
+        let (new_head_id, silenced_alerts) = write_transaction!(context, |conn| {
+            // Insert the new head
+            diesel::insert_into(schema::head::table)
+                .values(&insert_head)
+                .execute(conn)?;
+            let new_head_id: HeadId = diesel::select(last_insert_rowid()).get_result(conn)?;
 
-                // Update the branch to point to the new head
-                diesel::update(
-                    schema::branch::table.filter(schema::branch::id.eq(query_branch.id)),
-                )
+            // Update the branch to point to the new head
+            diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
                 .set(schema::branch::head_id.eq(new_head_id))
                 .execute(conn)?;
 
-                // If there is an old head, mark it as replaced and silence its alerts
-                let silenced_alerts = if let Some(old_head_id) = old_head_id {
-                    let update_head = UpdateHead::replace();
-                    diesel::update(schema::head::table.filter(schema::head::id.eq(old_head_id)))
-                        .set(&update_head)
-                        .execute(conn)?;
+            // If there is an old head, mark it as replaced and silence its alerts
+            let silenced_alerts = if let Some(old_head_id) = old_head_id {
+                let update_head = UpdateHead::replace();
+                diesel::update(schema::head::table.filter(schema::head::id.eq(old_head_id)))
+                    .set(&update_head)
+                    .execute(conn)?;
 
-                    QueryAlert::silence_all(conn, old_head_id)?
-                } else {
-                    0
-                };
+                QueryAlert::silence_all(conn, old_head_id)?
+            } else {
+                0
+            };
 
-                diesel::QueryResult::Ok((new_head_id, silenced_alerts))
-            })
-            .map_err(|e| {
-                issue_error(
-                    "Failed to create head for branch",
-                    "Failed to create head for branch in batch transaction:",
-                    e,
-                )
-            })?
-        };
+            diesel::QueryResult::Ok((new_head_id, silenced_alerts))
+        })
+        .map_err(|e| {
+            issue_error(
+                "Failed to create head for branch",
+                "Failed to create head for branch in batch transaction:",
+                e,
+            )
+        })?;
         slog::debug!(
             log,
             "Created head {new_head_id:?} for branch: {insert_head:?} (silenced {silenced_alerts} alerts)"
@@ -1105,8 +1100,6 @@ mod tests {
     /// Test that inserting a head and updating branch `head_id` works in a single transaction.
     #[test]
     fn for_branch_inserts_head_and_updates_branch() {
-        use diesel::Connection as _;
-
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
 
@@ -1122,7 +1115,7 @@ mod tests {
 
         // Run the transaction: insert new head + update branch
         let new_head_id = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 use super::InsertHead;
                 use crate::macros::sql::last_insert_rowid;
 
@@ -1152,8 +1145,6 @@ mod tests {
     /// Test that old head gets marked as replaced in a transaction.
     #[test]
     fn for_branch_replaces_old_head() {
-        use diesel::Connection as _;
-
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
 
@@ -1170,7 +1161,7 @@ mod tests {
         assert!(get_head_replaced(&mut conn, branch.head_id).is_none());
 
         // Run transaction: insert new head, update branch, mark old head replaced
-        conn.transaction(|conn| {
+        conn.immediate_transaction(|conn| {
             use super::{InsertHead, UpdateHead};
             use crate::macros::sql::last_insert_rowid;
 
@@ -1203,8 +1194,6 @@ mod tests {
     #[test]
     #[expect(clippy::too_many_lines)]
     fn for_branch_silences_old_head_alerts() {
-        use diesel::Connection as _;
-
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
 
@@ -1305,7 +1294,7 @@ mod tests {
         );
 
         // Run transaction: silence alerts for old head
-        conn.transaction(|conn| {
+        conn.immediate_transaction(|conn| {
             use super::super::super::threshold::alert::{AlertId, UpdateAlert};
 
             let alerts = schema::alert::table
@@ -1339,8 +1328,6 @@ mod tests {
     /// Test that transaction works correctly when branch has no old head.
     #[test]
     fn for_branch_no_old_head_skips_replace() {
-        use diesel::Connection as _;
-
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
 
@@ -1369,7 +1356,7 @@ mod tests {
 
         // Run transaction: insert new head, update branch, no old head to replace
         let new_head_id = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 use super::InsertHead;
                 use crate::macros::sql::last_insert_rowid;
 

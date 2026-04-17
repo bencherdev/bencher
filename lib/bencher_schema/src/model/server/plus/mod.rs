@@ -335,5 +335,6 @@ fn configure_standalone_connection(
 ) -> diesel::QueryResult<()> {
     conn.batch_execute(&format!("PRAGMA busy_timeout = {busy_timeout}"))?;
     conn.batch_execute("PRAGMA synchronous = NORMAL")?;
+    conn.batch_execute("PRAGMA extended_result_codes = ON")?;
     Ok(())
 }

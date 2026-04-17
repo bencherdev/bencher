@@ -14,11 +14,11 @@ use bencher_schema::{
         spec::{InsertSpec, QuerySpec, SpecId, UpdateSpec},
         user::{admin::AdminUser, auth::BearerToken},
     },
-    schema, write_conn,
+    schema, write_conn, write_transaction,
 };
 use diesel::{
-    BoolExpressionMethods as _, Connection as _, ExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, TextExpressionMethods as _,
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    TextExpressionMethods as _,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
@@ -168,20 +168,17 @@ async fn post_inner(context: &ApiContext, json_spec: JsonNewSpec) -> Result<Json
     let now = context.clock.now();
 
     // Hold write lock + transaction across slug check + clear + insert
-    let uuid = {
-        let conn = write_conn!(context);
-        conn.transaction(|conn| {
-            if is_fallback {
-                QuerySpec::clear_fallback(conn)?;
-            }
-            let insert_spec = InsertSpec::new(conn, &json_spec, now);
-            diesel::insert_into(schema::spec::table)
-                .values(&insert_spec)
-                .execute(conn)?;
-            Ok::<_, diesel::result::Error>(insert_spec.uuid)
-        })
-        .map_err(resource_conflict_err!(Spec, &json_spec))?
-    };
+    let uuid = write_transaction!(context, |conn| {
+        if is_fallback {
+            QuerySpec::clear_fallback(conn)?;
+        }
+        let insert_spec = InsertSpec::new(conn, &json_spec, now);
+        diesel::insert_into(schema::spec::table)
+            .values(&insert_spec)
+            .execute(conn)?;
+        Ok::<_, diesel::result::Error>(insert_spec.uuid)
+    })
+    .map_err(resource_conflict_err!(Spec, &json_spec))?;
 
     let query_spec = QuerySpec::from_uuid(auth_conn!(context), uuid)?;
     Ok(query_spec.into_json())
@@ -263,33 +260,30 @@ async fn patch_inner(
     let update_spec = UpdateSpec::new(json_spec.clone(), now);
 
     // Hold write lock + transaction across clear + update + testbed cleanup
-    {
-        let is_archiving = json_spec.archived == Some(true);
-        let spec_id = query_spec.id;
-        let conn = write_conn!(context);
-        conn.transaction(|conn| {
-            if is_setting_fallback {
-                QuerySpec::clear_fallback(conn)?;
-            }
+    let is_archiving = json_spec.archived == Some(true);
+    let spec_id = query_spec.id;
+    write_transaction!(context, |conn| {
+        if is_setting_fallback {
+            QuerySpec::clear_fallback(conn)?;
+        }
 
-            diesel::update(schema::spec::table.filter(schema::spec::id.eq(spec_id)))
-                .set(&update_spec)
+        diesel::update(schema::spec::table.filter(schema::spec::id.eq(spec_id)))
+            .set(&update_spec)
+            .execute(conn)?;
+
+        // Clear stale testbed spec references when archiving a spec
+        if is_archiving {
+            diesel::update(schema::testbed::table.filter(schema::testbed::spec_id.eq(spec_id)))
+                .set((
+                    schema::testbed::spec_id.eq(None::<SpecId>),
+                    schema::testbed::modified.eq(now),
+                ))
                 .execute(conn)?;
+        }
 
-            // Clear stale testbed spec references when archiving a spec
-            if is_archiving {
-                diesel::update(schema::testbed::table.filter(schema::testbed::spec_id.eq(spec_id)))
-                    .set((
-                        schema::testbed::spec_id.eq(None::<SpecId>),
-                        schema::testbed::modified.eq(now),
-                    ))
-                    .execute(conn)?;
-            }
-
-            Ok::<_, diesel::result::Error>(())
-        })
-        .map_err(resource_conflict_err!(Spec, (&query_spec, &json_spec)))?;
-    }
+        Ok::<_, diesel::result::Error>(())
+    })
+    .map_err(resource_conflict_err!(Spec, (&query_spec, &json_spec)))?;
 
     let spec = QuerySpec::get(auth_conn!(context), query_spec.id)?;
     Ok(spec.into_json())
