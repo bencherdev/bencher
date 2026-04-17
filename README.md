@@ -9,43 +9,100 @@
   Bencher
 </h1>
 
-[Bencher](https://bencher.dev) is a suite of [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking/) tools.
-Have you ever had a performance regression impact your users?
-Bencher could have prevented that from happening.
-Bencher allows you to detect and prevent performance regressions _before_ they merge.
+**Run locally. Run in CI. Same bare metal every time.**
 
-- **Run**: Run your benchmarks locally or in CI using the _exact same_ bare metal runners and your favorite benchmarking tools. The `bencher` CLI orchestrates running your benchmarks on bare metal and stores the results.
-- **Track**: Track the results of your benchmarks over time. Monitor, query, and graph the results using the Bencher web console based on the source branch, testbed, benchmark, and measure.
-- **Catch**: Catch performance regressions locally or in CI using the _exact same_ bare metal hardware. Bencher uses state of the art, customizable analytics to detect performance regressions before they merge.
+[Bencher](https://bencher.dev) is the first continuous benchmarking platform
+to run your existing benchmarks on the _exact same_ bare metal both locally and in CI.
+It tracks results over time and fails the PR when there's a performance regression.
 
-For the same reasons that unit tests are run to prevent feature regressions, benchmarks should be run with Bencher to prevent performance regressions. Performance bugs are bugs!
-
-<br />
-
-Bencher consists of:
-
-- `bencher` CLI
-- Bencher API Server
-- Bencher Console Web UI
-- Bencher Bare Metal `runner`
-
-<br />
-
-Though Bencher is open source, there is also a hosted version available [Bencher Cloud](https://bencher.dev/).
-
-The best place to start is the [Bencher Quickstart](https://bencher.dev/docs/tutorial/quickstart/) tutorial.
-
-<br />
 <p align="center">
-  <a href="https://bencher.dev/docs/tutorial/quickstart/">
+  <a href="https://bencher.dev">
     <img
-      src="https://s3.amazonaws.com/public.bencher.dev/github/continuous-benchmarking.png"
-      alt="Start Continuous Benchmarking"
+      src="https://s3.amazonaws.com/public.bencher.dev/github/regression-chart.svg"
+      alt="Animated chart showing benchmark results with a performance regression spike that triggers an alert, followed by a fix back to baseline"
+      width="800"
     />
   </a>
 </p>
 
+Built for teams where performance matters:
+- Databases
+- Compilers
+- Browsers
+- Runtimes
+- Networking stacks
+- Cryptographic libraries
+- Operating Systems
+
+Most teams start on GitHub Actions runners with a benchmark comparison script.
+That approach breaks down when noisy shared CI runners hide real performance regressions.
+
+- Typical CI runners have **>30% variance**,
+- Bencher Bare Metal runners have **<2% variance**.
+
+When a number moves, it means something.
+
+<p>
+  <a href="https://bencher.dev/auth/signup"><b>Benchmark for free →</b></a>
+  &nbsp;&nbsp;<a href="https://bencher.dev/docs/tutorial/bare-metal/">Bare Metal Quickstart</a>
+</p>
+
+<p>
+  Used by the teams behind
+  <a href="#showcase">Google Sedpack</a>,
+  <a href="#showcase">Microsoft CCF</a>,
+  <a href="#showcase">GitLab Git</a>,
+  <a href="#showcase">Mozilla Neqo</a>,
+  <a href="#showcase">Rustls</a>,
+  <a href="#showcase">Servo</a>,
+  and <a href="#showcase">Diesel</a>.
+</p>
+
 > 🐰 [Use the GitHub Action with your project](#github-actions)
+
+## The Problem
+
+Shipping a performance regression is expensive:
+
+- A database regression on a hot path pages someone at 2am
+- A compiler regression silently makes every downstream build slower
+- A browser engine ships a 10% paint regression and users notice
+- A crypto library that adds a microsecond to a handshake breaks an SLA
+
+Without trustworthy benchmarks in the PR workflow, you find out when users do.
+
+Local benchmarks aren't reproducible. Every check means stopping work to pull the baseline branch and wait on a comparison. Most engineers skip it.
+
+CI runners are shared and noisy. Noisy benchmarks train engineers to ignore alerts. Performance regressions silently ship.
+
+If you can't tell a real regression from noise, the results are worthless.
+So teams stop looking.
+
+## How Bencher Works
+
+1. **Run**: Run your benchmarks locally or in CI using the _exact same_ bare metal runners and your favorite benchmarking tools. The [`bencher` CLI](https://bencher.dev/docs/how-to/install-cli/) orchestrates running your benchmarks on bare metal and stores the results.
+2. **Track**: Track the results of your benchmarks over time. Monitor, query, and graph the results using the Bencher web console based on the source branch, testbed, benchmark, and measure.
+3. **Catch**: Catch performance regressions locally or in CI using the _exact same_ bare metal hardware. Bencher uses state of the art, customizable analytics to detect performance regressions before they merge.
+
+For the same reasons that unit tests are run to prevent feature regressions, benchmarks should be run with Bencher to prevent performance regressions.
+Performance bugs are bugs!
+
+## Example PR Comment
+
+<h2><a href="https://bencher.dev/perf/bencher/reports/36a1eeff-57f5-4b99-b058-8c9c240a9f2c?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher"><img src="https://bencher.dev/favicon.svg" width="24" height="24" alt="🐰" /> Bencher Report</a></h2><table><tr><td>Branch</td><td><a href="https://bencher.dev/perf/bencher/branches/254-merge?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">254/merge</a></td></tr><tr><td>Testbed</td><td><a href="https://bencher.dev/perf/bencher/testbeds/ubuntu-latest?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">ubuntu-latest</a></td></tr></table><blockquote><b>🚨 1 ALERT:</b> Threshold Boundary Limit exceeded!</blockquote><table><thead><tr><th>Benchmark</th><th>Measure<br/>Units</th><th>View</th><th>Benchmark Result<br/>(Result Δ%)</th><th>Upper Boundary<br/>(Limit %)</th></tr></thead><tbody><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/e93b3d71-8499-4fae-bb7c-4e540b775714?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::Json</a></td><td><a href="https://bencher.dev/perf/bencher/measures/latency?utm_medium=referral&utm_source=cli&utm_content=comment&utm_campaign=pr+comments&utm_term=bencher">Latency<br/>microseconds (µs)</a></td><td>📈 <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=e93b3d71-8499-4fae-bb7c-4e540b775714&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">plot</a><br/>🚨 <a href="https://bencher.dev/perf/bencher/alerts/91ee27a7-2aee-41fe-b037-80b786f26cd5?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">alert</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">threshold</a></td><td><b>3.45<br/>(+1.52%)</b></td><td><b>3.36<br/>(102.48%)</b></td></tr></tbody></table><details><summary>Click to view all benchmark results</summary><br/><table><tr><th>Benchmark</th><th><a href="https://bencher.dev/perf/bencher/measures/latency?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Latency</a></th><th>Benchmark Results<br/>microseconds (µs)<br/>(Result Δ%)</th><th>Upper Boundary<br/>microseconds (µs)<br/>(Limit %)</th></tr><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/e93b3d71-8499-4fae-bb7c-4e540b775714?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::Json</a></td><td>📈  <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=e93b3d71-8499-4fae-bb7c-4e540b775714&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">view plot</a><br/>🚨 <a href="https://bencher.dev/perf/bencher/alerts/91ee27a7-2aee-41fe-b037-80b786f26cd5?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view alert</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view threshold</a></td><td><b>3.45<br/>(+1.52%)</b></td><td><b>3.36<br/>(102.48%)</b></td></tr><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/3bfd5887-83ec-4e62-8690-02855a38fbc9?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::Magic (JSON)</a></td><td>📈 <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3bfd5887-83ec-4e62-8690-02855a38fbc9&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">view plot</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view threshold</a></td><td>3.43<br/>(+0.69%)</td><td>3.60<br/>(95.40%)</td></tr><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/3525f177-fc8f-4a92-bd2f-dda7c4e15699?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::Magic (Rust)</a></td><td>📈 <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">view plot</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view threshold</a></td><td>22.10<br/>(-0.83%)</td><td>24.73<br/>(89.33%)</td></tr><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/5655ed2a-3e45-4622-bdbd-39cdd9837af8?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::Rust</a></td><td>📈 <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=5655ed2a-3e45-4622-bdbd-39cdd9837af8&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">view plot</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view threshold</a></td><td>2.31<br/>(-2.76%)</td><td>2.50<br/>(92.21%)</td></tr><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/1db23e93-f909-40aa-bf42-838cc7ae05f5?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::RustBench</a></td><td>📈 <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">view plot</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view threshold</a></td><td>2.30<br/>(-3.11%)</td><td>2.50<br/>(91.87%)</td></tr></table></details><a href="https://bencher.dev/perf/bencher/reports/36a1eeff-57f5-4b99-b058-8c9c240a9f2c?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">🐰 View full continuous benchmarking report in Bencher</a>
+
+## The Bencher Suite
+
+Bencher is a suite of bare metal continuous benchmarking tools:
+
+- [`bencher` CLI](https://bencher.dev/docs/how-to/install-cli/): run benchmarks and publish results
+- Bencher API Server: store, query, and alert on results
+- Bencher Console: web UI for tracking and graphing
+- Bencher Bare Metal [`runner`](https://bencher.dev/docs/tutorial/bare-metal/): dedicated hardware for noise-free benchmarks
+
+The best place to start is the [Bare Metal Quickstart](https://bencher.dev/docs/tutorial/bare-metal/).
+
+For on-prem deployments, check out the [Bencher Self-Hosted Quickstart](https://bencher.dev/docs/tutorial/self-hosted/).
 
 ## Documentation
 
@@ -134,6 +191,8 @@ The best place to start is the [Bencher Quickstart](https://bencher.dev/docs/tut
   - [Hyperfine](https://bencher.dev/docs/explanation/adapters/#_%EF%B8%8F-shell-hyperfine)
 
 👉 For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters/).
+
+Don't see your harness? [Open an issue →](https://github.com/bencherdev/bencher/issues/new?labels=adapter&title=Adapter%20request%3A%20)
 
 ## Showcase
 
@@ -256,6 +315,80 @@ The best place to start is the [Bencher Quickstart](https://bencher.dev/docs/tut
 
 👉 Checkout [all public projects](https://bencher.dev/perf).
 
+## What Engineers Say
+
+<table>
+  <tr>
+    <td>
+      <p>Bencher is like CodeCov for performance metrics.</p>
+      <br />
+      <p align="center">
+        <a href="https://github.com/JonathanWoollett-Light">
+          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/JonathanWoollett-Light.jpg" width="48" height="48" alt="Jonathan Woollett-Light" />
+        </a>
+        <br />
+        Jonathan Woollett-Light
+        <br />
+        <a href="https://github.com/JonathanWoollett-Light">
+          @JonathanWoollett-Light
+        </a>
+      </p>
+    </td>
+    <td>
+      <p>I think I'm in heaven. Now that I'm starting to see graphs of performance over time automatically from tests I'm running in CI. It's like this whole branch of errors can be caught and noticed sooner.</p>
+      <br />
+      <p align="center">
+        <a href="https://github.com/gpwclark">
+          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/gpwclark.jpg" width="48" height="48" alt="Price Clark" />
+        </a>
+        <br />
+        Price Clark
+        <br />
+        <a href="https://github.com/gpwclark">
+          @gpwclark
+        </a>
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <p>95% of the time I don't want to think about my benchmarks. But when I need to, Bencher ensures that I have the detailed historical record waiting there for me. It's fire-and-forget.</p>
+      <br />
+      <p align="center">
+        <a href="https://github.com/jneem">
+          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/jneem.jpg" width="48" height="48" alt="Joe Neeman" />
+        </a>
+        <br />
+        Joe Neeman
+        <br />
+        <a href="https://github.com/jneem">
+          @jneem
+        </a>
+      </p>
+    </td>
+    <td>
+      <p>I've been looking for a public service like Bencher for about 10 years.</p>
+      <br />
+      <p align="center">
+        <a href="https://github.com/jaqx0r">
+          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/jaqx0r.png" width="48" height="48" alt="Jamie Wilkinson" />
+        </a>
+        <br />
+        Jamie Wilkinson
+        <br />
+        <a href="https://github.com/jaqx0r">
+          @jaqx0r
+        </a>
+      </p>
+    </td>
+  </tr>
+</table>
+
+## Hosting
+
+- **Bencher Self-Hosted**: Deploy Bencher on your own infrastructure. Bare metal, Docker, or Kubernetes. Full control, no data leaving your environment. [Deploy in 60 seconds →](https://bencher.dev/docs/tutorial/self-hosted/)
+- **Bencher Cloud**: Zero infrastructure to manage. On-demand bare metal runners, billed by the minute. Pay for your benchmark runs, not idle servers. [Benchmark for free →](https://bencher.dev/auth/signup)
+
 ## GitHub Actions
 
 Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli),
@@ -313,12 +446,7 @@ bencher run --github-actions "${{ secrets.GITHUB_TOKEN }}" "bencher mock"
 
 👉 For more details see the [explanation of `bencher run`](https://bencher.dev/docs/explanation/bencher-run/#--github-actions/).
 
-### Example PR Comment
-
-<br />
-
-<h2><a href="https://bencher.dev/perf/bencher/reports/36a1eeff-57f5-4b99-b058-8c9c240a9f2c?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher"><img src="https://bencher.dev/favicon.svg" width="24" height="24" alt="🐰" /> Bencher Report</a></h2><table><tr><td>Branch</td><td><a href="https://bencher.dev/perf/bencher/branches/254-merge?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">254/merge</a></td></tr><tr><td>Testbed</td><td><a href="https://bencher.dev/perf/bencher/testbeds/ubuntu-latest?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">ubuntu-latest</a></td></tr></table><blockquote><b>🚨 1 ALERT:</b> Threshold Boundary Limit exceeded!</blockquote><table><thead><tr><th>Benchmark</th><th>Measure<br/>Units</th><th>View</th><th>Benchmark Result<br/>(Result Δ%)</th><th>Upper Boundary<br/>(Limit %)</th></tr></thead><tbody><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/e93b3d71-8499-4fae-bb7c-4e540b775714?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::Json</a></td><td><a href="http://localhost:3000/perf/the-computer/measures/latency?utm_medium=referral&utm_source=cli&utm_content=comment&utm_campaign=pr+comments&utm_term=the-computer">Latency<br/>microseconds (µs)</a></td><td>📈 <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=e93b3d71-8499-4fae-bb7c-4e540b775714&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">plot</a><br/>🚨 <a href="https://bencher.dev/perf/bencher/alerts/91ee27a7-2aee-41fe-b037-80b786f26cd5?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">alert</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">threshold</a></td><td><b>3.45<br/>(+1.52%)</b></td><td><b>3.36<br/>(102.48%)</b></td></tr></tbody></table><details><summary>Click to view all benchmark results</summary><br/><table><tr><th>Benchmark</th><th><a href="https://bencher.dev/perf/bencher/measures/latency?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Latency</a></th><th>Benchmark Results<br/>microseconds (µs)<br/>(Result Δ%)</th><th>Upper Boundary<br/>microseconds (µs)<br/>(Limit %)</th></tr><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/e93b3d71-8499-4fae-bb7c-4e540b775714?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::Json</a></td><td>📈  <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=e93b3d71-8499-4fae-bb7c-4e540b775714&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">view plot</a><br/>🚨 <a href="https://bencher.dev/perf/bencher/alerts/91ee27a7-2aee-41fe-b037-80b786f26cd5?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view alert</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view threshold</a></td><td><b>3.45<br/>(+1.52%)</b></td><td><b>3.36<br/>(102.48%)</b></td></tr><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/3bfd5887-83ec-4e62-8690-02855a38fbc9?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::Magic (JSON)</a></td><td>📈 <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3bfd5887-83ec-4e62-8690-02855a38fbc9&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">view plot</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view threshold</a></td><td>3.43<br/>(+0.69%)</td><td>3.60<br/>(95.40%)</td></tr><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/3525f177-fc8f-4a92-bd2f-dda7c4e15699?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::Magic (Rust)</a></td><td>📈 <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">view plot</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view threshold</a></td><td>22.10<br/>(-0.83%)</td><td>24.73<br/>(89.33%)</td></tr><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/5655ed2a-3e45-4622-bdbd-39cdd9837af8?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::Rust</a></td><td>📈 <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=5655ed2a-3e45-4622-bdbd-39cdd9837af8&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">view plot</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view threshold</a></td><td>2.31<br/>(-2.76%)</td><td>2.50<br/>(92.21%)</td></tr><tr><td><a href="https://bencher.dev/perf/bencher/benchmarks/1db23e93-f909-40aa-bf42-838cc7ae05f5?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">Adapter::RustBench</a></td><td>📈 <a href="https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1699143413000&end_time=1701735487000&upper_boundary=true">view plot</a><br/>🚷 <a href="https://bencher.dev/perf/bencher/thresholds/f6ade42d-ef45-4533-b6fe-588c1f3e9405?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">view threshold</a></td><td>2.30<br/>(-3.11%)</td><td>2.50<br/>(91.87%)</td></tr></table></details><a href="https://bencher.dev/perf/bencher/reports/36a1eeff-57f5-4b99-b058-8c9c240a9f2c?utm_medium=referral&utm_source=github&utm_content=readme&utm_campaign=readme&utm_term=bencher">🐰 View full continuous benchmarking report in Bencher</a><div id="bencher.dev/projects/the-computer/id/master/base/magic"></div>
-
+👉 See the [example PR comment above](#example-pr-comment).
 
 ### Specify CLI Version
 
@@ -333,107 +461,6 @@ Otherwise, it will default to using the latest CLI version.
 
 Specify an exact version if using [Bencher _Self-Hosted_](https://bencher.dev/docs/explanation/bencher-self-hosted/).
 Do **not** specify an exact version if using Bencher _Cloud_ as there are still occasional breaking changes.
-
-## These Devs Get It
-
-<table>
-  <tr>
-    <td>
-      <p>Bencher is like CodeCov for performance metrics.</p>
-      <br />
-      <p align="center">
-        <a href="https://github.com/JonathanWoollett-Light">
-          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/JonathanWoollett-Light.jpg" width="48" height="48" alt="Jonathan Woollett-Light" />
-        </a>
-        <br />
-        Jonathan Woollett-Light
-        <br />
-        <a href="https://github.com/JonathanWoollett-Light">
-          @JonathanWoollett-Light
-        </a>
-      </p>
-    </td>
-    <td>
-      <p>I think I'm in heaven. Now that I'm starting to see graphs of performance over time automatically from tests I'm running in CI. It's like this whole branch of errors can be caught and noticed sooner.</p>
-      <br />
-      <p align="center">
-        <a href="https://github.com/gpwclark">
-          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/gpwclark.jpg" width="48" height="48" alt="Price Clark" />
-        </a>
-        <br />
-        Price Clark
-        <br />
-        <a href="https://github.com/gpwclark">
-          @gpwclark
-        </a>
-      </p>
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <p>95% of the time I don't want to think about my benchmarks. But when I need to, Bencher ensures that I have the detailed historical record waiting there for me. It's fire-and-forget.</p>
-      <br />
-      <p align="center">
-        <a href="https://github.com/jneem">
-          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/jneem.jpg" width="48" height="48" alt="Joe Neeman" />
-        </a>
-        <br />
-        Joe Neeman
-        <br />
-        <a href="https://github.com/jneem">
-          @jneem
-        </a>
-      </p>
-    </td>
-    <td>
-      <p>I've been looking for a public service like Bencher for about 10 years :)</p>
-      <br />
-      <p align="center">
-        <a href="https://github.com/jaqx0r">
-          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/jaqx0r.png" width="48" height="48" alt="Jamie Wilkinson" />
-        </a>
-        <br />
-        Jamie Wilkinson
-        <br />
-        <a href="https://github.com/jaqx0r">
-          @jaqx0r
-        </a>
-      </p>
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <p>I'm happy with how quickly I was able to get Bencher configured and working.</p>
-      <br />
-      <p align="center">
-        <a href="https://github.com/westonpace">
-          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/westonpace.jpg" width="48" height="48" alt="Weston Pace" />
-        </a>
-        <br />
-        Weston Pace
-        <br />
-        <a href="https://github.com/westonpace">
-          @westonpace
-        </a>
-      </p>
-    </td>
-    <td>
-      <p>Bencher's main ideas and concepts are really well designed.</p>
-      <br />
-      <p align="center">
-        <a href="https://github.com/freeekanayaka">
-          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/freeekanayaka.jpg" width="48" height="48" alt="Free Ekanayaka" />
-        </a>
-        <br />
-        Free Ekanayaka
-        <br />
-        <a href="https://github.com/freeekanayaka">
-          @freeekanayaka
-        </a>
-      </p>
-    </td>
-  </tr>
-</table>
 
 ## Contributing
 
