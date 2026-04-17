@@ -4,6 +4,8 @@ Disallow: /console/
 Disallow: /chat$
 Disallow: /demo$
 Disallow: /repo$
+Allow: /perf/*/plots$
+Allow: /perf/*/plots/
 Disallow: /perf/*/*
 Disallow: /pagefind/
 

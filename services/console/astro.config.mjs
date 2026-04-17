@@ -99,10 +99,26 @@ export default defineConfig({
 		"/[lang]/docs/tutorial/quick-start": "/[lang]/docs/tutorial/quickstart",
 		"/docs/how-to/branch-selection": "/docs/explanation/branches",
 		"/docs/explanation/branch-selection": "/docs/explanation/branches",
-		"/[lang]/docs/explanation/branch-selection":
-			"/[lang]/docs/explanation/branches",
+		// `[lang]` wildcard in redirect destinations does not resolve when the
+		// destination is served by a dynamic `[slug]` route in Astro's Netlify
+		// adapter, so enumerate locales explicitly for these renames.
+		"/de/docs/explanation/branch-selection": "/de/docs/explanation/branches",
+		"/es/docs/explanation/branch-selection": "/es/docs/explanation/branches",
+		"/fr/docs/explanation/branch-selection": "/fr/docs/explanation/branches",
+		"/ja/docs/explanation/branch-selection": "/ja/docs/explanation/branches",
+		"/ko/docs/explanation/branch-selection": "/ko/docs/explanation/branches",
+		"/pt/docs/explanation/branch-selection": "/pt/docs/explanation/branches",
+		"/ru/docs/explanation/branch-selection": "/ru/docs/explanation/branches",
+		"/zh/docs/explanation/branch-selection": "/zh/docs/explanation/branches",
 		"/docs/tutorial/docker": "/docs/tutorial/self-hosted",
-		"/[lang]/docs/tutorial/docker": "/[lang]/docs/tutorial/self-hosted",
+		"/de/docs/tutorial/docker": "/de/docs/tutorial/self-hosted",
+		"/es/docs/tutorial/docker": "/es/docs/tutorial/self-hosted",
+		"/fr/docs/tutorial/docker": "/fr/docs/tutorial/self-hosted",
+		"/ja/docs/tutorial/docker": "/ja/docs/tutorial/self-hosted",
+		"/ko/docs/tutorial/docker": "/ko/docs/tutorial/self-hosted",
+		"/pt/docs/tutorial/docker": "/pt/docs/tutorial/self-hosted",
+		"/ru/docs/tutorial/docker": "/ru/docs/tutorial/self-hosted",
+		"/zh/docs/tutorial/docker": "/zh/docs/tutorial/self-hosted",
 		// Docs
 		"/docs/[lang]": "/[lang]/docs",
 		// Tutorial
