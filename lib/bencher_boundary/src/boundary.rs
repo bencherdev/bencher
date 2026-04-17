@@ -92,7 +92,7 @@ impl MetricsBoundary {
                 data,
                 #[expect(clippy::cast_precision_loss)]
                 NormalTestKind::T {
-                    freedom: (data.len() - 1) as f64,
+                    sample_size: data.len() as f64,
                 },
                 lower_boundary,
                 upper_boundary,
