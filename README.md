@@ -9,9 +9,20 @@
   Bencher
 </h1>
 
-**Continuous benchmarking on bare metal**
+**Run locally. Run in CI. Same bare metal every time.**
 
-[Bencher](https://bencher.dev) catches performance regressions before they merge.
+[Bencher](https://bencher.dev) is the first continuous benchmarking platform
+to run your existing benchmarks on the _exact same_ bare metal both locally and in CI.
+It tracks results over time and fails the PR when there's a performance regression.
+
+Built for teams where performance matters:
+- Databases
+- Compilers
+- Browsers
+- Runtimes
+- Networking stacks
+- Cryptographic libraries
+- Operating Systems
 
 <p align="center">
   <a href="https://bencher.dev">
@@ -23,23 +34,40 @@
   </a>
 </p>
 
-Typical CI runners have **>30% variance**. Bencher Bare Metal runners have **<2%**. When a number moves, it means something.
+Most teams start on GitHub Actions runners with a benchmark comparison script.
+That approach breaks down when noisy shared CI runners hide real performance regressions.
+
+- Typical CI runners have **>30% variance**,
+- Bencher Bare Metal runners have **<2% variance**.
+
+When a number moves, it means something.
 
 <p>
   <a href="https://bencher.dev/auth/signup"><b>Benchmark for free →</b></a>
-  <a href="https://bencher.dev/docs/tutorial/bare-metal/">Bare Metal Quickstart</a>
+  &nbsp;&nbsp;<a href="https://bencher.dev/docs/tutorial/bare-metal/">Bare Metal Quickstart</a>
 </p>
 
 <p>
-  Trusted by engineers at
-  <a href="#showcase">Google</a>,
-  <a href="#showcase">Microsoft</a>,
-  <a href="#showcase">GitLab</a>,
-  <a href="#showcase">Mozilla</a>,
-  and <a href="#showcase">The Linux Foundation</a>.
+  Used by the teams behind
+  <a href="#showcase">Google Sedpack</a>,
+  <a href="#showcase">Microsoft CCF</a>,
+  <a href="#showcase">GitLab Git</a>,
+  <a href="#showcase">Mozilla Neqo</a>,
+  <a href="#showcase">Rustls</a>,
+  <a href="#showcase">Servo</a>,
+  and <a href="#showcase">Diesel</a>.
 </p>
 
 ## The Problem
+
+Shipping a performance regression is expensive:
+
+- A database regression on a hot path pages someone at 2am
+- A compiler regression silently makes every downstream build slower
+- A browser engine ships a 10% paint regression and users notice
+- A crypto library that adds a microsecond to a handshake breaks an SLA
+
+Without trustworthy benchmarks in the PR workflow, you find out when users do.
 
 Local benchmarks aren't reproducible. Every check means stopping work to pull the baseline branch and wait on a comparison. Most engineers skip it.
 
@@ -65,7 +93,7 @@ No dashboards to remember. No manual runs. Regressions fail the build.
 
 ## The Bencher Suite
 
-Bencher is a suite of bare metal continuous benchmarking tools.
+Bencher is a suite of bare metal continuous benchmarking tools:
 
 - [`bencher` CLI](https://bencher.dev/docs/how-to/install-cli/): run benchmarks and publish results
 - Bencher API Server: store, query, and alert on results
@@ -429,44 +457,12 @@ Do **not** specify an exact version if using Bencher _Cloud_ as there are still 
       </p>
     </td>
   </tr>
-  <tr>
-    <td>
-      <p>I'm happy with how quickly I was able to get Bencher configured and working.</p>
-      <br />
-      <p align="center">
-        <a href="https://github.com/westonpace">
-          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/westonpace.jpg" width="48" height="48" alt="Weston Pace" />
-        </a>
-        <br />
-        Weston Pace
-        <br />
-        <a href="https://github.com/westonpace">
-          @westonpace
-        </a>
-      </p>
-    </td>
-    <td>
-      <p>Bencher's main ideas and concepts are really well designed.</p>
-      <br />
-      <p align="center">
-        <a href="https://github.com/freeekanayaka">
-          <img src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/customers/freeekanayaka.jpg" width="48" height="48" alt="Free Ekanayaka" />
-        </a>
-        <br />
-        Free Ekanayaka
-        <br />
-        <a href="https://github.com/freeekanayaka">
-          @freeekanayaka
-        </a>
-      </p>
-    </td>
-  </tr>
 </table>
 
-## Hosting
+## Your infrastructure, or ours
 
 - **Bencher Self-Hosted**: Deploy Bencher on your own infrastructure. Bare metal, Docker, or Kubernetes. Full control, no data leaving your environment. [Deploy in 60 seconds →](https://bencher.dev/docs/tutorial/self-hosted/)
-- **Bencher Cloud**: Zero infrastructure to manage. On-demand bare metal runners, billed by the minute. [Benchmark for free →](https://bencher.dev/auth/signup)
+- **Bencher Cloud**: Zero infrastructure to manage. On-demand bare metal runners, billed by the minute. Pay for your benchmark runs, not idle servers. [Benchmark for free →](https://bencher.dev/auth/signup)
 
 ## Contributing
 
