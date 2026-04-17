@@ -3,8 +3,7 @@ use bencher_json::{
     project::branch::{JsonUpdateBranch, JsonUpdateStartPoint},
 };
 use diesel::{
-    Connection as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
+    ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::HttpError;
 use slog::Logger;
@@ -26,7 +25,7 @@ use crate::{
         sql::last_insert_rowid,
     },
     schema::{self, branch as branch_table},
-    write_conn,
+    write_conn, write_transaction,
 };
 
 pub mod head;
@@ -384,17 +383,14 @@ impl InsertBranch {
 
         // Create branch
         let insert_branch = Self::from_json_inner(auth_conn!(context), project_id, name, slug);
-        let query_branch = {
-            let conn = write_conn!(context);
-            conn.transaction(|conn| {
-                diesel::insert_into(schema::branch::table)
-                    .values(&insert_branch)
-                    .execute(conn)?;
-                diesel::select(last_insert_rowid()).get_result(conn)
-            })
-            .map_err(resource_conflict_err!(Branch, &insert_branch))
-            .map(|id| insert_branch.into_query(id))?
-        };
+        let query_branch = write_transaction!(context, |conn| {
+            diesel::insert_into(schema::branch::table)
+                .values(&insert_branch)
+                .execute(conn)?;
+            diesel::select(last_insert_rowid()).get_result(conn)
+        })
+        .map_err(resource_conflict_err!(Branch, &insert_branch))
+        .map(|id| insert_branch.into_query(id))?;
         slog::debug!(log, "Created branch {query_branch:?}");
 
         // Get the branch head version for the start point
@@ -516,7 +512,7 @@ impl UpdateBranch {
 
 #[cfg(test)]
 mod tests {
-    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use bencher_json::DateTime;
 
@@ -534,7 +530,7 @@ mod tests {
         let uuid = "00000000-0000-0000-0000-000000000010";
 
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::branch::table)
                     .values((
                         schema::branch::uuid.eq(uuid),
@@ -580,7 +576,7 @@ mod tests {
         // Insert second + verify
         let second_uuid = "00000000-0000-0000-0000-000000000011";
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::branch::table)
                     .values((
                         schema::branch::uuid.eq(second_uuid),

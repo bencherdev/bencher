@@ -8,9 +8,8 @@ use bencher_json::{
     },
 };
 use diesel::{
-    BelongingToDsl as _, Connection as _, ExpressionMethods as _, JoinOnDsl as _,
-    NullableExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
+    BelongingToDsl as _, ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _,
+    OptionalExtension as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::HttpError;
 use model::UpdateModel;
@@ -35,7 +34,7 @@ use crate::{
         sql::last_insert_rowid,
     },
     schema::{self, threshold as threshold_table},
-    write_conn,
+    write_transaction,
 };
 
 pub mod alert;
@@ -133,15 +132,13 @@ impl QueryThreshold {
             ThresholdModelAction::NoChange => Ok(()),
             ThresholdModelAction::Update(model) => self.update_from_model(context, model).await,
             ThresholdModelAction::Remove => {
-                let conn = write_conn!(context);
-                conn.transaction(|conn| self.remove_current_model(conn))
-                    .map_err(|e| {
-                        crate::error::issue_error(
-                            "Failed to remove threshold model",
-                            "Failed to remove threshold model:",
-                            e,
-                        )
-                    })
+                write_transaction!(context, |conn| self.remove_current_model(conn)).map_err(|e| {
+                    crate::error::issue_error(
+                        "Failed to remove threshold model",
+                        "Failed to remove threshold model:",
+                        e,
+                    )
+                })
             },
         }
     }
@@ -149,15 +146,13 @@ impl QueryThreshold {
     async fn update_from_model(&self, context: &ApiContext, model: Model) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]
         InsertModel::rate_limit(context, self).await?;
-        let conn = write_conn!(context);
-        conn.transaction(|conn| self.update_from_model_inner(conn, model))
-            .map_err(|e| {
-                crate::error::issue_error(
-                    "Failed to update threshold model",
-                    "Failed to update threshold model:",
-                    e,
-                )
-            })
+        write_transaction!(context, |conn| self.update_from_model_inner(conn, model)).map_err(|e| {
+            crate::error::issue_error(
+                "Failed to update threshold model",
+                "Failed to update threshold model:",
+                e,
+            )
+        })
     }
 
     fn update_from_model_inner(
@@ -396,8 +391,7 @@ impl InsertThreshold {
 
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
-        let conn = write_conn!(context);
-        conn.transaction(|conn| {
+        write_transaction!(context, |conn| {
             Self::from_model_inner(conn, project_id, branch_id, testbed_id, measure_id, model)
         })
         .map_err(|e| {
@@ -441,58 +435,6 @@ impl InsertThreshold {
         Ok(threshold_id)
     }
 
-    pub fn lower_boundary(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        branch_id: BranchId,
-        testbed_id: TestbedId,
-        measure_id: MeasureId,
-    ) -> Result<ThresholdId, HttpError> {
-        conn.transaction(|conn| {
-            Self::from_model_inner(
-                conn,
-                project_id,
-                branch_id,
-                testbed_id,
-                measure_id,
-                Model::lower_boundary(),
-            )
-        })
-        .map_err(|e| {
-            crate::error::issue_error(
-                "Failed to create lower boundary threshold",
-                "Failed to create lower boundary threshold:",
-                e,
-            )
-        })
-    }
-
-    pub fn upper_boundary(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        branch_id: BranchId,
-        testbed_id: TestbedId,
-        measure_id: MeasureId,
-    ) -> Result<ThresholdId, HttpError> {
-        conn.transaction(|conn| {
-            Self::from_model_inner(
-                conn,
-                project_id,
-                branch_id,
-                testbed_id,
-                measure_id,
-                Model::upper_boundary(),
-            )
-        })
-        .map_err(|e| {
-            crate::error::issue_error(
-                "Failed to create upper boundary threshold",
-                "Failed to create upper boundary threshold:",
-                e,
-            )
-        })
-    }
-
     pub async fn from_start_point(
         log: &Logger,
         context: &ApiContext,
@@ -528,8 +470,7 @@ impl InsertThreshold {
         if has_writes {
             let project_id = query_branch.project_id;
             let branch_id = query_branch.id;
-            let conn = write_conn!(context);
-            conn.transaction(|conn| {
+            write_transaction!(context, |conn| {
                 for action in actions {
                     match action {
                         StartPointAction::Create(testbed_id, measure_id, model) => {
@@ -754,8 +695,7 @@ impl InsertThreshold {
             .any(|a| !matches!(a, ThresholdAction::NoChange))
             || !orphans.is_empty();
         if has_writes {
-            let conn = write_conn!(context);
-            conn.transaction(|conn| {
+            write_transaction!(context, |conn| {
                 for action in actions {
                     match action {
                         ThresholdAction::Create(measure_id, model) => {

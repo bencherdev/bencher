@@ -5,7 +5,7 @@ use bencher_json::{
 };
 #[cfg(feature = "plus")]
 use bencher_json::{JsonSpec, SpecResourceId, project::testbed::JsonTestbedPatchNull};
-use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
@@ -26,7 +26,7 @@ use crate::{
         sql::last_insert_rowid,
     },
     schema::{self, testbed as testbed_table},
-    write_conn,
+    write_conn, write_transaction,
 };
 
 crate::macros::typed_id::typed_id!(TestbedId);
@@ -308,8 +308,7 @@ impl QueryTestbed {
             context.clock.now(),
         )?;
 
-        let conn = write_conn!(context);
-        conn.transaction(|conn| {
+        write_transaction!(context, |conn| {
             diesel::insert_into(schema::testbed::table)
                 .values(&insert_testbed)
                 .execute(conn)?;
@@ -986,8 +985,6 @@ mod tests {
 
     #[test]
     fn last_insert_rowid_returns_testbed_id() {
-        use diesel::Connection as _;
-
         use super::TestbedId;
         use crate::macros::sql::last_insert_rowid;
 
@@ -996,7 +993,7 @@ mod tests {
         let uuid = "00000000-0000-0000-0000-000000000020";
 
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::testbed::table)
                     .values((
                         schema::testbed::uuid.eq(uuid),
@@ -1023,8 +1020,6 @@ mod tests {
 
     #[test]
     fn last_insert_rowid_matches_second_testbed() {
-        use diesel::Connection as _;
-
         use super::TestbedId;
         use crate::macros::sql::last_insert_rowid;
 
@@ -1047,7 +1042,7 @@ mod tests {
         // Insert second + verify
         let second_uuid = "00000000-0000-0000-0000-000000000021";
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::testbed::table)
                     .values((
                         schema::testbed::uuid.eq(second_uuid),

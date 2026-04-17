@@ -216,6 +216,11 @@ async fn into_context(
     database_connection
         .batch_execute("PRAGMA synchronous = NORMAL")
         .map_err(ConfigTxError::Pragma)?;
+    // Surfaces `SQLITE_BUSY_SNAPSHOT` (517) etc. distinctly from plain `SQLITE_BUSY` (5)
+    // in error messages, instead of both rendering as "database is locked".
+    database_connection
+        .batch_execute("PRAGMA extended_result_codes = ON")
+        .map_err(ConfigTxError::Pragma)?;
 
     #[cfg(feature = "plus")]
     if plus
@@ -427,6 +432,8 @@ impl diesel::r2d2::CustomizeConnection<DbConnection, diesel::r2d2::Error>
         conn.batch_execute(&format!("PRAGMA busy_timeout = {}", self.busy_timeout))
             .map_err(diesel::r2d2::Error::QueryError)?;
         conn.batch_execute("PRAGMA synchronous = NORMAL")
+            .map_err(diesel::r2d2::Error::QueryError)?;
+        conn.batch_execute("PRAGMA extended_result_codes = ON")
             .map_err(diesel::r2d2::Error::QueryError)?;
         Ok(())
     }

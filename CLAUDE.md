@@ -138,6 +138,7 @@ The clippy script will install the target automatically and warn if no cross-com
   - `write_conn!()` - For single writer access
 - Use `diesel::QueryResult<T>` instead of `Result<T, diesel::result::Error>` — it is a type alias and more idiomatic
 - Database write methods that may be called both standalone and from within an outer transaction should NOT wrap in `conn.transaction()` internally. Instead, the standalone callers should wrap the call in a transaction. This avoids unnecessary SQLite savepoints when the method is called from batch operations.
+- Use the `write_transaction!()` macro (or `conn.immediate_transaction(...)` on an existing writer `&mut DbConnection`) for any transaction that writes — never `conn.transaction(...)`.
 
 ## Scripts Policy
 

@@ -3,9 +3,7 @@ use bencher_json::{
     project::plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis},
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
-use diesel::{
-    BelongingToDsl as _, Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-};
+use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use super::{
@@ -110,7 +108,7 @@ impl QueryPlot {
         // If the rank cannot be calculated, then we need to redistribute the ranks.
         // Wrap the redistribution in a transaction for atomicity.
         let now = DateTime::now();
-        conn.transaction(|conn| {
+        conn.immediate_transaction(|conn| {
             let plot_ranker = RankGenerator::new(plots.len());
             for (plot, rank) in plots.iter().zip(plot_ranker) {
                 let update_plot = UpdatePlot {
@@ -158,7 +156,7 @@ impl QueryPlot {
         // Wrap the redistribution in a transaction for atomicity.
         let all_plots = QueryPlot::all_for_project(conn, query_project)?;
         let now = DateTime::now();
-        conn.transaction(|conn| {
+        conn.immediate_transaction(|conn| {
             let plot_ranker = RankGenerator::new(all_plots.len());
             for (plot, rank) in all_plots.iter().zip(plot_ranker) {
                 let update_plot = UpdatePlot {
@@ -319,7 +317,7 @@ impl InsertPlot {
             modified: timestamp,
         };
         let plot_id = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(plot_table::table)
                     .values(&insert_plot)
                     .execute(conn)?;
@@ -393,8 +391,6 @@ impl UpdatePlot {
 #[cfg(test)]
 mod tests {
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
-
-    use diesel::Connection as _;
 
     use bencher_json::project::plot::XAxis;
 
@@ -631,7 +627,7 @@ mod tests {
 
         // Insert plot + all components in a single transaction
         let plot_id = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 let timestamp = bencher_json::DateTime::now();
                 let insert_plot = InsertPlot {
                     uuid: bencher_json::PlotUuid::new(),
@@ -736,7 +732,7 @@ mod tests {
         );
 
         // Batch insert branches and measures
-        conn.transaction(|conn| {
+        conn.immediate_transaction(|conn| {
             InsertPlotBranch::from_resolved(conn, plot_id, &[b1.branch_id, b2.branch_id])?;
             InsertPlotMeasure::from_resolved(conn, plot_id, &[m1, m2])?;
             diesel::QueryResult::Ok(())

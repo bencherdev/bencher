@@ -7,8 +7,8 @@ use bencher_json::{
 };
 use bencher_rbac::{Organization, Project, project::Permission};
 use diesel::{
-    BoolExpressionMethods as _, Connection as _, ExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, TextExpressionMethods as _,
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    TextExpressionMethods as _,
 };
 use dropshot::HttpError;
 use project_role::InsertProjectRole;
@@ -34,7 +34,7 @@ use crate::{
     },
     public_conn,
     schema::{self, project as project_table},
-    write_conn,
+    write_conn, write_transaction,
 };
 
 use super::organization::OrganizationId;
@@ -321,28 +321,25 @@ impl QueryProject {
         let timestamp = DateTime::now();
         let user_id = auth_user.id();
 
-        let query_project = {
-            let conn = write_conn!(context);
-            conn.transaction(|conn| {
-                let id = Self::insert(conn, &insert_project)?;
+        let query_project = write_transaction!(context, |conn| {
+            let id = Self::insert(conn, &insert_project)?;
 
-                // Connect the user to the project as a `Maintainer`
-                let insert_proj_role = InsertProjectRole {
-                    user_id,
-                    project_id: id,
-                    role: ProjectRole::Maintainer,
-                    created: timestamp,
-                    modified: timestamp,
-                };
-                diesel::insert_into(schema::project_role::table)
-                    .values(&insert_proj_role)
-                    .execute(conn)?;
+            // Connect the user to the project as a `Maintainer`
+            let insert_proj_role = InsertProjectRole {
+                user_id,
+                project_id: id,
+                role: ProjectRole::Maintainer,
+                created: timestamp,
+                modified: timestamp,
+            };
+            diesel::insert_into(schema::project_role::table)
+                .values(&insert_proj_role)
+                .execute(conn)?;
 
-                diesel::QueryResult::Ok(id)
-            })
-            .map_err(resource_conflict_err!(Project, &insert_project))
-            .map(|id| insert_project.into_query(id))?
-        };
+            diesel::QueryResult::Ok(id)
+        })
+        .map_err(resource_conflict_err!(Project, &insert_project))
+        .map(|id| insert_project.into_query(id))?;
         slog::debug!(log, "Created project: {query_project:?}");
 
         #[cfg(feature = "plus")]
@@ -359,12 +356,9 @@ impl QueryProject {
         context: &ApiContext,
         insert_project: InsertProject,
     ) -> Result<Self, HttpError> {
-        let query_project = {
-            let conn = write_conn!(context);
-            conn.transaction(|conn| Self::insert(conn, &insert_project))
-                .map_err(resource_conflict_err!(Project, &insert_project))
-                .map(|id| insert_project.into_query(id))?
-        };
+        let query_project = write_transaction!(context, |conn| Self::insert(conn, &insert_project))
+            .map_err(resource_conflict_err!(Project, &insert_project))
+            .map(|id| insert_project.into_query(id))?;
         slog::debug!(log, "Created project: {query_project:?}");
 
         #[cfg(feature = "plus")]
@@ -797,7 +791,7 @@ impl From<&QueryProject> for Project {
 
 #[cfg(test)]
 mod tests {
-    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use bencher_json::DateTime;
 
@@ -815,7 +809,7 @@ mod tests {
         let uuid = "00000000-0000-0000-0000-000000000010";
 
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::project::table)
                     .values((
                         schema::project::uuid.eq(uuid),
@@ -863,7 +857,7 @@ mod tests {
         // Insert second + verify
         let second_uuid = "00000000-0000-0000-0000-000000000011";
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::project::table)
                     .values((
                         schema::project::uuid.eq(second_uuid),

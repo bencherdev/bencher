@@ -9,8 +9,8 @@ use bencher_json::{
 };
 use diesel::OptionalExtension as _;
 use diesel::{
-    Connection as _, ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _,
+    ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    SelectableHelper as _,
 };
 
 use dropshot::HttpError;
@@ -43,7 +43,7 @@ use crate::{
     },
     public_conn,
     schema::{self, report as report_table},
-    view, write_conn,
+    view, write_transaction,
 };
 
 /// Encapsulates all context from a run request for report creation.
@@ -268,46 +268,42 @@ impl QueryReport {
 
         // Single transaction wraps version + report + job for true atomicity.
         // If any insert fails, all are rolled back.
-        let insert_report_uuid = {
-            let conn = write_conn!(context);
-            conn.transaction(|conn| {
-                // If the version was already found outside the transaction, use it.
-                // Otherwise, increment a new version inside the transaction.
-                let version_id = if let Some(version_id) = existing_version_id {
-                    version_id
-                } else {
-                    InsertVersion::increment(conn, project_id, head_id, json_report.hash.clone())?
-                };
+        let insert_report_uuid = write_transaction!(context, |conn| {
+            // If the version was already found outside the transaction, use it.
+            // Otherwise, increment a new version inside the transaction.
+            let version_id = if let Some(version_id) = existing_version_id {
+                version_id
+            } else {
+                InsertVersion::increment(conn, project_id, head_id, json_report.hash.clone())?
+            };
 
-                // Create a new report and add it to the database
-                let insert_report = InsertReport::from_json(
-                    idempotency_key,
-                    public_user.user_id(),
-                    project_id,
-                    head_id,
-                    version_id,
-                    testbed_id,
-                    spec_id,
-                    &json_report,
-                    adapter,
-                    now,
-                );
+            // Create a new report and add it to the database
+            let insert_report = InsertReport::from_json(
+                idempotency_key,
+                public_user.user_id(),
+                project_id,
+                head_id,
+                version_id,
+                testbed_id,
+                spec_id,
+                &json_report,
+                adapter,
+                now,
+            );
 
-                diesel::insert_into(schema::report::table)
-                    .values(&insert_report)
-                    .execute(conn)?;
+            diesel::insert_into(schema::report::table)
+                .values(&insert_report)
+                .execute(conn)?;
 
-                #[cfg(feature = "plus")]
-                if let Some(pending_job) = pending_job {
-                    let report_id =
-                        diesel::select(last_insert_rowid()).get_result::<ReportId>(conn)?;
-                    pending_job.insert(conn, report_id, now)?;
-                }
+            #[cfg(feature = "plus")]
+            if let Some(pending_job) = pending_job {
+                let report_id = diesel::select(last_insert_rowid()).get_result::<ReportId>(conn)?;
+                pending_job.insert(conn, report_id, now)?;
+            }
 
-                diesel::QueryResult::Ok(insert_report.uuid)
-            })
-            .map_err(resource_conflict_err!(Report, &json_report))?
-        };
+            diesel::QueryResult::Ok(insert_report.uuid)
+        })
+        .map_err(resource_conflict_err!(Report, &json_report))?;
 
         // Read full report via public_conn (outside write lock)
         let query_report = schema::report::table
@@ -825,7 +821,7 @@ pub fn upsert_metric_count(
 
 #[cfg(test)]
 mod tests {
-    use diesel::{Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use bencher_json::DateTime;
 
@@ -872,7 +868,7 @@ mod tests {
 
         // Insert a report and immediately call last_insert_rowid inside a transaction
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::report::table)
                     .values((
                         schema::report::uuid.eq(report_uuid),
@@ -947,7 +943,7 @@ mod tests {
         // Insert second report and verify last_insert_rowid points to the second one
         let second_uuid = "00000000-0000-0000-0000-000000000051";
         let (rowid, select_id) = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::report::table)
                     .values((
                         schema::report::uuid.eq(second_uuid),
@@ -1015,7 +1011,7 @@ mod tests {
 
         // Insert a report to get a valid ReportId
         let report_id: ReportId = conn
-            .transaction(|conn| {
+            .immediate_transaction(|conn| {
                 diesel::insert_into(schema::report::table)
                     .values((
                         schema::report::uuid.eq("00000000-0000-0000-0000-000000000050"),

@@ -5,8 +5,8 @@ use bencher_json::{
     project::report::JsonReportSettings, runner::JsonIterationOutput, runner::job::JsonNewRunJob,
 };
 use diesel::{
-    BoolExpressionMethods as _, Connection as _, ExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, result::QueryResult,
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    result::QueryResult,
 };
 use dropshot::HttpError;
 use tokio::sync::Mutex;
@@ -29,7 +29,7 @@ use crate::{
         user::public::PublicUser,
     },
     schema::{self, job as job_table},
-    write_conn,
+    write_conn, write_transaction,
 };
 
 crate::macros::typed_id::typed_id!(JobId);
@@ -170,32 +170,28 @@ impl QueryJob {
 
         // Update report times and record job duration atomically
         let report_id = self.report_id;
-        {
-            let conn = write_conn!(context);
-            conn.transaction(|conn| {
-                let updated = diesel::update(
-                    schema::report::table.filter(schema::report::id.eq(report_id)),
-                )
-                .set((
-                    schema::report::start_time.eq(start_time),
-                    schema::report::end_time.eq(end_time),
-                ))
-                .execute(conn)?;
-                if updated == 0 {
-                    return Err(diesel::result::Error::NotFound);
-                }
-                insert_job_duration(conn, report_id, job_duration)
-            })
-            .map_err(|e| {
-                issue_error(
-                    "Failed to update report times and insert job duration",
-                    &format!(
-                        "Failed to update report times / insert job duration for report {report_id}.",
-                    ),
-                    e,
-                )
-            })?;
-        }
+        write_transaction!(context, |conn| {
+            let updated =
+                diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+                    .set((
+                        schema::report::start_time.eq(start_time),
+                        schema::report::end_time.eq(end_time),
+                    ))
+                    .execute(conn)?;
+            if updated == 0 {
+                return Err(diesel::result::Error::NotFound);
+            }
+            insert_job_duration(conn, report_id, job_duration)
+        })
+        .map_err(|e| {
+            issue_error(
+                "Failed to update report times and insert job duration",
+                &format!(
+                    "Failed to update report times / insert job duration for report {report_id}.",
+                ),
+                e,
+            )
+        })?;
 
         #[cfg(feature = "otel")]
         {
@@ -463,7 +459,7 @@ fn insert_job_duration(
 #[cfg(test)]
 mod tests {
     use bencher_json::{DateTime, Entitlements, PlanLevel};
-    use diesel::{Connection as _, QueryDsl as _};
+    use diesel::QueryDsl as _;
     use pretty_assertions::assert_eq;
 
     use super::*;
@@ -634,7 +630,7 @@ mod tests {
         );
         create_head_version(conn, branch.head_id, version_id);
 
-        conn.transaction(|conn| {
+        conn.immediate_transaction(|conn| {
             diesel::insert_into(schema::report::table)
                 .values((
                     schema::report::uuid.eq("00000000-0000-0000-0000-000000000050"),
