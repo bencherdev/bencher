@@ -18,7 +18,7 @@ Either a Lower Boundary, Upper Boundary, or both must be set.
 Where `0.5` represents the mean and `1.0` represents all possible left-side values (-∞).
 It is used when a smaller value would indicate a performance regression.
   - For example, if you used a t-test Test with a Lower Boundary of `0.977`
-and you had `25` historical Metrics with a mean of `100` and a standard deviation of `10`,
+and you had `25` historical Metrics with a mean of `100` and a sample standard deviation of `10`,
 the Lower Boundary Limit would be `78.54` and
 any value less than `78.54` would generate an Alert.
 - #### t-test Upper Boundary
@@ -26,6 +26,6 @@ any value less than `78.54` would generate an Alert.
 Where `0.5` represents the mean and `1.0` represents all possible right-side values (∞).
 It is used when a greater value would indicate a performance regression.
   - For example, if you used a t-test Test with an Upper Boundary of `0.977`
-and you had `25` historical Metrics with a mean of `100` and a standard deviation of `10`,
+and you had `25` historical Metrics with a mean of `100` and a sample standard deviation of `10`,
 the Upper Boundary Limit would be `121.46` and
 any value greater than `121.46` would generate an Alert.

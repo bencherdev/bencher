@@ -18,7 +18,7 @@ Deve-se definir ou um Limite Inferior, um Limite Superior, ou ambos.
 Onde `0.5` representa a média e `1.0` representa todos os possíveis valores do lado esquerdo (-∞).
 É utilizado quando um valor menor indicaria uma regressão de desempenho.
   - Por exemplo, se você usou um Teste t-test com um Limite Inferior de `0.977`
-e tinha `25` Métricas históricas com uma média de `100` e um desvio padrão de `10`,
+e tinha `25` Métricas históricas com uma média de `100` e um desvio padrão amostral de `10`,
 o Limite Inferior seria `78.54` e
 qualquer valor inferior a `78.54` geraria um Alerta.
 - #### Limite Superior do t-test
@@ -26,6 +26,6 @@ qualquer valor inferior a `78.54` geraria um Alerta.
 Onde `0.5` representa a média e `1.0` representa todos os possíveis valores do lado direito (∞).
 É utilizado quando um valor maior indicaria uma regressão de desempenho.
   - Por exemplo, se você usou um Teste t-test com um Limite Superior de `0.977`
-e tinha `25` Métricas históricas com uma média de `100` e um desvio padrão de `10`,
+e tinha `25` Métricas históricas com uma média de `100` e um desvio padrão amostral de `10`,
 o Limite Superior seria `121.46` e
 qualquer valor superior a `121.46` geraria um Alerta.

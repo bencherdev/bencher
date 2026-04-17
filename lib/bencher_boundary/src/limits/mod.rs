@@ -102,7 +102,7 @@ impl MetricsLimits {
                 let students_t = StudentsT::new(mean, scale, freedom).map_err(|error| {
                     BoundaryError::StudentsT {
                         mean,
-                        std_dev: scale,
+                        scale,
                         freedom,
                         error,
                     }
