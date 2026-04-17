@@ -435,58 +435,6 @@ impl InsertThreshold {
         Ok(threshold_id)
     }
 
-    pub fn lower_boundary(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        branch_id: BranchId,
-        testbed_id: TestbedId,
-        measure_id: MeasureId,
-    ) -> Result<ThresholdId, HttpError> {
-        conn.immediate_transaction(|conn| {
-            Self::from_model_inner(
-                conn,
-                project_id,
-                branch_id,
-                testbed_id,
-                measure_id,
-                Model::lower_boundary(),
-            )
-        })
-        .map_err(|e| {
-            crate::error::issue_error(
-                "Failed to create lower boundary threshold",
-                "Failed to create lower boundary threshold:",
-                e,
-            )
-        })
-    }
-
-    pub fn upper_boundary(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        branch_id: BranchId,
-        testbed_id: TestbedId,
-        measure_id: MeasureId,
-    ) -> Result<ThresholdId, HttpError> {
-        conn.immediate_transaction(|conn| {
-            Self::from_model_inner(
-                conn,
-                project_id,
-                branch_id,
-                testbed_id,
-                measure_id,
-                Model::upper_boundary(),
-            )
-        })
-        .map_err(|e| {
-            crate::error::issue_error(
-                "Failed to create upper boundary threshold",
-                "Failed to create upper boundary threshold:",
-                e,
-            )
-        })
-    }
-
     pub async fn from_start_point(
         log: &Logger,
         context: &ApiContext,
