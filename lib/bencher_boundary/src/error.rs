@@ -9,11 +9,11 @@ pub enum BoundaryError {
         error: statrs::distribution::NormalError,
     },
     #[error(
-        "Invalid Student T Distribution (mean: {mean} | scale: {std_dev} | freedom: {freedom}): {error}"
+        "Invalid Student T Distribution (mean: {mean} | scale: {scale} | freedom: {freedom}): {error}"
     )]
     StudentsT {
         mean: f64,
-        std_dev: f64,
+        scale: f64,
         freedom: f64,
         error: statrs::distribution::StudentsTError,
     },

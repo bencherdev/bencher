@@ -41,7 +41,7 @@ fn variance(location: f64, data: &[f64]) -> Option<f64> {
             data.iter()
                 .map(|&value| (value - location).powi(2))
                 .sum::<f64>()
-                / data.len() as f64,
+                / (data.len() - 1) as f64,
         )
         .and_then(|v| v.is_finite().then_some(v))
     }
@@ -165,109 +165,109 @@ mod tests {
     #[test]
     fn variance_two() {
         let v = variance(MEAN_ZERO.mean, DATA_TWO).unwrap();
-        assert_eq!(v, 2.5);
+        assert_eq!(v, 5.0);
 
         let v = variance(MEAN_ONE.mean, DATA_TWO).unwrap();
-        assert_eq!(v, 0.5);
+        assert_eq!(v, 1.0);
 
         let v = variance(MEAN_TWO.mean, DATA_TWO).unwrap();
-        assert_eq!(v, 0.25);
-
-        let v = variance(MEAN_THREE.mean, DATA_TWO).unwrap();
         assert_eq!(v, 0.5);
 
+        let v = variance(MEAN_THREE.mean, DATA_TWO).unwrap();
+        assert_eq!(v, 1.0);
+
         let v = variance(MEAN_FIVE.mean, DATA_TWO).unwrap();
-        assert_eq!(v, 2.5);
+        assert_eq!(v, 5.0);
     }
 
     #[test]
     fn variance_three() {
         let v = variance(MEAN_ZERO.mean, DATA_THREE).unwrap();
-        assert_eq!(v, 4.666666666666667);
+        assert_eq!(v, 7.0);
 
         let v = variance(MEAN_ONE.mean, DATA_THREE).unwrap();
-        assert_eq!(v, 1.6666666666666667);
+        assert_eq!(v, 2.5);
 
         let v = variance(MEAN_TWO.mean, DATA_THREE).unwrap();
-        assert_eq!(v, 0.9166666666666666);
+        assert_eq!(v, 1.375);
 
         let v = variance(MEAN_THREE.mean, DATA_THREE).unwrap();
-        assert_eq!(v, 0.6666666666666666);
+        assert_eq!(v, 1.0);
 
         let v = variance(MEAN_FIVE.mean, DATA_THREE).unwrap();
-        assert_eq!(v, 1.6666666666666667);
+        assert_eq!(v, 2.5);
     }
 
     #[test]
     fn variance_five() {
         let v = variance(MEAN_ZERO.mean, DATA_FIVE).unwrap();
-        assert_eq!(v, 11.0);
+        assert_eq!(v, 13.75);
 
         let v = variance(MEAN_ONE.mean, DATA_FIVE).unwrap();
-        assert_eq!(v, 6.0);
+        assert_eq!(v, 7.5);
 
         let v = variance(MEAN_TWO.mean, DATA_FIVE).unwrap();
-        assert_eq!(v, 4.25);
+        assert_eq!(v, 5.3125);
 
         let v = variance(MEAN_THREE.mean, DATA_FIVE).unwrap();
-        assert_eq!(v, 3.0);
+        assert_eq!(v, 3.75);
 
         let v = variance(MEAN_FIVE.mean, DATA_FIVE).unwrap();
-        assert_eq!(v, 2.0);
+        assert_eq!(v, 2.5);
     }
 
     #[test]
     fn variance_five_desc() {
         let v = variance(MEAN_ZERO.mean, DATA_FIVE_DESC).unwrap();
-        assert_eq!(v, 11.0);
+        assert_eq!(v, 13.75);
 
         let v = variance(MEAN_ONE.mean, DATA_FIVE_DESC).unwrap();
-        assert_eq!(v, 6.0);
+        assert_eq!(v, 7.5);
 
         let v = variance(MEAN_TWO.mean, DATA_FIVE_DESC).unwrap();
-        assert_eq!(v, 4.25);
+        assert_eq!(v, 5.3125);
 
         let v = variance(MEAN_THREE.mean, DATA_FIVE_DESC).unwrap();
-        assert_eq!(v, 3.0);
+        assert_eq!(v, 3.75);
 
         let v = variance(MEAN_FIVE.mean, DATA_FIVE_DESC).unwrap();
-        assert_eq!(v, 2.0);
+        assert_eq!(v, 2.5);
     }
 
     #[test]
     fn variance_five_neg() {
         let v = variance(MEAN_ZERO.mean, DATA_FIVE_NEG).unwrap();
-        assert_eq!(v, 11.0);
+        assert_eq!(v, 13.75);
 
         let v = variance(MEAN_NEG_ONE.mean, DATA_FIVE_NEG).unwrap();
-        assert_eq!(v, 6.0);
+        assert_eq!(v, 7.5);
 
         let v = variance(MEAN_NEG_TWO.mean, DATA_FIVE_NEG).unwrap();
-        assert_eq!(v, 4.25);
+        assert_eq!(v, 5.3125);
 
         let v = variance(MEAN_NEG_THREE.mean, DATA_FIVE_NEG).unwrap();
-        assert_eq!(v, 3.0);
+        assert_eq!(v, 3.75);
 
         let v = variance(MEAN_NEG_FIVE.mean, DATA_FIVE_NEG).unwrap();
-        assert_eq!(v, 2.0);
+        assert_eq!(v, 2.5);
     }
 
     #[test]
     fn variance_five_const() {
         let v = variance(MEAN_ZERO.mean, DATA_FIVE_CONST).unwrap();
-        assert_eq!(v, 1.0);
+        assert_eq!(v, 1.25);
 
         let v = variance(MEAN_ONE.mean, DATA_FIVE_CONST).unwrap();
         assert_eq!(v, 0.0);
 
         let v = variance(MEAN_TWO.mean, DATA_FIVE_CONST).unwrap();
-        assert_eq!(v, 0.25);
+        assert_eq!(v, 0.3125);
 
         let v = variance(MEAN_THREE.mean, DATA_FIVE_CONST).unwrap();
-        assert_eq!(v, 1.0);
+        assert_eq!(v, 1.25);
 
         let v = variance(MEAN_FIVE.mean, DATA_FIVE_CONST).unwrap();
-        assert_eq!(v, 4.0);
+        assert_eq!(v, 5.0);
     }
 
     #[test]
@@ -310,111 +310,108 @@ mod tests {
     #[expect(clippy::approx_constant)]
     fn std_dev_two() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_TWO).unwrap();
-        assert_eq!(std_dev, 1.5811388300841898);
+        assert_eq!(std_dev, 2.23606797749979);
 
         let std_dev = MEAN_ONE.std_deviation(DATA_TWO).unwrap();
-        assert_eq!(std_dev, 0.7071067811865476);
+        assert_eq!(std_dev, 1.0);
 
         let std_dev = MEAN_TWO.std_deviation(DATA_TWO).unwrap();
-        assert_eq!(std_dev, 0.5);
-
-        let std_dev = MEAN_THREE.std_deviation(DATA_TWO).unwrap();
         assert_eq!(std_dev, 0.7071067811865476);
 
+        let std_dev = MEAN_THREE.std_deviation(DATA_TWO).unwrap();
+        assert_eq!(std_dev, 1.0);
+
         let std_dev = MEAN_FIVE.std_deviation(DATA_TWO).unwrap();
-        assert_eq!(std_dev, 1.5811388300841898);
+        assert_eq!(std_dev, 2.23606797749979);
     }
 
     #[test]
     fn std_dev_three() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_THREE).unwrap();
-        assert_eq!(std_dev, 2.160246899469287);
+        assert_eq!(std_dev, 2.6457513110645907);
 
         let std_dev = MEAN_ONE.std_deviation(DATA_THREE).unwrap();
-        assert_eq!(std_dev, 1.2909944487358056);
+        assert_eq!(std_dev, 1.5811388300841898);
 
         let std_dev = MEAN_TWO.std_deviation(DATA_THREE).unwrap();
-        assert_eq!(std_dev, 0.9574271077563381);
+        assert_eq!(std_dev, 1.1726039399558574);
 
         let std_dev = MEAN_THREE.std_deviation(DATA_THREE).unwrap();
-        assert_eq!(std_dev, 0.816496580927726);
+        assert_eq!(std_dev, 1.0);
 
         let std_dev = MEAN_FIVE.std_deviation(DATA_THREE).unwrap();
-        assert_eq!(std_dev, 1.2909944487358056);
+        assert_eq!(std_dev, 1.5811388300841898);
     }
 
     #[test]
-    #[expect(clippy::approx_constant)]
     fn std_dev_five() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_FIVE).unwrap();
-        assert_eq!(std_dev, 3.3166247903554);
+        assert_eq!(std_dev, 3.7080992435478315);
 
         let std_dev = MEAN_ONE.std_deviation(DATA_FIVE).unwrap();
-        assert_eq!(std_dev, 2.449489742783178);
+        assert_eq!(std_dev, 2.7386127875258306);
 
         let std_dev = MEAN_TWO.std_deviation(DATA_FIVE).unwrap();
-        assert_eq!(std_dev, 2.0615528128088303);
+        assert_eq!(std_dev, 2.3048861143232218);
 
         let std_dev = MEAN_THREE.std_deviation(DATA_FIVE).unwrap();
-        assert_eq!(std_dev, 1.7320508075688772);
+        assert_eq!(std_dev, 1.9364916731037085);
 
         let std_dev = MEAN_FIVE.std_deviation(DATA_FIVE).unwrap();
-        assert_eq!(std_dev, 1.4142135623730951);
+        assert_eq!(std_dev, 1.5811388300841898);
     }
 
     #[test]
-    #[expect(clippy::approx_constant)]
     fn std_dev_five_desc() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_FIVE_DESC).unwrap();
-        assert_eq!(std_dev, 3.3166247903554);
+        assert_eq!(std_dev, 3.7080992435478315);
 
         let std_dev = MEAN_ONE.std_deviation(DATA_FIVE_DESC).unwrap();
-        assert_eq!(std_dev, 2.449489742783178);
+        assert_eq!(std_dev, 2.7386127875258306);
 
         let std_dev = MEAN_TWO.std_deviation(DATA_FIVE_DESC).unwrap();
-        assert_eq!(std_dev, 2.0615528128088303);
+        assert_eq!(std_dev, 2.3048861143232218);
 
         let std_dev = MEAN_THREE.std_deviation(DATA_FIVE_DESC).unwrap();
-        assert_eq!(std_dev, 1.7320508075688772);
+        assert_eq!(std_dev, 1.9364916731037085);
 
         let std_dev = MEAN_FIVE.std_deviation(DATA_FIVE_DESC).unwrap();
-        assert_eq!(std_dev, 1.4142135623730951);
+        assert_eq!(std_dev, 1.5811388300841898);
     }
 
     #[test]
-    #[expect(clippy::approx_constant)]
     fn std_dev_five_neg() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_FIVE_NEG).unwrap();
-        assert_eq!(std_dev, 3.3166247903554);
+        assert_eq!(std_dev, 3.7080992435478315);
 
         let std_dev = MEAN_NEG_ONE.std_deviation(DATA_FIVE_NEG).unwrap();
-        assert_eq!(std_dev, 2.449489742783178);
+        assert_eq!(std_dev, 2.7386127875258306);
 
         let std_dev = MEAN_NEG_TWO.std_deviation(DATA_FIVE_NEG).unwrap();
-        assert_eq!(std_dev, 2.0615528128088303);
+        assert_eq!(std_dev, 2.3048861143232218);
 
         let std_dev = MEAN_NEG_THREE.std_deviation(DATA_FIVE_NEG).unwrap();
-        assert_eq!(std_dev, 1.7320508075688772);
+        assert_eq!(std_dev, 1.9364916731037085);
 
         let std_dev = MEAN_NEG_FIVE.std_deviation(DATA_FIVE_NEG).unwrap();
-        assert_eq!(std_dev, 1.4142135623730951);
+        assert_eq!(std_dev, 1.5811388300841898);
     }
 
     #[test]
     fn std_dev_five_const() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_FIVE_CONST).unwrap();
-        assert_eq!(std_dev, 1.0);
+        assert_eq!(std_dev, 1.118033988749895);
 
         let std_dev = MEAN_ONE.std_deviation(DATA_FIVE_CONST);
         assert_eq!(std_dev, None);
 
         let std_dev = MEAN_TWO.std_deviation(DATA_FIVE_CONST).unwrap();
-        assert_eq!(std_dev, 0.5);
+        assert_eq!(std_dev, 0.5590169943749475);
 
         let std_dev = MEAN_THREE.std_deviation(DATA_FIVE_CONST).unwrap();
-        assert_eq!(std_dev, 1.0);
+        assert_eq!(std_dev, 1.118033988749895);
 
         let std_dev = MEAN_FIVE.std_deviation(DATA_FIVE_CONST).unwrap();
-        assert_eq!(std_dev, 2.0);
+        assert_eq!(std_dev, 2.23606797749979);
     }
 }

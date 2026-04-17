@@ -20,7 +20,7 @@ pub struct MetricsLimits {
 #[derive(Clone, Copy)]
 pub enum NormalTestKind {
     Z,
-    T { freedom: f64 },
+    T { sample_size: f64 },
 }
 
 impl MetricsLimits {
@@ -89,15 +89,20 @@ impl MetricsLimits {
                 }
             },
             // Create a Student's t distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
-            NormalTestKind::T { freedom } => {
+            // The scale factor `sqrt(1 + 1/n)` turns the confidence interval for the
+            // mean into a prediction interval for a new observation under unknown
+            // mean and unknown variance (see https://en.wikipedia.org/wiki/Prediction_interval).
+            NormalTestKind::T { sample_size } => {
+                let freedom = sample_size - 1.0;
+                let scale = std_dev * (1.0 + 1.0 / sample_size).sqrt();
                 debug!(
                     log,
-                    "Students T distribution: mean={mean}, scale={std_dev}, freedom={freedom}"
+                    "Students T distribution: mean={mean}, scale={scale}, freedom={freedom}, sample_size={sample_size}"
                 );
-                let students_t = StudentsT::new(mean, std_dev, freedom).map_err(|error| {
+                let students_t = StudentsT::new(mean, scale, freedom).map_err(|error| {
                     BoundaryError::StudentsT {
                         mean,
-                        std_dev,
+                        scale,
                         freedom,
                         error,
                     }
@@ -234,7 +239,7 @@ mod tests {
 
     const MEAN: f64 = 0.0;
     const STD_DEV: f64 = 1.0;
-    const FREEDOM: f64 = 5.0;
+    const SAMPLE_SIZE: f64 = 6.0;
 
     static NEGATIVE_STATIC_LIMIT: LazyLock<Boundary> =
         LazyLock::new(|| (-5.0).try_into().expect("Failed to parse boundary."));
@@ -259,15 +264,15 @@ mod tests {
             .expect("Failed to parse statistical boundary.")
     });
     const Z_LIMIT: f64 = 1.0364333894937896;
-    const T_LIMIT: f64 = 1.1557673428942912;
+    const T_LIMIT: f64 = 1.2483714094976244;
 
     const LOG_DATA: &[f64] = &[
         1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0, 3.0,
         4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0,
     ];
     const LOG_LOCATION: f64 = 2.6051710846973517;
-    const LOG_LOWER: f64 = 0.5147481524981812;
-    const LOG_UPPER: f64 = 4.695594016896522;
+    const LOG_LOWER: f64 = 0.467218645251152;
+    const LOG_UPPER: f64 = 4.743123524143551;
 
     const IQR_Q1: f64 = 1.0;
     const IQR_Q2: f64 = 2.0;
@@ -722,7 +727,9 @@ mod tests {
             &log,
             MEAN,
             STD_DEV,
-            NormalTestKind::T { freedom: FREEDOM },
+            NormalTestKind::T {
+                sample_size: SAMPLE_SIZE,
+            },
             None,
             None,
         )
@@ -754,7 +761,9 @@ mod tests {
             &log,
             MEAN,
             STD_DEV,
-            NormalTestKind::T { freedom: FREEDOM },
+            NormalTestKind::T {
+                sample_size: SAMPLE_SIZE,
+            },
             Some(*PERCENTILE),
             None,
         )
@@ -789,7 +798,9 @@ mod tests {
             &log,
             MEAN,
             STD_DEV,
-            NormalTestKind::T { freedom: FREEDOM },
+            NormalTestKind::T {
+                sample_size: SAMPLE_SIZE,
+            },
             None,
             Some(*PERCENTILE),
         )
@@ -824,7 +835,9 @@ mod tests {
             &log,
             MEAN,
             STD_DEV,
-            NormalTestKind::T { freedom: FREEDOM },
+            NormalTestKind::T {
+                sample_size: SAMPLE_SIZE,
+            },
             Some(*PERCENTILE),
             Some(*PERCENTILE),
         )
@@ -861,9 +874,7 @@ mod tests {
             &log,
             MEAN_100,
             10.0,
-            NormalTestKind::T {
-                freedom: 25.0 - 1.0,
-            },
+            NormalTestKind::T { sample_size: 25.0 },
             Some(boundary),
             Some(boundary),
         )
@@ -875,13 +886,13 @@ mod tests {
         assert_eq!(
             limits.lower,
             Some(MetricsLimit {
-                value: 78.95585277295345
+                value: 78.53909652847402
             })
         );
         assert_eq!(
             limits.upper,
             Some(MetricsLimit {
-                value: 121.04414722704655
+                value: 121.46090347152598
             })
         );
 
@@ -899,6 +910,92 @@ mod tests {
 
         let side = limits.outlier(125.0);
         assert_eq!(side, Some(BoundaryLimit::Upper));
+    }
+
+    // Invariant: as `sample_size` grows, the t-test prediction interval must converge
+    // to the z-score interval at the same percentile and `std_dev`. If the `sqrt(1 + 1/n)`
+    // scaling were dropped, or Bessel's correction were re-introduced as biased variance,
+    // this convergence would fail.
+    //
+    // Uses a tolerance-based `assert!` rather than `assert_eq!` — the existing tests
+    // in this module assert exact f64 values, but that would be the wrong tool for
+    // an "approaches a limit" check.
+    #[test]
+    fn limits_t_asymptotic_to_z() {
+        let log = bootstrap_logger();
+        let t_limits = MetricsLimits::new_normal(
+            &log,
+            MEAN,
+            STD_DEV,
+            NormalTestKind::T {
+                sample_size: 10_000.0,
+            },
+            Some(*PERCENTILE),
+            Some(*PERCENTILE),
+        )
+        .unwrap();
+        let z_limits = MetricsLimits::new_normal(
+            &log,
+            MEAN,
+            STD_DEV,
+            NormalTestKind::Z,
+            Some(*PERCENTILE),
+            Some(*PERCENTILE),
+        )
+        .unwrap();
+        let t_upper = t_limits.upper.unwrap().value;
+        let t_lower = t_limits.lower.unwrap().value;
+        let z_upper = z_limits.upper.unwrap().value;
+        let z_lower = z_limits.lower.unwrap().value;
+        assert!(
+            (t_upper - z_upper).abs() < 1e-3,
+            "t_upper ({t_upper}) should approach z_upper ({z_upper}) at large n"
+        );
+        assert!(
+            (t_lower - z_lower).abs() < 1e-3,
+            "t_lower ({t_lower}) should approach z_lower ({z_lower}) at large n"
+        );
+    }
+
+    // Edge case: at the minimum allowed sample size (`SampleSize::MIN = 2`), the t-test
+    // uses `freedom = 1` (a Cauchy distribution) and `sqrt(1 + 1/2) = sqrt(1.5)` scaling.
+    // The interval must still be finite, and it must be strictly wider than the
+    // z-score interval, since both the t-quantile with 1 dof and the PI scaling factor
+    // exceed their asymptotic values.
+    #[test]
+    fn limits_t_n_two_finite_and_wider_than_z() {
+        let log = bootstrap_logger();
+        let t_limits = MetricsLimits::new_normal(
+            &log,
+            MEAN,
+            STD_DEV,
+            NormalTestKind::T { sample_size: 2.0 },
+            Some(*PERCENTILE),
+            Some(*PERCENTILE),
+        )
+        .unwrap();
+        let z_limits = MetricsLimits::new_normal(
+            &log,
+            MEAN,
+            STD_DEV,
+            NormalTestKind::Z,
+            Some(*PERCENTILE),
+            Some(*PERCENTILE),
+        )
+        .unwrap();
+        let t_upper = t_limits.upper.unwrap().value;
+        let t_lower = t_limits.lower.unwrap().value;
+        let z_upper = z_limits.upper.unwrap().value;
+        let z_lower = z_limits.lower.unwrap().value;
+        assert!(t_upper.is_finite() && t_lower.is_finite());
+        assert!(
+            t_upper > z_upper,
+            "t_upper ({t_upper}) must exceed z_upper ({z_upper}) at n=2"
+        );
+        assert!(
+            t_lower < z_lower,
+            "t_lower ({t_lower}) must fall below z_lower ({z_lower}) at n=2"
+        );
     }
 
     #[test]
@@ -1017,13 +1114,13 @@ mod tests {
         assert_eq!(
             limits.lower,
             Some(MetricsLimit {
-                value: 71.20299914980998
+                value: 70.49040406473313
             })
         );
         assert_eq!(
             limits.upper,
             Some(MetricsLimit {
-                value: 134.18085823622897
+                value: 134.89345332130583
             })
         );
 
