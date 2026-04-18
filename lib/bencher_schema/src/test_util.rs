@@ -428,6 +428,14 @@ pub fn clear_testbed_spec(conn: &mut SqliteConnection, testbed_id: TestbedId) {
         .expect("Failed to clear testbed spec_id");
 }
 
+/// Set report `spec_id`.
+pub fn set_report_spec(conn: &mut SqliteConnection, report_id: ReportId, spec_id: SpecId) {
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::spec_id.eq(Some(spec_id)))
+        .execute(conn)
+        .expect("Failed to set report spec_id");
+}
+
 /// Delete a spec by id.
 pub fn delete_spec(conn: &mut SqliteConnection, spec_id: SpecId) {
     diesel::delete(schema::spec::table.filter(schema::spec::id.eq(spec_id)))

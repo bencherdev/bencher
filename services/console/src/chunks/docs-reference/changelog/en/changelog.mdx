@@ -2,6 +2,7 @@
 - Fix sample standard deviation for Z-score, t-test, and Log Normal Thresholds to use Bessel's correction (divide by `n − 1`) (Thank you [@ggirol-rc](https://github.com/ggirol-rc))
 - Fix t-test Threshold to use the prediction interval (scale the standard deviation by `√(1 + 1/n)`) so the boundary tests whether a new Metric is consistent with the historical distribution rather than whether it contains the historical mean (Thank you [@ggirol-rc](https://github.com/ggirol-rc))
 - Existing Thresholds will produce slightly wider (statistically correct) boundaries; no configuration changes required
+- Fix Alert JSON to return the Spec for the Report in which the Alert was generated instead of the Testbed's current Spec
 
 ## `v0.6.2`
 - Allow unauthenticated `docker push` to unclaimed projects

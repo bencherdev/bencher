@@ -431,7 +431,7 @@ impl QueryReport {
         let branch = QueryBranch::get_json_for_report(conn, &query_project, head_id, version_id)?;
         let testbed = QueryTestbed::get_json_for_report(conn, &query_project, testbed_id, spec_id)?;
         let results = get_report_results(log, conn, &query_project, id)?;
-        let alerts = get_report_alerts(conn, &query_project, id, head_id, version_id)?;
+        let alerts = get_report_alerts(conn, &query_project, id, head_id, version_id, spec_id)?;
         #[cfg(feature = "plus")]
         let job = get_report_job(conn, id)?;
 
@@ -677,6 +677,7 @@ fn get_report_alerts(
     report_id: ReportId,
     head_id: HeadId,
     version_id: VersionId,
+    spec_id: Option<SpecId>,
 ) -> Result<JsonReportAlerts, HttpError> {
     let alerts = schema::alert::table
         .inner_join(
@@ -728,6 +729,7 @@ fn get_report_alerts(
             created,
             head_id,
             version_id,
+            spec_id,
             iteration,
             query_benchmark,
             query_metric,
