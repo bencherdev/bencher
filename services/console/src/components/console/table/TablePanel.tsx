@@ -40,6 +40,7 @@ const START_TIME_PARAM = "start_time";
 const END_TIME_PARAM = "end_time";
 const SEARCH_PARAM = "search";
 export const ARCHIVED_PARAM = "archived";
+export const REVOKED_PARAM = "revoked";
 
 const DEFAULT_PER_PAGE = 8;
 const DEFAULT_PAGE = 1;
@@ -90,6 +91,10 @@ const TablePanel = (props: Props) => {
 			initParams[ARCHIVED_PARAM] = null;
 		}
 
+		if (!isBoolParam(searchParams[REVOKED_PARAM])) {
+			initParams[REVOKED_PARAM] = null;
+		}
+
 		if (Object.keys(initParams).length !== 0) {
 			setSearchParams(initParams, { replace: true });
 		}
@@ -116,6 +121,7 @@ const TablePanel = (props: Props) => {
 	const search = createMemo(() => searchParams[SEARCH_PARAM]);
 
 	const archived = createMemo(() => searchParams[ARCHIVED_PARAM]);
+	const revoked = createMemo(() => searchParams[REVOKED_PARAM]);
 
 	const searchQuery = createMemo(() => {
 		return {
@@ -125,6 +131,7 @@ const TablePanel = (props: Props) => {
 			end_time: end_time(),
 			search: search(),
 			archived: archived(),
+			revoked: revoked(),
 		};
 	});
 
@@ -147,6 +154,7 @@ const TablePanel = (props: Props) => {
 			end_time: undefined | string;
 			search: undefined | string;
 			archived: undefined | boolean;
+			revoked: undefined | boolean;
 		};
 		token: string;
 	}) => {
@@ -223,6 +231,16 @@ const TablePanel = (props: Props) => {
 		);
 	};
 
+	const handleRevoked = () => {
+		setSearchParams(
+			{
+				[PAGE_PARAM]: DEFAULT_PAGE,
+				[REVOKED_PARAM]: !(revoked() === "true"),
+			},
+			{ scroll: true },
+		);
+	};
+
 	return (
 		<>
 			<TableHeader
@@ -233,11 +251,13 @@ const TablePanel = (props: Props) => {
 				end_date={end_date}
 				search={search}
 				archived={archived}
+				revoked={revoked}
 				handleRefresh={refetch}
 				handleStartTime={handleStartTime}
 				handleEndTime={handleEndTime}
 				handleSearch={handleSearch}
 				handleArchived={handleArchived}
+				handleRevoked={handleRevoked}
 			/>
 			<Table
 				config={config()?.table}

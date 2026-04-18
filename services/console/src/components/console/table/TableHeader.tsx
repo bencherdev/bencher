@@ -28,11 +28,13 @@ export interface Props {
 	end_date: Accessor<undefined | string>;
 	search: Accessor<undefined | string>;
 	archived: Accessor<undefined | string>;
+	revoked: Accessor<undefined | string>;
 	handleRefresh: () => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
 	handleSearch: (search: string) => void;
 	handleArchived: () => void;
+	handleRevoked: () => void;
 }
 
 export interface TableHeaderConfig {
@@ -62,6 +64,7 @@ const TableHeader = (props: Props) => {
 							end_date={props.end_date}
 							search={props.search}
 							archived={props.archived}
+							revoked={props.revoked}
 							title={title}
 							name={props.config?.name}
 							button={button}
@@ -70,6 +73,7 @@ const TableHeader = (props: Props) => {
 							handleEndTime={props.handleEndTime}
 							handleSearch={props.handleSearch}
 							handleArchived={props.handleArchived}
+							handleRevoked={props.handleRevoked}
 						/>
 					)}
 				</For>
@@ -92,6 +96,7 @@ const TableHeaderButton = (props: {
 	end_date: Accessor<undefined | string>;
 	search: Accessor<undefined | string>;
 	archived: Accessor<undefined | string>;
+	revoked: Accessor<undefined | string>;
 	title: string;
 	name: undefined | string;
 	button: TableButton;
@@ -100,6 +105,7 @@ const TableHeaderButton = (props: {
 	handleEndTime: (end_time: string) => void;
 	handleSearch: (search: string) => void;
 	handleArchived: () => void;
+	handleRevoked: () => void;
 }) => {
 	const [isAllowed] = createResource(props.params, (params) =>
 		props.button.is_allowed?.(props.apiUrl, params),
@@ -157,6 +163,26 @@ const TableHeaderButton = (props: {
 							<i class="fas fa-archive" />
 						</span>
 						<span>Archived</span>
+					</button>
+				</Match>
+				<Match when={props.button.kind === Button.REVOKED}>
+					<button
+						class={`button${props.revoked() === "true" ? " is-primary" : ""}`}
+						type="button"
+						title={
+							props.revoked() === "true"
+								? `View active ${props.title}`
+								: `View revoked ${props.title}`
+						}
+						onMouseDown={(e) => {
+							e.preventDefault();
+							props.handleRevoked();
+						}}
+					>
+						<span class="icon">
+							<i class="fas fa-ban" />
+						</span>
+						<span>Revoked</span>
 					</button>
 				</Match>
 				<Match when={props.button.kind === Button.ADD}>

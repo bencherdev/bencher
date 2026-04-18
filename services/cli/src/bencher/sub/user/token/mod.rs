@@ -2,6 +2,7 @@ use crate::{CliError, bencher::sub::SubCmd, parser::user::token::CliToken};
 
 mod create;
 mod list;
+mod revoke;
 mod update;
 mod view;
 
@@ -11,6 +12,7 @@ pub enum Token {
     Create(create::Create),
     View(view::View),
     Update(update::Update),
+    Revoke(revoke::Revoke),
 }
 
 impl TryFrom<CliToken> for Token {
@@ -22,6 +24,7 @@ impl TryFrom<CliToken> for Token {
             CliToken::Create(create) => Self::Create(create.try_into()?),
             CliToken::View(view) => Self::View(view.try_into()?),
             CliToken::Update(update) => Self::Update(update.try_into()?),
+            CliToken::Revoke(revoke) => Self::Revoke(revoke.try_into()?),
         })
     }
 }
@@ -33,6 +36,7 @@ impl SubCmd for Token {
             Self::Create(create) => create.exec().await,
             Self::View(view) => view.exec().await,
             Self::Update(update) => update.exec().await,
+            Self::Revoke(revoke) => revoke.exec().await,
         }
     }
 }

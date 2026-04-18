@@ -37,6 +37,7 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(tokens::user_token_post)?;
         api_description.register(tokens::user_token_get)?;
         api_description.register(tokens::user_token_patch)?;
+        api_description.register(tokens::user_token_delete)?;
 
         Ok(())
     }

@@ -985,6 +985,7 @@ export interface JsonToken {
 	token: Jwt;
 	creation: string;
 	expiration: string;
+	revoked?: string;
 }
 
 export enum UpdateAlertStatus {

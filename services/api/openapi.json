@@ -9599,6 +9599,15 @@
           },
           {
             "in": "query",
+            "name": "revoked",
+            "description": "Include revoked tokens in the results. Defaults to `false`.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "search",
             "description": "Search by token name, slug, or UUID.",
             "schema": {
@@ -9822,6 +9831,84 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonToken"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users",
+          "tokens"
+        ],
+        "summary": "Revoke a token",
+        "description": "Revoke an API token for a user. Revocation is terminal: a revoked token can no longer authenticate any request, and the revocation cannot be undone (for security — a leaked JWT must not become valid again). Only the authenticated user themselves and server admins have access to this endpoint.",
+        "operationId": "user_token_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "description": "The UUID for a token.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "description": "The slug or UUID for a user.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
                 }
               }
             }
@@ -15760,6 +15847,15 @@
           },
           "name": {
             "$ref": "#/components/schemas/ResourceName"
+          },
+          "revoked": {
+            "nullable": true,
+            "description": "The time at which the token was revoked, if any. `None` means the token is active.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
           "token": {
             "$ref": "#/components/schemas/Jwt"

@@ -17,6 +17,7 @@ import HeadReplacedButton from "./HeadReplacedButton";
 import ModelReplacedButton from "./ModelReplacedButton";
 import RawButton from "./RawButton";
 import RemoveModelButton from "./RemoveModelButton";
+import RevokeButton from "./RevokeButton";
 
 export interface Props {
 	apiUrl: string;
@@ -117,6 +118,31 @@ const DeckButton = (props: Props) => {
 							<div class="field">
 								<p class="control">
 									<RawButton data={props.data} />
+								</p>
+							</div>
+						</form>
+					</div>
+				</div>
+			</Match>
+			<Match when={props.config?.kind === ActionButton.REVOKE}>
+				<div class="columns">
+					<div class="column">
+						<form
+							onSubmit={(e) => {
+								e.preventDefault();
+							}}
+						>
+							<div class="field">
+								<p class="control">
+									<RevokeButton
+										apiUrl={props.apiUrl}
+										user={props.user}
+										path={props.path}
+										data={props.data}
+										subtitle={props.config.subtitle}
+										isAllowed={isAllowed}
+										handleRefresh={props.handleRefresh}
+									/>
 								</p>
 							</div>
 						</form>

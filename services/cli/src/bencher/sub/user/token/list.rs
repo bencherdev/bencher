@@ -15,6 +15,7 @@ pub struct List {
     pub user: UserResourceId,
     pub name: Option<ResourceName>,
     pub search: Option<String>,
+    pub revoked: bool,
     pub pagination: Pagination,
     pub backend: AuthBackend,
 }
@@ -35,6 +36,7 @@ impl TryFrom<CliTokenList> for List {
             user,
             name,
             search,
+            revoked,
             pagination,
             backend,
         } = list;
@@ -42,6 +44,7 @@ impl TryFrom<CliTokenList> for List {
             user,
             name,
             search,
+            revoked,
             pagination: pagination.into(),
             backend: backend.try_into()?,
         })
@@ -78,6 +81,9 @@ impl SubCmd for List {
                 }
                 if let Some(search) = self.search.clone() {
                     client = client.search(search);
+                }
+                if self.revoked {
+                    client = client.revoked(true);
                 }
                 if let Some(sort) = self.pagination.sort {
                     client = client.sort(sort);

@@ -108,6 +108,7 @@ export enum Button {
 	SEARCH = "search",
 	DATE_TIME = "date_time",
 	ARCHIVED = "archived",
+	REVOKED = "revoked",
 	DISMISS_ALL = "dismiss_all",
 }
 
@@ -119,6 +120,7 @@ export enum ActionButton {
 	MODEL_REPLACED = "model_replaced",
 	RAW = "raw",
 	DELETE = "delete",
+	REVOKE = "revoke",
 }
 
 export enum Row {

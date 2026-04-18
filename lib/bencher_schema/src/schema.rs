@@ -386,6 +386,7 @@ diesel::table! {
         jwt -> Text,
         creation -> BigInt,
         expiration -> BigInt,
+        revoked -> Nullable<BigInt>,
     }
 }
 

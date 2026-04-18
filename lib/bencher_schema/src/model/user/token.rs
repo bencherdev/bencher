@@ -30,6 +30,7 @@ pub struct QueryToken {
     pub jwt: Jwt,
     pub creation: DateTime,
     pub expiration: DateTime,
+    pub revoked: Option<DateTime>,
 }
 
 impl QueryToken {
@@ -49,6 +50,26 @@ impl QueryToken {
             .map_err(resource_not_found_err!(Token, (user_id, uuid)))
     }
 
+    /// Look up an active (non-revoked) token row by its JWT string.
+    /// Used by the authentication layer to reject revoked tokens.
+    pub fn get_active_by_jwt(conn: &mut DbConnection, jwt: &Jwt) -> diesel::QueryResult<Self> {
+        schema::token::table
+            .filter(schema::token::jwt.eq(jwt.as_ref()))
+            .filter(schema::token::revoked.is_null())
+            .first::<QueryToken>(conn)
+    }
+
+    pub fn revoke(
+        conn: &mut DbConnection,
+        token_id: TokenId,
+        now: DateTime,
+    ) -> diesel::QueryResult<()> {
+        diesel::update(schema::token::table.filter(schema::token::id.eq(token_id)))
+            .set(schema::token::revoked.eq(now))
+            .execute(conn)
+            .map(|_| ())
+    }
+
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonToken, HttpError> {
         let query_user = QueryUser::get(conn, self.user_id)?;
         Ok(self.into_json_for_user(&query_user))
@@ -56,13 +77,14 @@ impl QueryToken {
 
     pub fn into_json_for_user(self, query_user: &QueryUser) -> JsonToken {
         let Self {
+            id: _,
             uuid,
             user_id,
             name,
             jwt,
             creation,
             expiration,
-            ..
+            revoked,
         } = self;
         assert_parentage(
             BencherResource::User,
@@ -77,6 +99,7 @@ impl QueryToken {
             token: jwt,
             creation,
             expiration,
+            revoked,
         }
     }
 }

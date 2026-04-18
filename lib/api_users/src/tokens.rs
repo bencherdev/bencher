@@ -1,5 +1,6 @@
 use bencher_endpoint::{
-    CorsResponse, Endpoint, Get, Patch, Post, ResponseCreated, ResponseOk, TotalCount,
+    CorsResponse, Delete, Endpoint, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
+    TotalCount,
 };
 use bencher_json::{
     JsonDirection, JsonNewToken, JsonPagination, JsonToken, JsonTokens, ResourceName, Search,
@@ -8,14 +9,14 @@ use bencher_json::{
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{resource_conflict_err, resource_not_found_err},
+    error::{bad_request_error, resource_conflict_err, resource_not_found_err},
     model::user::{
         QueryUser, UserId,
         auth::{AuthUser, BearerToken},
         same_user,
         token::{InsertToken, QueryToken, UpdateToken},
     },
-    schema, write_conn,
+    schema, write_conn, write_transaction,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -48,6 +49,8 @@ pub struct UserTokensQuery {
     pub name: Option<ResourceName>,
     /// Search by token name, slug, or UUID.
     pub search: Option<Search>,
+    /// Include revoked tokens in the results. Defaults to `false`.
+    pub revoked: Option<bool>,
 }
 
 #[endpoint {
@@ -138,6 +141,10 @@ fn get_ls_query<'q>(
     let mut query = schema::token::table
         .filter(schema::token::user_id.eq(user_id))
         .into_boxed();
+
+    if !query_params.revoked.unwrap_or(false) {
+        query = query.filter(schema::token::revoked.is_null());
+    }
 
     if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::token::name.eq(name));
@@ -237,7 +244,7 @@ pub async fn user_token_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<UserTokenParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Patch.into()]))
+    Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
 /// View a token
@@ -327,4 +334,54 @@ async fn patch_inner(
     auth_conn!(context, |conn| {
         QueryToken::get(conn, query_token.id)?.into_json(conn)
     })
+}
+
+/// Revoke a token
+///
+/// Revoke an API token for a user.
+/// Revocation is terminal: a revoked token can no longer authenticate any request,
+/// and the revocation cannot be undone (for security — a leaked JWT must not become valid again).
+/// Only the authenticated user themselves and server admins have access to this endpoint.
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/users/{user}/tokens/{token}",
+    tags = ["users", "tokens"]
+}]
+pub async fn user_token_delete(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
+    path_params: Path<UserTokenParams>,
+) -> Result<ResponseDeleted, HttpError> {
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_deleted())
+}
+
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: UserTokenParams,
+    auth_user: &AuthUser,
+) -> Result<(), HttpError> {
+    let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
+    same_user!(auth_user, context.rbac, query_user.uuid);
+
+    let query_token = QueryToken::get_user_token(
+        auth_conn!(context),
+        query_user.id,
+        &path_params.token.to_string(),
+    )?;
+
+    if query_token.revoked.is_some() {
+        return Err(bad_request_error("Token has already been revoked"));
+    }
+
+    let now = context.clock.now();
+    write_transaction!(context, |conn| QueryToken::revoke(
+        conn,
+        query_token.id,
+        now
+    ))
+    .map_err(resource_conflict_err!(Token, (&query_user, &query_token)))?;
+
+    Ok(())
 }

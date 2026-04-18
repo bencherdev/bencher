@@ -9,6 +9,7 @@ use bencher_rbac::{
     server::Permission,
     user::{OrganizationRoles, ProjectRoles},
 };
+use bencher_token::Audience;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{
     ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
@@ -18,8 +19,8 @@ use oso::{PolarValue, ToPolar};
 
 use crate::{
     context::{ApiContext, DbConnection, Rbac},
-    error::{BEARER_TOKEN_FORMAT, bad_request_error},
-    model::{organization::OrganizationId, project::ProjectId},
+    error::{BEARER_TOKEN_FORMAT, bad_request_error, unauthorized_error},
+    model::{organization::OrganizationId, project::ProjectId, user::token::QueryToken},
     public_conn, schema,
 };
 
@@ -51,6 +52,13 @@ impl AuthUser {
         let email = claims.email();
 
         let conn = public_conn!(context);
+        // API keys are persisted in the `token` table and can be revoked;
+        // short-lived client (browser session) JWTs are not stored, so skip them.
+        if claims.aud == Audience::ApiKey.to_string() {
+            QueryToken::get_active_by_jwt(conn, &bearer_token).map_err(|_e| {
+                unauthorized_error("This API token has been revoked and is no longer valid")
+            })?;
+        }
         let query_user = QueryUser::get_with_email(conn, email)?;
         query_user.check_is_locked()?;
         #[cfg(feature = "plus")]
