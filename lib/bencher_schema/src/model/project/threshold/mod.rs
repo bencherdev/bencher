@@ -22,7 +22,6 @@ use super::{
     measure::{MeasureId, QueryMeasure},
     testbed::{QueryTestbed, TestbedId},
 };
-use crate::model::spec::SpecId;
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
@@ -34,6 +33,7 @@ use crate::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
         sql::last_insert_rowid,
     },
+    model::spec::SpecId,
     schema::{self, threshold as threshold_table},
     write_transaction,
 };
