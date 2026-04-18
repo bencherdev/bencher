@@ -23,7 +23,7 @@ use bencher_schema::{
             branch::QueryBranch,
             measure::QueryMeasure,
             testbed::QueryTestbed,
-            threshold::{InsertThreshold, QueryThreshold, model::QueryModel},
+            threshold::{InsertThreshold, QueryThreshold, ThresholdSpec, model::QueryModel},
         },
         user::{
             auth::{AuthUser, BearerToken},
@@ -416,6 +416,7 @@ async fn get_one_inner(
             public_conn!(context, public_user),
             Some(query_model),
             None,
+            ThresholdSpec::Testbed,
         )
     } else {
         query_threshold.into_json(public_conn!(context, public_user))

@@ -139,10 +139,11 @@ pub fn create_branch_with_head(
         .expect("Failed to get head id");
 
     // Update branch to point to head
-    diesel::update(schema::branch::table.filter(schema::branch::id.eq(branch_id)))
+    let updated = diesel::update(schema::branch::table.filter(schema::branch::id.eq(branch_id)))
         .set(schema::branch::head_id.eq(head_id))
         .execute(conn)
         .expect("Failed to update branch head_id");
+    assert_eq!(updated, 1, "expected exactly 1 branch row updated");
 
     BranchIds { branch_id, head_id }
 }
@@ -299,10 +300,12 @@ pub fn create_model(
         .expect("Failed to get model id");
 
     // Update threshold to reference model
-    diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
-        .set(schema::threshold::model_id.eq(model_id))
-        .execute(conn)
-        .expect("Failed to update threshold with model_id");
+    let updated =
+        diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
+            .set(schema::threshold::model_id.eq(model_id))
+            .execute(conn)
+            .expect("Failed to update threshold with model_id");
+    assert_eq!(updated, 1, "expected exactly 1 threshold row updated");
 
     model_id
 }
@@ -414,33 +417,46 @@ pub fn get_testbed_spec_id(conn: &mut SqliteConnection, testbed_id: TestbedId) -
 
 /// Set testbed `spec_id`.
 pub fn set_testbed_spec(conn: &mut SqliteConnection, testbed_id: TestbedId, spec_id: SpecId) {
-    diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
+    let updated = diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
         .set(schema::testbed::spec_id.eq(Some(spec_id)))
         .execute(conn)
         .expect("Failed to set testbed spec_id");
+    assert_eq!(updated, 1, "expected exactly 1 testbed row updated");
 }
 
 /// Clear testbed `spec_id`.
 pub fn clear_testbed_spec(conn: &mut SqliteConnection, testbed_id: TestbedId) {
-    diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
+    let updated = diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
         .set(schema::testbed::spec_id.eq(None::<SpecId>))
         .execute(conn)
         .expect("Failed to clear testbed spec_id");
+    assert_eq!(updated, 1, "expected exactly 1 testbed row updated");
+}
+
+/// Set report `spec_id`.
+pub fn set_report_spec(conn: &mut SqliteConnection, report_id: ReportId, spec_id: SpecId) {
+    let updated = diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::spec_id.eq(Some(spec_id)))
+        .execute(conn)
+        .expect("Failed to set report spec_id");
+    assert_eq!(updated, 1, "expected exactly 1 report row updated");
 }
 
 /// Delete a spec by id.
 pub fn delete_spec(conn: &mut SqliteConnection, spec_id: SpecId) {
-    diesel::delete(schema::spec::table.filter(schema::spec::id.eq(spec_id)))
+    let deleted = diesel::delete(schema::spec::table.filter(schema::spec::id.eq(spec_id)))
         .execute(conn)
         .expect("Failed to delete spec");
+    assert_eq!(deleted, 1, "expected exactly 1 spec row deleted");
 }
 
 /// Archive a testbed.
 pub fn archive_testbed(conn: &mut SqliteConnection, testbed_id: TestbedId) {
-    diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
+    let updated = diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(testbed_id)))
         .set(schema::testbed::archived.eq(Some(DateTime::TEST)))
         .execute(conn)
         .expect("Failed to archive testbed");
+    assert_eq!(updated, 1, "expected exactly 1 testbed row updated");
 }
 
 /// Get testbed `archived` timestamp.
@@ -631,18 +647,21 @@ pub fn get_head_replaced(conn: &mut SqliteConnection, head_id: HeadId) -> Option
 
 /// Archive a benchmark.
 pub fn archive_benchmark(conn: &mut SqliteConnection, benchmark_id: BenchmarkId) {
-    diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(benchmark_id)))
-        .set(schema::benchmark::archived.eq(Some(DateTime::TEST)))
-        .execute(conn)
-        .expect("Failed to archive benchmark");
+    let updated =
+        diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(benchmark_id)))
+            .set(schema::benchmark::archived.eq(Some(DateTime::TEST)))
+            .execute(conn)
+            .expect("Failed to archive benchmark");
+    assert_eq!(updated, 1, "expected exactly 1 benchmark row updated");
 }
 
 /// Archive a measure.
 pub fn archive_measure(conn: &mut SqliteConnection, measure_id: MeasureId) {
-    diesel::update(schema::measure::table.filter(schema::measure::id.eq(measure_id)))
+    let updated = diesel::update(schema::measure::table.filter(schema::measure::id.eq(measure_id)))
         .set(schema::measure::archived.eq(Some(DateTime::TEST)))
         .execute(conn)
         .expect("Failed to archive measure");
+    assert_eq!(updated, 1, "expected exactly 1 measure row updated");
 }
 
 /// Get benchmark `archived` timestamp.

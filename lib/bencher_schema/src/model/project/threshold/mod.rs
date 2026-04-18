@@ -33,6 +33,7 @@ use crate::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
         sql::last_insert_rowid,
     },
+    model::spec::SpecId,
     schema::{self, threshold as threshold_table},
     write_transaction,
 };
@@ -58,6 +59,14 @@ pub struct QueryThreshold {
     pub model_id: Option<ModelId>,
     pub created: DateTime,
     pub modified: DateTime,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ThresholdSpec {
+    /// Use the testbed's own current spec (standalone threshold views)
+    Testbed,
+    /// Use the report's spec (alert views) — may be None for non-job reports
+    Report(Option<SpecId>),
 }
 
 impl QueryThreshold {
@@ -211,15 +220,21 @@ impl QueryThreshold {
         model_id: ModelId,
         head_id: HeadId,
         version_id: VersionId,
+        spec_id: Option<SpecId>,
     ) -> Result<JsonThreshold, HttpError> {
         let query_threshold = Self::get(conn, threshold_id)?;
         let query_model = QueryModel::get(conn, model_id)?;
-        query_threshold.into_json_for_model(conn, Some(query_model), Some((head_id, version_id)))
+        query_threshold.into_json_for_model(
+            conn,
+            Some(query_model),
+            Some((head_id, version_id)),
+            ThresholdSpec::Report(spec_id),
+        )
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, HttpError> {
         let query_model = self.model(conn)?;
-        self.into_json_for_model(conn, query_model, None)
+        self.into_json_for_model(conn, query_model, None, ThresholdSpec::Testbed)
     }
 
     pub fn into_json_for_model(
@@ -227,6 +242,7 @@ impl QueryThreshold {
         conn: &mut DbConnection,
         query_model: Option<QueryModel>,
         head_version: Option<(HeadId, VersionId)>,
+        threshold_spec: ThresholdSpec,
     ) -> Result<JsonThreshold, HttpError> {
         let model = if let Some(query_model) = &query_model {
             assert_parentage(
@@ -256,8 +272,14 @@ impl QueryThreshold {
             let query_branch = QueryBranch::get(conn, branch_id)?;
             query_branch.into_json_for_project(conn, &query_project)?
         };
-        let testbed =
-            QueryTestbed::get(conn, testbed_id)?.into_json_for_project(conn, &query_project)?;
+        let testbed = match threshold_spec {
+            ThresholdSpec::Report(spec_id) => {
+                QueryTestbed::get_json_for_report(conn, &query_project, testbed_id, spec_id)?
+            },
+            ThresholdSpec::Testbed => {
+                QueryTestbed::get(conn, testbed_id)?.into_json_for_project(conn, &query_project)?
+            },
+        };
         let measure = QueryMeasure::get(conn, measure_id)?.into_json_for_project(&query_project);
         Ok(JsonThreshold {
             uuid,

@@ -17,11 +17,14 @@ use crate::{
     context::DbConnection,
     error::resource_not_found_err,
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
-    model::project::{
-        ProjectId, QueryProject,
-        benchmark::QueryBenchmark,
-        branch::{head::HeadId, version::VersionId},
-        metric::QueryMetric,
+    model::{
+        project::{
+            ProjectId, QueryProject,
+            benchmark::QueryBenchmark,
+            branch::{head::HeadId, version::VersionId},
+            metric::QueryMetric,
+        },
+        spec::SpecId,
     },
     schema::{self, alert as alert_table},
 };
@@ -90,6 +93,7 @@ impl QueryAlert {
             created,
             head_id,
             version_id,
+            spec_id,
             iteration,
             query_benchmark,
             query_metric,
@@ -110,6 +114,7 @@ impl QueryAlert {
                 schema::report::created,
                 schema::report::head_id,
                 schema::report::version_id,
+                schema::report::spec_id,
                 schema::report_benchmark::iteration,
                 QueryBenchmark::as_select(),
                 QueryMetric::as_select(),
@@ -120,6 +125,7 @@ impl QueryAlert {
                 DateTime,
                 HeadId,
                 VersionId,
+                Option<SpecId>,
                 Iteration,
                 QueryBenchmark,
                 QueryMetric,
@@ -134,6 +140,7 @@ impl QueryAlert {
             created,
             head_id,
             version_id,
+            spec_id,
             iteration,
             query_benchmark,
             query_metric,
@@ -150,6 +157,7 @@ impl QueryAlert {
         created: DateTime,
         head_id: HeadId,
         version_id: VersionId,
+        spec_id: Option<SpecId>,
         iteration: Iteration,
         query_benchmark: QueryBenchmark,
         query_metric: QueryMetric,
@@ -168,6 +176,7 @@ impl QueryAlert {
             query_boundary.model_id,
             head_id,
             version_id,
+            spec_id,
         )?;
         Ok(JsonAlert {
             uuid,
@@ -266,6 +275,11 @@ mod tests {
     use bencher_json::project::{alert::AlertStatus, boundary::BoundaryLimit};
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
+    #[cfg(feature = "plus")]
+    use crate::test_util::{
+        CreateSpecArgs, clear_testbed_spec, create_spec, set_report_spec, set_testbed_spec,
+    };
+
     use crate::{
         schema,
         test_util::{
@@ -281,11 +295,12 @@ mod tests {
         ProjectId,
         branch::{BranchId, head::HeadId, version::VersionId},
         measure::MeasureId,
+        report::ReportId,
         testbed::TestbedId,
     };
 
     /// Helper to create the full entity chain needed for an alert.
-    /// Returns the alert id.
+    /// Returns the alert id and the report id.
     #[expect(clippy::too_many_arguments)]
     fn create_alert_chain(
         conn: &mut diesel::SqliteConnection,
@@ -296,7 +311,7 @@ mod tests {
         branch_id: BranchId,
         measure_id: MeasureId,
         uuids: &AlertChainUuids<'_>,
-    ) -> AlertId {
+    ) -> (AlertId, ReportId) {
         let report_id = create_report(
             conn,
             uuids.report_uuid,
@@ -337,13 +352,14 @@ mod tests {
         let model_id = create_model(conn, threshold_id, uuids.model_uuid, 0);
         let boundary_id =
             create_boundary(conn, uuids.boundary_uuid, metric_id, threshold_id, model_id);
-        create_alert(
+        let alert_id = create_alert(
             conn,
             uuids.alert_uuid,
             boundary_id,
             BoundaryLimit::Upper,
             AlertStatus::Active,
-        )
+        );
+        (alert_id, report_id)
     }
 
     struct AlertChainUuids<'a> {
@@ -396,7 +412,7 @@ mod tests {
         );
 
         // Create 3 alerts on the same head
-        let alert1 = create_alert_chain(
+        let (alert1, _) = create_alert_chain(
             &mut conn,
             base.project_id,
             branch.head_id,
@@ -424,7 +440,7 @@ mod tests {
             "throughput",
             "throughput",
         );
-        let alert2 = create_alert_chain(
+        let (alert2, _) = create_alert_chain(
             &mut conn,
             base.project_id,
             branch.head_id,
@@ -452,7 +468,7 @@ mod tests {
             "filesize",
             "filesize",
         );
-        let alert3 = create_alert_chain(
+        let (alert3, _) = create_alert_chain(
             &mut conn,
             base.project_id,
             branch.head_id,
@@ -552,7 +568,7 @@ mod tests {
         );
 
         // Create alert on head1
-        let alert_head1 = create_alert_chain(
+        let (alert_head1, _) = create_alert_chain(
             &mut conn,
             base.project_id,
             branch1.head_id,
@@ -582,7 +598,7 @@ mod tests {
         );
 
         // Create alert on head2
-        let alert_head2 = create_alert_chain(
+        let (alert_head2, _) = create_alert_chain(
             &mut conn,
             base.project_id,
             branch2.head_id,
@@ -671,5 +687,274 @@ mod tests {
                 .execute(&mut conn)
                 .expect("Failed to bulk silence alerts");
         assert_eq!(updated, 0);
+    }
+
+    #[cfg(feature = "plus")]
+    struct AlertSpecSetup {
+        testbed: TestbedId,
+        branch: BranchId,
+        head: HeadId,
+        version: VersionId,
+        measure: MeasureId,
+        project: ProjectId,
+    }
+
+    #[cfg(feature = "plus")]
+    fn setup_alert_spec_entities(conn: &mut diesel::SqliteConnection) -> AlertSpecSetup {
+        let base = create_base_entities(conn);
+        let branch = create_branch_with_head(
+            conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000110",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000111",
+        );
+        let testbed = create_testbed(
+            conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000120",
+            "localhost",
+            "localhost",
+        );
+        let version = create_version(
+            conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000130",
+            1,
+            None,
+        );
+        create_head_version(conn, branch.head_id, version);
+        let measure = create_measure(
+            conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000140",
+            "latency",
+            "latency",
+        );
+        AlertSpecSetup {
+            testbed,
+            branch: branch.branch_id,
+            head: branch.head_id,
+            version,
+            measure,
+            project: base.project_id,
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    const ALERT_SPEC_UUIDS: AlertChainUuids<'_> = AlertChainUuids {
+        report_uuid: "00000000-0000-0000-0000-000000000200",
+        benchmark_uuid: "00000000-0000-0000-0000-000000000201",
+        benchmark_name: "bench_spec",
+        benchmark_slug: "bench-spec",
+        report_benchmark_uuid: "00000000-0000-0000-0000-000000000202",
+        metric_uuid: "00000000-0000-0000-0000-000000000203",
+        threshold_uuid: "00000000-0000-0000-0000-000000000204",
+        model_uuid: "00000000-0000-0000-0000-000000000205",
+        boundary_uuid: "00000000-0000-0000-0000-000000000206",
+        alert_uuid: "00000000-0000-0000-0000-000000000207",
+    };
+
+    #[cfg(feature = "plus")]
+    fn spec_a_args() -> CreateSpecArgs<'static> {
+        CreateSpecArgs {
+            uuid: "00000000-0000-0000-0000-000000000150",
+            name: "Spec A",
+            slug: "spec-a",
+            os: "linux",
+            architecture: "x86_64",
+            cpu: 4,
+            memory: 0x2_0000_0000,
+            disk: 0x4000_0000,
+            network: false,
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    fn spec_b_args() -> CreateSpecArgs<'static> {
+        CreateSpecArgs {
+            uuid: "00000000-0000-0000-0000-000000000160",
+            name: "Spec B",
+            slug: "spec-b",
+            os: "linux",
+            architecture: "aarch64",
+            cpu: 8,
+            memory: 0x4_0000_0000,
+            disk: 0x8000_0000,
+            network: true,
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn alert_spec_both_none() {
+        use super::QueryAlert;
+
+        let mut conn = setup_test_db();
+        let s = setup_alert_spec_entities(&mut conn);
+        let (alert_id, _) = create_alert_chain(
+            &mut conn,
+            s.project,
+            s.head,
+            s.version,
+            s.testbed,
+            s.branch,
+            s.measure,
+            &ALERT_SPEC_UUIDS,
+        );
+
+        let alert = QueryAlert::get(&mut conn, alert_id).unwrap();
+        let json_alert = alert.into_json(&mut conn).unwrap();
+        assert!(
+            json_alert.threshold.testbed.spec.is_none(),
+            "both report and testbed have no spec"
+        );
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn alert_spec_both_same() {
+        use super::QueryAlert;
+
+        let mut conn = setup_test_db();
+        let s = setup_alert_spec_entities(&mut conn);
+
+        let spec_a = create_spec(&mut conn, spec_a_args());
+        set_testbed_spec(&mut conn, s.testbed, spec_a);
+
+        let (alert_id, report_id) = create_alert_chain(
+            &mut conn,
+            s.project,
+            s.head,
+            s.version,
+            s.testbed,
+            s.branch,
+            s.measure,
+            &ALERT_SPEC_UUIDS,
+        );
+        set_report_spec(&mut conn, report_id, spec_a);
+
+        let alert = QueryAlert::get(&mut conn, alert_id).unwrap();
+        let json_alert = alert.into_json(&mut conn).unwrap();
+        let spec = json_alert
+            .threshold
+            .testbed
+            .spec
+            .expect("spec should be present");
+        assert_eq!(
+            spec.uuid.to_string(),
+            spec_a_args().uuid,
+            "alert should use the shared spec"
+        );
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn alert_spec_no_report_testbed_gains() {
+        use super::QueryAlert;
+
+        let mut conn = setup_test_db();
+        let s = setup_alert_spec_entities(&mut conn);
+
+        let (alert_id, _) = create_alert_chain(
+            &mut conn,
+            s.project,
+            s.head,
+            s.version,
+            s.testbed,
+            s.branch,
+            s.measure,
+            &ALERT_SPEC_UUIDS,
+        );
+
+        let spec_a = create_spec(&mut conn, spec_a_args());
+        set_testbed_spec(&mut conn, s.testbed, spec_a);
+
+        let alert = QueryAlert::get(&mut conn, alert_id).unwrap();
+        let json_alert = alert.into_json(&mut conn).unwrap();
+        assert!(
+            json_alert.threshold.testbed.spec.is_none(),
+            "alert should use report spec (None), not testbed's current spec"
+        );
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn alert_spec_report_has_testbed_changes() {
+        use super::QueryAlert;
+
+        let mut conn = setup_test_db();
+        let s = setup_alert_spec_entities(&mut conn);
+
+        let spec_a = create_spec(&mut conn, spec_a_args());
+        set_testbed_spec(&mut conn, s.testbed, spec_a);
+
+        let (alert_id, report_id) = create_alert_chain(
+            &mut conn,
+            s.project,
+            s.head,
+            s.version,
+            s.testbed,
+            s.branch,
+            s.measure,
+            &ALERT_SPEC_UUIDS,
+        );
+        set_report_spec(&mut conn, report_id, spec_a);
+
+        let spec_b = create_spec(&mut conn, spec_b_args());
+        set_testbed_spec(&mut conn, s.testbed, spec_b);
+
+        let alert = QueryAlert::get(&mut conn, alert_id).unwrap();
+        let json_alert = alert.into_json(&mut conn).unwrap();
+        let spec = json_alert
+            .threshold
+            .testbed
+            .spec
+            .expect("spec should be present");
+        assert_eq!(
+            spec.uuid.to_string(),
+            spec_a_args().uuid,
+            "alert should use report's spec_a, not testbed's current spec_b"
+        );
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn alert_spec_report_has_testbed_cleared() {
+        use super::QueryAlert;
+
+        let mut conn = setup_test_db();
+        let s = setup_alert_spec_entities(&mut conn);
+
+        let spec_a = create_spec(&mut conn, spec_a_args());
+        set_testbed_spec(&mut conn, s.testbed, spec_a);
+
+        let (alert_id, report_id) = create_alert_chain(
+            &mut conn,
+            s.project,
+            s.head,
+            s.version,
+            s.testbed,
+            s.branch,
+            s.measure,
+            &ALERT_SPEC_UUIDS,
+        );
+        set_report_spec(&mut conn, report_id, spec_a);
+
+        clear_testbed_spec(&mut conn, s.testbed);
+
+        let alert = QueryAlert::get(&mut conn, alert_id).unwrap();
+        let json_alert = alert.into_json(&mut conn).unwrap();
+        let spec = json_alert
+            .threshold
+            .testbed
+            .spec
+            .expect("spec should be present");
+        assert_eq!(
+            spec.uuid.to_string(),
+            spec_a_args().uuid,
+            "alert should use report's spec_a, even though testbed's spec was cleared"
+        );
     }
 }
