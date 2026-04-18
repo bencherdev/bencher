@@ -37,8 +37,8 @@ Built for teams where performance matters:
 Most teams start on GitHub Actions runners with a benchmark comparison script.
 That approach breaks down when noisy shared CI runners hide real performance regressions.
 
-- Typical CI runners have **>30% variance**,
-- Bencher Bare Metal runners have **<2% variance**.
+- Typical CI runners: **>30% variance**
+- Bencher Bare Metal runners: **<2% variance**
 
 When a number moves, it means something.
 
