@@ -1,19 +1,10 @@
 import FieldKind from "../../components/field/kind";
 import IconTitle from "../../components/site/IconTitle";
-import { getUserRaw } from "../../util/auth";
+import { getUserRaw, isSameUser } from "../../util/auth";
 import type { Params } from "../../util/url";
 import { validResourceName, validU32 } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation } from "../types";
 import { addPath, createdUuidPath, parentPath, viewUuidPath } from "../util";
-
-const isAllowedTokenRevoke = async (_apiUrl: string, params: Params) => {
-	const user = getUserRaw();
-	return (
-		user.user.uuid === params?.user ||
-		user.user.slug === params?.user ||
-		user.user.admin
-	);
-};
 
 export const TOKEN_ICON = "fas fa-stroopwafel";
 
@@ -136,7 +127,7 @@ const tokensConfig = {
 					subtitle: "API Token",
 					path: (params: Params) =>
 						`/v0/users/${params?.user}/tokens/${params?.token}`,
-					is_allowed: isAllowedTokenRevoke,
+					is_allowed: isSameUser,
 				},
 			],
 			cards: [

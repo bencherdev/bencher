@@ -77,9 +77,7 @@ const RevokeButton = (props: Props) => {
 						}
 					>
 						<div class="content has-text-centered">
-							<h3 class="title is-3">
-								Are you sure? Revocation is permanent.
-							</h3>
+							<h3 class="title is-3">Are you sure? Revocation is permanent.</h3>
 							{props.subtitle && (
 								<h4 class="subtitle is-4">{props.subtitle}</h4>
 							)}
@@ -117,9 +115,8 @@ const RevokeButton = (props: Props) => {
 		>
 			<div class="notification is-warning">
 				<p>
-					This {props.subtitle} was revoked on{" "}
-					{fmtDate(props.data()?.revoked)}. Revocation is permanent and cannot
-					be undone.
+					This {props.subtitle} was revoked on {fmtDate(props.data()?.revoked)}.
+					Revocation is permanent and cannot be undone.
 				</p>
 			</div>
 		</Show>

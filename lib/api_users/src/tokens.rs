@@ -218,6 +218,9 @@ async fn post_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Token, insert_token))?;
 
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenCreate);
+
     auth_conn!(context, |conn| {
         schema::token::table
             .filter(schema::token::uuid.eq(&insert_token.uuid))
@@ -382,6 +385,9 @@ async fn delete_inner(
         now
     ))
     .map_err(resource_conflict_err!(Token, (&query_user, &query_token)))?;
+
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenRevoke);
 
     Ok(())
 }

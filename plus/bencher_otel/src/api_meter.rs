@@ -81,6 +81,10 @@ pub enum ApiCounter {
     UserSsoJoin(AuthMethod),
     UserCheckout,
 
+    UserTokenCreate,
+    UserTokenRevoke,
+    UserTokenRevokedUse,
+
     RequestMax(IntervalKind, AuthorizationKind),
 
     RunClaimedMax(IntervalKind),
@@ -155,8 +159,10 @@ impl ApiCounter {
             Self::UserSsoJoin(_) => "{join}",
             Self::UserCheckout => "{checkout}",
 
-            Self::UserAttemptMax(_, _) => "{attempt}",
-            Self::UserTokenMax(_) => "{token}",
+            Self::UserAttemptMax(_, _) | Self::UserTokenRevokedUse => "{attempt}",
+            Self::UserTokenMax(_)
+            | Self::UserTokenCreate
+            | Self::UserTokenRevoke => "{token}",
             Self::RunnerKeyRotate => "{key}",
 
             Self::Create(_) | Self::CreateMax(_) => "{resource}",
@@ -204,6 +210,10 @@ impl ApiCounter {
             Self::UserClaim => "user.claim",
             Self::UserSsoJoin(_) => "user.sso.join",
             Self::UserCheckout => "user.checkout",
+
+            Self::UserTokenCreate => "user.token.create",
+            Self::UserTokenRevoke => "user.token.revoke",
+            Self::UserTokenRevokedUse => "user.token.revoked.use",
 
             Self::RequestMax(_, _) => "request.max",
 
@@ -278,6 +288,12 @@ impl ApiCounter {
             Self::UserSsoJoin(_) => "Counts the number of user SSO joins",
             Self::UserCheckout => "Counts the number of user checkouts",
 
+            Self::UserTokenCreate => "Counts the number of user API token creations",
+            Self::UserTokenRevoke => "Counts the number of user API token revocations",
+            Self::UserTokenRevokedUse => {
+                "Counts the number of authentication attempts with a revoked API token"
+            },
+
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
 
             Self::RunClaimedMax(_) => "Counts the number of claimed run maximums reached",
@@ -344,6 +360,9 @@ impl ApiCounter {
             | Self::UserInvite
             | Self::UserClaim
             | Self::UserCheckout
+            | Self::UserTokenCreate
+            | Self::UserTokenRevoke
+            | Self::UserTokenRevokedUse
             | Self::MetricsBilled
             | Self::MetricsBilledFailed
             | Self::EmailSend

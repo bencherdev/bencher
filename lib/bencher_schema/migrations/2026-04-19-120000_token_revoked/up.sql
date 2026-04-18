@@ -1,3 +1,3 @@
 ALTER TABLE token ADD COLUMN revoked BIGINT;
 
-CREATE INDEX index_token_not_revoked ON token(id) WHERE revoked IS NULL;
+CREATE UNIQUE INDEX index_token_active_jwt ON token(jwt) WHERE revoked IS NULL;

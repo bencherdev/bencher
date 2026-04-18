@@ -124,7 +124,7 @@ const DeckButton = (props: Props) => {
 					</div>
 				</div>
 			</Match>
-			<Match when={props.config?.kind === ActionButton.REVOKE}>
+			<Match when={props.config?.kind === ActionButton.REVOKE && isAllowed()}>
 				<div class="columns">
 					<div class="column">
 						<form

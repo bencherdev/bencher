@@ -56,6 +56,8 @@ impl AuthUser {
         // short-lived client (browser session) JWTs are not stored, so skip them.
         if claims.aud == Audience::ApiKey.to_string() {
             QueryToken::get_active_by_jwt(conn, &bearer_token).map_err(|_e| {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenRevokedUse);
                 unauthorized_error("This API token has been revoked and is no longer valid")
             })?;
         }
