@@ -63,9 +63,9 @@ pub struct TaskDeploy {
     #[clap(long)]
     pub user: Option<String>,
 
-    /// Runner authentication token
+    /// Runner authentication key
     #[clap(long)]
-    pub token: Option<Secret>,
+    pub runner_key: Option<Secret>,
 
     /// Bencher API host URL
     #[clap(long)]
@@ -93,9 +93,9 @@ pub struct TaskStart {
     #[clap(long)]
     pub user: Option<String>,
 
-    /// Runner authentication token
+    /// Runner authentication key
     #[clap(long)]
-    pub token: Option<Secret>,
+    pub runner_key: Option<Secret>,
 
     /// Bencher API host URL
     #[clap(long)]

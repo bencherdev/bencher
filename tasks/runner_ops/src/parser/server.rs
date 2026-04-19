@@ -12,7 +12,7 @@ pub struct Server {
     pub server: String,
     pub key: Option<Utf8PathBuf>,
     pub user: Option<String>,
-    pub token: Option<Secret>,
+    pub runner_key: Option<Secret>,
     pub host: Option<url::Url>,
 }
 

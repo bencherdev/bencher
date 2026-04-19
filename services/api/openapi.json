@@ -7677,7 +7677,7 @@
           "runners"
         ],
         "summary": "Create a runner",
-        "description": "➕ Bencher Plus: Create a new runner on the server. The user must be an admin to use this endpoint. Returns the runner token which is only shown once.",
+        "description": "➕ Bencher Plus: Create a new runner on the server. The user must be an admin to use this endpoint. Returns the runner key which is only shown once.",
         "operationId": "runners_post",
         "requestBody": {
           "content": {
@@ -7732,7 +7732,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonRunnerToken"
+                  "$ref": "#/components/schemas/JsonRunnerKey"
                 }
               }
             }
@@ -7912,7 +7912,7 @@
           "runners"
         ],
         "summary": "Persistent WebSocket channel for runner lifecycle",
-        "description": "➕ Bencher Plus: Single persistent WebSocket connection for job assignment and execution. Runner sends `Ready` to request a job, server pushes `Job` or `NoJob`. During execution, handles `Running`, `Heartbeat`, `Completed`, `Failed`, and `Canceled` messages. Authentication is via runner token in the Authorization header.",
+        "description": "➕ Bencher Plus: Single persistent WebSocket connection for job assignment and execution. Runner sends `Ready` to request a job, server pushes `Job` or `NoJob`. During execution, handles `Running`, `Heartbeat`, `Completed`, `Failed`, and `Canceled` messages. Authentication is via runner key in the Authorization header.",
         "operationId": "runner_channel",
         "parameters": [
           {
@@ -7936,6 +7936,82 @@
           }
         },
         "x-dropshot-websocket": {}
+      }
+    },
+    "/v0/runners/{runner}/key": {
+      "post": {
+        "tags": [
+          "runners"
+        ],
+        "summary": "Rotate runner key",
+        "description": "➕ Bencher Plus: Generate a new key for a runner, invalidating the old one. The user must be an admin to use this endpoint. Returns the new key which is only shown once.",
+        "operationId": "runner_key_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runner",
+            "description": "The slug or UUID for a runner.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "successful creation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonRunnerKey"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
       }
     },
     "/v0/runners/{runner}/specs": {
@@ -8163,82 +8239,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
-    "/v0/runners/{runner}/token": {
-      "post": {
-        "tags": [
-          "runners"
-        ],
-        "summary": "Rotate runner token",
-        "description": "➕ Bencher Plus: Generate a new token for a runner, invalidating the old one. The user must be an admin to use this endpoint. Returns the new token which is only shown once.",
-        "operationId": "runner_token_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "runner",
-            "description": "The slug or UUID for a runner.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "successful creation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonRunnerToken"
                 }
               }
             }
@@ -14670,6 +14670,27 @@
           "uuid"
         ]
       },
+      "JsonRunnerKey": {
+        "description": "Runner key response (returned on create or rotate)",
+        "type": "object",
+        "properties": {
+          "key": {
+            "description": "The runner key. Only shown once - store it securely!",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Secret"
+              }
+            ]
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/RunnerUuid"
+          }
+        },
+        "required": [
+          "key",
+          "uuid"
+        ]
+      },
       "JsonRunnerRateLimiter": {
         "type": "object",
         "properties": {
@@ -14848,27 +14869,6 @@
           "plus",
           "total",
           "unclaimed"
-        ]
-      },
-      "JsonRunnerToken": {
-        "description": "Runner token response (returned on create or rotate)",
-        "type": "object",
-        "properties": {
-          "token": {
-            "description": "The runner token. Only shown once - store it securely!",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Secret"
-              }
-            ]
-          },
-          "uuid": {
-            "$ref": "#/components/schemas/RunnerUuid"
-          }
-        },
-        "required": [
-          "token",
-          "uuid"
         ]
       },
       "JsonRunners": {

@@ -58,14 +58,14 @@ pub struct JsonNewRunner {
     pub slug: Option<RunnerSlug>,
 }
 
-/// Runner token response (returned on create or rotate)
+/// Runner key response (returned on create or rotate)
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonRunnerToken {
+pub struct JsonRunnerKey {
     pub uuid: RunnerUuid,
-    /// The runner token. Only shown once - store it securely!
-    pub token: Secret,
+    /// The runner key. Only shown once - store it securely!
+    pub key: Secret,
 }
 
 /// Update a runner

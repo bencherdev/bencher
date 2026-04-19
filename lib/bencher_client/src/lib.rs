@@ -203,7 +203,7 @@ try_from_client!(
     JsonServerStats,
     JsonRunners,
     JsonRunner,
-    JsonRunnerToken,
+    JsonRunnerKey,
     JsonSpecs,
     JsonSpec,
     JsonJobs,

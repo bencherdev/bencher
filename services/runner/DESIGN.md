@@ -69,7 +69,7 @@ Represents a registered bare metal machine capable of executing benchmark jobs.
 | uuid             | `RunnerUuid`        | Runner's unique identifier                           |
 | name             | `ResourceName`      | Human-readable name                                  |
 | slug             | `RunnerSlug`        | URL-friendly slug (unique, auto-generated from name) |
-| token_hash       | `TokenHash`         | SHA-256 hash of runner token (64-char hex, token itself never stored) |
+| key_hash         | `KeyHash`           | SHA-256 hash of runner key (64-char hex, key itself never stored) |
 | last_heartbeat   | `Option<DateTime>`  | Last heartbeat received from this runner             |
 | created          | `DateTime`          | Creation timestamp                                   |
 | modified         | `DateTime`          | Last modification timestamp                          |
@@ -267,11 +267,11 @@ Requires server admin permissions.
 
 | Method | Endpoint                     | Description                                    |
 | ------ | ---------------------------- | ---------------------------------------------- |
-| POST   | `/v0/runners`                | Create runner, returns token (shown once)       |
+| POST   | `/v0/runners`                | Create runner, returns key (shown once)         |
 | GET    | `/v0/runners`                | List runners (filterable by name, search, archived) |
 | GET    | `/v0/runners/{runner}`       | Get runner details (by UUID or slug)            |
 | PATCH  | `/v0/runners/{runner}`       | Update runner (name, slug, archived)            |
-| POST   | `/v0/runners/{runner}/token` | Rotate token (invalidates old immediately)      |
+| POST   | `/v0/runners/{runner}/key`   | Rotate key (invalidates old immediately)        |
 
 ### Spec Management (Server Scoped)
 
@@ -306,7 +306,7 @@ Jobs belong to projects, but can be executed by any runner on the server.
 
 ### Runner Agent Endpoints
 
-Authenticated via runner token (`Authorization: Bearer bencher_runner_<token>`)
+Authenticated via runner key (`Authorization: Bearer bencher_runner_<key>`)
 
 | Method    | Endpoint                          | Description                                            |
 | --------- | --------------------------------- | ------------------------------------------------------ |
@@ -374,7 +374,7 @@ Single persistent WebSocket connection for the entire runner lifecycle. Handles 
 ```
 Runner                              Server
   │                                    │
-  ├──[WS] Connect with runner token ──►│  Validate token
+  ├──[WS] Connect with runner key ───►│  Validate key
   │◄─────────────── Connected ─────────┤
   │                                    │
   │  ┌─── IDLE / POLLING LOOP ────┐    │
@@ -637,31 +637,31 @@ This is intentional: for a benchmarking platform, a failed benchmark is signal (
 
 ## Authentication
 
-### Token Format
+### Key Format
 
-Runner tokens use 64 random hex characters with a `bencher_runner_` prefix (79 chars total). The token is shown exactly once at creation and cannot be retrieved later. Only the SHA-256 hash is stored in the database, so a database breach does not expose usable tokens.
+Runner keys use 64 random hex characters with a `bencher_runner_` prefix (79 chars total). The key is shown exactly once at creation and cannot be retrieved later. Only the SHA-256 hash is stored in the database, so a database breach does not expose usable keys.
 
-### Token Validation
+### Key Validation
 
 1. Verify the `bencher_runner_` prefix and total length (79 chars)
-2. Hash the provided token with SHA-256
+2. Hash the provided key with SHA-256
 3. Look up the runner by hash AND path parameter (UUID or slug), excluding archived runners
-4. Single combined query prevents token enumeration attacks
+4. Single combined query prevents key enumeration attacks
 
-### Token Rotation
+### Key Rotation
 
-If a token is compromised:
-1. Rotate token (`POST /v0/runners/{runner}/token`) — old token is invalidated immediately
-2. Update runner agent with new token
-3. Archived runners cannot have their tokens rotated
+If a key is compromised:
+1. Rotate key (`POST /v0/runners/{runner}/key`) — old key is invalidated immediately
+2. Update runner agent with new key
+3. Archived runners cannot have their keys rotated
 
 ### Request Header
 
 ```
-Authorization: Bearer bencher_runner_<token>
+Authorization: Bearer bencher_runner_<key>
 ```
 
-This token is scoped to:
+This key is scoped to:
 - Only the runner agent endpoints (`/v0/runners/{runner}/channel`)
 - Can claim jobs from any project on the server
 - Can only perform operations on jobs claimed by this runner

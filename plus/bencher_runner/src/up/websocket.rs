@@ -17,12 +17,12 @@ pub struct JobChannel {
 }
 
 impl JobChannel {
-    pub fn connect(ws_url: &Url, token: &str) -> Result<Self, WebSocketError> {
+    pub fn connect(ws_url: &Url, key: &str) -> Result<Self, WebSocketError> {
         let request = Request::builder()
             .uri(ws_url.as_str())
             .header(
                 bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(token),
+                bencher_json::bearer_header(key),
             )
             .header("Sec-WebSocket-Version", "13")
             .header("Connection", "Upgrade")

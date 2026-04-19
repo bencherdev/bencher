@@ -17,7 +17,7 @@ impl TryFrom<CliUp> for Up {
         Ok(Self {
             config: UpConfig {
                 host: task.host,
-                token: task.token,
+                key: task.key,
                 runner: task.runner,
                 poll_timeout_secs: task.poll_timeout,
                 tuning,

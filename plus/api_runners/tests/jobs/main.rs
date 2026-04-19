@@ -120,11 +120,11 @@ async fn claim_job_no_jobs() {
 
     let (_, spec_id) = insert_test_spec(&server);
     let runner = create_runner(&server, &admin.token, "Claim Test Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
-    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
     assert!(claimed.is_none());
 }
 
@@ -142,7 +142,7 @@ async fn claim_job_canceled_pending() {
 
     let (_, spec_id) = insert_test_spec(&server);
     let runner = create_runner(&server, &admin.token, "Canceled Pending Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
@@ -155,7 +155,7 @@ async fn claim_job_canceled_pending() {
     set_job_status(&server, job_uuid, JobStatus::Canceled);
 
     // Try to claim - should get NoJob since only Pending jobs are claimable
-    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
     assert!(
         claimed.is_none(),
         "Canceled pending job should not be claimable"
@@ -185,7 +185,7 @@ mod job_lifecycle {
         // Create a runner
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Lifecycle Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -195,7 +195,7 @@ mod job_lifecycle {
         let job_uuid = insert_test_job(&server, report_id, spec_id);
 
         // Step 1: Claim the job via channel WS
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 5).await;
         let claimed_job = claimed.expect("Expected to claim a job");
         assert_eq!(claimed_job.uuid, job_uuid);
 
@@ -238,7 +238,7 @@ mod job_lifecycle {
         // Create a runner
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Lifecycle Fail Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -248,7 +248,7 @@ mod job_lifecycle {
         let job_uuid = insert_test_job(&server, report_id, spec_id);
 
         // Step 1: Claim the job via channel WS
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 5).await;
         assert!(claimed.is_some());
 
         // Step 2: Transition to running via DB
@@ -290,11 +290,11 @@ mod job_lifecycle {
         // Create two runners
         let (_, spec_id) = insert_test_spec(&server);
         let runner1 = create_runner(&server, &admin.token, "Concurrent Runner 1").await;
-        let runner1_token: String = runner1.token.as_ref().to_owned();
+        let runner1_key: String = runner1.key.as_ref().to_owned();
         let runner1_id = get_runner_id(&server, runner1.uuid);
         associate_runner_spec(&server, runner1_id, spec_id);
         let runner2 = create_runner(&server, &admin.token, "Concurrent Runner 2").await;
-        let runner2_token: String = runner2.token.as_ref().to_owned();
+        let runner2_key: String = runner2.key.as_ref().to_owned();
         let runner2_id = get_runner_id(&server, runner2.uuid);
         associate_runner_spec(&server, runner2_id, spec_id);
 
@@ -305,8 +305,8 @@ mod job_lifecycle {
 
         // Both runners try to claim concurrently via channel WS
         let (result1, result2) = (
-            claim_via_channel(&server, runner1.uuid, &runner1_token, 1),
-            claim_via_channel(&server, runner2.uuid, &runner2_token, 1),
+            claim_via_channel(&server, runner1.uuid, &runner1_key, 1),
+            claim_via_channel(&server, runner2.uuid, &runner2_key, 1),
         )
             .join()
             .await;
@@ -354,7 +354,7 @@ mod job_spec {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Spec Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -363,7 +363,7 @@ mod job_spec {
         let _job_uuid = insert_test_job_with_project(&server, report_id, project.uuid, spec_id);
 
         // Claim the job via channel WS
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 5).await;
         let claimed_job = claimed.expect("Expected to claim a job");
 
         // Verify spec is present and has correct values
@@ -395,7 +395,7 @@ mod job_spec {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Spec Optional Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -407,7 +407,7 @@ mod job_spec {
             insert_test_job_with_optional_fields(&server, report_id, project.uuid, spec_id);
 
         // Claim the job via channel WS
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 5).await;
         let claimed_job = claimed.expect("Expected to claim a job");
         assert_eq!(claimed_job.uuid, job_uuid);
 
@@ -446,7 +446,7 @@ mod job_spec {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Spec Invalid Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -457,7 +457,7 @@ mod job_spec {
         let _job_uuid = insert_test_job_with_invalid_config(&server, report_id, spec_id);
 
         // Try to claim the job via channel WS - should get an error or close
-        let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
+        let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
         let ready = RunnerMessage::Ready {
             poll_timeout: Some(PollTimeout::try_from(5).unwrap()),
         };
@@ -505,7 +505,7 @@ mod job_spec {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Spec Public Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -514,7 +514,7 @@ mod job_spec {
         let job_uuid = insert_test_job(&server, report_id, spec_id);
 
         // Claim the job via channel WS (so it has a runner assigned)
-        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
+        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_key, 5).await;
 
         // Fetch the job via the public project endpoint
         let project_slug: &str = project.slug.as_ref();
@@ -569,7 +569,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Priority Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -607,7 +607,7 @@ mod priority_scheduling {
         );
 
         // Claim first job - should be the high priority one
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, high_job,
@@ -619,7 +619,7 @@ mod priority_scheduling {
         set_job_status(&server, high_job, JobStatus::Completed);
 
         // Claim second job - should be the medium priority one
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, medium_job,
@@ -631,7 +631,7 @@ mod priority_scheduling {
         set_job_status(&server, medium_job, JobStatus::Completed);
 
         // Claim third job - should be the low priority one
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, low_job,
@@ -651,7 +651,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Free Tier Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -680,14 +680,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         assert!(claimed.is_some(), "Expected to claim first job");
 
         // Mark job as running (not completed)
         set_job_status(&server, job1, JobStatus::Running);
 
         // Try to claim second job - should fail because org already has a running job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         assert!(
             claimed.is_none(),
             "Expected no job to be claimed due to org concurrency limit"
@@ -706,7 +706,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Unclaimed Tier Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -736,14 +736,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         assert!(claimed.is_some(), "Expected to claim first job");
 
         // Mark job as running
         set_job_status(&server, job1, JobStatus::Running);
 
         // Try to claim second job - should fail because same IP already has a running job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         assert!(
             claimed.is_none(),
             "Expected no job to be claimed due to IP concurrency limit"
@@ -762,7 +762,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Unclaimed IPs Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -791,14 +791,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
         set_job_status(&server, first_claimed.uuid, JobStatus::Running);
 
         // Claim second job - should succeed because different IP
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let second_claimed = claimed.expect("Expected to claim second job with different IP");
 
         // Verify both jobs were claimed
@@ -821,7 +821,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Enterprise Tier Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -850,14 +850,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running (not completed)
         set_job_status(&server, first_claimed.uuid, JobStatus::Running);
 
         // Claim second job - should succeed because Enterprise tier has no limit
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let second_claimed = claimed.expect("Enterprise tier should allow concurrent jobs");
 
         // Verify both distinct jobs were claimed
@@ -880,7 +880,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Skip Blocked Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -900,7 +900,7 @@ mod priority_scheduling {
         );
 
         // Claim and start the blocking job
-        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         set_job_status(&server, blocking_job, JobStatus::Running);
 
         // Insert a blocked Free tier job and an unblocked Enterprise tier job
@@ -924,7 +924,7 @@ mod priority_scheduling {
         );
 
         // Try to claim - should get the Enterprise job (skipping the blocked Free tier job)
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim Enterprise job");
         assert_eq!(
             claimed.uuid, enterprise_job,
@@ -944,7 +944,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Team Tier Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -973,14 +973,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
         set_job_status(&server, first_claimed.uuid, JobStatus::Running);
 
         // Claim second job - should succeed because Team tier has no limit
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let second_claimed = claimed.expect("Team tier should allow concurrent jobs");
 
         assert!(
@@ -1000,7 +1000,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "FIFO Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -1047,7 +1047,7 @@ mod priority_scheduling {
         );
 
         // Claim first - should be first_job (created first)
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, first_job,
@@ -1059,7 +1059,7 @@ mod priority_scheduling {
         set_job_status(&server, first_job, JobStatus::Completed);
 
         // Claim second - should be second_job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, second_job,
@@ -1071,7 +1071,7 @@ mod priority_scheduling {
         set_job_status(&server, second_job, JobStatus::Completed);
 
         // Claim third - should be third_job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, third_job,
@@ -1097,7 +1097,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Free Diff Org Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -1130,14 +1130,14 @@ mod priority_scheduling {
         );
 
         // Claim first job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let first_claimed = claimed.expect("Expected to claim first job");
 
         // Mark job as running
         set_job_status(&server, first_claimed.uuid, JobStatus::Running);
 
         // Claim second job - should succeed because different org
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let second_claimed =
             claimed.expect("Different orgs should allow concurrent Free tier jobs");
 
@@ -1158,7 +1158,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Unblock Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -1187,13 +1187,13 @@ mod priority_scheduling {
         );
 
         // Claim and start first job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let first_claimed = claimed.expect("Expected to claim first job");
 
         set_job_status(&server, first_claimed.uuid, JobStatus::Running);
 
         // Try to claim second job - should fail (org blocked)
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         assert!(
             claimed.is_none(),
             "Second job should be blocked while first is running"
@@ -1203,7 +1203,7 @@ mod priority_scheduling {
         set_job_status(&server, first_claimed.uuid, JobStatus::Completed);
 
         // Now try to claim second job - should succeed (org no longer blocked)
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let second_claimed = claimed.expect("Second job should be claimable after first completes");
 
         // Verify we got the second job (not the completed first one)
@@ -1230,7 +1230,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Boundary Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -1250,7 +1250,7 @@ mod priority_scheduling {
         );
 
         // Claim and start the blocking job
-        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         set_job_status(&server, blocking_job, JobStatus::Running);
 
         // Insert another Free tier job (should be blocked by org concurrency)
@@ -1276,7 +1276,7 @@ mod priority_scheduling {
         );
 
         // Try to claim - should get the Team tier job, not the blocked Free tier job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim Team tier job");
         assert_eq!(
             claimed.uuid, team_job,
@@ -1296,7 +1296,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Boundary UF Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -1317,7 +1317,7 @@ mod priority_scheduling {
         );
 
         // Claim and start the blocking job
-        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, _claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         set_job_status(&server, blocking_job, JobStatus::Running);
 
         // Insert Unclaimed job with same IP (should be blocked by IP)
@@ -1363,7 +1363,7 @@ mod priority_scheduling {
         );
 
         // Try to claim - should get the Free tier job from different org
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim unblocked Free tier job");
         assert_eq!(
             claimed.uuid, free_unblocked,
@@ -1385,7 +1385,7 @@ mod priority_scheduling {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "FIFO Tie Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
@@ -1430,7 +1430,7 @@ mod priority_scheduling {
         );
 
         // Claim first - should be first_job (lowest id)
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, first_job,
@@ -1442,7 +1442,7 @@ mod priority_scheduling {
         set_job_status(&server, first_job, JobStatus::Completed);
 
         // Claim second - should be second_job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, second_job,
@@ -1454,7 +1454,7 @@ mod priority_scheduling {
         set_job_status(&server, second_job, JobStatus::Completed);
 
         // Claim third - should be third_job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
         let claimed = claimed.expect("Expected to claim a job");
         assert_eq!(
             claimed.uuid, third_job,
@@ -1480,11 +1480,11 @@ mod poll_timeout_boundaries {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Poll Zero Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
-        let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
+        let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
 
         // Send a raw Ready message with poll_timeout: 0 (which is invalid)
         let raw_msg = r#"{"event":"ready","poll_timeout":0}"#;
@@ -1532,12 +1532,12 @@ mod poll_timeout_boundaries {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner = create_runner(&server, &admin.token, "Poll Max Runner").await;
-        let runner_token: &str = runner.token.as_ref();
+        let runner_key: &str = runner.key.as_ref();
         let runner_id = get_runner_id(&server, runner.uuid);
         associate_runner_spec(&server, runner_id, spec_id);
 
         // Send a raw Ready with poll_timeout: 901 (above max 900, server closes connection)
-        let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
+        let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
         let raw_msg = r#"{"event":"ready","poll_timeout":901}"#;
         ws.send(Message::Text(raw_msg.into()))
             .await
@@ -1574,11 +1574,11 @@ mod concurrency_safety {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner1 = create_runner(&server, &admin.token, "Conc Free Runner 1").await;
-        let runner1_token: String = runner1.token.as_ref().to_owned();
+        let runner1_key: String = runner1.key.as_ref().to_owned();
         let runner1_id = get_runner_id(&server, runner1.uuid);
         associate_runner_spec(&server, runner1_id, spec_id);
         let runner2 = create_runner(&server, &admin.token, "Conc Free Runner 2").await;
-        let runner2_token: String = runner2.token.as_ref().to_owned();
+        let runner2_key: String = runner2.key.as_ref().to_owned();
         let runner2_id = get_runner_id(&server, runner2.uuid);
         associate_runner_spec(&server, runner2_id, spec_id);
 
@@ -1608,8 +1608,8 @@ mod concurrency_safety {
 
         // Race both runners to claim simultaneously via channel WS
         let (result1, result2) = (
-            claim_via_channel(&server, runner1.uuid, &runner1_token, 1),
-            claim_via_channel(&server, runner2.uuid, &runner2_token, 1),
+            claim_via_channel(&server, runner1.uuid, &runner1_key, 1),
+            claim_via_channel(&server, runner2.uuid, &runner2_key, 1),
         )
             .join()
             .await;
@@ -1642,11 +1642,11 @@ mod concurrency_safety {
 
         let (_, spec_id) = insert_test_spec(&server);
         let runner1 = create_runner(&server, &admin.token, "Conc Uncl Runner 1").await;
-        let runner1_token: String = runner1.token.as_ref().to_owned();
+        let runner1_key: String = runner1.key.as_ref().to_owned();
         let runner1_id = get_runner_id(&server, runner1.uuid);
         associate_runner_spec(&server, runner1_id, spec_id);
         let runner2 = create_runner(&server, &admin.token, "Conc Uncl Runner 2").await;
-        let runner2_token: String = runner2.token.as_ref().to_owned();
+        let runner2_key: String = runner2.key.as_ref().to_owned();
         let runner2_id = get_runner_id(&server, runner2.uuid);
         associate_runner_spec(&server, runner2_id, spec_id);
 
@@ -1677,8 +1677,8 @@ mod concurrency_safety {
 
         // Race both runners to claim simultaneously via channel WS
         let (result1, result2) = (
-            claim_via_channel(&server, runner1.uuid, &runner1_token, 1),
-            claim_via_channel(&server, runner2.uuid, &runner2_token, 1),
+            claim_via_channel(&server, runner1.uuid, &runner1_key, 1),
+            claim_via_channel(&server, runner2.uuid, &runner2_key, 1),
         )
             .join()
             .await;
@@ -1709,7 +1709,7 @@ async fn user_jwt_rejected_on_runner_endpoint() {
 
     let runner = create_runner(&server, &admin.token, "JWT Test Runner").await;
 
-    // Use the user's JWT (not a runner token) on the runner channel endpoint
+    // Use the user's JWT (not a runner key) on the runner channel endpoint
     let result = try_connect_channel_ws(&server, runner.uuid, &admin.token).await;
     match result {
         Err(_) => {},
@@ -1757,7 +1757,7 @@ async fn runner_multiple_specs_claims_matching_jobs() {
 
     // Create a runner and associate it with both specs
     let runner = create_runner(&server, &admin.token, "Multi Spec Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_x86_id);
     associate_runner_spec(&server, runner_id, spec_arm_id);
@@ -1786,11 +1786,11 @@ async fn runner_multiple_specs_claims_matching_jobs() {
     );
 
     // First claim should get one job
-    let (_ws, first) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+    let (_ws, first) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
     let first = first.expect("Expected to claim first job");
 
     // Second claim should get the other job
-    let (_ws, second) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+    let (_ws, second) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
     let second = second.expect("Expected to claim second job");
 
     // Both jobs should have been claimed (order depends on priority/FIFO)
@@ -1841,16 +1841,16 @@ async fn non_admin_cannot_patch_runner() {
 
 /// Wrong runner's token cannot connect to a different runner's channel.
 #[tokio::test]
-async fn wrong_runner_token_claim() {
+async fn wrong_runner_key_claim() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "auth-wrong-claim@example.com").await;
 
     let runner1 = create_runner(&server, &admin.token, "Auth Runner One").await;
     let runner2 = create_runner(&server, &admin.token, "Auth Runner Two").await;
-    let runner2_token: &str = runner2.token.as_ref();
+    let runner2_key: &str = runner2.key.as_ref();
 
     // Use runner2's token to connect to runner1's channel endpoint
-    let result = try_connect_channel_ws(&server, runner1.uuid, runner2_token).await;
+    let result = try_connect_channel_ws(&server, runner1.uuid, runner2_key).await;
     match result {
         Err(_) => {},
         Ok(mut ws) => assert_ws_closed(&mut ws).await,
@@ -1859,13 +1859,13 @@ async fn wrong_runner_token_claim() {
 
 /// Archived runner's token cannot connect to channel.
 #[tokio::test]
-async fn archived_runner_token_rejected() {
+async fn archived_runner_key_rejected() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "auth-archived@example.com").await;
 
     let (_, spec_id) = insert_test_spec(&server);
     let runner = create_runner(&server, &admin.token, "Archived Auth Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
@@ -1884,7 +1884,7 @@ async fn archived_runner_token_rejected() {
         .expect("Request failed");
 
     // Try to connect with the archived runner's token
-    let result = try_connect_channel_ws(&server, runner.uuid, runner_token).await;
+    let result = try_connect_channel_ws(&server, runner.uuid, runner_key).await;
     match result {
         Err(_) => {},
         Ok(mut ws) => assert_ws_closed(&mut ws).await,
@@ -1907,11 +1907,11 @@ async fn free_tier_blocked_same_org_different_runner() {
 
     let (_, spec_id) = insert_test_spec(&server);
     let runner1 = create_runner(&server, &admin.token, "FreeOrgRunner1").await;
-    let runner1_token: &str = runner1.token.as_ref();
+    let runner1_key: &str = runner1.key.as_ref();
     let runner1_id = get_runner_id(&server, runner1.uuid);
     associate_runner_spec(&server, runner1_id, spec_id);
     let runner2 = create_runner(&server, &admin.token, "FreeOrgRunner2").await;
-    let runner2_token: &str = runner2.token.as_ref();
+    let runner2_key: &str = runner2.key.as_ref();
     let runner2_id = get_runner_id(&server, runner2.uuid);
     associate_runner_spec(&server, runner2_id, spec_id);
 
@@ -1940,7 +1940,7 @@ async fn free_tier_blocked_same_org_different_runner() {
     );
 
     // Runner1 claims first job
-    let (_ws, claimed) = claim_via_channel(&server, runner1.uuid, runner1_token, 1).await;
+    let (_ws, claimed) = claim_via_channel(&server, runner1.uuid, runner1_key, 1).await;
     assert_eq!(claimed.as_ref().map(|j| j.uuid), Some(job1));
 
     // Set to running
@@ -1948,7 +1948,7 @@ async fn free_tier_blocked_same_org_different_runner() {
     set_job_runner_id(&server, job1, runner1_id);
 
     // Runner2 tries to claim second job — same org, should be blocked
-    let (_ws, claimed) = claim_via_channel(&server, runner2.uuid, runner2_token, 1).await;
+    let (_ws, claimed) = claim_via_channel(&server, runner2.uuid, runner2_key, 1).await;
     assert!(
         claimed.is_none(),
         "Free tier: second job should be blocked for same org"
@@ -1965,7 +1965,7 @@ async fn mixed_tier_free_blocked_enterprise_claimable() {
 
     let (_, spec_id) = insert_test_spec(&server);
     let runner = create_runner(&server, &admin.token, "MixTier Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
@@ -2007,7 +2007,7 @@ async fn mixed_tier_free_blocked_enterprise_claimable() {
     );
 
     // Claim should skip the blocked Free job and grab the Enterprise job
-    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
     assert_eq!(
         claimed.as_ref().map(|j| j.uuid),
         Some(enterprise_job),
@@ -2438,12 +2438,12 @@ async fn claim_job_invalid_config() {
     insert_test_job_with_invalid_config(&server, report_id, spec_id);
 
     let runner = create_runner(&server, &admin.token, "Invalid Config Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
     // Try to claim the job via channel WS — parse_config should fail
-    let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
+    let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(1).unwrap()),
     };
@@ -2493,7 +2493,7 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
 
     let (_, spec_id) = insert_test_spec(&server);
     let runner = create_runner(&server, &admin.token, "No WS Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
@@ -2502,7 +2502,7 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     let job_uuid = insert_test_job(&server, report_id, spec_id);
 
     // Claim the job via channel WS.
-    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 5).await;
     let claimed = claimed.expect("Expected to claim a job");
     assert_eq!(claimed.uuid, job_uuid);
 
@@ -2670,11 +2670,11 @@ async fn poll_timeout_delays_nojob() {
 
     let (_, spec_id) = insert_test_spec(&server);
     let runner = create_runner(&server, &admin.token, "Poll Timeout Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
-    let mut ws = connect_channel_ws(&server, runner.uuid, runner_token).await;
+    let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(2).expect("Invalid poll timeout")),
     };

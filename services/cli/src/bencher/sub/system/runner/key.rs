@@ -3,20 +3,20 @@ use bencher_json::RunnerResourceId;
 use crate::{
     CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::system::runner::CliRunnerToken,
+    parser::system::runner::CliRunnerKey,
 };
 
 #[derive(Debug)]
-pub struct Token {
+pub struct Key {
     pub runner: RunnerResourceId,
     pub backend: AuthBackend,
 }
 
-impl TryFrom<CliRunnerToken> for Token {
+impl TryFrom<CliRunnerKey> for Key {
     type Error = CliError;
 
-    fn try_from(token: CliRunnerToken) -> Result<Self, Self::Error> {
-        let CliRunnerToken { runner, backend } = token;
+    fn try_from(key: CliRunnerKey) -> Result<Self, Self::Error> {
+        let CliRunnerKey { runner, backend } = key;
         Ok(Self {
             runner,
             backend: backend.try_into()?,
@@ -24,13 +24,13 @@ impl TryFrom<CliRunnerToken> for Token {
     }
 }
 
-impl SubCmd for Token {
+impl SubCmd for Key {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
             .send(|client| async move {
                 client
-                    .runner_token_post()
+                    .runner_key_post()
                     .runner(self.runner.clone())
                     .send()
                     .await

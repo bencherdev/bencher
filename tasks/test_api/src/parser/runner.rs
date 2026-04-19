@@ -8,7 +8,7 @@ pub struct TaskRunner {
     #[clap(long)]
     pub url: Option<Url>,
 
-    /// Admin token for runner token rotation
+    /// Admin token for runner key rotation
     #[clap(long, requires = "with_daemon")]
     pub admin_token: Option<Jwt>,
 

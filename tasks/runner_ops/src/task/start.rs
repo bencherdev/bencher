@@ -9,7 +9,7 @@ pub struct Start {
     ssh: Ssh,
     host: url::Url,
     runner: RunnerResourceId,
-    token: Secret,
+    runner_key: Secret,
     danger_allow_no_sandbox: bool,
 }
 
@@ -22,17 +22,17 @@ impl TryFrom<TaskStart> for Start {
             server,
             key,
             user,
-            token,
+            runner_key,
             host,
             danger_allow_no_sandbox,
         } = task;
-        let (ssh, host, runner, token) =
-            merge_ssh_with_extras(runner, server, key, user, token, host)?;
+        let (ssh, host, runner, runner_key) =
+            merge_ssh_with_extras(runner, server, key, user, runner_key, host)?;
         Ok(Self {
             ssh,
             host,
             runner,
-            token,
+            runner_key,
             danger_allow_no_sandbox,
         })
     }
@@ -43,14 +43,14 @@ impl Start {
         ssh: Ssh,
         host: url::Url,
         runner: RunnerResourceId,
-        token: Secret,
+        runner_key: Secret,
         danger_allow_no_sandbox: bool,
     ) -> Self {
         Self {
             ssh,
             host,
             runner,
-            token,
+            runner_key,
             danger_allow_no_sandbox,
         }
     }
@@ -60,7 +60,7 @@ impl Start {
             ssh,
             host,
             runner,
-            token,
+            runner_key,
             danger_allow_no_sandbox,
         } = self;
         println!("Configuring runner credentials...");
@@ -75,10 +75,10 @@ impl Start {
              [Service]\n\
              Environment=BENCHER_HOST={host}\n\
              Environment=BENCHER_RUNNER={runner}\n\
-             Environment=BENCHER_RUNNER_TOKEN={token}\n\
+             Environment=BENCHER_RUNNER_KEY={runner_key}\n\
              {no_sandbox_env}\
              CRED_EOF",
-            token = token.as_ref(),
+            runner_key = runner_key.as_ref(),
         ))?;
         println!("Starting runner service...");
         ssh.run("systemctl daemon-reload")?;

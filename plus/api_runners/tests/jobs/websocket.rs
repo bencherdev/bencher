@@ -8,7 +8,7 @@ use super::common::{
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
 use bencher_json::{
-    JobStatus, JobUuid, JsonRunnerToken, PollTimeout, RunnerUuid, runner::JsonIterationOutput,
+    JobStatus, JobUuid, JsonRunnerKey, PollTimeout, RunnerUuid, runner::JsonIterationOutput,
 };
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -20,7 +20,7 @@ use tokio_tungstenite::tungstenite::{
 
 /// Full setup: create user, org, project, runner, job, then connect channel,
 /// send Ready, and receive Job.
-/// Returns `(ws, runner_uuid, runner_token, job_uuid)`.
+/// Returns `(ws, runner_uuid, runner_key, job_uuid)`.
 #[expect(clippy::expect_used, clippy::panic)]
 async fn setup_claimed_job(
     server: &TestServer,
@@ -35,7 +35,7 @@ async fn setup_claimed_job(
         .await;
 
     let runner = create_runner(server, &admin.token, &format!("Runner {suffix}")).await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(server, project.slug.as_ref());
     let report_id = create_test_report(server, project_id);
@@ -46,7 +46,7 @@ async fn setup_claimed_job(
     associate_runner_spec(server, runner_id, spec_id);
 
     // Connect channel, send Ready, receive Job
-    let mut ws = connect_channel(server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
     };
@@ -61,7 +61,7 @@ async fn setup_claimed_job(
         },
     }
 
-    (ws, runner.uuid, runner_token, job_uuid)
+    (ws, runner.uuid, runner_key, job_uuid)
 }
 
 /// Read the job status directly from the database.
@@ -79,15 +79,15 @@ fn get_job_status(server: &TestServer, job_uuid: JobUuid) -> JobStatus {
 // Authentication / Pre-condition Tests
 // =============================================================================
 
-/// Connect with an invalid runner token. The server upgrades the WebSocket
+/// Connect with an invalid runner key. The server upgrades the WebSocket
 /// (dropshot's `#[channel]` macro upgrades before the handler runs),
 /// then the handler returns an error and the connection is closed.
 #[tokio::test]
-async fn channel_invalid_token() {
+async fn channel_invalid_key() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "ws-badtok@example.com").await;
+    let admin = server.signup("Admin", "ws-badkey@example.com").await;
 
-    let runner = create_runner(&server, &admin.token, "Runner badtok").await;
+    let runner = create_runner(&server, &admin.token, "Runner badkey").await;
 
     let url = ws_url(&server, &format!("/v0/runners/{}/channel", runner.uuid));
     let mut request = url.into_client_request().expect("Failed to build request");
@@ -109,7 +109,7 @@ async fn channel_invalid_token() {
     }
 }
 
-/// Connect as a different runner (wrong token for the runner UUID).
+/// Connect as a different runner (wrong key for the runner UUID).
 #[tokio::test]
 async fn channel_wrong_runner() {
     let server = TestServer::new().await;
@@ -117,14 +117,14 @@ async fn channel_wrong_runner() {
 
     let runner1 = create_runner(&server, &admin.token, "Runner one").await;
     let runner2 = create_runner(&server, &admin.token, "Runner two").await;
-    let runner1_token: &str = runner1.token.as_ref();
+    let runner1_key: &str = runner1.key.as_ref();
 
-    // Try to connect to runner2's channel using runner1's token
+    // Try to connect to runner2's channel using runner1's key
     let url = ws_url(&server, &format!("/v0/runners/{}/channel", runner2.uuid));
     let mut request = url.into_client_request().expect("Failed to build request");
     request.headers_mut().insert(
         bencher_json::AUTHORIZATION,
-        bencher_json::bearer_header(runner1_token)
+        bencher_json::bearer_header(runner1_key)
             .parse()
             .expect("Invalid header"),
     );
@@ -146,7 +146,7 @@ async fn channel_wrong_runner() {
 #[tokio::test]
 async fn channel_lifecycle_completed() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) = setup_claimed_job(&server, "done").await;
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) = setup_claimed_job(&server, "done").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -209,7 +209,7 @@ async fn channel_completed_records_job_duration() {
         .await;
 
     let runner = create_runner(&server, &admin.token, "Runner duration").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -220,7 +220,7 @@ async fn channel_completed_records_job_duration() {
     associate_runner_spec(&server, runner_id, spec_id);
 
     // Connect channel, send Ready, receive Job
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
     };
@@ -275,7 +275,7 @@ async fn channel_completed_records_job_duration() {
 #[tokio::test]
 async fn channel_lifecycle_failed() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) = setup_claimed_job(&server, "fail").await;
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) = setup_claimed_job(&server, "fail").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -315,8 +315,7 @@ async fn channel_lifecycle_failed() {
 #[tokio::test]
 async fn channel_heartbeat_cancel() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
-        setup_claimed_job(&server, "cancel").await;
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) = setup_claimed_job(&server, "cancel").await;
 
     // Send Running
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -344,7 +343,7 @@ async fn channel_heartbeat_cancel() {
 #[tokio::test]
 async fn channel_canceled_message_over_ws() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "canceled-ws").await;
 
     // Transition to Running
@@ -376,7 +375,7 @@ async fn channel_canceled_message_over_ws() {
 #[tokio::test]
 async fn channel_runner_sends_canceled() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "runner-canceled").await;
 
     // Transition to Running
@@ -406,7 +405,7 @@ async fn channel_runner_sends_canceled() {
 #[tokio::test]
 async fn channel_canceled_acknowledgment() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "cancel-ack").await;
 
     // Send Running
@@ -438,8 +437,7 @@ async fn channel_canceled_acknowledgment() {
 #[tokio::test]
 async fn channel_invalid_json() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
-        setup_claimed_job(&server, "badjson").await;
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) = setup_claimed_job(&server, "badjson").await;
 
     // Send invalid JSON - server should ignore it
     ws.send(Message::Text("not valid json{{{".into()))
@@ -461,7 +459,7 @@ async fn channel_invalid_json() {
 #[tokio::test]
 async fn channel_heartbeat_timeout() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "hbtimeout").await;
 
     // Send Running to start the job
@@ -496,7 +494,7 @@ async fn channel_heartbeat_timeout() {
 #[tokio::test]
 async fn channel_ping_pong() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, _job_uuid) = setup_claimed_job(&server, "pong").await;
+    let (mut ws, _runner_uuid, _runner_key, _job_uuid) = setup_claimed_job(&server, "pong").await;
 
     // Send Ping
     let ping_data = b"hello".to_vec();
@@ -530,7 +528,7 @@ async fn channel_lifecycle_with_full_spec() {
         .await;
 
     let runner = create_runner(&server, &admin.token, "Runner fullspec").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -542,7 +540,7 @@ async fn channel_lifecycle_with_full_spec() {
     associate_runner_spec(&server, runner_id, spec_id);
 
     // Connect channel, send Ready, receive Job
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
     };
@@ -607,8 +605,7 @@ async fn channel_lifecycle_with_full_spec() {
 async fn channel_large_message() {
     // 1 MiB body limit so the WebSocket max_message_size < our 2 MiB payload
     let server = TestServer::new_with_limits(30, 1024 * 1024).await;
-    let (mut ws, runner_uuid, runner_token, _job_uuid) =
-        setup_claimed_job(&server, "largemsg").await;
+    let (mut ws, runner_uuid, runner_key, _job_uuid) = setup_claimed_job(&server, "largemsg").await;
     // Close the setup connection; we need a custom config for large frames
     ws.close(None).await.expect("Failed to close setup WS");
 
@@ -617,7 +614,7 @@ async fn channel_large_message() {
     let mut request = url.into_client_request().expect("Failed to build request");
     request.headers_mut().insert(
         bencher_json::AUTHORIZATION,
-        bencher_json::bearer_header(&runner_token)
+        bencher_json::bearer_header(&runner_key)
             .parse()
             .expect("Invalid header"),
     );
@@ -664,7 +661,7 @@ async fn channel_large_message() {
 #[tokio::test]
 async fn channel_ping_does_not_reset_heartbeat_timeout() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "ping-no-reset").await;
 
     // Send Running to start the job and reset the heartbeat clock
@@ -710,8 +707,7 @@ async fn channel_ping_does_not_reset_heartbeat_timeout() {
 #[tokio::test]
 async fn channel_binary_message() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
-        setup_claimed_job(&server, "binary").await;
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) = setup_claimed_job(&server, "binary").await;
 
     // Send a binary message — server should ignore it
     ws.send(Message::Binary(b"\x00\x01\x02\x03".to_vec().into()))
@@ -746,7 +742,7 @@ async fn channel_binary_message() {
 #[tokio::test]
 async fn channel_completed_before_running() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "complete-early").await;
 
     // Send Completed without first sending Running (job is still Claimed)
@@ -776,7 +772,7 @@ async fn channel_completed_before_running() {
 #[tokio::test]
 async fn channel_failed_from_claimed() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "fail-early").await;
 
     // Send Failed without first sending Running (job is still Claimed)
@@ -813,7 +809,7 @@ async fn channel_failed_from_claimed() {
 #[tokio::test]
 async fn channel_completed_ack_no_close() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "close-done").await;
 
     // Send Running
@@ -847,7 +843,7 @@ async fn channel_completed_ack_no_close() {
 #[tokio::test]
 async fn channel_failed_ack_no_close() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "close-fail").await;
 
     // Send Running
@@ -882,7 +878,7 @@ async fn channel_failed_ack_no_close() {
 #[tokio::test]
 async fn channel_canceled_ack_no_close() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "close-cancel").await;
 
     // Send Running
@@ -908,7 +904,7 @@ async fn channel_canceled_ack_no_close() {
 #[tokio::test]
 async fn channel_completed_with_output() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "output-done").await;
 
     // Send Running
@@ -963,7 +959,7 @@ async fn channel_completed_overrides_failed() {
         .await;
 
     let runner = create_runner(&server, &admin.token, "Runner comp-override").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -980,7 +976,7 @@ async fn channel_completed_overrides_failed() {
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 
     // Runner reconnects and resends Completed during Idle (retry after reconnect)
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
 
     // Send Completed before Ready (terminal message retry during Idle)
     send_msg(
@@ -1012,7 +1008,7 @@ async fn channel_completed_overrides_failed() {
 #[tokio::test]
 async fn channel_failed_with_output() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "output-fail").await;
 
     // Send Running
@@ -1047,7 +1043,7 @@ async fn channel_failed_with_output() {
 #[tokio::test]
 async fn channel_completed_with_stderr_only() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "stderr-only").await;
 
     // Send Running
@@ -1081,7 +1077,7 @@ async fn channel_completed_with_stderr_only() {
 #[tokio::test]
 async fn channel_completed_result_processing_failure() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "proc-fail").await;
 
     // Send Running
@@ -1125,7 +1121,7 @@ async fn channel_completed_result_processing_failure() {
 #[tokio::test]
 async fn channel_completed_multiple_iterations() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "multi-iter").await;
 
     // Send Running
@@ -1177,7 +1173,7 @@ async fn channel_completed_multiple_iterations() {
 #[tokio::test]
 async fn channel_completed_multiple_iterations_with_file_output() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "multi-iter-file").await;
 
     // Send Running
@@ -1232,7 +1228,7 @@ async fn channel_completed_multiple_iterations_with_file_output() {
 #[tokio::test]
 async fn channel_failed_multiple_iterations() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "multi-iter-fail").await;
 
     // Send Running
@@ -1304,7 +1300,7 @@ async fn channel_job_timeout() {
         .await;
 
     let runner = create_runner(&server, &admin.token, "Runner jobtimeout").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -1317,7 +1313,7 @@ async fn channel_job_timeout() {
     associate_runner_spec(&server, runner_id, spec_id);
 
     // Connect channel, send Ready, receive Job
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
     };
@@ -1369,19 +1365,17 @@ async fn channel_job_timeout() {
 // Token Rotation Tests
 // =============================================================================
 
-/// After rotating a runner's token, the old token cannot open a channel,
-/// but the new token can.
+/// After rotating a runner's key, the old key cannot open a channel,
+/// but the new key can.
 #[tokio::test]
-async fn channel_token_rotation_invalidates_old_token() {
+async fn channel_key_rotation_invalidates_old_key() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "ws-tokenrot@example.com").await;
-    let org = server.create_org(&admin, "Ws tokenrot").await;
-    let project = server
-        .create_project(&admin, &org, "Ws tokenrot proj")
-        .await;
+    let admin = server.signup("Admin", "ws-keyrot@example.com").await;
+    let org = server.create_org(&admin, "Ws keyrot").await;
+    let project = server.create_project(&admin, &org, "Ws keyrot proj").await;
 
-    let runner = create_runner(&server, &admin.token, "Runner tokenrot").await;
-    let original_token = runner.token.to_string();
+    let runner = create_runner(&server, &admin.token, "Runner keyrot").await;
+    let original_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -1391,8 +1385,8 @@ async fn channel_token_rotation_invalidates_old_token() {
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
-    // Open channel with original token, claim job, send Running
-    let mut ws = connect_channel(&server, runner.uuid, &original_token).await;
+    // Open channel with original key, claim job, send Running
+    let mut ws = connect_channel(&server, runner.uuid, &original_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
     };
@@ -1408,10 +1402,10 @@ async fn channel_token_rotation_invalidates_old_token() {
     // Close the WebSocket
     ws.close(None).await.expect("Failed to close WebSocket");
 
-    // Rotate the runner token via admin API
+    // Rotate the runner key via admin API
     let resp = server
         .client
-        .post(server.api_url(&format!("/v0/runners/{}/token", runner.uuid)))
+        .post(server.api_url(&format!("/v0/runners/{}/key", runner.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -1420,18 +1414,18 @@ async fn channel_token_rotation_invalidates_old_token() {
         .await
         .expect("Rotation request failed");
     assert_eq!(resp.status(), StatusCode::CREATED);
-    let new_runner: JsonRunnerToken = resp
+    let new_runner: JsonRunnerKey = resp
         .json()
         .await
         .expect("Failed to parse rotation response");
-    let new_token: String = new_runner.token.as_ref().to_owned();
+    let new_key: String = new_runner.key.as_ref().to_owned();
 
-    // Old token should be rejected on channel
+    // Old key should be rejected on channel
     let url = ws_url(&server, &format!("/v0/runners/{}/channel", runner.uuid));
     let mut request = url.into_client_request().expect("Failed to build request");
     request.headers_mut().insert(
         bencher_json::AUTHORIZATION,
-        bencher_json::bearer_header(&original_token)
+        bencher_json::bearer_header(&original_key)
             .parse()
             .expect("Invalid header"),
     );
@@ -1442,8 +1436,8 @@ async fn channel_token_rotation_invalidates_old_token() {
         },
     }
 
-    // New token should work for channel connection
-    let mut ws = connect_channel(&server, runner.uuid, &new_token).await;
+    // New key should work for channel connection
+    let mut ws = connect_channel(&server, runner.uuid, &new_key).await;
     // The job is Running; we can send a Heartbeat via the channel to verify auth works
     // But first we need to send Ready (the channel starts in Idle state).
     // Since the job is already Running, sending Ready will poll for a new Pending job.
@@ -1470,7 +1464,7 @@ async fn channel_token_rotation_invalidates_old_token() {
 #[tokio::test]
 async fn channel_running_cancel_on_concurrent_cancellation() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "run-cancel").await;
 
     // Cancel the job in DB (simulating concurrent user cancellation)
@@ -1502,7 +1496,7 @@ async fn channel_running_cancel_on_concurrent_cancellation() {
 #[tokio::test]
 async fn channel_completed_after_concurrent_cancel() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "done-vs-cancel").await;
 
     // Transition to Running
@@ -1547,7 +1541,7 @@ async fn channel_completed_after_concurrent_cancel() {
 #[tokio::test]
 async fn channel_completed_after_concurrent_failure() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "done-vs-fail").await;
 
     // Transition to Running
@@ -1590,7 +1584,7 @@ async fn channel_completed_after_concurrent_failure() {
 #[tokio::test]
 async fn channel_completed_idempotent_duplicate() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "done-idem").await;
 
     // Transition to Running
@@ -1631,7 +1625,7 @@ async fn channel_completed_idempotent_duplicate() {
 #[tokio::test]
 async fn channel_failed_after_concurrent_cancel() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "fail-vs-cancel").await;
 
     // Transition to Running
@@ -1675,7 +1669,7 @@ async fn channel_failed_after_concurrent_cancel() {
 #[tokio::test]
 async fn channel_failed_after_concurrent_completion() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "fail-vs-done").await;
 
     // Transition to Running
@@ -1719,7 +1713,7 @@ async fn channel_failed_after_concurrent_completion() {
 #[tokio::test]
 async fn channel_failed_idempotent_duplicate() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "fail-idem").await;
 
     // Transition to Running
@@ -1762,7 +1756,7 @@ async fn channel_failed_idempotent_duplicate() {
 #[tokio::test]
 async fn channel_completed_rejects_non_terminal_unexpected_state() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "done-bad-state").await;
 
     // Job is Claimed (not Running) — send Completed directly
@@ -1817,7 +1811,7 @@ async fn channel_heartbeat_detects_job_timeout() {
         .await;
 
     let runner = create_runner(&server, &admin.token, "Runner hb timeout").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -1830,7 +1824,7 @@ async fn channel_heartbeat_detects_job_timeout() {
     associate_runner_spec(&server, runner_id, spec_id);
 
     // Connect channel, send Ready, receive Job
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
     };
@@ -1895,7 +1889,7 @@ async fn channel_heartbeat_no_false_timeout() {
     let project = server.create_project(&admin, &org, "Ws hb noto proj").await;
 
     let runner = create_runner(&server, &admin.token, "Runner hb noto").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -1908,7 +1902,7 @@ async fn channel_heartbeat_no_false_timeout() {
     associate_runner_spec(&server, runner_id, spec_id);
 
     // Connect channel, send Ready, receive Job
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
     };
@@ -1960,7 +1954,7 @@ async fn channel_heartbeat_timeout_skipped_before_running() {
         .await;
 
     let runner = create_runner(&server, &admin.token, "Runner hb nostart").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -1973,7 +1967,7 @@ async fn channel_heartbeat_timeout_skipped_before_running() {
     associate_runner_spec(&server, runner_id, spec_id);
 
     // Connect channel, send Ready, receive Job
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
     };
@@ -2014,7 +2008,7 @@ async fn channel_multi_job_cycle() {
         .await;
 
     let runner = create_runner(&server, &admin.token, "Runner multijob").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -2028,7 +2022,7 @@ async fn channel_multi_job_cycle() {
     associate_runner_spec(&server, runner_id, spec_id);
 
     // Connect channel
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
 
     // --- Job 1 ---
     // Send Ready, receive Job
@@ -2143,7 +2137,7 @@ async fn channel_completed_during_idle() {
         .await;
 
     let runner = create_runner(&server, &admin.token, "Runner idle-complete").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -2158,7 +2152,7 @@ async fn channel_completed_during_idle() {
     set_job_status(&server, job_uuid, JobStatus::Running);
 
     // Connect a fresh channel (simulating reconnect)
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
 
     // Send Completed during Idle state (before sending Ready)
     send_msg(
@@ -2189,8 +2183,7 @@ async fn channel_completed_during_idle() {
 #[tokio::test]
 async fn channel_completed_during_idle_idempotent() {
     let server = TestServer::new().await;
-    let (mut ws, runner_uuid, runner_token, job_uuid) =
-        setup_claimed_job(&server, "idle-idem").await;
+    let (mut ws, runner_uuid, runner_key, job_uuid) = setup_claimed_job(&server, "idle-idem").await;
 
     // Complete the job normally
     send_msg(&mut ws, &RunnerMessage::Running).await;
@@ -2217,7 +2210,7 @@ async fn channel_completed_during_idle_idempotent() {
     // Close and reconnect
     ws.close(None).await.expect("Failed to close WebSocket");
 
-    let mut ws2 = connect_channel(&server, runner_uuid, &runner_token).await;
+    let mut ws2 = connect_channel(&server, runner_uuid, &runner_key).await;
 
     // Send Completed again during Idle (idempotent duplicate)
     send_msg(
@@ -2256,7 +2249,7 @@ async fn channel_failed_during_idle() {
         .await;
 
     let runner = create_runner(&server, &admin.token, "Runner idle-fail").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -2271,7 +2264,7 @@ async fn channel_failed_during_idle() {
     set_job_status(&server, job_uuid, JobStatus::Running);
 
     // Connect a fresh channel (simulating reconnect)
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
 
     // Send Failed during Idle state
     send_msg(
@@ -2312,7 +2305,7 @@ async fn channel_ready_no_poll_timeout() {
     let project = server.create_project(&admin, &org, "Ws nopt proj").await;
 
     let runner = create_runner(&server, &admin.token, "Runner nopt").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -2323,7 +2316,7 @@ async fn channel_ready_no_poll_timeout() {
     associate_runner_spec(&server, runner_id, spec_id);
 
     // Connect channel, send Ready with poll_timeout: None
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready { poll_timeout: None };
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
@@ -2347,9 +2340,9 @@ async fn channel_completed_wrong_job_uuid_during_idle() {
     let admin = server.signup("Admin", "ws-wrong-uuid-c@example.com").await;
 
     let runner = create_runner(&server, &admin.token, "Runner wrong-uuid-c").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
 
     // Send Completed with a UUID that doesn't exist in the DB
     let fake_uuid: JobUuid = "00000000-0000-0000-0000-000000000099"
@@ -2387,9 +2380,9 @@ async fn channel_failed_wrong_job_uuid_during_idle() {
     let admin = server.signup("Admin", "ws-wrong-uuid-f@example.com").await;
 
     let runner = create_runner(&server, &admin.token, "Runner wrong-uuid-f").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
-    let mut ws = connect_channel(&server, runner.uuid, &runner_token).await;
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
 
     // Send Failed with a UUID that doesn't exist in the DB
     let fake_uuid: JobUuid = "00000000-0000-0000-0000-000000000098"
@@ -2415,7 +2408,7 @@ async fn channel_failed_wrong_job_uuid_during_idle() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
-/// Two WS clients connect with the same runner token.
+/// Two WS clients connect with the same runner key.
 /// Both should connect. When a job is available, only one should claim it.
 #[tokio::test]
 async fn channel_concurrent_connections_same_runner() {
@@ -2427,7 +2420,7 @@ async fn channel_concurrent_connections_same_runner() {
         .await;
 
     let runner = create_runner(&server, &admin.token, "Runner concurrent").await;
-    let runner_token = runner.token.to_string();
+    let runner_key = runner.key.to_string();
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
@@ -2437,9 +2430,9 @@ async fn channel_concurrent_connections_same_runner() {
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
-    // Connect two WS clients with the same runner token
-    let mut ws1 = connect_channel(&server, runner.uuid, &runner_token).await;
-    let mut ws2 = connect_channel(&server, runner.uuid, &runner_token).await;
+    // Connect two WS clients with the same runner key
+    let mut ws1 = connect_channel(&server, runner.uuid, &runner_key).await;
+    let mut ws2 = connect_channel(&server, runner.uuid, &runner_key).await;
 
     // Both send Ready with a short poll timeout
     let ready = RunnerMessage::Ready {
@@ -2473,7 +2466,7 @@ async fn channel_concurrent_connections_same_runner() {
 #[tokio::test]
 async fn channel_running_twice_idempotent() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "running-twice").await;
 
     // Send Running first time
@@ -2503,7 +2496,7 @@ async fn channel_running_twice_idempotent() {
 #[tokio::test]
 async fn channel_close_reason_on_heartbeat_timeout() {
     let server = TestServer::new().await;
-    let (mut ws, _runner_uuid, _runner_token, job_uuid) =
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
         setup_claimed_job(&server, "close-reason").await;
 
     // Send Running to start the job

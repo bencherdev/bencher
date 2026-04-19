@@ -106,22 +106,22 @@ fn merge_ssh(
     Ok((server, key, user))
 }
 
-/// Merge SSH + runner/token/host fields from CLI flags and server config file.
+/// Merge SSH + runner-key/host fields from CLI flags and server config file.
 fn merge_ssh_with_extras(
     runner: RunnerResourceId,
     server: Option<String>,
     key: Option<Utf8PathBuf>,
     user: Option<String>,
-    token: Option<Secret>,
+    runner_key: Option<Secret>,
     host: Option<url::Url>,
 ) -> anyhow::Result<(Ssh, url::Url, RunnerResourceId, Secret)> {
     let file = load_server(&runner)?;
     let (server, key, user) = merge_ssh(file.as_ref(), server, key, user)?;
-    let token = token
-        .or(file.as_ref().and_then(|f| f.token.clone()))
-        .ok_or_else(|| anyhow::anyhow!("--token is required"))?;
+    let runner_key = runner_key
+        .or(file.as_ref().and_then(|f| f.runner_key.clone()))
+        .ok_or_else(|| anyhow::anyhow!("--runner-key is required"))?;
     let host = host
         .or(file.as_ref().and_then(|f| f.host.clone()))
         .unwrap_or_else(|| DEFAULT_HOST.clone());
-    Ok((Ssh::new(server, key, user), host, runner, token))
+    Ok((Ssh::new(server, key, user), host, runner, runner_key))
 }

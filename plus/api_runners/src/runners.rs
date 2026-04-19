@@ -2,7 +2,7 @@ use bencher_endpoint::{
     CorsResponse, Endpoint, Get, Patch, Post, ResponseCreated, ResponseOk, TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonNewRunner, JsonPagination, JsonRunner, JsonRunnerToken, JsonUpdateRunner,
+    JsonDirection, JsonNewRunner, JsonPagination, JsonRunner, JsonRunnerKey, JsonUpdateRunner,
     ResourceName, RunnerResourceId, RunnerSlug, Search, Slug, runner::JsonRunners,
 };
 use bencher_schema::{
@@ -10,7 +10,7 @@ use bencher_schema::{
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
-        runner::{InsertRunner, QueryRunner, TokenHash, UpdateRunner},
+        runner::{InsertRunner, KeyHash, QueryRunner, UpdateRunner},
         user::{admin::AdminUser, auth::BearerToken},
     },
     schema, write_conn,
@@ -23,10 +23,10 @@ use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-/// Runner token prefix
-pub const RUNNER_TOKEN_PREFIX: &str = "bencher_runner_";
-/// Expected total length of a runner token: prefix (15 chars) + 64 hex chars = 79
-pub const RUNNER_TOKEN_LENGTH: usize = RUNNER_TOKEN_PREFIX.len() + 64;
+/// Runner key prefix
+pub const RUNNER_KEY_PREFIX: &str = "bencher_runner_";
+/// Expected total length of a runner key: prefix (15 chars) + 64 hex chars = 79
+pub const RUNNER_KEY_LENGTH: usize = RUNNER_KEY_PREFIX.len() + 64;
 
 pub type RunnersPagination = JsonPagination<RunnersSort>;
 
@@ -160,7 +160,7 @@ fn get_ls_query<'q>(
 ///
 /// ➕ Bencher Plus: Create a new runner on the server.
 /// The user must be an admin to use this endpoint.
-/// Returns the runner token which is only shown once.
+/// Returns the runner key which is only shown once.
 #[endpoint {
     method = POST,
     path = "/v0/runners",
@@ -170,7 +170,7 @@ pub async fn runners_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
     body: TypedBody<JsonNewRunner>,
-) -> Result<ResponseCreated<JsonRunnerToken>, HttpError> {
+) -> Result<ResponseCreated<JsonRunnerKey>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(rqctx.context(), body.into_inner()).await?;
     Ok(Post::auth_response_created(json))
@@ -179,7 +179,7 @@ pub async fn runners_post(
 async fn post_inner(
     context: &ApiContext,
     json_runner: JsonNewRunner,
-) -> Result<JsonRunnerToken, HttpError> {
+) -> Result<JsonRunnerKey, HttpError> {
     // Generate slug from name if not provided
     let slug = json_runner.slug.unwrap_or_else(|| {
         RunnerSlug::from(
@@ -187,12 +187,12 @@ async fn post_inner(
         )
     });
 
-    // Generate random token
-    let token = generate_runner_token();
-    let token_hash = hash_token(&token);
+    // Generate random key
+    let key = generate_runner_key();
+    let key_hash = hash_key(&key);
 
     let now = context.clock.now();
-    let insert_runner = InsertRunner::new(json_runner.name, slug, token_hash, now);
+    let insert_runner = InsertRunner::new(json_runner.name, slug, key_hash, now);
     let uuid = insert_runner.uuid;
 
     diesel::insert_into(schema::runner::table)
@@ -200,18 +200,15 @@ async fn post_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Runner, insert_runner))?;
 
-    // parse() will succeed since token is non-empty
-    let secret = token.parse().map_err(|_err| {
-        HttpError::for_internal_error("Failed to create runner token".to_owned())
-    })?;
+    // parse() will succeed since key is non-empty
+    let secret = key
+        .parse()
+        .map_err(|_err| HttpError::for_internal_error("Failed to create runner key".to_owned()))?;
 
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerCreate);
 
-    Ok(JsonRunnerToken {
-        uuid,
-        token: secret,
-    })
+    Ok(JsonRunnerKey { uuid, key: secret })
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -309,14 +306,14 @@ async fn patch_inner(
     })
 }
 
-/// Generate a random runner token with prefix
-pub fn generate_runner_token() -> String {
+/// Generate a random runner key with prefix
+pub fn generate_runner_key() -> String {
     let random_bytes: [u8; 32] = rand::random();
     let encoded = hex::encode(random_bytes);
-    format!("{RUNNER_TOKEN_PREFIX}{encoded}")
+    format!("{RUNNER_KEY_PREFIX}{encoded}")
 }
 
-/// Hash a runner token using SHA-256
-pub fn hash_token(token: &str) -> TokenHash {
-    TokenHash::encode(token)
+/// Hash a runner key using SHA-256
+pub fn hash_key(key: &str) -> KeyHash {
+    KeyHash::encode(key)
 }
