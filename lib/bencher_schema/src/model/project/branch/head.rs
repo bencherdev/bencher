@@ -248,7 +248,7 @@ impl InsertHead {
             })
     }
 
-    fn new(branch_id: BranchId, start_point_id: Option<HeadVersionId>) -> Self {
+    pub fn new(branch_id: BranchId, start_point_id: Option<HeadVersionId>) -> Self {
         Self {
             uuid: HeadUuid::new(),
             branch_id,

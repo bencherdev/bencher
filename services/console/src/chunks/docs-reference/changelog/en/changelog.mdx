@@ -4,6 +4,7 @@
 - Existing Thresholds will produce slightly wider (statistically correct) boundaries; no configuration changes required
 - Fix Alert JSON to return the Spec for the Report in which the Alert was generated instead of the Testbed's current Spec
 - **BREAKING CHANGE** Rename `runner token` to `runner key` across the API, CLI, and environment variables
+- Fix race condition where concurrent branch creation could cause a "branch head is null" 500 error (Thank you [@vmelamed](https://github.com/vmelamed))
 
 ## `v0.6.2`
 - Allow unauthenticated `docker push` to unclaimed projects

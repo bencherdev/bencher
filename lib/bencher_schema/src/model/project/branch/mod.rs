@@ -381,19 +381,8 @@ impl InsertBranch {
             start_point,
         } = branch;
 
-        // Create branch
-        let insert_branch = Self::from_json_inner(auth_conn!(context), project_id, name, slug);
-        let query_branch = write_transaction!(context, |conn| {
-            diesel::insert_into(schema::branch::table)
-                .values(&insert_branch)
-                .execute(conn)?;
-            diesel::select(last_insert_rowid()).get_result(conn)
-        })
-        .map_err(resource_conflict_err!(Branch, &insert_branch))
-        .map(|id| insert_branch.into_query(id))?;
-        slog::debug!(log, "Created branch {query_branch:?}");
-
-        // Get the branch head version for the start point
+        // Resolve the start point BEFORE creating the branch.
+        // This reads from the source branch, not the new one being created.
         let branch_start_point = if let Some(start_point) = start_point {
             // It is okay if the start point does not exist.
             // This prevents a race condition when creating both the branch and start point in CI.
@@ -407,36 +396,48 @@ impl InsertBranch {
         };
         slog::debug!(log, "Using start point {branch_start_point:?}");
 
-        InsertHead::for_branch(log, context, query_branch, branch_start_point.as_ref()).await
-    }
+        let insert_branch = Self::from_json_inner(auth_conn!(context), project_id, name, slug);
+        let start_point_id = branch_start_point.as_ref().map(StartPoint::head_version_id);
 
-    /// Convert into a [`QueryBranch`] using the given ID.
-    ///
-    /// Note: The returned `QueryBranch` has `head_id: None` because the head
-    /// is created separately via [`InsertHead::for_branch`] after the branch insert.
-    /// Callers should re-read the branch after the full transaction to get the final `head_id`.
-    pub fn into_query(self, id: BranchId) -> QueryBranch {
-        let Self {
-            uuid,
-            project_id,
-            name,
-            slug,
-            head_id,
-            created,
-            modified,
-            archived,
-        } = self;
-        QueryBranch {
-            id,
-            uuid,
-            project_id,
-            name,
-            slug,
-            head_id,
-            created,
-            modified,
-            archived,
-        }
+        // Atomically create branch + head in a single transaction
+        // so the branch never exists in the DB without a head.
+        let (branch_id, head_id) = write_transaction!(context, |conn| {
+            diesel::insert_into(schema::branch::table)
+                .values(&insert_branch)
+                .execute(conn)?;
+            let branch_id: BranchId = diesel::select(last_insert_rowid()).get_result(conn)?;
+
+            let insert_head = InsertHead::new(branch_id, start_point_id);
+            diesel::insert_into(schema::head::table)
+                .values(&insert_head)
+                .execute(conn)?;
+            let head_id: HeadId = diesel::select(last_insert_rowid()).get_result(conn)?;
+
+            diesel::update(schema::branch::table.filter(schema::branch::id.eq(branch_id)))
+                .set(schema::branch::head_id.eq(head_id))
+                .execute(conn)?;
+
+            diesel::QueryResult::Ok((branch_id, head_id))
+        })
+        .map_err(resource_conflict_err!(Branch, &insert_branch))?;
+
+        let query_branch = QueryBranch::get(auth_conn!(context), branch_id)?;
+        let query_head = QueryHead::get(auth_conn!(context), head_id)?;
+        slog::debug!(
+            log,
+            "Created branch {query_branch:?} with head {query_head:?}"
+        );
+
+        // Clone data from the start point for the head
+        query_head
+            .clone_start_point(log, context, &query_branch, branch_start_point.as_ref())
+            .await?;
+        slog::debug!(
+            log,
+            "Cloned start point for head: {query_head:?} {branch_start_point:?}"
+        );
+
+        Ok((query_branch, query_head))
     }
 
     fn from_json_inner(
@@ -512,7 +513,7 @@ impl UpdateBranch {
 
 #[cfg(test)]
 mod tests {
-    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 
     use bencher_json::DateTime;
 
@@ -606,5 +607,66 @@ mod tests {
             .first(&mut conn)
             .expect("Failed to get first branch id");
         assert_ne!(rowid, first_id);
+    }
+
+    #[test]
+    fn head_id_returns_error_when_none() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        // Create a branch WITHOUT a head (head_id is None)
+        diesel::insert_into(schema::branch::table)
+            .values((
+                schema::branch::uuid.eq("00000000-0000-0000-0000-000000000010"),
+                schema::branch::project_id.eq(base.project_id),
+                schema::branch::name.eq("headless-branch"),
+                schema::branch::slug.eq("headless-branch"),
+                schema::branch::created.eq(DateTime::TEST),
+                schema::branch::modified.eq(DateTime::TEST),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert branch");
+
+        let branch_id: BranchId = {
+            diesel::select(last_insert_rowid())
+                .get_result(&mut conn)
+                .expect("Failed to get branch id")
+        };
+
+        let query_branch: super::QueryBranch = schema::branch::table
+            .filter(schema::branch::id.eq(branch_id))
+            .select(super::QueryBranch::as_select())
+            .first(&mut conn)
+            .expect("Failed to get branch");
+
+        // head_id is None (head_id() would return Err and debug_assert panic)
+        assert!(query_branch.head_id.is_none());
+
+        // Create a head for the branch
+        let new_head_id = conn
+            .immediate_transaction(|conn| {
+                let insert_head = super::head::InsertHead::new(branch_id, None);
+                diesel::insert_into(schema::head::table)
+                    .values(&insert_head)
+                    .execute(conn)?;
+                let new_head_id: super::head::HeadId =
+                    diesel::select(last_insert_rowid()).get_result(conn)?;
+
+                diesel::update(schema::branch::table.filter(schema::branch::id.eq(branch_id)))
+                    .set(schema::branch::head_id.eq(new_head_id))
+                    .execute(conn)?;
+
+                diesel::QueryResult::Ok(new_head_id)
+            })
+            .expect("Transaction failed");
+
+        // Re-read the branch and verify head_id() now succeeds
+        let query_branch: super::QueryBranch = schema::branch::table
+            .filter(schema::branch::id.eq(branch_id))
+            .select(super::QueryBranch::as_select())
+            .first(&mut conn)
+            .expect("Failed to get branch");
+
+        assert_eq!(query_branch.head_id().unwrap(), new_head_id);
     }
 }
