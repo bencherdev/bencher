@@ -1,6 +1,6 @@
 PRAGMA foreign_keys = off;
 
-DROP INDEX IF EXISTS index_token_jwt;
+DROP INDEX IF EXISTS index_token_user_id;
 
 -- token: remove revoked column
 CREATE TABLE down_token (

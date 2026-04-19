@@ -52,6 +52,9 @@ impl AuthUser {
         let email = claims.email();
 
         let conn = public_conn!(context);
+        let query_user = QueryUser::get_with_email(conn, email)?;
+        query_user.check_is_locked()?;
+
         // API keys created via `POST /tokens` are persisted in the `token` table and
         // can be revoked. Reject any JWT whose row has `revoked` set. A JWT with no
         // row (e.g. one issued before revocation tracking existed, or any
@@ -59,7 +62,7 @@ impl AuthUser {
         // have been revoked. Short-lived client (browser session) JWTs are never
         // persisted and skip this lookup.
         if claims.audience() == Audience::ApiKey.as_str()
-            && let Some(row) = QueryToken::get_by_jwt(conn, &bearer_token)
+            && let Some(row) = QueryToken::get_by_user_jwt(conn, query_user.id, &bearer_token)
                 .optional()
                 .map_err(|e| unauthorized_error(format!("Failed to look up API token: {e}")))?
             && row.revoked.is_some()
@@ -70,8 +73,7 @@ impl AuthUser {
                 "This API token has been revoked and is no longer valid",
             ));
         }
-        let query_user = QueryUser::get_with_email(conn, email)?;
-        query_user.check_is_locked()?;
+
         #[cfg(feature = "plus")]
         context.rate_limiting.user_request(query_user.uuid)?;
 

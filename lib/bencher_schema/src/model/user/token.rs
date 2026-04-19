@@ -50,8 +50,13 @@ impl QueryToken {
             .map_err(resource_not_found_err!(Token, (user_id, uuid)))
     }
 
-    pub fn get_by_jwt(conn: &mut DbConnection, jwt: &Jwt) -> diesel::QueryResult<Self> {
+    pub fn get_by_user_jwt(
+        conn: &mut DbConnection,
+        user_id: UserId,
+        jwt: &Jwt,
+    ) -> diesel::QueryResult<Self> {
         schema::token::table
+            .filter(schema::token::user_id.eq(user_id))
             .filter(schema::token::jwt.eq(jwt.as_ref()))
             .first::<QueryToken>(conn)
     }
