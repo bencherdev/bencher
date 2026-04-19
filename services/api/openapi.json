@@ -9600,7 +9600,7 @@
           {
             "in": "query",
             "name": "revoked",
-            "description": "Include revoked tokens in the results. Defaults to `false`.",
+            "description": "If set to `true`, only returns revoked tokens. If not set or set to `false`, only returns non-revoked tokens.",
             "schema": {
               "nullable": true,
               "type": "boolean"

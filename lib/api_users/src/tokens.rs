@@ -49,7 +49,8 @@ pub struct UserTokensQuery {
     pub name: Option<ResourceName>,
     /// Search by token name, slug, or UUID.
     pub search: Option<Search>,
-    /// Include revoked tokens in the results. Defaults to `false`.
+    /// If set to `true`, only returns revoked tokens.
+    /// If not set or set to `false`, only returns non-revoked tokens.
     pub revoked: Option<bool>,
 }
 
@@ -142,7 +143,9 @@ fn get_ls_query<'q>(
         .filter(schema::token::user_id.eq(user_id))
         .into_boxed();
 
-    if !query_params.revoked.unwrap_or(false) {
+    if let Some(true) = query_params.revoked {
+        query = query.filter(schema::token::revoked.is_not_null());
+    } else {
         query = query.filter(schema::token::revoked.is_null());
     }
 
