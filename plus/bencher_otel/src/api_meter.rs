@@ -109,7 +109,7 @@ pub enum ApiCounter {
     // Runner metrics
     RunnerCreate,
     RunnerUpdate,
-    RunnerTokenRotate,
+    RunnerKeyRotate,
     RunnerJobClaim,
     RunnerJobUpdate(JobStatusKind),
     RunnerMinutesBilled,
@@ -156,7 +156,8 @@ impl ApiCounter {
             Self::UserCheckout => "{checkout}",
 
             Self::UserAttemptMax(_, _) => "{attempt}",
-            Self::UserTokenMax(_) | Self::RunnerTokenRotate => "{token}",
+            Self::UserTokenMax(_) => "{token}",
+            Self::RunnerKeyRotate => "{key}",
 
             Self::Create(_) | Self::CreateMax(_) => "{resource}",
 
@@ -231,7 +232,7 @@ impl ApiCounter {
             // Runner metrics
             Self::RunnerCreate => "runner.create",
             Self::RunnerUpdate => "runner.update",
-            Self::RunnerTokenRotate => "runner.token.rotate",
+            Self::RunnerKeyRotate => "runner.key.rotate",
             Self::RunnerJobClaim => "runner.job.claim",
             Self::RunnerJobUpdate(_) => "runner.job.update",
             Self::RunnerMinutesBilled => "runner.minutes.billed",
@@ -308,7 +309,7 @@ impl ApiCounter {
             // Runner metrics
             Self::RunnerCreate => "Counts the number of runner creations",
             Self::RunnerUpdate => "Counts the number of runner updates",
-            Self::RunnerTokenRotate => "Counts the number of runner token rotations",
+            Self::RunnerKeyRotate => "Counts the number of runner key rotations",
             Self::RunnerJobClaim => "Counts the number of runner job claims",
             Self::RunnerJobUpdate(_) => "Counts the number of runner job status updates",
             Self::RunnerMinutesBilled => "Counts the number of runner minutes successfully billed",
@@ -353,7 +354,7 @@ impl ApiCounter {
             | Self::OciTagsList
             | Self::RunnerCreate
             | Self::RunnerUpdate
-            | Self::RunnerTokenRotate
+            | Self::RunnerKeyRotate
             | Self::RunnerJobClaim
             | Self::RunnerMinutesBilled
             | Self::RunnerMinutesBilledFailed

@@ -9,17 +9,17 @@ use bencher_schema::{
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, RequestContext};
 
-use crate::runners::{RUNNER_TOKEN_LENGTH, RUNNER_TOKEN_PREFIX, hash_token};
+use crate::runners::{RUNNER_KEY_LENGTH, RUNNER_KEY_PREFIX, hash_key};
 
-/// Extract and validate runner token from Authorization header
+/// Extract and validate runner key from Authorization header
 #[derive(Debug)]
-pub struct RunnerToken {
+pub struct RunnerKey {
     pub runner_id: RunnerId,
     pub runner_uuid: bencher_json::RunnerUuid,
 }
 
-impl RunnerToken {
-    /// Extract and validate runner token from a request.
+impl RunnerKey {
+    /// Extract and validate runner key from a request.
     pub async fn from_request(
         rqctx: &RequestContext<ApiContext>,
         expected_runner: &RunnerResourceId,
@@ -37,21 +37,21 @@ impl RunnerToken {
         auth_header: Option<&str>,
         expected_runner: &RunnerResourceId,
     ) -> Result<Self, HttpError> {
-        let token = auth_header
+        let key = auth_header
             .and_then(bencher_json::strip_bearer_token)
             .ok_or_else(|| unauthorized_error("Missing or invalid Authorization header"))?;
 
-        // Validate token format (prefix + length)
-        if !token.starts_with(RUNNER_TOKEN_PREFIX) || token.len() != RUNNER_TOKEN_LENGTH {
-            return Err(unauthorized_error("Invalid runner token format"));
+        // Validate key format (prefix + length)
+        if !key.starts_with(RUNNER_KEY_PREFIX) || key.len() != RUNNER_KEY_LENGTH {
+            return Err(unauthorized_error("Invalid runner key format"));
         }
 
-        // Hash the token
-        let token_hash = hash_token(token);
+        // Hash the key
+        let key_hash = hash_key(key);
 
-        // Look up runner by token hash AND path parameter in a single query
+        // Look up runner by key hash AND path parameter in a single query
         let mut query = schema::runner::table
-            .filter(schema::runner::token_hash.eq(&token_hash))
+            .filter(schema::runner::key_hash.eq(&key_hash))
             .filter(schema::runner::archived.is_null())
             .into_boxed();
 
@@ -68,7 +68,7 @@ impl RunnerToken {
             .first(auth_conn!(context))
             .optional()
             .map_err(resource_not_found_err!(Runner))?
-            .ok_or_else(|| unauthorized_error("Invalid runner token"))?;
+            .ok_or_else(|| unauthorized_error("Invalid runner key"))?;
 
         Ok(Self {
             runner_id: runner.id,

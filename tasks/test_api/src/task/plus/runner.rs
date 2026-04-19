@@ -81,11 +81,11 @@ impl RunnerTest {
 
         let host = self.url.as_ref();
 
-        // Rotate the runner token to get a fresh one we can use
+        // Rotate the runner key to get a fresh one we can use
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "runner",
-            "token",
+            "key",
             HOST_ARG,
             host,
             TOKEN_ARG,
@@ -96,16 +96,16 @@ impl RunnerTest {
         let output = cmd.output()?;
         anyhow::ensure!(
             output.status.success(),
-            "Failed to rotate runner token: {}",
+            "Failed to rotate runner key: {}",
             String::from_utf8_lossy(&output.stderr)
         );
-        let runner_token: bencher_json::JsonRunnerToken = serde_json::from_slice(&output.stdout)?;
+        let runner_key: bencher_json::JsonRunnerKey = serde_json::from_slice(&output.stdout)?;
 
-        // Rotate the no-sandbox runner token
+        // Rotate the no-sandbox runner key
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "runner",
-            "token",
+            "key",
             HOST_ARG,
             host,
             TOKEN_ARG,
@@ -116,10 +116,10 @@ impl RunnerTest {
         let output = cmd.output()?;
         anyhow::ensure!(
             output.status.success(),
-            "Failed to rotate no-sandbox runner token: {}",
+            "Failed to rotate no-sandbox runner key: {}",
             String::from_utf8_lossy(&output.stderr)
         );
-        let no_sandbox_runner_token: bencher_json::JsonRunnerToken =
+        let no_sandbox_runner_key: bencher_json::JsonRunnerKey =
             serde_json::from_slice(&output.stdout)?;
 
         // On Linux with KVM, build bencher-init for the musl target so it can
@@ -175,8 +175,8 @@ impl RunnerTest {
                     "up",
                     HOST_ARG,
                     host,
-                    TOKEN_ARG,
-                    runner_token.token.as_ref(),
+                    "--key",
+                    runner_key.key.as_ref(),
                     "--runner",
                     "test-runner",
                 ])
@@ -204,8 +204,8 @@ impl RunnerTest {
                 "up",
                 HOST_ARG,
                 host,
-                TOKEN_ARG,
-                no_sandbox_runner_token.token.as_ref(),
+                "--key",
+                no_sandbox_runner_key.key.as_ref(),
                 "--runner",
                 "test-runner-no-sandbox",
                 "--danger-allow-no-sandbox",

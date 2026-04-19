@@ -7,7 +7,7 @@
 //! Integration tests for spec CRUD endpoints.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonRunnerToken, JsonSpec, JsonSpecs};
+use bencher_json::{JsonRunnerKey, JsonSpec, JsonSpecs};
 use http::StatusCode;
 
 // POST /v0/specs - admin can create spec (no sandbox)
@@ -547,7 +547,7 @@ async fn specs_delete_fails_when_in_use() {
         .await
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::CREATED);
-    let runner: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let runner: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
 
     // Associate spec with runner via API
     let assoc_body = serde_json::json!({"spec": spec.uuid.to_string()});

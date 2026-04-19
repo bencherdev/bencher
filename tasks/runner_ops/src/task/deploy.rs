@@ -12,7 +12,7 @@ pub struct Deploy {
     ssh: Ssh,
     host: url::Url,
     runner: RunnerResourceId,
-    token: Secret,
+    key: Secret,
     run_id: Option<u64>,
 }
 
@@ -23,19 +23,18 @@ impl TryFrom<TaskDeploy> for Deploy {
         let TaskDeploy {
             runner,
             server,
-            key,
+            ssh,
             user,
-            token,
+            key,
             host,
             run_id,
         } = task;
-        let (ssh, host, runner, token) =
-            merge_ssh_with_extras(runner, server, key, user, token, host)?;
+        let (ssh, host, runner, key) = merge_ssh_with_extras(runner, server, ssh, user, key, host)?;
         Ok(Self {
             ssh,
             host,
             runner,
-            token,
+            key,
             run_id,
         })
     }
@@ -47,12 +46,12 @@ impl Deploy {
             ssh,
             host,
             runner,
-            token,
+            key,
             run_id,
         } = self;
         let (runner_binary, _temp_dir) = download::download(run_id)?;
         deploy_setup::deploy(&ssh, Some(runner_binary.as_path()))?;
-        let start = Start::new(ssh, host, runner, token, false);
+        let start = Start::new(ssh, host, runner, key, false);
         start.exec()?;
         Ok(())
     }

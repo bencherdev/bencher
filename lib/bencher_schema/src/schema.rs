@@ -295,7 +295,7 @@ diesel::table! {
         uuid -> Text,
         name -> Text,
         slug -> Text,
-        token_hash -> Text,
+        key_hash -> Text,
         last_heartbeat -> Nullable<BigInt>,
         created -> BigInt,
         modified -> BigInt,

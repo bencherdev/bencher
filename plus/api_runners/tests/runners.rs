@@ -8,7 +8,7 @@
 mod common;
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonRunner, JsonRunnerToken, runner::JsonRunners};
+use bencher_json::{JsonRunner, JsonRunnerKey, runner::JsonRunners};
 use http::StatusCode;
 
 // POST /v0/runners - admin can create runner
@@ -34,11 +34,11 @@ async fn runners_create_as_admin() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::CREATED);
-    let runner_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
-    assert!(!runner_token.uuid.to_string().is_empty());
-    // Token should start with prefix
-    let token_str: &str = runner_token.token.as_ref();
-    assert!(token_str.starts_with("bencher_runner_"));
+    let runner_key: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
+    assert!(!runner_key.uuid.to_string().is_empty());
+    // Key should start with prefix
+    let key_str: &str = runner_key.key.as_ref();
+    assert!(key_str.starts_with("bencher_runner_"));
 }
 
 // POST /v0/runners - non-admin cannot create runner
@@ -170,12 +170,12 @@ async fn runners_get_by_uuid() {
         .await
         .expect("Request failed");
 
-    let runner_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let runner_key: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
 
     // Get by UUID
     let resp = server
         .client
-        .get(server.api_url(&format!("/v0/runners/{}", runner_token.uuid)))
+        .get(server.api_url(&format!("/v0/runners/{}", runner_key.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -186,7 +186,7 @@ async fn runners_get_by_uuid() {
 
     assert_eq!(resp.status(), StatusCode::OK);
     let runner: JsonRunner = resp.json().await.expect("Failed to parse response");
-    assert_eq!(runner.uuid, runner_token.uuid);
+    assert_eq!(runner.uuid, runner_key.uuid);
     assert_eq!(runner.name.as_ref(), "Get Test Runner");
 }
 
@@ -212,7 +212,7 @@ async fn runners_update_name() {
         .await
         .expect("Request failed");
 
-    let runner_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let runner_key: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
 
     // Update name
     let body = serde_json::json!({
@@ -220,7 +220,7 @@ async fn runners_update_name() {
     });
     let resp = server
         .client
-        .patch(server.api_url(&format!("/v0/runners/{}", runner_token.uuid)))
+        .patch(server.api_url(&format!("/v0/runners/{}", runner_key.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -257,7 +257,7 @@ async fn runners_archive() {
         .await
         .expect("Request failed");
 
-    let runner_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let runner_key: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
 
     // Archive the runner
     let body = serde_json::json!({
@@ -265,7 +265,7 @@ async fn runners_archive() {
     });
     let resp = server
         .client
-        .patch(server.api_url(&format!("/v0/runners/{}", runner_token.uuid)))
+        .patch(server.api_url(&format!("/v0/runners/{}", runner_key.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -292,7 +292,7 @@ async fn runners_archive() {
         .expect("Request failed");
 
     let runners: JsonRunners = resp.json().await.expect("Failed to parse response");
-    let found = runners.0.iter().any(|r| r.uuid == runner_token.uuid);
+    let found = runners.0.iter().any(|r| r.uuid == runner_key.uuid);
     assert!(!found, "Archived runner should not appear in list");
 }
 
@@ -318,14 +318,14 @@ async fn runners_list_with_archived() {
         .await
         .expect("Request failed");
 
-    let runner_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let runner_key: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
 
     let body = serde_json::json!({
         "archived": true
     });
     server
         .client
-        .patch(server.api_url(&format!("/v0/runners/{}", runner_token.uuid)))
+        .patch(server.api_url(&format!("/v0/runners/{}", runner_key.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -348,7 +348,7 @@ async fn runners_list_with_archived() {
         .expect("Request failed");
 
     let runners: JsonRunners = resp.json().await.expect("Failed to parse response");
-    let found = runners.0.iter().any(|r| r.uuid == runner_token.uuid);
+    let found = runners.0.iter().any(|r| r.uuid == runner_key.uuid);
     assert!(found, "Archived runner should appear when archived=true");
 }
 
@@ -430,7 +430,7 @@ async fn runner_delete_restricted_by_fk() {
 
     let (_, spec_id) = insert_test_spec(&server);
     let runner = create_runner(&server, &admin.token, "FK Constraint Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
     let runner_id = get_runner_id(&server, runner.uuid);
     associate_runner_spec(&server, runner_id, spec_id);
 
@@ -439,7 +439,7 @@ async fn runner_delete_restricted_by_fk() {
     let _job_uuid = insert_test_job(&server, report_id, spec_id);
 
     // Claim the job via WS channel so runner_id is set
-    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 5).await;
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 5).await;
     assert!(claimed.is_some());
 
     // Try to delete the runner directly in the DB — should fail due to ON DELETE RESTRICT
@@ -706,31 +706,31 @@ async fn runners_list_search() {
     }
 }
 
-// A runner token should be rejected on user endpoints (e.g., project listing)
+// A runner key should be rejected on user endpoints (e.g., project listing)
 #[tokio::test]
-async fn runner_token_rejected_on_user_endpoint() {
+async fn runner_key_rejected_on_user_endpoint() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "runnertokusr@example.com").await;
+    let admin = server.signup("Admin", "runnerkeyusr@example.com").await;
 
     let runner = common::create_runner(&server, &admin.token, "Cross Auth Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
 
-    // Use runner token on a user endpoint that requires authentication
+    // Use runner key on a user endpoint that requires authentication
     let resp = server
         .client
         .get(server.api_url("/v0/users"))
         .header(
             bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(runner_token),
+            bencher_json::bearer_header(runner_key),
         )
         .send()
         .await
         .expect("Request failed");
 
-    // Runner tokens should not work on user endpoints
+    // Runner keys should not work on user endpoints
     assert_ne!(
         resp.status(),
         StatusCode::OK,
-        "Runner token should not authenticate on user endpoints"
+        "Runner key should not authenticate on user endpoints"
     );
 }

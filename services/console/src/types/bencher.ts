@@ -959,11 +959,11 @@ export interface JsonReport {
 	created: string;
 }
 
-/** Runner token response (returned on create or rotate) */
-export interface JsonRunnerToken {
+/** Runner key response (returned on create or rotate) */
+export interface JsonRunnerKey {
 	uuid: Uuid;
-	/** The runner token. Only shown once - store it securely! */
-	token: Secret;
+	/** The runner key. Only shown once - store it securely! */
+	key: Secret;
 }
 
 export interface JsonSignup {

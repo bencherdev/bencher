@@ -10,9 +10,9 @@ pub struct CliUp {
     #[arg(long, env = "BENCHER_HOST", default_value = bencher_json::BENCHER_API_URL_STR)]
     pub host: url::Url,
 
-    /// Runner authentication token.
-    #[arg(long, env = "BENCHER_RUNNER_TOKEN")]
-    pub token: bencher_json::Secret,
+    /// Runner authentication key.
+    #[arg(long, env = "BENCHER_RUNNER_KEY")]
+    pub key: bencher_json::Secret,
 
     /// Runner UUID or slug.
     #[arg(long, env = "BENCHER_RUNNER")]

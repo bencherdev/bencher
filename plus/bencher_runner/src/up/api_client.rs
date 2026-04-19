@@ -3,25 +3,21 @@ use url::Url;
 
 use super::error::ApiClientError;
 
-const TOKEN_PREFIX: &str = "bencher_runner_";
+const KEY_PREFIX: &str = "bencher_runner_";
 
 pub struct RunnerApiClient {
     host: Url,
-    token: String,
+    key: String,
     runner: RunnerResourceId,
 }
 
 impl RunnerApiClient {
-    pub fn new(host: Url, token: String, runner: RunnerResourceId) -> Result<Self, ApiClientError> {
-        if !token.starts_with(TOKEN_PREFIX) {
-            return Err(ApiClientError::InvalidToken);
+    pub fn new(host: Url, key: String, runner: RunnerResourceId) -> Result<Self, ApiClientError> {
+        if !key.starts_with(KEY_PREFIX) {
+            return Err(ApiClientError::InvalidKey);
         }
 
-        Ok(Self {
-            host,
-            token,
-            runner,
-        })
+        Ok(Self { host, key, runner })
     }
 
     /// Build the WebSocket URL for the persistent runner channel.
@@ -42,8 +38,8 @@ impl RunnerApiClient {
             .map_err(|e| ApiClientError::Http(format!("Failed to build WebSocket URL: {e}")))
     }
 
-    pub fn token(&self) -> &str {
-        &self.token
+    pub fn key(&self) -> &str {
+        &self.key
     }
 }
 
@@ -59,22 +55,22 @@ mod tests {
         Url::parse("https://api.bencher.dev/").unwrap()
     }
 
-    fn valid_token() -> String {
+    fn valid_key() -> String {
         "bencher_runner_abc123".to_owned()
     }
 
     // --- RunnerApiClient::new ---
 
     #[test]
-    fn new_accepts_valid_token() {
-        let client = RunnerApiClient::new(test_host(), valid_token(), "my-runner".parse().unwrap());
+    fn new_accepts_valid_key() {
+        let client = RunnerApiClient::new(test_host(), valid_key(), "my-runner".parse().unwrap());
         assert!(client.is_ok());
     }
 
     #[test]
-    fn new_rejects_empty_token() {
+    fn new_rejects_empty_key() {
         let result = RunnerApiClient::new(test_host(), String::new(), "r".parse().unwrap());
-        assert!(matches!(result, Err(ApiClientError::InvalidToken)));
+        assert!(matches!(result, Err(ApiClientError::InvalidKey)));
     }
 
     #[test]
@@ -84,7 +80,7 @@ mod tests {
             "bearer_abc123".to_owned(),
             "r".parse().unwrap(),
         );
-        assert!(matches!(result, Err(ApiClientError::InvalidToken)));
+        assert!(matches!(result, Err(ApiClientError::InvalidKey)));
     }
 
     #[test]
@@ -94,14 +90,14 @@ mod tests {
             "bencher_runne".to_owned(),
             "r".parse().unwrap(),
         );
-        assert!(matches!(result, Err(ApiClientError::InvalidToken)));
+        assert!(matches!(result, Err(ApiClientError::InvalidKey)));
     }
 
     #[test]
-    fn new_stores_token() {
+    fn new_stores_key() {
         let client =
-            RunnerApiClient::new(test_host(), valid_token(), "my-runner".parse().unwrap()).unwrap();
-        assert_eq!(client.token(), "bencher_runner_abc123");
+            RunnerApiClient::new(test_host(), valid_key(), "my-runner".parse().unwrap()).unwrap();
+        assert_eq!(client.key(), "bencher_runner_abc123");
     }
 
     // --- channel_url ---
@@ -109,7 +105,7 @@ mod tests {
     #[test]
     fn channel_url_http_becomes_ws() {
         let client =
-            RunnerApiClient::new(test_host(), valid_token(), "my-runner".parse().unwrap()).unwrap();
+            RunnerApiClient::new(test_host(), valid_key(), "my-runner".parse().unwrap()).unwrap();
         let ws_url = client.channel_url().unwrap();
         assert_eq!(ws_url.scheme(), "ws");
         assert_eq!(
@@ -120,12 +116,9 @@ mod tests {
 
     #[test]
     fn channel_url_https_becomes_wss() {
-        let client = RunnerApiClient::new(
-            test_https_host(),
-            valid_token(),
-            "runner-1".parse().unwrap(),
-        )
-        .unwrap();
+        let client =
+            RunnerApiClient::new(test_https_host(), valid_key(), "runner-1".parse().unwrap())
+                .unwrap();
         let ws_url = client.channel_url().unwrap();
         assert_eq!(ws_url.scheme(), "wss");
         assert_eq!(
@@ -137,7 +130,7 @@ mod tests {
     #[test]
     fn channel_url_includes_runner() {
         let client =
-            RunnerApiClient::new(test_host(), valid_token(), "slug-test".parse().unwrap()).unwrap();
+            RunnerApiClient::new(test_host(), valid_key(), "slug-test".parse().unwrap()).unwrap();
         let ws_url = client.channel_url().unwrap();
         let path = ws_url.path();
         assert!(

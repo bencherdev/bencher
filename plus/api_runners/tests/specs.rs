@@ -342,7 +342,7 @@ async fn claim_job_no_specs() {
 
     // Create runner but do NOT associate any specs
     let runner = create_runner(&server, &admin.token, "No Spec Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
 
     // Create a pending job
     let (_, spec_id) = insert_test_spec(&server);
@@ -351,7 +351,7 @@ async fn claim_job_no_specs() {
     let _job_uuid = insert_test_job(&server, report_id, spec_id);
 
     // Runner tries to claim via WS channel - should get NoJob (no specs associated)
-    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
     assert!(
         claimed.is_none(),
         "Runner with no specs should not claim any job"
@@ -370,7 +370,7 @@ async fn claim_job_spec_mismatch() {
 
     // Create runner
     let runner = create_runner(&server, &admin.token, "Mismatch Runner").await;
-    let runner_token: &str = runner.token.as_ref();
+    let runner_key: &str = runner.key.as_ref();
     let runner_id = get_runner_id(&server, runner.uuid);
 
     // Create two specs with different configurations
@@ -402,7 +402,7 @@ async fn claim_job_spec_mismatch() {
     let _job_uuid = insert_test_job(&server, report_id, spec_arm_id);
 
     // Runner tries to claim via WS channel - should get NoJob (no matching spec)
-    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
     assert!(
         claimed.is_none(),
         "Runner should not claim job with mismatched spec"
@@ -412,7 +412,7 @@ async fn claim_job_spec_mismatch() {
     associate_runner_spec(&server, runner_id, spec_arm_id);
 
     // Runner tries to claim again - should get the job
-    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_token, 1).await;
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
     assert!(
         claimed.is_some(),
         "Runner should claim job after spec association"

@@ -1,10 +1,10 @@
 #![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
-//! Integration tests for runner token rotation endpoint.
+//! Integration tests for runner key rotation endpoint.
 
 mod common;
 
 use bencher_api_tests::TestServer;
-use bencher_json::JsonRunnerToken;
+use bencher_json::JsonRunnerKey;
 use common::{
     assert_ws_closed, associate_runner_spec, claim_via_channel, create_runner, create_test_report,
     get_project_id, get_runner_id, insert_test_job, insert_test_spec, try_connect_channel_ws,
@@ -12,15 +12,15 @@ use common::{
 use futures_concurrency::future::Join as _;
 use http::StatusCode;
 
-// POST /v0/runners/{runner}/token - admin can rotate token
+// POST /v0/runners/{runner}/key - admin can rotate key
 #[tokio::test]
-async fn token_rotate_as_admin() {
+async fn key_rotate_as_admin() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "tokenadmin@example.com").await;
+    let admin = server.signup("Admin", "keyadmin@example.com").await;
 
     // Create a runner
     let body = serde_json::json!({
-        "name": "Token Rotate Runner"
+        "name": "Key Rotate Runner"
     });
     let resp = server
         .client
@@ -34,12 +34,12 @@ async fn token_rotate_as_admin() {
         .await
         .expect("Request failed");
 
-    let original_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let original_key: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
 
-    // Rotate token
+    // Rotate key
     let resp = server
         .client
-        .post(server.api_url(&format!("/v0/runners/{}/token", original_token.uuid)))
+        .post(server.api_url(&format!("/v0/runners/{}/key", original_key.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -49,28 +49,28 @@ async fn token_rotate_as_admin() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::CREATED);
-    let new_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let new_key: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
 
     // UUID should be the same
-    assert_eq!(new_token.uuid, original_token.uuid);
-    // Token should be different
-    let original_str: &str = original_token.token.as_ref();
-    let new_str: &str = new_token.token.as_ref();
+    assert_eq!(new_key.uuid, original_key.uuid);
+    // Key should be different
+    let original_str: &str = original_key.key.as_ref();
+    let new_str: &str = new_key.key.as_ref();
     assert_ne!(original_str, new_str);
-    // New token should start with prefix
+    // New key should start with prefix
     assert!(new_str.starts_with("bencher_runner_"));
 }
 
-// POST /v0/runners/{runner}/token - non-admin cannot rotate token
+// POST /v0/runners/{runner}/key - non-admin cannot rotate key
 #[tokio::test]
-async fn token_rotate_forbidden_for_non_admin() {
+async fn key_rotate_forbidden_for_non_admin() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "tokenadmin2@example.com").await;
-    let user = server.signup("User", "tokenuser@example.com").await;
+    let admin = server.signup("Admin", "keyadmin2@example.com").await;
+    let user = server.signup("User", "keyuser@example.com").await;
 
     // Create a runner as admin
     let body = serde_json::json!({
-        "name": "Token Test Runner"
+        "name": "Key Test Runner"
     });
     let resp = server
         .client
@@ -84,12 +84,12 @@ async fn token_rotate_forbidden_for_non_admin() {
         .await
         .expect("Request failed");
 
-    let runner_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let runner_key: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
 
     // Non-admin tries to rotate
     let resp = server
         .client
-        .post(server.api_url(&format!("/v0/runners/{}/token", runner_token.uuid)))
+        .post(server.api_url(&format!("/v0/runners/{}/key", runner_key.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
@@ -101,16 +101,16 @@ async fn token_rotate_forbidden_for_non_admin() {
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
 
-// POST /v0/runners/{runner}/token - rotate by slug
+// POST /v0/runners/{runner}/key - rotate by slug
 #[tokio::test]
-async fn token_rotate_by_slug() {
+async fn key_rotate_by_slug() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "tokenadmin3@example.com").await;
+    let admin = server.signup("Admin", "keyadmin3@example.com").await;
 
     // Create a runner with a slug
     let body = serde_json::json!({
-        "name": "Token Slug Runner",
-        "slug": "token-slug-runner"
+        "name": "Key Slug Runner",
+        "slug": "key-slug-runner"
     });
     let resp = server
         .client
@@ -124,12 +124,12 @@ async fn token_rotate_by_slug() {
         .await
         .expect("Request failed");
 
-    let original_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let original_key: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
 
-    // Rotate token by slug
+    // Rotate key by slug
     let resp = server
         .client
-        .post(server.api_url("/v0/runners/token-slug-runner/token"))
+        .post(server.api_url("/v0/runners/key-slug-runner/key"))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -139,19 +139,19 @@ async fn token_rotate_by_slug() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::CREATED);
-    let new_token: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
-    assert_eq!(new_token.uuid, original_token.uuid);
+    let new_key: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
+    assert_eq!(new_key.uuid, original_key.uuid);
 }
 
-// POST /v0/runners/{runner}/token - not found for invalid runner
+// POST /v0/runners/{runner}/key - not found for invalid runner
 #[tokio::test]
-async fn token_rotate_not_found() {
+async fn key_rotate_not_found() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "tokenadmin4@example.com").await;
+    let admin = server.signup("Admin", "keyadmin4@example.com").await;
 
     let resp = server
         .client
-        .post(server.api_url("/v0/runners/nonexistent-runner/token"))
+        .post(server.api_url("/v0/runners/nonexistent-runner/key"))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -163,11 +163,11 @@ async fn token_rotate_not_found() {
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
-// POST /v0/runners/{runner}/token - concurrent rotation yields two different tokens
+// POST /v0/runners/{runner}/key - concurrent rotation yields two different keys
 #[tokio::test]
-async fn concurrent_token_rotation() {
+async fn concurrent_key_rotation() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "tokenadmin5@example.com").await;
+    let admin = server.signup("Admin", "keyadmin5@example.com").await;
 
     // Create a runner
     let body = serde_json::json!({ "name": "Concurrent Rotate Runner" });
@@ -182,11 +182,11 @@ async fn concurrent_token_rotation() {
         .send()
         .await
         .expect("Request failed");
-    let original: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
-    let original_str: String = original.token.as_ref().to_owned();
+    let original: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
+    let original_str: String = original.key.as_ref().to_owned();
 
     // Two concurrent rotations
-    let url = server.api_url(&format!("/v0/runners/{}/token", original.uuid));
+    let url = server.api_url(&format!("/v0/runners/{}/key", original.uuid));
     let bearer = bencher_json::bearer_header(&admin.token);
     let client = &server.client;
 
@@ -214,39 +214,36 @@ async fn concurrent_token_rotation() {
     assert_eq!(resp1.status(), StatusCode::CREATED);
     assert_eq!(resp2.status(), StatusCode::CREATED);
 
-    let token1: JsonRunnerToken = resp1.json().await.expect("Failed to parse response 1");
-    let token2: JsonRunnerToken = resp2.json().await.expect("Failed to parse response 2");
+    let key1: JsonRunnerKey = resp1.json().await.expect("Failed to parse response 1");
+    let key2: JsonRunnerKey = resp2.json().await.expect("Failed to parse response 2");
 
-    let t1: &str = token1.token.as_ref();
-    let t2: &str = token2.token.as_ref();
+    let k1: &str = key1.key.as_ref();
+    let k2: &str = key2.key.as_ref();
 
-    // Both tokens should differ from the original
-    assert_ne!(t1, original_str, "Token 1 should differ from original");
-    assert_ne!(t2, original_str, "Token 2 should differ from original");
+    // Both keys should differ from the original
+    assert_ne!(k1, original_str, "Key 1 should differ from original");
+    assert_ne!(k2, original_str, "Key 2 should differ from original");
 
-    // The two tokens should differ from each other
-    assert_ne!(
-        t1, t2,
-        "Concurrent rotations should produce different tokens"
-    );
+    // The two keys should differ from each other
+    assert_ne!(k1, k2, "Concurrent rotations should produce different keys");
 
-    // Verify only one of the two tokens works for auth (the last writer wins)
+    // Verify only one of the two keys works for auth (the last writer wins)
     // We can't predict which one, but exactly one should authenticate.
     // We just verify both have the correct prefix and length.
-    assert!(t1.starts_with("bencher_runner_"));
-    assert!(t2.starts_with("bencher_runner_"));
-    assert_eq!(t1.len(), api_runners::RUNNER_TOKEN_LENGTH);
-    assert_eq!(t2.len(), api_runners::RUNNER_TOKEN_LENGTH);
+    assert!(k1.starts_with("bencher_runner_"));
+    assert!(k2.starts_with("bencher_runner_"));
+    assert_eq!(k1.len(), api_runners::RUNNER_KEY_LENGTH);
+    assert_eq!(k2.len(), api_runners::RUNNER_KEY_LENGTH);
 }
 
-// After token rotation, the old token should be rejected.
+// After key rotation, the old key should be rejected.
 #[tokio::test]
-async fn old_token_rejected_after_rotation() {
+async fn old_key_rejected_after_rotation() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "tokenold@example.com").await;
+    let admin = server.signup("Admin", "keyold@example.com").await;
 
-    // Create a runner and save the original token
-    let body = serde_json::json!({ "name": "Old Token Runner" });
+    // Create a runner and save the original key
+    let body = serde_json::json!({ "name": "Old Key Runner" });
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
@@ -258,13 +255,13 @@ async fn old_token_rejected_after_rotation() {
         .send()
         .await
         .expect("Request failed");
-    let original: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
-    let original_token: String = original.token.as_ref().to_owned();
+    let original: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
+    let original_key: String = original.key.as_ref().to_owned();
 
-    // Rotate the token
+    // Rotate the key
     let resp = server
         .client
-        .post(server.api_url(&format!("/v0/runners/{}/token", original.uuid)))
+        .post(server.api_url(&format!("/v0/runners/{}/key", original.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -273,13 +270,13 @@ async fn old_token_rejected_after_rotation() {
         .await
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::CREATED);
-    let new: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
-    let new_token: String = new.token.as_ref().to_owned();
+    let new: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
+    let new_key: String = new.key.as_ref().to_owned();
 
-    // Old token should be rejected on the WS channel endpoint
-    let result = try_connect_channel_ws(&server, original.uuid, &original_token).await;
+    // Old key should be rejected on the WS channel endpoint
+    let result = try_connect_channel_ws(&server, original.uuid, &original_key).await;
     match result {
-        Err(_) => {}, // Connection refused — old token rejected
+        Err(_) => {}, // Connection refused — old key rejected
         Ok(mut ws) => {
             // Dropshot upgrades before auth, so connection may succeed but
             // immediately close
@@ -287,18 +284,18 @@ async fn old_token_rejected_after_rotation() {
         },
     }
 
-    // New token should work on the WS channel endpoint
-    let (_ws, _) = claim_via_channel(&server, original.uuid, &new_token, 1).await;
+    // New key should work on the WS channel endpoint
+    let (_ws, _) = claim_via_channel(&server, original.uuid, &new_key, 1).await;
 }
 
-// Rotating a token on an archived runner should fail.
+// Rotating a key on an archived runner should fail.
 #[tokio::test]
-async fn token_rotate_archived_runner() {
+async fn key_rotate_archived_runner() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "tokenarchived@example.com").await;
+    let admin = server.signup("Admin", "keyarchived@example.com").await;
 
     // Create a runner
-    let body = serde_json::json!({ "name": "Archived Token Runner" });
+    let body = serde_json::json!({ "name": "Archived Key Runner" });
     let resp = server
         .client
         .post(server.api_url("/v0/runners"))
@@ -311,7 +308,7 @@ async fn token_rotate_archived_runner() {
         .await
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::CREATED);
-    let runner: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
+    let runner: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
 
     // Archive the runner
     let body = serde_json::json!({ "archived": true });
@@ -328,10 +325,10 @@ async fn token_rotate_archived_runner() {
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::OK);
 
-    // Try to rotate token on the archived runner — should fail
+    // Try to rotate key on the archived runner — should fail
     let resp = server
         .client
-        .post(server.api_url(&format!("/v0/runners/{}/token", runner.uuid)))
+        .post(server.api_url(&format!("/v0/runners/{}/key", runner.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -342,24 +339,24 @@ async fn token_rotate_archived_runner() {
     assert_ne!(
         resp.status(),
         StatusCode::CREATED,
-        "Token rotation on archived runner should not succeed"
+        "Key rotation on archived runner should not succeed"
     );
 }
 
-// Rotating a token while the runner has in-flight jobs should succeed,
-// and the old token should be invalidated.
+// Rotating a key while the runner has in-flight jobs should succeed,
+// and the old key should be invalidated.
 #[tokio::test]
-async fn token_rotate_with_inflight_jobs() {
+async fn key_rotate_with_inflight_jobs() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "tokeninflight@example.com").await;
-    let org = server.create_org(&admin, "Token Inflight Org").await;
+    let admin = server.signup("Admin", "keyinflight@example.com").await;
+    let org = server.create_org(&admin, "Key Inflight Org").await;
     let project = server
-        .create_project(&admin, &org, "Token Inflight Project")
+        .create_project(&admin, &org, "Key Inflight Project")
         .await;
 
     // Create runner and set up infrastructure
-    let runner = create_runner(&server, &admin.token, "Inflight Token Runner").await;
-    let original_token: String = runner.token.as_ref().to_owned();
+    let runner = create_runner(&server, &admin.token, "Inflight Key Runner").await;
+    let original_key: String = runner.key.as_ref().to_owned();
     let runner_id = get_runner_id(&server, runner.uuid);
     let (_, spec_id) = insert_test_spec(&server);
     associate_runner_spec(&server, runner_id, spec_id);
@@ -369,13 +366,13 @@ async fn token_rotate_with_inflight_jobs() {
     let _job_uuid = insert_test_job(&server, report_id, spec_id);
 
     // Claim the job via WS channel
-    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, &original_token, 5).await;
+    let (_ws, claimed) = claim_via_channel(&server, runner.uuid, &original_key, 5).await;
     assert!(claimed.is_some(), "Should claim a job");
 
-    // Rotate token while job is in-flight (Claimed status)
+    // Rotate key while job is in-flight (Claimed status)
     let resp = server
         .client
-        .post(server.api_url(&format!("/v0/runners/{}/token", runner.uuid)))
+        .post(server.api_url(&format!("/v0/runners/{}/key", runner.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -386,20 +383,20 @@ async fn token_rotate_with_inflight_jobs() {
     assert_eq!(
         resp.status(),
         StatusCode::CREATED,
-        "Token rotation should succeed even with in-flight jobs"
+        "Key rotation should succeed even with in-flight jobs"
     );
-    let new: JsonRunnerToken = resp.json().await.expect("Failed to parse response");
-    let new_token: String = new.token.as_ref().to_owned();
+    let new: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
+    let new_key: String = new.key.as_ref().to_owned();
 
-    // Old token should be rejected on the WS channel endpoint
-    let result = try_connect_channel_ws(&server, runner.uuid, &original_token).await;
+    // Old key should be rejected on the WS channel endpoint
+    let result = try_connect_channel_ws(&server, runner.uuid, &original_key).await;
     match result {
-        Err(_) => {}, // Connection refused — old token rejected
+        Err(_) => {}, // Connection refused — old key rejected
         Ok(mut ws) => {
             assert_ws_closed(&mut ws).await;
         },
     }
 
-    // New token should authenticate on the WS channel endpoint
-    let (_ws, _) = claim_via_channel(&server, runner.uuid, &new_token, 1).await;
+    // New key should authenticate on the WS channel endpoint
+    let (_ws, _) = claim_via_channel(&server, runner.uuid, &new_key, 1).await;
 }

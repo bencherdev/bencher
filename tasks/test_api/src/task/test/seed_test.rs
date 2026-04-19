@@ -1908,9 +1908,9 @@ impl SeedTest {
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
-        let runner_token: bencher_json::JsonRunnerToken =
+        let runner_key: bencher_json::JsonRunnerKey =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        let runner_uuid = runner_token.uuid;
+        let runner_uuid = runner_key.uuid;
 
         // List runners
         // cargo run -- runner list --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN
@@ -2026,7 +2026,7 @@ impl SeedTest {
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
-        let _nosandbox_runner_token: bencher_json::JsonRunnerToken =
+        let _nosandbox_runner_key: bencher_json::JsonRunnerKey =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
         // Add spec to no-sandbox runner
@@ -2046,12 +2046,12 @@ impl SeedTest {
         .current_dir(CLI_DIR);
         cmd.assert().success();
 
-        // Rotate runner token
-        // cargo run -- runner token --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-runner
+        // Rotate runner key
+        // cargo run -- runner key --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN test-runner
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "runner",
-            "token",
+            "key",
             HOST_ARG,
             host,
             TOKEN_ARG,
@@ -2060,9 +2060,9 @@ impl SeedTest {
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
-        let new_token: bencher_json::JsonRunnerToken =
+        let new_key: bencher_json::JsonRunnerKey =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(new_token.uuid, runner_uuid);
+        assert_eq!(new_key.uuid, runner_uuid);
 
         // Update runner name
         // cargo run -- runner update --host http://localhost:61016 --token $ADMIN_BENCHER_API_TOKEN --name "Updated Runner" test-runner

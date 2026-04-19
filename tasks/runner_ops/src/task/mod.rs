@@ -91,37 +91,37 @@ impl Sub {
 fn merge_ssh(
     file: Option<&Server>,
     server: Option<String>,
-    key: Option<Utf8PathBuf>,
+    ssh: Option<Utf8PathBuf>,
     user: Option<String>,
 ) -> anyhow::Result<(String, Utf8PathBuf, String)> {
     let server = server
         .or(file.map(|f| f.server.clone()))
         .ok_or_else(|| anyhow::anyhow!("--server is required"))?;
-    let key = key
-        .or(file.and_then(|f| f.key.clone()))
-        .ok_or_else(|| anyhow::anyhow!("--key is required"))?;
+    let ssh = ssh
+        .or(file.and_then(|f| f.ssh.clone()))
+        .ok_or_else(|| anyhow::anyhow!("--ssh is required"))?;
     let user = user
         .or(file.and_then(|f| f.user.clone()))
         .unwrap_or_else(|| DEFAULT_USER.into());
-    Ok((server, key, user))
+    Ok((server, ssh, user))
 }
 
-/// Merge SSH + runner/token/host fields from CLI flags and server config file.
+/// Merge SSH + key/host fields from CLI flags and server config file.
 fn merge_ssh_with_extras(
     runner: RunnerResourceId,
     server: Option<String>,
-    key: Option<Utf8PathBuf>,
+    ssh: Option<Utf8PathBuf>,
     user: Option<String>,
-    token: Option<Secret>,
+    key: Option<Secret>,
     host: Option<url::Url>,
 ) -> anyhow::Result<(Ssh, url::Url, RunnerResourceId, Secret)> {
     let file = load_server(&runner)?;
-    let (server, key, user) = merge_ssh(file.as_ref(), server, key, user)?;
-    let token = token
-        .or(file.as_ref().and_then(|f| f.token.clone()))
-        .ok_or_else(|| anyhow::anyhow!("--token is required"))?;
+    let (server, ssh, user) = merge_ssh(file.as_ref(), server, ssh, user)?;
+    let key = key
+        .or(file.as_ref().and_then(|f| f.key.clone()))
+        .ok_or_else(|| anyhow::anyhow!("--key is required"))?;
     let host = host
         .or(file.as_ref().and_then(|f| f.host.clone()))
         .unwrap_or_else(|| DEFAULT_HOST.clone());
-    Ok((Ssh::new(server, key, user), host, runner, token))
+    Ok((Ssh::new(server, ssh, user), host, runner, key))
 }

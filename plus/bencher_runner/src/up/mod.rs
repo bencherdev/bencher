@@ -42,7 +42,7 @@ static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 #[derive(Debug)]
 pub struct UpConfig {
     pub host: Url,
-    pub token: bencher_valid::Secret,
+    pub key: bencher_valid::Secret,
     pub runner: RunnerResourceId,
     pub poll_timeout_secs: u32,
     pub tuning: TuningConfig,
@@ -113,7 +113,7 @@ impl Up {
 
         let client = RunnerApiClient::new(
             self.config.host.clone(),
-            String::from(self.config.token.clone()),
+            String::from(self.config.key.clone()),
             self.config.runner.clone(),
         )?;
 
@@ -121,14 +121,14 @@ impl Up {
 
         println!("Connecting to channel...");
 
-        run_driver(&self.config, &channel_url, client.token())
+        run_driver(&self.config, &channel_url, client.key())
     }
 }
 
 /// Effect-driven protocol loop. The state machine decides what to do; this
 /// function executes effects and feeds I/O results back.
 #[expect(clippy::print_stdout)]
-fn run_driver(config: &UpConfig, channel_url: &Url, token: &str) -> Result<(), UpError> {
+fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpError> {
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs);
     let mut effects: VecDeque<Effect> =
         ChannelStateMachine::initial_effects().into_iter().collect();
@@ -142,7 +142,7 @@ fn run_driver(config: &UpConfig, channel_url: &Url, token: &str) -> Result<(), U
             continue;
         }
 
-        match execute_effect(effect, config, channel_url, token, &mut ws) {
+        match execute_effect(effect, config, channel_url, key, &mut ws) {
             EffectResult::Continue => {},
             EffectResult::Input(input) => {
                 effects.clear();
@@ -175,11 +175,11 @@ fn execute_effect(
     effect: Effect,
     config: &UpConfig,
     channel_url: &Url,
-    token: &str,
+    key: &str,
     ws: &mut Option<Arc<Mutex<JobChannel>>>,
 ) -> EffectResult {
     match effect {
-        Effect::Connect => match JobChannel::connect(channel_url, token) {
+        Effect::Connect => match JobChannel::connect(channel_url, key) {
             Ok(new_ws) => {
                 *ws = Some(Arc::new(Mutex::new(new_ws)));
                 EffectResult::Input(Input::Connected)

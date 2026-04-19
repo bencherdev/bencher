@@ -39,7 +39,7 @@ use tokio_tungstenite::tungstenite::{
     protocol::{CloseFrame, Role, WebSocketConfig, frame::coding::CloseCode},
 };
 
-use crate::runner_token::RunnerToken;
+use crate::runner_key::RunnerKey;
 
 // --- WebSocket message handlers ---
 
@@ -824,12 +824,12 @@ const POLL_INTERVAL: Duration = Duration::from_secs(1);
 /// - Unclaimed: 1 concurrent job per source IP
 ///
 /// Returns `Ok(Some(job))` if a job was claimed, `Ok(None)` if no eligible jobs available.
-/// OCI runner token TTL: 10 minutes (enough for image pull, short enough to limit exposure)
+/// OCI registry token TTL: 10 minutes (enough for image pull, short enough to limit exposure)
 const OCI_RUNNER_TOKEN_TTL: u32 = 600;
 
 async fn try_claim_job(
     context: &ApiContext,
-    runner_token: &RunnerToken,
+    runner_key: &RunnerKey,
 ) -> Result<Option<(QueryJob, JsonClaimedJob)>, HttpError> {
     use schema::job::dsl::{created, id, organization_id, priority, source_ip, status};
 
@@ -873,7 +873,7 @@ async fn try_claim_job(
     // Spec filter: only claim jobs whose spec_id matches one of the runner's specs
     let spec_filter = schema::job::spec_id.eq_any(
         schema::runner_spec::table
-            .filter(schema::runner_spec::runner_id.eq(runner_token.runner_id))
+            .filter(schema::runner_spec::runner_id.eq(runner_key.runner_id))
             .select(schema::runner_spec::spec_id),
     );
 
@@ -901,7 +901,7 @@ async fn try_claim_job(
 
         // Claim the job under the same lock
         let now = context.clock.now();
-        let update_job = UpdateJob::claim(runner_token.runner_id, now);
+        let update_job = UpdateJob::claim(runner_key.runner_id, now);
 
         let updated = update_job
             .execute_if_status(conn, query_job.id, JobStatus::Pending)
@@ -916,7 +916,7 @@ async fn try_claim_job(
     };
 
     if let Some(json_spec) = json_spec {
-        let claimed_job = build_claimed_job(context, query_job.clone(), runner_token, json_spec)?;
+        let claimed_job = build_claimed_job(context, query_job.clone(), runner_key, json_spec)?;
         Ok(Some((query_job, claimed_job)))
     } else {
         // Defensive: the UPDATE matched 0 rows despite SELECT finding a pending job.
@@ -929,7 +929,7 @@ async fn try_claim_job(
 fn build_claimed_job(
     context: &ApiContext,
     query_job: QueryJob,
-    runner_token: &RunnerToken,
+    runner_key: &RunnerKey,
     json_spec: JsonSpec,
 ) -> Result<JsonClaimedJob, HttpError> {
     #[cfg(feature = "otel")]
@@ -949,7 +949,7 @@ fn build_claimed_job(
     let oci_token = context
         .token_key
         .new_oci_runner(
-            runner_token.runner_uuid,
+            runner_key.runner_uuid,
             OCI_RUNNER_TOKEN_TTL,
             Some(query_job.config.project.to_string()),
             vec![OciAction::Pull],
@@ -991,7 +991,7 @@ pub struct RunnerChannelParams {
 /// and execution. Runner sends `Ready` to request a job, server pushes `Job`
 /// or `NoJob`. During execution, handles `Running`, `Heartbeat`, `Completed`,
 /// `Failed`, and `Canceled` messages.
-/// Authentication is via runner token in the Authorization header.
+/// Authentication is via runner key in the Authorization header.
 #[channel {
     protocol = WEBSOCKETS,
     path = "/v0/runners/{runner}/channel",
@@ -1007,14 +1007,14 @@ pub async fn runner_channel(
     let log = rqctx.log.clone();
     let path_params = path_params.into_inner();
 
-    // Validate runner token from Authorization header
-    let runner_token = RunnerToken::from_request(&rqctx, &path_params.runner).await?;
+    // Validate runner key from Authorization header
+    let runner_key = RunnerKey::from_request(&rqctx, &path_params.runner).await?;
 
     // Per-runner rate limiting
     #[cfg(feature = "plus")]
     context
         .rate_limiting
-        .runner_request(runner_token.runner_uuid)?;
+        .runner_request(runner_key.runner_uuid)?;
 
     // Upgrade to WebSocket
     let mut ws_config = WebSocketConfig::default();
@@ -1037,7 +1037,7 @@ pub async fn runner_channel(
         let Ok(poll_timeout) = wait_for_ready(
             &log,
             context,
-            runner_token.runner_id,
+            runner_key.runner_id,
             &mut tx,
             &mut rx,
             heartbeat_timeout,
@@ -1051,7 +1051,7 @@ pub async fn runner_channel(
 
         // Poll for a job, checking for WS disconnect between polls
         let claimed_job =
-            poll_for_job(&log, context, &runner_token, deadline, &mut tx, &mut rx).await;
+            poll_for_job(&log, context, &runner_key, deadline, &mut tx, &mut rx).await;
 
         match claimed_job {
             Ok(Some((query_job, claimed_job))) => {
@@ -1276,7 +1276,7 @@ async fn lookup_runner_job(
 async fn poll_for_job<S, R>(
     log: &slog::Logger,
     context: &ApiContext,
-    runner_token: &RunnerToken,
+    runner_key: &RunnerKey,
     deadline: tokio::time::Instant,
     tx: &mut S,
     rx: &mut R,
@@ -1286,7 +1286,7 @@ where
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
     loop {
-        match try_claim_job(context, runner_token).await {
+        match try_claim_job(context, runner_key).await {
             Ok(Some(job)) => return Ok(Some(job)),
             Ok(None) => {},
             Err(e) => {

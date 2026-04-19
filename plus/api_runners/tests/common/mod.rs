@@ -13,8 +13,8 @@ pub use bencher_api_tests::helpers::{
     base_timestamp, create_test_report, get_project_id, set_job_status,
 };
 use bencher_json::{
-    DateTime, JobStatus, JobUuid, JsonClaimedJob, JsonRunnerToken, PollTimeout, Priority,
-    RunnerUuid, SpecUuid,
+    DateTime, JobStatus, JobUuid, JsonClaimedJob, JsonRunnerKey, PollTimeout, Priority, RunnerUuid,
+    SpecUuid,
 };
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -23,7 +23,7 @@ use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest as _};
 
 /// Create a runner via the REST API.
 #[expect(clippy::expect_used)]
-pub async fn create_runner(server: &TestServer, admin_token: &str, name: &str) -> JsonRunnerToken {
+pub async fn create_runner(server: &TestServer, admin_token: &str, name: &str) -> JsonRunnerKey {
     let body = serde_json::json!({ "name": name });
     let resp = server
         .client
@@ -473,13 +473,13 @@ pub fn ws_url(server: &TestServer, path: &str) -> String {
 pub async fn connect_channel_ws(
     server: &TestServer,
     runner_uuid: RunnerUuid,
-    runner_token: &str,
+    runner_key: &str,
 ) -> WsStream {
     let url = ws_url(server, &format!("/v0/runners/{runner_uuid}/channel"));
     let mut request = url.into_client_request().expect("Failed to build request");
     request.headers_mut().insert(
         bencher_json::AUTHORIZATION,
-        bencher_json::bearer_header(runner_token)
+        bencher_json::bearer_header(runner_key)
             .parse()
             .expect("Invalid header"),
     );
@@ -495,13 +495,13 @@ pub async fn connect_channel_ws(
 pub async fn try_connect_channel_ws(
     server: &TestServer,
     runner_uuid: RunnerUuid,
-    runner_token: &str,
+    runner_key: &str,
 ) -> Result<WsStream, tokio_tungstenite::tungstenite::Error> {
     let url = ws_url(server, &format!("/v0/runners/{runner_uuid}/channel"));
     let mut request = url.into_client_request().expect("Failed to build request");
     request.headers_mut().insert(
         bencher_json::AUTHORIZATION,
-        bencher_json::bearer_header(runner_token)
+        bencher_json::bearer_header(runner_key)
             .parse()
             .expect("Invalid header"),
     );
@@ -534,10 +534,10 @@ pub async fn recv_server_msg(ws: &mut WsStream) -> ServerMessage {
 pub async fn claim_via_channel(
     server: &TestServer,
     runner_uuid: RunnerUuid,
-    runner_token: &str,
+    runner_key: &str,
     poll_timeout: u32,
 ) -> (WsStream, Option<JsonClaimedJob>) {
-    let mut ws = connect_channel_ws(server, runner_uuid, runner_token).await;
+    let mut ws = connect_channel_ws(server, runner_uuid, runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(poll_timeout).expect("Invalid poll timeout")),
     };

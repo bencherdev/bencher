@@ -1,9 +1,9 @@
 use crate::{CliError, bencher::sub::SubCmd, parser::system::runner::CliRunner};
 
 mod create;
+mod key;
 mod list;
 mod spec;
-mod token;
 mod update;
 mod view;
 
@@ -13,7 +13,7 @@ pub enum Runner {
     Create(create::Create),
     View(view::View),
     Update(update::Update),
-    Token(token::Token),
+    Key(key::Key),
     Spec(spec::Spec),
 }
 
@@ -26,7 +26,7 @@ impl TryFrom<CliRunner> for Runner {
             CliRunner::Create(create) => Self::Create(create.try_into()?),
             CliRunner::View(view) => Self::View(view.try_into()?),
             CliRunner::Update(update) => Self::Update(update.try_into()?),
-            CliRunner::Token(token) => Self::Token(token.try_into()?),
+            CliRunner::Key(key) => Self::Key(key.try_into()?),
             CliRunner::Spec(spec) => Self::Spec(spec.try_into()?),
         })
     }
@@ -39,7 +39,7 @@ impl SubCmd for Runner {
             Self::Create(create) => create.exec().await,
             Self::View(view) => view.exec().await,
             Self::Update(update) => update.exec().await,
-            Self::Token(token) => token.exec().await,
+            Self::Key(key) => key.exec().await,
             Self::Spec(spec) => spec.exec().await,
         }
     }

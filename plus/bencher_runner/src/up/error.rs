@@ -23,10 +23,10 @@ pub enum ApiClientError {
     #[error("HTTP error: {0}")]
     Http(String),
 
-    #[error("Invalid runner token format")]
-    InvalidToken,
+    #[error("Invalid runner key format")]
+    InvalidKey,
 
-    #[error("Unauthorized: invalid or expired token")]
+    #[error("Unauthorized: invalid or expired key")]
     Unauthorized,
 }
 

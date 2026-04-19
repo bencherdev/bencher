@@ -15,13 +15,13 @@ use serde_json as _;
 use tokio as _;
 
 mod channel;
-mod runner_token;
+mod key;
+mod runner_key;
 mod runners;
 mod specs;
-mod token;
 
 pub use bencher_json::runner::{RunnerMessage, ServerMessage};
-pub use runners::RUNNER_TOKEN_LENGTH;
+pub use runners::RUNNER_KEY_LENGTH;
 
 pub struct Api;
 
@@ -50,13 +50,13 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(specs::runner_specs_post)?;
         api_description.register(specs::runner_spec_delete)?;
 
-        // Token Rotation (admin only)
+        // Key Rotation (admin only)
         if http_options {
-            api_description.register(token::runner_token_options)?;
+            api_description.register(key::runner_key_options)?;
         }
-        api_description.register(token::runner_token_post)?;
+        api_description.register(key::runner_key_post)?;
 
-        // Runner Agent Endpoints (runner token auth)
+        // Runner Agent Endpoints (runner key auth)
         // Persistent WebSocket channel for job assignment and execution
         api_description.register(channel::runner_channel)?;
 

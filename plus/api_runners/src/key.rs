@@ -1,5 +1,5 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
-use bencher_json::{DateTime, JsonRunnerToken, RunnerResourceId};
+use bencher_json::{DateTime, JsonRunnerKey, RunnerResourceId};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -15,41 +15,41 @@ use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::runners::{generate_runner_token, hash_token};
+use crate::runners::{generate_runner_key, hash_key};
 
 #[derive(Deserialize, JsonSchema)]
-pub struct RunnerTokenParams {
+pub struct RunnerKeyParams {
     /// The slug or UUID for a runner.
     pub runner: RunnerResourceId,
 }
 
 #[endpoint {
     method = OPTIONS,
-    path = "/v0/runners/{runner}/token",
+    path = "/v0/runners/{runner}/key",
     tags = ["runners"]
 }]
-pub async fn runner_token_options(
+pub async fn runner_key_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<RunnerTokenParams>,
+    _path_params: Path<RunnerKeyParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Post.into()]))
 }
 
-/// Rotate runner token
+/// Rotate runner key
 ///
-/// ➕ Bencher Plus: Generate a new token for a runner, invalidating the old one.
+/// ➕ Bencher Plus: Generate a new key for a runner, invalidating the old one.
 /// The user must be an admin to use this endpoint.
-/// Returns the new token which is only shown once.
+/// Returns the new key which is only shown once.
 #[endpoint {
     method = POST,
-    path = "/v0/runners/{runner}/token",
+    path = "/v0/runners/{runner}/key",
     tags = ["runners"]
 }]
-pub async fn runner_token_post(
+pub async fn runner_key_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
-    path_params: Path<RunnerTokenParams>,
-) -> Result<ResponseCreated<JsonRunnerToken>, HttpError> {
+    path_params: Path<RunnerKeyParams>,
+) -> Result<ResponseCreated<JsonRunnerKey>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(rqctx.context(), path_params.into_inner()).await?;
     Ok(Post::auth_response_created(json))
@@ -57,20 +57,20 @@ pub async fn runner_token_post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: RunnerTokenParams,
-) -> Result<JsonRunnerToken, HttpError> {
+    path_params: RunnerKeyParams,
+) -> Result<JsonRunnerKey, HttpError> {
     let query_runner = QueryRunner::from_resource_id(auth_conn!(context), &path_params.runner)?;
 
     if query_runner.is_archived() {
-        return Err(conflict_error("Cannot rotate token for an archived runner"));
+        return Err(conflict_error("Cannot rotate key for an archived runner"));
     }
 
-    // Generate new token
-    let token = generate_runner_token();
-    let token_hash = hash_token(&token);
+    // Generate new key
+    let key = generate_runner_key();
+    let key_hash = hash_key(&key);
 
     let update_runner = UpdateRunner {
-        token_hash: Some(token_hash),
+        key_hash: Some(key_hash),
         modified: Some(DateTime::now()),
         ..Default::default()
     };
@@ -80,16 +80,16 @@ async fn post_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Runner, query_runner))?;
 
-    // parse() will succeed since token is non-empty
-    let secret = token.parse().map_err(|_err| {
-        HttpError::for_internal_error("Failed to create runner token".to_owned())
-    })?;
+    // parse() will succeed since key is non-empty
+    let secret = key
+        .parse()
+        .map_err(|_err| HttpError::for_internal_error("Failed to create runner key".to_owned()))?;
 
     #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerTokenRotate);
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerKeyRotate);
 
-    Ok(JsonRunnerToken {
+    Ok(JsonRunnerKey {
         uuid: query_runner.uuid,
-        token: secret,
+        key: secret,
     })
 }

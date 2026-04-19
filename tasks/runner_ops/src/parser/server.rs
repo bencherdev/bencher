@@ -10,9 +10,9 @@ type Servers = BTreeMap<RunnerResourceId, Server>;
 #[expect(clippy::struct_field_names)]
 pub struct Server {
     pub server: String,
-    pub key: Option<Utf8PathBuf>,
+    pub ssh: Option<Utf8PathBuf>,
     pub user: Option<String>,
-    pub token: Option<Secret>,
+    pub key: Option<Secret>,
     pub host: Option<url::Url>,
 }
 

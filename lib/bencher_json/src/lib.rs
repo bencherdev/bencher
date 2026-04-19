@@ -94,7 +94,7 @@ pub use run::JsonNewRun;
 #[cfg(feature = "plus")]
 pub use runner::{
     DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimJob, JsonClaimedJob, JsonJob, JsonJobConfig,
-    JsonJobs, JsonNewRunJob, JsonNewRunner, JsonRunner, JsonRunnerToken, JsonRunners,
+    JsonJobs, JsonNewRunJob, JsonNewRunner, JsonRunner, JsonRunnerKey, JsonRunners,
     JsonUpdateRunner, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT, RunnerResourceId, RunnerSlug, RunnerUuid,
 };
 #[cfg(feature = "plus")]

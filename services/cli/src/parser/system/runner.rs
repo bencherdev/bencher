@@ -17,8 +17,8 @@ pub enum CliRunner {
     /// Update a runner
     #[clap(alias = "edit")]
     Update(CliRunnerUpdate),
-    /// Rotate a runner token
-    Token(CliRunnerToken),
+    /// Rotate a runner key
+    Key(CliRunnerKey),
     /// Manage runner specs
     #[clap(subcommand)]
     Spec(CliRunnerSpec),
@@ -98,7 +98,7 @@ pub struct CliRunnerUpdate {
 }
 
 #[derive(Parser, Debug)]
-pub struct CliRunnerToken {
+pub struct CliRunnerKey {
     /// Runner slug or UUID
     pub runner: RunnerResourceId,
 
