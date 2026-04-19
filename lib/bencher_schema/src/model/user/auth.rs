@@ -10,7 +10,7 @@ use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
 };
 use bencher_token::Audience;
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{
     ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
     ServerContext, SharedExtractor,
@@ -52,14 +52,23 @@ impl AuthUser {
         let email = claims.email();
 
         let conn = public_conn!(context);
-        // API keys are persisted in the `token` table and can be revoked;
-        // short-lived client (browser session) JWTs are not stored, so skip them.
-        if claims.aud == Audience::ApiKey.to_string() {
-            QueryToken::get_active_by_jwt(conn, &bearer_token).map_err(|_e| {
-                #[cfg(feature = "otel")]
-                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenRevokedUse);
-                unauthorized_error("This API token has been revoked and is no longer valid")
-            })?;
+        // API keys created via `POST /tokens` are persisted in the `token` table and
+        // can be revoked. Reject any JWT whose row has `revoked` set. A JWT with no
+        // row (e.g. one issued before revocation tracking existed, or any
+        // externally-signed test fixture) is accepted — we only block tokens we know
+        // have been revoked. Short-lived client (browser session) JWTs are never
+        // persisted and skip this lookup.
+        if claims.aud == Audience::ApiKey.to_string()
+            && let Some(row) = QueryToken::get_by_jwt(conn, &bearer_token)
+                .optional()
+                .map_err(|e| unauthorized_error(format!("Failed to look up API token: {e}")))?
+            && row.revoked.is_some()
+        {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenRevokedUse);
+            return Err(unauthorized_error(
+                "This API token has been revoked and is no longer valid",
+            ));
         }
         let query_user = QueryUser::get_with_email(conn, email)?;
         query_user.check_is_locked()?;

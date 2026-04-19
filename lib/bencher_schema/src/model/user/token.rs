@@ -50,12 +50,9 @@ impl QueryToken {
             .map_err(resource_not_found_err!(Token, (user_id, uuid)))
     }
 
-    /// Look up an active (non-revoked) token row by its JWT string.
-    /// Used by the authentication layer to reject revoked tokens.
-    pub fn get_active_by_jwt(conn: &mut DbConnection, jwt: &Jwt) -> diesel::QueryResult<Self> {
+    pub fn get_by_jwt(conn: &mut DbConnection, jwt: &Jwt) -> diesel::QueryResult<Self> {
         schema::token::table
             .filter(schema::token::jwt.eq(jwt.as_ref()))
-            .filter(schema::token::revoked.is_null())
             .first::<QueryToken>(conn)
     }
 

@@ -1,4 +1,4 @@
-DROP INDEX IF EXISTS index_token_active_jwt;
+DROP INDEX IF EXISTS index_token_jwt;
 
 PRAGMA foreign_keys = off;
 
