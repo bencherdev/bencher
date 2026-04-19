@@ -35,7 +35,7 @@ pub struct TaskProvision {
 
     /// Path to SSH private key
     #[clap(long, required_unless_present = "runner")]
-    pub key: Option<Utf8PathBuf>,
+    pub ssh: Option<Utf8PathBuf>,
 
     /// SSH user
     #[clap(long)]
@@ -57,7 +57,7 @@ pub struct TaskDeploy {
 
     /// Path to SSH private key
     #[clap(long)]
-    pub key: Option<Utf8PathBuf>,
+    pub ssh: Option<Utf8PathBuf>,
 
     /// SSH user
     #[clap(long)]
@@ -65,7 +65,7 @@ pub struct TaskDeploy {
 
     /// Runner authentication key
     #[clap(long)]
-    pub runner_key: Option<Secret>,
+    pub key: Option<Secret>,
 
     /// Bencher API host URL
     #[clap(long)]
@@ -87,7 +87,7 @@ pub struct TaskStart {
 
     /// Path to SSH private key
     #[clap(long)]
-    pub key: Option<Utf8PathBuf>,
+    pub ssh: Option<Utf8PathBuf>,
 
     /// SSH user
     #[clap(long)]
@@ -95,7 +95,7 @@ pub struct TaskStart {
 
     /// Runner authentication key
     #[clap(long)]
-    pub runner_key: Option<Secret>,
+    pub key: Option<Secret>,
 
     /// Bencher API host URL
     #[clap(long)]
@@ -117,7 +117,7 @@ pub struct TaskStop {
 
     /// Path to SSH private key
     #[clap(long, required_unless_present = "runner")]
-    pub key: Option<Utf8PathBuf>,
+    pub ssh: Option<Utf8PathBuf>,
 
     /// SSH user
     #[clap(long)]
@@ -135,7 +135,7 @@ pub struct TaskLogs {
 
     /// Path to SSH private key
     #[clap(long, required_unless_present = "runner")]
-    pub key: Option<Utf8PathBuf>,
+    pub ssh: Option<Utf8PathBuf>,
 
     /// SSH user
     #[clap(long)]

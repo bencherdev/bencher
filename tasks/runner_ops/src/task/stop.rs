@@ -15,13 +15,13 @@ impl TryFrom<TaskStop> for Stop {
         let TaskStop {
             runner,
             server,
-            key,
+            ssh,
             user,
         } = task;
         let file = runner.as_ref().map(load_server).transpose()?.flatten();
-        let (server, key, user) = merge_ssh(file.as_ref(), server, key, user)?;
+        let (server, ssh, user) = merge_ssh(file.as_ref(), server, ssh, user)?;
         Ok(Self {
-            ssh: Ssh::new(server, key, user),
+            ssh: Ssh::new(server, ssh, user),
         })
     }
 }
