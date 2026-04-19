@@ -75,6 +75,20 @@ impl QueryToken {
         .execute(conn)
     }
 
+    pub fn revoke_all(
+        conn: &mut DbConnection,
+        user_id: UserId,
+        now: DateTime,
+    ) -> diesel::QueryResult<usize> {
+        diesel::update(
+            schema::token::table
+                .filter(schema::token::user_id.eq(user_id))
+                .filter(schema::token::revoked.is_null()),
+        )
+        .set(schema::token::revoked.eq(now))
+        .execute(conn)
+    }
+
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonToken, HttpError> {
         let query_user = QueryUser::get(conn, self.user_id)?;
         Ok(self.into_json_for_user(&query_user))

@@ -12,8 +12,9 @@ use bencher_schema::{
         admin::AdminUser,
         auth::{AuthUser, BearerToken},
         same_user,
+        token::QueryToken,
     },
-    schema, write_conn,
+    schema, write_conn, write_transaction,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -234,10 +235,27 @@ async fn patch_inner(
     }
 
     let update_user = UpdateUser::from(json_user.clone());
-    diesel::update(schema::user::table.filter(schema::user::id.eq(query_user.id)))
-        .set(&update_user)
-        .execute(write_conn!(context))
+
+    let email_changed = json_user
+        .email
+        .as_ref()
+        .is_some_and(|new_email| *new_email != query_user.email);
+
+    if email_changed {
+        let now = context.clock.now();
+        write_transaction!(context, |conn| {
+            diesel::update(schema::user::table.filter(schema::user::id.eq(query_user.id)))
+                .set(&update_user)
+                .execute(conn)?;
+            QueryToken::revoke_all(conn, query_user.id, now)
+        })
         .map_err(resource_conflict_err!(User, (&query_user, &json_user)))?;
+    } else {
+        diesel::update(schema::user::table.filter(schema::user::id.eq(query_user.id)))
+            .set(&update_user)
+            .execute(write_conn!(context))
+            .map_err(resource_conflict_err!(User, (&query_user, &json_user)))?;
+    }
 
     Ok(QueryUser::get(auth_conn!(context), query_user.id)?.into_json())
 }
