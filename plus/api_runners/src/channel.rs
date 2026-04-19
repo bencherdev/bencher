@@ -824,7 +824,7 @@ const POLL_INTERVAL: Duration = Duration::from_secs(1);
 /// - Unclaimed: 1 concurrent job per source IP
 ///
 /// Returns `Ok(Some(job))` if a job was claimed, `Ok(None)` if no eligible jobs available.
-/// OCI runner token TTL: 10 minutes (enough for image pull, short enough to limit exposure)
+/// OCI registry token TTL: 10 minutes (enough for image pull, short enough to limit exposure)
 const OCI_RUNNER_TOKEN_TTL: u32 = 600;
 
 async fn try_claim_job(
