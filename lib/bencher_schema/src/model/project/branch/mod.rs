@@ -185,6 +185,23 @@ impl QueryBranch {
         project_id: ProjectId,
         start_point: Option<&JsonUpdateStartPoint>,
     ) -> Result<(Self, QueryHead), HttpError> {
+        // Self-heal legacy rows that pre-date f5516cc. Before that fix, a branch
+        // row could exist with head_id = NULL due to a non-atomic insert race
+        // (#800). Every subsequent request hitting QueryBranch::head_id() would
+        // 500. Detect the legacy shape here and create a head via the same path
+        // used for "new head for existing branch" elsewhere in this fn.
+        if self.head_id.is_none() {
+            slog::warn!(
+                log,
+                "Self-healing branch with NULL head_id";
+                "project_id" => ?self.project_id,
+                "branch_id" => ?self.id,
+                "branch_uuid" => ?self.uuid,
+            );
+            let new_start_point =
+                StartPoint::from_update_json(context, project_id, start_point).await?;
+            return InsertHead::for_branch(log, context, self, new_start_point.as_ref()).await;
+        }
         // Get the current start point, if one exists.
         let current_start_point = self.get_start_point(context).await?;
         // Get the new start point, if there is one specified.
@@ -668,5 +685,78 @@ mod tests {
             .expect("Failed to get branch");
 
         assert_eq!(query_branch.head_id().unwrap(), new_head_id);
+    }
+
+    /// Exercises the DB-level invariants of the self-heal short-circuit in
+    /// [`super::QueryBranch::update_start_point_if_changed`] for a legacy
+    /// branch row whose `head_id` is `NULL` (issue #800).
+    ///
+    /// Full coverage of `update_start_point_if_changed` requires an
+    /// `ApiContext`, which this unit-test harness doesn't wire up; the
+    /// transaction here mirrors the body of `InsertHead::for_branch` when
+    /// `old_head_id = None` and `branch_start_point = None` — i.e. the case
+    /// the short-circuit produces for `start_point = None`.
+    #[test]
+    fn self_heal_null_head_branch() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        diesel::insert_into(schema::branch::table)
+            .values((
+                schema::branch::uuid.eq("00000000-0000-0000-0000-000000000010"),
+                schema::branch::project_id.eq(base.project_id),
+                schema::branch::name.eq("legacy-null-head"),
+                schema::branch::slug.eq("legacy-null-head"),
+                schema::branch::created.eq(DateTime::TEST),
+                schema::branch::modified.eq(DateTime::TEST),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert branch");
+        let branch_id: BranchId = diesel::select(last_insert_rowid())
+            .get_result(&mut conn)
+            .expect("Failed to get branch id");
+
+        let pre_heal: super::QueryBranch = schema::branch::table
+            .filter(schema::branch::id.eq(branch_id))
+            .select(super::QueryBranch::as_select())
+            .first(&mut conn)
+            .expect("Failed to get branch");
+        assert!(pre_heal.head_id.is_none());
+
+        // Self-heal: atomically insert a head with no start point and point the
+        // branch at it.
+        let new_head_id = conn
+            .immediate_transaction(|conn| {
+                let insert_head = super::head::InsertHead::new(branch_id, None);
+                diesel::insert_into(schema::head::table)
+                    .values(&insert_head)
+                    .execute(conn)?;
+                let new_head_id: super::head::HeadId =
+                    diesel::select(last_insert_rowid()).get_result(conn)?;
+                diesel::update(schema::branch::table.filter(schema::branch::id.eq(branch_id)))
+                    .set(schema::branch::head_id.eq(new_head_id))
+                    .execute(conn)?;
+                diesel::QueryResult::Ok(new_head_id)
+            })
+            .expect("Transaction failed");
+
+        let post_heal: super::QueryBranch = schema::branch::table
+            .filter(schema::branch::id.eq(branch_id))
+            .select(super::QueryBranch::as_select())
+            .first(&mut conn)
+            .expect("Failed to get branch");
+        assert_eq!(post_heal.head_id().unwrap(), new_head_id);
+
+        let healed_head: super::head::QueryHead = schema::head::table
+            .filter(schema::head::id.eq(new_head_id))
+            .select(super::head::QueryHead::as_select())
+            .first(&mut conn)
+            .expect("Failed to get head");
+        assert_eq!(healed_head.branch_id, branch_id);
+        assert!(
+            healed_head.start_point_id.is_none(),
+            "self-heal with start_point = None must not invent a start point"
+        );
+        assert!(healed_head.replaced.is_none());
     }
 }
