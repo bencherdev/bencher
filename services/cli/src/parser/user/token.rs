@@ -35,7 +35,7 @@ pub struct CliTokenList {
     #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
 
-    /// Include revoked tokens in the results
+    /// Show only revoked tokens instead of active ones
     #[clap(long)]
     pub revoked: bool,
 

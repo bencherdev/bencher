@@ -58,7 +58,7 @@ impl AuthUser {
         // externally-signed test fixture) is accepted — we only block tokens we know
         // have been revoked. Short-lived client (browser session) JWTs are never
         // persisted and skip this lookup.
-        if claims.aud == Audience::ApiKey.as_str()
+        if claims.audience() == Audience::ApiKey.as_str()
             && let Some(row) = QueryToken::get_by_jwt(conn, &bearer_token)
                 .optional()
                 .map_err(|e| unauthorized_error(format!("Failed to look up API token: {e}")))?
