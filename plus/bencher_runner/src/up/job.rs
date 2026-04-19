@@ -284,7 +284,9 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
                 break;
             },
             Ok(None | Some(ServerMessage::Ack { .. })) => {},
-            Ok(Some(msg @ (ServerMessage::Job(_) | ServerMessage::NoJob))) => {
+            Ok(Some(
+                msg @ (ServerMessage::Job(_) | ServerMessage::NoJob | ServerMessage::Update { .. }),
+            )) => {
                 eprintln!("Warning: unexpected {msg:?} during job execution heartbeat");
             },
             Err(_) => break,
@@ -383,6 +385,7 @@ mod tests {
             grace_period: None,
             sandbox_log_level: crate::SandboxLogLevel::default(),
             allow_no_sandbox: false,
+            no_auto_update: false,
         }
     }
 

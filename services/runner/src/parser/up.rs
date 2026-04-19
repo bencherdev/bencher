@@ -50,4 +50,8 @@ pub struct CliUp {
     /// Without this flag, jobs with no sandbox will be rejected at runtime.
     #[arg(long, env = "BENCHER_DANGER_ALLOW_NO_SANDBOX")]
     pub danger_allow_no_sandbox: bool,
+
+    /// Disable automatic updates from the server.
+    #[arg(long, env = "BENCHER_NO_AUTO_UPDATE")]
+    pub no_auto_update: bool,
 }

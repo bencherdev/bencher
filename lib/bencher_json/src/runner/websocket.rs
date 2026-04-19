@@ -1,7 +1,26 @@
-use bencher_valid::PollTimeout;
+#[cfg(feature = "plus")]
+use bencher_valid::Sha256;
+use bencher_valid::{Architecture, OperatingSystem, PollTimeout};
+#[cfg(feature = "schema")]
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "plus")]
+use url::Url;
 
 use super::job::{JobUuid, JsonClaimedJob, JsonIterationOutput};
+
+/// Runner metadata sent with `Ready` messages.
+/// When present, enables server-directed features like auto-update.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonRunnerMetadata {
+    /// Runner operating system
+    pub os: OperatingSystem,
+    /// Runner CPU architecture
+    pub arch: Architecture,
+    /// Runner binary version
+    pub version: String,
+}
 
 /// Messages sent from the runner to the server over the WebSocket channel.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12,6 +31,9 @@ pub enum RunnerMessage {
         /// Maximum time to wait for a job (long-poll), in seconds (1-900)
         #[serde(skip_serializing_if = "Option::is_none")]
         poll_timeout: Option<PollTimeout>,
+        /// Runner metadata (version, architecture). When present, enables auto-update.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        runner: Option<JsonRunnerMetadata>,
     },
     /// Job setup complete, benchmark execution starting.
     Running,
@@ -56,6 +78,16 @@ pub enum ServerMessage {
     NoJob,
     /// Job was canceled, stop execution immediately.
     Cancel,
+    /// Runner should self-update to a new version.
+    #[cfg(feature = "plus")]
+    Update {
+        /// Version to update to
+        version: String,
+        /// URL to download the new binary
+        url: Url,
+        /// SHA-256 checksum of the new binary
+        checksum: Sha256,
+    },
 }
 
 /// Reason for closing a WebSocket connection, sent in the close frame.
@@ -93,14 +125,33 @@ mod tests {
         "550e8400-e29b-41d4-a716-446655440000".parse().unwrap()
     }
 
+    fn test_version() -> String {
+        env!("CARGO_PKG_VERSION").to_owned()
+    }
+
     #[test]
     fn ready_no_timeout_roundtrip() {
-        let msg = RunnerMessage::Ready { poll_timeout: None };
+        let msg = RunnerMessage::Ready {
+            poll_timeout: None,
+            runner: Some(JsonRunnerMetadata {
+                os: OperatingSystem::Linux,
+                arch: Architecture::X86_64,
+                version: test_version(),
+            }),
+        };
         let json = serde_json::to_string(&msg).unwrap();
-        assert_eq!(json, r#"{"event":"ready"}"#);
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Ready { poll_timeout } => assert!(poll_timeout.is_none()),
+            RunnerMessage::Ready {
+                poll_timeout,
+                runner,
+            } => {
+                assert!(poll_timeout.is_none());
+                let runner = runner.unwrap();
+                assert_eq!(runner.os, OperatingSystem::Linux);
+                assert_eq!(runner.arch, Architecture::X86_64);
+                assert_eq!(runner.version, test_version());
+            },
             other => panic!("Expected Ready, got {other:?}"),
         }
     }
@@ -109,12 +160,45 @@ mod tests {
     fn ready_with_timeout_roundtrip() {
         let msg = RunnerMessage::Ready {
             poll_timeout: Some(PollTimeout::try_from(30).unwrap()),
+            runner: Some(JsonRunnerMetadata {
+                os: OperatingSystem::Linux,
+                arch: Architecture::Aarch64,
+                version: test_version(),
+            }),
         };
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Ready { poll_timeout } => {
+            RunnerMessage::Ready {
+                poll_timeout,
+                runner,
+            } => {
                 assert_eq!(u32::from(poll_timeout.unwrap()), 30);
+                let runner = runner.unwrap();
+                assert_eq!(runner.os, OperatingSystem::Linux);
+                assert_eq!(runner.arch, Architecture::Aarch64);
+                assert_eq!(runner.version, test_version());
+            },
+            other => panic!("Expected Ready, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ready_no_runner_metadata_roundtrip() {
+        let msg = RunnerMessage::Ready {
+            poll_timeout: None,
+            runner: None,
+        };
+        let json = serde_json::to_string(&msg).unwrap();
+        assert_eq!(json, r#"{"event":"ready"}"#);
+        let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            RunnerMessage::Ready {
+                poll_timeout,
+                runner,
+            } => {
+                assert!(poll_timeout.is_none());
+                assert!(runner.is_none());
             },
             other => panic!("Expected Ready, got {other:?}"),
         }

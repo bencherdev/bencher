@@ -12,6 +12,12 @@ use url::Url;
 
 use super::error::WebSocketError;
 
+pub enum WaitResult {
+    Job(Box<JsonClaimedJob>),
+    NoJob,
+    Update(ServerMessage),
+}
+
 pub struct JobChannel {
     ws: WebSocket<MaybeTlsStream<TcpStream>>,
 }
@@ -55,17 +61,11 @@ impl JobChannel {
         Ok(())
     }
 
-    /// Block-read until the server sends `Job(..)` or `NoJob`.
-    ///
-    /// Returns `Ok(Some(job))` on `Job`, `Ok(None)` on `NoJob`,
-    /// or an error on timeout/disconnect.
+    /// Block-read until the server sends `Job`, `NoJob`, or `Update`.
     ///
     /// Uses an `Instant`-based deadline so that Ping frames (which reset the OS
     /// read timeout) cannot extend the wait beyond the original `timeout`.
-    pub fn wait_for_job(
-        &mut self,
-        timeout: Duration,
-    ) -> Result<Option<JsonClaimedJob>, WebSocketError> {
+    pub fn wait_for_job(&mut self, timeout: Duration) -> Result<WaitResult, WebSocketError> {
         let deadline = std::time::Instant::now() + timeout;
         loop {
             let remaining = deadline.saturating_duration_since(std::time::Instant::now());
@@ -92,8 +92,9 @@ impl JobChannel {
                         ))
                     })?;
                     match server_msg {
-                        ServerMessage::Job(job) => return Ok(Some(*job)),
-                        ServerMessage::NoJob => return Ok(None),
+                        ServerMessage::Job(job) => return Ok(WaitResult::Job(job)),
+                        ServerMessage::NoJob => return Ok(WaitResult::NoJob),
+                        ServerMessage::Update { .. } => return Ok(WaitResult::Update(server_msg)),
                         ServerMessage::Ack { .. } => {
                             // Stale Ack from the previous job completion — safe to ignore.
                             // This happens when the server's Ack arrives after the runner
@@ -111,7 +112,9 @@ impl JobChannel {
                         .send(Message::Pong(data))
                         .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
                 },
-                Message::Close(frame) => return Self::handle_close_frame(frame).map(|_| None),
+                Message::Close(frame) => {
+                    return Self::handle_close_frame(frame).map(|_| WaitResult::NoJob);
+                },
                 Message::Binary(_) | Message::Pong(_) | Message::Frame(_) => {},
             }
         }

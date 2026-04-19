@@ -9,8 +9,10 @@ use std::time::Duration;
 
 use bencher_json::{
     JobUuid, JsonClaimedJob,
-    runner::{JsonIterationOutput, RunnerMessage, ServerMessage},
+    runner::{JsonIterationOutput, JsonRunnerMetadata, RunnerMessage, ServerMessage},
 };
+use bencher_valid::Sha256;
+use url::Url;
 
 /// Margin added to `poll_timeout` for the WS read timeout, giving the server
 /// time to send `NoJob` after its own deadline.
@@ -158,6 +160,12 @@ pub enum Effect {
     Log(LogLevel, String),
     /// Exit the protocol loop.
     Exit,
+    /// Download, verify, and exec a new runner binary.
+    SelfUpdate {
+        version: String,
+        url: Url,
+        checksum: Sha256,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -180,6 +188,7 @@ pub struct JobOutcome {
 pub struct ChannelStateMachine {
     state: ChannelState,
     poll_timeout_secs: u32,
+    runner: Option<JsonRunnerMetadata>,
     // Retry lifecycle for unACKed terminal messages:
     //
     // 1. Job finishes → build terminal message, set `in_flight`, send it
@@ -197,10 +206,11 @@ pub struct ChannelStateMachine {
 }
 
 impl ChannelStateMachine {
-    pub fn new(poll_timeout_secs: u32) -> Self {
+    pub fn new(poll_timeout_secs: u32, runner: Option<JsonRunnerMetadata>) -> Self {
         Self {
             state: ChannelState::Disconnected,
             poll_timeout_secs,
+            runner,
             pending_result: None,
             pending_retry_count: 0,
             in_flight: None,
@@ -336,6 +346,25 @@ impl ChannelStateMachine {
                 ]
             },
             Input::Message(ServerMessage::NoJob) => self.resolve_idle(),
+            Input::Message(ServerMessage::Update {
+                version,
+                url,
+                checksum,
+            }) => {
+                self.state = ChannelState::ShutDown;
+                vec![
+                    Effect::Log(
+                        LogLevel::Info,
+                        format!("Server requested update to version {version}"),
+                    ),
+                    Effect::Close,
+                    Effect::SelfUpdate {
+                        version,
+                        url,
+                        checksum,
+                    },
+                ]
+            },
             Input::ReceiveTimeout => {
                 self.state = ChannelState::Disconnected;
                 vec![
@@ -497,7 +526,10 @@ impl ChannelStateMachine {
             let wait_duration =
                 Duration::from_secs(u64::from(self.poll_timeout_secs) + POLL_TIMEOUT_MARGIN_SECS);
             vec![
-                Effect::Send(RunnerMessage::Ready { poll_timeout }),
+                Effect::Send(RunnerMessage::Ready {
+                    poll_timeout,
+                    runner: self.runner.clone(),
+                }),
                 Effect::WaitForJob(wait_duration),
             ]
         }
@@ -562,6 +594,8 @@ fn build_terminal_message(
 #[cfg(test)]
 #[expect(clippy::indexing_slicing)]
 mod tests {
+    use bencher_valid::{Architecture, OperatingSystem};
+
     use super::*;
 
     fn test_job_uuid() -> JobUuid {
@@ -573,7 +607,14 @@ mod tests {
     }
 
     fn test_sm() -> ChannelStateMachine {
-        ChannelStateMachine::new(30)
+        ChannelStateMachine::new(
+            30,
+            Some(JsonRunnerMetadata {
+                os: OperatingSystem::Linux,
+                arch: Architecture::X86_64,
+                version: env!("CARGO_PKG_VERSION").to_owned(),
+            }),
+        )
     }
 
     fn test_completed_msg() -> RunnerMessage {
@@ -1121,7 +1162,14 @@ mod tests {
 
     #[test]
     fn poll_timeout_margin_applied_to_wait() {
-        let mut sm = ChannelStateMachine::new(60);
+        let mut sm = ChannelStateMachine::new(
+            60,
+            Some(JsonRunnerMetadata {
+                os: OperatingSystem::Linux,
+                arch: Architecture::X86_64,
+                version: env!("CARGO_PKG_VERSION").to_owned(),
+            }),
+        );
         let effects = sm.step(Input::Connected);
         let wait = effects
             .iter()

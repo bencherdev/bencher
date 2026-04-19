@@ -1,4 +1,4 @@
-use std::{fmt, str::FromStr};
+use std::{env::consts, fmt, str::FromStr};
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -39,6 +39,22 @@ impl TryFrom<String> for Architecture {
             X86_64 => Ok(Self::X86_64),
             AARCH64 => Ok(Self::Aarch64),
             _ => Err(ValidError::Architecture(architecture)),
+        }
+    }
+}
+
+const LINUX_X86_64_SLUG: &str = "linux-x86-64";
+const LINUX_AARCH64_SLUG: &str = "linux-arm-64";
+
+impl Architecture {
+    pub fn from_host() -> Result<Self, ValidError> {
+        consts::ARCH.parse()
+    }
+
+    pub fn artifact_slug(&self) -> &'static str {
+        match self {
+            Self::X86_64 => LINUX_X86_64_SLUG,
+            Self::Aarch64 => LINUX_AARCH64_SLUG,
         }
     }
 }

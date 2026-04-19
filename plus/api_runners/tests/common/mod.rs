@@ -540,13 +540,20 @@ pub async fn claim_via_channel(
     let mut ws = connect_channel_ws(server, runner_uuid, runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(poll_timeout).expect("Invalid poll timeout")),
+        runner: Some(bencher_json::runner::JsonRunnerMetadata {
+            os: bencher_json::OperatingSystem::Linux,
+            arch: bencher_json::Architecture::X86_64,
+            version: bencher_json::BENCHER_API_VERSION.to_owned(),
+        }),
     };
     send_runner_msg(&mut ws, &ready).await;
     let response = recv_server_msg(&mut ws).await;
     let job = match response {
         ServerMessage::Job(job) => Some(*job),
         ServerMessage::NoJob => None,
-        other @ (ServerMessage::Ack { .. } | ServerMessage::Cancel) => {
+        other @ (ServerMessage::Ack { .. }
+        | ServerMessage::Cancel
+        | ServerMessage::Update { .. }) => {
             panic!("Expected Job or NoJob, got: {other:?}")
         },
     };

@@ -28,6 +28,7 @@ impl TryFrom<CliUp> for Up {
                 grace_period: task.grace_period,
                 sandbox_log_level: task.sandbox_log_level,
                 allow_no_sandbox: task.danger_allow_no_sandbox,
+                no_auto_update: task.no_auto_update,
             },
         })
     }

@@ -102,6 +102,9 @@ pub enum ValidError {
     #[error("Failed to validate sandbox: {0}")]
     Sandbox(String),
     #[cfg(feature = "plus")]
+    #[error("Failed to validate SHA-256 hash: {0}")]
+    Sha256(String),
+    #[cfg(feature = "plus")]
     #[error("Failed to validate plan level: {0}")]
     PlanLevel(String),
     #[cfg(feature = "plus")]

@@ -1,3 +1,4 @@
+use std::io::Read as _;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use bencher_json::RunnerResourceId;
@@ -61,6 +62,8 @@ pub struct UpConfig {
     pub sandbox_log_level: SandboxLogLevel,
     /// Whether to allow non-sandboxed execution.
     pub allow_no_sandbox: bool,
+    /// Disable auto-update: do not send runner metadata to the server.
+    pub no_auto_update: bool,
 }
 
 pub struct Up {
@@ -129,7 +132,19 @@ impl Up {
 /// function executes effects and feeds I/O results back.
 #[expect(clippy::print_stdout)]
 fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpError> {
-    let mut sm = ChannelStateMachine::new(config.poll_timeout_secs);
+    let runner_metadata = if config.no_auto_update {
+        None
+    } else {
+        bencher_valid::OperatingSystem::from_host()
+            .ok()
+            .zip(bencher_valid::Architecture::from_host().ok())
+            .map(|(os, arch)| bencher_json::runner::JsonRunnerMetadata {
+                os,
+                arch,
+                version: env!("CARGO_PKG_VERSION").to_owned(),
+            })
+    };
+    let mut sm = ChannelStateMachine::new(config.poll_timeout_secs, runner_metadata);
     let mut effects: VecDeque<Effect> =
         ChannelStateMachine::initial_effects().into_iter().collect();
     let mut ws: Option<Arc<Mutex<JobChannel>>> = None;
@@ -232,6 +247,14 @@ fn execute_effect(
             EffectResult::Continue
         },
         Effect::Exit => EffectResult::Exit,
+        Effect::SelfUpdate {
+            version,
+            url,
+            checksum,
+        } => {
+            self_update(&version, &url, &checksum);
+            EffectResult::Exit
+        },
     }
 }
 
@@ -273,8 +296,9 @@ fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) ->
         return Input::ConnectionFailed;
     };
     match ws_guard.wait_for_job(timeout) {
-        Ok(Some(job)) => Input::Message(ServerMessage::Job(Box::new(job))),
-        Ok(None) => Input::Message(ServerMessage::NoJob),
+        Ok(websocket::WaitResult::Job(job)) => Input::Message(ServerMessage::Job(job)),
+        Ok(websocket::WaitResult::NoJob) => Input::Message(ServerMessage::NoJob),
+        Ok(websocket::WaitResult::Update(msg)) => Input::Message(msg),
         // wait_for_job conflates timeout and connection errors in Err;
         // ConnectionFailed is the safer default — the state machine will
         // reconnect either way, and Close on a dead connection is a no-op.
@@ -354,4 +378,91 @@ fn install_signal_handlers() {
 
 extern "C" fn signal_handler(_sig: libc::c_int) {
     SHUTDOWN.store(true, Ordering::SeqCst);
+}
+
+#[expect(clippy::print_stdout, clippy::print_stderr)]
+fn self_update(version: &str, url: &Url, checksum: &bencher_valid::Sha256) {
+    println!("Updating to version {version}...");
+    println!("  Downloading: {url}");
+
+    let current_exe = match std::env::current_exe() {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!("Failed to determine current binary path: {e}");
+            return;
+        },
+    };
+
+    let new_path = current_exe.with_extension("new");
+    let old_path = current_exe.with_extension("old");
+
+    // Download
+    let response = match ureq::get(url.as_str()).call() {
+        Ok(resp) => resp,
+        Err(e) => {
+            eprintln!("Failed to download update: {e}");
+            return;
+        },
+    };
+
+    let mut reader = response.into_body().into_reader();
+    let mut bytes = Vec::new();
+    if let Err(e) = reader.read_to_end(&mut bytes) {
+        eprintln!("Failed to read update body: {e}");
+        return;
+    }
+
+    // Verify checksum
+    let actual = bencher_valid::Sha256::compute(&bytes);
+    if actual != *checksum {
+        eprintln!("Checksum mismatch: expected {checksum}, got {actual}");
+        return;
+    }
+    println!("  Checksum verified: {checksum}");
+
+    // Write new binary
+    if let Err(e) = std::fs::write(&new_path, &bytes) {
+        eprintln!("Failed to write new binary: {e}");
+        return;
+    }
+
+    // Make executable
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        if let Err(e) = std::fs::set_permissions(&new_path, std::fs::Permissions::from_mode(0o755))
+        {
+            eprintln!("Failed to set permissions: {e}");
+            drop(std::fs::remove_file(&new_path));
+            return;
+        }
+    }
+
+    // Swap: current → old, new → current
+    if old_path.exists() {
+        drop(std::fs::remove_file(&old_path));
+    }
+    if let Err(e) = std::fs::rename(&current_exe, &old_path) {
+        eprintln!("Failed to rename current binary: {e}");
+        drop(std::fs::remove_file(&new_path));
+        return;
+    }
+    if let Err(e) = std::fs::rename(&new_path, &current_exe) {
+        eprintln!("Failed to rename new binary: {e}");
+        drop(std::fs::rename(&old_path, &current_exe));
+        return;
+    }
+
+    println!("  Binary updated. Restarting...");
+
+    // exec the new binary with the same arguments
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt as _;
+        let args: Vec<String> = std::env::args().skip(1).collect();
+        let err = std::process::Command::new(&current_exe).args(&args).exec();
+        // exec only returns on error
+        eprintln!("Failed to exec new binary: {err}");
+        drop(std::fs::rename(&old_path, &current_exe));
+    }
 }

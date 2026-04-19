@@ -88,6 +88,9 @@ enum ChannelError {
         target: JobStatus,
         current: JobStatus,
     },
+
+    #[error("Runner update failed: {0}")]
+    Update(String),
 }
 
 /// Handle a heartbeat timeout by reading the job and deciding the right status.
@@ -1034,7 +1037,7 @@ pub async fn runner_channel(
     loop {
         // === IDLE STATE ===
         // Wait for Ready message from runner (also handles terminal message retries)
-        let Ok(poll_timeout) = wait_for_ready(
+        let Ok(ReadyOutcome::Ready(poll_timeout)) = wait_for_ready(
             &log,
             context,
             runner_key.runner_id,
@@ -1133,7 +1136,59 @@ pub async fn runner_channel(
     Ok(())
 }
 
+/// Outcome of waiting for a `RunnerMessage::Ready` message.
+enum ReadyOutcome {
+    /// Runner version matches; proceed with job polling.
+    Ready(u32),
+    /// Runner version is outdated; `Update` message was sent.
+    UpdateSent,
+}
+
+/// GitHub Releases base URL for runner binary downloads.
+const RUNNER_RELEASE_BASE_URL: &str = "https://github.com/bencherdev/bencher/releases/download";
+
+/// Construct the GitHub Releases download URL for a runner binary.
+fn runner_download_url(
+    version: &str,
+    arch: bencher_json::Architecture,
+) -> Result<url::Url, ChannelError> {
+    let tag = format!("v{version}");
+    let artifact = format!("runner-{tag}-{}", arch.artifact_slug());
+    let url_str = format!("{RUNNER_RELEASE_BASE_URL}/{tag}/{artifact}");
+    url::Url::parse(&url_str).map_err(|e| ChannelError::Update(e.to_string()))
+}
+
+/// Fetch the SHA-256 checksum for a runner binary from its companion `.sha256` file.
+async fn fetch_runner_checksum(
+    binary_url: &url::Url,
+) -> Result<bencher_json::Sha256, ChannelError> {
+    let checksum_url = format!("{binary_url}.sha256");
+    let response = reqwest::get(&checksum_url)
+        .await
+        .map_err(|e| ChannelError::Update(format!("Failed to fetch checksum: {e}")))?;
+    if !response.status().is_success() {
+        return Err(ChannelError::Update(format!(
+            "Checksum fetch returned {}",
+            response.status()
+        )));
+    }
+    let body = response
+        .text()
+        .await
+        .map_err(|e| ChannelError::Update(format!("Failed to read checksum body: {e}")))?;
+    let hex = body
+        .split_whitespace()
+        .next()
+        .ok_or_else(|| ChannelError::Update("Empty checksum response".to_owned()))?;
+    hex.parse()
+        .map_err(|e| ChannelError::Update(format!("Invalid checksum: {e}")))
+}
+
 /// Wait for a `RunnerMessage::Ready` message, returning the poll timeout.
+///
+/// If the runner's version does not match the server's version, sends a
+/// `ServerMessage::Update` with the download URL and checksum, then returns
+/// `ReadyOutcome::UpdateSent`.
 ///
 /// Also handles terminal messages (Completed/Failed/Canceled) during Idle state,
 /// which occur when a runner reconnects with a pending result that wasn't acknowledged.
@@ -1146,7 +1201,7 @@ async fn wait_for_ready<S, R>(
     tx: &mut S,
     rx: &mut R,
     idle_timeout: Duration,
-) -> Result<u32, ChannelError>
+) -> Result<ReadyOutcome, ChannelError>
 where
     S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
@@ -1173,9 +1228,11 @@ where
             Message::Text(text) => {
                 let runner_msg: RunnerMessage = serde_json::from_str(&text)?;
                 match runner_msg {
-                    RunnerMessage::Ready { poll_timeout } => {
-                        let timeout = poll_timeout.map_or(DEFAULT_POLL_TIMEOUT, u32::from);
-                        return Ok(timeout);
+                    RunnerMessage::Ready {
+                        poll_timeout,
+                        runner,
+                    } => {
+                        return handle_ready(log, tx, poll_timeout, runner.as_ref()).await;
                     },
                     RunnerMessage::Completed {
                         job: job_uuid,
@@ -1239,6 +1296,48 @@ where
             Message::Binary(_) | Message::Pong(_) | Message::Frame(_) => {},
         }
     }
+}
+
+/// Check the runner version against the server version.
+///
+/// If runner metadata is absent, skips auto-update and returns `ReadyOutcome::Ready`.
+/// If the versions match, returns `ReadyOutcome::Ready` with the poll timeout.
+/// If they differ, sends `ServerMessage::Update` with the download URL and
+/// checksum, then returns `ReadyOutcome::UpdateSent`.
+async fn handle_ready<S>(
+    log: &slog::Logger,
+    tx: &mut S,
+    poll_timeout: Option<bencher_json::PollTimeout>,
+    runner: Option<&bencher_json::runner::JsonRunnerMetadata>,
+) -> Result<ReadyOutcome, ChannelError>
+where
+    S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+{
+    let timeout = poll_timeout.map_or(DEFAULT_POLL_TIMEOUT, u32::from);
+
+    let Some(runner) = runner else {
+        slog::info!(log, "Runner ready (no metadata, skipping auto-update)");
+        return Ok(ReadyOutcome::Ready(timeout));
+    };
+
+    let server_version = bencher_json::BENCHER_API_VERSION;
+    slog::info!(log, "Runner ready"; "os" => %runner.os, "arch" => %runner.arch, "version" => &runner.version, "server_version" => server_version);
+
+    if runner.version != server_version && runner.os == bencher_json::OperatingSystem::Linux {
+        slog::info!(log, "Runner version mismatch, sending update"; "runner" => &runner.version, "server" => server_version);
+        let url = runner_download_url(server_version, runner.arch)?;
+        let checksum = fetch_runner_checksum(&url).await?;
+        let update = ServerMessage::Update {
+            version: server_version.to_owned(),
+            url,
+            checksum,
+        };
+        let text = serde_json::to_string(&update)?;
+        tx.send(Message::Text(text.into())).await?;
+        return Ok(ReadyOutcome::UpdateSent);
+    }
+
+    Ok(ReadyOutcome::Ready(timeout))
 }
 
 /// Look up a job by UUID and verify it belongs to the given runner.
