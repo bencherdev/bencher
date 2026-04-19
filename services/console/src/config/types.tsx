@@ -121,6 +121,7 @@ export enum ActionButton {
 	RAW = "raw",
 	DELETE = "delete",
 	REVOKE = "revoke",
+	REVOKED = "revoked",
 }
 
 export enum Row {

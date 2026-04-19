@@ -123,11 +123,8 @@ const tokensConfig = {
 				`/v0/users/${params?.user}/tokens/${params?.token}`,
 			top_buttons: [
 				{
-					kind: ActionButton.REVOKE,
+					kind: ActionButton.REVOKED,
 					subtitle: "API Token",
-					path: (params: Params) =>
-						`/v0/users/${params?.user}/tokens/${params?.token}`,
-					is_allowed: isSameUser,
 				},
 			],
 			cards: [
@@ -180,6 +177,15 @@ const tokensConfig = {
 					label: "API Token Revocation",
 					key: "revoked",
 					display: Display.RAW,
+				},
+			],
+			buttons: [
+				{
+					kind: ActionButton.REVOKE,
+					subtitle: "API Token",
+					path: (params: Params) =>
+						`/v0/users/${params?.user}/tokens/${params?.token}`,
+					is_allowed: isSameUser,
 				},
 			],
 		},

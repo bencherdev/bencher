@@ -3,12 +3,14 @@ import {
 	type Accessor,
 	Match,
 	type Resource,
+	Show,
 	Switch,
 	createMemo,
 	createResource,
 } from "solid-js";
 import { ActionButton } from "../../../../config/types";
 import type { JsonAuthUser } from "../../../../types/bencher";
+import { fmtDate } from "../../../../util/convert";
 import type { PubResourceKind } from "../../../perf/util";
 import ArchiveButton from "./ArchiveButton";
 import ArchivedButton from "./ArchivedButton";
@@ -148,6 +150,21 @@ const DeckButton = (props: Props) => {
 						</form>
 					</div>
 				</div>
+			</Match>
+			<Match when={props.config?.kind === ActionButton.REVOKED}>
+				<Show when={props.data()?.revoked}>
+					<div class="columns">
+						<div class="column">
+							<div class="notification is-warning">
+								<p>
+									This {props.config.subtitle} was revoked on{" "}
+									{fmtDate(props.data()?.revoked)}. Revocation is permanent and
+									cannot be undone.
+								</p>
+							</div>
+						</div>
+					</div>
+				</Show>
 			</Match>
 			<Match when={props.config?.kind === ActionButton.DELETE && isAllowed()}>
 				<div class="columns">

@@ -1,7 +1,6 @@
 import * as Sentry from "@sentry/astro";
 import { type Accessor, type Resource, Show, createSignal } from "solid-js";
 import type { JsonAuthUser, JsonToken } from "../../../../types/bencher";
-import { fmtDate } from "../../../../util/convert";
 import { httpDelete } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { validJwt } from "../../../../util/valid";
@@ -52,73 +51,61 @@ const RevokeButton = (props: Props) => {
 	};
 
 	return (
-		<Show
-			when={props.data()?.revoked}
-			fallback={
-				<Show when={props.isAllowed()}>
-					<Show
-						when={revokeClicked()}
-						fallback={
-							<div class="buttons is-right">
-								<button
-									class="button is-small"
-									type="button"
-									onMouseDown={(e) => {
-										e.preventDefault();
-										setRevokeClicked(true);
-									}}
-								>
-									<span class="icon">
-										<i class="fas fa-ban" />
-									</span>
-									<span>Revoke</span>
-								</button>
-							</div>
-						}
-					>
-						<div class="content has-text-centered">
-							<h3 class="title is-3">Are you sure? Revocation is permanent.</h3>
-							{props.subtitle && (
-								<h4 class="subtitle is-4">{props.subtitle}</h4>
-							)}
+		<Show when={!props.data()?.revoked}>
+			<Show when={props.isAllowed()}>
+				<Show
+					when={revokeClicked()}
+					fallback={
+						<div class="buttons is-right">
+							<button
+								class="button is-small"
+								type="button"
+								onMouseDown={(e) => {
+									e.preventDefault();
+									setRevokeClicked(true);
+								}}
+							>
+								<span class="icon">
+									<i class="fas fa-ban" />
+								</span>
+								<span>Revoke</span>
+							</button>
 						</div>
-						<div class="columns">
-							<div class="column">
-								<button
-									class="button is-fullwidth"
-									type="submit"
-									disabled={revoking()}
-									onMouseDown={(e) => {
-										e.preventDefault();
-										sendRevoke();
-									}}
-								>
-									I am 💯 sure
-								</button>
-							</div>
-							<div class="column">
-								<button
-									class="button is-primary is-fullwidth"
-									type="button"
-									onMouseDown={(e) => {
-										e.preventDefault();
-										setRevokeClicked(false);
-									}}
-								>
-									Cancel
-								</button>
-							</div>
+					}
+				>
+					<div class="content has-text-centered">
+						<h3 class="title is-3">Are you sure? Revocation is permanent.</h3>
+						{props.subtitle && <h4 class="subtitle is-4">{props.subtitle}</h4>}
+					</div>
+					<div class="columns">
+						<div class="column">
+							<button
+								class="button is-fullwidth"
+								type="submit"
+								disabled={revoking()}
+								onMouseDown={(e) => {
+									e.preventDefault();
+									sendRevoke();
+								}}
+							>
+								I am 💯 sure
+							</button>
 						</div>
-					</Show>
+						<div class="column">
+							<button
+								class="button is-primary is-fullwidth"
+								type="button"
+								onMouseDown={(e) => {
+									e.preventDefault();
+									setRevokeClicked(false);
+								}}
+							>
+								Cancel
+							</button>
+						</div>
+					</div>
 				</Show>
-			}
-		>
-			<div class="notification is-warning">
-				<p>
-					This {props.subtitle} was revoked on {fmtDate(props.data()?.revoked)}.
-					Revocation is permanent and cannot be undone.
-				</p>
-			</div>
+			</Show>
 		</Show>
 	);
 };
