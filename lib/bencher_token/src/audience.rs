@@ -20,22 +20,25 @@ pub enum Audience {
     OciAuth,
     OciRunner,
 }
+
+impl Audience {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Auth => AUDIENCE_AUTH,
+            Self::Client => AUDIENCE_CLIENT,
+            Self::ApiKey => AUDIENCE_API_KEY,
+            Self::Invite => AUDIENCE_INVITE,
+            Self::OAuth => AUDIENCE_OAUTH,
+            Self::OciPublic => AUDIENCE_OCI_PUBLIC,
+            Self::OciAuth => AUDIENCE_OCI_AUTH,
+            Self::OciRunner => AUDIENCE_OCI_RUNNER,
+        }
+    }
+}
+
 impl fmt::Display for Audience {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Auth => AUDIENCE_AUTH,
-                Self::Client => AUDIENCE_CLIENT,
-                Self::ApiKey => AUDIENCE_API_KEY,
-                Self::Invite => AUDIENCE_INVITE,
-                Self::OAuth => AUDIENCE_OAUTH,
-                Self::OciPublic => AUDIENCE_OCI_PUBLIC,
-                Self::OciAuth => AUDIENCE_OCI_AUTH,
-                Self::OciRunner => AUDIENCE_OCI_RUNNER,
-            }
-        )
+        write!(f, "{}", self.as_str())
     }
 }
 

@@ -473,6 +473,50 @@ async fn tokens_revoke_other_user_forbidden() {
     );
 }
 
+// DELETE /v0/users/{user}/tokens/{token} - admin can revoke another user's token
+#[tokio::test]
+async fn tokens_revoke_admin_can_revoke_other_user() {
+    let server = TestServer::new().await;
+    // First signup is admin on this server.
+    let admin = server.signup("Admin", "revokeadmin@example.com").await;
+    let target = server.signup("Target", "revoketarget@example.com").await;
+    let target_slug: &str = target.slug.as_ref();
+
+    let body = serde_json::json!({ "name": "Target Token" });
+    let create_resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{}/tokens", target_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&target.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(create_resp.status(), StatusCode::CREATED);
+    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+
+    let revoke_resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v0/users/{}/tokens/{}",
+            target_slug, created.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(
+        revoke_resp.status(),
+        StatusCode::NO_CONTENT,
+        "admin must be able to revoke another user's token"
+    );
+}
+
 // DELETE /v0/users/{user}/tokens/{token} - revoking the same token twice is a 4xx
 #[tokio::test]
 async fn tokens_revoke_double_rejected() {
@@ -518,11 +562,7 @@ async fn tokens_revoke_double_rejected() {
         .send()
         .await
         .expect("Request failed");
-    assert!(
-        second.status().is_client_error(),
-        "second revocation must return a 4xx, got: {}",
-        second.status()
-    );
+    assert_eq!(second.status(), StatusCode::CONFLICT);
 }
 
 // POST /v0/users/{user}/tokens - cannot create token for other user

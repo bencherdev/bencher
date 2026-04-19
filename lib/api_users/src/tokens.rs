@@ -9,7 +9,7 @@ use bencher_json::{
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{bad_request_error, resource_conflict_err, resource_not_found_err},
+    error::{conflict_error, resource_conflict_err, resource_not_found_err},
     model::user::{
         QueryUser, UserId,
         auth::{AuthUser, BearerToken},
@@ -378,7 +378,7 @@ async fn delete_inner(
     )?;
 
     if query_token.revoked.is_some() {
-        return Err(bad_request_error("Token has already been revoked"));
+        return Err(conflict_error("Token has already been revoked"));
     }
 
     let now = context.clock.now();

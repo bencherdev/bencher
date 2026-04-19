@@ -160,9 +160,7 @@ impl ApiCounter {
             Self::UserCheckout => "{checkout}",
 
             Self::UserAttemptMax(_, _) | Self::UserTokenRevokedUse => "{attempt}",
-            Self::UserTokenMax(_)
-            | Self::UserTokenCreate
-            | Self::UserTokenRevoke => "{token}",
+            Self::UserTokenMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
             Self::RunnerKeyRotate => "{key}",
 
             Self::Create(_) | Self::CreateMax(_) => "{resource}",

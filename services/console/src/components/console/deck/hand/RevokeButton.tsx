@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/astro";
 import { type Accessor, type Resource, Show, createSignal } from "solid-js";
-import type { JsonAuthUser } from "../../../../types/bencher";
+import type { JsonAuthUser, JsonToken } from "../../../../types/bencher";
 import { fmtDate } from "../../../../util/convert";
 import { httpDelete } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
@@ -10,7 +10,7 @@ export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
 	path: Accessor<string>;
-	data: Resource<{ revoked?: string }>;
+	data: Resource<JsonToken>;
 	subtitle: string;
 	isAllowed: Resource<boolean>;
 	handleRefresh: () => void;
