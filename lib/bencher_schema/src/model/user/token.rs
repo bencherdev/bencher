@@ -60,15 +60,14 @@ impl QueryToken {
         conn: &mut DbConnection,
         token_id: TokenId,
         now: DateTime,
-    ) -> diesel::QueryResult<()> {
-        let rows = diesel::update(schema::token::table.filter(schema::token::id.eq(token_id)))
-            .set(schema::token::revoked.eq(now))
-            .execute(conn)?;
-        if rows == 1 {
-            Ok(())
-        } else {
-            Err(diesel::result::Error::NotFound)
-        }
+    ) -> diesel::QueryResult<usize> {
+        diesel::update(
+            schema::token::table
+                .filter(schema::token::id.eq(token_id))
+                .filter(schema::token::revoked.is_null()),
+        )
+        .set(schema::token::revoked.eq(now))
+        .execute(conn)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonToken, HttpError> {

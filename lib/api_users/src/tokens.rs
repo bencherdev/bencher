@@ -377,17 +377,16 @@ async fn delete_inner(
         &path_params.token.to_string(),
     )?;
 
-    if query_token.revoked.is_some() {
-        return Err(conflict_error("Token has already been revoked"));
-    }
-
     let now = context.clock.now();
-    write_transaction!(context, |conn| QueryToken::revoke(
+    let rows = write_transaction!(context, |conn| QueryToken::revoke(
         conn,
         query_token.id,
         now
     ))
     .map_err(resource_conflict_err!(Token, (&query_user, &query_token)))?;
+    if rows == 0 {
+        return Err(conflict_error("Token has already been revoked"));
+    }
 
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenRevoke);
