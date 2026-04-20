@@ -1,0 +1,25 @@
+name: Rebase cloud on devel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rebase_cloud_on_devel:
+    name: Rebase cloud on devel
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Rebase cloud on devel
+        run: |
+          git config --global user.name "Bencher"
+          git config --global user.email "git@bencher.dev"
+          git fetch origin devel
+          git checkout devel
+          git pull
+          git fetch origin cloud
+          git checkout cloud
+          git pull
+          git rebase origin/devel
+          git push
