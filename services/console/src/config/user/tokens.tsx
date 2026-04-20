@@ -1,9 +1,9 @@
 import FieldKind from "../../components/field/kind";
 import IconTitle from "../../components/site/IconTitle";
-import { getUserRaw } from "../../util/auth";
+import { getUserRaw, isSameUser } from "../../util/auth";
 import type { Params } from "../../util/url";
 import { validResourceName, validU32 } from "../../util/valid";
-import { Button, Card, Display, Operation } from "../types";
+import { ActionButton, Button, Card, Display, Operation } from "../types";
 import { addPath, createdUuidPath, parentPath, viewUuidPath } from "../util";
 
 export const TOKEN_ICON = "fas fa-stroopwafel";
@@ -46,6 +46,7 @@ const tokensConfig = {
 						);
 					},
 				},
+				{ kind: Button.REVOKED },
 				{ kind: Button.REFRESH },
 			],
 		},
@@ -120,6 +121,12 @@ const tokensConfig = {
 		deck: {
 			url: (params: Params) =>
 				`/v0/users/${params?.user}/tokens/${params?.token}`,
+			top_buttons: [
+				{
+					kind: ActionButton.REVOKED,
+					subtitle: "API Token",
+				},
+			],
 			cards: [
 				{
 					kind: Card.FIELD,
@@ -164,6 +171,21 @@ const tokensConfig = {
 					label: "API Token Expiration",
 					key: "expiration",
 					display: Display.RAW,
+				},
+				{
+					kind: Card.FIELD,
+					label: "API Token Revocation",
+					key: "revoked",
+					display: Display.RAW,
+				},
+			],
+			buttons: [
+				{
+					kind: ActionButton.REVOKE,
+					subtitle: "API Token",
+					path: (params: Params) =>
+						`/v0/users/${params?.user}/tokens/${params?.token}`,
+					is_allowed: isSameUser,
 				},
 			],
 		},

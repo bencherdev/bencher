@@ -6,6 +6,7 @@
 - **BREAKING CHANGE** Rename `runner token` to `runner key` across the API, CLI, and environment variables
 - Fix race condition where concurrent branch creation could cause a "branch head is null" 500 error (Thank you [@vmelamed](https://github.com/vmelamed))
 - Self-heal legacy Branches whose `head_id` is still `NULL` from the race condition above so subsequent `bencher run` submissions succeed instead of 500ing (Thank you [@vmelamed](https://github.com/vmelamed))
+- Add API token revocation with `bencher token revoke` and Revoke button in the Console
 
 ## `v0.6.2`
 - Allow unauthenticated `docker push` to unclaimed projects

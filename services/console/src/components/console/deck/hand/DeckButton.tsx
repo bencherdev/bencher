@@ -3,12 +3,14 @@ import {
 	type Accessor,
 	Match,
 	type Resource,
+	Show,
 	Switch,
 	createMemo,
 	createResource,
 } from "solid-js";
 import { ActionButton } from "../../../../config/types";
 import type { JsonAuthUser } from "../../../../types/bencher";
+import { fmtDate } from "../../../../util/convert";
 import type { PubResourceKind } from "../../../perf/util";
 import ArchiveButton from "./ArchiveButton";
 import ArchivedButton from "./ArchivedButton";
@@ -17,6 +19,7 @@ import HeadReplacedButton from "./HeadReplacedButton";
 import ModelReplacedButton from "./ModelReplacedButton";
 import RawButton from "./RawButton";
 import RemoveModelButton from "./RemoveModelButton";
+import RevokeButton from "./RevokeButton";
 
 export interface Props {
 	apiUrl: string;
@@ -122,6 +125,46 @@ const DeckButton = (props: Props) => {
 						</form>
 					</div>
 				</div>
+			</Match>
+			<Match when={props.config?.kind === ActionButton.REVOKE && isAllowed()}>
+				<div class="columns">
+					<div class="column">
+						<form
+							onSubmit={(e) => {
+								e.preventDefault();
+							}}
+						>
+							<div class="field">
+								<p class="control">
+									<RevokeButton
+										apiUrl={props.apiUrl}
+										user={props.user}
+										path={props.path}
+										data={props.data}
+										subtitle={props.config.subtitle}
+										isAllowed={isAllowed}
+										handleRefresh={props.handleRefresh}
+									/>
+								</p>
+							</div>
+						</form>
+					</div>
+				</div>
+			</Match>
+			<Match when={props.config?.kind === ActionButton.REVOKED}>
+				<Show when={props.data()?.revoked}>
+					<div class="columns">
+						<div class="column">
+							<div class="notification is-warning">
+								<p>
+									This {props.config.subtitle} was revoked on{" "}
+									{fmtDate(props.data()?.revoked)}. Revocation is permanent and
+									cannot be undone.
+								</p>
+							</div>
+						</div>
+					</div>
+				</Show>
 			</Match>
 			<Match when={props.config?.kind === ActionButton.DELETE && isAllowed()}>
 				<div class="columns">

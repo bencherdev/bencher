@@ -232,6 +232,339 @@ async fn tokens_update() {
     assert_eq!(updated.name.as_ref(), "Updated Token");
 }
 
+// DELETE /v0/users/{user}/tokens/{token} - revoke succeeds and hides from default list
+#[tokio::test]
+async fn tokens_revoke_hides_from_list() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "tokensrevokelist@example.com")
+        .await;
+    let user_slug: &str = user.slug.as_ref();
+
+    let body = serde_json::json!({ "name": "Revoke Me" });
+    let create_resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(create_resp.status(), StatusCode::CREATED);
+    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+
+    let revoke_resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(revoke_resp.status(), StatusCode::NO_CONTENT);
+
+    let list_resp = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(list_resp.status(), StatusCode::OK);
+    let tokens: JsonTokens = list_resp.json().await.expect("Failed to parse response");
+    assert!(
+        tokens.0.iter().all(|t| t.uuid != created.uuid),
+        "revoked token must be hidden from default list: {:?}",
+        tokens
+    );
+
+    let list_with_revoked = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}/tokens?revoked=true", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(list_with_revoked.status(), StatusCode::OK);
+    let tokens: JsonTokens = list_with_revoked
+        .json()
+        .await
+        .expect("Failed to parse response");
+    let entry = tokens
+        .0
+        .iter()
+        .find(|t| t.uuid == created.uuid)
+        .expect("revoked token should appear when `?revoked=true`");
+    assert!(
+        entry.revoked.is_some(),
+        "revoked entry must carry a revoked timestamp: {:?}",
+        entry
+    );
+}
+
+// DELETE /v0/users/{user}/tokens/{token} - revoked token still readable via direct GET
+#[tokio::test]
+async fn tokens_revoke_visible_on_direct_get() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "tokensrevokeget@example.com")
+        .await;
+    let user_slug: &str = user.slug.as_ref();
+
+    let body = serde_json::json!({ "name": "Visible After Revoke" });
+    let create_resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+
+    let revoke_resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(revoke_resp.status(), StatusCode::NO_CONTENT);
+
+    let get_resp = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(get_resp.status(), StatusCode::OK);
+    let fetched: JsonToken = get_resp.json().await.expect("Failed to parse response");
+    assert!(
+        fetched.revoked.is_some(),
+        "direct GET on revoked token must expose the revoked timestamp: {:?}",
+        fetched
+    );
+}
+
+// DELETE /v0/users/{user}/tokens/{token} - revoked JWT stops authenticating
+#[tokio::test]
+async fn tokens_revoke_breaks_auth() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "tokensrevokeauth@example.com")
+        .await;
+    let user_slug: &str = user.slug.as_ref();
+
+    let body = serde_json::json!({ "name": "About To Be Revoked" });
+    let create_resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+
+    // The freshly minted JWT authenticates.
+    let pre_auth = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&created.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(pre_auth.status(), StatusCode::OK);
+
+    let revoke_resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(revoke_resp.status(), StatusCode::NO_CONTENT);
+
+    // Same JWT, now rejected as 401.
+    let post_auth = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&created.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(post_auth.status(), StatusCode::UNAUTHORIZED);
+}
+
+// DELETE /v0/users/{user}/tokens/{token} - another non-admin user cannot revoke
+#[tokio::test]
+async fn tokens_revoke_other_user_forbidden() {
+    let server = TestServer::new().await;
+    let owner = server.signup("Owner", "revokeowner@example.com").await;
+    // First signup is admin on this server; ensure the attacker is not the owner.
+    let attacker = server
+        .signup("Attacker", "revokeattacker@example.com")
+        .await;
+    let owner_slug: &str = owner.slug.as_ref();
+
+    let body = serde_json::json!({ "name": "Owner Token" });
+    let create_resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{}/tokens", owner_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&owner.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(create_resp.status(), StatusCode::CREATED);
+    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+
+    let revoke_resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", owner_slug, created.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&attacker.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    // `same_user!` returns 4xx when a non-admin user acts on another user's resource.
+    assert!(
+        revoke_resp.status().is_client_error(),
+        "non-admin attacker must not be able to revoke another user's token, got: {}",
+        revoke_resp.status()
+    );
+}
+
+// DELETE /v0/users/{user}/tokens/{token} - admin can revoke another user's token
+#[tokio::test]
+async fn tokens_revoke_admin_can_revoke_other_user() {
+    let server = TestServer::new().await;
+    // First signup is admin on this server.
+    let admin = server.signup("Admin", "revokeadmin@example.com").await;
+    let target = server.signup("Target", "revoketarget@example.com").await;
+    let target_slug: &str = target.slug.as_ref();
+
+    let body = serde_json::json!({ "name": "Target Token" });
+    let create_resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{}/tokens", target_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&target.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(create_resp.status(), StatusCode::CREATED);
+    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+
+    let revoke_resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v0/users/{}/tokens/{}",
+            target_slug, created.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(
+        revoke_resp.status(),
+        StatusCode::NO_CONTENT,
+        "admin must be able to revoke another user's token"
+    );
+}
+
+// DELETE /v0/users/{user}/tokens/{token} - revoking the same token twice is a 4xx
+#[tokio::test]
+async fn tokens_revoke_double_rejected() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "tokensrevoketwice@example.com")
+        .await;
+    let user_slug: &str = user.slug.as_ref();
+
+    let body = serde_json::json!({ "name": "Revoke Twice" });
+    let create_resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+
+    let first = server
+        .client
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(first.status(), StatusCode::NO_CONTENT);
+
+    let second = server
+        .client
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(second.status(), StatusCode::CONFLICT);
+}
+
 // POST /v0/users/{user}/tokens - cannot create token for other user
 #[tokio::test]
 async fn tokens_create_other_user_forbidden() {

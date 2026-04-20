@@ -14,9 +14,12 @@ pub enum CliToken {
     /// View a token
     #[clap(alias = "get")]
     View(CliTokenView),
-    // Update a token
+    /// Update a token
     #[clap(alias = "edit")]
     Update(CliTokenUpdate),
+    /// Revoke a token
+    #[clap(alias = "rm")]
+    Revoke(CliTokenRevoke),
 }
 
 #[derive(Parser, Debug)]
@@ -31,6 +34,10 @@ pub struct CliTokenList {
     /// Token search string
     #[clap(long, value_name = "QUERY")]
     pub search: Option<String>,
+
+    /// Show only revoked tokens instead of active ones
+    #[clap(long)]
+    pub revoked: bool,
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliTokensSort>,
@@ -86,6 +93,18 @@ pub struct CliTokenUpdate {
     /// Token name
     #[clap(long)]
     pub name: Option<ResourceName>,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliTokenRevoke {
+    /// User slug or UUID
+    pub user: UserResourceId,
+
+    /// Token UUID
+    pub uuid: TokenUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,

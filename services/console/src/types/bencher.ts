@@ -985,6 +985,11 @@ export interface JsonToken {
 	token: Jwt;
 	creation: string;
 	expiration: string;
+	/**
+	 * The time at which the token was revoked, if any.
+	 * `None` means the token is active.
+	 */
+	revoked?: string;
 }
 
 export enum UpdateAlertStatus {

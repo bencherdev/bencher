@@ -78,6 +78,10 @@ impl Claims {
         }
     }
 
+    pub fn audience(&self) -> &str {
+        &self.aud
+    }
+
     pub fn email(&self) -> &Email {
         &self.sub
     }

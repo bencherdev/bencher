@@ -9,7 +9,8 @@ use bencher_rbac::{
     server::Permission,
     user::{OrganizationRoles, ProjectRoles},
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use bencher_token::Audience;
+use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{
     ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
     ServerContext, SharedExtractor,
@@ -18,8 +19,8 @@ use oso::{PolarValue, ToPolar};
 
 use crate::{
     context::{ApiContext, DbConnection, Rbac},
-    error::{BEARER_TOKEN_FORMAT, bad_request_error},
-    model::{organization::OrganizationId, project::ProjectId},
+    error::{BEARER_TOKEN_FORMAT, bad_request_error, unauthorized_error},
+    model::{organization::OrganizationId, project::ProjectId, user::token::QueryToken},
     public_conn, schema,
 };
 
@@ -53,6 +54,26 @@ impl AuthUser {
         let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, email)?;
         query_user.check_is_locked()?;
+
+        // API keys created via `POST /tokens` are persisted in the `token` table and
+        // can be revoked. Reject any JWT whose row has `revoked` set. A JWT with no
+        // row (e.g. one issued before revocation tracking existed, or any
+        // externally-signed test fixture) is accepted — we only block tokens we know
+        // have been revoked. Short-lived client (browser session) JWTs are never
+        // persisted and skip this lookup.
+        if claims.audience() == Audience::ApiKey.as_str()
+            && let Some(row) = QueryToken::get_by_user_jwt(conn, query_user.id, &bearer_token)
+                .optional()
+                .map_err(|e| unauthorized_error(format!("Failed to look up API token: {e}")))?
+            && row.revoked.is_some()
+        {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenRevokedUse);
+            return Err(unauthorized_error(
+                "This API token has been revoked and is no longer valid",
+            ));
+        }
+
         #[cfg(feature = "plus")]
         context.rate_limiting.user_request(query_user.uuid)?;
 

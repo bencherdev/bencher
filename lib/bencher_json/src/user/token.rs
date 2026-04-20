@@ -35,6 +35,10 @@ pub struct JsonToken {
     pub token: Jwt,
     pub creation: DateTime,
     pub expiration: DateTime,
+    /// The time at which the token was revoked, if any.
+    /// `None` means the token is active.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revoked: Option<DateTime>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
