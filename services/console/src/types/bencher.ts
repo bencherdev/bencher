@@ -415,6 +415,8 @@ export type RunnerResourceId = Uuid | Slug;
 
 export type Secret = string;
 
+export type Sha256 = string;
+
 export type Slug = string;
 
 /** A spec UUID or slug. */

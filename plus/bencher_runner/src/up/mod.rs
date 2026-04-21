@@ -1,4 +1,3 @@
-use std::io::Read as _;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use bencher_json::RunnerResourceId;
@@ -18,7 +17,7 @@ pub use error::UpError;
 
 use api_client::RunnerApiClient;
 use bencher_json::runner::{RunnerMessage, ServerMessage};
-use error::WebSocketError;
+use error::{SelfUpdateError, WebSocketError};
 use job::execute_job;
 use state_machine::{ChannelStateMachine, Effect, Input, LogLevel};
 
@@ -251,9 +250,12 @@ fn execute_effect(
             version,
             url,
             checksum,
-        } => {
-            self_update(&version, &url, &checksum);
-            EffectResult::Exit
+        } => match self_update(&version, &url, &checksum) {
+            Ok(()) => EffectResult::Exit,
+            Err(e) => {
+                eprintln!("Self-update failed: {e}");
+                EffectResult::Continue
+            },
         },
     }
 }
@@ -380,89 +382,93 @@ extern "C" fn signal_handler(_sig: libc::c_int) {
     SHUTDOWN.store(true, Ordering::SeqCst);
 }
 
-#[expect(clippy::print_stdout, clippy::print_stderr)]
-fn self_update(version: &str, url: &Url, checksum: &bencher_valid::Sha256) {
-    println!("Updating to version {version}...");
-    println!("  Downloading: {url}");
-
-    let current_exe = match std::env::current_exe() {
-        Ok(path) => path,
-        Err(e) => {
-            eprintln!("Failed to determine current binary path: {e}");
-            return;
-        },
-    };
-
-    let new_path = current_exe.with_extension("new");
-    let old_path = current_exe.with_extension("old");
-
-    // Download
-    let response = match ureq::get(url.as_str()).call() {
-        Ok(resp) => resp,
-        Err(e) => {
-            eprintln!("Failed to download update: {e}");
-            return;
-        },
-    };
-
-    let mut reader = response.into_body().into_reader();
-    let mut bytes = Vec::new();
-    if let Err(e) = reader.read_to_end(&mut bytes) {
-        eprintln!("Failed to read update body: {e}");
-        return;
+#[expect(clippy::print_stdout)]
+fn self_update(
+    version: &str,
+    url: &Url,
+    checksum: &bencher_valid::Sha256,
+) -> Result<(), SelfUpdateError> {
+    #[cfg(not(unix))]
+    {
+        return Err(SelfUpdateError::UnsupportedPlatform);
     }
 
-    // Verify checksum
-    let actual = bencher_valid::Sha256::compute(&bytes);
-    if actual != *checksum {
-        eprintln!("Checksum mismatch: expected {checksum}, got {actual}");
-        return;
-    }
-    println!("  Checksum verified: {checksum}");
-
-    // Write new binary
-    if let Err(e) = std::fs::write(&new_path, &bytes) {
-        eprintln!("Failed to write new binary: {e}");
-        return;
-    }
-
-    // Make executable
     #[cfg(unix)]
     {
+        use sha2::Digest as _;
+        use std::io::{BufWriter, Read as _, Write as _};
         use std::os::unix::fs::PermissionsExt as _;
-        if let Err(e) = std::fs::set_permissions(&new_path, std::fs::Permissions::from_mode(0o755))
-        {
-            eprintln!("Failed to set permissions: {e}");
-            drop(std::fs::remove_file(&new_path));
-            return;
-        }
-    }
-
-    // Swap: current → old, new → current
-    if old_path.exists() {
-        drop(std::fs::remove_file(&old_path));
-    }
-    if let Err(e) = std::fs::rename(&current_exe, &old_path) {
-        eprintln!("Failed to rename current binary: {e}");
-        drop(std::fs::remove_file(&new_path));
-        return;
-    }
-    if let Err(e) = std::fs::rename(&new_path, &current_exe) {
-        eprintln!("Failed to rename new binary: {e}");
-        drop(std::fs::rename(&old_path, &current_exe));
-        return;
-    }
-
-    println!("  Binary updated. Restarting...");
-
-    // exec the new binary with the same arguments
-    #[cfg(unix)]
-    {
         use std::os::unix::process::CommandExt as _;
+
+        println!("Updating to version {version}...");
+        println!("  Downloading: {url}");
+
+        let current_exe = std::env::current_exe().map_err(SelfUpdateError::CurrentExe)?;
+        let new_path = current_exe.with_extension("new");
+        let old_path = current_exe.with_extension("old");
+
+        let response = ureq::get(url.as_str())
+            .call()
+            .map_err(SelfUpdateError::Http)?;
+
+        let mut reader = response.into_body().into_reader();
+        let mut file =
+            BufWriter::new(std::fs::File::create(&new_path).map_err(SelfUpdateError::FileOp)?);
+        let mut hasher = sha2::Sha256::new();
+        let mut buf = [0u8; 8192];
+        loop {
+            let n = reader.read(&mut buf).map_err(SelfUpdateError::Download)?;
+            if n == 0 {
+                break;
+            }
+            let chunk = buf.get(..n).ok_or_else(|| {
+                SelfUpdateError::Download(std::io::Error::other(
+                    "read returned byte count exceeding buffer",
+                ))
+            })?;
+            hasher.update(chunk);
+            file.write_all(chunk).map_err(SelfUpdateError::FileOp)?;
+        }
+        file.flush().map_err(SelfUpdateError::FileOp)?;
+        drop(file);
+
+        let digest = hasher.finalize();
+        let actual_hex = format!("{digest:x}");
+        let actual: bencher_valid::Sha256 =
+            actual_hex.parse().map_err(SelfUpdateError::ChecksumParse)?;
+        if actual != *checksum {
+            let _remove_new = std::fs::remove_file(&new_path);
+            return Err(SelfUpdateError::Checksum {
+                expected: checksum.clone(),
+                actual,
+            });
+        }
+        println!("  Checksum verified: {checksum}");
+
+        std::fs::set_permissions(&new_path, std::fs::Permissions::from_mode(0o755)).map_err(
+            |e| {
+                let _remove_new = std::fs::remove_file(&new_path);
+                SelfUpdateError::FileOp(e)
+            },
+        )?;
+
+        if old_path.exists() {
+            let _remove_old = std::fs::remove_file(&old_path);
+        }
+        std::fs::rename(&current_exe, &old_path).map_err(|e| {
+            let _remove_new = std::fs::remove_file(&new_path);
+            SelfUpdateError::FileOp(e)
+        })?;
+        std::fs::rename(&new_path, &current_exe).map_err(|e| {
+            let _restore_current = std::fs::rename(&old_path, &current_exe);
+            SelfUpdateError::FileOp(e)
+        })?;
+
+        println!("  Binary updated. Restarting...");
+
         let args: Vec<String> = std::env::args().skip(1).collect();
         let err = std::process::Command::new(&current_exe).args(&args).exec();
-        // exec only returns on error
-        eprintln!("Failed to exec new binary: {err}");
-        drop(std::fs::rename(&old_path, &current_exe));
+        let _restore_current = std::fs::rename(&old_path, &current_exe);
+        Err(SelfUpdateError::Exec(err))
     }
 }

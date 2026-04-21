@@ -121,6 +121,7 @@ The clippy script will install the target automatically and warn if no cross-com
 - Always pass strong types (`MyTypeId`, `MyTypeUuid`, etc) into a function instead of its stringly typed equivalent, even in tests
 - Do **NOT** use shared, global mutable state
 - Always use `thiserror` for error types in libraries and production binaries (`services/`). Do not use `anyhow` in those crates. `anyhow` is acceptable in `tasks/` crates (build tasks, test harnesses) where convenience outweighs structured errors.
+- Error enum variants must wrap the original error type, not `String`. Use `#[error("context: {0}")] Variant(OriginalError)`, not `Variant(String)` with `.to_string()` at the call site.
 - Do not use `Box<dyn Error>` (or `Box<dyn std::error::Error + Send + Sync>`) as a return type. Use `HttpError` for API endpoint errors or define specific `thiserror` error enums. The only acceptable uses of `Box<dyn Error>` are when wrapping third-party APIs that return boxed errors (e.g., diesel migrations, dropshot server creation).
 - Do **NOT** use `dyn std::any::Any` without explicit justification and approval
 - When adding workspace dependencies without extra options (no `optional`, no `features`), use the shorthand `dep.workspace = true` form instead of `dep = { workspace = true }`

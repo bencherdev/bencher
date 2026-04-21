@@ -47,3 +47,34 @@ pub enum WebSocketError {
     #[error("Protocol error: {0}")]
     Protocol(String),
 }
+
+#[derive(Debug, Error)]
+pub enum SelfUpdateError {
+    #[error("Failed to determine current binary path: {0}")]
+    CurrentExe(std::io::Error),
+
+    #[error("Download request failed: {0}")]
+    Http(ureq::Error),
+
+    #[error("Download I/O failed: {0}")]
+    Download(std::io::Error),
+
+    #[error("Failed to parse computed checksum: {0}")]
+    ChecksumParse(bencher_valid::ValidError),
+
+    #[error("Checksum mismatch: expected {expected}, got {actual}")]
+    Checksum {
+        expected: bencher_valid::Sha256,
+        actual: bencher_valid::Sha256,
+    },
+
+    #[error("File operation failed: {0}")]
+    FileOp(std::io::Error),
+
+    #[error("Exec failed: {0}")]
+    Exec(std::io::Error),
+
+    #[error("Self-update not supported on this platform")]
+    #[cfg(not(unix))]
+    UnsupportedPlatform,
+}

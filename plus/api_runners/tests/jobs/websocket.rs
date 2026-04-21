@@ -2,8 +2,8 @@ use super::common::{
     WsStream, assert_ws_closed, associate_runner_spec, connect_channel_ws as connect_channel,
     create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job,
     insert_test_job_with_optional_fields, insert_test_job_with_timeout, insert_test_spec,
-    recv_server_msg as recv_msg, send_runner_msg as send_msg, set_job_runner_id, set_job_status,
-    ws_url,
+    recv_server_msg as recv_msg, runner_metadata, send_runner_msg as send_msg, set_job_runner_id,
+    set_job_status, ws_url,
 };
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
@@ -49,11 +49,7 @@ async fn setup_claimed_job(
     let mut ws = connect_channel(server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
@@ -231,11 +227,7 @@ async fn channel_completed_records_job_duration() {
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
@@ -556,11 +548,7 @@ async fn channel_lifecycle_with_full_spec() {
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
@@ -1337,11 +1325,7 @@ async fn channel_job_timeout() {
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
@@ -1418,11 +1402,7 @@ async fn channel_key_rotation_invalidates_old_key() {
     let mut ws = connect_channel(&server, runner.uuid, &original_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
@@ -1478,11 +1458,7 @@ async fn channel_key_rotation_invalidates_old_key() {
     // There are no more pending jobs, so we'll get NoJob. That's fine — it proves auth works.
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(1).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
     let resp = recv_msg(&mut ws).await;
@@ -1866,11 +1842,7 @@ async fn channel_heartbeat_detects_job_timeout() {
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
@@ -1949,11 +1921,7 @@ async fn channel_heartbeat_no_false_timeout() {
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
@@ -2019,11 +1987,7 @@ async fn channel_heartbeat_timeout_skipped_before_running() {
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
@@ -2083,11 +2047,7 @@ async fn channel_multi_job_cycle() {
     // Send Ready, receive Job
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
@@ -2385,11 +2345,7 @@ async fn channel_ready_no_poll_timeout() {
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: None,
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
@@ -2513,11 +2469,7 @@ async fn channel_concurrent_connections_same_runner() {
     // Both send Ready with a short poll timeout
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(2).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(runner_metadata()),
     };
     send_msg(&mut ws1, &ready).await;
     send_msg(&mut ws2, &ready).await;

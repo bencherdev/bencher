@@ -460,11 +460,7 @@ mod job_spec {
         let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
         let ready = RunnerMessage::Ready {
             poll_timeout: Some(PollTimeout::try_from(5).unwrap()),
-            runner: Some(bencher_json::runner::JsonRunnerMetadata {
-                os: bencher_json::OperatingSystem::Linux,
-                arch: bencher_json::Architecture::X86_64,
-                version: bencher_json::BENCHER_API_VERSION.to_owned(),
-            }),
+            runner: Some(common::runner_metadata()),
         };
         send_msg(&mut ws, &ready).await;
 
@@ -2451,11 +2447,7 @@ async fn claim_job_invalid_config() {
     let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(1).unwrap()),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(common::runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
 
@@ -2687,11 +2679,7 @@ async fn poll_timeout_delays_nojob() {
     let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(2).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
-            os: bencher_json::OperatingSystem::Linux,
-            arch: bencher_json::Architecture::X86_64,
-            version: bencher_json::BENCHER_API_VERSION.to_owned(),
-        }),
+        runner: Some(common::runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
 
