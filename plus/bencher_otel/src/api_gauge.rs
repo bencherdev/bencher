@@ -36,7 +36,6 @@ pub enum RunnerStateKind {
     Idle,
     Executing,
     Updating,
-    Disconnected,
 }
 
 impl fmt::Display for RunnerStateKind {
@@ -45,7 +44,6 @@ impl fmt::Display for RunnerStateKind {
             Self::Idle => write!(f, "idle"),
             Self::Executing => write!(f, "executing"),
             Self::Updating => write!(f, "updating"),
-            Self::Disconnected => write!(f, "disconnected"),
         }
     }
 }

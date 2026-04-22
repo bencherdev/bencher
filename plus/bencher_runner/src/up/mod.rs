@@ -266,10 +266,10 @@ fn try_send(
     ws: Option<&Arc<Mutex<JobChannel>>>,
     msg: &RunnerMessage,
 ) -> Result<(), WebSocketError> {
-    let ws_ref = ws.ok_or_else(|| WebSocketError::Send("Not connected".to_owned()))?;
+    let ws_ref = ws.ok_or(WebSocketError::NotConnected)?;
     let mut ws_guard = ws_ref
         .lock()
-        .map_err(|e| WebSocketError::Send(format!("Lock failed: {e}")))?;
+        .map_err(|_poison| WebSocketError::LockPoisoned)?;
     ws_guard.send_message(msg)
 }
 

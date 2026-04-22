@@ -13,15 +13,12 @@ pub enum UpError {
 
     #[error("Runner received shutdown signal")]
     Shutdown,
-
-    #[error("Configuration error: {0}")]
-    Config(String),
 }
 
 #[derive(Debug, Error)]
 pub enum ApiClientError {
-    #[error("HTTP error: {0}")]
-    Http(String),
+    #[error("Failed to parse URL: {0}")]
+    Url(#[from] url::ParseError),
 
     #[error("Invalid runner key format")]
     InvalidKey,
@@ -32,20 +29,44 @@ pub enum ApiClientError {
 
 #[derive(Debug, Error)]
 pub enum WebSocketError {
+    #[error("Failed to build WebSocket request: {0}")]
+    ConnectionHttp(tungstenite::http::Error),
+
     #[error("WebSocket connection failed: {0}")]
-    Connection(String),
+    ConnectionWebSocket(tungstenite::Error),
+
+    #[error("Connection I/O error: {0}")]
+    ConnectionIo(std::io::Error),
+
+    #[error("Unsupported TLS stream type")]
+    UnsupportedTlsStream,
+
+    #[error("Failed to serialize message: {0}")]
+    Serialize(serde_json::Error),
 
     #[error("WebSocket send failed: {0}")]
-    Send(String),
+    SendWebSocket(tungstenite::Error),
+
+    #[error("WebSocket not connected")]
+    NotConnected,
+
+    #[error("WebSocket lock poisoned")]
+    LockPoisoned,
 
     #[error("WebSocket receive failed: {0}")]
-    Receive(String),
+    ReceiveWebSocket(tungstenite::Error),
 
-    #[error("Unexpected WebSocket message: {0}")]
-    UnexpectedMessage(String),
+    #[error("Timed out waiting for server message")]
+    ReceiveTimeout,
 
-    #[error("Protocol error: {0}")]
-    Protocol(String),
+    #[error("Server closed connection: {0:?}")]
+    ServerClosed(Option<bencher_json::runner::CloseReason>),
+
+    #[error("Failed to parse server message: {0}")]
+    Deserialize(serde_json::Error),
+
+    #[error("Unexpected server message: {0}")]
+    UnexpectedServerMessage(String),
 }
 
 #[derive(Debug, Error)]

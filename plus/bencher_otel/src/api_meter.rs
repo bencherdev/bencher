@@ -135,6 +135,7 @@ pub enum ApiCounter {
     RunnerMinutesBilledFailed,
     RunnerHeartbeatTimeout,
     RunnerJobTimeout,
+    RunnerDisconnect,
 
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
@@ -189,6 +190,7 @@ impl ApiCounter {
             Self::RunnerJobClaim | Self::RunnerJobUpdate(_) => "{job}",
             Self::RunnerMinutesBilled | Self::RunnerMinutesBilledFailed => "{minute}",
             Self::RunnerHeartbeatTimeout | Self::RunnerJobTimeout => "{timeout}",
+            Self::RunnerDisconnect => "{disconnect}",
         }
     }
 
@@ -258,6 +260,7 @@ impl ApiCounter {
             Self::RunnerMinutesBilledFailed => "runner.minutes.billed.failed",
             Self::RunnerHeartbeatTimeout => "runner.heartbeat.timeout",
             Self::RunnerJobTimeout => "runner.job.timeout",
+            Self::RunnerDisconnect => "runner.disconnect",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
@@ -341,6 +344,7 @@ impl ApiCounter {
             Self::RunnerJobTimeout => {
                 "Counts the number of jobs canceled due to exceeding job timeout"
             },
+            Self::RunnerDisconnect => "Counts the number of runner disconnections",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
@@ -378,7 +382,8 @@ impl ApiCounter {
             | Self::RunnerMinutesBilled
             | Self::RunnerMinutesBilledFailed
             | Self::RunnerHeartbeatTimeout
-            | Self::RunnerJobTimeout => Vec::new(),
+            | Self::RunnerJobTimeout
+            | Self::RunnerDisconnect => Vec::new(),
             Self::Run(priority) | Self::MetricsCreate(priority) => {
                 vec![priority_attribute(priority)]
             },

@@ -1073,7 +1073,7 @@ pub async fn runner_channel(
             },
             Err(_) => {
                 #[cfg(feature = "otel")]
-                state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerDisconnect);
                 break;
             },
         };
@@ -1092,7 +1092,7 @@ pub async fn runner_channel(
                     .map_err(|e| HttpError::for_internal_error(e.to_string()))?;
                 if tx.send(Message::Text(text.into())).await.is_err() {
                     #[cfg(feature = "otel")]
-                    state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
+                    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerDisconnect);
                     break;
                 }
 
@@ -1116,7 +1116,9 @@ pub async fn runner_channel(
                     },
                     Ok(ExecuteResult::Disconnected) => {
                         #[cfg(feature = "otel")]
-                        state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
+                        bencher_otel::ApiMeter::increment(
+                            bencher_otel::ApiCounter::RunnerDisconnect,
+                        );
                         // Spawn heartbeat timeout for in-flight jobs
                         let job = QueryJob::get(auth_conn!(context), query_job.id)?;
                         if !job.status.has_run() {
@@ -1135,7 +1137,9 @@ pub async fn runner_channel(
                     },
                     Err(e) => {
                         #[cfg(feature = "otel")]
-                        state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
+                        bencher_otel::ApiMeter::increment(
+                            bencher_otel::ApiCounter::RunnerDisconnect,
+                        );
                         slog::error!(log, "Execute loop error"; "error" => %e, "job_id" => ?query_job.id);
                         // Spawn heartbeat timeout for in-flight jobs
                         let job = QueryJob::get(auth_conn!(context), query_job.id)?;
@@ -1161,13 +1165,13 @@ pub async fn runner_channel(
                     .map_err(|e| HttpError::for_internal_error(e.to_string()))?;
                 if tx.send(Message::Text(text.into())).await.is_err() {
                     #[cfg(feature = "otel")]
-                    state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
+                    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerDisconnect);
                     break;
                 }
             },
             Err(_) => {
                 #[cfg(feature = "otel")]
-                state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerDisconnect);
                 break;
             },
         }

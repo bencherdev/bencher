@@ -44,20 +44,19 @@ impl JobChannel {
                 },
             )
             .body(())
-            .map_err(|e| WebSocketError::Connection(format!("Failed to build request: {e}")))?;
+            .map_err(WebSocketError::ConnectionHttp)?;
 
         let (ws, _response) =
-            tungstenite::connect(request).map_err(|e| WebSocketError::Connection(e.to_string()))?;
+            tungstenite::connect(request).map_err(WebSocketError::ConnectionWebSocket)?;
 
         Ok(Self { ws })
     }
 
     pub fn send_message(&mut self, msg: &RunnerMessage) -> Result<(), WebSocketError> {
-        let json = serde_json::to_string(msg)
-            .map_err(|e| WebSocketError::Send(format!("Failed to serialize message: {e}")))?;
+        let json = serde_json::to_string(msg).map_err(WebSocketError::Serialize)?;
         self.ws
             .send(Message::Text(json.into()))
-            .map_err(|e| WebSocketError::Send(e.to_string()))?;
+            .map_err(WebSocketError::SendWebSocket)?;
         Ok(())
     }
 
@@ -70,27 +69,19 @@ impl JobChannel {
         loop {
             let remaining = deadline.saturating_duration_since(std::time::Instant::now());
             if remaining.is_zero() {
-                return Err(WebSocketError::Receive(
-                    "Timed out waiting for job".to_owned(),
-                ));
+                return Err(WebSocketError::ReceiveTimeout);
             }
 
             let stream = self.ws.get_mut();
             set_read_timeout(stream, Some(remaining))?;
-            let msg = self
-                .ws
-                .read()
-                .map_err(|e| WebSocketError::Receive(e.to_string()))?;
+            let msg = self.ws.read().map_err(WebSocketError::ReceiveWebSocket)?;
             let stream = self.ws.get_mut();
             set_read_timeout(stream, None)?;
 
             match msg {
                 Message::Text(text) => {
-                    let server_msg: ServerMessage = serde_json::from_str(&text).map_err(|e| {
-                        WebSocketError::UnexpectedMessage(format!(
-                            "Failed to parse server message: {e} (raw: {text})"
-                        ))
-                    })?;
+                    let server_msg: ServerMessage =
+                        serde_json::from_str(&text).map_err(WebSocketError::Deserialize)?;
                     match server_msg {
                         ServerMessage::Job(job) => return Ok(WaitResult::Job(job)),
                         ServerMessage::NoJob => return Ok(WaitResult::NoJob),
@@ -101,8 +92,8 @@ impl JobChannel {
                             // has already moved on to requesting the next job.
                         },
                         ServerMessage::Cancel => {
-                            return Err(WebSocketError::Protocol(format!(
-                                "Expected Job or NoJob, got {server_msg:?}"
+                            return Err(WebSocketError::UnexpectedServerMessage(format!(
+                                "{server_msg:?}"
                             )));
                         },
                     }
@@ -110,7 +101,7 @@ impl JobChannel {
                 Message::Ping(data) => {
                     self.ws
                         .send(Message::Pong(data))
-                        .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
+                        .map_err(WebSocketError::SendWebSocket)?;
                 },
                 Message::Close(frame) => {
                     return Self::handle_close_frame(frame).map(|_| WaitResult::NoJob);
@@ -136,18 +127,14 @@ impl JobChannel {
         // Process read result first (more informative error than restore failure)
         let msg = match result {
             Ok(Message::Text(text)) => {
-                let msg: ServerMessage = serde_json::from_str(&text).map_err(|e| {
-                    WebSocketError::UnexpectedMessage(format!(
-                        "Failed to parse server message: {e} (raw: {text})"
-                    ))
-                })?;
+                let msg: ServerMessage =
+                    serde_json::from_str(&text).map_err(WebSocketError::Deserialize)?;
                 Ok(Some(msg))
             },
             Ok(Message::Ping(data)) => {
-                // Respond to ping with pong
                 self.ws
                     .send(Message::Pong(data))
-                    .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
+                    .map_err(WebSocketError::SendWebSocket)?;
                 Ok(None)
             },
             Ok(Message::Close(frame)) => Self::handle_close_frame(frame),
@@ -155,7 +142,7 @@ impl JobChannel {
             Err(tungstenite::Error::Io(e)) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 Ok(None)
             },
-            Err(e) => Err(WebSocketError::Receive(e.to_string())),
+            Err(e) => Err(WebSocketError::ReceiveWebSocket(e)),
         };
 
         // Then check restore (read errors take priority over restore errors)
@@ -182,17 +169,14 @@ impl JobChannel {
 
             match result {
                 Ok(Message::Text(text)) => {
-                    let msg: ServerMessage = serde_json::from_str(&text).map_err(|e| {
-                        WebSocketError::UnexpectedMessage(format!(
-                            "Failed to parse server message: {e} (raw: {text})"
-                        ))
-                    })?;
+                    let msg: ServerMessage =
+                        serde_json::from_str(&text).map_err(WebSocketError::Deserialize)?;
                     return Ok(Some(msg));
                 },
                 Ok(Message::Ping(data)) => {
                     self.ws
                         .send(Message::Pong(data))
-                        .map_err(|e| WebSocketError::Send(format!("Failed to send pong: {e}")))?;
+                        .map_err(WebSocketError::SendWebSocket)?;
                     // Continue looping with reduced remaining time
                 },
                 Ok(Message::Close(frame)) => return Self::handle_close_frame(frame),
@@ -205,7 +189,7 @@ impl JobChannel {
                 {
                     return Ok(None);
                 },
-                Err(e) => return Err(WebSocketError::Receive(e.to_string())),
+                Err(e) => return Err(WebSocketError::ReceiveWebSocket(e)),
             }
         }
     }
@@ -216,14 +200,7 @@ impl JobChannel {
         let reason = frame.and_then(|f| {
             serde_json::from_str::<bencher_json::runner::CloseReason>(&f.reason).ok()
         });
-        match reason {
-            Some(reason) => Err(WebSocketError::Receive(format!(
-                "Server closed connection: {reason:?}"
-            ))),
-            None => Err(WebSocketError::Receive(
-                "Server closed connection".to_owned(),
-            )),
-        }
+        Err(WebSocketError::ServerClosed(reason))
     }
 }
 
@@ -231,9 +208,7 @@ fn get_tcp_stream(stream: &MaybeTlsStream<TcpStream>) -> Result<&TcpStream, WebS
     match stream {
         MaybeTlsStream::Plain(s) => Ok(s),
         MaybeTlsStream::Rustls(s) => Ok(s.get_ref()),
-        _ => Err(WebSocketError::Connection(
-            "Unsupported TLS stream type".to_owned(),
-        )),
+        _ => Err(WebSocketError::UnsupportedTlsStream),
     }
 }
 
@@ -243,7 +218,7 @@ fn set_nonblocking(
 ) -> Result<(), WebSocketError> {
     get_tcp_stream(stream)?
         .set_nonblocking(nonblocking)
-        .map_err(|e| WebSocketError::Connection(format!("Failed to set nonblocking: {e}")))
+        .map_err(WebSocketError::ConnectionIo)
 }
 
 fn set_read_timeout(
@@ -252,7 +227,7 @@ fn set_read_timeout(
 ) -> Result<(), WebSocketError> {
     get_tcp_stream(stream)?
         .set_read_timeout(timeout)
-        .map_err(|e| WebSocketError::Connection(format!("Failed to set read timeout: {e}")))
+        .map_err(WebSocketError::ConnectionIo)
 }
 
 #[cfg(test)]
