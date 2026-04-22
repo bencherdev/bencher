@@ -386,6 +386,29 @@ extern "C" fn signal_handler(_sig: libc::c_int) {
 
 const DEFAULT_MAX_DOWNLOAD_SIZE: u64 = 500 * 1024 * 1024;
 
+struct CleanupGuard {
+    path: std::path::PathBuf,
+    armed: bool,
+}
+
+impl CleanupGuard {
+    fn new(path: std::path::PathBuf) -> Self {
+        Self { path, armed: true }
+    }
+
+    fn defuse(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for CleanupGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let _remove = std::fs::remove_file(&self.path);
+        }
+    }
+}
+
 #[expect(clippy::print_stdout)]
 fn self_update(
     version: &str,
@@ -420,6 +443,7 @@ fn self_update(
         let mut reader = response.into_body().into_reader();
         let mut file =
             BufWriter::new(std::fs::File::create(&new_path).map_err(SelfUpdateError::FileOp)?);
+        let mut cleanup = CleanupGuard::new(new_path.clone());
         let mut hasher = sha2::Sha256::new();
         let mut downloaded: u64 = 0;
         let mut buf = [0u8; 8192];
@@ -431,7 +455,6 @@ fn self_update(
             downloaded += n as u64;
             if downloaded > limit {
                 drop(file);
-                let _remove_new = std::fs::remove_file(&new_path);
                 return Err(SelfUpdateError::DownloadTooLarge { limit, downloaded });
             }
             let chunk = buf.get(..n).ok_or_else(|| {
@@ -450,7 +473,6 @@ fn self_update(
         let actual: bencher_valid::Sha256 =
             actual_hex.parse().map_err(SelfUpdateError::ChecksumParse)?;
         if actual != *checksum {
-            let _remove_new = std::fs::remove_file(&new_path);
             return Err(SelfUpdateError::Checksum {
                 expected: checksum.clone(),
                 actual,
@@ -458,12 +480,10 @@ fn self_update(
         }
         println!("  Checksum verified: {checksum}");
 
-        std::fs::set_permissions(&new_path, std::fs::Permissions::from_mode(0o755)).map_err(
-            |e| {
-                let _remove_new = std::fs::remove_file(&new_path);
-                SelfUpdateError::FileOp(e)
-            },
-        )?;
+        std::fs::set_permissions(&new_path, std::fs::Permissions::from_mode(0o755))
+            .map_err(SelfUpdateError::FileOp)?;
+
+        cleanup.defuse();
 
         if old_path.exists() {
             let _remove_old = std::fs::remove_file(&old_path);

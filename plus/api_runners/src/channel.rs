@@ -101,6 +101,9 @@ enum ChannelError {
     #[error("Checksum response too large: {0} bytes")]
     UpdateChecksumTooLarge(usize),
 
+    #[error("Checksum response is not valid UTF-8: {0}")]
+    UpdateChecksumUtf8(std::str::Utf8Error),
+
     #[error("Empty checksum response")]
     UpdateEmptyChecksum,
 
@@ -1245,7 +1248,7 @@ async fn fetch_runner_checksum(
     if bytes.len() > MAX_CHECKSUM_RESPONSE_BYTES {
         return Err(ChannelError::UpdateChecksumTooLarge(bytes.len()));
     }
-    let body = String::from_utf8_lossy(&bytes);
+    let body = std::str::from_utf8(&bytes).map_err(ChannelError::UpdateChecksumUtf8)?;
     let hex = body
         .split_whitespace()
         .next()
