@@ -89,8 +89,23 @@ enum ChannelError {
         current: JobStatus,
     },
 
-    #[error("Runner update failed: {0}")]
-    Update(String),
+    #[error("Failed to parse runner download URL: {0}")]
+    UpdateUrl(url::ParseError),
+
+    #[error("Failed to fetch runner checksum: {0}")]
+    UpdateHttp(reqwest::Error),
+
+    #[error("Checksum fetch returned non-success status: {0}")]
+    UpdateHttpStatus(reqwest::StatusCode),
+
+    #[error("Checksum response too large: {0} bytes")]
+    UpdateChecksumTooLarge(usize),
+
+    #[error("Empty checksum response")]
+    UpdateEmptyChecksum,
+
+    #[error("Invalid runner checksum: {0}")]
+    UpdateChecksum(bencher_json::ValidError),
 }
 
 /// Handle a heartbeat timeout by reading the job and deciding the right status.
@@ -1033,11 +1048,14 @@ pub async fn runner_channel(
     let (mut tx, mut rx) = ws_stream.split();
     let heartbeat_timeout = context.heartbeat_timeout;
 
+    #[cfg(feature = "otel")]
+    let mut state_guard = RunnerStateGuard::new(bencher_otel::RunnerStateKind::Idle);
+
     // State machine: Idle -> Executing -> Idle -> ...
     loop {
         // === IDLE STATE ===
         // Wait for Ready message from runner (also handles terminal message retries)
-        let Ok(ReadyOutcome::Ready(poll_timeout)) = wait_for_ready(
+        let poll_timeout = match wait_for_ready(
             &log,
             context,
             runner_key.runner_id,
@@ -1046,8 +1064,18 @@ pub async fn runner_channel(
             heartbeat_timeout,
         )
         .await
-        else {
-            break;
+        {
+            Ok(ReadyOutcome::Ready(poll_timeout)) => poll_timeout,
+            Ok(ReadyOutcome::UpdateSent) => {
+                #[cfg(feature = "otel")]
+                state_guard.transition(bencher_otel::RunnerStateKind::Updating);
+                break;
+            },
+            Err(_) => {
+                #[cfg(feature = "otel")]
+                state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
+                break;
+            },
         };
 
         let deadline = tokio::time::Instant::now() + Duration::from_secs(u64::from(poll_timeout));
@@ -1063,10 +1091,14 @@ pub async fn runner_channel(
                 let text = serde_json::to_string(&job_msg)
                     .map_err(|e| HttpError::for_internal_error(e.to_string()))?;
                 if tx.send(Message::Text(text.into())).await.is_err() {
+                    #[cfg(feature = "otel")]
+                    state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
                     break;
                 }
 
                 // === EXECUTING STATE ===
+                #[cfg(feature = "otel")]
+                state_guard.transition(bencher_otel::RunnerStateKind::Executing);
 
                 match execute_loop(
                     &log,
@@ -1079,9 +1111,12 @@ pub async fn runner_channel(
                 .await
                 {
                     Ok(ExecuteResult::JobDone) => {
-                        // Transition back to Idle
+                        #[cfg(feature = "otel")]
+                        state_guard.transition(bencher_otel::RunnerStateKind::Idle);
                     },
                     Ok(ExecuteResult::Disconnected) => {
+                        #[cfg(feature = "otel")]
+                        state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
                         // Spawn heartbeat timeout for in-flight jobs
                         let job = QueryJob::get(auth_conn!(context), query_job.id)?;
                         if !job.status.has_run() {
@@ -1099,6 +1134,8 @@ pub async fn runner_channel(
                         break;
                     },
                     Err(e) => {
+                        #[cfg(feature = "otel")]
+                        state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
                         slog::error!(log, "Execute loop error"; "error" => %e, "job_id" => ?query_job.id);
                         // Spawn heartbeat timeout for in-flight jobs
                         let job = QueryJob::get(auth_conn!(context), query_job.id)?;
@@ -1123,11 +1160,14 @@ pub async fn runner_channel(
                 let text = serde_json::to_string(&ServerMessage::NoJob)
                     .map_err(|e| HttpError::for_internal_error(e.to_string()))?;
                 if tx.send(Message::Text(text.into())).await.is_err() {
+                    #[cfg(feature = "otel")]
+                    state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
                     break;
                 }
             },
             Err(_) => {
-                // Error during polling (likely WS disconnect)
+                #[cfg(feature = "otel")]
+                state_guard.transition(bencher_otel::RunnerStateKind::Disconnected);
                 break;
             },
         }
@@ -1144,6 +1184,32 @@ enum ReadyOutcome {
     UpdateSent,
 }
 
+#[cfg(feature = "otel")]
+struct RunnerStateGuard {
+    state: bencher_otel::RunnerStateKind,
+}
+
+#[cfg(feature = "otel")]
+impl RunnerStateGuard {
+    fn new(state: bencher_otel::RunnerStateKind) -> Self {
+        bencher_otel::ApiMeter::up(bencher_otel::ApiGauge::RunnerState(state));
+        Self { state }
+    }
+
+    fn transition(&mut self, new_state: bencher_otel::RunnerStateKind) {
+        bencher_otel::ApiMeter::down(bencher_otel::ApiGauge::RunnerState(self.state));
+        self.state = new_state;
+        bencher_otel::ApiMeter::up(bencher_otel::ApiGauge::RunnerState(self.state));
+    }
+}
+
+#[cfg(feature = "otel")]
+impl Drop for RunnerStateGuard {
+    fn drop(&mut self) {
+        bencher_otel::ApiMeter::down(bencher_otel::ApiGauge::RunnerState(self.state));
+    }
+}
+
 /// GitHub Releases base URL for runner binary downloads.
 const RUNNER_RELEASE_BASE_URL: &str = "https://github.com/bencherdev/bencher/releases/download";
 
@@ -1155,8 +1221,10 @@ fn runner_download_url(
     let tag = format!("v{version}");
     let artifact = format!("runner-{tag}-{}", arch.artifact_slug());
     let url_str = format!("{RUNNER_RELEASE_BASE_URL}/{tag}/{artifact}");
-    url::Url::parse(&url_str).map_err(|e| ChannelError::Update(e.to_string()))
+    url::Url::parse(&url_str).map_err(ChannelError::UpdateUrl)
 }
+
+const MAX_CHECKSUM_RESPONSE_BYTES: usize = 1024;
 
 /// Fetch the SHA-256 checksum for a runner binary from its companion `.sha256` file.
 async fn fetch_runner_checksum(
@@ -1165,23 +1233,20 @@ async fn fetch_runner_checksum(
     let checksum_url = format!("{binary_url}.sha256");
     let response = reqwest::get(&checksum_url)
         .await
-        .map_err(|e| ChannelError::Update(format!("Failed to fetch checksum: {e}")))?;
+        .map_err(ChannelError::UpdateHttp)?;
     if !response.status().is_success() {
-        return Err(ChannelError::Update(format!(
-            "Checksum fetch returned {}",
-            response.status()
-        )));
+        return Err(ChannelError::UpdateHttpStatus(response.status()));
     }
-    let body = response
-        .text()
-        .await
-        .map_err(|e| ChannelError::Update(format!("Failed to read checksum body: {e}")))?;
+    let bytes = response.bytes().await.map_err(ChannelError::UpdateHttp)?;
+    if bytes.len() > MAX_CHECKSUM_RESPONSE_BYTES {
+        return Err(ChannelError::UpdateChecksumTooLarge(bytes.len()));
+    }
+    let body = String::from_utf8_lossy(&bytes);
     let hex = body
         .split_whitespace()
         .next()
-        .ok_or_else(|| ChannelError::Update("Empty checksum response".to_owned()))?;
-    hex.parse()
-        .map_err(|e| ChannelError::Update(format!("Invalid checksum: {e}")))
+        .ok_or(ChannelError::UpdateEmptyChecksum)?;
+    hex.parse().map_err(ChannelError::UpdateChecksum)
 }
 
 /// Wait for a `RunnerMessage::Ready` message, returning the poll timeout.

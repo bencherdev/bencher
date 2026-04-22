@@ -386,6 +386,7 @@ mod tests {
             sandbox_log_level: crate::SandboxLogLevel::default(),
             allow_no_sandbox: false,
             no_auto_update: false,
+            max_download_size: None,
         }
     }
 

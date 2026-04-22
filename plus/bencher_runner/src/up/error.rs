@@ -59,6 +59,9 @@ pub enum SelfUpdateError {
     #[error("Download I/O failed: {0}")]
     Download(std::io::Error),
 
+    #[error("Download too large: {downloaded} bytes exceeds {limit} byte limit")]
+    DownloadTooLarge { limit: u64, downloaded: u64 },
+
     #[error("Failed to parse computed checksum: {0}")]
     ChecksumParse(bencher_valid::ValidError),
 

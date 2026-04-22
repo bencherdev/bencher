@@ -2555,3 +2555,56 @@ async fn channel_close_reason_on_heartbeat_timeout() {
 
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
 }
+
+// =============================================================================
+// Self-Update Tests
+// =============================================================================
+
+/// Sending Ready with a stale version causes the server to attempt an update.
+/// Since version "0.0.0" doesn't exist on GitHub Releases, the checksum fetch
+/// fails and the channel closes.
+#[tokio::test]
+async fn version_mismatch_causes_disconnect() {
+    let server = TestServer::new().await;
+    let admin = server
+        .signup("Admin", "ws-version-mismatch@example.com")
+        .await;
+
+    let runner = create_runner(&server, &admin.token, "Runner version-mismatch").await;
+
+    let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        runner: Some(bencher_json::runner::JsonRunnerMetadata {
+            os: bencher_json::OperatingSystem::Linux,
+            arch: bencher_json::Architecture::X86_64,
+            version: "0.0.0".to_owned(),
+        }),
+    };
+    send_msg(&mut ws, &ready).await;
+
+    assert_ws_closed(&mut ws).await;
+}
+
+/// Sending Ready with `runner: None` (opt-out of auto-update) should skip the
+/// update check and return `NoJob` when no jobs are queued.
+#[tokio::test]
+async fn no_metadata_skips_update() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-no-metadata@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Runner no-metadata").await;
+
+    let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        runner: None,
+    };
+    send_msg(&mut ws, &ready).await;
+
+    let response = recv_msg(&mut ws).await;
+    assert!(
+        matches!(response, ServerMessage::NoJob),
+        "Expected NoJob, got: {response:?}"
+    );
+}

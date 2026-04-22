@@ -4,6 +4,7 @@ use std::sync::LazyLock;
 use opentelemetry::metrics::Meter;
 use uuid::Uuid;
 
+use crate::api_gauge::ApiGauge;
 use crate::api_histogram::{ApiHistogram, Priority, priority_attribute};
 
 static METER: LazyLock<Meter> = LazyLock::new(|| opentelemetry::global::meter(ApiMeter::NAME));
@@ -32,6 +33,24 @@ impl ApiMeter {
             .with_unit(api_counter.unit())
             .build();
         let attributes = api_counter.attributes();
+        counter.add(value, &attributes);
+    }
+
+    pub fn up(api_gauge: ApiGauge) {
+        Self::adjust(api_gauge, 1);
+    }
+
+    pub fn down(api_gauge: ApiGauge) {
+        Self::adjust(api_gauge, -1);
+    }
+
+    fn adjust(api_gauge: ApiGauge, value: i64) {
+        let counter = METER
+            .i64_up_down_counter(api_gauge.name())
+            .with_description(api_gauge.description())
+            .with_unit(api_gauge.unit())
+            .build();
+        let attributes = api_gauge.attributes();
         counter.add(value, &attributes);
     }
 

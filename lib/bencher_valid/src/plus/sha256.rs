@@ -76,7 +76,10 @@ impl Visitor<'_> for Sha256Visitor {
 }
 
 pub fn is_valid_sha256(hex_str: &str) -> bool {
-    hex_str.len() == SHA256_HEX_LEN && hex_str.chars().all(|c| matches!(c, '0'..='9' | 'a'..='f'))
+    hex_str.len() == SHA256_HEX_LEN
+        && hex_str
+            .bytes()
+            .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
 }
 
 #[cfg(test)]

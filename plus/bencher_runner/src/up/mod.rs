@@ -63,6 +63,8 @@ pub struct UpConfig {
     pub allow_no_sandbox: bool,
     /// Disable auto-update: do not send runner metadata to the server.
     pub no_auto_update: bool,
+    /// Maximum download size in bytes for self-update binaries.
+    pub max_download_size: Option<u64>,
 }
 
 pub struct Up {
@@ -250,7 +252,7 @@ fn execute_effect(
             version,
             url,
             checksum,
-        } => match self_update(&version, &url, &checksum) {
+        } => match self_update(&version, &url, &checksum, config.max_download_size) {
             Ok(()) => EffectResult::Exit,
             Err(e) => {
                 eprintln!("Self-update failed: {e}");
@@ -382,11 +384,14 @@ extern "C" fn signal_handler(_sig: libc::c_int) {
     SHUTDOWN.store(true, Ordering::SeqCst);
 }
 
+const DEFAULT_MAX_DOWNLOAD_SIZE: u64 = 500 * 1024 * 1024;
+
 #[expect(clippy::print_stdout)]
 fn self_update(
     version: &str,
     url: &Url,
     checksum: &bencher_valid::Sha256,
+    max_download_size: Option<u64>,
 ) -> Result<(), SelfUpdateError> {
     #[cfg(not(unix))]
     {
@@ -411,15 +416,23 @@ fn self_update(
             .call()
             .map_err(SelfUpdateError::Http)?;
 
+        let limit = max_download_size.unwrap_or(DEFAULT_MAX_DOWNLOAD_SIZE);
         let mut reader = response.into_body().into_reader();
         let mut file =
             BufWriter::new(std::fs::File::create(&new_path).map_err(SelfUpdateError::FileOp)?);
         let mut hasher = sha2::Sha256::new();
+        let mut downloaded: u64 = 0;
         let mut buf = [0u8; 8192];
         loop {
             let n = reader.read(&mut buf).map_err(SelfUpdateError::Download)?;
             if n == 0 {
                 break;
+            }
+            downloaded += n as u64;
+            if downloaded > limit {
+                drop(file);
+                let _remove_new = std::fs::remove_file(&new_path);
+                return Err(SelfUpdateError::DownloadTooLarge { limit, downloaded });
             }
             let chunk = buf.get(..n).ok_or_else(|| {
                 SelfUpdateError::Download(std::io::Error::other(
