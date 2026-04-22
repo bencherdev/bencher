@@ -1217,8 +1217,17 @@ impl Drop for RunnerStateGuard {
     }
 }
 
-/// GitHub Releases base URL for runner binary downloads.
-const RUNNER_RELEASE_BASE_URL: &str = "https://github.com/bencherdev/bencher/releases/download";
+// Trailing slash is required: Url::join appends to the last path segment,
+// so without it the join would replace "download" instead of extending it.
+#[expect(
+    clippy::expect_used,
+    reason = "Constant URL literal, infallible at runtime"
+)]
+static RUNNER_RELEASE_BASE_URL: std::sync::LazyLock<url::Url> = std::sync::LazyLock::new(|| {
+    "https://github.com/bencherdev/bencher/releases/download/"
+        .parse()
+        .expect("valid base URL")
+});
 
 /// Construct the GitHub Releases download URL for a runner binary.
 fn runner_download_url(
@@ -1226,9 +1235,11 @@ fn runner_download_url(
     arch: bencher_json::Architecture,
 ) -> Result<url::Url, ChannelError> {
     let tag = format!("v{version}");
-    let artifact = format!("runner-{tag}-{}", arch.artifact_slug());
-    let url_str = format!("{RUNNER_RELEASE_BASE_URL}/{tag}/{artifact}");
-    url::Url::parse(&url_str).map_err(ChannelError::UpdateUrl)
+    let artifact = format!("runner-{tag}-{}", arch.linux_artifact_slug());
+    let path = format!("{tag}/{artifact}");
+    RUNNER_RELEASE_BASE_URL
+        .join(&path)
+        .map_err(ChannelError::UpdateUrl)
 }
 
 const MAX_CHECKSUM_RESPONSE_BYTES: usize = 1024;

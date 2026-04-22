@@ -247,7 +247,6 @@ fn execute_effect(
             log_message(level, &msg);
             EffectResult::Continue
         },
-        Effect::Exit => EffectResult::Exit,
         Effect::SelfUpdate {
             version,
             url,
@@ -256,9 +255,10 @@ fn execute_effect(
             Ok(()) => EffectResult::Exit,
             Err(e) => {
                 eprintln!("Self-update failed: {e}");
-                EffectResult::Continue
+                EffectResult::Input(Input::SelfUpdateFailed)
             },
         },
+        Effect::Exit => EffectResult::Exit,
     }
 }
 

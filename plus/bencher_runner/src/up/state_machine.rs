@@ -42,6 +42,8 @@ pub enum ChannelState {
         job_uuid: JobUuid,
         kind: TerminalKind,
     },
+    /// Self-update in progress. WebSocket is closed.
+    Updating,
     /// Clean shutdown.
     ShutDown,
 }
@@ -74,6 +76,8 @@ pub enum Input {
     JobFinished(JobFinishResult),
     /// External shutdown signal.
     Shutdown,
+    /// Self-update download/verify/exec failed.
+    SelfUpdateFailed,
 }
 
 /// Result of job execution, produced by the driver.
@@ -110,6 +114,8 @@ pub enum ReconnectReason {
     ExecutingConnectionLost,
     /// Connection lost while awaiting terminal ACK.
     TerminalAckConnectionLost,
+    /// Self-update failed, reconnecting to resume on old version.
+    SelfUpdateFailed,
 }
 
 impl std::fmt::Display for ReconnectReason {
@@ -133,6 +139,7 @@ impl std::fmt::Display for ReconnectReason {
             Self::TerminalAckConnectionLost => {
                 write!(f, "connection lost while awaiting terminal ACK")
             },
+            Self::SelfUpdateFailed => write!(f, "self-update failed"),
         }
     }
 }
@@ -158,14 +165,14 @@ pub enum Effect {
     ReportOutcome(JobOutcome),
     /// Log a message.
     Log(LogLevel, String),
-    /// Exit the protocol loop.
-    Exit,
     /// Download, verify, and exec a new runner binary.
     SelfUpdate {
         version: String,
         url: Url,
         checksum: Sha256,
     },
+    /// Exit the protocol loop.
+    Exit,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -252,6 +259,7 @@ impl ChannelStateMachine {
             ChannelState::AwaitingTerminalAck { job_uuid, kind } => {
                 self.handle_awaiting_terminal_ack(job_uuid, kind, input)
             },
+            ChannelState::Updating => self.handle_updating(input),
             // ShutDown is handled above; this arm is unreachable.
             ChannelState::ShutDown => vec![],
         }
@@ -279,7 +287,8 @@ impl ChannelStateMachine {
             input @ (Input::Message(_)
             | Input::ReceiveTimeout
             | Input::JobFinished(_)
-            | Input::Shutdown) => self.unexpected(ChannelState::Disconnected, input),
+            | Input::Shutdown
+            | Input::SelfUpdateFailed) => self.unexpected(ChannelState::Disconnected, input),
         }
     }
 
@@ -328,9 +337,10 @@ impl ChannelStateMachine {
                     Effect::Connect,
                 ]
             },
-            input @ (Input::Connected | Input::JobFinished(_) | Input::Shutdown) => {
-                self.unexpected(ChannelState::AwaitingPendingAck, &input)
-            },
+            input @ (Input::Connected
+            | Input::JobFinished(_)
+            | Input::Shutdown
+            | Input::SelfUpdateFailed) => self.unexpected(ChannelState::AwaitingPendingAck, &input),
         }
     }
 
@@ -351,7 +361,7 @@ impl ChannelStateMachine {
                 url,
                 checksum,
             }) => {
-                self.state = ChannelState::ShutDown;
+                self.state = ChannelState::Updating;
                 vec![
                     Effect::Log(
                         LogLevel::Info,
@@ -383,7 +393,8 @@ impl ChannelStateMachine {
             input @ (Input::Connected
             | Input::Message(ServerMessage::Ack { .. } | ServerMessage::Cancel)
             | Input::JobFinished(_)
-            | Input::Shutdown) => self.unexpected(ChannelState::AwaitingJob, &input),
+            | Input::Shutdown
+            | Input::SelfUpdateFailed) => self.unexpected(ChannelState::AwaitingJob, &input),
         }
     }
 
@@ -405,7 +416,10 @@ impl ChannelStateMachine {
             input @ (Input::Connected
             | Input::Message(_)
             | Input::ReceiveTimeout
-            | Input::Shutdown) => self.unexpected(ChannelState::Executing { job_uuid }, &input),
+            | Input::Shutdown
+            | Input::SelfUpdateFailed) => {
+                self.unexpected(ChannelState::Executing { job_uuid }, &input)
+            },
         }
     }
 
@@ -475,9 +489,30 @@ impl ChannelStateMachine {
                     Effect::Connect,
                 ]
             },
-            input @ (Input::Connected | Input::JobFinished(_) | Input::Shutdown) => {
+            input @ (Input::Connected
+            | Input::JobFinished(_)
+            | Input::Shutdown
+            | Input::SelfUpdateFailed) => {
                 self.unexpected(ChannelState::AwaitingTerminalAck { job_uuid, kind }, &input)
             },
+        }
+    }
+
+    fn handle_updating(&mut self, input: Input) -> Vec<Effect> {
+        match input {
+            Input::SelfUpdateFailed => {
+                self.state = ChannelState::Disconnected;
+                vec![
+                    Effect::SleepBeforeReconnect(ReconnectReason::SelfUpdateFailed),
+                    Effect::Connect,
+                ]
+            },
+            input @ (Input::Connected
+            | Input::ConnectionFailed
+            | Input::Message(_)
+            | Input::ReceiveTimeout
+            | Input::JobFinished(_)
+            | Input::Shutdown) => self.unexpected(ChannelState::Updating, &input),
         }
     }
 
@@ -1052,6 +1087,48 @@ mod tests {
                 .any(|e| matches!(e, Effect::Send(RunnerMessage::Completed { .. })))
         );
         assert_eq!(*sm.state(), ChannelState::AwaitingPendingAck);
+    }
+
+    // --- Updating ---
+
+    #[test]
+    fn update_message_transitions_to_updating() {
+        let mut sm = test_sm().with_state(ChannelState::AwaitingJob);
+        let effects = sm.step(Input::Message(ServerMessage::Update {
+            version: "99.0.0".to_owned(),
+            url: "https://example.com/runner".parse().unwrap(),
+            checksum: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+                .parse()
+                .unwrap(),
+        }));
+        assert_eq!(*sm.state(), ChannelState::Updating);
+        assert!(effects.iter().any(|e| matches!(e, Effect::Close)));
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::SelfUpdate { .. }))
+        );
+    }
+
+    #[test]
+    fn self_update_failed_reconnects() {
+        let mut sm = test_sm().with_state(ChannelState::Updating);
+        let effects = sm.step(Input::SelfUpdateFailed);
+        assert_eq!(*sm.state(), ChannelState::Disconnected);
+        assert!(effects.iter().any(|e| matches!(
+            e,
+            Effect::SleepBeforeReconnect(ReconnectReason::SelfUpdateFailed)
+        )));
+        assert!(effects.iter().any(|e| matches!(e, Effect::Connect)));
+    }
+
+    #[test]
+    fn shutdown_during_updating() {
+        let mut sm = test_sm().with_state(ChannelState::Updating);
+        let effects = sm.step(Input::Shutdown);
+        assert!(effects.iter().any(|e| matches!(e, Effect::Close)));
+        assert!(effects.iter().any(|e| matches!(e, Effect::Exit)));
+        assert_eq!(*sm.state(), ChannelState::ShutDown);
     }
 
     // --- Shutdown ---

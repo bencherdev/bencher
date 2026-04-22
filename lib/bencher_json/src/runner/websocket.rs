@@ -9,19 +9,6 @@ use url::Url;
 
 use super::job::{JobUuid, JsonClaimedJob, JsonIterationOutput};
 
-/// Runner metadata sent with `Ready` messages.
-/// When present, enables server-directed features like auto-update.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonRunnerMetadata {
-    /// Runner operating system
-    pub os: OperatingSystem,
-    /// Runner CPU architecture
-    pub arch: Architecture,
-    /// Runner binary version
-    pub version: String,
-}
-
 /// Messages sent from the runner to the server over the WebSocket channel.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event", rename_all = "snake_case")]
@@ -60,6 +47,19 @@ pub enum RunnerMessage {
         /// The job this cancellation belongs to (enables retry on reconnect)
         job: JobUuid,
     },
+}
+
+/// Runner metadata sent with `Ready` messages.
+/// When present, enables server-directed features like auto-update.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonRunnerMetadata {
+    /// Runner operating system
+    pub os: OperatingSystem,
+    /// Runner CPU architecture
+    pub arch: Architecture,
+    /// Runner binary version
+    pub version: String,
 }
 
 /// Messages sent from the server to the runner over the WebSocket channel.

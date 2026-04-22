@@ -51,7 +51,7 @@ impl Architecture {
         consts::ARCH.parse()
     }
 
-    pub fn artifact_slug(&self) -> &'static str {
+    pub fn linux_artifact_slug(&self) -> &'static str {
         match self {
             Self::X86_64 => LINUX_X86_64_SLUG,
             Self::Aarch64 => LINUX_AARCH64_SLUG,
