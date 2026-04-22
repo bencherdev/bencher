@@ -86,7 +86,7 @@ async-stripe-shared = "1.0.0-rc.3"
 async-stripe-types = "1.0.0-rc.3"
 async-trait = "0.1"
 aws-credential-types = "1.2"
-aws-sdk-s3 = { version = "1.126", default-features = false, features = ["behavior-version-latest", "sigv4a", "http-1x", "rustls", "rt-tokio"] }
+aws-sdk-s3 = { version = "1.129", default-features = false, features = ["behavior-version-latest", "sigv4a", "http-1x", "rustls", "rt-tokio"] }
 base64 = "0.22"
 bollard = "0.20"
 bytes = "1.11"
