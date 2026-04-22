@@ -34,8 +34,7 @@ impl RunnerApiClient {
             .unwrap_or(host_str);
         let ws_url_str = format!("{scheme}{without_scheme}v0/runners/{}/channel", self.runner);
 
-        Url::parse(&ws_url_str)
-            .map_err(|e| ApiClientError::Http(format!("Failed to build WebSocket URL: {e}")))
+        Url::parse(&ws_url_str).map_err(ApiClientError::Url)
     }
 
     pub fn key(&self) -> &str {

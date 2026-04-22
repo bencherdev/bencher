@@ -15,7 +15,7 @@ client = ["dep:regex-lite"]
 server = ["dep:rand", "dep:regex"]
 schema = ["dep:schemars", "ordered-float/schemars"]
 db = ["dep:diesel"]
-plus = ["chrono/clock"]
+plus = ["chrono/clock", "dep:hex", "dep:sha2"]
 test-clock = []
 wasm = [
     "client",
@@ -34,6 +34,7 @@ diesel = { workspace = true, optional = true }
 email_address.workspace = true
 gix-hash.workspace = true
 git-validate.workspace = true
+hex = { workspace = true, optional = true }
 ordered-float = { workspace = true, features = ["serde"] }
 rand = { workspace = true, optional = true }
 regex = { workspace = true, optional = true }
@@ -41,6 +42,7 @@ regex-lite = { workspace = true, optional = true }
 schemars = { workspace = true, optional = true, features = ["chrono"] }
 serde.workspace = true
 serde_json = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
 slug.workspace = true
 thiserror.workspace = true
 typeshare.workspace = true

@@ -21,6 +21,7 @@ mod poll_timeout;
 mod recaptcha_action;
 mod recaptcha_score;
 mod sandbox;
+mod sha256;
 mod timeout;
 mod year;
 
@@ -45,5 +46,6 @@ pub use poll_timeout::PollTimeout;
 pub use recaptcha_action::RecaptchaAction;
 pub use recaptcha_score::RecaptchaScore;
 pub use sandbox::Sandbox;
+pub use sha256::Sha256;
 pub use timeout::Timeout;
 pub use year::ExpirationYear;

@@ -88,6 +88,27 @@ enum ChannelError {
         target: JobStatus,
         current: JobStatus,
     },
+
+    #[error("Failed to parse runner download URL: {0}")]
+    UpdateUrl(url::ParseError),
+
+    #[error("Failed to fetch runner checksum: {0}")]
+    UpdateHttp(reqwest::Error),
+
+    #[error("Checksum fetch returned non-success status: {0}")]
+    UpdateHttpStatus(reqwest::StatusCode),
+
+    #[error("Checksum response too large: {0} bytes")]
+    UpdateChecksumTooLarge(usize),
+
+    #[error("Checksum response is not valid UTF-8: {0}")]
+    UpdateChecksumUtf8(std::str::Utf8Error),
+
+    #[error("Empty checksum response")]
+    UpdateEmptyChecksum,
+
+    #[error("Invalid runner checksum: {0}")]
+    UpdateChecksum(bencher_json::ValidError),
 }
 
 /// Handle a heartbeat timeout by reading the job and deciding the right status.
@@ -1030,11 +1051,14 @@ pub async fn runner_channel(
     let (mut tx, mut rx) = ws_stream.split();
     let heartbeat_timeout = context.heartbeat_timeout;
 
+    #[cfg(feature = "otel")]
+    let mut state_guard = RunnerStateGuard::new(bencher_otel::RunnerStateKind::Idle);
+
     // State machine: Idle -> Executing -> Idle -> ...
     loop {
         // === IDLE STATE ===
         // Wait for Ready message from runner (also handles terminal message retries)
-        let Ok(poll_timeout) = wait_for_ready(
+        let poll_timeout = match wait_for_ready(
             &log,
             context,
             runner_key.runner_id,
@@ -1043,8 +1067,18 @@ pub async fn runner_channel(
             heartbeat_timeout,
         )
         .await
-        else {
-            break;
+        {
+            Ok(ReadyOutcome::Ready(poll_timeout)) => poll_timeout,
+            Ok(ReadyOutcome::UpdateSent) => {
+                #[cfg(feature = "otel")]
+                state_guard.transition(bencher_otel::RunnerStateKind::Updating);
+                break;
+            },
+            Err(_) => {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerDisconnect);
+                break;
+            },
         };
 
         let deadline = tokio::time::Instant::now() + Duration::from_secs(u64::from(poll_timeout));
@@ -1060,10 +1094,14 @@ pub async fn runner_channel(
                 let text = serde_json::to_string(&job_msg)
                     .map_err(|e| HttpError::for_internal_error(e.to_string()))?;
                 if tx.send(Message::Text(text.into())).await.is_err() {
+                    #[cfg(feature = "otel")]
+                    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerDisconnect);
                     break;
                 }
 
                 // === EXECUTING STATE ===
+                #[cfg(feature = "otel")]
+                state_guard.transition(bencher_otel::RunnerStateKind::Executing);
 
                 match execute_loop(
                     &log,
@@ -1076,9 +1114,14 @@ pub async fn runner_channel(
                 .await
                 {
                     Ok(ExecuteResult::JobDone) => {
-                        // Transition back to Idle
+                        #[cfg(feature = "otel")]
+                        state_guard.transition(bencher_otel::RunnerStateKind::Idle);
                     },
                     Ok(ExecuteResult::Disconnected) => {
+                        #[cfg(feature = "otel")]
+                        bencher_otel::ApiMeter::increment(
+                            bencher_otel::ApiCounter::RunnerDisconnect,
+                        );
                         // Spawn heartbeat timeout for in-flight jobs
                         let job = QueryJob::get(auth_conn!(context), query_job.id)?;
                         if !job.status.has_run() {
@@ -1096,6 +1139,10 @@ pub async fn runner_channel(
                         break;
                     },
                     Err(e) => {
+                        #[cfg(feature = "otel")]
+                        bencher_otel::ApiMeter::increment(
+                            bencher_otel::ApiCounter::RunnerDisconnect,
+                        );
                         slog::error!(log, "Execute loop error"; "error" => %e, "job_id" => ?query_job.id);
                         // Spawn heartbeat timeout for in-flight jobs
                         let job = QueryJob::get(auth_conn!(context), query_job.id)?;
@@ -1120,11 +1167,14 @@ pub async fn runner_channel(
                 let text = serde_json::to_string(&ServerMessage::NoJob)
                     .map_err(|e| HttpError::for_internal_error(e.to_string()))?;
                 if tx.send(Message::Text(text.into())).await.is_err() {
+                    #[cfg(feature = "otel")]
+                    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerDisconnect);
                     break;
                 }
             },
             Err(_) => {
-                // Error during polling (likely WS disconnect)
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerDisconnect);
                 break;
             },
         }
@@ -1133,7 +1183,95 @@ pub async fn runner_channel(
     Ok(())
 }
 
+/// Outcome of waiting for a `RunnerMessage::Ready` message.
+enum ReadyOutcome {
+    /// Runner version matches; proceed with job polling.
+    Ready(u32),
+    /// Runner version is outdated; `Update` message was sent.
+    UpdateSent,
+}
+
+#[cfg(feature = "otel")]
+struct RunnerStateGuard {
+    state: bencher_otel::RunnerStateKind,
+}
+
+#[cfg(feature = "otel")]
+impl RunnerStateGuard {
+    fn new(state: bencher_otel::RunnerStateKind) -> Self {
+        bencher_otel::ApiMeter::up(bencher_otel::ApiGauge::RunnerState(state));
+        Self { state }
+    }
+
+    fn transition(&mut self, new_state: bencher_otel::RunnerStateKind) {
+        bencher_otel::ApiMeter::down(bencher_otel::ApiGauge::RunnerState(self.state));
+        self.state = new_state;
+        bencher_otel::ApiMeter::up(bencher_otel::ApiGauge::RunnerState(self.state));
+    }
+}
+
+#[cfg(feature = "otel")]
+impl Drop for RunnerStateGuard {
+    fn drop(&mut self) {
+        bencher_otel::ApiMeter::down(bencher_otel::ApiGauge::RunnerState(self.state));
+    }
+}
+
+// Trailing slash is required: Url::join appends to the last path segment,
+// so without it the join would replace "download" instead of extending it.
+#[expect(
+    clippy::expect_used,
+    reason = "Constant URL literal, infallible at runtime"
+)]
+static RUNNER_RELEASE_BASE_URL: std::sync::LazyLock<url::Url> = std::sync::LazyLock::new(|| {
+    "https://github.com/bencherdev/bencher/releases/download/"
+        .parse()
+        .expect("valid base URL")
+});
+
+/// Construct the GitHub Releases download URL for a runner binary.
+fn runner_download_url(
+    version: &str,
+    arch: bencher_json::Architecture,
+) -> Result<url::Url, ChannelError> {
+    let tag = format!("v{version}");
+    let artifact = format!("runner-{tag}-{}", arch.linux_artifact_slug());
+    let path = format!("{tag}/{artifact}");
+    RUNNER_RELEASE_BASE_URL
+        .join(&path)
+        .map_err(ChannelError::UpdateUrl)
+}
+
+const MAX_CHECKSUM_RESPONSE_BYTES: usize = 1024;
+
+/// Fetch the SHA-256 checksum for a runner binary from its companion `.sha256` file.
+async fn fetch_runner_checksum(
+    binary_url: &url::Url,
+) -> Result<bencher_json::Sha256, ChannelError> {
+    let checksum_url = format!("{binary_url}.sha256");
+    let response = reqwest::get(&checksum_url)
+        .await
+        .map_err(ChannelError::UpdateHttp)?;
+    if !response.status().is_success() {
+        return Err(ChannelError::UpdateHttpStatus(response.status()));
+    }
+    let bytes = response.bytes().await.map_err(ChannelError::UpdateHttp)?;
+    if bytes.len() > MAX_CHECKSUM_RESPONSE_BYTES {
+        return Err(ChannelError::UpdateChecksumTooLarge(bytes.len()));
+    }
+    let body = std::str::from_utf8(&bytes).map_err(ChannelError::UpdateChecksumUtf8)?;
+    let hex = body
+        .split_whitespace()
+        .next()
+        .ok_or(ChannelError::UpdateEmptyChecksum)?;
+    hex.parse().map_err(ChannelError::UpdateChecksum)
+}
+
 /// Wait for a `RunnerMessage::Ready` message, returning the poll timeout.
+///
+/// If the runner's version does not match the server's version, sends a
+/// `ServerMessage::Update` with the download URL and checksum, then returns
+/// `ReadyOutcome::UpdateSent`.
 ///
 /// Also handles terminal messages (Completed/Failed/Canceled) during Idle state,
 /// which occur when a runner reconnects with a pending result that wasn't acknowledged.
@@ -1146,7 +1284,7 @@ async fn wait_for_ready<S, R>(
     tx: &mut S,
     rx: &mut R,
     idle_timeout: Duration,
-) -> Result<u32, ChannelError>
+) -> Result<ReadyOutcome, ChannelError>
 where
     S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
@@ -1173,9 +1311,11 @@ where
             Message::Text(text) => {
                 let runner_msg: RunnerMessage = serde_json::from_str(&text)?;
                 match runner_msg {
-                    RunnerMessage::Ready { poll_timeout } => {
-                        let timeout = poll_timeout.map_or(DEFAULT_POLL_TIMEOUT, u32::from);
-                        return Ok(timeout);
+                    RunnerMessage::Ready {
+                        poll_timeout,
+                        runner,
+                    } => {
+                        return handle_ready(log, tx, poll_timeout, runner.as_ref()).await;
                     },
                     RunnerMessage::Completed {
                         job: job_uuid,
@@ -1239,6 +1379,48 @@ where
             Message::Binary(_) | Message::Pong(_) | Message::Frame(_) => {},
         }
     }
+}
+
+/// Check the runner version against the server version.
+///
+/// If runner metadata is absent, skips auto-update and returns `ReadyOutcome::Ready`.
+/// If the versions match, returns `ReadyOutcome::Ready` with the poll timeout.
+/// If they differ, sends `ServerMessage::Update` with the download URL and
+/// checksum, then returns `ReadyOutcome::UpdateSent`.
+async fn handle_ready<S>(
+    log: &slog::Logger,
+    tx: &mut S,
+    poll_timeout: Option<bencher_json::PollTimeout>,
+    runner: Option<&bencher_json::runner::JsonRunnerMetadata>,
+) -> Result<ReadyOutcome, ChannelError>
+where
+    S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+{
+    let timeout = poll_timeout.map_or(DEFAULT_POLL_TIMEOUT, u32::from);
+
+    let Some(runner) = runner else {
+        slog::info!(log, "Runner ready (no metadata, skipping auto-update)");
+        return Ok(ReadyOutcome::Ready(timeout));
+    };
+
+    let server_version = bencher_json::BENCHER_API_VERSION;
+    slog::info!(log, "Runner ready"; "os" => %runner.os, "arch" => %runner.arch, "version" => &runner.version, "server_version" => server_version);
+
+    if runner.version != server_version && runner.os == bencher_json::OperatingSystem::Linux {
+        slog::info!(log, "Runner version mismatch, sending update"; "runner" => &runner.version, "server" => server_version);
+        let url = runner_download_url(server_version, runner.arch)?;
+        let checksum = fetch_runner_checksum(&url).await?;
+        let update = ServerMessage::Update {
+            version: server_version.to_owned(),
+            url,
+            checksum,
+        };
+        let text = serde_json::to_string(&update)?;
+        tx.send(Message::Text(text.into())).await?;
+        return Ok(ReadyOutcome::UpdateSent);
+    }
+
+    Ok(ReadyOutcome::Ready(timeout))
 }
 
 /// Look up a job by UUID and verify it belongs to the given runner.

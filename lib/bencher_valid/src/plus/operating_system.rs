@@ -1,4 +1,4 @@
-use std::{fmt, str::FromStr};
+use std::{env::consts, fmt, str::FromStr};
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -43,6 +43,12 @@ impl TryFrom<String> for OperatingSystem {
             WINDOWS => Ok(Self::Windows),
             _ => Err(ValidError::OperatingSystem(os)),
         }
+    }
+}
+
+impl OperatingSystem {
+    pub fn from_host() -> Result<Self, ValidError> {
+        consts::OS.parse()
     }
 }
 

@@ -14,12 +14,21 @@ pub use bencher_api_tests::helpers::{
 };
 use bencher_json::{
     DateTime, JobStatus, JobUuid, JsonClaimedJob, JsonRunnerKey, PollTimeout, Priority, RunnerUuid,
-    SpecUuid,
+    SpecUuid, runner::JsonRunnerMetadata,
 };
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
 use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest as _};
+
+/// Build the standard `JsonRunnerMetadata` used in tests.
+pub fn runner_metadata() -> JsonRunnerMetadata {
+    JsonRunnerMetadata {
+        os: bencher_json::OperatingSystem::Linux,
+        arch: bencher_json::Architecture::X86_64,
+        version: bencher_json::BENCHER_API_VERSION.to_owned(),
+    }
+}
 
 /// Create a runner via the REST API.
 #[expect(clippy::expect_used)]
@@ -540,13 +549,16 @@ pub async fn claim_via_channel(
     let mut ws = connect_channel_ws(server, runner_uuid, runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(poll_timeout).expect("Invalid poll timeout")),
+        runner: Some(runner_metadata()),
     };
     send_runner_msg(&mut ws, &ready).await;
     let response = recv_server_msg(&mut ws).await;
     let job = match response {
         ServerMessage::Job(job) => Some(*job),
         ServerMessage::NoJob => None,
-        other @ (ServerMessage::Ack { .. } | ServerMessage::Cancel) => {
+        other @ (ServerMessage::Ack { .. }
+        | ServerMessage::Cancel
+        | ServerMessage::Update { .. }) => {
             panic!("Expected Job or NoJob, got: {other:?}")
         },
     };

@@ -17,7 +17,7 @@ pub use error::UpError;
 
 use api_client::RunnerApiClient;
 use bencher_json::runner::{RunnerMessage, ServerMessage};
-use error::WebSocketError;
+use error::{SelfUpdateError, WebSocketError};
 use job::execute_job;
 use state_machine::{ChannelStateMachine, Effect, Input, LogLevel};
 
@@ -61,6 +61,10 @@ pub struct UpConfig {
     pub sandbox_log_level: SandboxLogLevel,
     /// Whether to allow non-sandboxed execution.
     pub allow_no_sandbox: bool,
+    /// Disable auto-update: do not send runner metadata to the server.
+    pub no_auto_update: bool,
+    /// Maximum download size in bytes for self-update binaries.
+    pub max_download_size: Option<u64>,
 }
 
 pub struct Up {
@@ -129,7 +133,19 @@ impl Up {
 /// function executes effects and feeds I/O results back.
 #[expect(clippy::print_stdout)]
 fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpError> {
-    let mut sm = ChannelStateMachine::new(config.poll_timeout_secs);
+    let runner_metadata = if config.no_auto_update {
+        None
+    } else {
+        bencher_valid::OperatingSystem::from_host()
+            .ok()
+            .zip(bencher_valid::Architecture::from_host().ok())
+            .map(|(os, arch)| bencher_json::runner::JsonRunnerMetadata {
+                os,
+                arch,
+                version: env!("CARGO_PKG_VERSION").to_owned(),
+            })
+    };
+    let mut sm = ChannelStateMachine::new(config.poll_timeout_secs, runner_metadata);
     let mut effects: VecDeque<Effect> =
         ChannelStateMachine::initial_effects().into_iter().collect();
     let mut ws: Option<Arc<Mutex<JobChannel>>> = None;
@@ -231,6 +247,17 @@ fn execute_effect(
             log_message(level, &msg);
             EffectResult::Continue
         },
+        Effect::SelfUpdate {
+            version,
+            url,
+            checksum,
+        } => match self_update(&version, &url, &checksum, config.max_download_size) {
+            Ok(()) => EffectResult::Exit,
+            Err(e) => {
+                eprintln!("Self-update failed: {e}");
+                EffectResult::Input(Input::SelfUpdateFailed)
+            },
+        },
         Effect::Exit => EffectResult::Exit,
     }
 }
@@ -239,10 +266,10 @@ fn try_send(
     ws: Option<&Arc<Mutex<JobChannel>>>,
     msg: &RunnerMessage,
 ) -> Result<(), WebSocketError> {
-    let ws_ref = ws.ok_or_else(|| WebSocketError::Send("Not connected".to_owned()))?;
+    let ws_ref = ws.ok_or(WebSocketError::NotConnected)?;
     let mut ws_guard = ws_ref
         .lock()
-        .map_err(|e| WebSocketError::Send(format!("Lock failed: {e}")))?;
+        .map_err(|_poison| WebSocketError::LockPoisoned)?;
     ws_guard.send_message(msg)
 }
 
@@ -273,8 +300,9 @@ fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) ->
         return Input::ConnectionFailed;
     };
     match ws_guard.wait_for_job(timeout) {
-        Ok(Some(job)) => Input::Message(ServerMessage::Job(Box::new(job))),
-        Ok(None) => Input::Message(ServerMessage::NoJob),
+        Ok(websocket::WaitResult::Job(job)) => Input::Message(ServerMessage::Job(job)),
+        Ok(websocket::WaitResult::NoJob) => Input::Message(ServerMessage::NoJob),
+        Ok(websocket::WaitResult::Update(msg)) => Input::Message(msg),
         // wait_for_job conflates timeout and connection errors in Err;
         // ConnectionFailed is the safer default — the state machine will
         // reconnect either way, and Close on a dead connection is a no-op.
@@ -354,4 +382,126 @@ fn install_signal_handlers() {
 
 extern "C" fn signal_handler(_sig: libc::c_int) {
     SHUTDOWN.store(true, Ordering::SeqCst);
+}
+
+const DEFAULT_MAX_DOWNLOAD_SIZE: u64 = 500 * 1024 * 1024;
+
+struct CleanupGuard {
+    path: std::path::PathBuf,
+    armed: bool,
+}
+
+impl CleanupGuard {
+    fn new(path: std::path::PathBuf) -> Self {
+        Self { path, armed: true }
+    }
+
+    fn defuse(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for CleanupGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let _remove = std::fs::remove_file(&self.path);
+        }
+    }
+}
+
+#[expect(clippy::print_stdout)]
+fn self_update(
+    version: &str,
+    url: &Url,
+    checksum: &bencher_valid::Sha256,
+    max_download_size: Option<u64>,
+) -> Result<(), SelfUpdateError> {
+    #[cfg(not(unix))]
+    {
+        return Err(SelfUpdateError::UnsupportedPlatform);
+    }
+
+    #[cfg(unix)]
+    {
+        use sha2::Digest as _;
+        use std::io::{BufWriter, Read as _, Write as _};
+        use std::os::unix::fs::PermissionsExt as _;
+        use std::os::unix::process::CommandExt as _;
+
+        println!("Updating to version {version}...");
+        println!("  Downloading: {url}");
+
+        let current_exe = std::env::current_exe().map_err(SelfUpdateError::CurrentExe)?;
+        let new_path = current_exe.with_extension("new");
+        let old_path = current_exe.with_extension("old");
+
+        let response = ureq::get(url.as_str())
+            .call()
+            .map_err(SelfUpdateError::Http)?;
+
+        let limit = max_download_size.unwrap_or(DEFAULT_MAX_DOWNLOAD_SIZE);
+        let mut reader = response.into_body().into_reader();
+        let mut file =
+            BufWriter::new(std::fs::File::create(&new_path).map_err(SelfUpdateError::FileOp)?);
+        let mut cleanup = CleanupGuard::new(new_path.clone());
+        let mut hasher = sha2::Sha256::new();
+        let mut downloaded: u64 = 0;
+        let mut buf = [0u8; 8192];
+        loop {
+            let n = reader.read(&mut buf).map_err(SelfUpdateError::Download)?;
+            if n == 0 {
+                break;
+            }
+            downloaded += n as u64;
+            if downloaded > limit {
+                drop(file);
+                return Err(SelfUpdateError::DownloadTooLarge { limit, downloaded });
+            }
+            let chunk = buf.get(..n).ok_or_else(|| {
+                SelfUpdateError::Download(std::io::Error::other(
+                    "read returned byte count exceeding buffer",
+                ))
+            })?;
+            hasher.update(chunk);
+            file.write_all(chunk).map_err(SelfUpdateError::FileOp)?;
+        }
+        file.flush().map_err(SelfUpdateError::FileOp)?;
+        drop(file);
+
+        let digest = hasher.finalize();
+        let actual_hex = format!("{digest:x}");
+        let actual: bencher_valid::Sha256 =
+            actual_hex.parse().map_err(SelfUpdateError::ChecksumParse)?;
+        if actual != *checksum {
+            return Err(SelfUpdateError::Checksum {
+                expected: checksum.clone(),
+                actual,
+            });
+        }
+        println!("  Checksum verified: {checksum}");
+
+        std::fs::set_permissions(&new_path, std::fs::Permissions::from_mode(0o755))
+            .map_err(SelfUpdateError::FileOp)?;
+
+        cleanup.defuse();
+
+        if old_path.exists() {
+            let _remove_old = std::fs::remove_file(&old_path);
+        }
+        std::fs::rename(&current_exe, &old_path).map_err(|e| {
+            let _remove_new = std::fs::remove_file(&new_path);
+            SelfUpdateError::FileOp(e)
+        })?;
+        std::fs::rename(&new_path, &current_exe).map_err(|e| {
+            let _restore_current = std::fs::rename(&old_path, &current_exe);
+            SelfUpdateError::FileOp(e)
+        })?;
+
+        println!("  Binary updated. Restarting...");
+
+        let args: Vec<String> = std::env::args().skip(1).collect();
+        let err = std::process::Command::new(&current_exe).args(&args).exec();
+        let _restore_current = std::fs::rename(&old_path, &current_exe);
+        Err(SelfUpdateError::Exec(err))
+    }
 }

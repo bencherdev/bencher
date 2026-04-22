@@ -353,7 +353,7 @@ Single persistent WebSocket connection for the entire runner lifecycle. Handles 
 
 | Event       | Description                                 | Payload                            |
 | ----------- | ------------------------------------------- | ---------------------------------- |
-| `ready`     | Runner is idle, requesting a job            | Optional `poll_timeout` (1-900 seconds) |
+| `ready`     | Runner is idle, requesting a job            | Optional `poll_timeout` (1-900s), optional `runner` object (`os`, `arch`, `version`) |
 | `running`   | Job setup complete, benchmark starting      | —                                  |
 | `heartbeat` | Periodic liveness signal (~1/sec)           | —                                  |
 | `completed` | Benchmark completed successfully            | `job` (JobUuid), `results` (per-iteration output) |
@@ -368,6 +368,7 @@ Single persistent WebSocket connection for the entire runner lifecycle. Handles 
 | `job`    | Job assigned to runner                   | `JsonClaimedJob` (spec, config, OCI token)      |
 | `no_job` | Poll timeout expired, no job available   | —                                               |
 | `cancel` | Job was canceled, stop execution         | —                                               |
+| `update` | Runner should self-update to a new version | `version`, `url` (download URL), `checksum` (SHA-256) |
 
 ### Connection Flow
 
@@ -378,11 +379,18 @@ Runner                              Server
   │◄─────────────── Connected ─────────┤
   │                                    │
   │  ┌─── IDLE / POLLING LOOP ────┐    │
-  ├──┤ { "event": "ready" } ──────────►│  Poll for eligible pending job (1s intervals)
+  ├──┤ { "event": "ready",       │    │
+  │  │   "runner": {             │    │
+  │  │     "os": "linux",       │    │
+  │  │     "arch": "x86_64",    │    │
+  │  │     "version": "..."     │    │
+  │  │   } } ────────────────────────►│  Check version, poll for job (1s intervals)
   │  │                            │    │
   │◄─┤ { "event": "job", ... } ───────┤  Claimed job with config, spec, OCI token
   │  │  OR                        │    │
   │◄─┤ { "event": "no_job" } ─────────┤  Poll timeout expired, back to Ready
+  │  │  OR                        │    │
+  │◄─┤ { "event": "update", ... } ────┤  Version mismatch, self-update (see Self-Update)
   │  └────────────────────────────┘    │
   │                                    │
   ├──── { "event": "running" } ───────►│  Mark job running, start billing clock
@@ -634,6 +642,60 @@ On each heartbeat:
 There is no automatic retry. Failed jobs stay in `Failed` status permanently. Users must explicitly re-submit a new run if they want to retry.
 
 This is intentional: for a benchmarking platform, a failed benchmark is signal (flaky test, environment issue, resource exhaustion). Automatic retry would hide this signal and complicate the state machine.
+
+## Self-Update
+
+Runners self-update between jobs using a server-directed protocol. When a runner sends `Ready` with a `runner` metadata object whose `version` differs from the server's `CARGO_PKG_VERSION`, the server responds with an `Update` message instead of polling for jobs. If `runner` is absent (opt-out via `--no-auto-update`, or unsupported architecture), the server skips auto-update and proceeds normally.
+
+### Update Flow
+
+```
+Runner                              Server
+  │                                    │
+  ├── { "event": "ready",             │
+  │     "runner": {                    │
+  │       "os": "linux",               │
+  │       "arch": "x86_64",           │
+  │       "version": "0.6.1"          │
+  │     } } ─────────────────────────►│  Compare version against server's own
+  │                                    │
+  │◄── { "event": "update",           │  Version mismatch detected
+  │     "version": "0.6.2",           │
+  │     "url": "https://...",          │
+  │     "checksum": "abc123..." } ────┤
+  │                                    │
+  │  (runner downloads, verifies,      │
+  │   swaps binary, exec()s itself)    │
+```
+
+### Runner Self-Update Procedure
+
+1. Download new binary from `url` to `{current_exe}.new`
+2. Compute SHA-256 of downloaded bytes, compare to `checksum`
+3. If mismatch: log error, discard download, continue with old binary
+4. If match: rename `current_exe` → `{current_exe}.old`, rename `.new` → `current_exe`
+5. `exec()` the new binary with the same arguments — replaces the process in-place
+6. If `exec()` fails: rename `.old` back, log error
+
+The state machine emits `Close` before `SelfUpdate`, so the WebSocket is cleanly closed before the process replaces itself.
+
+### Server-Side URL Construction
+
+The download URL follows the GitHub Releases pattern:
+```
+https://github.com/bencherdev/bencher/releases/download/v{VERSION}/runner-v{VERSION}-{ARCH_SLUG}
+```
+
+Where `ARCH_SLUG` maps `x86_64` → `linux-x86-64` and `aarch64` → `linux-arm-64`. The server fetches the SHA-256 checksum from the companion `.sha256` file at the same release URL.
+
+### Safety Properties
+
+- **Never interrupts a running benchmark**: Updates only happen in the Idle state (between jobs)
+- **Checksum verification**: SHA-256 must match before the binary swap
+- **Rollback**: Old binary preserved as `.old` for manual recovery
+- **No fleet coordination**: All runners update on their next poll cycle
+- **Same workspace version**: Runner and server share `CARGO_PKG_VERSION`, so the server always directs runners to its own version
+- **Opt-out**: `--no-auto-update` flag or unsupported architecture omits `runner` metadata, disabling auto-update
 
 ## Authentication
 

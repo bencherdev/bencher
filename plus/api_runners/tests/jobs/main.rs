@@ -460,6 +460,7 @@ mod job_spec {
         let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
         let ready = RunnerMessage::Ready {
             poll_timeout: Some(PollTimeout::try_from(5).unwrap()),
+            runner: Some(common::runner_metadata()),
         };
         send_msg(&mut ws, &ready).await;
 
@@ -2446,6 +2447,7 @@ async fn claim_job_invalid_config() {
     let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(1).unwrap()),
+        runner: Some(common::runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
 
@@ -2677,6 +2679,7 @@ async fn poll_timeout_delays_nojob() {
     let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(2).expect("Invalid poll timeout")),
+        runner: Some(common::runner_metadata()),
     };
     send_msg(&mut ws, &ready).await;
 

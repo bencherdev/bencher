@@ -4,6 +4,7 @@ use std::sync::LazyLock;
 use opentelemetry::metrics::Meter;
 use uuid::Uuid;
 
+use crate::api_gauge::ApiGauge;
 use crate::api_histogram::{ApiHistogram, Priority, priority_attribute};
 
 static METER: LazyLock<Meter> = LazyLock::new(|| opentelemetry::global::meter(ApiMeter::NAME));
@@ -32,6 +33,24 @@ impl ApiMeter {
             .with_unit(api_counter.unit())
             .build();
         let attributes = api_counter.attributes();
+        counter.add(value, &attributes);
+    }
+
+    pub fn up(api_gauge: ApiGauge) {
+        Self::adjust(api_gauge, 1);
+    }
+
+    pub fn down(api_gauge: ApiGauge) {
+        Self::adjust(api_gauge, -1);
+    }
+
+    fn adjust(api_gauge: ApiGauge, value: i64) {
+        let counter = METER
+            .i64_up_down_counter(api_gauge.name())
+            .with_description(api_gauge.description())
+            .with_unit(api_gauge.unit())
+            .build();
+        let attributes = api_gauge.attributes();
         counter.add(value, &attributes);
     }
 
@@ -120,6 +139,7 @@ pub enum ApiCounter {
     RunnerMinutesBilledFailed,
     RunnerHeartbeatTimeout,
     RunnerJobTimeout,
+    RunnerDisconnect,
 
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
@@ -174,6 +194,7 @@ impl ApiCounter {
             Self::RunnerJobClaim | Self::RunnerJobUpdate(_) => "{job}",
             Self::RunnerMinutesBilled | Self::RunnerMinutesBilledFailed => "{minute}",
             Self::RunnerHeartbeatTimeout | Self::RunnerJobTimeout => "{timeout}",
+            Self::RunnerDisconnect => "{disconnect}",
         }
     }
 
@@ -247,6 +268,7 @@ impl ApiCounter {
             Self::RunnerMinutesBilledFailed => "runner.minutes.billed.failed",
             Self::RunnerHeartbeatTimeout => "runner.heartbeat.timeout",
             Self::RunnerJobTimeout => "runner.job.timeout",
+            Self::RunnerDisconnect => "runner.disconnect",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
@@ -336,6 +358,7 @@ impl ApiCounter {
             Self::RunnerJobTimeout => {
                 "Counts the number of jobs canceled due to exceeding job timeout"
             },
+            Self::RunnerDisconnect => "Counts the number of runner disconnections",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
@@ -376,7 +399,8 @@ impl ApiCounter {
             | Self::RunnerMinutesBilled
             | Self::RunnerMinutesBilledFailed
             | Self::RunnerHeartbeatTimeout
-            | Self::RunnerJobTimeout => Vec::new(),
+            | Self::RunnerJobTimeout
+            | Self::RunnerDisconnect => Vec::new(),
             Self::Run(priority) | Self::MetricsCreate(priority) => {
                 vec![priority_attribute(priority)]
             },

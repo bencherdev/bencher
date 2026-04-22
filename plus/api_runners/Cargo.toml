@@ -22,6 +22,8 @@ plus = [
     "dep:futures",
     "dep:hex",
     "dep:rand",
+    "dep:reqwest",
+    "dep:url",
     "dep:schemars",
     "dep:serde",
     "dep:serde_json",
@@ -47,6 +49,7 @@ dropshot = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
@@ -55,6 +58,7 @@ slog = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["time"], optional = true }
 tokio-tungstenite = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
 uuid = { workspace = true, features = ["v4"], optional = true }
 
 [dev-dependencies]

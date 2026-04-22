@@ -302,6 +302,7 @@ dependencies = [
  "hex",
  "http 1.4.0",
  "rand 0.10.0",
+ "reqwest",
  "schemars",
  "sentry",
  "serde",
@@ -310,6 +311,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tokio-tungstenite",
+ "url",
  "uuid",
 ]
 
@@ -1629,6 +1631,7 @@ dependencies = [
  "email_address",
  "git-validate",
  "gix-hash",
+ "hex",
  "ordered-float",
  "pretty_assertions",
  "rand 0.10.0",
@@ -1637,6 +1640,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "sha2",
  "slug",
  "thiserror 2.0.18",
  "typeshare",
