@@ -40,7 +40,7 @@
     </div>
 
     <div class="tetris-center">
-      <canvas width="320" height="640" id="game"></canvas>
+      <canvas width="320" height="640" id="game" aria-label="Tetris game"></canvas>
       <div class="tetris-hud" id="hud">
         <div><span class="tetris-label">SCORE </span><span id="d-score">0</span></div>
         <div><span class="tetris-label">LV </span><span id="d-level">0</span></div>
@@ -139,11 +139,14 @@
     padding: 6px;
     margin-bottom: 8px;
     text-align: center;
+    overflow: hidden;
   }
 
   .tetris-panel canvas {
     display: block;
     margin: 4px auto 0;
+    max-width: 100%;
+    height: auto;
   }
 
   .tetris-panel-title {
@@ -1413,8 +1416,8 @@ bindBtn("btn-pause", "pause", false);
 function toggleMute() {
 	S.muted = !S.muted;
 	try {
-		if (S.muted) localStorage.setItem("tetris-muted", "1");
-		else localStorage.removeItem("tetris-muted");
+		if (S.muted) localStorage.setItem("bencher-tetris-muted", "1");
+		else localStorage.removeItem("bencher-tetris-muted");
 	} catch (_) {
 		// localStorage not available
 	}
@@ -1446,8 +1449,8 @@ function startGame() {
 	S.grounded = false;
 
 	try {
-		S.highScore = Number.parseInt(localStorage.getItem("tetris-hi") || "0", 10) || 0;
-		S.muted = localStorage.getItem("tetris-muted") === "1";
+		S.highScore = Number.parseInt(localStorage.getItem("bencher-tetris-hi") || "0", 10) || 0;
+		S.muted = localStorage.getItem("bencher-tetris-muted") === "1";
 	} catch (_) {
 		S.highScore = 0;
 	}
@@ -1463,7 +1466,7 @@ function gameOver() {
 	if (S.score > S.highScore) {
 		S.highScore = S.score;
 		try {
-			localStorage.setItem("tetris-hi", String(S.highScore));
+			localStorage.setItem("bencher-tetris-hi", String(S.highScore));
 		} catch (_) {
 			// localStorage not available
 		}
@@ -1489,11 +1492,10 @@ function loop(time) {
 		if (S.clearing) {
 			S.clearing.timer += dt;
 			if (S.clearing.timer >= CLEAR_DURATION) {
-				const sorted = [...S.clearing.rows].sort((a, b) => b - a);
-				for (const row of sorted) {
-					S.board.splice(row, 1);
-					S.board.unshift(Array(COLS).fill(0));
-				}
+				const clearSet = new Set(S.clearing.rows);
+				const kept = S.board.filter((_, i) => !clearSet.has(i));
+				while (kept.length < ROWS) kept.unshift(Array(COLS).fill(0));
+				S.board = kept;
 				S.clearing = null;
 				S.piece = nextPiece();
 			}
@@ -1529,8 +1531,8 @@ function loop(time) {
 
 // Load mute preference
 try {
-	S.muted = localStorage.getItem("tetris-muted") === "1";
-	S.highScore = Number.parseInt(localStorage.getItem("tetris-hi") || "0", 10) || 0;
+	S.muted = localStorage.getItem("bencher-tetris-muted") === "1";
+	S.highScore = Number.parseInt(localStorage.getItem("bencher-tetris-hi") || "0", 10) || 0;
 } catch (_) {
 	// localStorage not available
 }
