@@ -34,6 +34,7 @@
           <div>Shift Hold</div>
           <div>Z Rotate CCW</div>
           <div>Esc Pause</div>
+          <div>M Mute</div>
         </div>
       </div>
     </div>
@@ -108,6 +109,7 @@
   .tetris-layout {
     display: flex;
     justify-content: center;
+    align-items: flex-start;
     gap: 8px;
   }
 
@@ -567,7 +569,6 @@ const S = {
 	lockMoves: 0,
 	lastTime: 0,
 	grounded: false,
-	softDrop: false,
 	particles: [],
 	clearing: null,
 	muted: false,
@@ -595,7 +596,6 @@ const els = {
 	mScore: document.getElementById("m-score"),
 	mLevel: document.getElementById("m-level"),
 	mLines: document.getElementById("m-lines"),
-	muteIcon: document.getElementById("mute-icon"),
 };
 
 let rAF = null;
@@ -892,10 +892,6 @@ function renderStart(time) {
 	ctx.textBaseline = "middle";
 	ctx.fillText("TETRIS", 160, 200);
 
-	ctx.fillStyle = "#fff";
-	ctx.font = "12px monospace";
-	ctx.fillText("a][ Bencher easter egg", 160, 250);
-
 	if (Math.floor((time || 0) / 600) % 2 === 0) {
 		ctx.fillStyle = ORANGE;
 		ctx.font = "bold 14px monospace";
@@ -938,7 +934,7 @@ function renderOver() {
 	ctx.font = "bold 32px monospace";
 	ctx.textAlign = "center";
 	ctx.textBaseline = "middle";
-	ctx.fillText("GAME OVER", 160, 230);
+	ctx.fillText("🐰 GAME OVER", 160, 230);
 
 	ctx.fillStyle = "#fff";
 	ctx.font = "16px monospace";
@@ -1250,7 +1246,7 @@ const GAME_KEYS = new Set([
 window.addEventListener(
 	"keydown",
 	(e) => {
-		if (GAME_KEYS.has(e.key)) e.preventDefault();
+		if (GAME_KEYS.has(e.key) && S.phase !== "start") e.preventDefault();
 	},
 	{ capture: true },
 );
@@ -1302,6 +1298,11 @@ document.addEventListener("keydown", (e) => {
 		case "R":
 			e.preventDefault();
 			handleAction("restart");
+			break;
+		case "m":
+		case "M":
+			e.preventDefault();
+			toggleMute();
 			break;
 		default:
 			if (S.phase === "start") handleAction("start");
@@ -1409,8 +1410,7 @@ bindBtn("btn-drop", "hardDrop", false);
 bindBtn("btn-hold", "hold", false);
 bindBtn("btn-pause", "pause", false);
 
-document.getElementById("btn-mute")?.addEventListener("pointerdown", (e) => {
-	e.preventDefault();
+function toggleMute() {
 	S.muted = !S.muted;
 	try {
 		if (S.muted) localStorage.setItem("tetris-muted", "1");
@@ -1418,9 +1418,12 @@ document.getElementById("btn-mute")?.addEventListener("pointerdown", (e) => {
 	} catch (_) {
 		// localStorage not available
 	}
-	if (els.muteIcon) {
-		updateMuteIcon();
-	}
+	updateMuteIcon();
+}
+
+document.getElementById("btn-mute")?.addEventListener("pointerdown", (e) => {
+	e.preventDefault();
+	toggleMute();
 });
 
 // ==================== GAME FLOW ====================
@@ -1441,17 +1444,14 @@ function startGame() {
 	S.lockMoves = 0;
 	S.lastTime = 0;
 	S.grounded = false;
-	S.softDrop = false;
 
 	try {
-		S.highScore = Number.parseInt(localStorage.getItem("tetris-hi") || "0", 10);
+		S.highScore = Number.parseInt(localStorage.getItem("tetris-hi") || "0", 10) || 0;
 		S.muted = localStorage.getItem("tetris-muted") === "1";
 	} catch (_) {
 		S.highScore = 0;
 	}
-	if (els.muteIcon) {
-		updateMuteIcon();
-	}
+	updateMuteIcon();
 
 	fillBag();
 	S.piece = nextPiece();
@@ -1489,7 +1489,7 @@ function loop(time) {
 		if (S.clearing) {
 			S.clearing.timer += dt;
 			if (S.clearing.timer >= CLEAR_DURATION) {
-				const sorted = [...S.clearing.rows].sort((a, b) => a - b);
+				const sorted = [...S.clearing.rows].sort((a, b) => b - a);
 				for (const row of sorted) {
 					S.board.splice(row, 1);
 					S.board.unshift(Array(COLS).fill(0));
@@ -1498,7 +1498,7 @@ function loop(time) {
 				S.piece = nextPiece();
 			}
 		} else {
-			const speed = S.softDrop ? 50 : getSpeed(S.level);
+			const speed = getSpeed(S.level);
 			S.dropTime += dt;
 			if (S.dropTime >= speed) {
 				S.dropTime = 0;
@@ -1530,13 +1530,11 @@ function loop(time) {
 // Load mute preference
 try {
 	S.muted = localStorage.getItem("tetris-muted") === "1";
-	S.highScore = Number.parseInt(localStorage.getItem("tetris-hi") || "0", 10);
+	S.highScore = Number.parseInt(localStorage.getItem("tetris-hi") || "0", 10) || 0;
 } catch (_) {
 	// localStorage not available
 }
-if (els.muteIcon) {
-	updateMuteIcon();
-}
+updateMuteIcon();
 
 rAF = requestAnimationFrame(loop);
 
