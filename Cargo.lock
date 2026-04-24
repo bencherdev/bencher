@@ -158,7 +158,7 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
 name = "api_auth"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "base64",
  "bencher_api_tests",
@@ -180,7 +180,7 @@ dependencies = [
 
 [[package]]
 name = "api_checkout"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_endpoint",
  "bencher_json",
@@ -193,7 +193,7 @@ dependencies = [
 
 [[package]]
 name = "api_oci"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "api_auth",
  "bencher_api_tests",
@@ -221,7 +221,7 @@ dependencies = [
 
 [[package]]
 name = "api_organizations"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_api_tests",
  "bencher_billing",
@@ -243,7 +243,7 @@ dependencies = [
 
 [[package]]
 name = "api_projects"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_api_tests",
  "bencher_endpoint",
@@ -266,7 +266,7 @@ dependencies = [
 
 [[package]]
 name = "api_run"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_api_tests",
  "bencher_endpoint",
@@ -284,7 +284,7 @@ dependencies = [
 
 [[package]]
 name = "api_runners"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_api_tests",
  "bencher_billing",
@@ -317,7 +317,7 @@ dependencies = [
 
 [[package]]
 name = "api_server"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_api_tests",
  "bencher_config",
@@ -337,7 +337,7 @@ dependencies = [
 
 [[package]]
 name = "api_specs"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_api_tests",
  "bencher_endpoint",
@@ -354,7 +354,7 @@ dependencies = [
 
 [[package]]
 name = "api_users"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_api_tests",
  "bencher_endpoint",
@@ -1040,7 +1040,7 @@ checksum = "0e050f626429857a27ddccb31e0aca21356bfa709c04041aefddac081a8f068a"
 
 [[package]]
 name = "bencher_adapter"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_json",
  "criterion",
@@ -1057,7 +1057,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_api"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "api_auth",
  "api_checkout",
@@ -1090,7 +1090,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_api_tests"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_api",
  "bencher_config",
@@ -1116,7 +1116,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_billing"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "async-stripe",
  "async-stripe-billing",
@@ -1139,7 +1139,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_bing_index"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "reqwest",
  "thiserror 2.0.18",
@@ -1148,7 +1148,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_boundary"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_json",
  "bencher_logger",
@@ -1161,7 +1161,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_cli"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_adapter",
  "bencher_client",
@@ -1190,7 +1190,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_client"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "base64",
  "bencher_json",
@@ -1213,7 +1213,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_comment"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_json",
  "ordered-float",
@@ -1223,7 +1223,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_config"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_billing",
  "bencher_endpoint",
@@ -1248,7 +1248,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_context"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_valid",
  "gix",
@@ -1261,7 +1261,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_endpoint"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_schema",
  "dropshot",
@@ -1273,7 +1273,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_github_client"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_valid",
  "oauth2",
@@ -1285,7 +1285,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_google_client"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_valid",
  "oauth2",
@@ -1297,7 +1297,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_google_index"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "http 1.4.0",
  "reqwest",
@@ -1311,7 +1311,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_init"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_output_protocol",
  "camino",
@@ -1323,7 +1323,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_json"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_context",
  "bencher_valid",
@@ -1347,7 +1347,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_license"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -1359,7 +1359,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_logger"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "slog",
  "slog-term",
@@ -1367,7 +1367,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_noise"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_adapter",
  "bencher_json",
@@ -1379,7 +1379,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_oci"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_json",
  "bencher_valid",
@@ -1399,7 +1399,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_oci_storage"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "aws-credential-types",
  "aws-sdk-s3",
@@ -1426,7 +1426,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_otel"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_json",
  "opentelemetry",
@@ -1435,7 +1435,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_otel_provider"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_config",
  "bencher_json",
@@ -1448,7 +1448,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_output_protocol"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "camino",
  "thiserror 2.0.18",
@@ -1456,11 +1456,11 @@ dependencies = [
 
 [[package]]
 name = "bencher_parser"
-version = "0.6.2"
+version = "0.6.3"
 
 [[package]]
 name = "bencher_plot"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -1474,14 +1474,14 @@ dependencies = [
 
 [[package]]
 name = "bencher_rank"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "diesel",
 ]
 
 [[package]]
 name = "bencher_rbac"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_json",
  "literally",
@@ -1491,7 +1491,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_recaptcha"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_otel",
  "bencher_valid",
@@ -1505,7 +1505,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_rootfs"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "backhand",
  "bencher_oci",
@@ -1517,7 +1517,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_runner"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_json",
  "bencher_oci",
@@ -1543,7 +1543,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_runner_cli"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_json",
  "bencher_parser",
@@ -1557,7 +1557,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_schema"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "async-compression",
  "async-trait",
@@ -1609,7 +1609,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_token"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -1621,7 +1621,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_valid"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "base64",
  "chrono",
@@ -1652,7 +1652,7 @@ dependencies = [
 
 [[package]]
 name = "bin_version"
-version = "0.6.2"
+version = "0.6.3"
 
 [[package]]
 name = "bit-set"
@@ -3539,7 +3539,7 @@ dependencies = [
 
 [[package]]
 name = "gen_installer"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "anyhow",
  "clap",
@@ -3550,7 +3550,7 @@ dependencies = [
 
 [[package]]
 name = "gen_notes"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "anyhow",
  "camino",
@@ -3559,7 +3559,7 @@ dependencies = [
 
 [[package]]
 name = "gen_pkg"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "anyhow",
  "bencher_cli",
@@ -3570,7 +3570,7 @@ dependencies = [
 
 [[package]]
 name = "gen_types"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "anyhow",
  "bencher_api",
@@ -7376,7 +7376,7 @@ dependencies = [
 
 [[package]]
 name = "runner_ops"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "anyhow",
  "bencher_json",
@@ -8568,7 +8568,7 @@ checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
 
 [[package]]
 name = "test_api"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -8581,7 +8581,7 @@ dependencies = [
 
 [[package]]
 name = "test_netlify"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "anyhow",
  "bencher_json",
@@ -8595,7 +8595,7 @@ dependencies = [
 
 [[package]]
 name = "test_runner"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "anyhow",
  "camino",
@@ -10107,7 +10107,7 @@ checksum = "66fee0b777b0f5ac1c69bb06d361268faafa61cd4682ae064a171c16c433e9e4"
 
 [[package]]
 name = "xtask"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "anyhow",
  "bencher_bing_index",
