@@ -647,7 +647,7 @@ mod tests {
             Some(JsonRunnerMetadata {
                 os: OperatingSystem::Linux,
                 arch: Architecture::X86_64,
-                version: env!("CARGO_PKG_VERSION").to_owned(),
+                version: bencher_json::BENCHER_API_VERSION.to_owned(),
             }),
         )
     }
@@ -1244,7 +1244,7 @@ mod tests {
             Some(JsonRunnerMetadata {
                 os: OperatingSystem::Linux,
                 arch: Architecture::X86_64,
-                version: env!("CARGO_PKG_VERSION").to_owned(),
+                version: bencher_json::BENCHER_API_VERSION.to_owned(),
             }),
         );
         let effects = sm.step(Input::Connected);

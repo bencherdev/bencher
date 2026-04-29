@@ -17,7 +17,7 @@ pub use tuning::CliTuning;
 pub use up::CliUp;
 
 #[derive(Parser, Debug)]
-#[command(name = "runner")]
+#[command(name = "runner", version)]
 #[command(about = "Execute benchmarks in isolated Firecracker microVMs", long_about = None)]
 pub struct CliRunner {
     #[command(subcommand)]
