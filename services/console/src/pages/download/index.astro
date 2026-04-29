@@ -22,9 +22,10 @@ const RunnerBins = RunnerBinaries.Content;
 <LegalLayout
   title="Download"
   description="Download Bencher software"
-  heading={`Bencher v${BENCHER_VERSION} Download`}
+  heading="Download Bencher"
 >
-    <Fragment slot="heading">Bencher <code>v{BENCHER_VERSION}</code> Download</Fragment>
+    <p class="subtitle is-5">Latest Version: <code>v{BENCHER_VERSION}</code></p>
+    <p><a href="https://github.com/bencherdev/bencher/releases">View past releases</a></p>
     <h2 id="cli" class="title is-2">Bencher CLI <LinkFragment fragment="cli"/></h2>
     <h3 id="cli-bins" class="title is-3">Pre-Built Binaries <LinkFragment fragment="cli-bins"/></h3>
     <PreBuiltBins />
