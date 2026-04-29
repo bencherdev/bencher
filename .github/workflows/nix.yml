@@ -1,0 +1,42 @@
+name: Nix
+
+on:
+  workflow_call:
+    inputs:
+      nix-lint:
+        type: boolean
+        required: true
+      nix-build:
+        type: boolean
+        required: true
+
+jobs:
+  nix_lints:
+    name: Check Nix code
+    if: ${{ inputs.nix-lint }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-25.11
+      - name: Check nix formatting
+        run: nix develop .#ci --command alejandra --check .
+      - name: Check nix lints
+        run: nix develop .#ci --command statix check
+      - name: Check for dead nix code
+        run: nix develop .#ci --command deadnix
+
+  build_bencher_nix:
+    name: Build `bencher` Nix Package
+    if: ${{ inputs.nix-build }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-25.11
+      - name: Nix build
+        run: nix build .#bencher

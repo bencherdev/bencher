@@ -122,38 +122,6 @@ jobs:
       zig-version: "0.13.0"
       zig-build-version: "0.19.3"
 
-  nix_lints:
-    name: Check Nix code
-    needs: changes
-    if: ${{ github.ref != 'refs/heads/cloud' && needs.changes.outputs.nix == 'true' }}
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install Nix
-        uses: cachix/install-nix-action@v25
-        with:
-          nix_path: nixpkgs=channel:nixos-25.11
-      - name: Check nix formatting
-        run: nix develop .#ci --command alejandra --check .
-      - name: Check nix lints
-        run: nix develop .#ci --command statix check
-      - name: Check for dead nix code
-        run: nix develop .#ci --command deadnix
-
-  build_bencher_nix:
-    name: Build `bencher` Nix Package
-    needs: changes
-    if: ${{ github.ref != 'refs/heads/cloud' && (needs.changes.outputs.nix == 'true' || needs.changes.outputs.cli == 'true') }}
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install Nix
-        uses: cachix/install-nix-action@v25
-        with:
-          nix_path: nixpkgs=channel:nixos-25.11
-      - name: Nix build
-        run: nix build .#bencher
-
   test:
     name: Test
     needs: changes
@@ -188,6 +156,15 @@ jobs:
       mold-version: "2.34.1"
       litestream-version: "0.5.10"
 
+  nix:
+    name: Nix
+    needs: changes
+    if: github.ref != 'refs/heads/cloud'
+    uses: ./.github/workflows/nix.yml
+    with:
+      nix-lint: ${{ needs.changes.outputs.nix == 'true' }}
+      nix-build: ${{ needs.changes.outputs.nix == 'true' || needs.changes.outputs.cli == 'true' }}
+
   deploy:
     name: Deploy
     needs: [lint, cli, test, build]
@@ -210,7 +187,7 @@ jobs:
   release:
     name: Release
     if: ${{ !failure() && !cancelled() && github.ref != 'refs/heads/cloud' && (needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/')) }}
-    needs: [changes, lint, cli, runner, test, build, docker, build_bencher_nix]
+    needs: [changes, lint, cli, runner, test, build, docker, nix]
     uses: ./.github/workflows/release.yml
     with:
       mold-version: "2.34.1"
