@@ -84,7 +84,10 @@ impl Up {
     pub fn run(mut self) -> Result<(), UpError> {
         install_signal_handlers();
 
-        println!("Bencher Runner starting...");
+        println!(
+            "Bencher Runner v{} starting...",
+            bencher_json::BENCHER_API_VERSION
+        );
         println!("  Host: {}", self.config.host);
         println!("  Runner: {}", self.config.runner);
         println!("  Poll timeout: {}s", self.config.poll_timeout_secs);
@@ -142,7 +145,7 @@ fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpE
             .map(|(os, arch)| bencher_json::runner::JsonRunnerMetadata {
                 os,
                 arch,
-                version: env!("CARGO_PKG_VERSION").to_owned(),
+                version: bencher_json::BENCHER_API_VERSION.to_owned(),
             })
     };
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs, runner_metadata);
