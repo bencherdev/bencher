@@ -62,7 +62,6 @@
         packages = rec {
           default = bencher;
           bencher = mkPackage "bencher";
-          api = mkPackage "api";
         };
         # Enter reproducible development shell with `nix develop`
         devShells = {
@@ -81,10 +80,6 @@
           # nix run .#bencher
           bencher = flake-utils.lib.mkApp {
             drv = self.packages.${system}.bencher;
-          };
-          # nix run .#api
-          api = flake-utils.lib.mkApp {
-            drv = self.packages.${system}.api;
           };
         };
       }

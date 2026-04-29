@@ -29,6 +29,7 @@ jobs:
       cli: ${{ steps.filter.outputs.cli }}
       docker: ${{ steps.filter.outputs.docker }}
       runner: ${{ steps.filter.outputs.runner }}
+      nix: ${{ steps.filter.outputs.nix }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v4
@@ -80,6 +81,9 @@ jobs:
               - 'plus/bencher_runner/**'
               - 'services/runner/**'
               - 'tasks/test_runner/**'
+            nix:
+              - 'flake.nix'
+              - 'flake.lock'
 
   lint:
     name: Lint
@@ -152,6 +156,15 @@ jobs:
       mold-version: "2.34.1"
       litestream-version: "0.5.10"
 
+  nix:
+    name: Nix
+    needs: changes
+    if: github.ref != 'refs/heads/cloud'
+    uses: ./.github/workflows/nix.yml
+    with:
+      nix-lint: ${{ needs.changes.outputs.nix == 'true' }}
+      nix-build: ${{ needs.changes.outputs.nix == 'true' || needs.changes.outputs.cli == 'true' }}
+
   deploy:
     name: Deploy
     needs: [lint, cli, test, build]
@@ -174,7 +187,7 @@ jobs:
   release:
     name: Release
     if: ${{ !failure() && !cancelled() && github.ref != 'refs/heads/cloud' && (needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/')) }}
-    needs: [changes, lint, cli, runner, test, build, docker]
+    needs: [changes, lint, cli, runner, test, build, docker, nix]
     uses: ./.github/workflows/release.yml
     with:
       mold-version: "2.34.1"
