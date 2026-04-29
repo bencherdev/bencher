@@ -178,4 +178,4 @@ When adding a new crate, update all four `Dockerfile`s:
 
 ## CI Path Filters
 
-When adding a new crate or changing crate dependencies, update the path filters in `.github/workflows/ci.yml` and `.github/workflows/nix.yml` (`changes` jobs) for any affected filter (`rust`, `api`, `cli`, `runner`, `console`, `action`, `docker`).
+When adding a new crate or changing crate dependencies, update the path filters in `.github/workflows/ci.yml` (`changes` job) for any affected filter (`rust`, `api`, `cli`, `runner`, `console`, `action`, `docker`). Also update `.github/workflows/nix.yml` if the change affects its `nix` or `cli` filters (only the CLI is built via nix).
