@@ -25,8 +25,11 @@ use serde::Deserialize;
 
 /// Runner key prefix
 pub const RUNNER_KEY_PREFIX: &str = "bencher_runner_";
-/// Expected total length of a runner key: prefix (15 chars) + 64 hex chars = 79
-pub const RUNNER_KEY_LENGTH: usize = RUNNER_KEY_PREFIX.len() + 64;
+/// Length of the random alphanumeric part in runner keys (~178 bits of entropy).
+/// https://github.blog/engineering/platform-security/behind-githubs-new-authentication-token-formats/
+const RUNNER_KEY_RANDOM_LEN: usize = 30;
+/// Expected total length of a runner key: prefix (15 chars) + 30 alphanumeric chars = 45
+pub const RUNNER_KEY_LENGTH: usize = RUNNER_KEY_PREFIX.len() + RUNNER_KEY_RANDOM_LEN;
 
 pub type RunnersPagination = JsonPagination<RunnersSort>;
 
@@ -306,14 +309,56 @@ async fn patch_inner(
     })
 }
 
+/// Alphanumeric charset for key generation (0-9, A-Z, a-z = 62 characters)
+const KEY_CHARSET: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
 /// Generate a random runner key with prefix
 pub fn generate_runner_key() -> String {
-    let random_bytes: [u8; 32] = rand::random();
-    let encoded = hex::encode(random_bytes);
-    format!("{RUNNER_KEY_PREFIX}{encoded}")
+    use rand::RngExt as _;
+    let mut rng = rand::rng();
+    let random_part: String = std::iter::repeat_with(|| {
+        let idx = rng.random_range(0..KEY_CHARSET.len());
+        char::from(KEY_CHARSET.get(idx).copied().unwrap_or(b'0'))
+    })
+    .take(RUNNER_KEY_RANDOM_LEN)
+    .collect();
+    format!("{RUNNER_KEY_PREFIX}{random_part}")
 }
 
 /// Hash a runner key using SHA-256
 pub fn hash_key(key: &str) -> KeyHash {
     KeyHash::encode(key)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generated_key_has_prefix() {
+        let key = generate_runner_key();
+        assert!(key.starts_with(RUNNER_KEY_PREFIX));
+    }
+
+    #[test]
+    fn generated_key_has_correct_length() {
+        let key = generate_runner_key();
+        assert_eq!(key.len(), RUNNER_KEY_LENGTH);
+    }
+
+    #[test]
+    fn generated_key_random_part_is_alphanumeric() {
+        let key = generate_runner_key();
+        let random_part = key
+            .strip_prefix(RUNNER_KEY_PREFIX)
+            .expect("key should have prefix");
+        assert!(random_part.chars().all(|c| c.is_ascii_alphanumeric()));
+    }
+
+    #[test]
+    fn generated_keys_are_unique() {
+        let k1 = generate_runner_key();
+        let k2 = generate_runner_key();
+        assert_ne!(k1, k2);
+    }
 }

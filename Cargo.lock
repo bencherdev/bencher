@@ -299,7 +299,6 @@ dependencies = [
  "dropshot",
  "futures",
  "futures-concurrency",
- "hex",
  "http 1.4.0",
  "rand 0.10.1",
  "reqwest",

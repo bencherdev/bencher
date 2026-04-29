@@ -1,6 +1,6 @@
 ## Pending `v0.6.4`
 - Allow a minimum sample size of `1` for the Percentage (`percentage`) Threshold Test (Thank you [@teofr](https://github.com/teofr))
-
+- **BREAKING CHANGE** Switch runner key format from hex to alphanumeric encoding, reducing key length from 79 to 45 characters; existing runner keys must be rotated
 ## `v0.6.3`
 - Fix sample standard deviation for Z-score, t-test, and Log Normal Thresholds to use Bessel's correction (divide by `n − 1`) (Thank you [@ggirol-rc](https://github.com/ggirol-rc))
 - Fix t-test Threshold to use the prediction interval (scale the standard deviation by `√(1 + 1/n)`) so the boundary tests whether a new Metric is consistent with the historical distribution rather than whether it contains the historical mean (Thank you [@ggirol-rc](https://github.com/ggirol-rc))
