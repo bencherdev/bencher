@@ -21,7 +21,6 @@ mod runners;
 mod specs;
 
 pub use bencher_json::runner::{RunnerMessage, ServerMessage};
-pub use runners::RUNNER_KEY_LENGTH;
 
 pub struct Api;
 

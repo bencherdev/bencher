@@ -57,8 +57,8 @@ async fn key_rotate_as_admin() {
     let original_str: &str = original_key.key.as_ref();
     let new_str: &str = new_key.key.as_ref();
     assert_ne!(original_str, new_str);
-    // New key should start with prefix
-    assert!(new_str.starts_with("bencher_runner_"));
+    // New key should be a valid RunnerKey
+    assert!(new_str.parse::<bencher_json::RunnerKey>().is_ok());
 }
 
 // POST /v0/runners/{runner}/key - non-admin cannot rotate key
@@ -227,13 +227,9 @@ async fn concurrent_key_rotation() {
     // The two keys should differ from each other
     assert_ne!(k1, k2, "Concurrent rotations should produce different keys");
 
-    // Verify only one of the two keys works for auth (the last writer wins)
-    // We can't predict which one, but exactly one should authenticate.
-    // We just verify both have the correct prefix and length.
-    assert!(k1.starts_with("bencher_runner_"));
-    assert!(k2.starts_with("bencher_runner_"));
-    assert_eq!(k1.len(), api_runners::RUNNER_KEY_LENGTH);
-    assert_eq!(k2.len(), api_runners::RUNNER_KEY_LENGTH);
+    // Verify both keys are valid RunnerKeys.
+    assert!(k1.parse::<bencher_json::RunnerKey>().is_ok());
+    assert!(k2.parse::<bencher_json::RunnerKey>().is_ok());
 }
 
 // After key rotation, the old key should be rejected.

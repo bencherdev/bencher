@@ -1,5 +1,5 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
-use bencher_json::{DateTime, JsonRunnerKey, RunnerResourceId};
+use bencher_json::{DateTime, JsonRunnerKey, RunnerKey, RunnerResourceId};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -15,7 +15,7 @@ use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::runners::{generate_runner_key, hash_key};
+use crate::runners::hash_key;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct RunnerKeyParams {
@@ -65,8 +65,7 @@ async fn post_inner(
         return Err(conflict_error("Cannot rotate key for an archived runner"));
     }
 
-    // Generate new key
-    let key = generate_runner_key();
+    let key = RunnerKey::generate();
     let key_hash = hash_key(&key);
 
     let update_runner = UpdateRunner {
@@ -80,16 +79,11 @@ async fn post_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Runner, query_runner))?;
 
-    // parse() will succeed since key is non-empty
-    let secret = key
-        .parse()
-        .map_err(|_err| HttpError::for_internal_error("Failed to create runner key".to_owned()))?;
-
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerKeyRotate);
 
     Ok(JsonRunnerKey {
         uuid: query_runner.uuid,
-        key: secret,
+        key,
     })
 }

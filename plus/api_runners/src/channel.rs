@@ -39,7 +39,7 @@ use tokio_tungstenite::tungstenite::{
     protocol::{CloseFrame, Role, WebSocketConfig, frame::coding::CloseCode},
 };
 
-use crate::runner_key::RunnerKey;
+use crate::runner_key::RunnerAuth;
 
 // --- WebSocket message handlers ---
 
@@ -850,7 +850,7 @@ const OCI_RUNNER_TOKEN_TTL: u32 = 600;
 
 async fn try_claim_job(
     context: &ApiContext,
-    runner_key: &RunnerKey,
+    runner_key: &RunnerAuth,
 ) -> Result<Option<(QueryJob, JsonClaimedJob)>, HttpError> {
     use schema::job::dsl::{created, id, organization_id, priority, source_ip, status};
 
@@ -950,7 +950,7 @@ async fn try_claim_job(
 fn build_claimed_job(
     context: &ApiContext,
     query_job: QueryJob,
-    runner_key: &RunnerKey,
+    runner_key: &RunnerAuth,
     json_spec: JsonSpec,
 ) -> Result<JsonClaimedJob, HttpError> {
     #[cfg(feature = "otel")]
@@ -1029,7 +1029,7 @@ pub async fn runner_channel(
     let path_params = path_params.into_inner();
 
     // Validate runner key from Authorization header
-    let runner_key = RunnerKey::from_request(&rqctx, &path_params.runner).await?;
+    let runner_key = RunnerAuth::from_request(&rqctx, &path_params.runner).await?;
 
     // Per-runner rate limiting
     #[cfg(feature = "plus")]
@@ -1458,7 +1458,7 @@ async fn lookup_runner_job(
 async fn poll_for_job<S, R>(
     log: &slog::Logger,
     context: &ApiContext,
-    runner_key: &RunnerKey,
+    runner_key: &RunnerAuth,
     deadline: tokio::time::Instant,
     tx: &mut S,
     rx: &mut R,

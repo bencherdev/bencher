@@ -300,7 +300,6 @@ dependencies = [
  "futures",
  "futures-concurrency",
  "http 1.4.0",
- "rand 0.10.1",
  "reqwest",
  "schemars",
  "sentry",

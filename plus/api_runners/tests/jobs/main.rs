@@ -83,7 +83,7 @@ async fn claim_job_wrong_length_token() {
 
     let runner = create_runner(&server, &admin.token, "Wrong Length Runner").await;
 
-    // Token has the correct prefix but is too short (15 + 32 hex = 47 chars, not 45)
+    // Token has the correct prefix but wrong length (47 chars)
     let result = try_connect_channel_ws(
         &server,
         runner.uuid,
@@ -95,7 +95,7 @@ async fn claim_job_wrong_length_token() {
         Ok(mut ws) => assert_ws_closed(&mut ws).await,
     }
 
-    // Token has the correct prefix but is too long (15 + 66 hex = 81 chars, not 45)
+    // Token has the correct prefix but wrong length (81 chars)
     let result = try_connect_channel_ws(
         &server,
         runner.uuid,
