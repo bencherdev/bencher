@@ -120,9 +120,9 @@ impl Up {
 
         let client = RunnerApiClient::new(
             self.config.host.clone(),
-            self.config.key.as_ref(),
+            self.config.key.clone(),
             self.config.runner.clone(),
-        )?;
+        );
 
         let channel_url = client.channel_url()?;
 

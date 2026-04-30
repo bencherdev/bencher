@@ -42,8 +42,6 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Failed to validate OCI image reference: {0}")]
     ImageReference(String),
-    #[error("Failed to validate runner key: {0}")]
-    RunnerKey(String),
     #[error("Failed to validate secret: {0}")]
     Secret(String),
     #[error("Invalid model boundary: {0}")]
@@ -103,6 +101,9 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Failed to validate sandbox: {0}")]
     Sandbox(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate runner key: {0}")]
+    RunnerKey(String),
     #[cfg(feature = "plus")]
     #[error("Failed to validate runner key hash: {0}")]
     RunnerKeyHash(String),

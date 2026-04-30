@@ -1,4 +1,5 @@
 use derive_more::Display;
+use sha2::Digest as _;
 use std::str::FromStr;
 
 use crate::ValidError;
@@ -18,7 +19,6 @@ crate::typed_string!(RunnerKeyHash);
 
 impl From<&crate::RunnerKey> for RunnerKeyHash {
     fn from(key: &crate::RunnerKey) -> Self {
-        use sha2::Digest as _;
         let digest = sha2::Sha256::digest(key.as_ref().as_bytes());
         Self(hex::encode(digest))
     }

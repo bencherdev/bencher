@@ -19,7 +19,6 @@ mod non_empty;
 mod plus;
 mod resource_id;
 mod resource_name;
-mod runner_key;
 mod search;
 mod secret;
 mod slug;
@@ -55,11 +54,10 @@ pub use plus::{
     Architecture, CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth,
     ExpirationYear, GracePeriod, HeartbeatTimeout, ImageReference, LastFour, LicensedPlanId,
     Memory, MeteredPlanId, OperatingSystem, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction,
-    RecaptchaScore, RunnerKeyHash, Sandbox, Sha256, Timeout,
+    RecaptchaScore, RunnerKey, RunnerKeyHash, Sandbox, Sha256, Timeout,
 };
 pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;
-pub use runner_key::RunnerKey;
 pub use search::Search;
 pub use secret::Secret;
 pub use units::{BYTES, DECIBELS, NANOSECONDS, PERCENTAGE, SECONDS, Units};

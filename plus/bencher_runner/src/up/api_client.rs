@@ -11,9 +11,8 @@ pub struct RunnerApiClient {
 }
 
 impl RunnerApiClient {
-    pub fn new(host: Url, key: &str, runner: RunnerResourceId) -> Result<Self, ApiClientError> {
-        let key: RunnerKey = key.parse().map_err(|_err| ApiClientError::InvalidKey)?;
-        Ok(Self { host, key, runner })
+    pub fn new(host: Url, key: RunnerKey, runner: RunnerResourceId) -> Self {
+        Self { host, key, runner }
     }
 
     /// Build the WebSocket URL for the persistent runner channel.
@@ -50,40 +49,17 @@ mod tests {
         Url::parse("https://api.bencher.dev/").unwrap()
     }
 
-    fn valid_key() -> &'static str {
+    fn valid_key() -> RunnerKey {
         "bencher_runner_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh"
+            .parse()
+            .unwrap()
     }
 
     // --- RunnerApiClient::new ---
 
     #[test]
-    fn new_accepts_valid_key() {
-        let client = RunnerApiClient::new(test_host(), valid_key(), "my-runner".parse().unwrap());
-        assert!(client.is_ok());
-    }
-
-    #[test]
-    fn new_rejects_empty_key() {
-        let result = RunnerApiClient::new(test_host(), "", "r".parse().unwrap());
-        assert!(matches!(result, Err(ApiClientError::InvalidKey)));
-    }
-
-    #[test]
-    fn new_rejects_wrong_prefix() {
-        let result = RunnerApiClient::new(test_host(), "bearer_abc123", "r".parse().unwrap());
-        assert!(matches!(result, Err(ApiClientError::InvalidKey)));
-    }
-
-    #[test]
-    fn new_rejects_partial_prefix() {
-        let result = RunnerApiClient::new(test_host(), "bencher_runne", "r".parse().unwrap());
-        assert!(matches!(result, Err(ApiClientError::InvalidKey)));
-    }
-
-    #[test]
     fn new_stores_key() {
-        let client =
-            RunnerApiClient::new(test_host(), valid_key(), "my-runner".parse().unwrap()).unwrap();
+        let client = RunnerApiClient::new(test_host(), valid_key(), "my-runner".parse().unwrap());
         assert_eq!(
             client.key(),
             "bencher_runner_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh"
@@ -94,8 +70,7 @@ mod tests {
 
     #[test]
     fn channel_url_http_becomes_ws() {
-        let client =
-            RunnerApiClient::new(test_host(), valid_key(), "my-runner".parse().unwrap()).unwrap();
+        let client = RunnerApiClient::new(test_host(), valid_key(), "my-runner".parse().unwrap());
         let ws_url = client.channel_url().unwrap();
         assert_eq!(ws_url.scheme(), "ws");
         assert_eq!(
@@ -107,8 +82,7 @@ mod tests {
     #[test]
     fn channel_url_https_becomes_wss() {
         let client =
-            RunnerApiClient::new(test_https_host(), valid_key(), "runner-1".parse().unwrap())
-                .unwrap();
+            RunnerApiClient::new(test_https_host(), valid_key(), "runner-1".parse().unwrap());
         let ws_url = client.channel_url().unwrap();
         assert_eq!(ws_url.scheme(), "wss");
         assert_eq!(
@@ -119,8 +93,7 @@ mod tests {
 
     #[test]
     fn channel_url_includes_runner() {
-        let client =
-            RunnerApiClient::new(test_host(), valid_key(), "slug-test".parse().unwrap()).unwrap();
+        let client = RunnerApiClient::new(test_host(), valid_key(), "slug-test".parse().unwrap());
         let ws_url = client.channel_url().unwrap();
         let path = ws_url.path();
         assert!(

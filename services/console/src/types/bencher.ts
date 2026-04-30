@@ -410,6 +410,8 @@ export type ProjectResourceId = Uuid | Slug;
 
 export type RunContext = Record<string, string>;
 
+export type RunnerKey = string;
+
 /** A runner UUID or slug. */
 export type RunnerResourceId = Uuid | Slug;
 
@@ -965,7 +967,7 @@ export interface JsonReport {
 export interface JsonRunnerKey {
 	uuid: Uuid;
 	/** The runner key. Only shown once - store it securely! */
-	key: Secret;
+	key: RunnerKey;
 }
 
 export interface JsonSignup {

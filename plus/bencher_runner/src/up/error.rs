@@ -20,9 +20,6 @@ pub enum ApiClientError {
     #[error("Failed to parse URL: {0}")]
     Url(#[from] url::ParseError),
 
-    #[error("Invalid runner key format")]
-    InvalidKey,
-
     #[error("Unauthorized: invalid or expired key")]
     Unauthorized,
 }

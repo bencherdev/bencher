@@ -14765,7 +14765,7 @@
             "description": "The runner key. Only shown once - store it securely!",
             "allOf": [
               {
-                "$ref": "#/components/schemas/Secret"
+                "$ref": "#/components/schemas/RunnerKey"
               }
             ]
           },
@@ -16871,6 +16871,9 @@
         "additionalProperties": {
           "type": "string"
         }
+      },
+      "RunnerKey": {
+        "type": "string"
       },
       "RunnerSlug": {
         "$ref": "#/components/schemas/Slug"

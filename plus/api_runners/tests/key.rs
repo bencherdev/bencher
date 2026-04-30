@@ -57,8 +57,6 @@ async fn key_rotate_as_admin() {
     let original_str: &str = original_key.key.as_ref();
     let new_str: &str = new_key.key.as_ref();
     assert_ne!(original_str, new_str);
-    // New key should be a valid RunnerKey
-    assert!(new_str.parse::<bencher_json::RunnerKey>().is_ok());
 }
 
 // POST /v0/runners/{runner}/key - non-admin cannot rotate key
@@ -226,10 +224,6 @@ async fn concurrent_key_rotation() {
 
     // The two keys should differ from each other
     assert_ne!(k1, k2, "Concurrent rotations should produce different keys");
-
-    // Verify both keys are valid RunnerKeys.
-    assert!(k1.parse::<bencher_json::RunnerKey>().is_ok());
-    assert!(k2.parse::<bencher_json::RunnerKey>().is_ok());
 }
 
 // After key rotation, the old key should be rejected.

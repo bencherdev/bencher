@@ -12,18 +12,11 @@ pub const RUNNER_KEY_PREFIX: &str = "bencher_runner_";
 const RUNNER_KEY_RANDOM_LEN: usize = 30;
 const RUNNER_KEY_LENGTH: usize = RUNNER_KEY_PREFIX.len() + RUNNER_KEY_RANDOM_LEN;
 
-const SANITIZED_RUNNER_KEY: &str = concat!("bencher_runner_", "************");
+const SANITIZED_RUNNER_KEY: &str = "bencher_runner_************";
 
 /// Alphanumeric charset for key generation (0-9, A-Z, a-z = 62 characters)
 #[cfg(feature = "server")]
 const KEY_CHARSET: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-
-pub fn is_valid_runner_key(key: &str) -> bool {
-    key.len() == RUNNER_KEY_LENGTH
-        && key
-            .strip_prefix(RUNNER_KEY_PREFIX)
-            .is_some_and(|random| random.bytes().all(|b| b.is_ascii_alphanumeric()))
-}
 
 #[typeshare::typeshare]
 #[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -33,13 +26,13 @@ pub struct RunnerKey(String);
 
 impl RunnerKey {
     #[cfg(feature = "server")]
+    #[expect(clippy::indexing_slicing)]
     pub fn generate() -> Self {
         use rand::RngExt as _;
         let mut rng = rand::rng();
         let random_part: String = std::iter::repeat_with(|| {
             let idx = rng.random_range(0..KEY_CHARSET.len());
-            #[expect(clippy::expect_used)]
-            char::from(*KEY_CHARSET.get(idx).expect("index within charset"))
+            KEY_CHARSET[idx] as char
         })
         .take(RUNNER_KEY_RANDOM_LEN)
         .collect();
@@ -99,6 +92,13 @@ impl From<RunnerKey> for String {
     fn from(key: RunnerKey) -> Self {
         key.0
     }
+}
+
+fn is_valid_runner_key(key: &str) -> bool {
+    key.len() == RUNNER_KEY_LENGTH
+        && key
+            .strip_prefix(RUNNER_KEY_PREFIX)
+            .is_some_and(|random| random.bytes().all(|b| b.is_ascii_alphanumeric()))
 }
 
 #[cfg(test)]

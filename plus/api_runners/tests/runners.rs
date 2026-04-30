@@ -36,9 +36,6 @@ async fn runners_create_as_admin() {
     assert_eq!(resp.status(), StatusCode::CREATED);
     let runner_key: JsonRunnerKey = resp.json().await.expect("Failed to parse response");
     assert!(!runner_key.uuid.to_string().is_empty());
-    // Key should be a valid RunnerKey (already typed, so just verify non-empty)
-    let key_str: &str = runner_key.key.as_ref();
-    assert!(!key_str.is_empty());
 }
 
 // POST /v0/runners - non-admin cannot create runner
