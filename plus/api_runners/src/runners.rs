@@ -3,14 +3,15 @@ use bencher_endpoint::{
 };
 use bencher_json::{
     JsonDirection, JsonNewRunner, JsonPagination, JsonRunner, JsonRunnerKey, JsonUpdateRunner,
-    ResourceName, RunnerKey, RunnerResourceId, RunnerSlug, Search, Slug, runner::JsonRunners,
+    ResourceName, RunnerKey, RunnerKeyHash, RunnerResourceId, RunnerSlug, Search, Slug,
+    runner::JsonRunners,
 };
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
-        runner::{InsertRunner, KeyHash, QueryRunner, UpdateRunner},
+        runner::{InsertRunner, QueryRunner, UpdateRunner},
         user::{admin::AdminUser, auth::BearerToken},
     },
     schema, write_conn,
@@ -183,7 +184,7 @@ async fn post_inner(
     });
 
     let key = RunnerKey::generate();
-    let key_hash = hash_key(&key);
+    let key_hash = RunnerKeyHash::from(&key);
 
     let now = context.clock.now();
     let insert_runner = InsertRunner::new(json_runner.name, slug, key_hash, now);
@@ -293,9 +294,4 @@ async fn patch_inner(
         let runner = QueryRunner::get(conn, query_runner.id)?;
         runner.into_json(conn)
     })
-}
-
-/// Hash a runner key using SHA-256
-pub fn hash_key(key: &RunnerKey) -> KeyHash {
-    KeyHash::encode(key.as_ref())
 }

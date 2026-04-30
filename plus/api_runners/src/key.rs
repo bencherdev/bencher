@@ -1,5 +1,5 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
-use bencher_json::{DateTime, JsonRunnerKey, RunnerKey, RunnerResourceId};
+use bencher_json::{DateTime, JsonRunnerKey, RunnerKey, RunnerKeyHash, RunnerResourceId};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -14,8 +14,6 @@ use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::runners::hash_key;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct RunnerKeyParams {
@@ -66,7 +64,7 @@ async fn post_inner(
     }
 
     let key = RunnerKey::generate();
-    let key_hash = hash_key(&key);
+    let key_hash = RunnerKeyHash::from(&key);
 
     let update_runner = UpdateRunner {
         key_hash: Some(key_hash),

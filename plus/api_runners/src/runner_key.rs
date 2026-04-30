@@ -1,4 +1,4 @@
-use bencher_json::{RunnerKey, RunnerResourceId};
+use bencher_json::{RunnerKey, RunnerKeyHash, RunnerResourceId};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -8,8 +8,6 @@ use bencher_schema::{
 };
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, RequestContext};
-
-use crate::runners::hash_key;
 
 /// Authenticated runner identity, extracted from a valid runner key
 #[derive(Debug)]
@@ -45,7 +43,7 @@ impl RunnerAuth {
             .parse()
             .map_err(|_err| unauthorized_error("Invalid runner key format"))?;
 
-        let key_hash = hash_key(&runner_key);
+        let key_hash = RunnerKeyHash::from(&runner_key);
 
         // Look up runner by key hash AND path parameter in a single query
         let mut query = schema::runner::table
