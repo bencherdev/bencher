@@ -12,7 +12,7 @@ pub const RUNNER_KEY_PREFIX: &str = "bencher_runner_";
 const RUNNER_KEY_RANDOM_LEN: usize = 30;
 const RUNNER_KEY_LENGTH: usize = RUNNER_KEY_PREFIX.len() + RUNNER_KEY_RANDOM_LEN;
 
-const SANITIZED_RUNNER_KEY: &str = "bencher_runner_************";
+const SANITIZED_RUNNER_KEY: &str = "bencher_runner_******************************";
 
 /// Alphanumeric charset for key generation (0-9, A-Z, a-z = 62 characters)
 #[cfg(feature = "server")]
