@@ -126,27 +126,27 @@ pub struct CliReportThresholds {
     pub threshold_test: Vec<CliModelTest>,
 
     /// Minimum historical sample size
-    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    /// To ignore this option when specifying multiple Thresholds, use an underscore (`_`).
     #[clap(long, requires = "threshold_test")]
     pub threshold_min_sample_size: Vec<ElidedOption<SampleSize>>,
 
     /// Maximum historical sample size
-    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    /// To ignore this option when specifying multiple Thresholds, use an underscore (`_`).
     #[clap(long, requires = "threshold_test")]
     pub threshold_max_sample_size: Vec<ElidedOption<SampleSize>>,
 
     /// Window size (seconds)
-    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    /// To ignore this option when specifying multiple Thresholds, use an underscore (`_`).
     #[clap(long, requires = "threshold_test")]
     pub threshold_window: Vec<ElidedOption<Window>>,
 
     /// Lower boundary
-    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    /// To ignore this option when specifying multiple Thresholds, use an underscore (`_`).
     #[clap(long, requires = "threshold_test")]
     pub threshold_lower_boundary: Vec<ElidedOption<Boundary>>,
 
     /// Upper boundary
-    /// To ignore a this option when specifying multiple Thresholds, use an underscore (`_`).
+    /// To ignore this option when specifying multiple Thresholds, use an underscore (`_`).
     #[clap(long, requires = "threshold_test")]
     pub threshold_upper_boundary: Vec<ElidedOption<Boundary>>,
 
