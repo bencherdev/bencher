@@ -4,10 +4,11 @@
 
 オプションとして、テストを実行するために必要な過去の[メトリクス][metric]の最小数を指定します。
 この最小数に達していない場合、テストは実行されません。
-指定したサンプルサイズは`1`以上でなければなりません。
+指定したサンプルサイズは[パーセンテージ（`percentage`）テスト][percentage]では`1`以上、
+分散ベースのテスト（`z_score`、`t_test`、`log_normal`、`iqr`、`delta_iqr`）では`2`以上でなければなりません。
+このオプションは[Static（`static`）テスト][static]では使用できません。
 [the `--threshold-max-sample-size` option][threshold max sample size option]が設定されている場合、
 指定したサンプルサイズは`--threshold-max-sample-size`以下でなければなりません。
-このオプションは[Static（`static`）テスト][static]では使用できません。
 
 例えば、最小サンプルサイズを`10`でしきい値を使用するには、
 `--threshold-min-sample-size 10`と記述できます。
@@ -18,3 +19,4 @@
 
 [threshold max sample size option]: #--threshold-max-sample-size-sample-size
 [static]: #static
+[percentage]: #percentage

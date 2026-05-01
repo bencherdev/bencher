@@ -957,7 +957,7 @@ mod tests {
         );
     }
 
-    // Edge case: at the minimum allowed sample size (`SampleSize::MIN = 2`), the t-test
+    // Edge case: at the minimum allowed sample size (`SampleSize::TWO = 2`), the t-test
     // uses `freedom = 1` (a Cauchy distribution) and `sqrt(1 + 1/2) = sqrt(1.5)` scaling.
     // The interval must still be finite, and it must be strictly wider than the
     // z-score interval, since both the t-quantile with 1 dof and the PI scaling factor
