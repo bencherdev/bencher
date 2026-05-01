@@ -431,8 +431,6 @@ async fn thresholds_get_with_wrong_threshold_model() {
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
-// Helper that creates a project with a branch/testbed/measure for sample-size tests.
-// Returns the project slug.
 async fn create_project_with_branch_testbed_measure(
     server: &TestServer,
     user: &TestUser,
@@ -478,7 +476,6 @@ async fn create_project_with_branch_testbed_measure(
     project_slug
 }
 
-// Issue #818 - percentage threshold with max_sample_size=1 should be accepted
 #[tokio::test]
 async fn create_threshold_percentage_max_sample_size_one_succeeds() {
     let server = TestServer::new().await;
@@ -516,7 +513,6 @@ async fn create_threshold_percentage_max_sample_size_one_succeeds() {
     let _threshold: JsonThreshold = resp.json().await.expect("Failed to parse threshold");
 }
 
-// Issue #818 - t_test threshold with max_sample_size=1 should be rejected
 #[tokio::test]
 async fn create_threshold_t_test_max_sample_size_one_rejected() {
     let server = TestServer::new().await;
@@ -555,7 +551,6 @@ async fn create_threshold_t_test_max_sample_size_one_rejected() {
     );
 }
 
-// Issue #818 - iqr threshold with max_sample_size=1 should be rejected
 #[tokio::test]
 async fn create_threshold_iqr_max_sample_size_one_rejected() {
     let server = TestServer::new().await;

@@ -124,7 +124,7 @@ fn validate_test_sample_size(
     min_sample_size: Option<SampleSize>,
     max_sample_size: Option<SampleSize>,
 ) -> Result<(), ValidError> {
-    let test_min: u32 = match test {
+    let test_min: SampleSize = match test {
         ModelTest::Static => {
             if let Some(min) = min_sample_size {
                 return Err(ValidError::StaticMinSampleSize(min));
@@ -134,15 +134,15 @@ fn validate_test_sample_size(
             }
             return Ok(());
         },
-        ModelTest::Percentage => SampleSize::MIN.into(),
+        ModelTest::Percentage => SampleSize::MIN,
         ModelTest::ZScore
         | ModelTest::TTest
         | ModelTest::LogNormal
         | ModelTest::Iqr
-        | ModelTest::DeltaIqr => SampleSize::TWO.into(),
+        | ModelTest::DeltaIqr => SampleSize::TWO,
     };
     for sample_size in [min_sample_size, max_sample_size].into_iter().flatten() {
-        if u32::from(sample_size) < test_min {
+        if sample_size < test_min {
             return Err(ValidError::TestSampleSize {
                 test,
                 sample_size,
@@ -268,7 +268,7 @@ mod tests {
                 ValidError::TestSampleSize {
                     test: ModelTest::TTest,
                     sample_size,
-                    min: 2,
+                    min: SampleSize::TWO,
                 } if sample_size == SampleSize::MIN
             ),
             "unexpected error: {err:?}",
@@ -284,7 +284,7 @@ mod tests {
                 ValidError::TestSampleSize {
                     test: ModelTest::TTest,
                     sample_size,
-                    min: 2,
+                    min: SampleSize::TWO,
                 } if sample_size == SampleSize::MIN
             ),
             "unexpected error: {err:?}",
@@ -306,7 +306,7 @@ mod tests {
                 ValidError::TestSampleSize {
                     test: ModelTest::Iqr,
                     sample_size,
-                    min: 2,
+                    min: SampleSize::TWO,
                 } if sample_size == SampleSize::MIN
             ),
             "unexpected error: {err:?}",
@@ -323,7 +323,7 @@ mod tests {
                 ValidError::TestSampleSize {
                     test: ModelTest::DeltaIqr,
                     sample_size,
-                    min: 2,
+                    min: SampleSize::TWO,
                 } if sample_size == SampleSize::MIN
             ),
             "unexpected error: {err:?}",
@@ -339,7 +339,7 @@ mod tests {
                     err,
                     ValidError::TestSampleSize {
                         sample_size,
-                        min: 2,
+                        min: SampleSize::TWO,
                         ..
                     } if sample_size == SampleSize::MIN
                 ),

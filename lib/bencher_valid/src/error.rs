@@ -157,7 +157,7 @@ pub enum ValidError {
     TestSampleSize {
         test: ModelTest,
         sample_size: SampleSize,
-        min: u32,
+        min: SampleSize,
     },
     #[error("Invalid model, lower boundary ({lower}) is greater than upper boundary ({upper})")]
     Boundaries { lower: Boundary, upper: Boundary },
