@@ -2,7 +2,7 @@
 
 <br />
 
-オプションでテストを実行するために使用される[メトリック][metric]の最大数を指定します。この最大値を超えると、最も古いメトリックが無視されます。指定されたサンプルサイズは`2`以上でなければなりません。[`--threshold-min-sample-size`オプション][threshold min sample size option]も設定されている場合、指定されたサンプルサイズは`--threshold-min-sample-size`以上である必要があります。このオプションは[静的（`static`）テスト][static]と一緒に使用することはできません。
+オプションでテストを実行するために使用される過去の[メトリック][metric]の最大数を指定します。この最大値を超えると、最も古いメトリックが無視されます。指定されたサンプルサイズは[パーセンテージ（`percentage`）テスト][percentage]では`1`以上、分散ベースのテスト（`z_score`、`t_test`、`log_normal`、`iqr`、`delta_iqr`）では`2`以上でなければなりません。このオプションは[静的（`static`）テスト][static]と一緒に使用することはできません。[`--threshold-min-sample-size`オプション][threshold min sample size option]も設定されている場合、指定されたサンプルサイズは`--threshold-min-sample-size`以上である必要があります。
 
 例えば、最大サンプルサイズを`100`とするしきい値を使用するには、`--threshold-max-sample-size 100`と記述します。`100`を超えるメトリックがあった場合、最新の`100`メトリックのみが含まれます。逆に、`100`以下のメトリックがあった場合、すべてのメトリックが含まれます。
 
@@ -10,3 +10,4 @@
 
 [threshold min sample size option]: #--threshold-min-sample-size-sample-size
 [static]: #static
+[percentage]: #percentage

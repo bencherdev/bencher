@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 const STATIC_INT: i32 = 20;
 const PERCENTAGE_INT: i32 = 30;
-const Z_SCORE_INT: i32 = 0;
-const T_TEST_INT: i32 = 1;
+const Z_SCORE_INT: i32 = 1;
+const T_TEST_INT: i32 = 0;
 const LOG_NORMAL_INT: i32 = 10;
 const IQR_INT: i32 = 40;
 const DELTA_IQR_INT: i32 = 41;
@@ -55,8 +55,8 @@ mod db {
             match self {
                 Self::Static => STATIC_INT.to_sql(out),
                 Self::Percentage => PERCENTAGE_INT.to_sql(out),
-                Self::ZScore => T_TEST_INT.to_sql(out),
-                Self::TTest => Z_SCORE_INT.to_sql(out),
+                Self::ZScore => Z_SCORE_INT.to_sql(out),
+                Self::TTest => T_TEST_INT.to_sql(out),
                 Self::LogNormal => LOG_NORMAL_INT.to_sql(out),
                 Self::Iqr => IQR_INT.to_sql(out),
                 Self::DeltaIqr => DELTA_IQR_INT.to_sql(out),
@@ -73,8 +73,8 @@ mod db {
             match i32::from_sql(bytes)? {
                 STATIC_INT => Ok(Self::Static),
                 PERCENTAGE_INT => Ok(Self::Percentage),
-                T_TEST_INT => Ok(Self::ZScore),
-                Z_SCORE_INT => Ok(Self::TTest),
+                Z_SCORE_INT => Ok(Self::ZScore),
+                T_TEST_INT => Ok(Self::TTest),
                 LOG_NORMAL_INT => Ok(Self::LogNormal),
                 IQR_INT => Ok(Self::Iqr),
                 DELTA_IQR_INT => Ok(Self::DeltaIqr),

@@ -13,7 +13,7 @@ use serde::{
 use crate::ValidError;
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::BigInt))]
@@ -48,7 +48,8 @@ impl From<SampleSize> for usize {
 }
 
 impl SampleSize {
-    pub const MIN: Self = Self(2);
+    pub const MIN: Self = Self(1);
+    pub const TWO: Self = Self(2);
     pub const THIRTY: Self = Self(30);
     pub const SIXTY_FOUR: Self = Self(64);
     pub const TWO_FIFTY_FIVE: Self = Self(u8::MAX as u32);
@@ -78,7 +79,7 @@ impl Visitor<'_> for SampleSizeVisitor {
     type Value = SampleSize;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a model sample size greater than or equal to 2")
+        formatter.write_str("a model sample size greater than or equal to 1")
     }
 
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
@@ -130,7 +131,7 @@ mod db {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_sample_size(sample_size: u32) -> bool {
-    sample_size >= 2
+    sample_size >= 1
 }
 
 #[cfg(test)]
@@ -142,6 +143,8 @@ mod tests {
     #[test]
     fn boundary() {
         assert_eq!(true, is_valid_sample_size(SampleSize::MIN.into()));
+        assert_eq!(true, is_valid_sample_size(1));
+        assert_eq!(true, is_valid_sample_size(SampleSize::TWO.into()));
         assert_eq!(true, is_valid_sample_size(2));
         assert_eq!(true, is_valid_sample_size(3));
         assert_eq!(true, is_valid_sample_size(4));
@@ -155,6 +158,5 @@ mod tests {
         assert_eq!(true, is_valid_sample_size(SampleSize::MAX.into()));
 
         assert_eq!(false, is_valid_sample_size(0));
-        assert_eq!(false, is_valid_sample_size(1));
     }
 }

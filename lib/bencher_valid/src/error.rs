@@ -1,4 +1,4 @@
-use crate::{Boundary, SampleSize, Window};
+use crate::{Boundary, ModelTest, SampleSize, Window};
 
 pub(crate) const REGEX_ERROR: &str = "Failed to compile regex.";
 
@@ -151,6 +151,14 @@ pub enum ValidError {
         "Invalid model, minimum sample size ({min}) is greater than maximum sample size ({max})"
     )]
     SampleSizes { min: SampleSize, max: SampleSize },
+    #[error(
+        "Invalid model, sample size ({sample_size}) is below the minimum ({min}) required for the {test} test"
+    )]
+    TestSampleSize {
+        test: ModelTest,
+        sample_size: SampleSize,
+        min: SampleSize,
+    },
     #[error("Invalid model, lower boundary ({lower}) is greater than upper boundary ({upper})")]
     Boundaries { lower: Boundary, upper: Boundary },
     #[error("Invalid model, no boundary provided")]

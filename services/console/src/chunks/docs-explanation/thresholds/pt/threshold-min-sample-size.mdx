@@ -2,7 +2,7 @@
 
 <br />
 
-Opcionalmente, especifique o número mínimo de [Métricas][metric] necessárias para executar um Teste. Se esse mínimo não for atingido, o Teste não será executado. O tamanho amostral especificado deve ser maior ou igual a `2`. Se a [opção `--threshold-max-sample-size`][threshold max sample size option] também estiver definida, então o tamanho amostral especificado deve ser menor ou igual a `--threshold-max-sample-size`. Esta opção não pode ser usada com o Teste [Estático (`static`)][static].
+Opcionalmente, especifique o número mínimo de [Métricas][metric] históricas necessárias para executar um Teste. Se esse mínimo não for atingido, o Teste não será executado. O tamanho amostral especificado deve ser maior ou igual a `1` para [o Teste de Porcentagem (`percentage`)][percentage], e maior ou igual a `2` para testes baseados em variância (`z_score`, `t_test`, `log_normal`, `iqr` e `delta_iqr`). Esta opção não pode ser usada com o Teste [Estático (`static`)][static]. Se a [opção `--threshold-max-sample-size`][threshold max sample size option] também estiver definida, então o tamanho amostral especificado deve ser menor ou igual a `--threshold-max-sample-size`.
 
 Por exemplo, para usar um Limite com um tamanho mínimo de amostra de `10`, você poderia escrever `--threshold-min-sample-size 10`. Se houvesse menos de `10` Métricas, o Teste não seria executado. Por outro lado, se houvesse `10` ou mais Métricas, o Teste seria executado.
 
@@ -10,3 +10,4 @@ Por exemplo, para usar um Limite com um tamanho mínimo de amostra de `10`, voc�
 
 [threshold max sample size option]: #--threshold-max-sample-size-sample-size
 [static]: #static
+[percentage]: #percentage

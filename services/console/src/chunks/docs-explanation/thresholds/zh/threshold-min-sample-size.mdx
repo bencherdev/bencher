@@ -2,12 +2,13 @@
 
 <br />
 
-可选地指定运行测试所需的最小[指标][metric]数量。
+可选地指定运行测试所需的最小历史[指标][metric]数量。
 如果未达到此最小值，测试将不会运行。
-指定的样本大小必须大于或等于 `2`。
+指定的样本大小对于[百分比（`percentage`）测试][percentage]必须大于或等于 `1`，
+对于基于方差的测试（`z_score`、`t_test`、`log_normal`、`iqr` 和 `delta_iqr`）必须大于或等于 `2`。
+此选项不能与[静态 (`static`) 测试][static]一起使用。
 如果还设置了[ `--threshold-max-sample-size` 选项][threshold max sample size option]，
 那么指定的样本大小必须小于或等于 `--threshold-max-sample-size`。
-此选项不能与[静态 (`static`) 测试][static]一起使用。
 
 例如，要使用最小样本大小为 `10` 的阈值，
 您可以编写 `--threshold-min-sample-size 10`。
@@ -18,3 +19,4 @@
 
 [threshold max sample size option]: #--threshold-max-sample-size-sample-size
 [static]: #static
+[percentage]: #percentage

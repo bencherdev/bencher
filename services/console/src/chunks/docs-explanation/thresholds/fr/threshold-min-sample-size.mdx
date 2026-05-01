@@ -2,7 +2,7 @@
 
 <br />
 
-Spécifiez éventuellement le nombre minimum de [Métriques][metric] requis pour exécuter un Test. Si ce minimum n'est pas atteint, le Test ne s'exécutera pas. La taille de l'échantillon spécifiée doit être supérieure ou égale à `2`. Si l'[option `--threshold-max-sample-size`][threshold max sample size option] est également définie, alors la taille de l'échantillon spécifiée doit être inférieure ou égale à `--threshold-max-sample-size`. Cette option ne peut pas être utilisée avec le Test [Statique (`static`)][static].
+Spécifiez éventuellement le nombre minimum de [Métriques][metric] historiques requis pour exécuter un Test. Si ce minimum n'est pas atteint, le Test ne s'exécutera pas. La taille de l'échantillon spécifiée doit être supérieure ou égale à `1` pour [le Test de Pourcentage (`percentage`)][percentage], et supérieure ou égale à `2` pour les tests basés sur la variance (`z_score`, `t_test`, `log_normal`, `iqr` et `delta_iqr`). Cette option ne peut pas être utilisée avec le Test [Statique (`static`)][static]. Si l'[option `--threshold-max-sample-size`][threshold max sample size option] est également définie, alors la taille de l'échantillon spécifiée doit être inférieure ou égale à `--threshold-max-sample-size`.
 
 Par exemple, pour utiliser un Seuil avec une taille d'échantillon minimale de `10`, vous pouvez écrire `--threshold-min-sample-size 10`. S'il y avait moins de `10` Métriques, le Test ne s'exécuterait pas. Inversement, s'il y avait `10` Métriques ou plus, le Test s'exécuterait.
 
@@ -10,3 +10,4 @@ Par exemple, pour utiliser un Seuil avec une taille d'échantillon minimale de `
 
 [threshold max sample size option]: #--threshold-max-sample-size-sample-size
 [static]: #static
+[percentage]: #percentage
