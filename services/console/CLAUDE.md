@@ -82,6 +82,10 @@ Architecture and schema diagrams are defined as Mermaid `.mmd` files in `diagram
 
 Available locally at [`services/console/src/content/`](./src/content/) or online at https://bencher.dev/docs/.
 
+### Modified Date
+
+When updating a content page (`src/content/`) or any chunk it imports (`src/chunks/`), also update the `modified` field in the content page's frontmatter to the current date.
+
 ### i18n
 
 When adding a new documentation update the chunks in all 9 language directories
