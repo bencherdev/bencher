@@ -92,11 +92,11 @@ pub struct CliModel {
     #[clap(value_enum, long)]
     pub test: CliModelTest,
 
-    /// Min sample size
+    /// Min historical sample size
     #[clap(long, value_name = "SAMPLE_SIZE")]
     pub min_sample_size: Option<SampleSize>,
 
-    /// Max sample size
+    /// Max historical sample size
     #[clap(long, value_name = "SAMPLE_SIZE")]
     pub max_sample_size: Option<SampleSize>,
 

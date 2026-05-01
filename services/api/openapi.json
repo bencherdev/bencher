@@ -13234,7 +13234,7 @@
           },
           "max_sample_size": {
             "nullable": true,
-            "description": "The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.",
+            "description": "The maximum number of historical samples used to perform the test. Only the most recent samples will be used if there are more. The new Metric being tested is not counted towards this maximum.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
@@ -13251,7 +13251,7 @@
           },
           "min_sample_size": {
             "nullable": true,
-            "description": "The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.",
+            "description": "The minimum number of historical samples required to perform the test. If there are fewer historical samples, the test will not be performed. The new Metric being tested is not counted towards this minimum.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
@@ -16135,7 +16135,7 @@
           },
           "max_sample_size": {
             "nullable": true,
-            "description": "The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.",
+            "description": "The maximum number of historical samples used to perform the test. Only the most recent samples will be used if there are more. The new Metric being tested is not counted towards this maximum.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
@@ -16144,7 +16144,7 @@
           },
           "min_sample_size": {
             "nullable": true,
-            "description": "The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.",
+            "description": "The minimum number of historical samples required to perform the test. If there are fewer historical samples, the test will not be performed. The new Metric being tested is not counted towards this minimum.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
@@ -16637,7 +16637,7 @@
           },
           "max_sample_size": {
             "nullable": true,
-            "description": "The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.",
+            "description": "The maximum number of historical samples used to perform the test. Only the most recent samples will be used if there are more. The new Metric being tested is not counted towards this maximum.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
@@ -16646,7 +16646,7 @@
           },
           "min_sample_size": {
             "nullable": true,
-            "description": "The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.",
+            "description": "The minimum number of historical samples required to perform the test. If there are fewer historical samples, the test will not be performed. The new Metric being tested is not counted towards this minimum.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"

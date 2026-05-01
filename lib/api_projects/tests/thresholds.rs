@@ -430,3 +430,166 @@ async fn thresholds_get_with_wrong_threshold_model() {
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
+
+// Helper that creates a project with a branch/testbed/measure for sample-size tests.
+// Returns the project slug.
+async fn create_project_with_branch_testbed_measure(
+    server: &TestServer,
+    user: &TestUser,
+    org_name: &str,
+    project_name: &str,
+) -> String {
+    let org = server.create_org(user, org_name).await;
+    let project = server.create_project(user, &org, project_name).await;
+    let project_slug: String = AsRef::<str>::as_ref(&project.slug).to_owned();
+
+    for (path, body) in [
+        (
+            "branches",
+            serde_json::json!({"name": "ssize-branch", "slug": "ssize-branch"}),
+        ),
+        (
+            "testbeds",
+            serde_json::json!({"name": "ssize-testbed", "slug": "ssize-testbed"}),
+        ),
+        (
+            "measures",
+            serde_json::json!({
+                "name": "latency",
+                "slug": "latency",
+                "units": "ns",
+            }),
+        ),
+    ] {
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/projects/{project_slug}/{path}")))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    project_slug
+}
+
+// Issue #818 - percentage threshold with max_sample_size=1 should be accepted
+#[tokio::test]
+async fn create_threshold_percentage_max_sample_size_one_succeeds() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "ssize-percentage@example.com")
+        .await;
+    let project_slug = create_project_with_branch_testbed_measure(
+        &server,
+        &user,
+        "Sample Size Percentage Org",
+        "Sample Size Percentage Project",
+    )
+    .await;
+
+    let body = serde_json::json!({
+        "branch": "ssize-branch",
+        "testbed": "ssize-testbed",
+        "measure": "latency",
+        "test": "percentage",
+        "max_sample_size": 1,
+        "upper_boundary": 0.05,
+    });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/thresholds")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let _threshold: JsonThreshold = resp.json().await.expect("Failed to parse threshold");
+}
+
+// Issue #818 - t_test threshold with max_sample_size=1 should be rejected
+#[tokio::test]
+async fn create_threshold_t_test_max_sample_size_one_rejected() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "ssize-ttest@example.com").await;
+    let project_slug = create_project_with_branch_testbed_measure(
+        &server,
+        &user,
+        "Sample Size TTest Org",
+        "Sample Size TTest Project",
+    )
+    .await;
+
+    let body = serde_json::json!({
+        "branch": "ssize-branch",
+        "testbed": "ssize-testbed",
+        "measure": "latency",
+        "test": "t_test",
+        "max_sample_size": 1,
+        "upper_boundary": 0.99,
+    });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/thresholds")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert!(
+        resp.status().is_client_error(),
+        "Expected 4xx, got: {}",
+        resp.status()
+    );
+}
+
+// Issue #818 - iqr threshold with max_sample_size=1 should be rejected
+#[tokio::test]
+async fn create_threshold_iqr_max_sample_size_one_rejected() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "ssize-iqr@example.com").await;
+    let project_slug = create_project_with_branch_testbed_measure(
+        &server,
+        &user,
+        "Sample Size IQR Org",
+        "Sample Size IQR Project",
+    )
+    .await;
+
+    let body = serde_json::json!({
+        "branch": "ssize-branch",
+        "testbed": "ssize-testbed",
+        "measure": "latency",
+        "test": "iqr",
+        "max_sample_size": 1,
+        "upper_boundary": 1.5,
+    });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/thresholds")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert!(
+        resp.status().is_client_error(),
+        "Expected 4xx, got: {}",
+        resp.status()
+    );
+}
