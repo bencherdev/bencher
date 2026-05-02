@@ -1,4 +1,4 @@
-use bencher_json::RunnerResourceId;
+use bencher_json::{RunnerKey, RunnerKeyHash, RunnerResourceId};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -9,16 +9,14 @@ use bencher_schema::{
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, RequestContext};
 
-use crate::runners::{RUNNER_KEY_LENGTH, RUNNER_KEY_PREFIX, hash_key};
-
-/// Extract and validate runner key from Authorization header
+/// Authenticated runner identity, extracted from a valid runner key
 #[derive(Debug)]
-pub struct RunnerKey {
+pub struct RunnerAuth {
     pub runner_id: RunnerId,
     pub runner_uuid: bencher_json::RunnerUuid,
 }
 
-impl RunnerKey {
+impl RunnerAuth {
     /// Extract and validate runner key from a request.
     pub async fn from_request(
         rqctx: &RequestContext<ApiContext>,
@@ -37,17 +35,15 @@ impl RunnerKey {
         auth_header: Option<&str>,
         expected_runner: &RunnerResourceId,
     ) -> Result<Self, HttpError> {
-        let key = auth_header
+        let key_str = auth_header
             .and_then(bencher_json::strip_bearer_token)
             .ok_or_else(|| unauthorized_error("Missing or invalid Authorization header"))?;
 
-        // Validate key format (prefix + length)
-        if !key.starts_with(RUNNER_KEY_PREFIX) || key.len() != RUNNER_KEY_LENGTH {
-            return Err(unauthorized_error("Invalid runner key format"));
-        }
+        let runner_key: RunnerKey = key_str
+            .parse()
+            .map_err(|_err| unauthorized_error("Invalid runner key format"))?;
 
-        // Hash the key
-        let key_hash = hash_key(key);
+        let key_hash = RunnerKeyHash::from(&runner_key);
 
         // Look up runner by key hash AND path parameter in a single query
         let mut query = schema::runner::table

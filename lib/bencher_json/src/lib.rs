@@ -11,7 +11,8 @@ pub use bencher_valid::{
 pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
     GracePeriod, ImageDigest, ImageReference, LastFour, LicensedPlanId, Memory, MeteredPlanId,
-    PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, Timeout,
+    PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash,
+    Timeout,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;

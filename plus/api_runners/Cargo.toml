@@ -20,8 +20,6 @@ plus = [
     "dep:diesel",
     "dep:dropshot",
     "dep:futures",
-    "dep:hex",
-    "dep:rand",
     "dep:reqwest",
     "dep:url",
     "dep:schemars",
@@ -47,8 +45,6 @@ bencher_schema = { workspace = true, optional = true }
 diesel = { workspace = true, optional = true }
 dropshot = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
-hex = { workspace = true, optional = true }
-rand = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }

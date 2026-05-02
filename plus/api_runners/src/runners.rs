@@ -3,14 +3,15 @@ use bencher_endpoint::{
 };
 use bencher_json::{
     JsonDirection, JsonNewRunner, JsonPagination, JsonRunner, JsonRunnerKey, JsonUpdateRunner,
-    ResourceName, RunnerResourceId, RunnerSlug, Search, Slug, runner::JsonRunners,
+    ResourceName, RunnerKey, RunnerKeyHash, RunnerResourceId, RunnerSlug, Search, Slug,
+    runner::JsonRunners,
 };
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
-        runner::{InsertRunner, KeyHash, QueryRunner, UpdateRunner},
+        runner::{InsertRunner, QueryRunner, UpdateRunner},
         user::{admin::AdminUser, auth::BearerToken},
     },
     schema, write_conn,
@@ -22,11 +23,6 @@ use diesel::{
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-/// Runner key prefix
-pub const RUNNER_KEY_PREFIX: &str = "bencher_runner_";
-/// Expected total length of a runner key: prefix (15 chars) + 64 hex chars = 79
-pub const RUNNER_KEY_LENGTH: usize = RUNNER_KEY_PREFIX.len() + 64;
 
 pub type RunnersPagination = JsonPagination<RunnersSort>;
 
@@ -187,9 +183,8 @@ async fn post_inner(
         )
     });
 
-    // Generate random key
-    let key = generate_runner_key();
-    let key_hash = hash_key(&key);
+    let key = RunnerKey::generate();
+    let key_hash = RunnerKeyHash::from(&key);
 
     let now = context.clock.now();
     let insert_runner = InsertRunner::new(json_runner.name, slug, key_hash, now);
@@ -200,15 +195,10 @@ async fn post_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Runner, insert_runner))?;
 
-    // parse() will succeed since key is non-empty
-    let secret = key
-        .parse()
-        .map_err(|_err| HttpError::for_internal_error("Failed to create runner key".to_owned()))?;
-
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerCreate);
 
-    Ok(JsonRunnerKey { uuid, key: secret })
+    Ok(JsonRunnerKey { uuid, key })
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -304,16 +294,4 @@ async fn patch_inner(
         let runner = QueryRunner::get(conn, query_runner.id)?;
         runner.into_json(conn)
     })
-}
-
-/// Generate a random runner key with prefix
-pub fn generate_runner_key() -> String {
-    let random_bytes: [u8; 32] = rand::random();
-    let encoded = hex::encode(random_bytes);
-    format!("{RUNNER_KEY_PREFIX}{encoded}")
-}
-
-/// Hash a runner key using SHA-256
-pub fn hash_key(key: &str) -> KeyHash {
-    KeyHash::encode(key)
 }

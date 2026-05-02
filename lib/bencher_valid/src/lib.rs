@@ -54,7 +54,7 @@ pub use plus::{
     Architecture, CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth,
     ExpirationYear, GracePeriod, HeartbeatTimeout, ImageReference, LastFour, LicensedPlanId,
     Memory, MeteredPlanId, OperatingSystem, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction,
-    RecaptchaScore, Sandbox, Sha256, Timeout,
+    RecaptchaScore, RunnerKey, RunnerKeyHash, Sandbox, Sha256, Timeout,
 };
 pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;

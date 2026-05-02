@@ -42,7 +42,7 @@ static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 #[derive(Debug)]
 pub struct UpConfig {
     pub host: Url,
-    pub key: bencher_valid::Secret,
+    pub key: bencher_valid::RunnerKey,
     pub runner: RunnerResourceId,
     pub poll_timeout_secs: u32,
     pub tuning: TuningConfig,
@@ -120,9 +120,9 @@ impl Up {
 
         let client = RunnerApiClient::new(
             self.config.host.clone(),
-            String::from(self.config.key.clone()),
+            self.config.key.clone(),
             self.config.runner.clone(),
-        )?;
+        );
 
         let channel_url = client.channel_url()?;
 

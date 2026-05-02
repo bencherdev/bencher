@@ -12,7 +12,7 @@ pub struct CliUp {
 
     /// Runner authentication key.
     #[arg(long, env = "BENCHER_RUNNER_KEY")]
-    pub key: bencher_json::Secret,
+    pub key: bencher_json::RunnerKey,
 
     /// Runner UUID or slug.
     #[arg(long, env = "BENCHER_RUNNER")]

@@ -1,4 +1,4 @@
-use bencher_valid::{DateTime, ResourceId, ResourceName, Secret};
+use bencher_valid::{DateTime, ResourceId, ResourceName, RunnerKey};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -65,7 +65,7 @@ pub struct JsonNewRunner {
 pub struct JsonRunnerKey {
     pub uuid: RunnerUuid,
     /// The runner key. Only shown once - store it securely!
-    pub key: Secret,
+    pub key: RunnerKey,
 }
 
 /// Update a runner

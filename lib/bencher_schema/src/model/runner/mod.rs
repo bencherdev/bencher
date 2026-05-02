@@ -1,6 +1,8 @@
 use std::string::ToString as _;
 
-use bencher_json::{DateTime, JsonRunner, JsonUpdateRunner, ResourceName, RunnerSlug, SpecUuid};
+use bencher_json::{
+    DateTime, JsonRunner, JsonUpdateRunner, ResourceName, RunnerKeyHash, RunnerSlug, SpecUuid,
+};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
@@ -17,7 +19,6 @@ use crate::{
 };
 
 pub mod job;
-mod key_hash;
 pub mod runner_spec;
 mod source_ip;
 
@@ -25,7 +26,6 @@ pub use job::{
     InsertJob, JobId, PendingInsertJob, QueryJob, UpdateJob, recover_orphaned_claimed_jobs,
     reprocess_completed_jobs, spawn_heartbeat_timeout,
 };
-pub use key_hash::KeyHash;
 pub use runner_spec::{InsertRunnerSpec, QueryRunnerSpec, RunnerSpecId};
 pub use source_ip::SourceIp;
 
@@ -38,7 +38,7 @@ pub struct QueryRunner {
     pub uuid: RunnerUuid,
     pub name: ResourceName,
     pub slug: RunnerSlug,
-    pub key_hash: KeyHash,
+    pub key_hash: RunnerKeyHash,
     pub last_heartbeat: Option<DateTime>,
     pub created: DateTime,
     pub modified: DateTime,
@@ -82,13 +82,18 @@ pub struct InsertRunner {
     pub uuid: RunnerUuid,
     pub name: ResourceName,
     pub slug: RunnerSlug,
-    pub key_hash: KeyHash,
+    pub key_hash: RunnerKeyHash,
     pub created: DateTime,
     pub modified: DateTime,
 }
 
 impl InsertRunner {
-    pub fn new(name: ResourceName, slug: RunnerSlug, key_hash: KeyHash, now: DateTime) -> Self {
+    pub fn new(
+        name: ResourceName,
+        slug: RunnerSlug,
+        key_hash: RunnerKeyHash,
+        now: DateTime,
+    ) -> Self {
         Self {
             uuid: RunnerUuid::new(),
             name,
@@ -105,7 +110,7 @@ impl InsertRunner {
 pub struct UpdateRunner {
     pub name: Option<ResourceName>,
     pub slug: Option<RunnerSlug>,
-    pub key_hash: Option<KeyHash>,
+    pub key_hash: Option<RunnerKeyHash>,
     pub last_heartbeat: Option<Option<DateTime>>,
     pub modified: Option<DateTime>,
     pub archived: Option<Option<DateTime>>,
