@@ -14,6 +14,10 @@ please alert the developer working with you and indicate that this is the case b
 
 See [services/runner/DESIGN.md](services/runner/DESIGN.md) for design documentation.
 
+## Operations
+
+See [`tasks/runner_ops/CLAUDE.md`](../../tasks/runner_ops/CLAUDE.md) for deploying and managing runner servers.
+
 ## Testing
 
 See [services/runner/TEST.md](services/runner/TEST.md) for testing instructions and common failure patterns.

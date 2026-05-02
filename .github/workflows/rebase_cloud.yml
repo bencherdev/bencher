@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
@@ -23,3 +24,7 @@ jobs:
           git checkout cloud
           git rebase origin/devel
           git push
+      - name: Trigger CI
+        run: gh workflow run ci.yml --ref cloud
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
