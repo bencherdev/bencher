@@ -53,6 +53,7 @@ from_client!(
 from_client!(
     OrganizationUuid,
     ProjectUuid,
+    ProjectKeyUuid,
     ReportUuid,
     PlotUuid,
     BranchUuid,
@@ -70,7 +71,6 @@ from_client!(
 
 #[cfg(feature = "plus")]
 from_client!(
-    ProjectKeyUuid,
     SsoUuid,
     RunnerUuid,
     SpecUuid,
@@ -191,16 +191,16 @@ try_from_client!(
     JsonConfig,
     JsonConsole,
     JsonApiVersion,
-    JsonOpenApiSpec
+    JsonOpenApiSpec,
+    JsonProjectKeys,
+    JsonProjectKey,
+    JsonProjectKeyCreated
 );
 
 #[cfg(feature = "plus")]
 try_from_client!(
     JsonOAuth,
     JsonPlan,
-    JsonProjectKeys,
-    JsonProjectKey,
-    JsonProjectKeyCreated,
     JsonSsos,
     JsonSso,
     JsonUsage,

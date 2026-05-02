@@ -13,6 +13,7 @@ mod git_hash;
 mod image_digest;
 mod index;
 mod jwt;
+pub mod keys;
 mod model;
 mod name_id;
 mod non_empty;
@@ -40,6 +41,7 @@ use error::REGEX_ERROR;
 pub use error::ValidError;
 pub use index::Index;
 pub use jwt::Jwt;
+pub use keys::{ProjectKey, ProjectKeyHash};
 pub use model::{
     Model,
     boundary::{Boundary, CdfBoundary, IqrBoundary, PercentageBoundary},
@@ -53,9 +55,8 @@ pub use non_empty::NonEmpty;
 pub use plus::{
     Architecture, CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth,
     ExpirationYear, GracePeriod, HeartbeatTimeout, ImageReference, LastFour, LicensedPlanId,
-    Memory, MeteredPlanId, OperatingSystem, PlanLevel, PlanStatus, PollTimeout, ProjectKey,
-    ProjectKeyHash, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash, Sandbox, Sha256,
-    Timeout,
+    Memory, MeteredPlanId, OperatingSystem, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction,
+    RecaptchaScore, RunnerKey, RunnerKeyHash, Sandbox, Sha256, Timeout,
 };
 pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;

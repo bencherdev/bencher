@@ -94,13 +94,8 @@ fn map_credential(
     credential: crate::parser::CliCredential,
     is_public: bool,
 ) -> Result<bencher_client::BencherClientBuilder, BackendError> {
-    let crate::parser::CliCredential {
-        token,
-        #[cfg(feature = "plus")]
-        key,
-    } = credential;
+    let crate::parser::CliCredential { token, key } = credential;
 
-    #[cfg(feature = "plus")]
     if let Some(key) = key {
         return Ok(builder.bearer(key.into()));
     }

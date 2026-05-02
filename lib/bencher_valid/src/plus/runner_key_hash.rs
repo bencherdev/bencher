@@ -16,7 +16,7 @@ crate::typed_string!(RunnerKeyHash);
 
 impl From<&crate::RunnerKey> for RunnerKeyHash {
     fn from(key: &crate::RunnerKey) -> Self {
-        Self(super::sha256_hex(key.as_ref().as_bytes()))
+        Self(crate::keys::sha256_hex(key.as_ref().as_bytes()))
     }
 }
 
@@ -24,7 +24,7 @@ impl FromStr for RunnerKeyHash {
     type Err = ValidError;
 
     fn from_str(hash: &str) -> Result<Self, Self::Err> {
-        if super::is_valid_sha256_hex(hash) {
+        if crate::keys::is_valid_sha256_hex(hash) {
             Ok(Self(hash.to_owned()))
         } else {
             Err(ValidError::RunnerKeyHash(hash.to_owned()))
@@ -49,7 +49,7 @@ mod tests {
     fn valid() {
         assert!(VALID_HEX.parse::<RunnerKeyHash>().is_ok());
         assert!(
-            "a".repeat(super::super::SHA256_HEX_LEN)
+            "a".repeat(crate::keys::SHA256_HEX_LEN)
                 .parse::<RunnerKeyHash>()
                 .is_ok()
         );
@@ -60,7 +60,7 @@ mod tests {
         assert!("".parse::<RunnerKeyHash>().is_err());
         assert!("abc123".parse::<RunnerKeyHash>().is_err());
         assert!(
-            "g".repeat(super::super::SHA256_HEX_LEN)
+            "g".repeat(crate::keys::SHA256_HEX_LEN)
                 .parse::<RunnerKeyHash>()
                 .is_err()
         );
@@ -78,7 +78,7 @@ mod tests {
             .parse()
             .unwrap();
         let hash = RunnerKeyHash::from(&key);
-        assert_eq!(hash.as_ref().len(), super::super::SHA256_HEX_LEN);
+        assert_eq!(hash.as_ref().len(), crate::keys::SHA256_HEX_LEN);
         assert_eq!(hash, RunnerKeyHash::from(&key));
 
         let other: crate::RunnerKey = "bencher_runner_xY9mN2pQ7rS4tU8vW1zK5jL0fGhaB3"

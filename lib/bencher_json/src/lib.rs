@@ -11,9 +11,10 @@ pub use bencher_valid::{
 pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
     GracePeriod, ImageDigest, ImageReference, LastFour, LicensedPlanId, Memory, MeteredPlanId,
-    PlanLevel, PlanStatus, PollTimeout, ProjectKey, ProjectKeyHash, RecaptchaAction,
-    RecaptchaScore, RunnerKey, RunnerKeyHash, Timeout,
+    PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash,
+    Timeout,
 };
+pub use bencher_valid::{ProjectKey, ProjectKeyHash, keys::project_key::PROJECT_KEY_PREFIX};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -61,7 +62,6 @@ pub use organization::{
 pub use pagination::{JsonDirection, JsonPagination};
 #[cfg(feature = "plus")]
 pub use priority::Priority;
-#[cfg(feature = "plus")]
 pub use project::key::{
     JsonNewProjectKey, JsonProjectKey, JsonProjectKeyCreated, JsonProjectKeys,
     JsonUpdateProjectKey, ProjectKeyUuid,

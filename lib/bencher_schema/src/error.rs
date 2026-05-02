@@ -37,7 +37,6 @@ pub enum BencherResource {
     Job,
     User,
     Token,
-    #[cfg(feature = "plus")]
     ProjectKey,
     #[cfg(feature = "plus")]
     Plan,
@@ -82,7 +81,6 @@ impl fmt::Display for BencherResource {
                 Self::Job => "Job",
                 Self::User => "User",
                 Self::Token => "Token",
-                #[cfg(feature = "plus")]
                 Self::ProjectKey => "Project Key",
                 #[cfg(feature = "plus")]
                 Self::Plan => "Plan",

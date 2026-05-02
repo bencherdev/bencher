@@ -15,7 +15,6 @@ pub enum Project {
     Update(update::Update),
     Delete(delete::Delete),
     Allowed(allowed::Allowed),
-    #[cfg(feature = "plus")]
     Key(super::key::Key),
 }
 
@@ -30,7 +29,6 @@ impl TryFrom<CliProject> for Project {
             CliProject::Update(update) => Self::Update(update.try_into()?),
             CliProject::Delete(delete) => Self::Delete(delete.try_into()?),
             CliProject::Allowed(allowed) => Self::Allowed(allowed.try_into()?),
-            #[cfg(feature = "plus")]
             CliProject::Key(key) => Self::Key(key.try_into()?),
         })
     }
@@ -45,7 +43,6 @@ impl SubCmd for Project {
             Self::Update(update) => update.exec().await,
             Self::Delete(delete) => delete.exec().await,
             Self::Allowed(allowed) => allowed.exec().await,
-            #[cfg(feature = "plus")]
             Self::Key(key) => key.exec().await,
         }
     }

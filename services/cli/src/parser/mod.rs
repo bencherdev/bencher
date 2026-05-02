@@ -1,8 +1,6 @@
 use std::str::FromStr;
 
-#[cfg(feature = "plus")]
-use bencher_json::ProjectKey;
-use bencher_json::{BENCHER_API_URL_STR, Jwt, Url};
+use bencher_json::{BENCHER_API_URL_STR, Jwt, ProjectKey, Url};
 use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 pub mod compose;
@@ -185,7 +183,6 @@ pub struct CliCredential {
     pub token: Option<Jwt>,
 
     /// Project-scoped API key
-    #[cfg(feature = "plus")]
     #[clap(long, env = "BENCHER_API_KEY")]
     pub key: Option<ProjectKey>,
 }

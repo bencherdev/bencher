@@ -1,12 +1,8 @@
 pub mod project_key;
 pub mod project_key_hash;
-pub mod runner_key;
-pub mod runner_key_hash;
 
 pub use project_key::ProjectKey;
 pub use project_key_hash::ProjectKeyHash;
-pub use runner_key::RunnerKey;
-pub use runner_key_hash::RunnerKeyHash;
 
 /// ~178 bits of entropy.
 /// <https://github.blog/engineering/platform-security/behind-githubs-new-authentication-token-formats/>

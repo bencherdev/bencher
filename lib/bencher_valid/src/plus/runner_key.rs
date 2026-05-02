@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Sanitize, ValidError};
 
 pub const RUNNER_KEY_PREFIX: &str = "bencher_runner_";
-const RUNNER_KEY_LENGTH: usize = RUNNER_KEY_PREFIX.len() + super::KEY_RANDOM_LEN;
+const RUNNER_KEY_LENGTH: usize = RUNNER_KEY_PREFIX.len() + crate::keys::KEY_RANDOM_LEN;
 
 const SANITIZED_RUNNER_KEY: &str = "bencher_runner_******************************";
 
@@ -22,7 +22,7 @@ impl RunnerKey {
     pub fn generate() -> Self {
         Self(format!(
             "{RUNNER_KEY_PREFIX}{}",
-            super::generate_random_body()
+            crate::keys::generate_random_body()
         ))
     }
 }
@@ -85,7 +85,7 @@ fn is_valid_runner_key(key: &str) -> bool {
     key.len() == RUNNER_KEY_LENGTH
         && key
             .strip_prefix(RUNNER_KEY_PREFIX)
-            .is_some_and(super::is_valid_alphanumeric_body)
+            .is_some_and(crate::keys::is_valid_alphanumeric_body)
 }
 
 #[cfg(test)]
@@ -98,7 +98,7 @@ mod tests {
     fn is_valid_true() {
         let valid = format!(
             "{RUNNER_KEY_PREFIX}{}",
-            "A".repeat(super::super::KEY_RANDOM_LEN)
+            "A".repeat(crate::keys::KEY_RANDOM_LEN)
         );
         assert!(is_valid_runner_key(&valid));
 

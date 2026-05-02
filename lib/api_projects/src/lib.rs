@@ -11,7 +11,6 @@ mod allowed;
 mod benchmarks;
 mod branches;
 mod jobs;
-#[cfg(feature = "plus")]
 mod keys;
 mod measures;
 mod metrics;
@@ -61,18 +60,15 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(reports::proj_report_delete)?;
 
         // Project Keys
-        #[cfg(feature = "plus")]
-        {
-            if http_options {
-                api_description.register(keys::proj_keys_options)?;
-                api_description.register(keys::proj_key_options)?;
-            }
-            api_description.register(keys::proj_keys_get)?;
-            api_description.register(keys::proj_key_post)?;
-            api_description.register(keys::proj_key_get)?;
-            api_description.register(keys::proj_key_patch)?;
-            api_description.register(keys::proj_key_delete)?;
+        if http_options {
+            api_description.register(keys::proj_keys_options)?;
+            api_description.register(keys::proj_key_options)?;
         }
+        api_description.register(keys::proj_keys_get)?;
+        api_description.register(keys::proj_key_post)?;
+        api_description.register(keys::proj_key_get)?;
+        api_description.register(keys::proj_key_patch)?;
+        api_description.register(keys::proj_key_delete)?;
 
         // Jobs
         #[cfg(feature = "plus")]
