@@ -3,6 +3,8 @@ pub mod archive;
 pub mod benchmark;
 pub mod branch;
 pub mod job;
+#[cfg(feature = "plus")]
+pub mod key;
 pub mod measure;
 pub mod metric;
 pub mod perf;

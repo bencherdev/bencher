@@ -27,6 +27,7 @@ schemars.workspace = true
 sentry = { workspace = true, optional = true }
 serde.workspace = true
 slog.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
 bencher_api_tests.workspace = true

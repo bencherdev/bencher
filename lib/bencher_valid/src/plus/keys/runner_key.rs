@@ -7,16 +7,9 @@ use serde::{Deserialize, Serialize};
 use crate::{Sanitize, ValidError};
 
 pub const RUNNER_KEY_PREFIX: &str = "bencher_runner_";
-/// ~178 bits of entropy.
-/// <https://github.blog/engineering/platform-security/behind-githubs-new-authentication-token-formats/>
-const RUNNER_KEY_RANDOM_LEN: usize = 30;
-const RUNNER_KEY_LENGTH: usize = RUNNER_KEY_PREFIX.len() + RUNNER_KEY_RANDOM_LEN;
+const RUNNER_KEY_LENGTH: usize = RUNNER_KEY_PREFIX.len() + super::KEY_RANDOM_LEN;
 
 const SANITIZED_RUNNER_KEY: &str = "bencher_runner_******************************";
-
-/// Alphanumeric charset for key generation (0-9, A-Z, a-z = 62 characters)
-#[cfg(feature = "server")]
-const KEY_CHARSET: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 #[typeshare::typeshare]
 #[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -26,17 +19,11 @@ pub struct RunnerKey(String);
 
 impl RunnerKey {
     #[cfg(feature = "server")]
-    #[expect(clippy::indexing_slicing)]
     pub fn generate() -> Self {
-        use rand::RngExt as _;
-        let mut rng = rand::rng();
-        let random_part: String = std::iter::repeat_with(|| {
-            let idx = rng.random_range(0..KEY_CHARSET.len());
-            KEY_CHARSET[idx] as char
-        })
-        .take(RUNNER_KEY_RANDOM_LEN)
-        .collect();
-        Self(format!("{RUNNER_KEY_PREFIX}{random_part}"))
+        Self(format!(
+            "{RUNNER_KEY_PREFIX}{}",
+            super::generate_random_body()
+        ))
     }
 }
 
@@ -98,7 +85,7 @@ fn is_valid_runner_key(key: &str) -> bool {
     key.len() == RUNNER_KEY_LENGTH
         && key
             .strip_prefix(RUNNER_KEY_PREFIX)
-            .is_some_and(|random| random.bytes().all(|b| b.is_ascii_alphanumeric()))
+            .is_some_and(super::is_valid_alphanumeric_body)
 }
 
 #[cfg(test)]
@@ -109,7 +96,10 @@ mod tests {
 
     #[test]
     fn is_valid_true() {
-        let valid = format!("{RUNNER_KEY_PREFIX}{}", "A".repeat(RUNNER_KEY_RANDOM_LEN));
+        let valid = format!(
+            "{RUNNER_KEY_PREFIX}{}",
+            "A".repeat(super::super::KEY_RANDOM_LEN)
+        );
         assert!(is_valid_runner_key(&valid));
 
         let mixed = format!("{RUNNER_KEY_PREFIX}aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh");

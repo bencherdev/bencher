@@ -70,6 +70,7 @@ from_client!(
 
 #[cfg(feature = "plus")]
 from_client!(
+    ProjectKeyUuid,
     SsoUuid,
     RunnerUuid,
     SpecUuid,
@@ -197,6 +198,9 @@ try_from_client!(
 try_from_client!(
     JsonOAuth,
     JsonPlan,
+    JsonProjectKeys,
+    JsonProjectKey,
+    JsonProjectKeyCreated,
     JsonSsos,
     JsonSso,
     JsonUsage,

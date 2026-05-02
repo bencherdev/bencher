@@ -251,6 +251,21 @@ diesel::table! {
 }
 
 diesel::table! {
+    project_key (id) {
+        id -> Integer,
+        uuid -> Text,
+        project_id -> Integer,
+        creator_id -> Nullable<Integer>,
+        name -> Text,
+        key_hash -> Text,
+        creation -> BigInt,
+        expiration -> BigInt,
+        revoked -> Nullable<BigInt>,
+        last_used_at -> Nullable<BigInt>,
+    }
+}
+
+diesel::table! {
     project_role (id) {
         id -> Integer,
         user_id -> Integer,
@@ -442,6 +457,8 @@ diesel::joinable!(plot_measure -> plot (plot_id));
 diesel::joinable!(plot_testbed -> plot (plot_id));
 diesel::joinable!(plot_testbed -> testbed (testbed_id));
 diesel::joinable!(project -> organization (organization_id));
+diesel::joinable!(project_key -> project (project_id));
+diesel::joinable!(project_key -> user (creator_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
 diesel::joinable!(report -> head (head_id));
@@ -486,6 +503,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     plot_measure,
     plot_testbed,
     project,
+    project_key,
     project_role,
     report,
     report_benchmark,

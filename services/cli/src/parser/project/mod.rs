@@ -10,6 +10,8 @@ pub mod archive;
 pub mod benchmark;
 pub mod branch;
 pub mod job;
+#[cfg(feature = "plus")]
+pub mod key;
 pub mod measure;
 pub mod metric;
 pub mod perf;
@@ -36,6 +38,10 @@ pub enum CliProject {
     Delete(CliProjectDelete),
     /// Check project permission
     Allowed(CliProjectAllowed),
+    /// Manage project API keys
+    #[cfg(feature = "plus")]
+    #[clap(subcommand)]
+    Key(key::CliProjectKey),
 }
 
 #[derive(Parser, Debug)]
