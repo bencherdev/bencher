@@ -2,14 +2,18 @@ use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_json::{JsonNewRun, JsonReport, ProjectSlug, ResourceName, RunContext};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
+    auth_conn,
     context::ApiContext,
-    error::{bad_request_error, unauthorized_error},
+    error::{bad_request_error, forbidden_error, unauthorized_error},
     model::{
         project::{
             QueryProject,
             report::{NewRunReport, QueryReport},
         },
-        user::public::{PubBearerToken, PublicUser},
+        user::{
+            actor::{ApiActor, ProjectKeyActor},
+            public::PublicUser,
+        },
     },
     public_conn,
 };
@@ -45,27 +49,34 @@ pub async fn run_options(_rqctx: RequestContext<ApiContext>) -> Result<CorsRespo
 }]
 pub async fn run_post(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
     body: TypedBody<JsonNewRun>,
 ) -> Result<ResponseCreated<JsonReport>, HttpError> {
-    let public_user = PublicUser::from_token(
-        &rqctx.log,
-        rqctx.context(),
-        #[cfg(feature = "plus")]
-        rqctx.request.headers(),
-        bearer_token,
-    )
-    .await?;
+    let actor = ApiActor::new(&rqctx).await?;
 
-    let json = post_inner(
-        &rqctx.log,
-        rqctx.context(),
-        &public_user,
-        #[cfg(feature = "plus")]
-        rqctx.request.headers(),
-        body.into_inner(),
-    )
-    .await?;
+    let json = match actor {
+        ApiActor::ProjectKey(project_key_actor) => {
+            post_inner_project_key(
+                &rqctx.log,
+                rqctx.context(),
+                project_key_actor,
+                #[cfg(feature = "plus")]
+                rqctx.request.headers(),
+                body.into_inner(),
+            )
+            .await?
+        },
+        ApiActor::Public(public_user) => {
+            post_inner(
+                &rqctx.log,
+                rqctx.context(),
+                &public_user,
+                #[cfg(feature = "plus")]
+                rqctx.request.headers(),
+                body.into_inner(),
+            )
+            .await?
+        },
+    };
 
     Ok(Post::auth_response_created(json))
 }
@@ -181,6 +192,79 @@ async fn post_inner(
     };
 
     QueryReport::create(log, context, &query_project, new_run_report, public_user).await
+}
+
+async fn post_inner_project_key(
+    log: &Logger,
+    context: &ApiContext,
+    project_key_actor: ProjectKeyActor,
+    #[cfg(feature = "plus")] headers: &http::HeaderMap,
+    mut json_run: JsonNewRun,
+) -> Result<JsonReport, HttpError> {
+    let ProjectKeyActor {
+        key_id: _,
+        project_id,
+    } = project_key_actor;
+
+    let query_project = QueryProject::get(auth_conn!(context), project_id)?;
+
+    // Verify the run targets this project (if explicitly specified)
+    if let Some(project_rid) = json_run.project.as_ref() {
+        let target = QueryProject::from_resource_id(auth_conn!(context), project_rid)?;
+        if target.id != project_id {
+            return Err(forbidden_error(
+                "Project key is not authorized for the specified project",
+            ));
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    let testbed = if json_run.testbed.is_some() {
+        RunTestbed::Explicit
+    } else {
+        RunTestbed::Derived
+    };
+
+    #[cfg(feature = "plus")]
+    let spec_reset = json_run.spec_reset.unwrap_or_default();
+
+    #[cfg(feature = "plus")]
+    let job = json_run.job.take().map(|run_job| {
+        let source_ip = if let Some(ip) = RateLimiting::remote_ip(log, headers) {
+            SourceIp::new(ip)
+        } else {
+            slog::warn!(
+                log,
+                "Failed to extract remote IP for job; falling back to LOCALHOST"
+            );
+            SourceIp::new(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST))
+        };
+        NewRunJob {
+            is_claimed: true,
+            run_job,
+            source_ip,
+        }
+    });
+
+    slog::info!(log, "New run via project key"; "project" => ?query_project.uuid, "run" => ?json_run);
+
+    let idempotency_key = json_run.idempotency_key.take();
+
+    let new_run_report = NewRunReport {
+        report: json_run.into(),
+        idempotency_key,
+        #[cfg(feature = "plus")]
+        is_claimed: true,
+        #[cfg(feature = "plus")]
+        testbed,
+        #[cfg(feature = "plus")]
+        spec_reset,
+        #[cfg(feature = "plus")]
+        job,
+    };
+
+    let public_user = PublicUser::Public(None);
+    QueryReport::create(log, context, &query_project, new_run_report, &public_user).await
 }
 
 fn project_name(json_run: &JsonNewRun) -> Result<ResourceName, HttpError> {
