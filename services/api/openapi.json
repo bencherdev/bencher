@@ -5013,8 +5013,7 @@
             "description": "The UUID for a project key.",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/ProjectKeyUuid"
             }
           },
           {
@@ -5098,8 +5097,7 @@
             "description": "The UUID for a project key.",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/ProjectKeyUuid"
             }
           },
           {
@@ -5176,8 +5174,7 @@
             "description": "The UUID for a project key.",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/ProjectKeyUuid"
             }
           },
           {
@@ -14802,6 +14799,19 @@
           "url"
         ]
       },
+      "JsonProjectRateLimiter": {
+        "type": "object",
+        "properties": {
+          "runs": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          }
+        }
+      },
       "JsonProjects": {
         "type": "array",
         "items": {
@@ -14870,6 +14880,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonOciBandwidth"
+              }
+            ]
+          },
+          "project": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonProjectRateLimiter"
               }
             ]
           },
