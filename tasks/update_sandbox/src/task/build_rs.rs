@@ -55,20 +55,48 @@ pub fn apply_updates(
     let content = fs::read_to_string(build_rs_path)
         .with_context(|| format!("failed to read {build_rs_path}"))?;
 
-    let updated = content
-        .replace(&old.firecracker_version, &new.firecracker_version)
-        .replace(
+    let replacements = [
+        (
+            "DEFAULT_FIRECRACKER_VERSION",
+            &old.firecracker_version,
+            &new.firecracker_version,
+        ),
+        (
+            "FIRECRACKER_TGZ_SHA256_X86_64",
             &old.firecracker_sha256_x86_64,
             &new.firecracker_sha256_x86_64,
-        )
-        .replace(
+        ),
+        (
+            "FIRECRACKER_TGZ_SHA256_AARCH64",
             &old.firecracker_sha256_aarch64,
             &new.firecracker_sha256_aarch64,
-        )
-        .replace(&old.kernel_url_x86_64, &new.kernel_url_x86_64)
-        .replace(&old.kernel_url_aarch64, &new.kernel_url_aarch64)
-        .replace(&old.kernel_sha256_x86_64, &new.kernel_sha256_x86_64)
-        .replace(&old.kernel_sha256_aarch64, &new.kernel_sha256_aarch64);
+        ),
+        (
+            "DEFAULT_KERNEL_URL_X86_64",
+            &old.kernel_url_x86_64,
+            &new.kernel_url_x86_64,
+        ),
+        (
+            "DEFAULT_KERNEL_URL_AARCH64",
+            &old.kernel_url_aarch64,
+            &new.kernel_url_aarch64,
+        ),
+        (
+            "KERNEL_SHA256_X86_64",
+            &old.kernel_sha256_x86_64,
+            &new.kernel_sha256_x86_64,
+        ),
+        (
+            "KERNEL_SHA256_AARCH64",
+            &old.kernel_sha256_aarch64,
+            &new.kernel_sha256_aarch64,
+        ),
+    ];
+
+    let mut updated = content.clone();
+    for (name, old_val, new_val) in replacements {
+        updated = replace_const(&updated, name, old_val, new_val)?;
+    }
 
     if updated == content {
         return Ok(false);
@@ -78,6 +106,50 @@ pub fn apply_updates(
         .with_context(|| format!("failed to write {build_rs_path}"))?;
 
     Ok(true)
+}
+
+fn replace_const(
+    content: &str,
+    name: &str,
+    old_value: &str,
+    new_value: &str,
+) -> anyhow::Result<String> {
+    let prefix = format!("const {name}: &str =");
+    let mut result = String::with_capacity(content.len());
+    let mut lines = content.lines().peekable();
+    let mut found = false;
+
+    while let Some(line) = lines.next() {
+        if !found && line.trim().starts_with(&prefix) {
+            found = true;
+            if line.contains(old_value) {
+                result.push_str(&line.replacen(old_value, new_value, 1));
+                result.push('\n');
+            } else {
+                result.push_str(line);
+                result.push('\n');
+                // Value is on the next line
+                if let Some(next_line) = lines.next() {
+                    result.push_str(&next_line.replacen(old_value, new_value, 1));
+                    result.push('\n');
+                }
+            }
+        } else {
+            result.push_str(line);
+            result.push('\n');
+        }
+    }
+
+    if !found {
+        anyhow::bail!("constant {name} not found in build.rs");
+    }
+
+    // Preserve original trailing newline behavior
+    if !content.ends_with('\n') {
+        result.pop();
+    }
+
+    Ok(result)
 }
 
 pub fn read_current(build_rs_path: &Utf8Path) -> anyhow::Result<BuildRsValues> {

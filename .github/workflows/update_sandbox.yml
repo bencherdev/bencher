@@ -18,6 +18,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Update sandbox dependencies
         id: update
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           output=$(cargo update-sandbox)
           echo "$output"
@@ -36,6 +38,7 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          SUMMARY: ${{ steps.update.outputs.summary }}
         run: |
           git config user.name "Bencher"
           git config user.email "git@bencher.dev"
@@ -43,7 +46,7 @@ jobs:
           branch="update/sandbox"
           git checkout -B "$branch"
           git add plus/bencher_runner/build.rs
-          git commit -m "${{ steps.update.outputs.summary }}"
+          git commit -m "$SUMMARY"
           git push -u origin "$branch" --force
 
           existing=$(gh pr list --head "$branch" --base devel --json number -q '.[0].number')
@@ -51,7 +54,8 @@ jobs:
             gh pr create \
               --base devel \
               --head "$branch" \
-              --title "${{ steps.update.outputs.summary }}" \
+              --title "$SUMMARY" \
               --body "Automated update of bundled Firecracker and/or kernel in the runner sandbox." \
-              --label "dependencies"
+              --label "dependencies" \
+              --label "deploy"
           fi

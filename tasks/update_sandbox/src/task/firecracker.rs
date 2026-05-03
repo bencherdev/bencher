@@ -15,9 +15,17 @@ pub struct FirecrackerRelease {
 pub fn find_latest(pinned_minor: &str) -> anyhow::Result<FirecrackerRelease> {
     let prefix = format!("v{pinned_minor}.");
 
-    let body = ureq::get("https://api.github.com/repos/firecracker-microvm/firecracker/releases")
-        .header("Accept", "application/vnd.github+json")
-        .header("User-Agent", "bencher-update-sandbox")
+    let mut request = ureq::get(
+        "https://api.github.com/repos/firecracker-microvm/firecracker/releases?per_page=100",
+    )
+    .header("Accept", "application/vnd.github+json")
+    .header("User-Agent", "bencher-update-sandbox");
+
+    if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+        request = request.header("Authorization", &format!("Bearer {token}"));
+    }
+
+    let body = request
         .call()
         .context("failed to fetch Firecracker releases")?
         .body_mut()
