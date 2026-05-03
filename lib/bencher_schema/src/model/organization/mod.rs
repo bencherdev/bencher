@@ -13,7 +13,9 @@ use bencher_json::{
 use bencher_rbac::{Organization, organization::Permission};
 #[cfg(feature = "plus")]
 use diesel::BelongingToDsl as _;
-use diesel::{ExpressionMethods as _, QueryDsl as _, Queryable, RunQueryDsl as _};
+use diesel::{
+    ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, Queryable, RunQueryDsl as _,
+};
 use dropshot::HttpError;
 use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 #[cfg(feature = "plus")]
@@ -124,24 +126,58 @@ impl QueryOrganization {
         project_name: &ResourceName,
         project_slug: &ProjectSlug,
     ) -> Result<Self, HttpError> {
-        // The project organization should be created with the project's slug.
+        // Fast path: check if already exists (pool connection, covers common case)
         if let Ok(query_organization) =
             Self::find_unclaimed_project_organization(context, project_slug).await
         {
             return Ok(query_organization);
         }
 
+        // Slow path: atomic check-or-insert using only the write connection.
+        // Under concurrent OCI pushes, multiple requests race past the fast path.
+        // By doing check-or-insert inside the write transaction, we avoid pool
+        // exhaustion that occurred when conflict recovery needed a pool connection.
         let insert_organization =
             InsertOrganization::new(project_name.clone(), project_slug.clone().into());
-        match Self::create_from_project(context, insert_organization).await {
-            Ok(org) => Ok(org),
-            Err(e) if crate::error::is_conflict(&e) => {
-                // Another concurrent request created this org — re-lookup
-                Self::find_unclaimed_project_organization(context, project_slug)
-                    .await
-                    .map_err(|_lookup_err| e)
+        let org_slug = OrganizationSlug::from(project_slug.clone());
+
+        let (query_organization, created) = write_transaction!(context, |conn| {
+            let existing = schema::organization::table
+                .filter(schema::organization::slug.eq(org_slug.as_ref()))
+                .filter(schema::organization::deleted.is_null())
+                .first::<Self>(conn)
+                .optional()?;
+
+            if let Some(existing) = existing {
+                let member_count: i64 = schema::organization_role::table
+                    .filter(schema::organization_role::organization_id.eq(existing.id))
+                    .count()
+                    .get_result(conn)?;
+                if member_count == 0 {
+                    return Ok((Some(existing), false));
+                }
+                // Claimed — signal via None
+                return Ok((None, false));
+            }
+
+            let id = Self::insert(conn, &insert_organization)?;
+            Ok((Some(insert_organization.into_query(id)), true))
+        })
+        .map_err(resource_conflict_err!(Organization, &insert_organization))?;
+
+        match query_organization {
+            Some(org) => {
+                #[cfg(feature = "otel")]
+                if created {
+                    bencher_otel::ApiMeter::increment(
+                        bencher_otel::ApiCounter::OrganizationCreate,
+                    );
+                }
+                Ok(org)
             },
-            Err(e) => Err(e),
+            None => Err(unauthorized_error(format!(
+                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
+            ))),
         }
     }
 
@@ -202,20 +238,6 @@ impl QueryOrganization {
         Ok(query_organization)
     }
 
-    async fn create_from_project(
-        context: &ApiContext,
-        insert_organization: InsertOrganization,
-    ) -> Result<Self, HttpError> {
-        let query_organization =
-            write_transaction!(context, |conn| Self::insert(conn, &insert_organization))
-                .map_err(resource_conflict_err!(Organization, &insert_organization))
-                .map(|id| insert_organization.into_query(id))?;
-
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
-
-        Ok(query_organization)
-    }
 
     fn insert(
         conn: &mut DbConnection,

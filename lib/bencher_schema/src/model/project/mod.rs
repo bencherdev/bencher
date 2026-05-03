@@ -7,8 +7,8 @@ use bencher_json::{
 };
 use bencher_rbac::{Organization, Project, project::Permission};
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    TextExpressionMethods as _,
+    BoolExpressionMethods as _, ExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
+    RunQueryDsl as _, TextExpressionMethods as _,
 };
 use dropshot::HttpError;
 use project_role::InsertProjectRole;
@@ -162,28 +162,40 @@ impl QueryProject {
                     &project_slug,
                 )
                 .await?;
-                // In most cases, there should only ever be one on-the-fly project here,
-                // but check the rate limit just in case.
                 #[cfg(feature = "plus")]
                 InsertProject::rate_limit(context, &query_organization).await?;
-                // Currently, there is no semantic importance to having the organization and project have the same UUID.
-                // However, it seems like a good idea to keep them in sync for now.
-                // It makes identifying on-the-fly unclaimed projects easier, even after they have been claimed.
-                // This is okay since there should never be more than one project in an unclaimed "from project" organization.
+                // The organization and project share the same UUID so that
+                // on-the-fly unclaimed projects are easy to identify after claiming.
                 let insert_project = InsertProject::from_organization(
                     &query_organization,
                     project_name,
                     project_slug.clone(),
                 );
-                match Self::create_inner(log, context, insert_project).await {
-                    Ok(project) => Ok(project),
-                    Err(e) if crate::error::is_conflict(&e) => {
-                        // Another concurrent request created this project — re-lookup
-                        Self::from_slug(public_conn!(context), &project_slug)
-                            .map_err(|_lookup_err| e)
-                    },
-                    Err(e) => Err(e),
+                // Atomic check-or-insert: under concurrent OCI pushes, multiple
+                // requests race past the caller's existence check. By doing
+                // check-or-insert inside the write transaction, we avoid pool
+                // exhaustion from conflict-recovery re-lookups.
+                let (query_project, created) = write_transaction!(context, |conn| {
+                    let existing = schema::project::table
+                        .filter(schema::project::slug.eq(&project_slug))
+                        .filter(schema::project::deleted.is_null())
+                        .first::<Self>(conn)
+                        .optional()?;
+                    if let Some(existing) = existing {
+                        return Ok((existing, false));
+                    }
+                    let id = Self::insert(conn, &insert_project)?;
+                    Ok((insert_project.into_query(id), true))
+                })
+                .map_err(resource_conflict_err!(Project, &insert_project))?;
+
+                if created {
+                    slog::debug!(log, "Created project: {query_project:?}");
+                    #[cfg(feature = "plus")]
+                    context.update_index(log, &query_project).await;
                 }
+
+                Ok(query_project)
             },
             PublicUser::Auth(auth_user) => {
                 let query_organization =
@@ -351,21 +363,6 @@ impl QueryProject {
         Ok(query_project)
     }
 
-    async fn create_inner(
-        log: &Logger,
-        context: &ApiContext,
-        insert_project: InsertProject,
-    ) -> Result<Self, HttpError> {
-        let query_project = write_transaction!(context, |conn| Self::insert(conn, &insert_project))
-            .map_err(resource_conflict_err!(Project, &insert_project))
-            .map(|id| insert_project.into_query(id))?;
-        slog::debug!(log, "Created project: {query_project:?}");
-
-        #[cfg(feature = "plus")]
-        context.update_index(log, &query_project).await;
-
-        Ok(query_project)
-    }
 
     fn insert(
         conn: &mut DbConnection,
