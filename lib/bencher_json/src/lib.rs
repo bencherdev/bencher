@@ -62,10 +62,6 @@ pub use organization::{
 pub use pagination::{JsonDirection, JsonPagination};
 #[cfg(feature = "plus")]
 pub use priority::Priority;
-pub use project::key::{
-    JsonNewProjectKey, JsonProjectKey, JsonProjectKeyCreated, JsonProjectKeys,
-    JsonUpdateProjectKey, ProjectKeyUuid,
-};
 pub use project::{
     JsonNewProject, JsonProject, JsonProjects, ProjectResourceId, ProjectSlug, ProjectUuid,
     alert::{AlertUuid, JsonAlert, JsonAlerts},
@@ -79,6 +75,10 @@ pub use project::{
         JsonNewBranch, JsonNewStartPoint,
     },
     head::{HeadUuid, JsonHead, JsonStartPoint, VersionUuid},
+    key::{
+        JsonNewProjectKey, JsonProjectKey, JsonProjectKeyCreated, JsonProjectKeys,
+        JsonUpdateProjectKey, ProjectKeyUuid,
+    },
     measure::{
         JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureNameId, MeasureResourceId, MeasureSlug,
         MeasureUuid,

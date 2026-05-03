@@ -10,6 +10,7 @@ pub struct JsonRateLimiting {
     pub claimed_limit: Option<u32>,
     pub public: Option<JsonPublicRateLimiter>,
     pub user: Option<JsonUserRateLimiter>,
+    pub project: Option<JsonProjectRateLimiter>,
     pub runner: Option<JsonRunnerRateLimiter>,
     pub oci_bandwidth: Option<JsonOciBandwidth>,
 }
@@ -30,6 +31,12 @@ pub struct JsonUserRateLimiter {
     pub tokens: Option<JsonRateLimits>,
     pub organizations: Option<JsonRateLimits>,
     pub invites: Option<JsonRateLimits>,
+    pub runs: Option<JsonRateLimits>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonProjectRateLimiter {
     pub runs: Option<JsonRateLimits>,
 }
 

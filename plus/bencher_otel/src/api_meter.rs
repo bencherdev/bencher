@@ -104,10 +104,14 @@ pub enum ApiCounter {
     UserTokenRevoke,
     UserTokenRevokedUse,
 
+    ProjectKeyAuthFailed(ProjectKeyAuthFailureReason),
+    ProjectKeyTouchFailed,
+
     RequestMax(IntervalKind, AuthorizationKind),
 
     RunClaimedMax(IntervalKind),
     RunUnclaimedMax(IntervalKind),
+    ProjectRunMax(IntervalKind),
 
     UserAttemptMax(IntervalKind, AuthorizationKind),
     UserTokenMax(IntervalKind),
@@ -157,7 +161,10 @@ impl ApiCounter {
 
             Self::ProjectCreate | Self::ProjectDelete => "{project}",
 
-            Self::Run(_) | Self::RunClaimedMax(_) | Self::RunUnclaimedMax(_) => "{run}",
+            Self::Run(_)
+            | Self::RunClaimedMax(_)
+            | Self::RunUnclaimedMax(_)
+            | Self::ProjectRunMax(_) => "{run}",
 
             Self::ReportCreate | Self::ReportDelete | Self::SelfHostedServerStats(_) => "{report}",
 
@@ -181,7 +188,8 @@ impl ApiCounter {
 
             Self::UserAttemptMax(_, _) | Self::UserTokenRevokedUse => "{attempt}",
             Self::UserTokenMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
-            Self::RunnerKeyRotate => "{key}",
+            Self::RunnerKeyRotate | Self::ProjectKeyTouchFailed => "{key}",
+            Self::ProjectKeyAuthFailed(_) => "{auth_failure}",
 
             Self::Create(_) | Self::CreateMax(_) => "{resource}",
 
@@ -257,6 +265,11 @@ impl ApiCounter {
             Self::OciTagsList => "oci.tags.list",
 
             Self::RunnerRequestMax(_) => "runner.request.max",
+            Self::ProjectRunMax(_) => "project.run.max",
+
+            // Project key metrics
+            Self::ProjectKeyAuthFailed(_) => "project.key.auth.failed",
+            Self::ProjectKeyTouchFailed => "project.key.touch.failed",
 
             // Runner metrics
             Self::RunnerCreate => "runner.create",
@@ -341,6 +354,15 @@ impl ApiCounter {
             Self::OciTagsList => "Counts the number of OCI tags list requests",
 
             Self::RunnerRequestMax(_) => "Counts the number of runner request maximums reached",
+            Self::ProjectRunMax(_) => "Counts the number of project run maximums reached",
+
+            // Project key metrics
+            Self::ProjectKeyAuthFailed(_) => {
+                "Counts the number of project key authentication failures"
+            },
+            Self::ProjectKeyTouchFailed => {
+                "Counts the number of project key last_used_at update failures"
+            },
 
             // Runner metrics
             Self::RunnerCreate => "Counts the number of runner creations",
@@ -400,7 +422,8 @@ impl ApiCounter {
             | Self::RunnerMinutesBilledFailed
             | Self::RunnerHeartbeatTimeout
             | Self::RunnerJobTimeout
-            | Self::RunnerDisconnect => Vec::new(),
+            | Self::RunnerDisconnect
+            | Self::ProjectKeyTouchFailed => Vec::new(),
             Self::Run(priority) | Self::MetricsCreate(priority) => {
                 vec![priority_attribute(priority)]
             },
@@ -419,11 +442,13 @@ impl ApiCounter {
             Self::RunnerRequestMax(interval_kind)
             | Self::RunUnclaimedMax(interval_kind)
             | Self::RunClaimedMax(interval_kind)
+            | Self::ProjectRunMax(interval_kind)
             | Self::UserTokenMax(interval_kind)
             | Self::UserOrganizationMax(interval_kind)
             | Self::UserInviteMax(interval_kind) => {
                 vec![interval_kind.into()]
             },
+            Self::ProjectKeyAuthFailed(reason) => vec![reason.into()],
             Self::RunnerJobUpdate(status_kind) => vec![status_kind.into()],
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(server_uuid)
@@ -585,6 +610,33 @@ impl From<JobStatusKind> for opentelemetry::KeyValue {
 
 impl JobStatusKind {
     const KEY: &str = "job.status";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ProjectKeyAuthFailureReason {
+    Invalid,
+    NotFound,
+    Expired,
+}
+
+impl fmt::Display for ProjectKeyAuthFailureReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Invalid => write!(f, "invalid"),
+            Self::NotFound => write!(f, "not_found"),
+            Self::Expired => write!(f, "expired"),
+        }
+    }
+}
+
+impl From<ProjectKeyAuthFailureReason> for opentelemetry::KeyValue {
+    fn from(reason: ProjectKeyAuthFailureReason) -> Self {
+        opentelemetry::KeyValue::new(ProjectKeyAuthFailureReason::KEY, reason.to_string())
+    }
+}
+
+impl ProjectKeyAuthFailureReason {
+    const KEY: &str = "reason";
 }
 
 fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {

@@ -174,6 +174,9 @@ async fn post_inner(
         }
     });
 
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_run(query_project.uuid)?;
+
     slog::info!(log, "New run requested"; "project" => ?query_project, "run" => ?json_run);
 
     let idempotency_key = json_run.idempotency_key.take();
@@ -245,6 +248,9 @@ async fn post_inner_project_key(
             source_ip,
         }
     });
+
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_run(query_project.uuid)?;
 
     slog::info!(log, "New run via project key"; "project" => ?query_project.uuid, "run" => ?json_run);
 

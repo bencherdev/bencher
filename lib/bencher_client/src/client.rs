@@ -423,8 +423,8 @@ impl BencherClientBuilder {
 
     #[must_use]
     /// Do not retry parsing the response JSON if it fails to deserialize the original client type
-    pub fn strict(mut self, log: bool) -> Self {
-        self.log = Some(log);
+    pub fn strict(mut self, strict: bool) -> Self {
+        self.strict = Some(strict);
         self
     }
 

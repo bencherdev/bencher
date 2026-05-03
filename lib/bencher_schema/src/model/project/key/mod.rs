@@ -40,22 +40,24 @@ impl QueryProjectKey {
     pub fn get_project_key(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        uuid: &str,
+        uuid: ProjectKeyUuid,
     ) -> Result<Self, HttpError> {
         schema::project_key::table
             .filter(schema::project_key::project_id.eq(project_id))
             .filter(schema::project_key::uuid.eq(uuid))
             .first::<QueryProjectKey>(conn)
-            .map_err(resource_not_found_err!(ProjectKey, (project_id, uuid)))
+            .map_err(resource_not_found_err!(ProjectKey, (project_id, &uuid)))
     }
 
     pub fn from_hash(
         conn: &mut DbConnection,
         key_hash: &ProjectKeyHash,
+        now: DateTime,
     ) -> diesel::QueryResult<Self> {
         schema::project_key::table
             .filter(schema::project_key::key_hash.eq(key_hash.as_ref()))
             .filter(schema::project_key::revoked.is_null())
+            .filter(schema::project_key::expiration.gt(now))
             .first::<QueryProjectKey>(conn)
     }
 

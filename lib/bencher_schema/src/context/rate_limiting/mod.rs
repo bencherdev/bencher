@@ -1,6 +1,8 @@
 use std::{net::IpAddr, time::Duration};
 
-use bencher_json::{DateTime, PlanLevel, RunnerUuid, UserUuid, system::config::JsonRateLimiting};
+use bencher_json::{
+    DateTime, PlanLevel, ProjectUuid, RunnerUuid, UserUuid, system::config::JsonRateLimiting,
+};
 use bencher_license::Licensor;
 #[cfg(feature = "otel")]
 use bencher_otel::AuthorizationKind;
@@ -17,6 +19,7 @@ use crate::{
 };
 
 mod bandwidth;
+mod project;
 mod public;
 mod rate_limiter;
 mod remote_ip;
@@ -24,6 +27,7 @@ mod runner;
 mod user;
 
 use bandwidth::BandwidthRateLimiter;
+use project::ProjectRateLimiter;
 use public::PublicRateLimiter;
 use rate_limiter::{RateLimiter, RateLimits};
 use runner::RunnerRateLimiter;
@@ -44,6 +48,7 @@ pub struct RateLimiting {
     // In-memory rate limiters
     public: PublicRateLimiter,
     user: UserRateLimiter,
+    project: ProjectRateLimiter,
     runner: RunnerRateLimiter,
     bandwidth: BandwidthRateLimiter,
 }
@@ -97,6 +102,9 @@ pub enum RateLimitingError {
         limit_gib: u64,
     },
 
+    #[error("Too many runs for project. Please, try again later.")]
+    ProjectRuns,
+
     #[error("Too many requests for runner. Please, try again later.")]
     RunnerRequests,
 
@@ -129,6 +137,7 @@ impl Default for RateLimiting {
             claimed_limit: DEFAULT_CLAIMED_LIMIT,
             public: PublicRateLimiter::default(),
             user: UserRateLimiter::default(),
+            project: ProjectRateLimiter::default(),
             runner: RunnerRateLimiter::default(),
             bandwidth: BandwidthRateLimiter::default(),
         }
@@ -143,6 +152,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             claimed_limit,
             public,
             user,
+            project,
             runner,
             oci_bandwidth,
         } = json;
@@ -152,6 +162,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
             public: public.map_or_else(PublicRateLimiter::default, Into::into),
             user: user.map_or_else(UserRateLimiter::default, Into::into),
+            project: project.map_or_else(ProjectRateLimiter::default, Into::into),
             runner: runner.map_or_else(RunnerRateLimiter::default, Into::into),
             bandwidth: oci_bandwidth.map_or_else(BandwidthRateLimiter::default, Into::into),
         }
@@ -208,6 +219,7 @@ impl RateLimiting {
             claimed_limit: u32::MAX,
             public: PublicRateLimiter::max(),
             user: UserRateLimiter::max(),
+            project: ProjectRateLimiter::max(),
             runner: RunnerRateLimiter::max(),
             bandwidth: BandwidthRateLimiter::max(),
         }
@@ -316,6 +328,10 @@ impl RateLimiting {
 
     pub fn claimed_run(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
         self.user.check_run(user_uuid)
+    }
+
+    pub fn project_run(&self, project_uuid: ProjectUuid) -> Result<(), HttpError> {
+        self.project.check_run(project_uuid)
     }
 
     pub fn runner_request(&self, runner_uuid: RunnerUuid) -> Result<(), HttpError> {

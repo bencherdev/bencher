@@ -26,8 +26,8 @@ pub use plus::{
     },
     litestream::{JsonCheckpoint, JsonLitestream, JsonReplica},
     rate_limiting::{
-        JsonOciBandwidth, JsonPublicRateLimiter, JsonRateLimiting, JsonRunnerRateLimiter,
-        JsonUserRateLimiter,
+        JsonOciBandwidth, JsonProjectRateLimiter, JsonPublicRateLimiter, JsonRateLimiting,
+        JsonRunnerRateLimiter, JsonUserRateLimiter,
     },
     registry::{
         DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, MAX_CHUNK_SIZE,

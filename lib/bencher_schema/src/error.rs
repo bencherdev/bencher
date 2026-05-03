@@ -12,6 +12,7 @@ pub enum BencherResource {
     OrganizationRole,
     Project,
     ProjectRole,
+    ProjectKey,
     Report,
     ReportBenchmark,
     Plot,
@@ -37,7 +38,6 @@ pub enum BencherResource {
     Job,
     User,
     Token,
-    ProjectKey,
     #[cfg(feature = "plus")]
     Plan,
     #[cfg(feature = "plus")]
@@ -56,6 +56,7 @@ impl fmt::Display for BencherResource {
                 Self::OrganizationRole => "Organization Role",
                 Self::Project => "Project",
                 Self::ProjectRole => "Project Role",
+                Self::ProjectKey => "Project Key",
                 Self::Report => "Report",
                 Self::ReportBenchmark => "Report Benchmark",
                 Self::Plot => "Plot",
@@ -81,7 +82,6 @@ impl fmt::Display for BencherResource {
                 Self::Job => "Job",
                 Self::User => "User",
                 Self::Token => "Token",
-                Self::ProjectKey => "Project Key",
                 #[cfg(feature = "plus")]
                 Self::Plan => "Plan",
                 #[cfg(feature = "plus")]

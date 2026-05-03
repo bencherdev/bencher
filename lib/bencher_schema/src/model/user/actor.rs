@@ -1,5 +1,5 @@
 use bencher_json::{PROJECT_KEY_PREFIX, ProjectKey, ProjectKeyHash};
-use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::OptionalExtension as _;
 use dropshot::HttpError;
 use slog::Logger;
 
@@ -10,7 +10,7 @@ use crate::{
         ProjectId,
         key::{ProjectKeyId, QueryProjectKey},
     },
-    schema, write_conn,
+    write_conn,
 };
 
 use super::{auth::AuthUser, public::PublicUser};
@@ -83,23 +83,32 @@ impl ApiActor {
         context: &ApiContext,
         raw: &str,
     ) -> Result<Self, HttpError> {
-        let key: ProjectKey = raw
-            .parse()
-            .map_err(|_err| unauthorized_error("Invalid project key"))?;
+        let key: ProjectKey = raw.parse().map_err(|_err| {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectKeyAuthFailed(
+                bencher_otel::ProjectKeyAuthFailureReason::Invalid,
+            ));
+            unauthorized_error("Invalid project key")
+        })?;
         let key_hash = ProjectKeyHash::from(&key);
 
-        let query_key: QueryProjectKey = schema::project_key::table
-            .filter(schema::project_key::key_hash.eq(key_hash.as_ref()))
-            .filter(schema::project_key::revoked.is_null())
-            .first::<QueryProjectKey>(auth_conn!(context))
-            .optional()
-            .map_err(|_err| unauthorized_error("Invalid project key"))?
-            .ok_or_else(|| unauthorized_error("Invalid project key"))?;
-
         let now = context.clock.now();
-        if query_key.expiration.timestamp() < now.timestamp() {
-            return Err(unauthorized_error("Invalid project key"));
-        }
+        let query_key = QueryProjectKey::from_hash(auth_conn!(context), &key_hash, now)
+            .optional()
+            .map_err(|_err| {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectKeyAuthFailed(
+                    bencher_otel::ProjectKeyAuthFailureReason::NotFound,
+                ));
+                unauthorized_error("Invalid project key")
+            })?
+            .ok_or_else(|| {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectKeyAuthFailed(
+                    bencher_otel::ProjectKeyAuthFailureReason::NotFound,
+                ));
+                unauthorized_error("Invalid project key")
+            })?;
 
         slog::info!(
             log,
@@ -111,11 +120,11 @@ impl ApiActor {
         let key_id = query_key.id;
         let project_id = query_key.project_id;
 
-        drop(QueryProjectKey::touch_last_used(
-            write_conn!(context),
-            key_id,
-            now,
-        ));
+        if let Err(err) = QueryProjectKey::touch_last_used(write_conn!(context), key_id, now) {
+            slog::warn!(log, "Failed to update project key last_used_at"; "error" => %err);
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectKeyTouchFailed);
+        }
 
         Ok(Self::ProjectKey(ProjectKeyActor { key_id, project_id }))
     }

@@ -4,7 +4,8 @@ use bencher_endpoint::{
 };
 use bencher_json::{
     JsonDirection, JsonNewProjectKey, JsonPagination, JsonProjectKey, JsonProjectKeyCreated,
-    JsonProjectKeys, ProjectResourceId, ResourceName, Search, project::key::JsonUpdateProjectKey,
+    JsonProjectKeys, ProjectKeyUuid, ProjectResourceId, ResourceName, Search,
+    project::key::JsonUpdateProjectKey,
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -30,7 +31,6 @@ use diesel::{
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use uuid::Uuid;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjKeysParams {
@@ -248,7 +248,7 @@ pub struct ProjKeyParams {
     /// The slug or UUID for a project.
     pub project: ProjectResourceId,
     /// The UUID for a project key.
-    pub key: Uuid,
+    pub key: ProjectKeyUuid,
 }
 
 #[endpoint {
@@ -296,8 +296,7 @@ async fn get_one_inner(
     )?;
 
     auth_conn!(context, |conn| {
-        QueryProjectKey::get_project_key(conn, query_project.id, &path_params.key.to_string())?
-            .into_json(conn)
+        QueryProjectKey::get_project_key(conn, query_project.id, path_params.key)?.into_json(conn)
     })
 }
 
@@ -341,11 +340,8 @@ async fn patch_inner(
         Permission::Manage,
     )?;
 
-    let query_key = QueryProjectKey::get_project_key(
-        auth_conn!(context),
-        query_project.id,
-        &path_params.key.to_string(),
-    )?;
+    let query_key =
+        QueryProjectKey::get_project_key(auth_conn!(context), query_project.id, path_params.key)?;
 
     let update_key = UpdateProjectKey::from(json_key);
     diesel::update(schema::project_key::table.filter(schema::project_key::id.eq(query_key.id)))
@@ -395,11 +391,8 @@ async fn delete_inner(
         Permission::Manage,
     )?;
 
-    let query_key = QueryProjectKey::get_project_key(
-        auth_conn!(context),
-        query_project.id,
-        &path_params.key.to_string(),
-    )?;
+    let query_key =
+        QueryProjectKey::get_project_key(auth_conn!(context), query_project.id, path_params.key)?;
 
     let now = context.clock.now();
     let rows = write_transaction!(context, |conn| QueryProjectKey::revoke(
