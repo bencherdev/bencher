@@ -40,31 +40,31 @@ use std::path::{Path, PathBuf};
 use sha2::{Digest as _, Sha256};
 
 /// Default Firecracker version to download.
-const DEFAULT_FIRECRACKER_VERSION: &str = "v1.12.0";
+const DEFAULT_FIRECRACKER_VERSION: &str = "v1.15.1";
 
 /// Default kernel URL to download (per-architecture).
 ///
 /// Uses versioned CI build artifacts from the Firecracker project.
-const DEFAULT_KERNEL_URL_X86_64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/x86_64/vmlinux-5.10.245";
-const DEFAULT_KERNEL_URL_AARCH64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260130-7073e31a0ed7-0/aarch64/vmlinux-5.10.245";
+const DEFAULT_KERNEL_URL_X86_64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260501-42066df1eb5d-0/x86_64/vmlinux-6.1.168";
+const DEFAULT_KERNEL_URL_AARCH64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260501-42066df1eb5d-0/aarch64/vmlinux-6.1.168";
 
 /// Expected SHA256 hashes for Firecracker `.tgz` archives.
 ///
 /// These MUST be updated whenever `DEFAULT_FIRECRACKER_VERSION` changes.
 /// Source: `firecracker-{version}-{arch}.tgz.sha256.txt` from the GitHub release.
 const FIRECRACKER_TGZ_SHA256_X86_64: &str =
-    "392b5f7e4bf12871d1e8377a60ed3b384a46bc2f7d3771caf202aa7a63e32676";
+    "d4a32ab2322d887ca1bc4a4e7afa9cc35393e6362dfc2b3becb389d362e4275a";
 const FIRECRACKER_TGZ_SHA256_AARCH64: &str =
-    "55f3e76c6a16128e91aea1d2ed3d436f5d4e2e9547bfdd226ce570a89cd48921";
+    "00654ac1e702a22744121ea9f10a4f792ebd7c3a744cba587dfac9fcb79b41a5";
 
 /// Expected SHA256 hashes for vmlinux kernel binaries.
 ///
 /// These MUST be updated whenever `DEFAULT_KERNEL_URL_*` changes.
 /// Compute with: `curl -sL <url> | sha256sum`
 const KERNEL_SHA256_X86_64: &str =
-    "02cd0f40652b023614b87638de2e5cc53655b88ba82e57eab642adc5a9384c30";
+    "e4a0d9dd1be4527a408c0d7c028aad1fd54108e34083dc9bf832b85dc8f616f9";
 const KERNEL_SHA256_AARCH64: &str =
-    "cd752664f99ffa2e460d0fd55846b2394f06a6fce28c7d1d497c8815844a57ff";
+    "0b04dc58dc201555830838b90e6edc5de469f9d7f5ca88de1fb73c5828df06c4";
 
 fn main() {
     // Only bundle on Linux where we actually use the binaries
@@ -348,7 +348,7 @@ fn download_file(url: &str, dest: &Path, expected_sha256: Option<&str>) -> Resul
 /// # Arguments
 ///
 /// * `url` - URL of the `.tgz` archive
-/// * `entry_name` - Path of the entry to extract (e.g., `release-v1.12.0-x86_64/firecracker-v1.12.0-x86_64`)
+/// * `entry_name` - Path of the entry to extract (e.g., `release-v1.15.1-x86_64/firecracker-v1.15.1-x86_64`)
 /// * `dest` - Destination path for the extracted file
 /// * `expected_sha256` - If `Some`, verify the archive's SHA256 before extracting
 fn download_and_extract_tgz(
