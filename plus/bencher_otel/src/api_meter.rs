@@ -105,7 +105,6 @@ pub enum ApiCounter {
     UserTokenRevokedUse,
 
     ProjectKeyAuthFailed(ProjectKeyAuthFailureReason),
-    ProjectKeyTouchFailed,
 
     RequestMax(IntervalKind, AuthorizationKind),
 
@@ -188,7 +187,7 @@ impl ApiCounter {
 
             Self::UserAttemptMax(_, _) | Self::UserTokenRevokedUse => "{attempt}",
             Self::UserTokenMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
-            Self::RunnerKeyRotate | Self::ProjectKeyTouchFailed => "{key}",
+            Self::RunnerKeyRotate => "{key}",
             Self::ProjectKeyAuthFailed(_) => "{auth_failure}",
 
             Self::Create(_) | Self::CreateMax(_) => "{resource}",
@@ -269,7 +268,6 @@ impl ApiCounter {
 
             // Project key metrics
             Self::ProjectKeyAuthFailed(_) => "project.key.auth.failed",
-            Self::ProjectKeyTouchFailed => "project.key.touch.failed",
 
             // Runner metrics
             Self::RunnerCreate => "runner.create",
@@ -360,9 +358,6 @@ impl ApiCounter {
             Self::ProjectKeyAuthFailed(_) => {
                 "Counts the number of project key authentication failures"
             },
-            Self::ProjectKeyTouchFailed => {
-                "Counts the number of project key last_used_at update failures"
-            },
 
             // Runner metrics
             Self::RunnerCreate => "Counts the number of runner creations",
@@ -422,8 +417,7 @@ impl ApiCounter {
             | Self::RunnerMinutesBilledFailed
             | Self::RunnerHeartbeatTimeout
             | Self::RunnerJobTimeout
-            | Self::RunnerDisconnect
-            | Self::ProjectKeyTouchFailed => Vec::new(),
+            | Self::RunnerDisconnect => Vec::new(),
             Self::Run(priority) | Self::MetricsCreate(priority) => {
                 vec![priority_attribute(priority)]
             },
@@ -616,7 +610,6 @@ impl JobStatusKind {
 pub enum ProjectKeyAuthFailureReason {
     Invalid,
     NotFound,
-    Expired,
 }
 
 impl fmt::Display for ProjectKeyAuthFailureReason {
@@ -624,7 +617,6 @@ impl fmt::Display for ProjectKeyAuthFailureReason {
         match self {
             Self::Invalid => write!(f, "invalid"),
             Self::NotFound => write!(f, "not_found"),
-            Self::Expired => write!(f, "expired"),
         }
     }
 }

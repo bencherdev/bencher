@@ -933,7 +933,6 @@ export interface JsonProjectKey {
 	name: ResourceName;
 	creation: string;
 	expiration: string;
-	last_used_at?: string;
 	/**
 	 * The time at which the key was revoked, if any.
 	 * `None` means the key is active.

@@ -29,7 +29,6 @@ pub struct QueryProjectKey {
     pub creation: DateTime,
     pub expiration: DateTime,
     pub revoked: Option<DateTime>,
-    pub last_used_at: Option<DateTime>,
 }
 
 impl QueryProjectKey {
@@ -52,10 +51,15 @@ impl QueryProjectKey {
     pub fn from_hash(
         conn: &mut DbConnection,
         key_hash: &ProjectKeyHash,
+        now: DateTime,
     ) -> diesel::QueryResult<Self> {
         schema::project_key::table
+            .inner_join(schema::project::table)
             .filter(schema::project_key::key_hash.eq(key_hash.as_ref()))
             .filter(schema::project_key::revoked.is_null())
+            .filter(schema::project_key::expiration.gt(now))
+            .filter(schema::project::deleted.is_null())
+            .select(schema::project_key::all_columns)
             .first::<QueryProjectKey>(conn)
     }
 
@@ -71,16 +75,6 @@ impl QueryProjectKey {
         )
         .set(schema::project_key::revoked.eq(now))
         .execute(conn)
-    }
-
-    pub fn touch_last_used(
-        conn: &mut DbConnection,
-        key_id: ProjectKeyId,
-        now: DateTime,
-    ) -> diesel::QueryResult<usize> {
-        diesel::update(schema::project_key::table.filter(schema::project_key::id.eq(key_id)))
-            .set(schema::project_key::last_used_at.eq(now))
-            .execute(conn)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProjectKey, HttpError> {
@@ -121,7 +115,6 @@ impl QueryProjectKey {
             creation,
             expiration,
             revoked,
-            last_used_at,
         } = self;
         JsonProjectKey {
             uuid,
@@ -130,7 +123,6 @@ impl QueryProjectKey {
             name,
             creation,
             expiration,
-            last_used_at,
             revoked,
         }
     }

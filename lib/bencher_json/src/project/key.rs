@@ -35,7 +35,6 @@ pub struct JsonProjectKey {
     pub name: ResourceName,
     pub creation: DateTime,
     pub expiration: DateTime,
-    pub last_used_at: Option<DateTime>,
     /// The time at which the key was revoked, if any.
     /// `None` means the key is active.
     #[serde(skip_serializing_if = "Option::is_none")]

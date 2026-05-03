@@ -14643,14 +14643,6 @@
           "expiration": {
             "$ref": "#/components/schemas/DateTime"
           },
-          "last_used_at": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DateTime"
-              }
-            ]
-          },
           "name": {
             "$ref": "#/components/schemas/ResourceName"
           },

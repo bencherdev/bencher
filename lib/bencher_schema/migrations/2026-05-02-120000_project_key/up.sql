@@ -8,7 +8,6 @@ CREATE TABLE project_key (
     creation BIGINT NOT NULL,
     expiration BIGINT NOT NULL,
     revoked BIGINT,
-    last_used_at BIGINT,
     FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
     FOREIGN KEY (creator_id) REFERENCES user (id) ON DELETE SET NULL
 );

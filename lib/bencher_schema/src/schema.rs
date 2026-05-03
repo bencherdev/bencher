@@ -261,7 +261,6 @@ diesel::table! {
         creation -> BigInt,
         expiration -> BigInt,
         revoked -> Nullable<BigInt>,
-        last_used_at -> Nullable<BigInt>,
     }
 }
 
