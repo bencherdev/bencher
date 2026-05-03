@@ -137,7 +137,7 @@ impl QueryOrganization {
         let insert_organization =
             InsertOrganization::new(project_name.clone(), project_slug.clone().into());
 
-        let (existing, inserted_id) = write_transaction!(context, |conn| {
+        let result = write_transaction!(context, |conn| {
             let existing = schema::organization::table
                 .filter(schema::organization::slug.eq(&insert_organization.slug))
                 .filter(schema::organization::deleted.is_null())
@@ -146,24 +146,24 @@ impl QueryOrganization {
 
             if let Some(existing) = existing {
                 if !Self::is_claimed_inner(conn, existing.id)? {
-                    return diesel::QueryResult::Ok((Some(existing), None));
+                    return diesel::QueryResult::Ok(GetOrCreateOrg::Unclaimed(existing));
                 }
-                return diesel::QueryResult::Ok((None, None));
+                return diesel::QueryResult::Ok(GetOrCreateOrg::Claimed);
             }
 
             let id = Self::insert(conn, &insert_organization)?;
-            diesel::QueryResult::Ok((None, Some(id)))
+            diesel::QueryResult::Ok(GetOrCreateOrg::Inserted(id))
         })
         .map_err(resource_conflict_err!(Organization, &insert_organization))?;
 
-        match (existing, inserted_id) {
-            (Some(org), _) => Ok(org),
-            (None, Some(id)) => {
+        match result {
+            GetOrCreateOrg::Unclaimed(org) => Ok(org),
+            GetOrCreateOrg::Inserted(id) => {
                 #[cfg(feature = "otel")]
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
                 Ok(insert_organization.into_query(id))
             },
-            (None, None) => Err(unauthorized_error(format!(
+            GetOrCreateOrg::Claimed => Err(unauthorized_error(format!(
                 "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
             ))),
         }
@@ -582,6 +582,12 @@ impl QueryOrganization {
             claimed,
         }
     }
+}
+
+enum GetOrCreateOrg {
+    Unclaimed(QueryOrganization),
+    Inserted(OrganizationId),
+    Claimed,
 }
 
 #[derive(Debug, diesel::Insertable)]

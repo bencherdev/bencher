@@ -170,10 +170,6 @@ impl QueryProject {
                     project_name,
                     project_slug.clone(),
                 );
-                // Atomic check-or-insert: under concurrent OCI pushes, multiple
-                // requests race past the caller's existence check. By doing
-                // check-or-insert inside the write transaction, we avoid pool
-                // exhaustion from conflict-recovery re-lookups.
                 let result = write_transaction!(context, |conn| {
                     let existing = schema::project::table
                         .filter(schema::project::slug.eq(&project_slug))
@@ -181,21 +177,22 @@ impl QueryProject {
                         .first::<Self>(conn)
                         .optional()?;
                     if let Some(existing) = existing {
-                        return diesel::QueryResult::Ok(Some(existing));
+                        return diesel::QueryResult::Ok(GetOrCreateProject::Existing(existing));
                     }
-                    Self::insert(conn, &insert_project)?;
-                    diesel::QueryResult::Ok(None)
+                    let id = Self::insert(conn, &insert_project)?;
+                    diesel::QueryResult::Ok(GetOrCreateProject::Inserted(id))
                 })
                 .map_err(resource_conflict_err!(Project, &insert_project))?;
 
-                if let Some(query_project) = result {
-                    Ok(query_project)
-                } else {
-                    let query_project = Self::from_slug(write_conn!(context), &project_slug)?;
-                    slog::debug!(log, "Created project: {query_project:?}");
-                    #[cfg(feature = "plus")]
-                    context.update_index(log, &query_project).await;
-                    Ok(query_project)
+                match result {
+                    GetOrCreateProject::Existing(query_project) => Ok(query_project),
+                    GetOrCreateProject::Inserted(id) => {
+                        let query_project = insert_project.into_query(id);
+                        slog::debug!(log, "Created project: {query_project:?}");
+                        #[cfg(feature = "plus")]
+                        context.update_index(log, &query_project).await;
+                        Ok(query_project)
+                    },
                 }
             },
             PublicUser::Auth(auth_user) => {
@@ -560,6 +557,11 @@ impl QueryProject {
             claimed,
         }
     }
+}
+
+enum GetOrCreateProject {
+    Existing(QueryProject),
+    Inserted(ProjectId),
 }
 
 #[derive(Debug, diesel::Insertable)]
