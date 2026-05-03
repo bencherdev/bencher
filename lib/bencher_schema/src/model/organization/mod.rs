@@ -133,49 +133,37 @@ impl QueryOrganization {
             return Ok(query_organization);
         }
 
-        // Slow path: atomic check-or-insert using only the write connection.
-        // Under concurrent OCI pushes, multiple requests race past the fast path.
-        // By doing check-or-insert inside the write transaction, we avoid pool
-        // exhaustion that occurred when conflict recovery needed a pool connection.
+        // Slow path: atomic check-or-insert using only the write connection
         let insert_organization =
             InsertOrganization::new(project_name.clone(), project_slug.clone().into());
-        let org_slug = OrganizationSlug::from(project_slug.clone());
 
-        let (query_organization, created) = write_transaction!(context, |conn| {
+        let (existing, inserted_id) = write_transaction!(context, |conn| {
             let existing = schema::organization::table
-                .filter(schema::organization::slug.eq(org_slug.as_ref()))
+                .filter(schema::organization::slug.eq(&insert_organization.slug))
                 .filter(schema::organization::deleted.is_null())
                 .first::<Self>(conn)
                 .optional()?;
 
             if let Some(existing) = existing {
-                let member_count: i64 = schema::organization_role::table
-                    .filter(schema::organization_role::organization_id.eq(existing.id))
-                    .count()
-                    .get_result(conn)?;
-                if member_count == 0 {
-                    return Ok((Some(existing), false));
+                if !Self::is_claimed_inner(conn, existing.id)? {
+                    return diesel::QueryResult::Ok((Some(existing), None));
                 }
-                // Claimed — signal via None
-                return Ok((None, false));
+                return diesel::QueryResult::Ok((None, None));
             }
 
             let id = Self::insert(conn, &insert_organization)?;
-            Ok((Some(insert_organization.into_query(id)), true))
+            diesel::QueryResult::Ok((None, Some(id)))
         })
         .map_err(resource_conflict_err!(Organization, &insert_organization))?;
 
-        match query_organization {
-            Some(org) => {
+        match (existing, inserted_id) {
+            (Some(org), _) => Ok(org),
+            (None, Some(id)) => {
                 #[cfg(feature = "otel")]
-                if created {
-                    bencher_otel::ApiMeter::increment(
-                        bencher_otel::ApiCounter::OrganizationCreate,
-                    );
-                }
-                Ok(org)
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
+                Ok(insert_organization.into_query(id))
             },
-            None => Err(unauthorized_error(format!(
+            (None, None) => Err(unauthorized_error(format!(
                 "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
             ))),
         }
@@ -237,7 +225,6 @@ impl QueryOrganization {
 
         Ok(query_organization)
     }
-
 
     fn insert(
         conn: &mut DbConnection,
@@ -313,10 +300,20 @@ impl QueryOrganization {
             .map_err(forbidden_error)
     }
 
+    fn is_claimed_inner(
+        conn: &mut DbConnection,
+        organization_id: OrganizationId,
+    ) -> diesel::QueryResult<bool> {
+        let member_count: i64 = schema::organization_role::table
+            .filter(schema::organization_role::organization_id.eq(organization_id))
+            .count()
+            .get_result(conn)?;
+        Ok(member_count > 0)
+    }
+
     pub fn is_claimed(&self, conn: &mut DbConnection) -> Result<bool, HttpError> {
-        let total_members = QueryOrganizationRole::count(conn, self.id)?;
-        // If the organization that has zero members, then it is unclaimed.
-        Ok(total_members > 0)
+        Self::is_claimed_inner(conn, self.id)
+            .map_err(resource_not_found_err!(OrganizationRole, self.id))
     }
 
     pub fn claimed_at(&self, conn: &mut DbConnection) -> Result<DateTime, HttpError> {

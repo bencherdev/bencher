@@ -32,7 +32,6 @@ use crate::{
         organization::QueryOrganization,
         user::{auth::AuthUser, public::PublicUser},
     },
-    public_conn,
     schema::{self, project as project_table},
     write_conn, write_transaction,
 };
@@ -175,27 +174,29 @@ impl QueryProject {
                 // requests race past the caller's existence check. By doing
                 // check-or-insert inside the write transaction, we avoid pool
                 // exhaustion from conflict-recovery re-lookups.
-                let (query_project, created) = write_transaction!(context, |conn| {
+                let result = write_transaction!(context, |conn| {
                     let existing = schema::project::table
                         .filter(schema::project::slug.eq(&project_slug))
                         .filter(schema::project::deleted.is_null())
                         .first::<Self>(conn)
                         .optional()?;
                     if let Some(existing) = existing {
-                        return Ok((existing, false));
+                        return diesel::QueryResult::Ok(Some(existing));
                     }
-                    let id = Self::insert(conn, &insert_project)?;
-                    Ok((insert_project.into_query(id), true))
+                    Self::insert(conn, &insert_project)?;
+                    diesel::QueryResult::Ok(None)
                 })
                 .map_err(resource_conflict_err!(Project, &insert_project))?;
 
-                if created {
+                if let Some(query_project) = result {
+                    Ok(query_project)
+                } else {
+                    let query_project = Self::from_slug(write_conn!(context), &project_slug)?;
                     slog::debug!(log, "Created project: {query_project:?}");
                     #[cfg(feature = "plus")]
                     context.update_index(log, &query_project).await;
+                    Ok(query_project)
                 }
-
-                Ok(query_project)
             },
             PublicUser::Auth(auth_user) => {
                 let query_organization =
@@ -362,7 +363,6 @@ impl QueryProject {
 
         Ok(query_project)
     }
-
 
     fn insert(
         conn: &mut DbConnection,
