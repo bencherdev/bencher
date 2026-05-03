@@ -81,6 +81,7 @@ jobs:
               - 'plus/bencher_runner/**'
               - 'services/runner/**'
               - 'tasks/test_runner/**'
+              - 'tasks/update_sandbox/**'
             nix:
               - 'flake.nix'
               - 'flake.lock'

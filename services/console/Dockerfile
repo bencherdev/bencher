@@ -57,6 +57,7 @@ RUN cargo init --bin test_api
 RUN cargo init --bin test_netlify
 RUN cargo init --bin test_runner
 RUN cargo init --bin runner_ops
+RUN cargo init --bin update_sandbox
 
 WORKDIR /usr/src/bencher
 COPY Cargo.toml Cargo.toml

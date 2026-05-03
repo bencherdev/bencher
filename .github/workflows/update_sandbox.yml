@@ -1,0 +1,57 @@
+name: Update Sandbox
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: devel
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Update sandbox dependencies
+        id: update
+        run: |
+          output=$(cargo update-sandbox)
+          echo "$output"
+          echo "summary<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$output" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Create or update PR
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "Bencher"
+          git config user.email "git@bencher.dev"
+
+          branch="update/sandbox"
+          git checkout -B "$branch"
+          git add plus/bencher_runner/build.rs
+          git commit -m "${{ steps.update.outputs.summary }}"
+          git push -u origin "$branch" --force
+
+          existing=$(gh pr list --head "$branch" --base devel --json number -q '.[0].number')
+          if [ -z "$existing" ]; then
+            gh pr create \
+              --base devel \
+              --head "$branch" \
+              --title "${{ steps.update.outputs.summary }}" \
+              --body "Automated update of bundled Firecracker and/or kernel in the runner sandbox." \
+              --label "dependencies"
+          fi
