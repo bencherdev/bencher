@@ -18056,7 +18056,8 @@
       "description": "Jobs"
     },
     {
-      "name": "keys"
+      "name": "keys",
+      "description": "Project API Keys"
     },
     {
       "name": "measures",

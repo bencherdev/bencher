@@ -92,14 +92,10 @@ impl ApiActor {
         })?;
         let key_hash = ProjectKeyHash::from(&key);
 
-        let now = context.clock.now();
-        let query_key = QueryProjectKey::from_hash(auth_conn!(context), &key_hash, now)
+        let query_key = QueryProjectKey::from_hash(auth_conn!(context), &key_hash)
             .optional()
-            .map_err(|_err| {
-                #[cfg(feature = "otel")]
-                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectKeyAuthFailed(
-                    bencher_otel::ProjectKeyAuthFailureReason::NotFound,
-                ));
+            .map_err(|err| {
+                slog::error!(log, "DB error during project key lookup"; "error" => %err);
                 unauthorized_error("Invalid project key")
             })?
             .ok_or_else(|| {
@@ -109,6 +105,15 @@ impl ApiActor {
                 ));
                 unauthorized_error("Invalid project key")
             })?;
+
+        let now = context.clock.now();
+        if query_key.expiration.timestamp() < now.timestamp() {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectKeyAuthFailed(
+                bencher_otel::ProjectKeyAuthFailureReason::Expired,
+            ));
+            return Err(unauthorized_error("Invalid project key"));
+        }
 
         slog::info!(
             log,

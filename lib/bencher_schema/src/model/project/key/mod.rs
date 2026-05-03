@@ -52,12 +52,10 @@ impl QueryProjectKey {
     pub fn from_hash(
         conn: &mut DbConnection,
         key_hash: &ProjectKeyHash,
-        now: DateTime,
     ) -> diesel::QueryResult<Self> {
         schema::project_key::table
             .filter(schema::project_key::key_hash.eq(key_hash.as_ref()))
             .filter(schema::project_key::revoked.is_null())
-            .filter(schema::project_key::expiration.gt(now))
             .first::<QueryProjectKey>(conn)
     }
 

@@ -132,10 +132,11 @@ async fn get_ls_inner(
             .map(|query_key| {
                 let creator_uuid = query_key
                     .creator_id
-                    .and_then(|id| QueryUser::get(conn, id).ok().map(|u| u.uuid));
-                query_key.into_json_for_project(&query_project, creator_uuid)
+                    .map(|id| QueryUser::get(conn, id).map(|u| u.uuid))
+                    .transpose()?;
+                Ok(query_key.into_json_for_project(&query_project, creator_uuid))
             })
-            .collect()
+            .collect::<Result<_, HttpError>>()?
     });
 
     let total_count = get_ls_query(&pagination_params, &query_params, query_project.id)
@@ -344,13 +345,15 @@ async fn patch_inner(
         QueryProjectKey::get_project_key(auth_conn!(context), query_project.id, path_params.key)?;
 
     let update_key = UpdateProjectKey::from(json_key);
-    diesel::update(schema::project_key::table.filter(schema::project_key::id.eq(query_key.id)))
-        .set(&update_key)
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(
-            ProjectKey,
-            (&query_project, &query_key)
-        ))?;
+    write_transaction!(context, |conn| {
+        diesel::update(schema::project_key::table.filter(schema::project_key::id.eq(query_key.id)))
+            .set(&update_key)
+            .execute(conn)
+    })
+    .map_err(resource_conflict_err!(
+        ProjectKey,
+        (&query_project, &query_key)
+    ))?;
 
     auth_conn!(context, |conn| {
         QueryProjectKey::get(conn, query_key.id)?.into_json(conn)
