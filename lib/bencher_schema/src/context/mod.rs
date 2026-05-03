@@ -92,7 +92,8 @@ macro_rules! public_conn {
             $crate::model::user::public::PublicUser::Public(_) => {
                 $context.database.get_public_conn().await?
             },
-            $crate::model::user::public::PublicUser::Auth(_) => {
+            $crate::model::user::public::PublicUser::Auth(_)
+            | $crate::model::user::public::PublicUser::Key => {
                 $context.database.get_auth_conn().await?
             },
         }

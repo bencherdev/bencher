@@ -1,6 +1,10 @@
+use async_trait::async_trait;
 use bencher_json::{PROJECT_KEY_PREFIX, ProjectKey, ProjectKeyHash};
 use diesel::OptionalExtension as _;
-use dropshot::HttpError;
+use dropshot::{
+    ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
+    ServerContext, SharedExtractor,
+};
 use slog::Logger;
 
 use crate::{
@@ -24,30 +28,40 @@ pub struct ProjectKeyActor {
     pub project_id: ProjectId,
 }
 
-impl ApiActor {
-    pub async fn new(rqctx: &dropshot::RequestContext<ApiContext>) -> Result<Self, HttpError> {
-        let headers = rqctx.request.headers();
-        let raw_bearer = headers
+pub struct PubApiActor(Option<String>);
+
+#[async_trait]
+impl SharedExtractor for PubApiActor {
+    async fn from_request<Context: ServerContext>(
+        rqctx: &RequestContext<Context>,
+    ) -> Result<Self, HttpError> {
+        let raw = rqctx
+            .request
+            .headers()
             .get(bencher_json::AUTHORIZATION)
             .and_then(|v| v.to_str().ok())
-            .and_then(bencher_json::strip_bearer_token);
-
-        Self::from_raw_bearer(
-            &rqctx.log,
-            rqctx.context(),
-            #[cfg(feature = "plus")]
-            headers,
-            raw_bearer,
-        )
-        .await
+            .and_then(bencher_json::strip_bearer_token)
+            .map(String::from);
+        Ok(Self(raw))
     }
 
-    async fn from_raw_bearer(
+    fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
+        ExtractorMetadata {
+            extension_mode: ExtensionMode::None,
+            parameters: Vec::new(),
+        }
+    }
+}
+
+impl ApiActor {
+    pub async fn from_token(
         log: &Logger,
         context: &ApiContext,
         #[cfg(feature = "plus")] headers: &crate::HeaderMap,
-        raw_bearer: Option<&str>,
+        pub_api_actor: PubApiActor,
     ) -> Result<Self, HttpError> {
+        let raw_bearer = pub_api_actor.0.as_deref();
+
         if let Some(raw) = raw_bearer.filter(|r| r.starts_with(PROJECT_KEY_PREFIX)) {
             return Self::authenticate_project_key(log, context, raw).await;
         }

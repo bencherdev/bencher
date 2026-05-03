@@ -30,6 +30,10 @@ pub enum BackendError {
         "Failed to find Bencher API credential, and this API endpoint requires authorization. Set `--token`/`BENCHER_API_TOKEN` or `--key`/`BENCHER_API_KEY`."
     )]
     NoCredential,
+    #[error(
+        "Both `--token`/`BENCHER_API_TOKEN` and `--key`/`BENCHER_API_KEY` are set. Only one credential may be provided."
+    )]
+    ConflictingCredentials,
     #[error("Failed to get API server version: {0}")]
     ApiVersion(bencher_client::ClientError),
     #[error("{err}\nHint: This may be due to a version mismatch. {mismatch}")]
@@ -95,6 +99,10 @@ fn map_credential(
     is_public: bool,
 ) -> Result<bencher_client::BencherClientBuilder, BackendError> {
     let crate::parser::CliCredential { token, key } = credential;
+
+    if token.is_some() && key.is_some() {
+        return Err(BackendError::ConflictingCredentials);
+    }
 
     if let Some(key) = key {
         return Ok(builder.bearer(key.into()));

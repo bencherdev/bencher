@@ -21,6 +21,7 @@ use crate::{
 pub enum PublicUser {
     Public(Option<IpAddr>),
     Auth(Box<AuthUser>),
+    Key,
 }
 
 impl PublicUser {
@@ -67,12 +68,12 @@ impl PublicUser {
     }
 
     pub fn is_auth(&self) -> bool {
-        matches!(self, Self::Auth(_))
+        matches!(self, Self::Auth(_) | Self::Key)
     }
 
     pub fn user_id(&self) -> Option<UserId> {
         match self {
-            Self::Public(_) => None,
+            Self::Public(_) | Self::Key => None,
             Self::Auth(auth_user) => Some(auth_user.id),
         }
     }
