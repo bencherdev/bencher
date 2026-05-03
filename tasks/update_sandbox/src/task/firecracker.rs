@@ -4,6 +4,7 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 struct Release {
     tag_name: String,
+    prerelease: bool,
 }
 
 pub struct FirecrackerRelease {
@@ -37,7 +38,7 @@ pub fn find_latest(pinned_minor: &str) -> anyhow::Result<FirecrackerRelease> {
 
     let best = releases
         .iter()
-        .filter(|r| r.tag_name.starts_with(&prefix))
+        .filter(|r| !r.prerelease && r.tag_name.starts_with(&prefix))
         .max_by(|a, b| compare_tags(&a.tag_name, &b.tag_name))
         .with_context(|| format!("no Firecracker release found matching v{pinned_minor}.x"))?;
 

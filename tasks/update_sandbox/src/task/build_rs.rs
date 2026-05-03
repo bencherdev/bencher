@@ -116,7 +116,7 @@ fn replace_const(
 ) -> anyhow::Result<String> {
     let prefix = format!("const {name}: &str =");
     let mut result = String::with_capacity(content.len());
-    let mut lines = content.lines().peekable();
+    let mut lines = content.lines();
     let mut found = false;
 
     while let Some(line) = lines.next() {
