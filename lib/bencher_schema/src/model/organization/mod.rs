@@ -167,7 +167,7 @@ impl QueryOrganization {
                 Ok(insert_organization.into_query(id))
             },
             GetOrCreateOrg::Claimed => Err(unauthorized_error(format!(
-                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
+                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) or project key (`--key`) to authenticate."
             ))),
         }
     }
@@ -184,7 +184,7 @@ impl QueryOrganization {
         // then the project can not have anonymous reports.
         if query_organization.is_claimed(public_conn!(context))? {
             return Err(unauthorized_error(format!(
-                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
+                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) or project key (`--key`) to authenticate."
             )));
         }
         Ok(query_organization)

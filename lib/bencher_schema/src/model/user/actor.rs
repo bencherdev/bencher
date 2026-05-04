@@ -9,14 +9,16 @@ use slog::Logger;
 
 use crate::{
     ApiContext, auth_conn,
-    error::unauthorized_error,
+    error::{issue_error, unauthorized_error},
     model::project::{
         ProjectId,
         key::{ProjectKeyId, QueryProjectKey},
     },
 };
 
-use super::{auth::AuthUser, public::PublicUser};
+use super::public::{PubBearerToken, PublicUser};
+
+const INVALID_PROJECT_KEY: &str = "Invalid project key";
 
 pub enum ApiActor {
     Public(PublicUser),
@@ -28,10 +30,10 @@ pub struct ProjectKeyActor {
     pub project_id: ProjectId,
 }
 
-pub struct PubApiActor(Option<String>);
+pub struct PubProjectBearerToken(Option<String>);
 
 #[async_trait]
-impl SharedExtractor for PubApiActor {
+impl SharedExtractor for PubProjectBearerToken {
     async fn from_request<Context: ServerContext>(
         rqctx: &RequestContext<Context>,
     ) -> Result<Self, HttpError> {
@@ -58,36 +60,31 @@ impl ApiActor {
         log: &Logger,
         context: &ApiContext,
         #[cfg(feature = "plus")] headers: &crate::HeaderMap,
-        pub_api_actor: PubApiActor,
+        pub_project_bearer_token: PubProjectBearerToken,
     ) -> Result<Self, HttpError> {
-        let raw_bearer = pub_api_actor.0.as_deref();
+        let raw_bearer = pub_project_bearer_token.0.as_deref();
 
         if let Some(raw) = raw_bearer.filter(|r| r.starts_with(PROJECT_KEY_PREFIX)) {
             return Self::authenticate_project_key(log, context, raw).await;
         }
 
-        let public_user = if let Some(raw) = raw_bearer {
-            let jwt = raw
-                .parse::<bencher_json::Jwt>()
-                .map_err(|_err| unauthorized_error("Invalid authorization token"))?;
-            let user = AuthUser::from_token(context, jwt.into()).await?;
-            slog::info!(log, "Authenticated user"; "user_uuid" => %user.user.uuid);
-            PublicUser::Auth(Box::new(user))
-        } else {
-            #[cfg(feature = "plus")]
-            let remote_ip = {
-                let remote_ip = crate::RateLimiting::remote_ip(log, headers);
-                remote_ip
-                    .map(|ip| context.rate_limiting.public_request(ip))
-                    .transpose()?;
-                remote_ip
-            };
-            #[cfg(not(feature = "plus"))]
-            let remote_ip = None;
-
-            PublicUser::Public(remote_ip)
+        let pub_bearer_token = match raw_bearer {
+            Some(raw) => {
+                let jwt = raw
+                    .parse::<bencher_json::Jwt>()
+                    .map_err(|_err| unauthorized_error("Invalid authorization token"))?;
+                PubBearerToken::from(Some(jwt.into()))
+            },
+            None => PubBearerToken::from(None),
         };
-
+        let public_user = PublicUser::from_token(
+            log,
+            context,
+            #[cfg(feature = "plus")]
+            headers,
+            pub_bearer_token,
+        )
+        .await?;
         Ok(Self::Public(public_user))
     }
 
@@ -101,7 +98,7 @@ impl ApiActor {
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectKeyAuthFailed(
                 bencher_otel::ProjectKeyAuthFailureReason::Invalid,
             ));
-            unauthorized_error("Invalid project key")
+            unauthorized_error(INVALID_PROJECT_KEY)
         })?;
         let key_hash = ProjectKeyHash::from(&key);
 
@@ -109,15 +106,19 @@ impl ApiActor {
         let query_key = QueryProjectKey::from_hash(auth_conn!(context), &key_hash, now)
             .optional()
             .map_err(|err| {
-                slog::error!(log, "DB error during project key lookup"; "error" => %err);
-                unauthorized_error("Invalid project key")
-            })?
+                issue_error(
+                    "Failed to lookup project key",
+                    &format!("Failed to lookup project key by hash: {key_hash}"),
+                    err,
+                )
+            })
+            .map_err(|_issue| unauthorized_error(INVALID_PROJECT_KEY))?
             .ok_or_else(|| {
                 #[cfg(feature = "otel")]
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectKeyAuthFailed(
                     bencher_otel::ProjectKeyAuthFailureReason::NotFound,
                 ));
-                unauthorized_error("Invalid project key")
+                unauthorized_error(INVALID_PROJECT_KEY)
             })?;
 
         slog::info!(

@@ -105,7 +105,7 @@ fn map_credential(
     }
 
     if let Some(key) = key {
-        return Ok(builder.bearer(key.into()));
+        return Ok(builder.key(key));
     }
 
     if let Some(token) = token {

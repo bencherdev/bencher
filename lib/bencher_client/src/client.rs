@@ -1,6 +1,6 @@
 use std::env;
 
-use bencher_json::{BENCHER_API_URL, Jwt};
+use bencher_json::{BENCHER_API_URL, Jwt, ProjectKey};
 use reqwest::ClientBuilder;
 use serde::{Serialize, de::DeserializeOwned};
 use tokio::time::{Duration, sleep};
@@ -19,9 +19,7 @@ const DEFAULT_RETRY_AFTER: u64 = 1;
 pub struct BencherClient {
     pub host: url::Url,
     pub token: Option<Jwt>,
-    /// Raw bearer string for non-JWT credentials (e.g., project keys).
-    /// Takes precedence over `token` when set.
-    pub bearer: Option<String>,
+    pub key: Option<ProjectKey>,
     pub insecure_host: bool,
     pub native_tls: bool,
     pub timeout: Duration,
@@ -82,7 +80,7 @@ impl BencherClient {
         BencherClientBuilder {
             host: Some(self.host),
             token: self.token,
-            bearer: self.bearer,
+            key: self.key,
             insecure_host: Some(self.insecure_host),
             native_tls: Some(self.native_tls),
             timeout: Some(self.timeout),
@@ -244,8 +242,9 @@ impl BencherClient {
         let mut client_builder = ClientBuilder::new().connect_timeout(self.timeout);
 
         let bearer_value = self
-            .bearer
-            .as_deref()
+            .key
+            .as_ref()
+            .map(AsRef::as_ref)
             .or(self.token.as_ref().map(AsRef::as_ref));
         if let Some(value) = bearer_value {
             let mut headers = reqwest::header::HeaderMap::new();
@@ -348,7 +347,7 @@ impl std::fmt::Display for ErrorResponse {
 pub struct BencherClientBuilder {
     host: Option<url::Url>,
     token: Option<Jwt>,
-    bearer: Option<String>,
+    key: Option<ProjectKey>,
     insecure_host: Option<bool>,
     native_tls: Option<bool>,
     timeout: Option<Duration>,
@@ -380,9 +379,9 @@ impl BencherClientBuilder {
     }
 
     #[must_use]
-    /// Set a raw bearer credential (e.g., project key)
-    pub fn bearer(mut self, bearer: String) -> Self {
-        self.bearer = Some(bearer);
+    /// Set a project key credential
+    pub fn key(mut self, key: ProjectKey) -> Self {
+        self.key = Some(key);
         self
     }
 
@@ -445,7 +444,7 @@ impl BencherClientBuilder {
         let Self {
             host,
             token,
-            bearer,
+            key,
             insecure_host,
             native_tls,
             timeout,
@@ -457,7 +456,7 @@ impl BencherClientBuilder {
         BencherClient {
             host: host.unwrap_or_else(|| BENCHER_API_URL.clone()),
             token,
-            bearer,
+            key,
             insecure_host: insecure_host.unwrap_or_default(),
             native_tls: native_tls.unwrap_or_default(),
             timeout: timeout.unwrap_or(DEFAULT_TIMEOUT),

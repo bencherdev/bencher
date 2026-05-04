@@ -157,6 +157,9 @@ try_from_client!(
     JsonAllowed,
     JsonProjects,
     JsonProject,
+    JsonProjectKeys,
+    JsonProjectKey,
+    JsonProjectKeyCreated,
     JsonReports,
     JsonReport,
     JsonPerf,
@@ -191,10 +194,7 @@ try_from_client!(
     JsonConfig,
     JsonConsole,
     JsonApiVersion,
-    JsonOpenApiSpec,
-    JsonProjectKeys,
-    JsonProjectKey,
-    JsonProjectKeyCreated
+    JsonOpenApiSpec
 );
 
 #[cfg(feature = "plus")]

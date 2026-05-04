@@ -87,6 +87,12 @@ impl From<AuthUser> for PublicUser {
 
 pub struct PubBearerToken(Option<BearerToken>);
 
+impl From<Option<BearerToken>> for PubBearerToken {
+    fn from(token: Option<BearerToken>) -> Self {
+        Self(token)
+    }
+}
+
 #[async_trait]
 impl SharedExtractor for PubBearerToken {
     async fn from_request<Context: ServerContext>(

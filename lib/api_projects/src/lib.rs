@@ -49,16 +49,6 @@ impl bencher_endpoint::Registrar for Api {
         }
         api_description.register(allowed::proj_allowed_get)?;
 
-        // Reports
-        if http_options {
-            api_description.register(reports::proj_reports_options)?;
-            api_description.register(reports::proj_report_options)?;
-        }
-        api_description.register(reports::proj_report_post)?;
-        api_description.register(reports::proj_reports_get)?;
-        api_description.register(reports::proj_report_get)?;
-        api_description.register(reports::proj_report_delete)?;
-
         // Project Keys
         if http_options {
             api_description.register(keys::proj_keys_options)?;
@@ -69,6 +59,16 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(keys::proj_key_get)?;
         api_description.register(keys::proj_key_patch)?;
         api_description.register(keys::proj_key_delete)?;
+
+        // Reports
+        if http_options {
+            api_description.register(reports::proj_reports_options)?;
+            api_description.register(reports::proj_report_options)?;
+        }
+        api_description.register(reports::proj_report_post)?;
+        api_description.register(reports::proj_reports_get)?;
+        api_description.register(reports::proj_report_get)?;
+        api_description.register(reports::proj_report_delete)?;
 
         // Jobs
         #[cfg(feature = "plus")]

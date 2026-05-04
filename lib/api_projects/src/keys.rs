@@ -241,7 +241,7 @@ async fn post_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(ProjectKey, insert_key))?;
 
-    Ok(insert_key.into_json_created(query_project.uuid, plaintext_key))
+    Ok(insert_key.into_json(query_project.uuid, plaintext_key))
 }
 
 #[derive(Deserialize, JsonSchema)]

@@ -11,7 +11,7 @@ use bencher_schema::{
             report::{NewRunReport, QueryReport},
         },
         user::{
-            actor::{ApiActor, ProjectKeyActor, PubApiActor},
+            actor::{ApiActor, ProjectKeyActor, PubProjectBearerToken},
             public::PublicUser,
         },
     },
@@ -49,7 +49,7 @@ pub async fn run_options(_rqctx: RequestContext<ApiContext>) -> Result<CorsRespo
 }]
 pub async fn run_post(
     rqctx: RequestContext<ApiContext>,
-    pub_api_actor: PubApiActor,
+    pub_project_bearer_token: PubProjectBearerToken,
     body: TypedBody<JsonNewRun>,
 ) -> Result<ResponseCreated<JsonReport>, HttpError> {
     let actor = ApiActor::from_token(
@@ -57,7 +57,7 @@ pub async fn run_post(
         rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        pub_api_actor,
+        pub_project_bearer_token,
     )
     .await?;
 
@@ -110,7 +110,9 @@ async fn post_inner(
 
             slog::info!(log, "Authenticated run request"; "user_uuid" => %auth_user.user.uuid);
         },
-        PublicUser::Key => {},
+        PublicUser::Key => {
+            return Err(unauthorized_error("Unexpected project key run"));
+        },
     }
 
     let project_name_fn = || project_name(&json_run);
@@ -137,7 +139,7 @@ async fn post_inner(
                 slog::info!(log, "Public user attempted to create a run for a claimed project"; "project" => ?query_project.uuid, "remote_ip" => ?remote_ip);
 
                 return Err(unauthorized_error(format!(
-                    "This project ({slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate.",
+                    "This project ({slug}) has already been claimed. Provide a valid API token (`--token`) or project key (`--key`) to authenticate.",
                     slug = query_project.slug
                 )));
             },
@@ -145,7 +147,9 @@ async fn post_inner(
                 let auth_user = auth_user.reload(public_conn!(context, public_user))?;
                 query_project.try_allowed(&context.rbac, &auth_user, Permission::Create)?;
             },
-            PublicUser::Key => {},
+            PublicUser::Key => {
+                return Err(unauthorized_error("Unexpected project key run"));
+            },
         }
     // If the organization is not claimed and the user is authenticated, claim it
     } else if let PublicUser::Auth(auth_user) = public_user {
@@ -216,6 +220,8 @@ async fn create_run_report(
     #[cfg(feature = "plus")] headers: &http::HeaderMap,
     mut json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
+    #[cfg(not(feature = "plus"))]
+    let _unused = is_claimed;
     #[cfg(feature = "plus")]
     let testbed = if json_run.testbed.is_some() {
         RunTestbed::Explicit

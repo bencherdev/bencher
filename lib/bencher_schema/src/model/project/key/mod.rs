@@ -183,11 +183,7 @@ impl InsertProjectKey {
         ))
     }
 
-    pub fn into_json_created(
-        self,
-        project_uuid: ProjectUuid,
-        key: ProjectKey,
-    ) -> JsonProjectKeyCreated {
+    pub fn into_json(self, project_uuid: ProjectUuid, key: ProjectKey) -> JsonProjectKeyCreated {
         let Self {
             uuid,
             project_id: _,
