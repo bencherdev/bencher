@@ -13,7 +13,9 @@ use bencher_json::{
 use bencher_rbac::{Organization, organization::Permission};
 #[cfg(feature = "plus")]
 use diesel::BelongingToDsl as _;
-use diesel::{ExpressionMethods as _, QueryDsl as _, Queryable, RunQueryDsl as _};
+use diesel::{
+    ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, Queryable, RunQueryDsl as _,
+};
 use dropshot::HttpError;
 use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 #[cfg(feature = "plus")]
@@ -124,24 +126,49 @@ impl QueryOrganization {
         project_name: &ResourceName,
         project_slug: &ProjectSlug,
     ) -> Result<Self, HttpError> {
-        // The project organization should be created with the project's slug.
+        // Fast path: check if already exists (pool connection, covers common case)
         if let Ok(query_organization) =
             Self::find_unclaimed_project_organization(context, project_slug).await
         {
             return Ok(query_organization);
         }
 
+        // Slow path: atomic check-or-insert using only the write connection
         let insert_organization =
             InsertOrganization::new(project_name.clone(), project_slug.clone().into());
-        match Self::create_from_project(context, insert_organization).await {
-            Ok(org) => Ok(org),
-            Err(e) if crate::error::is_conflict(&e) => {
-                // Another concurrent request created this org — re-lookup
-                Self::find_unclaimed_project_organization(context, project_slug)
-                    .await
-                    .map_err(|_lookup_err| e)
+
+        let result = write_transaction!(context, |conn| {
+            let existing = schema::organization::table
+                .filter(schema::organization::slug.eq(&insert_organization.slug))
+                .filter(schema::organization::deleted.is_null())
+                .first::<Self>(conn)
+                .optional()?;
+
+            if let Some(existing) = existing {
+                return diesel::QueryResult::Ok(
+                    if QueryOrganizationRole::count_query(conn, existing.id)? == 0 {
+                        GetOrCreateOrg::Unclaimed(existing)
+                    } else {
+                        GetOrCreateOrg::Claimed
+                    },
+                );
+            }
+
+            let id = Self::insert(conn, &insert_organization)?;
+            diesel::QueryResult::Ok(GetOrCreateOrg::Inserted(id))
+        })
+        .map_err(resource_conflict_err!(Organization, &insert_organization))?;
+
+        match result {
+            GetOrCreateOrg::Unclaimed(org) => Ok(org),
+            GetOrCreateOrg::Inserted(id) => {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
+                Ok(insert_organization.into_query(id))
             },
-            Err(e) => Err(e),
+            GetOrCreateOrg::Claimed => Err(unauthorized_error(format!(
+                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
+            ))),
         }
     }
 
@@ -195,21 +222,6 @@ impl QueryOrganization {
         })
         .map_err(resource_conflict_err!(Organization, &insert_organization))
         .map(|id| insert_organization.into_query(id))?;
-
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
-
-        Ok(query_organization)
-    }
-
-    async fn create_from_project(
-        context: &ApiContext,
-        insert_organization: InsertOrganization,
-    ) -> Result<Self, HttpError> {
-        let query_organization =
-            write_transaction!(context, |conn| Self::insert(conn, &insert_organization))
-                .map_err(resource_conflict_err!(Organization, &insert_organization))
-                .map(|id| insert_organization.into_query(id))?;
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationCreate);
@@ -292,9 +304,7 @@ impl QueryOrganization {
     }
 
     pub fn is_claimed(&self, conn: &mut DbConnection) -> Result<bool, HttpError> {
-        let total_members = QueryOrganizationRole::count(conn, self.id)?;
-        // If the organization that has zero members, then it is unclaimed.
-        Ok(total_members > 0)
+        Ok(QueryOrganizationRole::count(conn, self.id)? > 0)
     }
 
     pub fn claimed_at(&self, conn: &mut DbConnection) -> Result<DateTime, HttpError> {
@@ -563,6 +573,12 @@ impl QueryOrganization {
             claimed,
         }
     }
+}
+
+enum GetOrCreateOrg {
+    Unclaimed(QueryOrganization),
+    Inserted(OrganizationId),
+    Claimed,
 }
 
 #[derive(Debug, diesel::Insertable)]
