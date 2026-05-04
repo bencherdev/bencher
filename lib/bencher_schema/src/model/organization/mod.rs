@@ -145,10 +145,13 @@ impl QueryOrganization {
                 .optional()?;
 
             if let Some(existing) = existing {
-                if !Self::is_claimed_inner(conn, existing.id)? {
-                    return diesel::QueryResult::Ok(GetOrCreateOrg::Unclaimed(existing));
-                }
-                return diesel::QueryResult::Ok(GetOrCreateOrg::Claimed);
+                return diesel::QueryResult::Ok(
+                    if QueryOrganizationRole::count_query(conn, existing.id)? == 0 {
+                        GetOrCreateOrg::Unclaimed(existing)
+                    } else {
+                        GetOrCreateOrg::Claimed
+                    },
+                );
             }
 
             let id = Self::insert(conn, &insert_organization)?;
@@ -300,20 +303,8 @@ impl QueryOrganization {
             .map_err(forbidden_error)
     }
 
-    fn is_claimed_inner(
-        conn: &mut DbConnection,
-        organization_id: OrganizationId,
-    ) -> diesel::QueryResult<bool> {
-        let member_count: i64 = schema::organization_role::table
-            .filter(schema::organization_role::organization_id.eq(organization_id))
-            .count()
-            .get_result(conn)?;
-        Ok(member_count > 0)
-    }
-
     pub fn is_claimed(&self, conn: &mut DbConnection) -> Result<bool, HttpError> {
-        Self::is_claimed_inner(conn, self.id)
-            .map_err(resource_not_found_err!(OrganizationRole, self.id))
+        Ok(QueryOrganizationRole::count(conn, self.id)? > 0)
     }
 
     pub fn claimed_at(&self, conn: &mut DbConnection) -> Result<DateTime, HttpError> {

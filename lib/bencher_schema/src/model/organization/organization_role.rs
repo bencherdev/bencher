@@ -28,14 +28,21 @@ pub struct QueryOrganizationRole {
 }
 
 impl QueryOrganizationRole {
-    pub fn count(
+    pub(crate) fn count_query(
         conn: &mut DbConnection,
         organization_id: OrganizationId,
-    ) -> Result<i64, HttpError> {
+    ) -> diesel::QueryResult<i64> {
         schema::organization_role::table
             .filter(schema::organization_role::organization_id.eq(&organization_id))
             .count()
             .get_result(conn)
+    }
+
+    pub fn count(
+        conn: &mut DbConnection,
+        organization_id: OrganizationId,
+    ) -> Result<i64, HttpError> {
+        Self::count_query(conn, organization_id)
             .map_err(resource_not_found_err!(OrganizationRole, organization_id))
     }
 
