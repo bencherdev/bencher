@@ -10,9 +10,12 @@ use slog::Logger;
 use crate::{
     ApiContext, auth_conn,
     error::{issue_error, unauthorized_error},
-    model::project::{
-        ProjectId,
-        key::{ProjectKeyId, QueryProjectKey},
+    model::{
+        project::{
+            ProjectId,
+            key::{ProjectKeyId, QueryProjectKey},
+        },
+        user::UserId,
     },
 };
 
@@ -28,6 +31,12 @@ pub enum ApiActor {
 pub struct ProjectKeyActor {
     pub key_id: ProjectKeyId,
     pub project_id: ProjectId,
+}
+
+impl From<super::auth::AuthUser> for ApiActor {
+    fn from(auth_user: super::auth::AuthUser) -> Self {
+        Self::Public(PublicUser::from(auth_user))
+    }
 }
 
 pub struct PubProjectBearerToken(Option<String>);
@@ -56,6 +65,13 @@ impl SharedExtractor for PubProjectBearerToken {
 }
 
 impl ApiActor {
+    pub fn user_id(&self) -> Option<UserId> {
+        match self {
+            Self::Public(public_user) => public_user.user_id(),
+            Self::ProjectKey(_) => None,
+        }
+    }
+
     pub async fn from_token(
         log: &Logger,
         context: &ApiContext,

@@ -308,7 +308,6 @@ fn apply_push_rate_limit(
             slog::debug!(log, "Applying claimed OCI push rate limit"; "user_uuid" => %auth_user.user.uuid);
             context.rate_limiting.user_request(auth_user.user.uuid)?;
         },
-        PublicUser::Key => {},
     }
     Ok(())
 }

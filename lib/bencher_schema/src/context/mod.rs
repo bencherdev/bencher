@@ -92,8 +92,7 @@ macro_rules! public_conn {
             $crate::model::user::public::PublicUser::Public(_) => {
                 $context.database.get_public_conn().await?
             },
-            $crate::model::user::public::PublicUser::Auth(_)
-            | $crate::model::user::public::PublicUser::Key => {
+            $crate::model::user::public::PublicUser::Auth(_) => {
                 $context.database.get_auth_conn().await?
             },
         }
@@ -102,6 +101,25 @@ macro_rules! public_conn {
         let $conn = $crate::public_conn!($context, $pub_user);
         $multi
     }};
+}
+
+#[macro_export]
+macro_rules! actor_conn {
+    ($context:expr, $actor:expr) => {
+        &mut *match $actor {
+            $crate::model::user::actor::ApiActor::Public(public_user) => match public_user {
+                $crate::model::user::public::PublicUser::Public(_) => {
+                    $context.database.get_public_conn().await?
+                },
+                $crate::model::user::public::PublicUser::Auth(_) => {
+                    $context.database.get_auth_conn().await?
+                },
+            },
+            $crate::model::user::actor::ApiActor::ProjectKey(_) => {
+                $context.database.get_auth_conn().await?
+            },
+        }
+    };
 }
 
 #[macro_export]

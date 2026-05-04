@@ -220,9 +220,6 @@ impl QueryProject {
                 )
                 .await
             },
-            PublicUser::Key => Err(unauthorized_error(
-                "Project keys cannot create new projects",
-            )),
         }
     }
 

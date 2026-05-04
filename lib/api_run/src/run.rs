@@ -52,7 +52,7 @@ pub async fn run_post(
     pub_project_bearer_token: PubProjectBearerToken,
     body: TypedBody<JsonNewRun>,
 ) -> Result<ResponseCreated<JsonReport>, HttpError> {
-    let actor = ApiActor::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -61,7 +61,7 @@ pub async fn run_post(
     )
     .await?;
 
-    let json = match actor {
+    let json = match api_actor {
         ApiActor::ProjectKey(project_key_actor) => {
             post_inner_project_key(
                 &rqctx.log,
@@ -110,9 +110,6 @@ async fn post_inner(
 
             slog::info!(log, "Authenticated run request"; "user_uuid" => %auth_user.user.uuid);
         },
-        PublicUser::Key => {
-            return Err(unauthorized_error("Unexpected project key run"));
-        },
     }
 
     let project_name_fn = || project_name(&json_run);
@@ -147,9 +144,6 @@ async fn post_inner(
                 let auth_user = auth_user.reload(public_conn!(context, public_user))?;
                 query_project.try_allowed(&context.rbac, &auth_user, Permission::Create)?;
             },
-            PublicUser::Key => {
-                return Err(unauthorized_error("Unexpected project key run"));
-            },
         }
     // If the organization is not claimed and the user is authenticated, claim it
     } else if let PublicUser::Auth(auth_user) = public_user {
@@ -158,12 +152,13 @@ async fn post_inner(
             .await?;
     }
 
+    let api_actor = ApiActor::Public(public_user.clone());
     create_run_report(
         log,
         context,
         &query_project,
         is_claimed,
-        public_user,
+        &api_actor,
         #[cfg(feature = "plus")]
         headers,
         json_run,
@@ -178,17 +173,12 @@ async fn post_inner_project_key(
     #[cfg(feature = "plus")] headers: &http::HeaderMap,
     json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
-    let ProjectKeyActor {
-        key_id: _,
-        project_id,
-    } = project_key_actor;
-
-    let query_project = QueryProject::get(auth_conn!(context), project_id)?;
+    let query_project = QueryProject::get(auth_conn!(context), project_key_actor.project_id)?;
 
     // Verify the run targets this project (if explicitly specified)
     if let Some(project_rid) = json_run.project.as_ref() {
         let target = QueryProject::from_resource_id(auth_conn!(context), project_rid)?;
-        if target.id != project_id {
+        if target.id != project_key_actor.project_id {
             return Err(forbidden_error(
                 "Project key is not authorized for the specified project",
             ));
@@ -197,13 +187,13 @@ async fn post_inner_project_key(
 
     slog::info!(log, "New run via project key"; "project" => ?query_project.uuid);
 
-    let public_user = PublicUser::Key;
+    let api_actor = ApiActor::ProjectKey(project_key_actor);
     create_run_report(
         log,
         context,
         &query_project,
         true,
-        &public_user,
+        &api_actor,
         #[cfg(feature = "plus")]
         headers,
         json_run,
@@ -216,7 +206,7 @@ async fn create_run_report(
     context: &ApiContext,
     query_project: &QueryProject,
     is_claimed: bool,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
     #[cfg(feature = "plus")] headers: &http::HeaderMap,
     mut json_run: JsonNewRun,
 ) -> Result<JsonReport, HttpError> {
@@ -270,7 +260,7 @@ async fn create_run_report(
         job,
     };
 
-    QueryReport::create(log, context, query_project, new_run_report, public_user).await
+    QueryReport::create(log, context, query_project, new_run_report, api_actor).await
 }
 
 fn project_name(json_run: &JsonNewRun) -> Result<ResourceName, HttpError> {

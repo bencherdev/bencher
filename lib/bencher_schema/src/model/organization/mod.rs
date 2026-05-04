@@ -21,10 +21,8 @@ use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 #[cfg(feature = "plus")]
 use sso::QuerySso;
 
-#[cfg(feature = "plus")]
-use crate::model::user::public::PublicUser;
 use crate::{
-    ApiContext, CLAIM_TOKEN_TTL, auth_conn,
+    ApiContext, CLAIM_TOKEN_TTL, actor_conn, auth_conn,
     context::{DbConnection, Rbac},
     error::{
         BencherResource, forbidden_error, issue_error, resource_not_found_error, unauthorized_error,
@@ -35,7 +33,7 @@ use crate::{
         slug::ok_slug,
         sql::last_insert_rowid,
     },
-    model::user::auth::AuthUser,
+    model::user::{actor::ApiActor, auth::AuthUser},
     public_conn, resource_conflict_err, resource_not_found_err,
     schema::{self, organization as organization_table},
     write_conn, write_transaction,
@@ -414,13 +412,13 @@ impl QueryOrganization {
     pub async fn window_usage(
         &self,
         context: &ApiContext,
-        public_user: &PublicUser,
+        api_actor: &ApiActor,
     ) -> Result<u32, HttpError> {
         use crate::model::project::metric::QueryMetric;
 
         let (start_time, end_time) = context.rate_limiting.window();
         QueryMetric::usage(
-            public_conn!(context, public_user),
+            actor_conn!(context, api_actor),
             self.id,
             start_time,
             end_time,

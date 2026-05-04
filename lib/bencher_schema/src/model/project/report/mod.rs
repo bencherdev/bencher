@@ -27,6 +27,7 @@ use crate::model::{
     runner::{PendingInsertJob, SourceIp},
 };
 use crate::{
+    actor_conn,
     context::{ApiContext, DbConnection},
     error::{issue_error, resource_conflict_err, resource_not_found_err},
     macros::fn_get::{fn_get_id, fn_get_uuid},
@@ -39,9 +40,8 @@ use crate::{
             testbed::{QueryTestbed, ResolvedTestbed, TestbedId},
             threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
         },
-        user::{QueryUser, UserId, public::PublicUser},
+        user::{QueryUser, UserId, actor::ApiActor},
     },
-    public_conn,
     schema::{self, report as report_table},
     view, write_transaction,
 };
@@ -115,6 +115,7 @@ impl QueryReport {
 
     #[expect(
         clippy::too_many_lines,
+        clippy::cognitive_complexity,
         reason = "report creation has many dimensions and steps"
     )]
     pub async fn create(
@@ -122,7 +123,7 @@ impl QueryReport {
         context: &ApiContext,
         query_project: &QueryProject,
         new_run_report: NewRunReport,
-        public_user: &PublicUser,
+        api_actor: &ApiActor,
     ) -> Result<JsonReport, HttpError> {
         #[cfg(feature = "otel")]
         let create_start = context.clock.now();
@@ -138,7 +139,7 @@ impl QueryReport {
             context.biller.as_ref(),
             &context.licensor,
             query_project,
-            public_user,
+            api_actor,
         )
         .await?;
         let project_id = query_project.id;
@@ -157,12 +158,10 @@ impl QueryReport {
         } = new_run_report;
 
         // Idempotency check: if a key is provided, look for an existing report
-        if let Some(existing) = Self::check_idempotency(
-            public_conn!(context, public_user),
-            project_id,
-            idempotency_key,
-        )? {
-            return existing.into_json(log, public_conn!(context, public_user));
+        if let Some(existing) =
+            Self::check_idempotency(actor_conn!(context, api_actor), project_id, idempotency_key)?
+        {
+            return existing.into_json(log, actor_conn!(context, api_actor));
         }
 
         #[cfg(all(feature = "plus", not(feature = "otel")))]
@@ -251,7 +250,7 @@ impl QueryReport {
         // the write lock for a read-only query in the common case (same hash re-submitted).
         let existing_version_id = if let Some(hash) = json_report.hash.as_ref() {
             QueryVersion::find_by_hash(
-                public_conn!(context, public_user),
+                actor_conn!(context, api_actor),
                 project_id,
                 head_id,
                 hash,
@@ -280,7 +279,7 @@ impl QueryReport {
             // Create a new report and add it to the database
             let insert_report = InsertReport::from_json(
                 idempotency_key,
-                public_user.user_id(),
+                api_actor.user_id(),
                 project_id,
                 head_id,
                 version_id,
@@ -308,7 +307,7 @@ impl QueryReport {
         // Read full report via public_conn (outside write lock)
         let query_report = schema::report::table
             .filter(schema::report::uuid.eq(&insert_report_uuid))
-            .first::<QueryReport>(public_conn!(context, public_user))
+            .first::<QueryReport>(actor_conn!(context, api_actor))
             .map_err(|e| {
                 issue_error(
                     "Failed to find new report that was just created",
@@ -324,7 +323,7 @@ impl QueryReport {
                 .finish_create(
                     log,
                     context,
-                    public_user,
+                    api_actor,
                     #[cfg(feature = "otel")]
                     create_start,
                 )
@@ -355,7 +354,7 @@ impl QueryReport {
             .finish_create(
                 log,
                 context,
-                public_user,
+                api_actor,
                 #[cfg(feature = "otel")]
                 create_start,
             )
@@ -389,7 +388,7 @@ impl QueryReport {
         self,
         log: &Logger,
         context: &ApiContext,
-        public_user: &PublicUser,
+        api_actor: &ApiActor,
         #[cfg(feature = "otel")] create_start: DateTime,
     ) -> Result<JsonReport, HttpError> {
         #[cfg(feature = "otel")]
@@ -402,7 +401,7 @@ impl QueryReport {
             );
         }
 
-        self.into_json(log, public_conn!(context, public_user))
+        self.into_json(log, actor_conn!(context, api_actor))
     }
 
     pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, HttpError> {
