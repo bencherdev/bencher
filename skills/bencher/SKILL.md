@@ -29,6 +29,7 @@ Choose your workflow:
 | Run benchmarks on dedicated hardware (Bencher Cloud) | See [bare-metal.md](./bare-metal.md) |
 | Set up CI regression detection | See [ci.md](./ci.md) |
 | Configure statistical thresholds | See [thresholds.md](./thresholds.md) |
+| Set up a self-hosted Bencher instance | See [self-hosted.md](./self-hosted.md) |
 | Quick command reference | See [reference.md](./reference.md) |
 
 Simplest possible run (generates mock data to verify setup):
