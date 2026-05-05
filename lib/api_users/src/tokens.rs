@@ -205,7 +205,9 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonToken, HttpError> {
     #[cfg(feature = "plus")]
-    context.rate_limiting.create_token(auth_user.user.uuid)?;
+    context
+        .rate_limiting
+        .create_credential(auth_user.user.uuid)?;
 
     let insert_token = InsertToken::from_json(
         auth_conn!(context),

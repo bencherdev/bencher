@@ -121,8 +121,8 @@ pub enum RateLimitingError {
     UserRuns,
     #[error("Too many authentication attempts for user. Please, try again later.")]
     UserAttempts,
-    #[error("Too many token generations for user. Please, try again later.")]
-    UserTokens,
+    #[error("Too many credential generations for user. Please, try again later.")]
+    UserCredentials,
     #[error("Too many organization creations for user. Please, try again later.")]
     UserOrganizations,
     #[error("Too many invitation emails for user. Please, try again later.")]
@@ -314,8 +314,8 @@ impl RateLimiting {
         self.user.check_attempt(user_uuid)
     }
 
-    pub fn create_token(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
-        self.user.check_token(user_uuid)
+    pub fn create_credential(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
+        self.user.check_credential(user_uuid)
     }
 
     pub fn create_organization(&self, user_uuid: UserUuid) -> Result<(), HttpError> {

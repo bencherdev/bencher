@@ -113,7 +113,7 @@ pub enum ApiCounter {
     ProjectRunMax(IntervalKind),
 
     UserAttemptMax(IntervalKind, AuthorizationKind),
-    UserTokenMax(IntervalKind),
+    UserCredentialMax(IntervalKind),
     UserOrganizationMax(IntervalKind),
     UserInviteMax(IntervalKind),
 
@@ -186,7 +186,7 @@ impl ApiCounter {
             Self::UserCheckout => "{checkout}",
 
             Self::UserAttemptMax(_, _) | Self::UserTokenRevokedUse => "{attempt}",
-            Self::UserTokenMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
+            Self::UserCredentialMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
             Self::RunnerKeyRotate => "{key}",
             Self::ProjectKeyAuthFailed(_) => "{auth_failure}",
 
@@ -247,7 +247,7 @@ impl ApiCounter {
             Self::RunUnclaimedMax(_) => "run.unclaimed.max",
 
             Self::UserAttemptMax(_, _) => "user.auth.max",
-            Self::UserTokenMax(_) => "user.token.max",
+            Self::UserCredentialMax(_) => "user.credential.max",
             Self::UserOrganizationMax(_) => "user.organization.max",
             Self::UserInviteMax(_) => "user.invite.max",
 
@@ -333,7 +333,7 @@ impl ApiCounter {
             Self::UserAttemptMax(_, _) => {
                 "Counts the number of user authentication attempt maximums reached"
             },
-            Self::UserTokenMax(_) => "Counts the number of user token maximums reached",
+            Self::UserCredentialMax(_) => "Counts the number of user credential maximums reached",
             Self::UserOrganizationMax(_) => {
                 "Counts the number of user organization maximums reached"
             },
@@ -437,7 +437,7 @@ impl ApiCounter {
             | Self::RunUnclaimedMax(interval_kind)
             | Self::RunClaimedMax(interval_kind)
             | Self::ProjectRunMax(interval_kind)
-            | Self::UserTokenMax(interval_kind)
+            | Self::UserCredentialMax(interval_kind)
             | Self::UserOrganizationMax(interval_kind)
             | Self::UserInviteMax(interval_kind) => {
                 vec![interval_kind.into()]

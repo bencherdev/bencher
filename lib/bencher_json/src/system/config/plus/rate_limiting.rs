@@ -28,7 +28,7 @@ pub struct JsonPublicRateLimiter {
 pub struct JsonUserRateLimiter {
     pub requests: Option<JsonRateLimits>,
     pub attempts: Option<JsonRateLimits>,
-    pub tokens: Option<JsonRateLimits>,
+    pub credentials: Option<JsonRateLimits>,
     pub organizations: Option<JsonRateLimits>,
     pub invites: Option<JsonRateLimits>,
     pub runs: Option<JsonRateLimits>,

@@ -232,6 +232,11 @@ async fn post_inner(
         Permission::Manage,
     )?;
 
+    #[cfg(feature = "plus")]
+    context
+        .rate_limiting
+        .create_credential(auth_user.user.uuid)?;
+
     let now = context.clock.now();
     let (insert_key, plaintext_key) =
         InsertProjectKey::from_json(query_project.id, auth_user.user.id, json_key, now)?;
