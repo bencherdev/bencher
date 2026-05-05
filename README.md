@@ -98,7 +98,7 @@ Bencher is a suite of bare metal continuous benchmarking tools:
 - [`bencher` CLI](https://bencher.dev/docs/how-to/install-cli/): run benchmarks and publish results
 - Bencher API Server: store, query, and alert on results
 - Bencher Console: web UI for tracking and graphing
-- Bencher Bare Metal [`runner`](https://bencher.dev/docs/tutorial/bare-metal/): dedicated hardware for noise-free benchmarks
+- Bencher Bare Metal [`runner`](https://bencher.dev/docs/tutorial/bare-metal/): bare metal benchmark execution
 
 The best place to start is the [Bare Metal Quickstart](https://bencher.dev/docs/tutorial/bare-metal/).
 
@@ -386,8 +386,8 @@ Don't see your harness? [Open an issue →](https://github.com/bencherdev/benche
 
 ## Hosting
 
-- **Bencher Self-Hosted**: Deploy Bencher on your own infrastructure. Bare metal, Docker, or Kubernetes. Full control, no data leaving your environment. [Deploy in 60 seconds →](https://bencher.dev/docs/tutorial/self-hosted/)
 - **Bencher Cloud**: Zero infrastructure to manage. On-demand bare metal runners, billed by the minute. Pay for your benchmark runs, not idle servers. [Benchmark for free →](https://bencher.dev/auth/signup)
+- **Bencher Self-Hosted**: Deploy Bencher on your own infrastructure. Bare metal, Docker, or Kubernetes. Full control, no data leaving your environment. [Deploy in 60 seconds →](https://bencher.dev/docs/tutorial/self-hosted/)
 
 ## GitHub Actions
 
