@@ -48,7 +48,12 @@ impl ProjectRateLimiter {
             hour,
             day,
             #[cfg(feature = "otel")]
-            &bencher_otel::ApiCounter::ProjectRunMax,
+            &|interval| {
+                bencher_otel::ApiCounter::RequestMax(
+                    interval,
+                    bencher_otel::AuthorizationKind::Project,
+                )
+            },
             RateLimitingError::ProjectRuns,
         );
 

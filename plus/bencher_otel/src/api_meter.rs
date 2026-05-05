@@ -110,7 +110,6 @@ pub enum ApiCounter {
 
     RunClaimedMax(IntervalKind),
     RunUnclaimedMax(IntervalKind),
-    ProjectRunMax(IntervalKind),
 
     UserAttemptMax(IntervalKind, AuthorizationKind),
     UserCredentialMax(IntervalKind),
@@ -160,10 +159,7 @@ impl ApiCounter {
 
             Self::ProjectCreate | Self::ProjectDelete => "{project}",
 
-            Self::Run(_)
-            | Self::RunClaimedMax(_)
-            | Self::RunUnclaimedMax(_)
-            | Self::ProjectRunMax(_) => "{run}",
+            Self::Run(_) | Self::RunClaimedMax(_) | Self::RunUnclaimedMax(_) => "{run}",
 
             Self::ReportCreate | Self::ReportDelete | Self::SelfHostedServerStats(_) => "{report}",
 
@@ -264,7 +260,6 @@ impl ApiCounter {
             Self::OciTagsList => "oci.tags.list",
 
             Self::RunnerRequestMax(_) => "runner.request.max",
-            Self::ProjectRunMax(_) => "project.run.max",
 
             // Project key metrics
             Self::ProjectKeyAuthFailed(_) => "project.key.auth.failed",
@@ -352,7 +347,6 @@ impl ApiCounter {
             Self::OciTagsList => "Counts the number of OCI tags list requests",
 
             Self::RunnerRequestMax(_) => "Counts the number of runner request maximums reached",
-            Self::ProjectRunMax(_) => "Counts the number of project run maximums reached",
 
             // Project key metrics
             Self::ProjectKeyAuthFailed(_) => {
@@ -436,7 +430,6 @@ impl ApiCounter {
             Self::RunnerRequestMax(interval_kind)
             | Self::RunUnclaimedMax(interval_kind)
             | Self::RunClaimedMax(interval_kind)
-            | Self::ProjectRunMax(interval_kind)
             | Self::UserCredentialMax(interval_kind)
             | Self::UserOrganizationMax(interval_kind)
             | Self::UserInviteMax(interval_kind) => {
@@ -554,6 +547,7 @@ impl IntervalKind {
 pub enum AuthorizationKind {
     Public,
     User,
+    Project,
 }
 
 impl fmt::Display for AuthorizationKind {
@@ -561,6 +555,7 @@ impl fmt::Display for AuthorizationKind {
         match self {
             Self::Public => write!(f, "public"),
             Self::User => write!(f, "user"),
+            Self::Project => write!(f, "project"),
         }
     }
 }
