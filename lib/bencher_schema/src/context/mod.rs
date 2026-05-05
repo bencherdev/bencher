@@ -104,6 +104,17 @@ macro_rules! public_conn {
 }
 
 #[macro_export]
+macro_rules! auth_conn {
+    ($context:expr) => {
+        &mut *$context.database.get_auth_conn().await?
+    };
+    ($context:expr, |$conn:ident| $multi:expr) => {{
+        let $conn = $crate::auth_conn!($context);
+        $multi
+    }};
+}
+
+#[macro_export]
 macro_rules! actor_conn {
     ($context:expr, $actor:expr) => {
         &mut *match $actor {
@@ -120,17 +131,6 @@ macro_rules! actor_conn {
             },
         }
     };
-}
-
-#[macro_export]
-macro_rules! auth_conn {
-    ($context:expr) => {
-        &mut *$context.database.get_auth_conn().await?
-    };
-    ($context:expr, |$conn:ident| $multi:expr) => {{
-        let $conn = $crate::auth_conn!($context);
-        $multi
-    }};
 }
 
 #[macro_export]
