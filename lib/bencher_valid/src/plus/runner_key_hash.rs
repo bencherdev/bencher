@@ -73,6 +73,7 @@ mod tests {
         assert_eq!(hash.to_string(), VALID_HEX);
     }
 
+    #[cfg(feature = "server")]
     #[test]
     fn from_runner_key() {
         let key: crate::RunnerKey = "bencher_runner_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh"

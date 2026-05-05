@@ -17127,6 +17127,14 @@
               }
             ]
           },
+          "credentials": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          },
           "invites": {
             "nullable": true,
             "allOf": [
@@ -17152,14 +17160,6 @@
             ]
           },
           "runs": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonRateLimits"
-              }
-            ]
-          },
-          "tokens": {
             "nullable": true,
             "allOf": [
               {

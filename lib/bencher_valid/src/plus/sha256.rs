@@ -128,6 +128,7 @@ mod tests {
         assert!("invalid".parse::<Sha256>().is_err());
     }
 
+    #[cfg(feature = "server")]
     #[test]
     fn compute_and_display() {
         let sha = Sha256::compute(b"hello");
