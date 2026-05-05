@@ -4772,6 +4772,488 @@
         }
       }
     },
+    "/v0/projects/{project}/keys": {
+      "get": {
+        "tags": [
+          "projects",
+          "keys"
+        ],
+        "summary": "List project keys",
+        "description": "List all API keys for a project. Requires `manage` permission on the project. By default, the keys are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of keys.",
+        "operationId": "proj_keys_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
+            "schema": {
+              "$ref": "#/components/schemas/ProjKeysSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "description": "Filter by key name, exact match.",
+            "schema": {
+              "$ref": "#/components/schemas/ResourceName"
+            }
+          },
+          {
+            "in": "query",
+            "name": "revoked",
+            "description": "If set to `true`, only returns revoked keys. If not set or set to `false`, only returns non-revoked keys.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "description": "Search by key name or UUID.",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonProjectKeys"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects",
+          "keys"
+        ],
+        "summary": "Create a project key",
+        "description": "Create a new API key for a project. The plaintext key is only returned once in the response. Requires `manage` permission on the project.",
+        "operationId": "proj_key_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewProjectKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "successful creation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonProjectKeyCreated"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/projects/{project}/keys/{key}": {
+      "get": {
+        "tags": [
+          "projects",
+          "keys"
+        ],
+        "summary": "View a project key",
+        "description": "View an API key for a project. Requires `manage` permission on the project.",
+        "operationId": "proj_key_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "description": "The UUID for a project key.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProjectKeyUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonProjectKey"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects",
+          "keys"
+        ],
+        "summary": "Revoke a project key",
+        "description": "Revoke an API key for a project. Revocation is terminal: a revoked key can no longer authenticate any request, and the revocation cannot be undone. Requires `manage` permission on the project.",
+        "operationId": "proj_key_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "description": "The UUID for a project key.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProjectKeyUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "projects",
+          "keys"
+        ],
+        "summary": "Update a project key",
+        "description": "Update an API key for a project (rename only). Requires `manage` permission on the project.",
+        "operationId": "proj_key_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "description": "The UUID for a project key.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProjectKeyUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateProjectKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonProjectKey"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/measures": {
       "get": {
         "tags": [
@@ -12677,6 +13159,29 @@
           "name"
         ]
       },
+      "JsonNewProjectKey": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "The name of the project key. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          },
+          "ttl": {
+            "nullable": true,
+            "description": "The time-to-live (TTL) for the key in seconds. If not provided, the key will not expire for over 128 years.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
       "JsonNewReport": {
         "type": "object",
         "properties": {
@@ -14121,6 +14626,92 @@
           "visibility"
         ]
       },
+      "JsonProjectKey": {
+        "type": "object",
+        "properties": {
+          "creation": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "creator": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserUuid"
+              }
+            ]
+          },
+          "expiration": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "name": {
+            "$ref": "#/components/schemas/ResourceName"
+          },
+          "project": {
+            "$ref": "#/components/schemas/ProjectUuid"
+          },
+          "revoked": {
+            "nullable": true,
+            "description": "The time at which the key was revoked, if any. `None` means the key is active.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ProjectKeyUuid"
+          }
+        },
+        "required": [
+          "creation",
+          "expiration",
+          "name",
+          "project",
+          "uuid"
+        ]
+      },
+      "JsonProjectKeyCreated": {
+        "type": "object",
+        "properties": {
+          "creation": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "expiration": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "key": {
+            "description": "The plaintext project key. Only returned once, at creation.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProjectKey"
+              }
+            ]
+          },
+          "name": {
+            "$ref": "#/components/schemas/ResourceName"
+          },
+          "project": {
+            "$ref": "#/components/schemas/ProjectUuid"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ProjectKeyUuid"
+          }
+        },
+        "required": [
+          "creation",
+          "expiration",
+          "key",
+          "name",
+          "project",
+          "uuid"
+        ]
+      },
+      "JsonProjectKeys": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonProjectKey"
+        }
+      },
       "JsonProjectPatch": {
         "type": "object",
         "properties": {
@@ -14200,6 +14791,19 @@
           "url"
         ]
       },
+      "JsonProjectRateLimiter": {
+        "type": "object",
+        "properties": {
+          "runs": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          }
+        }
+      },
       "JsonProjects": {
         "type": "array",
         "items": {
@@ -14268,6 +14872,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonOciBandwidth"
+              }
+            ]
+          },
+          "project": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonProjectRateLimiter"
               }
             ]
           },
@@ -16212,6 +16824,20 @@
           }
         ]
       },
+      "JsonUpdateProjectKey": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "nullable": true,
+            "description": "The new name of the project key. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          }
+        }
+      },
       "JsonUpdateRunner": {
         "description": "Update a runner",
         "type": "object",
@@ -16501,6 +17127,14 @@
               }
             ]
           },
+          "credentials": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRateLimits"
+              }
+            ]
+          },
           "invites": {
             "nullable": true,
             "allOf": [
@@ -16526,14 +17160,6 @@
             ]
           },
           "runs": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonRateLimits"
-              }
-            ]
-          },
-          "tokens": {
             "nullable": true,
             "allOf": [
               {
@@ -16779,6 +17405,13 @@
         ]
       },
       "PlotUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "ProjectKey": {
+        "type": "string"
+      },
+      "ProjectKeyUuid": {
         "type": "string",
         "format": "uuid"
       },
@@ -17224,6 +17857,17 @@
           }
         ]
       },
+      "ProjKeysSort": {
+        "oneOf": [
+          {
+            "description": "Sort by key name.",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
+        ]
+      },
       "ProjMeasuresSort": {
         "oneOf": [
           {
@@ -17402,6 +18046,10 @@
     {
       "name": "jobs",
       "description": "Jobs"
+    },
+    {
+      "name": "keys",
+      "description": "Project API Keys"
     },
     {
       "name": "measures",

@@ -12,10 +12,10 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = []
 client = ["dep:regex-lite"]
-server = ["dep:rand", "dep:regex"]
+server = ["dep:hex", "dep:rand", "dep:regex", "dep:sha2"]
 schema = ["dep:schemars", "ordered-float/schemars"]
 db = ["dep:diesel"]
-plus = ["chrono/clock", "dep:hex", "dep:sha2"]
+plus = ["chrono/clock"]
 test-clock = []
 wasm = [
     "client",

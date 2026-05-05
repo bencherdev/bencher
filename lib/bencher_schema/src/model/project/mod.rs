@@ -40,6 +40,7 @@ use super::organization::OrganizationId;
 
 pub mod benchmark;
 pub mod branch;
+pub mod key;
 pub mod measure;
 pub mod metric;
 pub mod metric_boundary;

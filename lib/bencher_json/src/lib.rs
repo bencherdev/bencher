@@ -4,8 +4,8 @@ pub use bencher_context::RunContext;
 pub use bencher_valid::{
     BenchmarkName, Boundary, BranchName, CdfBoundary, DateTime, DateTimeMillis, Email, GitHash,
     Index, IntoResourceId, IqrBoundary, Jwt, Model, ModelTest, NameId, NonEmpty,
-    PercentageBoundary, ResourceId, ResourceName, SampleSize, Sanitize, Search, Secret, Slug,
-    Units, Url, UserName, ValidError, Window,
+    PROJECT_KEY_PREFIX, PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId, ResourceName,
+    SampleSize, Sanitize, Search, Secret, Slug, Units, Url, UserName, ValidError, Window,
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
@@ -74,6 +74,10 @@ pub use project::{
         JsonNewBranch, JsonNewStartPoint,
     },
     head::{HeadUuid, JsonHead, JsonStartPoint, VersionUuid},
+    key::{
+        JsonNewProjectKey, JsonProjectKey, JsonProjectKeyCreated, JsonProjectKeys,
+        JsonUpdateProjectKey, ProjectKeyUuid,
+    },
     measure::{
         JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureNameId, MeasureResourceId, MeasureSlug,
         MeasureUuid,

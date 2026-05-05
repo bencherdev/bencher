@@ -26,7 +26,7 @@ use crate::{
         },
         runner::{QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
-        user::public::PublicUser,
+        user::{actor::ApiActor, public::PublicUser},
     },
     schema::{self, job as job_table},
     write_conn, write_transaction,
@@ -94,16 +94,14 @@ impl QueryJob {
         // Look up the project for plan checks
         let query_project = QueryProject::get(auth_conn!(context), query_report.project_id)?;
 
-        // TODO: Refactor PlanKind to support auth_conn directly so we don't need this PublicUser hack.
-        // In the runner context we're already authenticated but PlanKind::new_for_project requires
-        // a PublicUser for public_conn! routing.
-        let public_user = PublicUser::Public(None);
+        // TODO: Add a RunnerKey variant to ApiActor so runner-authenticated requests use auth_conn
+        let api_actor = ApiActor::Public(PublicUser::Public(None));
         let plan_kind = PlanKind::new_for_project(
             context,
             context.biller.as_ref(),
             &context.licensor,
             &query_project,
-            &public_user,
+            &api_actor,
         )
         .await?;
 

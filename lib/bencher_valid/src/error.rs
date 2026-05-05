@@ -101,6 +101,10 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Failed to validate sandbox: {0}")]
     Sandbox(String),
+    #[error("Failed to validate project key: {0}")]
+    ProjectKey(String),
+    #[error("Failed to validate project key hash: {0}")]
+    ProjectKeyHash(String),
     #[cfg(feature = "plus")]
     #[error("Failed to validate runner key: {0}")]
     RunnerKey(String),

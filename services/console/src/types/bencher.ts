@@ -405,6 +405,8 @@ export type OrganizationResourceId = Uuid | Slug;
 
 export type PollTimeout = number;
 
+export type ProjectKey = string;
+
 /** An project UUID or slug. */
 export type ProjectResourceId = Uuid | Slug;
 
@@ -663,6 +665,19 @@ export interface JsonNewProject {
 	visibility?: Visibility;
 }
 
+export interface JsonNewProjectKey {
+	/**
+	 * The name of the project key.
+	 * Maximum length is 64 characters.
+	 */
+	name: ResourceName;
+	/**
+	 * The time-to-live (TTL) for the key in seconds.
+	 * If not provided, the key will not expire for over 128 years.
+	 */
+	ttl?: number;
+}
+
 /**
  * Job configuration for a remote runner execution.
  * 
@@ -911,6 +926,30 @@ export interface JsonPlot {
 	modified: string;
 }
 
+export interface JsonProjectKey {
+	uuid: ProjectKeyUuid;
+	project: Uuid;
+	creator?: Uuid;
+	name: ResourceName;
+	creation: string;
+	expiration: string;
+	/**
+	 * The time at which the key was revoked, if any.
+	 * `None` means the key is active.
+	 */
+	revoked?: string;
+}
+
+export interface JsonProjectKeyCreated {
+	uuid: ProjectKeyUuid;
+	project: Uuid;
+	name: ResourceName;
+	/** The plaintext project key. Only returned once, at creation. */
+	key: ProjectKey;
+	creation: string;
+	expiration: string;
+}
+
 export interface JsonPubUser {
 	uuid: Uuid;
 	name: UserName;
@@ -1006,6 +1045,14 @@ export enum UpdateAlertStatus {
 export interface JsonUpdateAlert {
 	/** The new status of the alert. */
 	status?: UpdateAlertStatus;
+}
+
+export interface JsonUpdateProjectKey {
+	/**
+	 * The new name of the project key.
+	 * Maximum length is 64 characters.
+	 */
+	name?: ResourceName;
 }
 
 /** Update a runner */

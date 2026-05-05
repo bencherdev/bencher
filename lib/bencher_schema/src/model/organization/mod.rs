@@ -21,8 +21,6 @@ use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 #[cfg(feature = "plus")]
 use sso::QuerySso;
 
-#[cfg(feature = "plus")]
-use crate::model::user::public::PublicUser;
 use crate::{
     ApiContext, CLAIM_TOKEN_TTL, auth_conn,
     context::{DbConnection, Rbac},
@@ -40,6 +38,8 @@ use crate::{
     schema::{self, organization as organization_table},
     write_conn, write_transaction,
 };
+#[cfg(feature = "plus")]
+use crate::{actor_conn, model::user::actor::ApiActor};
 
 use super::user::QueryUser;
 
@@ -167,7 +167,7 @@ impl QueryOrganization {
                 Ok(insert_organization.into_query(id))
             },
             GetOrCreateOrg::Claimed => Err(unauthorized_error(format!(
-                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
+                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) or project key (`--key`) to authenticate."
             ))),
         }
     }
@@ -184,7 +184,7 @@ impl QueryOrganization {
         // then the project can not have anonymous reports.
         if query_organization.is_claimed(public_conn!(context))? {
             return Err(unauthorized_error(format!(
-                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) to authenticate."
+                "This project ({project_slug}) has already been claimed. Provide a valid API token (`--token`) or project key (`--key`) to authenticate."
             )));
         }
         Ok(query_organization)
@@ -414,13 +414,13 @@ impl QueryOrganization {
     pub async fn window_usage(
         &self,
         context: &ApiContext,
-        public_user: &PublicUser,
+        api_actor: &ApiActor,
     ) -> Result<u32, HttpError> {
         use crate::model::project::metric::QueryMetric;
 
         let (start_time, end_time) = context.rate_limiting.window();
         QueryMetric::usage(
-            public_conn!(context, public_user),
+            actor_conn!(context, api_actor),
             self.id,
             start_time,
             end_time,

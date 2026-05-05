@@ -11,6 +11,7 @@ mod allowed;
 mod benchmarks;
 mod branches;
 mod jobs;
+mod keys;
 mod measures;
 mod metrics;
 mod perf;
@@ -47,6 +48,17 @@ impl bencher_endpoint::Registrar for Api {
             api_description.register(allowed::proj_allowed_options)?;
         }
         api_description.register(allowed::proj_allowed_get)?;
+
+        // Project Keys
+        if http_options {
+            api_description.register(keys::proj_keys_options)?;
+            api_description.register(keys::proj_key_options)?;
+        }
+        api_description.register(keys::proj_keys_get)?;
+        api_description.register(keys::proj_key_post)?;
+        api_description.register(keys::proj_key_get)?;
+        api_description.register(keys::proj_key_patch)?;
+        api_description.register(keys::proj_key_delete)?;
 
         // Reports
         if http_options {

@@ -53,6 +53,7 @@ from_client!(
 from_client!(
     OrganizationUuid,
     ProjectUuid,
+    ProjectKeyUuid,
     ReportUuid,
     PlotUuid,
     BranchUuid,
@@ -156,6 +157,9 @@ try_from_client!(
     JsonAllowed,
     JsonProjects,
     JsonProject,
+    JsonProjectKeys,
+    JsonProjectKey,
+    JsonProjectKeyCreated,
     JsonReports,
     JsonReport,
     JsonPerf,

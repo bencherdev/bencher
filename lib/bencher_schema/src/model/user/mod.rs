@@ -23,6 +23,7 @@ use crate::{
     write_conn,
 };
 
+pub mod actor;
 pub mod admin;
 pub mod auth;
 pub mod public;

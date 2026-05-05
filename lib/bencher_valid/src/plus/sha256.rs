@@ -3,13 +3,11 @@ use derive_more::Display;
 use schemars::JsonSchema;
 use std::{fmt, str::FromStr};
 
+use crate::ValidError;
 use serde::{
     Deserialize, Deserializer, Serialize,
     de::{self, Visitor},
 };
-use sha2::Digest as _;
-
-use crate::ValidError;
 
 const SHA256_HEX_LEN: usize = 64;
 
@@ -19,7 +17,9 @@ const SHA256_HEX_LEN: usize = 64;
 pub struct Sha256(String);
 
 impl Sha256 {
+    #[cfg(feature = "server")]
     pub fn compute(data: &[u8]) -> Self {
+        use sha2::Digest as _;
         let hash = sha2::Sha256::digest(data);
         Self(hex::encode(hash))
     }
@@ -128,6 +128,7 @@ mod tests {
         assert!("invalid".parse::<Sha256>().is_err());
     }
 
+    #[cfg(feature = "server")]
     #[test]
     fn compute_and_display() {
         let sha = Sha256::compute(b"hello");

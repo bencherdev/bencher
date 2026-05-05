@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{BENCHER_API_URL_STR, Jwt, Url};
+use bencher_json::{BENCHER_API_URL_STR, Jwt, ProjectKey, Url};
 use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 pub mod compose;
@@ -147,9 +147,8 @@ pub struct CliBackend {
     #[clap(long, value_name = "URL", env = "BENCHER_HOST", default_value = BENCHER_API_URL_STR)]
     pub host: Url,
 
-    /// User API token
-    #[clap(long, env = "BENCHER_API_TOKEN")]
-    pub token: Option<Jwt>,
+    #[clap(flatten)]
+    pub credential: CliCredential,
 
     /// Allow insecure connections to an HTTPS host
     #[clap(long)]
@@ -174,6 +173,18 @@ pub struct CliBackend {
     /// Strictly parse JSON responses
     #[clap(long)]
     pub strict: bool,
+}
+
+#[derive(Args, Debug)]
+#[clap(group(ArgGroup::new("bencher_credential").args(["token", "key"]).multiple(false)))]
+pub struct CliCredential {
+    /// User API token (JWT)
+    #[clap(long, env = "BENCHER_API_TOKEN")]
+    pub token: Option<Jwt>,
+
+    /// Project-scoped API key
+    #[clap(long, env = "BENCHER_API_KEY")]
+    pub key: Option<ProjectKey>,
 }
 
 #[derive(Args, Debug)]

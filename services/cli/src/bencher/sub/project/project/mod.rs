@@ -1,5 +1,7 @@
 use crate::{CliError, bencher::sub::SubCmd, parser::project::CliProject};
 
+use super::key;
+
 mod allowed;
 mod create;
 mod delete;
@@ -15,6 +17,7 @@ pub enum Project {
     Update(update::Update),
     Delete(delete::Delete),
     Allowed(allowed::Allowed),
+    Key(key::Key),
 }
 
 impl TryFrom<CliProject> for Project {
@@ -28,6 +31,7 @@ impl TryFrom<CliProject> for Project {
             CliProject::Update(update) => Self::Update(update.try_into()?),
             CliProject::Delete(delete) => Self::Delete(delete.try_into()?),
             CliProject::Allowed(allowed) => Self::Allowed(allowed.try_into()?),
+            CliProject::Key(key) => Self::Key(key.try_into()?),
         })
     }
 }
@@ -41,6 +45,7 @@ impl SubCmd for Project {
             Self::Update(update) => update.exec().await,
             Self::Delete(delete) => delete.exec().await,
             Self::Allowed(allowed) => allowed.exec().await,
+            Self::Key(key) => key.exec().await,
         }
     }
 }

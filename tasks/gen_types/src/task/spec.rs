@@ -48,6 +48,7 @@ impl Spec {
                 "sso" => TagDetails { description: Some("Single Sign-On (SSO)".into()), external_docs: None},
                 "organizations" => TagDetails { description: Some("Organizations".into()), external_docs: None},
                 "projects" => TagDetails { description: Some("Projects".into()), external_docs: None},
+                "keys" => TagDetails { description: Some("Project API Keys".into()), external_docs: None},
                 "reports" => TagDetails { description: Some("Reports".into()), external_docs: None},
                 "perf" => TagDetails { description: Some("Perf Metrics".into()), external_docs: None},
                 "plots" => TagDetails { description: Some("Plots".into()), external_docs: None},

@@ -10,7 +10,7 @@ use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQuer
 use dropshot::HttpError;
 
 use crate::{
-    ApiContext, auth_conn,
+    ApiContext, actor_conn, auth_conn,
     context::{DbConnection, RateLimitingError},
     error::{
         issue_error, not_found_error, payment_required_error, resource_conflict_err,
@@ -19,9 +19,8 @@ use crate::{
     model::{
         organization::{OrganizationId, QueryOrganization, UpdateOrganization},
         project::{QueryProject, metric::QueryMetric},
-        user::{auth::AuthUser, public::PublicUser},
+        user::{actor::ApiActor, auth::AuthUser},
     },
-    public_conn,
     schema::{self, plan as plan_table},
 };
 
@@ -90,7 +89,7 @@ impl QueryPlan {
     pub async fn get_active_metered_plan(
         context: &ApiContext,
         biller: Option<&Biller>,
-        public_user: &PublicUser,
+        api_actor: &ApiActor,
         query_organization: &QueryOrganization,
     ) -> Result<Option<CustomerId>, HttpError> {
         let Some(biller) = biller else {
@@ -98,7 +97,7 @@ impl QueryPlan {
         };
 
         let Ok(query_plan) = Self::belonging_to(&query_organization)
-            .first::<QueryPlan>(public_conn!(context, public_user))
+            .first::<QueryPlan>(actor_conn!(context, api_actor))
         else {
             return Ok(None);
         };
@@ -263,17 +262,17 @@ impl PlanKind {
         context: &ApiContext,
         biller: Option<&Biller>,
         licensor: &Licensor,
-        public_user: &PublicUser,
+        api_actor: &ApiActor,
         query_organization: &QueryOrganization,
         visibility: Visibility,
     ) -> Result<Self, HttpError> {
         if let Some(customer_id) =
-            QueryPlan::get_active_metered_plan(context, biller, public_user, query_organization)
+            QueryPlan::get_active_metered_plan(context, biller, api_actor, query_organization)
                 .await?
         {
             Ok(Self::Metered(customer_id))
         } else if let Some(license_usage) = LicenseUsage::get(
-            public_conn!(context, public_user),
+            actor_conn!(context, api_actor),
             licensor,
             query_organization,
         )? {
@@ -287,10 +286,8 @@ impl PlanKind {
                 }))
             }
         } else if visibility.is_public() {
-            let is_claimed = query_organization.is_claimed(public_conn!(context, public_user))?;
-            let window_usage = query_organization
-                .window_usage(context, public_user)
-                .await?;
+            let is_claimed = query_organization.is_claimed(actor_conn!(context, api_actor))?;
+            let window_usage = query_organization.window_usage(context, api_actor).await?;
 
             context
                 .rate_limiting
@@ -319,14 +316,14 @@ impl PlanKind {
         biller: Option<&Biller>,
         licensor: &Licensor,
         project: &QueryProject,
-        public_user: &PublicUser,
+        api_actor: &ApiActor,
     ) -> Result<Self, HttpError> {
-        let query_organization = project.organization(public_conn!(context, public_user))?;
+        let query_organization = project.organization(actor_conn!(context, api_actor))?;
         Self::new(
             context,
             biller,
             licensor,
-            public_user,
+            api_actor,
             &query_organization,
             project.visibility,
         )

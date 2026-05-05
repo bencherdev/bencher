@@ -1,6 +1,6 @@
 use std::{fmt, ops::Deref, time::Duration};
 
-use bencher_json::{BENCHER_API_URL, BENCHER_URL, JsonApiVersion, JsonConsole, Jwt};
+use bencher_json::{BENCHER_API_URL, BENCHER_URL, JsonApiVersion, JsonConsole};
 use serde::{Serialize, de::DeserializeOwned};
 
 use crate::{CLI_VERSION, cli_eprintln_quietable, parser::CliBackend};
@@ -27,9 +27,13 @@ pub enum BackendError {
     #[error("Failed to parse API token: {0}")]
     ParseToken(bencher_json::ValidError),
     #[error(
-        "Failed to find Bencher API token, and this API endpoint requires authorization. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable."
+        "Failed to find Bencher API credential, and this API endpoint requires authorization. Set `--token`/`BENCHER_API_TOKEN` or `--key`/`BENCHER_API_KEY`."
     )]
-    NoToken,
+    NoCredential,
+    #[error(
+        "Both `--token`/`BENCHER_API_TOKEN` and `--key`/`BENCHER_API_KEY` are set. Only one credential may be provided."
+    )]
+    ConflictingCredentials,
     #[error("Failed to get API server version: {0}")]
     ApiVersion(bencher_client::ClientError),
     #[error("{err}\nHint: This may be due to a version mismatch. {mismatch}")]
@@ -65,7 +69,7 @@ impl TryFrom<(CliBackend, bool)> for Backend {
     fn try_from((backend, is_public): (CliBackend, bool)) -> Result<Self, Self::Error> {
         let CliBackend {
             host,
-            token,
+            credential,
             insecure_host,
             native_tls,
             timeout,
@@ -74,11 +78,8 @@ impl TryFrom<(CliBackend, bool)> for Backend {
             strict,
         } = backend;
         let host = host.try_into().map_err(BackendError::ParseHost)?;
-        let token = map_token(token, is_public)?;
         let mut builder = bencher_client::BencherClient::builder().host(host);
-        if let Some(token) = token {
-            builder = builder.token(token);
-        }
+        builder = map_credential(builder, credential, is_public)?;
         let client = builder
             .insecure_host(insecure_host)
             .native_tls(native_tls)
@@ -92,13 +93,27 @@ impl TryFrom<(CliBackend, bool)> for Backend {
     }
 }
 
-fn map_token(token: Option<Jwt>, is_public: bool) -> Result<Option<Jwt>, BackendError> {
+fn map_credential(
+    builder: bencher_client::BencherClientBuilder,
+    credential: crate::parser::CliCredential,
+    is_public: bool,
+) -> Result<bencher_client::BencherClientBuilder, BackendError> {
+    let crate::parser::CliCredential { token, key } = credential;
+
+    if token.is_some() && key.is_some() {
+        return Err(BackendError::ConflictingCredentials);
+    }
+
+    if let Some(key) = key {
+        return Ok(builder.key(key));
+    }
+
     if let Some(token) = token {
-        Ok(Some(token))
+        Ok(builder.token(token))
     } else if is_public {
-        Ok(None)
+        Ok(builder)
     } else {
-        Err(BackendError::NoToken)
+        Err(BackendError::NoCredential)
     }
 }
 
