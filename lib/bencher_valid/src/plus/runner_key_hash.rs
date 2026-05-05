@@ -14,6 +14,7 @@ pub struct RunnerKeyHash(String);
 #[cfg(feature = "db")]
 crate::typed_string!(RunnerKeyHash);
 
+#[cfg(feature = "server")]
 impl From<&crate::RunnerKey> for RunnerKeyHash {
     fn from(key: &crate::RunnerKey) -> Self {
         Self(crate::keys::sha256_hex(key.as_ref().as_bytes()))

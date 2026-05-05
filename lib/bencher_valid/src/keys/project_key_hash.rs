@@ -14,6 +14,7 @@ pub struct ProjectKeyHash(String);
 #[cfg(feature = "db")]
 crate::typed_string!(ProjectKeyHash);
 
+#[cfg(feature = "server")]
 impl From<&crate::ProjectKey> for ProjectKeyHash {
     fn from(key: &crate::ProjectKey) -> Self {
         Self(super::sha256_hex(key.as_ref().as_bytes()))

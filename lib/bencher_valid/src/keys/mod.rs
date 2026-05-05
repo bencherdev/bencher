@@ -36,6 +36,7 @@ pub(crate) fn is_valid_sha256_hex(s: &str) -> bool {
     s.len() == SHA256_HEX_LEN && s.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
+#[cfg(feature = "server")]
 pub(crate) fn sha256_hex(input: &[u8]) -> String {
     use sha2::Digest as _;
     hex::encode(sha2::Sha256::digest(input))
