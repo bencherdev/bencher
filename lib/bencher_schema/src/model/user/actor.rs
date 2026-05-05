@@ -121,14 +121,14 @@ impl ApiActor {
         let now = context.clock.now();
         let query_key = QueryProjectKey::from_hash(auth_conn!(context), &key_hash, now)
             .optional()
-            .map_err(|err| {
+            .inspect_err(|err| {
                 issue_error(
                     "Failed to lookup project key",
                     &format!("Failed to lookup project key by hash: {key_hash}"),
                     err,
-                )
+                );
             })
-            .map_err(|_issue| unauthorized_error(INVALID_PROJECT_KEY))?
+            .map_err(|_err| unauthorized_error(INVALID_PROJECT_KEY))?
             .ok_or_else(|| {
                 #[cfg(feature = "otel")]
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectKeyAuthFailed(

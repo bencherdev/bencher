@@ -220,6 +220,8 @@ enum MockSetup {
 }
 
 fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
+    #[cfg(not(feature = "plus"))]
+    let _unused = registry_url;
     match mock_setup {
         MockSetup::BencherCloud => {
             let task = TaskSeedTest {
