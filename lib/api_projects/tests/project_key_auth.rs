@@ -9,10 +9,12 @@
 //! Integration tests for project key authentication on GET endpoints.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonBranches, JsonProject, JsonProjectKeyCreated, JsonProjects, ProjectKey};
+use bencher_json::{
+    JsonBranch, JsonBranches, JsonProject, JsonProjectKeyCreated, JsonProjects, ProjectKey,
+};
 use http::StatusCode;
 
-async fn setup() -> (TestServer, String, ProjectKey) {
+async fn setup() -> (TestServer, String, String, ProjectKey) {
     let server = TestServer::new().await;
     let user = server.signup("Key User", "keyuser@example.com").await;
     let org = server.create_org(&user, "Key Org").await;
@@ -37,13 +39,13 @@ async fn setup() -> (TestServer, String, ProjectKey) {
     assert_eq!(resp.status(), StatusCode::CREATED);
     let key_created: JsonProjectKeyCreated = resp.json().await.expect("Failed to parse key");
 
-    (server, project_slug, key_created.key)
+    (server, project_slug, user.token, key_created.key)
 }
 
 // GET /v0/projects/{project} - view project with key
 #[tokio::test]
 async fn project_key_get_project() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
@@ -65,7 +67,7 @@ async fn project_key_get_project() {
 // GET /v0/projects - list projects with key returns only key's project
 #[tokio::test]
 async fn project_key_list_projects() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
@@ -88,7 +90,7 @@ async fn project_key_list_projects() {
 // GET /v0/projects/{project}/branches - list branches with key
 #[tokio::test]
 async fn project_key_list_branches() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
@@ -105,10 +107,51 @@ async fn project_key_list_branches() {
     let _branches: JsonBranches = resp.json().await.expect("Failed to parse response");
 }
 
+// GET /v0/projects/{project}/branches/{branch} - get single branch with key
+// This exercises the PubProjectBearerToken extractor path (different from list endpoints)
+#[tokio::test]
+async fn project_key_get_branch() {
+    let (server, project_slug, token, key) = setup().await;
+
+    // Create a branch using JWT auth
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "feature-branch", "slug": "feature-branch"}))
+        .send()
+        .await
+        .expect("Failed to create branch");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // GET the branch using the project key
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/branches/feature-branch",
+            project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let branch: JsonBranch = resp.json().await.expect("Failed to parse response");
+    let name: &str = branch.name.as_ref();
+    assert_eq!(name, "feature-branch");
+}
+
 // GET /v0/projects/{project}/testbeds - list testbeds with key
 #[tokio::test]
 async fn project_key_list_testbeds() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
@@ -127,7 +170,7 @@ async fn project_key_list_testbeds() {
 // GET /v0/projects/{project}/benchmarks - list benchmarks with key
 #[tokio::test]
 async fn project_key_list_benchmarks() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
@@ -146,7 +189,7 @@ async fn project_key_list_benchmarks() {
 // GET /v0/projects/{project}/measures - list measures with key
 #[tokio::test]
 async fn project_key_list_measures() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
@@ -165,7 +208,7 @@ async fn project_key_list_measures() {
 // GET /v0/projects/{project}/thresholds - list thresholds with key
 #[tokio::test]
 async fn project_key_list_thresholds() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
@@ -184,7 +227,7 @@ async fn project_key_list_thresholds() {
 // GET /v0/projects/{project}/alerts - list alerts with key
 #[tokio::test]
 async fn project_key_list_alerts() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
@@ -203,7 +246,7 @@ async fn project_key_list_alerts() {
 // GET /v0/projects/{project}/reports - list reports with key
 #[tokio::test]
 async fn project_key_list_reports() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
@@ -222,7 +265,7 @@ async fn project_key_list_reports() {
 // GET /v0/projects/{project}/plots - list plots with key
 #[tokio::test]
 async fn project_key_list_plots() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
@@ -283,7 +326,7 @@ async fn project_key_wrong_project() {
 // Negative: project key cannot list keys (requires Manage permission)
 #[tokio::test]
 async fn project_key_cannot_list_keys() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
@@ -302,7 +345,7 @@ async fn project_key_cannot_list_keys() {
 // Negative: project key cannot write (POST requires user auth)
 #[tokio::test]
 async fn project_key_cannot_write() {
-    let (server, project_slug, key) = setup().await;
+    let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
         .client
