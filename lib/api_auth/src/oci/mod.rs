@@ -129,14 +129,10 @@ pub async fn auth_oci_token_get(
                 )
                 .await?
             } else {
-                context
-                    .token_key
-                    .new_oci_public(OCI_TOKEN_TTL, repository, actions)
-                    .map_err(|e| {
-                        HttpError::for_internal_error(format!(
-                            "Failed to create public OCI token: {e}"
-                        ))
-                    })?
+                return Err(unauthorized_with_www_authenticate(
+                    &rqctx,
+                    query.scope.as_deref(),
+                ));
             }
         },
         Err(_) => context
