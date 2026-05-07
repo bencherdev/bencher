@@ -77,7 +77,8 @@ pub async fn proj_benchmarks_options(
 ///
 /// List all benchmarks for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 /// By default, the benchmarks are sorted in alphabetical order by name.
 /// The HTTP response header `X-Total-Count` contains the total number of benchmarks.
 #[endpoint {
@@ -251,7 +252,8 @@ pub async fn proj_benchmark_options(
 ///
 /// View a benchmark for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/benchmarks/{benchmark}",
@@ -279,21 +281,19 @@ async fn get_one_inner(
     path_params: ProjBenchmarkParams,
     api_actor: &ApiActor,
 ) -> Result<JsonBenchmark, HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
-        actor_conn!(context, api_actor),
-        &context.rbac,
-        &path_params.project,
-        api_actor,
-    )?;
+    actor_conn!(context, api_actor, |conn| {
+        let query_project =
+            QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?;
 
-    QueryBenchmark::belonging_to(&query_project)
-        .filter(QueryBenchmark::eq_resource_id(&path_params.benchmark))
-        .first::<QueryBenchmark>(actor_conn!(context, api_actor))
-        .map(|benchmark| benchmark.into_json_for_project(&query_project))
-        .map_err(resource_not_found_err!(
-            Benchmark,
-            (&query_project, path_params.benchmark)
-        ))
+        QueryBenchmark::belonging_to(&query_project)
+            .filter(QueryBenchmark::eq_resource_id(&path_params.benchmark))
+            .first::<QueryBenchmark>(conn)
+            .map(|benchmark| benchmark.into_json_for_project(&query_project))
+            .map_err(resource_not_found_err!(
+                Benchmark,
+                (&query_project, path_params.benchmark)
+            ))
+    })
 }
 
 /// Update a benchmark

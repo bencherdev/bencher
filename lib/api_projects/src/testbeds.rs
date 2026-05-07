@@ -80,7 +80,8 @@ pub async fn proj_testbeds_options(
 ///
 /// List all testbeds for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 /// By default, the testbeds are sorted in alphabetical order by name.
 /// The HTTP response header `X-Total-Count` contains the total number of testbeds.
 #[endpoint {
@@ -266,7 +267,8 @@ pub async fn proj_testbed_options(
 ///
 /// View a testbed for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/testbeds/{testbed}",

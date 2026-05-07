@@ -76,7 +76,8 @@ pub async fn proj_measures_options(
 ///
 /// List all measures for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 /// By default, the measures are sorted in alphabetical order by name.
 /// The HTTP response header `X-Total-Count` contains the total number of measures.
 #[endpoint {
@@ -250,7 +251,8 @@ pub async fn proj_measure_options(
 ///
 /// View a measure for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/measures/{measure}",
@@ -278,21 +280,19 @@ async fn get_one_inner(
     path_params: ProjMeasureParams,
     api_actor: &ApiActor,
 ) -> Result<JsonMeasure, HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
-        actor_conn!(context, api_actor),
-        &context.rbac,
-        &path_params.project,
-        api_actor,
-    )?;
+    actor_conn!(context, api_actor, |conn| {
+        let query_project =
+            QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?;
 
-    QueryMeasure::belonging_to(&query_project)
-        .filter(QueryMeasure::eq_resource_id(&path_params.measure))
-        .first::<QueryMeasure>(actor_conn!(context, api_actor))
-        .map(|measure| measure.into_json_for_project(&query_project))
-        .map_err(resource_not_found_err!(
-            Measure,
-            (&query_project, path_params.measure)
-        ))
+        QueryMeasure::belonging_to(&query_project)
+            .filter(QueryMeasure::eq_resource_id(&path_params.measure))
+            .first::<QueryMeasure>(conn)
+            .map(|measure| measure.into_json_for_project(&query_project))
+            .map_err(resource_not_found_err!(
+                Measure,
+                (&query_project, path_params.measure)
+            ))
+    })
 }
 
 /// Update a measure

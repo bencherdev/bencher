@@ -75,7 +75,8 @@ pub async fn proj_alerts_options(
 ///
 /// List all alerts for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 /// By default, the alerts are sorted by status (active then dismissed) and modification date time in reverse chronological order.
 /// The HTTP response header `X-Total-Count` contains the total number of alerts.
 #[endpoint {
@@ -314,7 +315,8 @@ pub async fn proj_alert_options(
 ///
 /// View an alert for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/alerts/{alert}",

@@ -79,7 +79,8 @@ pub async fn proj_thresholds_options(
 ///
 /// List all thresholds for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 /// By default, the thresholds are sorted by creation date time in chronological order.
 /// The HTTP response header `X-Total-Count` contains the total number of thresholds.
 #[endpoint {
@@ -347,7 +348,8 @@ pub async fn proj_threshold_options(
 ///
 /// View a threshold for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/thresholds/{threshold}",

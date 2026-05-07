@@ -34,7 +34,8 @@ pub async fn proj_perf_img_options(
 /// There is a limit of 8 permutations for a single image.
 /// Therefore, only the first 8 permutations are plotted.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/perf/img",

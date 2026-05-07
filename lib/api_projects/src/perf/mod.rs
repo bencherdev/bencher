@@ -73,7 +73,8 @@ pub async fn proj_perf_options(
 /// There is a limit of 255 permutations for a single request.
 /// Therefore, only the first 255 permutations are returned.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/perf",

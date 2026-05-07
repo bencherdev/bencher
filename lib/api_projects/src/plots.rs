@@ -76,7 +76,8 @@ pub async fn proj_plots_options(
 ///
 /// List all plots for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 /// By default, the plots are sorted in their index order.
 /// The HTTP response header `X-Total-Count` contains the total number of plots.
 #[endpoint {
@@ -266,7 +267,8 @@ pub async fn proj_plot_options(
 ///
 /// View a plot for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/plots/{plot}",
