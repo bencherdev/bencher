@@ -1,4 +1,7 @@
-use std::{fmt, io::BufRead as _};
+use std::{
+    fmt,
+    io::{BufRead as _, IsTerminal as _},
+};
 
 use super::Output;
 
@@ -7,6 +10,12 @@ pub struct Pipe(Output);
 
 impl Pipe {
     pub fn new() -> Option<Self> {
+        // If stdin is an interactive TTY, nothing is being piped — bail
+        // immediately rather than blocking on `read_line` forever.
+        if std::io::stdin().is_terminal() {
+            return None;
+        }
+
         let mut stdin = String::new();
         let mut stdin_handle = std::io::stdin().lock();
         while let Ok(size) = stdin_handle.read_line(&mut stdin) {
