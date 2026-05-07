@@ -146,10 +146,18 @@ impl TryFrom<CliRun> for Run {
         let sub_adapter: SubAdapter = (&cmd).into();
         #[cfg(feature = "plus")]
         let runner = if job.is_some() {
-            match cmd.try_into() {
-                Ok(runner) => Some(runner),
-                Err(RunError::NoCommand) => None,
-                Err(e) => return Err(e.into()),
+            // Remote bare metal: only build a local runner if the user
+            // actually provided a local input source. Otherwise skip stdin
+            // entirely so a pure `--image` invocation dispatches directly to
+            // the remote job.
+            if cmd.command.is_none() && cmd.file.is_none() && cmd.file_size.is_none() {
+                None
+            } else {
+                match cmd.try_into() {
+                    Ok(runner) => Some(runner),
+                    Err(RunError::NoCommand) => None,
+                    Err(e) => return Err(e.into()),
+                }
             }
         } else {
             Some(cmd.try_into()?)

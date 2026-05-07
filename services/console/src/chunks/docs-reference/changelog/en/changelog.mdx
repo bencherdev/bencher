@@ -1,3 +1,6 @@
+## `v0.6.5`
+- Fix `bencher run` hanging on stdin when no command is provided, including for `--image` remote bare metal runs (Thank you [@sophie-h](https://github.com/sophie-h))
+
 ## `v0.6.4`
 - Allow a minimum sample size of `1` for the Percentage (`percentage`) Threshold Test (Thank you [@teofr](https://github.com/teofr))
 - **BREAKING CHANGE** Switch runner key format from hex to alphanumeric encoding, reducing key length from 79 to 45 characters; existing runner keys must be rotated
