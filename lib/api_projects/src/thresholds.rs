@@ -11,7 +11,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    auth_conn,
+    actor_conn, auth_conn,
     context::ApiContext,
     error::{
         BencherResource, bad_request_error, resource_conflict_err, resource_not_found_err,
@@ -26,11 +26,11 @@ use bencher_schema::{
             threshold::{InsertThreshold, QueryThreshold, ThresholdSpec, model::QueryModel},
         },
         user::{
+            actor::{ApiActor, PubProjectBearerToken},
             auth::{AuthUser, BearerToken},
-            public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema, write_conn,
+    schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
@@ -99,18 +99,18 @@ pub async fn proj_thresholds_get(
         .try_into()
         .map_err(bad_request_error)?;
 
-    let public_user = PublicUser::new(&rqctx).await?;
+    let api_actor = ApiActor::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
         path_params.into_inner(),
         pagination_params.into_inner(),
         json_threshold_query,
-        &public_user,
+        &api_actor,
     )
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        public_user.is_auth(),
+        api_actor.is_auth(),
         total_count,
     ))
 }
@@ -120,19 +120,19 @@ async fn get_ls_inner(
     path_params: ProjThresholdsParams,
     pagination_params: ProjThresholdsPagination,
     query_params: JsonThresholdQuery,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<(JsonThresholds, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let query_project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
     let thresholds = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryThreshold>(public_conn!(context, public_user))
+        .load::<QueryThreshold>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Threshold,
             (&query_project, &pagination_params, &query_params)
@@ -141,7 +141,7 @@ async fn get_ls_inner(
     // Drop connection lock before iterating
     let json_thresholds = thresholds
         .into_iter()
-        .map(|threshold| async { threshold.into_json(public_conn!(context, public_user)) })
+        .map(|threshold| async { threshold.into_json(actor_conn!(context, api_actor)) })
         .collect::<FuturesOrdered<_>>()
         .collect::<Vec<_>>()
         .await
@@ -159,7 +159,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(public_conn!(context, public_user))
+        .get_result::<i64>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Threshold,
             (&query_project, &pagination_params, &query_params)
@@ -355,11 +355,11 @@ pub async fn proj_threshold_options(
 }]
 pub async fn proj_threshold_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjThresholdParams>,
     query_params: Query<ProjThresholdQuery>,
 ) -> Result<ResponseOk<JsonThreshold>, HttpError> {
-    let public_user = PublicUser::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -371,56 +371,47 @@ pub async fn proj_threshold_get(
         rqctx.context(),
         path_params.into_inner(),
         query_params.into_inner(),
-        &public_user,
+        &api_actor,
     )
     .await?;
-    Ok(Get::response_ok(json, public_user.is_auth()))
+    Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjThresholdParams,
     query_params: ProjThresholdQuery,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonThreshold, HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
-        &context.rbac,
-        &path_params.project,
-        public_user,
-    )?;
+    actor_conn!(context, api_actor, |conn| {
+        let query_project =
+            QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?;
 
-    let query_threshold = QueryThreshold::get_with_uuid(
-        public_conn!(context, public_user),
-        &query_project,
-        path_params.threshold,
-    )?;
+        let query_threshold =
+            QueryThreshold::get_with_uuid(conn, &query_project, path_params.threshold)?;
 
-    if let Some(model_uuid) = query_params.model {
-        let query_model = QueryModel::from_uuid(
-            public_conn!(context, public_user),
-            query_project.id,
-            model_uuid,
-        )?;
-        if query_model.threshold_id != query_threshold.id {
-            return Err(resource_not_found_error(
-                BencherResource::Model,
-                model_uuid,
-                format!(
-                    "Specified model {model_uuid} does not belong to threshold {threshold_uuid}",
-                    threshold_uuid = query_threshold.uuid
-                ),
-            ));
+        if let Some(model_uuid) = query_params.model {
+            let query_model = QueryModel::from_uuid(conn, query_project.id, model_uuid)?;
+            if query_model.threshold_id != query_threshold.id {
+                return Err(resource_not_found_error(
+                    BencherResource::Model,
+                    model_uuid,
+                    format!(
+                        "Specified model {model_uuid} does not belong to threshold {threshold_uuid}",
+                        threshold_uuid = query_threshold.uuid
+                    ),
+                ));
+            }
+            query_threshold.into_json_for_model(
+                conn,
+                Some(query_model),
+                None,
+                ThresholdSpec::Testbed,
+            )
+        } else {
+            query_threshold.into_json(conn)
         }
-        query_threshold.into_json_for_model(
-            public_conn!(context, public_user),
-            Some(query_model),
-            None,
-            ThresholdSpec::Testbed,
-        )
-    } else {
-        query_threshold.into_json(public_conn!(context, public_user))
-    }
+    })
 }
 
 /// Update a threshold

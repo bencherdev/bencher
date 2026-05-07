@@ -10,12 +10,13 @@ use bencher_rbac::project::Permission;
 #[cfg(feature = "plus")]
 use bencher_schema::model::organization::plan::PlanKind;
 use bencher_schema::{
-    auth_conn,
+    actor_conn, auth_conn,
     context::ApiContext,
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::{
         project::{QueryProject, UpdateProject},
         user::{
+            actor::{ApiActor, PubProjectBearerToken},
             auth::{AuthUser, BearerToken},
             public::{PubBearerToken, PublicUser},
         },
@@ -225,10 +226,10 @@ pub async fn project_options(
 }]
 pub async fn project_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjectParams>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
-    let public_user = PublicUser::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -236,17 +237,17 @@ pub async fn project_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &public_user).await?;
-    Ok(Get::response_ok(json, public_user.is_auth()))
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &api_actor).await?;
+    Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjectParams,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonProject, HttpError> {
-    public_conn!(context, public_user, |conn| {
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, public_user)?
+    actor_conn!(context, api_actor, |conn| {
+        QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?
             .into_json(conn)
     })
 }

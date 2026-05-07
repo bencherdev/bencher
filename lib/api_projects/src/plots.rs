@@ -8,7 +8,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    auth_conn,
+    actor_conn, auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
@@ -17,11 +17,11 @@ use bencher_schema::{
             plot::{InsertPlot, QueryPlot, UpdatePlot},
         },
         user::{
+            actor::{ApiActor, PubProjectBearerToken},
             auth::{AuthUser, BearerToken},
-            public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema, write_conn,
+    schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _,
@@ -90,10 +90,10 @@ pub async fn proj_plots_get(
     pagination_params: Query<ProjPlotsPagination>,
     query_params: Query<ProjPlotsQuery>,
 ) -> Result<ResponseOk<JsonPlots>, HttpError> {
-    let public_user = PublicUser::new(&rqctx).await?;
+    let api_actor = ApiActor::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
-        &public_user,
+        &api_actor,
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
@@ -101,29 +101,29 @@ pub async fn proj_plots_get(
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        public_user.is_auth(),
+        api_actor.is_auth(),
         total_count,
     ))
 }
 
 async fn get_ls_inner(
     context: &ApiContext,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
     path_params: ProjPlotsParams,
     pagination_params: ProjPlotsPagination,
     query_params: ProjPlotsQuery,
 ) -> Result<(JsonPlots, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let query_project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
     let plots = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryPlot>(public_conn!(context, public_user))
+        .load::<QueryPlot>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Plot,
             (&query_project, &pagination_params, &query_params)
@@ -133,7 +133,7 @@ async fn get_ls_inner(
     let json_plots = plots
         .into_iter()
         .map(|plot| async {
-            plot.into_json_for_project(public_conn!(context, public_user), &query_project)
+            plot.into_json_for_project(actor_conn!(context, api_actor), &query_project)
         })
         .collect::<FuturesOrdered<_>>()
         .collect::<Vec<_>>()
@@ -152,7 +152,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(public_conn!(context, public_user))
+        .get_result::<i64>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Plot,
             (&query_project, &pagination_params, &query_params)
@@ -274,10 +274,10 @@ pub async fn proj_plot_options(
 }]
 pub async fn proj_plot_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjPlotParams>,
 ) -> Result<ResponseOk<JsonPlot>, HttpError> {
-    let public_user = PublicUser::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -285,23 +285,23 @@ pub async fn proj_plot_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &public_user).await?;
-    Ok(Get::response_ok(json, public_user.is_auth()))
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &api_actor).await?;
+    Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjPlotParams,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonPlot, HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let query_project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
-    public_conn!(context, public_user, |conn| {
+    actor_conn!(context, api_actor, |conn| {
         QueryPlot::get_with_uuid(conn, &query_project, path_params.plot)
             .and_then(|plot| plot.into_json_for_project(conn, &query_project))
     })

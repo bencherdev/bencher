@@ -16,7 +16,7 @@ use bencher_rbac::project::Permission;
 #[cfg(feature = "plus")]
 use bencher_schema::model::project::testbed::RunTestbed;
 use bencher_schema::{
-    auth_conn,
+    actor_conn, auth_conn,
     context::ApiContext,
     error::{bad_request_error, resource_conflict_err, resource_not_found_err},
     model::{
@@ -29,11 +29,11 @@ use bencher_schema::{
             report::{NewRunReport, QueryReport, ReportId},
         },
         user::{
+            actor::{ApiActor, PubProjectBearerToken},
             auth::{AuthUser, BearerToken},
-            public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema, write_conn,
+    schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
@@ -101,19 +101,19 @@ pub async fn proj_reports_get(
         .try_into()
         .map_err(bad_request_error)?;
 
-    let public_user = PublicUser::new(&rqctx).await?;
+    let api_actor = ApiActor::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         pagination_params.into_inner(),
         json_report_query,
-        &public_user,
+        &api_actor,
     )
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        public_user.is_auth(),
+        api_actor.is_auth(),
         total_count,
     ))
 }
@@ -124,19 +124,19 @@ async fn get_ls_inner(
     path_params: ProjReportsParams,
     pagination_params: ProjReportsPagination,
     query_params: JsonReportQuery,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<(JsonReports, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let query_project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
     let reports = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load(public_conn!(context, public_user))
+        .load(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Report,
             (&query_project, &pagination_params, &query_params)
@@ -145,7 +145,7 @@ async fn get_ls_inner(
     // Drop connection lock before iterating
     let json_reports = reports
         .into_iter()
-        .map(|report| async { report.into_json(log, public_conn!(context, public_user)) })
+        .map(|report| async { report.into_json(log, actor_conn!(context, api_actor)) })
         .collect::<FuturesOrdered<_>>()
         .collect::<Vec<_>>()
         .await
@@ -163,7 +163,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(public_conn!(context, public_user))
+        .get_result::<i64>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Report,
             (&query_project, &pagination_params, &query_params)
@@ -361,10 +361,10 @@ pub async fn proj_report_options(
 }]
 pub async fn proj_report_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjReportParams>,
 ) -> Result<ResponseOk<JsonReport>, HttpError> {
-    let public_user = PublicUser::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -376,26 +376,26 @@ pub async fn proj_report_get(
         &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
-        &public_user,
+        &api_actor,
     )
     .await?;
-    Ok(Get::response_ok(json, public_user.is_auth()))
+    Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
 async fn get_one_inner(
     log: &Logger,
     context: &ApiContext,
     path_params: ProjReportParams,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonReport, HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let query_project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
-    public_conn!(context, public_user, |conn| {
+    actor_conn!(context, api_actor, |conn| {
         QueryReport::belonging_to(&query_project)
             .filter(schema::report::uuid.eq(path_params.report.to_string()))
             .first::<QueryReport>(conn)

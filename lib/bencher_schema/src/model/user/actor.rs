@@ -65,6 +65,25 @@ impl SharedExtractor for PubProjectBearerToken {
 }
 
 impl ApiActor {
+    pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, HttpError> {
+        let pub_project_bearer_token = PubProjectBearerToken::from_request(rqctx).await?;
+        Self::from_token(
+            &rqctx.log,
+            rqctx.context(),
+            #[cfg(feature = "plus")]
+            rqctx.request.headers(),
+            pub_project_bearer_token,
+        )
+        .await
+    }
+
+    pub fn is_auth(&self) -> bool {
+        match self {
+            Self::Public(public_user) => public_user.is_auth(),
+            Self::ProjectKey(_) => true,
+        }
+    }
+
     pub fn user_id(&self) -> Option<UserId> {
         match self {
             Self::Public(public_user) => public_user.user_id(),
