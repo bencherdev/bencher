@@ -102,6 +102,8 @@ pub enum RateLimitingError {
         limit_gib: u64,
     },
 
+    #[error("Too many requests for project. Please, try again later.")]
+    ProjectRequests,
     #[error("Too many runs for project. Please, try again later.")]
     ProjectRuns,
 
@@ -328,6 +330,10 @@ impl RateLimiting {
 
     pub fn claimed_run(&self, user_uuid: UserUuid) -> Result<(), HttpError> {
         self.user.check_run(user_uuid)
+    }
+
+    pub fn project_request(&self, project_uuid: ProjectUuid) -> Result<(), HttpError> {
+        self.project.check_request(project_uuid)
     }
 
     pub fn project_run(&self, project_uuid: ProjectUuid) -> Result<(), HttpError> {

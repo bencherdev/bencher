@@ -11,12 +11,12 @@ mod error;
 mod key;
 
 pub use audience::Audience;
-#[cfg(feature = "plus")]
-pub use claims::RunnerOciClaims;
 pub use claims::{
     AuthOciClaims, Claims, InviteClaims, OAuthClaims, OciAction, OciScopeClaims, OrgClaims,
     PublicOciClaims, StateClaims,
 };
+#[cfg(feature = "plus")]
+pub use claims::{ProjectOciClaims, RunnerOciClaims};
 pub use error::TokenError;
 pub use key::TokenKey;
 

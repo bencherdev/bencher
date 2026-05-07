@@ -22,18 +22,20 @@ use bencher_schema::{
     },
     public_conn,
 };
-use bencher_token::{AuthOciClaims, OciAction, OciScopeClaims, RunnerOciClaims};
+use bencher_token::{AuthOciClaims, OciAction, OciScopeClaims, ProjectOciClaims, RunnerOciClaims};
 use dropshot::{ClientErrorStatusCode, HttpError, RequestContext};
 use slog::Logger;
 
 /// Identity that can pull from the OCI registry.
 ///
 /// Pull endpoints accept public OCI tokens (anonymous),
-/// user OCI tokens (sub: `Email`), and runner OCI tokens (sub: `RunnerUuid`).
+/// user OCI tokens (sub: `Email`), runner OCI tokens (sub: `RunnerUuid`),
+/// and project OCI tokens (sub: `ProjectUuid`).
 pub enum OciPullIdentity {
     Public,
     Auth(AuthOciClaims),
     Runner(RunnerOciClaims),
+    Project(ProjectOciClaims),
 }
 
 // Re-export from api_auth
@@ -135,6 +137,12 @@ fn validate_pull_identity(
         return Ok(OciPullIdentity::Runner(runner_claims));
     }
 
+    // Try project token
+    if let Ok(project_claims) = context.token_key.validate_oci_project(token) {
+        validate_oci_scope(&project_claims.oci, repository, &OciAction::Pull)?;
+        return Ok(OciPullIdentity::Project(project_claims));
+    }
+
     // Try user token
     if let Ok(user_claims) = context.token_key.validate_oci_auth(token) {
         validate_oci_scope(&user_claims.oci, repository, &OciAction::Pull)?;
@@ -176,6 +184,23 @@ pub async fn validate_pull_access(
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
     let identity = validate_pull_identity(context, &token, &repository_str)?;
 
+    // Project tokens can pull from their own project regardless of claimed status
+    if let OciPullIdentity::Project(pk_claims) = &identity {
+        let project = resolve_project(context, repository).await?;
+        if project.uuid != pk_claims.project_uuid() {
+            return Err(HttpError::for_client_error(
+                None,
+                ClientErrorStatusCode::FORBIDDEN,
+                oci_error_body(
+                    OCI_ERROR_DENIED,
+                    "Project token not authorized for this repository",
+                ),
+            ));
+        }
+        context.rate_limiting.project_request(project.uuid)?;
+        return Ok(project);
+    }
+
     // Public tokens can only pull from unclaimed projects
     if matches!(identity, OciPullIdentity::Public) {
         let conn = public_conn!(context);
@@ -197,7 +222,9 @@ pub async fn validate_pull_access(
 
     apply_pull_rate_limit(rqctx, &identity).await?;
 
-    resolve_project(context, repository).await
+    let project = resolve_project(context, repository).await?;
+    context.rate_limiting.project_request(project.uuid)?;
+    Ok(project)
 }
 
 /// Require push access for an OCI operation (simple ops like delete, not project creation).
@@ -217,6 +244,16 @@ pub async fn require_push_access(
     let scope = format!("repository:{repository}:push");
     let token = extract_oci_bearer_token(rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+
+    // Try project token first
+    if let Ok(pk_claims) = context.token_key.validate_oci_project(&token) {
+        validate_oci_scope(&pk_claims.oci, repository, &OciAction::Push)?;
+        context
+            .rate_limiting
+            .project_request(pk_claims.project_uuid())?;
+        return Ok(());
+    }
+
     let claims = context
         .token_key
         .validate_oci_auth(&token)
@@ -270,6 +307,33 @@ pub async fn validate_push_access(
     // Bearer token is required (Docker obtains one from the token endpoint)
     let token = extract_oci_bearer_token(rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+
+    // Project tokens bypass the standard auth flow — the key is the authorization
+    if let Ok(pk_claims) = context.token_key.validate_oci_project(&token) {
+        validate_oci_scope(&pk_claims.oci, &repository_str, &OciAction::Push)?;
+        let project = resolve_project(context, repository).await?;
+        if project.uuid != pk_claims.project_uuid() {
+            return Err(HttpError::for_client_error(
+                None,
+                ClientErrorStatusCode::FORBIDDEN,
+                oci_error_body(
+                    OCI_ERROR_DENIED,
+                    "Project token not authorized for this repository",
+                ),
+            ));
+        }
+        slog::info!(
+            log,
+            "OCI push with project token";
+            "project_uuid" => %project.uuid
+        );
+        context.rate_limiting.project_request(project.uuid)?;
+        return Ok(PushAccess {
+            project,
+            claims: None,
+        });
+    }
+
     let (public_user, claims) =
         build_public_user(log, context, rqctx, token, &repository_str).await?;
 
@@ -278,12 +342,16 @@ pub async fn validate_push_access(
 
     // Try to find existing project, or create if using a slug
     let conn = public_conn!(context);
-    match QueryProject::from_resource_id(conn, repository) {
+    let push_access = match QueryProject::from_resource_id(conn, repository) {
         Ok(project) => {
             handle_existing_project(log, rqctx, context, project, &public_user, claims).await
         },
         Err(_) => handle_nonexistent_project(log, context, repository, &public_user, claims).await,
-    }
+    }?;
+    context
+        .rate_limiting
+        .project_request(push_access.project.uuid)?;
+    Ok(push_access)
 }
 
 /// Apply rate limiting for push operations based on authentication status.
@@ -489,6 +557,10 @@ async fn apply_pull_rate_limit(
         OciPullIdentity::Auth(claims) => apply_user_rate_limit(log, context, claims).await,
         OciPullIdentity::Runner(claims) => {
             slog::debug!(log, "Skipping rate limit for runner OCI pull"; "runner_uuid" => %claims.sub);
+            Ok(())
+        },
+        OciPullIdentity::Project(_) => {
+            // Project rate limit is applied after project resolution in validate_pull_access
             Ok(())
         },
     }

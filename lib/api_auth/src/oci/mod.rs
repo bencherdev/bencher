@@ -16,13 +16,13 @@
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_json::oci::{OCI_ERROR_DENIED, OCI_ERROR_UNAUTHORIZED, oci_error_body};
-use bencher_json::{Email, Jwt, ProjectResourceId};
+use bencher_json::{Email, Jwt, PROJECT_KEY_PREFIX, ProjectKey, ProjectKeyHash, ProjectResourceId};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::ApiContext,
     error::issue_error,
     model::{
-        project::QueryProject,
+        project::{QueryProject, key::QueryProjectKey},
         user::{QueryUser, auth::AuthUser},
     },
     public_conn,
@@ -73,9 +73,16 @@ pub async fn auth_oci_token_options(
 
 /// OCI token endpoint
 ///
-/// Authenticates users via Basic auth (email:bencher-api-token)
-/// and returns a short-lived JWT for OCI operations.
+/// Authenticates via Basic auth and returns a short-lived JWT for OCI operations.
+/// Supports two credential types:
+/// - `email:api-key-jwt` — user authentication
+/// - `project-slug-or-uuid:bencher_run_xxxxx` — project key authentication
+///
 /// If no Basic auth credentials are provided, issues a public (anonymous) OCI token.
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding credential parse errors for security"
+)]
 #[endpoint {
     method = GET,
     path = "/v0/auth/oci/token",
@@ -95,20 +102,49 @@ pub async fn auth_oci_token_get(
         (None, vec![])
     };
 
-    // Try to extract Basic auth — if absent, issue a public (anonymous) token
-    let jwt = if let Ok((email, api_token)) = extract_basic_auth(&rqctx) {
-        auth_oci_token(
-            &rqctx, context, &query, &email, &api_token, repository, actions,
-        )
-        .await?
-    } else {
-        // Anonymous: issue a public OCI token with no identity or RBAC checks
-        context
+    let jwt = match extract_basic_credentials(&rqctx) {
+        Ok((username, password)) if password.starts_with(PROJECT_KEY_PREFIX) => {
+            let project_key: ProjectKey = password
+                .parse()
+                .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
+            let project: ProjectResourceId = username
+                .parse()
+                .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
+            project_key_oci_token(
+                &rqctx,
+                context,
+                &query,
+                &project,
+                &project_key,
+                repository,
+                actions,
+            )
+            .await?
+        },
+        Ok((username, password)) => {
+            if let (Ok(email), Ok(api_token)) = (username.parse::<Email>(), password.parse::<Jwt>())
+            {
+                auth_oci_token(
+                    &rqctx, context, &query, &email, &api_token, repository, actions,
+                )
+                .await?
+            } else {
+                context
+                    .token_key
+                    .new_oci_public(OCI_TOKEN_TTL, repository, actions)
+                    .map_err(|e| {
+                        HttpError::for_internal_error(format!(
+                            "Failed to create public OCI token: {e}"
+                        ))
+                    })?
+            }
+        },
+        Err(_) => context
             .token_key
             .new_oci_public(OCI_TOKEN_TTL, repository, actions)
             .map_err(|e| {
                 HttpError::for_internal_error(format!("Failed to create public OCI token: {e}"))
-            })?
+            })?,
     };
 
     let response = TokenResponse {
@@ -272,12 +308,97 @@ pub fn unauthorized_with_www_authenticate(
     error
 }
 
-/// Extract email and API token from Basic auth header
+/// Issue a project-scoped OCI token after validating a project key.
+#[expect(
+    clippy::map_err_ignore,
+    reason = "Intentionally discarding project key validation errors for security"
+)]
+async fn project_key_oci_token(
+    rqctx: &RequestContext<ApiContext>,
+    context: &ApiContext,
+    query: &TokenQuery,
+    project_rid: &ProjectResourceId,
+    project_key: &ProjectKey,
+    repository: Option<String>,
+    actions: Vec<OciAction>,
+) -> Result<Jwt, HttpError> {
+    // Pull-only requests are not allowed for project key auth.
+    // Only bare metal runners should be pulling, and they use runner tokens.
+    if actions.contains(&OciAction::Pull) && !actions.contains(&OciAction::Push) {
+        return Err(HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::FORBIDDEN,
+            oci_error_body(
+                OCI_ERROR_DENIED,
+                "Project keys cannot be used for pull-only access. Use a runner token to pull.",
+            ),
+        ));
+    }
+
+    let key_hash = ProjectKeyHash::from(project_key);
+    let now = context.clock.now();
+
+    let query_key = QueryProjectKey::from_hash(public_conn!(context), &key_hash, now)
+        .map_err(|_| unauthorized_with_www_authenticate(rqctx, query.scope.as_deref()))?;
+
+    let query_project = QueryProject::get(public_conn!(context), query_key.project_id)
+        .map_err(|_| unauthorized_with_www_authenticate(rqctx, query.scope.as_deref()))?;
+
+    // Verify the username matches the key's project
+    let username_matches = match project_rid {
+        ProjectResourceId::Slug(slug) => query_project.slug == *slug,
+        ProjectResourceId::Uuid(uuid) => query_project.uuid == *uuid,
+    };
+    if !username_matches {
+        return Err(unauthorized_with_www_authenticate(
+            rqctx,
+            query.scope.as_deref(),
+        ));
+    }
+
+    // If scope specifies a repository, verify it matches the key's project
+    if let Some(repo_name) = &repository
+        && let Ok(repo_rid) = repo_name.parse::<ProjectResourceId>()
+    {
+        let repo_matches = match &repo_rid {
+            ProjectResourceId::Slug(slug) => query_project.slug == *slug,
+            ProjectResourceId::Uuid(uuid) => query_project.uuid == *uuid,
+        };
+        if !repo_matches {
+            return Err(HttpError::for_client_error(
+                None,
+                ClientErrorStatusCode::FORBIDDEN,
+                oci_error_body(
+                    OCI_ERROR_DENIED,
+                    "Project key is not authorized for the requested repository",
+                ),
+            ));
+        }
+    }
+
+    slog::info!(
+        &rqctx.log,
+        "Issuing OCI project token via project key";
+        "project_key_uuid" => %query_key.uuid,
+        "project_uuid" => %query_project.uuid
+    );
+
+    context
+        .token_key
+        .new_oci_project(query_project.uuid, OCI_TOKEN_TTL, repository, actions)
+        .map_err(|e| {
+            HttpError::for_internal_error(format!("Failed to create OCI project token: {e}"))
+        })
+}
+
+/// Extract raw username and password from Basic auth header
 #[expect(
     clippy::map_err_ignore,
     reason = "Intentionally discarding decode errors for security"
 )]
-fn extract_basic_auth(rqctx: &RequestContext<ApiContext>) -> Result<(Email, Jwt), HttpError> {
+fn extract_basic_credentials(
+    rqctx: &RequestContext<ApiContext>,
+) -> Result<(String, String), HttpError> {
     let headers = rqctx.request.headers();
 
     let auth_header = headers
@@ -325,23 +446,7 @@ fn extract_basic_auth(rqctx: &RequestContext<ApiContext>) -> Result<(Email, Jwt)
         )
     })?;
 
-    let email: Email = username.parse().map_err(|_| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid email format in username".to_owned(),
-        )
-    })?;
-
-    let api_token: Jwt = password.parse().map_err(|_| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid API token format in password".to_owned(),
-        )
-    })?;
-
-    Ok((email, api_token))
+    Ok((username.to_owned(), password.to_owned()))
 }
 
 /// Parse OCI scope string into repository and actions
