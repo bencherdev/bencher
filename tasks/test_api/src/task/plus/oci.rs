@@ -6,12 +6,12 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use bencher_json::Jwt;
-use bencher_json::Url;
+use assert_cmd::cargo::CommandCargoExt as _;
+use bencher_json::{JsonProjectKeyCreated, Jwt, Url};
 
 use crate::parser::TaskOci;
 use crate::task::is_dev;
-use crate::task::test::seed_test::ADMIN_EMAIL;
+use crate::task::test::seed_test::{ADMIN_EMAIL, BENCHER_CMD, CLI_DIR, HOST_ARG, TOKEN_ARG};
 use crate::task::unwrap_admin_token;
 use crate::task::unwrap_url;
 
@@ -122,7 +122,101 @@ impl Oci {
             println!("Open {} to view the detailed report", report_path.display());
         }
 
-        result
+        result?;
+
+        // Run conformance tests again with a project key
+        self.run_project_key_conformance_tests()
+    }
+
+    fn run_project_key_conformance_tests(&self) -> anyhow::Result<()> {
+        println!();
+        println!("=== OCI Conformance Tests (Project Key) ===");
+
+        // Create a project key for the namespace project
+        let host = self.url.as_ref();
+        println!("Creating project key for namespace: {}", self.namespace);
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "project",
+            "key",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            self.password.as_ref(),
+            "--name",
+            "oci-conformance-key",
+            &self.namespace,
+        ])
+        .current_dir(CLI_DIR);
+        let output = cmd.output()?;
+        anyhow::ensure!(
+            output.status.success(),
+            "Failed to create project key for OCI conformance:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let project_key_created: JsonProjectKeyCreated = serde_json::from_slice(&output.stdout)?;
+        let project_key = project_key_created.key;
+
+        println!(
+            "Running conformance tests with project key (username: {})...",
+            self.namespace
+        );
+        println!("Test categories enabled:");
+        println!("  - Pull: 0 (project keys reject pull-only scope)");
+        println!("  - Push: 1");
+        println!("  - Content Discovery: 1");
+        println!("  - Content Management: 1");
+        println!();
+
+        let conformance_dir = self.spec_dir.join("conformance");
+        let conformance_binary = self.conformance_binary_path();
+        let project_key_output_dir = self.output_dir.join("project-key");
+        fs::create_dir_all(&project_key_output_dir)?;
+
+        let output_file = project_key_output_dir.join("test-output.log");
+
+        let mut cmd = Command::new(&conformance_binary);
+        cmd.args(["-test.v"])
+            .current_dir(&conformance_dir)
+            .env("OCI_ROOT_URL", host)
+            .env("OCI_NAMESPACE", &self.namespace)
+            .env("OCI_CROSSMOUNT_NAMESPACE", &self.crossmount_namespace)
+            .env("OCI_DEBUG", if self.debug { "1" } else { "0" })
+            .env("OCI_REPORT_DIR", &project_key_output_dir)
+            .env("OCI_USERNAME", &self.namespace)
+            .env("OCI_PASSWORD", project_key.as_ref())
+            .env("OCI_AUTOMATIC_CROSSMOUNT", "0")
+            .env("OCI_TEST_PULL", "0")
+            .env("OCI_TEST_PUSH", "1")
+            .env("OCI_TEST_CONTENT_DISCOVERY", "1")
+            .env("OCI_TEST_CONTENT_MANAGEMENT", "1");
+
+        let output = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).output()?;
+
+        let combined_output = format!(
+            "STDOUT:\n{}\n\nSTDERR:\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        fs::write(&output_file, &combined_output)?;
+
+        print!("{}", String::from_utf8_lossy(&output.stdout));
+        eprint!("{}", String::from_utf8_lossy(&output.stderr));
+
+        println!();
+        println!("=== OCI Conformance Tests (Project Key) Complete ===");
+        println!("Results saved to: {}", project_key_output_dir.display());
+
+        if output.status.success() {
+            Ok(())
+        } else {
+            anyhow::bail!(
+                "OCI conformance tests (project key) failed with exit code: {:?}",
+                output.status.code()
+            )
+        }
     }
 
     fn check_api_connectivity(&self) -> anyhow::Result<()> {
