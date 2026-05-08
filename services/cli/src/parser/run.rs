@@ -180,6 +180,12 @@ pub struct CliRunCommand {
     pub command: Option<Vec<String>>,
 }
 
+impl CliRunCommand {
+    pub fn has_local_input(&self) -> bool {
+        self.command.is_some() || self.file.is_some() || self.file_size.is_some()
+    }
+}
+
 #[derive(Args, Debug)]
 pub struct CliRunShell {
     /// Shell command path
