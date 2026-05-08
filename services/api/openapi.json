@@ -695,7 +695,7 @@
           "oci"
         ],
         "summary": "OCI token endpoint",
-        "description": "Authenticates via Basic auth and returns a short-lived JWT for OCI operations. Supports two credential types: - `email:api-key-jwt` — user authentication - `project-slug-or-uuid:bencher_run_xxxxx` — project key authentication\n\nIf no Basic auth credentials are provided, issues a public (anonymous) OCI token.",
+        "description": "Authenticates via Basic auth and returns a short-lived JWT for OCI operations. Supports two credential types: - `email:api-key-jwt`: user authentication - `project-slug-or-uuid:bencher_run_xxxxx`: project key authentication\n\nIf no Basic auth credentials are provided, issues a public (anonymous) OCI token.",
         "operationId": "auth_oci_token_get",
         "parameters": [
           {

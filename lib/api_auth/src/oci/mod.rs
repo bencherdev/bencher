@@ -75,14 +75,10 @@ pub async fn auth_oci_token_options(
 ///
 /// Authenticates via Basic auth and returns a short-lived JWT for OCI operations.
 /// Supports two credential types:
-/// - `email:api-key-jwt` — user authentication
-/// - `project-slug-or-uuid:bencher_run_xxxxx` — project key authentication
+/// - `email:api-key-jwt`: user authentication
+/// - `project-slug-or-uuid:bencher_run_xxxxx`: project key authentication
 ///
 /// If no Basic auth credentials are provided, issues a public (anonymous) OCI token.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding credential parse errors for security"
-)]
 #[endpoint {
     method = GET,
     path = "/v0/auth/oci/token",
@@ -104,22 +100,26 @@ pub async fn auth_oci_token_get(
 
     let jwt = match extract_basic_credentials(&rqctx) {
         Ok((username, password)) if password.starts_with(PROJECT_KEY_PREFIX) => {
-            let project_key: ProjectKey = password
-                .parse()
-                .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
-            let project: ProjectResourceId = username
-                .parse()
-                .map_err(|_| unauthorized_with_www_authenticate(&rqctx, query.scope.as_deref()))?;
-            project_key_oci_token(
-                &rqctx,
-                context,
-                &query,
-                &project,
-                &project_key,
-                repository,
-                actions,
-            )
-            .await?
+            if let (Ok(project), Ok(project_key)) = (
+                username.parse::<ProjectResourceId>(),
+                password.parse::<ProjectKey>(),
+            ) {
+                project_key_oci_token(
+                    &rqctx,
+                    context,
+                    &query,
+                    &project,
+                    &project_key,
+                    repository,
+                    actions,
+                )
+                .await?
+            } else {
+                return Err(unauthorized_with_www_authenticate(
+                    &rqctx,
+                    query.scope.as_deref(),
+                ));
+            }
         },
         Ok((username, password)) => {
             if let (Ok(email), Ok(api_token)) = (username.parse::<Email>(), password.parse::<Jwt>())

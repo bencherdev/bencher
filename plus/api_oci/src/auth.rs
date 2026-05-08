@@ -234,7 +234,7 @@ pub async fn validate_pull_access(
 /// For operations that may create projects, use `validate_push_access` instead.
 #[expect(
     clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
+    reason = "Intentionally discarding auth and parse errors for security"
 )]
 pub async fn require_push_access(
     rqctx: &RequestContext<ApiContext>,
@@ -248,20 +248,35 @@ pub async fn require_push_access(
     // Try project token first
     if let Ok(pk_claims) = context.token_key.validate_oci_project(&token) {
         validate_oci_scope(&pk_claims.oci, repository, &OciAction::Push)?;
-        if let Ok(repo_rid) = repository.parse::<ProjectResourceId>() {
-            let project = resolve_project(context, &repo_rid).await?;
-            if project.uuid != pk_claims.project_uuid() {
-                return Err(HttpError::for_client_error(
+        let repo_rid: ProjectResourceId = repository
+            .parse()
+            .inspect_err(|e| {
+                slog::error!(
+                    &rqctx.log,
+                    "Failed to parse repository as ProjectResourceId";
+                    "repository" => repository,
+                    "error" => %e
+                );
+            })
+            .map_err(|_| {
+                HttpError::for_client_error(
                     None,
                     ClientErrorStatusCode::FORBIDDEN,
-                    oci_error_body(
-                        OCI_ERROR_DENIED,
-                        "Project token not authorized for this repository",
-                    ),
-                ));
-            }
-            context.rate_limiting.project_request(project.uuid)?;
+                    oci_error_body(OCI_ERROR_DENIED, "Invalid repository for project token"),
+                )
+            })?;
+        let project = resolve_project(context, &repo_rid).await?;
+        if project.uuid != pk_claims.project_uuid() {
+            return Err(HttpError::for_client_error(
+                None,
+                ClientErrorStatusCode::FORBIDDEN,
+                oci_error_body(
+                    OCI_ERROR_DENIED,
+                    "Project token not authorized for this repository",
+                ),
+            ));
         }
+        context.rate_limiting.project_request(project.uuid)?;
         return Ok(());
     }
 
