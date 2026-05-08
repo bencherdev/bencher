@@ -185,16 +185,7 @@ pub async fn validate_pull_access(
     // Project tokens can pull from their own project regardless of claimed status
     if let OciPullIdentity::Project(pk_claims) = &identity {
         let project = resolve_project(context, repository).await?;
-        if project.uuid != pk_claims.project_uuid() {
-            return Err(HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::FORBIDDEN,
-                oci_error_body(
-                    OCI_ERROR_DENIED,
-                    "Project token not authorized for this repository",
-                ),
-            ));
-        }
+        verify_project_token(&project, pk_claims)?;
         context.rate_limiting.project_request(project.uuid)?;
         return Ok(project);
     }
@@ -260,16 +251,7 @@ pub async fn require_push_access(
                 )
             })?;
         let project = resolve_project(context, &repo_rid).await?;
-        if project.uuid != pk_claims.project_uuid() {
-            return Err(HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::FORBIDDEN,
-                oci_error_body(
-                    OCI_ERROR_DENIED,
-                    "Project token not authorized for this repository",
-                ),
-            ));
-        }
+        verify_project_token(&project, &pk_claims)?;
         context.rate_limiting.project_request(project.uuid)?;
         return Ok(());
     }
@@ -328,16 +310,7 @@ pub async fn validate_push_access(
     if let Ok(pk_claims) = context.token_key.validate_oci_project(&token) {
         validate_oci_scope(&pk_claims.oci, &repository_str, &OciAction::Push)?;
         let project = resolve_project(context, repository).await?;
-        if project.uuid != pk_claims.project_uuid() {
-            return Err(HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::FORBIDDEN,
-                oci_error_body(
-                    OCI_ERROR_DENIED,
-                    "Project token not authorized for this repository",
-                ),
-            ));
-        }
+        verify_project_token(&project, &pk_claims)?;
         slog::info!(
             log,
             "OCI push with project token";
@@ -617,6 +590,23 @@ pub fn apply_public_rate_limit(
         context.rate_limiting.public_request(remote_ip)?;
     }
     Ok(())
+}
+
+fn verify_project_token(
+    project: &QueryProject,
+    claims: &ProjectOciClaims,
+) -> Result<(), HttpError> {
+    if project.uuid == claims.project_uuid() {
+        return Ok(());
+    }
+    Err(HttpError::for_client_error(
+        None,
+        ClientErrorStatusCode::FORBIDDEN,
+        oci_error_body(
+            OCI_ERROR_DENIED,
+            "Project token not authorized for this repository",
+        ),
+    ))
 }
 
 /// Resolve a `ProjectResourceId` (UUID or slug) to a `QueryProject`
