@@ -340,12 +340,7 @@ async fn project_key_oci_token(
     let query_project = QueryProject::get(public_conn!(context), query_key.project_id)
         .map_err(|_| unauthorized_with_www_authenticate(rqctx, query.scope.as_deref()))?;
 
-    // Verify the username matches the key's project
-    let username_matches = match project_rid {
-        ProjectResourceId::Slug(slug) => query_project.slug == *slug,
-        ProjectResourceId::Uuid(uuid) => query_project.uuid == *uuid,
-    };
-    if !username_matches {
+    if !query_project.matches_resource_id(project_rid) {
         return Err(unauthorized_with_www_authenticate(
             rqctx,
             query.scope.as_deref(),
@@ -355,21 +350,16 @@ async fn project_key_oci_token(
     // If scope specifies a repository, verify it matches the key's project
     if let Some(repo_name) = &repository
         && let Ok(repo_rid) = repo_name.parse::<ProjectResourceId>()
+        && !query_project.matches_resource_id(&repo_rid)
     {
-        let repo_matches = match &repo_rid {
-            ProjectResourceId::Slug(slug) => query_project.slug == *slug,
-            ProjectResourceId::Uuid(uuid) => query_project.uuid == *uuid,
-        };
-        if !repo_matches {
-            return Err(HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::FORBIDDEN,
-                oci_error_body(
-                    OCI_ERROR_DENIED,
-                    "Project key is not authorized for the requested repository",
-                ),
-            ));
-        }
+        return Err(HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::FORBIDDEN,
+            oci_error_body(
+                OCI_ERROR_DENIED,
+                "Project key is not authorized for the requested repository",
+            ),
+        ));
     }
 
     slog::info!(
