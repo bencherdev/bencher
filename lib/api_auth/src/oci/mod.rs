@@ -99,7 +99,7 @@ pub async fn auth_oci_token_get(
     };
 
     let jwt = match extract_basic_credentials(&rqctx) {
-        Ok((username, password)) if password.starts_with(PROJECT_KEY_PREFIX) => {
+        Some((username, password)) if password.starts_with(PROJECT_KEY_PREFIX) => {
             if let (Ok(project), Ok(project_key)) = (
                 username.parse::<ProjectResourceId>(),
                 password.parse::<ProjectKey>(),
@@ -121,7 +121,7 @@ pub async fn auth_oci_token_get(
                 ));
             }
         },
-        Ok((username, password)) => {
+        Some((username, password)) => {
             if let (Ok(email), Ok(api_token)) = (username.parse::<Email>(), password.parse::<Jwt>())
             {
                 auth_oci_token(
@@ -135,7 +135,7 @@ pub async fn auth_oci_token_get(
                 ));
             }
         },
-        Err(_) => context
+        None => context
             .token_key
             .new_oci_public(OCI_TOKEN_TTL, repository, actions)
             .map_err(|e| {
@@ -377,62 +377,21 @@ async fn project_key_oci_token(
         })
 }
 
-/// Extract raw username and password from Basic auth header
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding decode errors for security"
-)]
-fn extract_basic_credentials(
-    rqctx: &RequestContext<ApiContext>,
-) -> Result<(String, String), HttpError> {
+/// Extract raw username and password from Basic auth header.
+///
+/// Returns `None` if the header is missing or malformed.
+fn extract_basic_credentials(rqctx: &RequestContext<ApiContext>) -> Option<(String, String)> {
     let headers = rqctx.request.headers();
-
-    let auth_header = headers
-        .get(http::header::AUTHORIZATION)
-        .ok_or_else(|| unauthorized_with_www_authenticate(rqctx, None))?;
-
-    let auth_str = auth_header.to_str().map_err(|_| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid Authorization header encoding".to_owned(),
-        )
-    })?;
-
-    let (scheme, credentials) = auth_str
-        .split_once(' ')
-        .ok_or_else(|| unauthorized_with_www_authenticate(rqctx, None))?;
-
+    let auth_header = headers.get(http::header::AUTHORIZATION)?;
+    let auth_str = auth_header.to_str().ok()?;
+    let (scheme, credentials) = auth_str.split_once(' ')?;
     if !scheme.eq_ignore_ascii_case("Basic") {
-        return Err(unauthorized_with_www_authenticate(rqctx, None));
+        return None;
     }
-
-    // Decode base64 credentials
-    let decoded = STANDARD.decode(credentials).map_err(|_| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid base64 encoding in Authorization header".to_owned(),
-        )
-    })?;
-
-    let decoded_str = String::from_utf8(decoded).map_err(|_| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid UTF-8 in Authorization credentials".to_owned(),
-        )
-    })?;
-
-    let (username, password) = decoded_str.split_once(':').ok_or_else(|| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid Basic auth format (expected username:password)".to_owned(),
-        )
-    })?;
-
-    Ok((username.to_owned(), password.to_owned()))
+    let decoded = STANDARD.decode(credentials).ok()?;
+    let decoded_str = String::from_utf8(decoded).ok()?;
+    let (username, password) = decoded_str.split_once(':')?;
+    Some((username.to_owned(), password.to_owned()))
 }
 
 /// Parse OCI scope string into repository and actions
