@@ -5,10 +5,11 @@ use bencher_json::{
     JobStatus, JobUuid, JsonDirection, JsonJob, JsonPagination, ProjectResourceId, runner::JsonJobs,
 };
 use bencher_schema::{
+    actor_conn,
     context::ApiContext,
     error::resource_not_found_err,
-    model::{project::QueryProject, runner::QueryJob, user::public::PublicUser},
-    public_conn, schema,
+    model::{project::QueryProject, runner::QueryJob, user::actor::ApiActor},
+    schema,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
@@ -56,7 +57,8 @@ pub async fn proj_jobs_options(
 /// ➕ Bencher Plus: List all jobs for a project.
 /// The job output is not included in the list response.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 /// By default, the jobs are sorted by creation date time in reverse chronological order.
 /// The HTTP response header `X-Total-Count` contains the total number of jobs.
 #[endpoint {
@@ -70,18 +72,18 @@ pub async fn proj_jobs_get(
     pagination_params: Query<ProjJobsPagination>,
     query_params: Query<ProjJobsQuery>,
 ) -> Result<ResponseOk<JsonJobs>, HttpError> {
-    let public_user = PublicUser::new(&rqctx).await?;
+    let api_actor = ApiActor::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
-        &public_user,
+        &api_actor,
     )
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        public_user.is_auth(),
+        api_actor.is_auth(),
         total_count,
     ))
 }
@@ -95,25 +97,25 @@ async fn get_ls_inner(
     path_params: ProjJobsParams,
     pagination_params: ProjJobsPagination,
     query_params: ProjJobsQuery,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<(JsonJobs, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let query_project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
     let jobs = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryJob>(public_conn!(context, public_user))
+        .load::<QueryJob>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Job,
             (&query_project, &pagination_params, &query_params)
         ))?;
 
-    let json_jobs = public_conn!(context, public_user, |conn| {
+    let json_jobs = actor_conn!(context, api_actor, |conn| {
         jobs.into_iter()
             .map(|job| job.into_json(conn))
             .collect::<Result<Vec<_>, _>>()?
@@ -121,7 +123,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(public_conn!(context, public_user))
+        .get_result::<i64>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Job,
             (&query_project, &pagination_params, &query_params)
@@ -188,7 +190,8 @@ pub async fn proj_job_options(
 ///
 /// ➕ Bencher Plus: View a job for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 /// The job output is only included in the response for terminal (completed, failed, or canceled) jobs
 /// when the user is authenticated and has `view` permissions for the project.
 #[endpoint {
@@ -200,28 +203,28 @@ pub async fn proj_job_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjJobParams>,
 ) -> Result<ResponseOk<JsonJob>, HttpError> {
-    let public_user = PublicUser::new(&rqctx).await?;
+    let api_actor = ApiActor::new(&rqctx).await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
-        &public_user,
+        &api_actor,
         &rqctx.log,
     )
     .await?;
-    Ok(Get::response_ok(json, public_user.is_auth()))
+    Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjJobParams,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
     log: &slog::Logger,
 ) -> Result<JsonJob, HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let query_project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
     let job_uuid = path_params.job;
@@ -231,14 +234,14 @@ async fn get_one_inner(
         .filter(schema::report::project_id.eq(query_project.id))
         .filter(schema::job::uuid.eq(job_uuid))
         .select(QueryJob::as_select())
-        .first(public_conn!(context, public_user))
+        .first(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(Job, (&query_project, job_uuid)))?;
 
     let has_run = query_job.status.has_run();
-    let mut job = query_job.into_json(public_conn!(context, public_user))?;
+    let mut job = query_job.into_json(actor_conn!(context, api_actor))?;
 
     // Fetch output from blob storage for terminal jobs only when authenticated
-    if has_run && public_user.is_auth() {
+    if has_run && api_actor.is_auth() {
         job.output = match context
             .oci_storage()
             .job_output()

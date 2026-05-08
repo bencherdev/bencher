@@ -8,7 +8,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    auth_conn,
+    actor_conn, auth_conn,
     context::ApiContext,
     error::{
         BencherResource, resource_conflict_err, resource_not_found_err, resource_not_found_error,
@@ -19,11 +19,11 @@ use bencher_schema::{
             branch::{QueryBranch, UpdateBranch, head::QueryHead},
         },
         user::{
+            actor::{ApiActor, PubProjectBearerToken},
             auth::{AuthUser, BearerToken},
-            public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema, write_conn,
+    schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
@@ -80,7 +80,8 @@ pub async fn proj_branches_options(
 ///
 /// List all branches for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 /// By default, the branches are sorted in alphabetical order by name.
 /// The HTTP response header `X-Total-Count` contains the total number of branches.
 #[endpoint {
@@ -94,10 +95,10 @@ pub async fn proj_branches_get(
     pagination_params: Query<ProjBranchesPagination>,
     query_params: Query<ProjBranchesQuery>,
 ) -> Result<ResponseOk<JsonBranches>, HttpError> {
-    let public_user = PublicUser::new(&rqctx).await?;
+    let api_actor = ApiActor::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
-        &public_user,
+        &api_actor,
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
@@ -105,29 +106,29 @@ pub async fn proj_branches_get(
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        public_user.is_auth(),
+        api_actor.is_auth(),
         total_count,
     ))
 }
 
 async fn get_ls_inner(
     context: &ApiContext,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
     path_params: ProjBranchesParams,
     pagination_params: ProjBranchesPagination,
     query_params: ProjBranchesQuery,
 ) -> Result<(JsonBranches, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let query_project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
     let branches = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryBranch>(public_conn!(context, public_user))
+        .load::<QueryBranch>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Branch,
             (&query_project, &pagination_params, &query_params)
@@ -137,7 +138,7 @@ async fn get_ls_inner(
     let json_branches = branches
         .into_iter()
         .map(|branch| async {
-            branch.into_json_for_project(public_conn!(context, public_user), &query_project)
+            branch.into_json_for_project(actor_conn!(context, api_actor), &query_project)
         })
         .collect::<FuturesOrdered<_>>()
         .collect::<Vec<_>>()
@@ -156,7 +157,7 @@ async fn get_ls_inner(
 
     let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
         .count()
-        .get_result::<i64>(public_conn!(context, public_user))
+        .get_result::<i64>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Branch,
             (&query_project, &pagination_params, &query_params)
@@ -281,7 +282,8 @@ pub async fn proj_branch_options(
 ///
 /// View a branch for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/branches/{branch}",
@@ -289,11 +291,11 @@ pub async fn proj_branch_options(
 }]
 pub async fn proj_branch_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjBranchParams>,
     query_params: Query<ProjBranchQuery>,
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
-    let public_user = PublicUser::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -305,58 +307,47 @@ pub async fn proj_branch_get(
         rqctx.context(),
         path_params.into_inner(),
         query_params.into_inner(),
-        &public_user,
+        &api_actor,
     )
     .await?;
-    Ok(Get::response_ok(json, public_user.is_auth()))
+    Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjBranchParams,
     query_params: ProjBranchQuery,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonBranch, HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
-        &context.rbac,
-        &path_params.project,
-        public_user,
-    )?;
+    actor_conn!(context, api_actor, |conn| {
+        let query_project =
+            QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?;
 
-    let query_branch = QueryBranch::belonging_to(&query_project)
-        .filter(QueryBranch::eq_resource_id(&path_params.branch))
-        .first::<QueryBranch>(public_conn!(context, public_user))
-        .map_err(resource_not_found_err!(
-            Branch,
-            (&query_project, &path_params.branch)
-        ))?;
+        let query_branch = QueryBranch::belonging_to(&query_project)
+            .filter(QueryBranch::eq_resource_id(&path_params.branch))
+            .first::<QueryBranch>(conn)
+            .map_err(resource_not_found_err!(
+                Branch,
+                (&query_project, &path_params.branch)
+            ))?;
 
-    if let Some(head_uuid) = query_params.head {
-        let query_head = QueryHead::from_uuid(
-            public_conn!(context, public_user),
-            query_project.id,
-            head_uuid,
-        )?;
-        if query_head.branch_id != query_branch.id {
-            return Err(resource_not_found_error(
-                BencherResource::Head,
-                head_uuid,
-                format!(
-                    "Specified head {head_uuid} does not belong to branch {branch_uuid}",
-                    branch_uuid = query_branch.uuid
-                ),
-            ));
+        if let Some(head_uuid) = query_params.head {
+            let query_head = QueryHead::from_uuid(conn, query_project.id, head_uuid)?;
+            if query_head.branch_id != query_branch.id {
+                return Err(resource_not_found_error(
+                    BencherResource::Head,
+                    head_uuid,
+                    format!(
+                        "Specified head {head_uuid} does not belong to branch {branch_uuid}",
+                        branch_uuid = query_branch.uuid
+                    ),
+                ));
+            }
+            query_branch.into_json_for_head(conn, &query_project, &query_head, None)
+        } else {
+            query_branch.into_json_for_project(conn, &query_project)
         }
-        query_branch.into_json_for_head(
-            public_conn!(context, public_user),
-            &query_project,
-            &query_head,
-            None,
-        )
-    } else {
-        query_branch.into_json_for_project(public_conn!(context, public_user), &query_project)
-    }
+    })
 }
 
 /// Update a branch

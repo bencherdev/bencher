@@ -16,6 +16,7 @@ use bencher_json::{
 use bencher_schema::model::spec::QuerySpec;
 use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
+    actor_conn,
     context::{ApiContext, DbConnection},
     error::{bad_request_error, resource_not_found_err},
     model::{
@@ -30,9 +31,9 @@ use bencher_schema::{
                 QueryThreshold, alert::QueryAlert, boundary::QueryBoundary, model::QueryModel,
             },
         },
-        user::public::{PubBearerToken, PublicUser},
+        user::actor::{ApiActor, PubProjectBearerToken},
     },
-    public_conn, schema, view,
+    schema, view,
 };
 use diesel::{
     ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
@@ -72,7 +73,8 @@ pub async fn proj_perf_options(
 /// There is a limit of 255 permutations for a single request.
 /// Therefore, only the first 255 permutations are returned.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/perf",
@@ -80,7 +82,7 @@ pub async fn proj_perf_options(
 }]
 pub async fn proj_perf_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjPerfParams>,
     query_params: Query<JsonPerfQueryParams>,
 ) -> Result<ResponseOk<JsonPerf>, HttpError> {
@@ -90,7 +92,7 @@ pub async fn proj_perf_get(
         .try_into()
         .map_err(bad_request_error)?;
 
-    let public_user = PublicUser::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -103,10 +105,10 @@ pub async fn proj_perf_get(
         rqctx.context(),
         path_params.into_inner(),
         json_perf_query,
-        &public_user,
+        &api_actor,
     )
     .await?;
-    Ok(Get::response_ok(json, public_user.is_auth()))
+    Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
 async fn get_inner(
@@ -114,13 +116,13 @@ async fn get_inner(
     context: &ApiContext,
     path_params: ProjPerfParams,
     json_perf_query: JsonPerfQuery,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonPerf, HttpError> {
-    let project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
     let JsonPerfQuery {
@@ -143,7 +145,7 @@ async fn get_inner(
     let results = perf_results(
         log,
         context,
-        public_user,
+        api_actor,
         &project,
         &branches,
         &heads,
@@ -157,7 +159,7 @@ async fn get_inner(
     .await?;
 
     Ok(JsonPerf {
-        project: project.into_json(public_conn!(context, public_user))?,
+        project: project.into_json(actor_conn!(context, api_actor))?,
         start_time,
         end_time,
         results,
@@ -174,7 +176,7 @@ struct Times {
 async fn perf_results(
     log: &slog::Logger,
     context: &ApiContext,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
     project: &QueryProject,
     branches: &[BranchUuid],
     heads: &[Option<HeadUuid>],
@@ -196,7 +198,7 @@ async fn perf_results(
             let spec_id: Option<SpecId> = if let Some(spec_uuid) =
                 specs.get(testbed_index).copied().flatten()
             {
-                match QuerySpec::get_id(public_conn!(context, public_user), spec_uuid) {
+                match QuerySpec::get_id(actor_conn!(context, api_actor), spec_uuid) {
                     Ok(id) => Some(id),
                     Err(e) => {
                         slog::info!(log, "Skipping perf query for nonexistent spec UUID: {spec_uuid}"; "error" => %e);
@@ -223,7 +225,7 @@ async fn perf_results(
 
                     let pq = perf_query(
                         context,
-                        public_user,
+                        api_actor,
                         project,
                         *branch_uuid,
                         *head_uuid,
@@ -243,7 +245,7 @@ async fn perf_results(
                             perf_metrics.metrics.push(perf_metric);
                         } else {
                             perf_metrics = new_perf_metrics(
-                                public_conn!(context, public_user),
+                                actor_conn!(context, api_actor),
                                 project,
                                 query_dimensions,
                                 perf_metric,
@@ -265,7 +267,7 @@ async fn perf_results(
 #[expect(clippy::too_many_arguments, clippy::too_many_lines)]
 async fn perf_query(
     context: &ApiContext,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
     project: &QueryProject,
     branch_uuid: BranchUuid,
     head_uuid: Option<HeadUuid>,
@@ -404,7 +406,7 @@ async fn perf_query(
         // Acquire the lock on the database connection for every query.
         // This helps to avoid resource contention when the database is under heavy load.
         // This will make the perf query itself slower, but it will make the overall system more stable.
-        .load::<PerfQuery>(public_conn!(context, public_user))
+        .load::<PerfQuery>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(Metric, (project,  branch_uuid, testbed_uuid, benchmark_uuid, measure_uuid)))
 }
 

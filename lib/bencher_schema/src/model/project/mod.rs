@@ -30,7 +30,7 @@ use crate::{
     },
     model::{
         organization::QueryOrganization,
-        user::{auth::AuthUser, public::PublicUser},
+        user::{actor::ApiActor, auth::AuthUser, public::PublicUser},
     },
     schema::{self, project as project_table},
     write_conn, write_transaction,
@@ -446,6 +446,38 @@ impl QueryProject {
             Ok(query_project)
         } else {
             Err(unauthorized_error(project))
+        }
+    }
+
+    pub fn is_allowed_actor(
+        conn: &mut DbConnection,
+        rbac: &Rbac,
+        project: &ProjectResourceId,
+        api_actor: &ApiActor,
+    ) -> Result<Self, HttpError> {
+        Self::is_allowed_actor_inner(conn, rbac, project, api_actor).map_err(|_e| {
+            resource_not_found_error(BencherResource::Project, project, Permission::View)
+        })
+    }
+
+    fn is_allowed_actor_inner(
+        conn: &mut DbConnection,
+        rbac: &Rbac,
+        project: &ProjectResourceId,
+        api_actor: &ApiActor,
+    ) -> Result<Self, HttpError> {
+        match api_actor {
+            ApiActor::Public(public_user) => {
+                Self::is_allowed_public_inner(conn, rbac, project, public_user)
+            },
+            ApiActor::ProjectKey(project_key_actor) => {
+                let query_project = Self::from_resource_id(conn, project)?;
+                if query_project.id == project_key_actor.project_id {
+                    Ok(query_project)
+                } else {
+                    Err(unauthorized_error(project))
+                }
+            },
         }
     }
 

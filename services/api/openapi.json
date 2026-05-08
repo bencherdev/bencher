@@ -2844,7 +2844,7 @@
           "projects"
         ],
         "summary": "List projects",
-        "description": "List all projects. If the user is not authenticated, then only public projects are returned. If the user is authenticated, then all public projects and any private project where the user has `view` permissions are returned. By default, the projects are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of projects.",
+        "description": "List all projects. If the user is not authenticated, then only public projects are returned. If the user is authenticated, then all public projects and any private project where the user has `view` permissions are returned. If a project key is provided, then only the key's project is returned. By default, the projects are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of projects.",
         "operationId": "projects_get",
         "parameters": [
           {
@@ -2965,7 +2965,7 @@
           "projects"
         ],
         "summary": "View a project",
-        "description": "View a project. If the user is not authenticated, then only a public project is available. If the user is authenticated, then any public project and any private project where the user has `view` permissions is available.",
+        "description": "View a project. If the user is not authenticated, then only a public project is available. If the user is authenticated, then any public project and any private project where the user has `view` permissions is available. A valid project key for the project may also be used for authentication.",
         "operationId": "project_get",
         "parameters": [
           {
@@ -3202,7 +3202,7 @@
           "alerts"
         ],
         "summary": "List alerts for a project",
-        "description": "List all alerts for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the alerts are sorted by status (active then dismissed) and modification date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of alerts.",
+        "description": "List all alerts for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the alerts are sorted by status (active then dismissed) and modification date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of alerts.",
         "operationId": "proj_alerts_get",
         "parameters": [
           {
@@ -3334,7 +3334,7 @@
           "alerts"
         ],
         "summary": "View an alert",
-        "description": "View an alert for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "View an alert for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_alert_get",
         "parameters": [
           {
@@ -3598,7 +3598,7 @@
           "benchmarks"
         ],
         "summary": "List benchmarks for a project",
-        "description": "List all benchmarks for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the benchmarks are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of benchmarks.",
+        "description": "List all benchmarks for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the benchmarks are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of benchmarks.",
         "operationId": "proj_benchmarks_get",
         "parameters": [
           {
@@ -3823,7 +3823,7 @@
           "benchmarks"
         ],
         "summary": "View a benchmark",
-        "description": "View a benchmark for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "View a benchmark for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_benchmark_get",
         "parameters": [
           {
@@ -4080,7 +4080,7 @@
           "branches"
         ],
         "summary": "List branches for a project",
-        "description": "List all branches for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the branches are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of branches.",
+        "description": "List all branches for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the branches are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of branches.",
         "operationId": "proj_branches_get",
         "parameters": [
           {
@@ -4305,7 +4305,7 @@
           "branches"
         ],
         "summary": "View a branch",
-        "description": "View a branch for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "View a branch for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_branch_get",
         "parameters": [
           {
@@ -4570,7 +4570,7 @@
           "jobs"
         ],
         "summary": "List jobs for a project",
-        "description": "➕ Bencher Plus: List all jobs for a project. The job output is not included in the list response. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the jobs are sorted by creation date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of jobs.",
+        "description": "➕ Bencher Plus: List all jobs for a project. The job output is not included in the list response. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the jobs are sorted by creation date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of jobs.",
         "operationId": "proj_jobs_get",
         "parameters": [
           {
@@ -4693,7 +4693,7 @@
           "jobs"
         ],
         "summary": "View a job",
-        "description": "➕ Bencher Plus: View a job for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. The job output is only included in the response for terminal (completed, failed, or canceled) jobs when the user is authenticated and has `view` permissions for the project.",
+        "description": "➕ Bencher Plus: View a job for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. The job output is only included in the response for terminal (completed, failed, or canceled) jobs when the user is authenticated and has `view` permissions for the project.",
         "operationId": "proj_job_get",
         "parameters": [
           {
@@ -5261,7 +5261,7 @@
           "measures"
         ],
         "summary": "List measures for a project",
-        "description": "List all measures for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the measures are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of measures.",
+        "description": "List all measures for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the measures are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of measures.",
         "operationId": "proj_measures_get",
         "parameters": [
           {
@@ -5486,7 +5486,7 @@
           "measures"
         ],
         "summary": "View a measure",
-        "description": "View a measure for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "View a measure for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_measure_get",
         "parameters": [
           {
@@ -5743,7 +5743,7 @@
           "metrics"
         ],
         "summary": "View a metric",
-        "description": "View a metric for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "View a metric for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_metric_get",
         "parameters": [
           {
@@ -5829,7 +5829,7 @@
           "perf"
         ],
         "summary": "Query project performance metrics",
-        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 255 permutations for a single request. Therefore, only the first 255 permutations are returned. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 255 permutations for a single request. Therefore, only the first 255 permutations are returned. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_perf_get",
         "parameters": [
           {
@@ -5976,7 +5976,7 @@
           "perf"
         ],
         "summary": "Generate a dynamic image of project performance metrics",
-        "description": "Generate a dynamic image of performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 8 permutations for a single image. Therefore, only the first 8 permutations are plotted. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "Generate a dynamic image of performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 8 permutations for a single image. Therefore, only the first 8 permutations are plotted. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_perf_img_get",
         "parameters": [
           {
@@ -6087,7 +6087,7 @@
           "plots"
         ],
         "summary": "List plots for a project",
-        "description": "List all plots for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the plots are sorted in their index order. The HTTP response header `X-Total-Count` contains the total number of plots.",
+        "description": "List all plots for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the plots are sorted in their index order. The HTTP response header `X-Total-Count` contains the total number of plots.",
         "operationId": "proj_plots_get",
         "parameters": [
           {
@@ -6303,7 +6303,7 @@
           "plots"
         ],
         "summary": "View a plot",
-        "description": "View a plot for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "View a plot for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_plot_get",
         "parameters": [
           {
@@ -6560,7 +6560,7 @@
           "reports"
         ],
         "summary": "List reports for a project",
-        "description": "List all reports for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the reports are sorted by date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of reports.",
+        "description": "List all reports for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the reports are sorted by date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of reports.",
         "operationId": "proj_reports_get",
         "parameters": [
           {
@@ -6803,7 +6803,7 @@
           "reports"
         ],
         "summary": "View a report",
-        "description": "View a report for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "View a report for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_report_get",
         "parameters": [
           {
@@ -6966,7 +6966,7 @@
           "testbeds"
         ],
         "summary": "List testbeds for a project",
-        "description": "List all testbeds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the testbeds are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of testbeds.",
+        "description": "List all testbeds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the testbeds are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of testbeds.",
         "operationId": "proj_testbeds_get",
         "parameters": [
           {
@@ -7191,7 +7191,7 @@
           "testbeds"
         ],
         "summary": "View a testbed",
-        "description": "View a testbed for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "View a testbed for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_testbed_get",
         "parameters": [
           {
@@ -7456,7 +7456,7 @@
           "thresholds"
         ],
         "summary": "List thresholds for a project",
-        "description": "List all thresholds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the thresholds are sorted by creation date time in chronological order. The HTTP response header `X-Total-Count` contains the total number of thresholds.",
+        "description": "List all thresholds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the thresholds are sorted by creation date time in chronological order. The HTTP response header `X-Total-Count` contains the total number of thresholds.",
         "operationId": "proj_thresholds_get",
         "parameters": [
           {
@@ -7692,7 +7692,7 @@
           "thresholds"
         ],
         "summary": "View a threshold",
-        "description": "View a threshold for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "View a threshold for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_threshold_get",
         "parameters": [
           {

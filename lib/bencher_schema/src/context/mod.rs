@@ -131,6 +131,10 @@ macro_rules! actor_conn {
             },
         }
     };
+    ($context:expr, $actor:expr, |$conn:ident| $multi:expr) => {{
+        let $conn = $crate::actor_conn!($context, $actor);
+        $multi
+    }};
 }
 
 #[macro_export]

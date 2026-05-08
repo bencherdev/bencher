@@ -10,17 +10,18 @@ use bencher_rbac::project::Permission;
 #[cfg(feature = "plus")]
 use bencher_schema::model::organization::plan::PlanKind;
 use bencher_schema::{
-    auth_conn,
+    actor_conn, auth_conn,
     context::ApiContext,
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::{
         project::{QueryProject, UpdateProject},
         user::{
+            actor::{ApiActor, PubProjectBearerToken},
             auth::{AuthUser, BearerToken},
-            public::{PubBearerToken, PublicUser},
+            public::PublicUser,
         },
     },
-    public_conn, schema, write_conn,
+    schema, write_conn,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -69,6 +70,7 @@ pub async fn projects_options(
 /// If the user is not authenticated, then only public projects are returned.
 /// If the user is authenticated, then all public projects and
 /// any private project where the user has `view` permissions are returned.
+/// If a project key is provided, then only the key's project is returned.
 /// By default, the projects are sorted in alphabetical order by name.
 /// The HTTP response header `X-Total-Count` contains the total number of projects.
 #[endpoint {
@@ -78,11 +80,11 @@ pub async fn projects_options(
 }]
 pub async fn projects_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
+    bearer_token: PubProjectBearerToken,
     pagination_params: Query<ProjectsPagination>,
     query_params: Query<ProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
-    let public_user = PublicUser::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -94,12 +96,12 @@ pub async fn projects_get(
         rqctx.context(),
         pagination_params.into_inner(),
         query_params.into_inner(),
-        &public_user,
+        &api_actor,
     )
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        public_user.is_auth(),
+        api_actor.is_auth(),
         total_count,
     ))
 }
@@ -108,21 +110,21 @@ async fn get_ls_inner(
     context: &ApiContext,
     pagination_params: ProjectsPagination,
     query_params: ProjectsQuery,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<(JsonProjects, TotalCount), HttpError> {
-    let projects = get_ls_query(context, &pagination_params, &query_params, public_user)
+    let projects = get_ls_query(context, &pagination_params, &query_params, api_actor)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryProject>(public_conn!(context, public_user))
+        .load::<QueryProject>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Project,
-            (&pagination_params, &query_params, public_user)
+            (&pagination_params, &query_params)
         ))?;
 
     // Drop connection lock before iterating
     let json_projects = projects
         .into_iter()
-        .map(|project| async { project.into_json(public_conn!(context, public_user)) })
+        .map(|project| async { project.into_json(actor_conn!(context, api_actor)) })
         .collect::<FuturesOrdered<_>>()
         .collect::<Vec<_>>()
         .await
@@ -138,12 +140,12 @@ async fn get_ls_inner(
         })
         .collect::<Vec<_>>();
 
-    let total_count = get_ls_query(context, &pagination_params, &query_params, public_user)
+    let total_count = get_ls_query(context, &pagination_params, &query_params, api_actor)
         .count()
-        .get_result::<i64>(public_conn!(context, public_user))
+        .get_result::<i64>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Project,
-            (&pagination_params, &query_params, public_user)
+            (&pagination_params, &query_params)
         ))?
         .try_into()?;
 
@@ -154,24 +156,30 @@ fn get_ls_query<'q>(
     context: &ApiContext,
     pagination_params: &ProjectsPagination,
     query_params: &'q ProjectsQuery,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> schema::project::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = schema::project::table
         .into_boxed()
         .filter(schema::project::deleted.is_null());
 
-    // All users should just see the public projects if the query is for public projects
-    if let PublicUser::Auth(auth_user) = public_user {
-        if !auth_user.is_admin(&context.rbac) {
-            let projects = auth_user.projects(&context.rbac, Permission::View);
-            query = query.filter(
-                schema::project::id
-                    .eq_any(projects)
-                    .or(schema::project::visibility.eq(Visibility::Public)),
-            );
-        }
-    } else {
-        query = query.filter(schema::project::visibility.eq(Visibility::Public));
+    match api_actor {
+        ApiActor::Public(public_user) => {
+            if let PublicUser::Auth(auth_user) = public_user {
+                if !auth_user.is_admin(&context.rbac) {
+                    let projects = auth_user.projects(&context.rbac, Permission::View);
+                    query = query.filter(
+                        schema::project::id
+                            .eq_any(projects)
+                            .or(schema::project::visibility.eq(Visibility::Public)),
+                    );
+                }
+            } else {
+                query = query.filter(schema::project::visibility.eq(Visibility::Public));
+            }
+        },
+        ApiActor::ProjectKey(project_key_actor) => {
+            query = query.filter(schema::project::id.eq(project_key_actor.project_id));
+        },
     }
 
     if let Some(name) = query_params.name.as_ref() {
@@ -218,6 +226,7 @@ pub async fn project_options(
 /// If the user is not authenticated, then only a public project is available.
 /// If the user is authenticated, then any public project and
 /// any private project where the user has `view` permissions is available.
+/// A valid project key for the project may also be used for authentication.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}",
@@ -225,10 +234,10 @@ pub async fn project_options(
 }]
 pub async fn project_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjectParams>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
-    let public_user = PublicUser::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -236,17 +245,17 @@ pub async fn project_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &public_user).await?;
-    Ok(Get::response_ok(json, public_user.is_auth()))
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &api_actor).await?;
+    Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjectParams,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonProject, HttpError> {
-    public_conn!(context, public_user, |conn| {
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, public_user)?
+    actor_conn!(context, api_actor, |conn| {
+        QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?
             .into_json(conn)
     })
 }

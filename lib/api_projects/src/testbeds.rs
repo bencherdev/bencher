@@ -12,7 +12,7 @@ use bencher_rbac::project::Permission;
 #[cfg(feature = "plus")]
 use bencher_schema::model::spec::QuerySpec;
 use bencher_schema::{
-    auth_conn,
+    actor_conn, auth_conn,
     context::ApiContext,
     error::{resource_conflict_err, resource_not_found_err},
     model::{
@@ -21,11 +21,11 @@ use bencher_schema::{
             testbed::{QueryTestbed, UpdateTestbed},
         },
         user::{
+            actor::{ApiActor, PubProjectBearerToken},
             auth::{AuthUser, BearerToken},
-            public::{PubBearerToken, PublicUser},
         },
     },
-    public_conn, schema, write_conn,
+    schema, write_conn,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _,
@@ -80,7 +80,8 @@ pub async fn proj_testbeds_options(
 ///
 /// List all testbeds for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 /// By default, the testbeds are sorted in alphabetical order by name.
 /// The HTTP response header `X-Total-Count` contains the total number of testbeds.
 #[endpoint {
@@ -94,10 +95,10 @@ pub async fn proj_testbeds_get(
     pagination_params: Query<ProjTestbedsPagination>,
     query_params: Query<ProjTestbedsQuery>,
 ) -> Result<ResponseOk<JsonTestbeds>, HttpError> {
-    let public_user = PublicUser::new(&rqctx).await?;
+    let api_actor = ApiActor::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
-        &public_user,
+        &api_actor,
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
@@ -105,26 +106,26 @@ pub async fn proj_testbeds_get(
     .await?;
     Ok(Get::response_ok_with_total_count(
         json,
-        public_user.is_auth(),
+        api_actor.is_auth(),
         total_count,
     ))
 }
 
 async fn get_ls_inner(
     context: &ApiContext,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
     path_params: ProjTestbedsParams,
     pagination_params: ProjTestbedsPagination,
     query_params: ProjTestbedsQuery,
 ) -> Result<(JsonTestbeds, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let query_project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
-    public_conn!(context, public_user, |conn| {
+    actor_conn!(context, api_actor, |conn| {
         let testbeds = get_ls_query(&query_project, &pagination_params, &query_params)
             .offset(pagination_params.offset())
             .limit(pagination_params.limit())
@@ -266,7 +267,8 @@ pub async fn proj_testbed_options(
 ///
 /// View a testbed for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/testbeds/{testbed}",
@@ -274,11 +276,11 @@ pub async fn proj_testbed_options(
 }]
 pub async fn proj_testbed_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjTestbedParams>,
     query_params: Query<ProjTestbedQuery>,
 ) -> Result<ResponseOk<JsonTestbed>, HttpError> {
-    let public_user = PublicUser::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -290,26 +292,26 @@ pub async fn proj_testbed_get(
         rqctx.context(),
         path_params.into_inner(),
         query_params.into_inner(),
-        &public_user,
+        &api_actor,
     )
     .await?;
-    Ok(Get::response_ok(json, public_user.is_auth()))
+    Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjTestbedParams,
     query_params: ProjTestbedQuery,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonTestbed, HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let query_project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
-    public_conn!(context, public_user, |conn| {
+    actor_conn!(context, api_actor, |conn| {
         let testbed = QueryTestbed::belonging_to(&query_project)
             .filter(QueryTestbed::eq_resource_id(&path_params.testbed))
             .first::<QueryTestbed>(conn)

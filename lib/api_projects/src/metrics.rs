@@ -4,6 +4,7 @@ use bencher_json::{
 };
 use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
+    actor_conn,
     context::{ApiContext, DbConnection},
     error::resource_not_found_err,
     model::{
@@ -18,9 +19,9 @@ use bencher_schema::{
                 QueryThreshold, alert::QueryAlert, boundary::QueryBoundary, model::QueryModel,
             },
         },
-        user::public::{PubBearerToken, PublicUser},
+        user::actor::{ApiActor, PubProjectBearerToken},
     },
-    public_conn, schema, view,
+    schema, view,
 };
 use diesel::{
     ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
@@ -56,7 +57,8 @@ pub async fn proj_metric_options(
 ///
 /// View a metric for a project.
 /// If the project is public, then the user does not need to be authenticated.
-/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/metrics/{metric}",
@@ -64,10 +66,10 @@ pub async fn proj_metric_options(
 }]
 pub async fn proj_metric_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjMetricParams>,
 ) -> Result<ResponseOk<JsonOneMetric>, HttpError> {
-    let public_user = PublicUser::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -75,23 +77,23 @@ pub async fn proj_metric_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &public_user).await?;
-    Ok(Get::response_ok(json, public_user.is_auth()))
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &api_actor).await?;
+    Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjMetricParams,
-    public_user: &PublicUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonOneMetric, HttpError> {
-    let query_project = QueryProject::is_allowed_public(
-        public_conn!(context, public_user),
+    let query_project = QueryProject::is_allowed_actor(
+        actor_conn!(context, api_actor),
         &context.rbac,
         &path_params.project,
-        public_user,
+        api_actor,
     )?;
 
-    public_conn!(context, public_user, |conn| {
+    actor_conn!(context, api_actor, |conn| {
         view::metric_boundary::table
         .inner_join(
             schema::report_benchmark::table.inner_join(
