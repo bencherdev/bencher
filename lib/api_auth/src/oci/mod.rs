@@ -161,10 +161,6 @@ pub async fn auth_oci_token_get(
 }
 
 /// Issue an authenticated OCI token after validating credentials and RBAC.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding API key validation error for security"
-)]
 async fn auth_oci_token(
     rqctx: &RequestContext<ApiContext>,
     context: &ApiContext,
@@ -174,18 +170,17 @@ async fn auth_oci_token(
     repository: Option<String>,
     actions: Vec<OciAction>,
 ) -> Result<Jwt, HttpError> {
+    let scope = query.scope.as_deref();
+
     // Validate the API token
     let claims = context
         .token_key
         .validate_api_key(api_token)
-        .map_err(|_| unauthorized_with_www_authenticate(rqctx, query.scope.as_deref()))?;
+        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
     // Verify the email matches the token subject
     if claims.email() != email {
-        return Err(unauthorized_with_www_authenticate(
-            rqctx,
-            query.scope.as_deref(),
-        ));
+        return Err(unauthorized_with_www_authenticate(rqctx, scope));
     }
 
     // Check admin status for pull-only requests
@@ -196,9 +191,9 @@ async fn auth_oci_token(
     if actions.contains(&OciAction::Pull) && !actions.contains(&OciAction::Push) {
         let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, email)
-            .map_err(|_| unauthorized_with_www_authenticate(rqctx, query.scope.as_deref()))?;
+            .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
         let auth_user = AuthUser::load(conn, query_user)
-            .map_err(|_| unauthorized_with_www_authenticate(rqctx, query.scope.as_deref()))?;
+            .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
         if !auth_user.is_admin(&context.rbac) {
             return Err(HttpError::for_client_error(
@@ -218,27 +213,28 @@ async fn auth_oci_token(
         if let Ok(query_project) = QueryProject::from_resource_id(conn, &project_id) {
             let is_claimed = query_project
                 .organization(conn)
-                .map_err(|_| {
-                    HttpError::for_internal_error("Failed to query organization".to_owned())
+                .map_err(|e| {
+                    HttpError::for_internal_error(format!("Failed to query organization: {e}"))
                 })?
                 .is_claimed(conn)
-                .map_err(|_| {
-                    HttpError::for_internal_error(
-                        "Failed to check organization claim status".to_owned(),
-                    )
+                .map_err(|e| {
+                    HttpError::for_internal_error(format!(
+                        "Failed to check organization claim status: {e}"
+                    ))
                 })?;
 
             if is_claimed {
-                let query_user = QueryUser::get_with_email(conn, email).map_err(|_| {
-                    unauthorized_with_www_authenticate(rqctx, query.scope.as_deref())
-                })?;
-                let auth_user = AuthUser::load(conn, query_user).map_err(|_| {
-                    unauthorized_with_www_authenticate(rqctx, query.scope.as_deref())
-                })?;
+                let query_user = QueryUser::get_with_email(conn, email)
+                    .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
+                let auth_user = AuthUser::load(conn, query_user)
+                    .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
                 query_project
                     .try_allowed(&context.rbac, &auth_user, Permission::Create)
-                    .map_err(|_| {
+                    .inspect_err(|e| {
+                        slog::info!(&rqctx.log, "OCI RBAC check failed"; "error" => %e);
+                    })
+                    .map_err(|_err| {
                         HttpError::for_client_error(
                             None,
                             ClientErrorStatusCode::FORBIDDEN,
@@ -304,11 +300,16 @@ pub fn unauthorized_with_www_authenticate(
     error
 }
 
+pub fn log_unauthorized_with_www_authenticate(
+    rqctx: &RequestContext<ApiContext>,
+    scope: Option<&str>,
+    error: &dyn std::fmt::Display,
+) -> HttpError {
+    slog::info!(&rqctx.log, "OCI auth failed"; "error" => %error);
+    unauthorized_with_www_authenticate(rqctx, scope)
+}
+
 /// Issue a project-scoped OCI token after validating a project key.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding project key validation errors for security"
-)]
 async fn project_key_oci_token(
     rqctx: &RequestContext<ApiContext>,
     context: &ApiContext,
@@ -318,6 +319,8 @@ async fn project_key_oci_token(
     repository: Option<String>,
     actions: Vec<OciAction>,
 ) -> Result<Jwt, HttpError> {
+    let scope = query.scope.as_deref();
+
     // Pull-only requests are not allowed for project key auth.
     // Only bare metal runners should be pulling, and they use runner tokens.
     if actions.contains(&OciAction::Pull) && !actions.contains(&OciAction::Push) {
@@ -335,16 +338,13 @@ async fn project_key_oci_token(
     let now = context.clock.now();
 
     let query_key = QueryProjectKey::from_hash(public_conn!(context), &key_hash, now)
-        .map_err(|_| unauthorized_with_www_authenticate(rqctx, query.scope.as_deref()))?;
+        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
     let query_project = QueryProject::get(public_conn!(context), query_key.project_id)
-        .map_err(|_| unauthorized_with_www_authenticate(rqctx, query.scope.as_deref()))?;
+        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
     if !query_project.matches_resource_id(project_rid) {
-        return Err(unauthorized_with_www_authenticate(
-            rqctx,
-            query.scope.as_deref(),
-        ));
+        return Err(unauthorized_with_www_authenticate(rqctx, scope));
     }
 
     // If scope specifies a repository, verify it matches the key's project

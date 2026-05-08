@@ -39,7 +39,9 @@ pub enum OciPullIdentity {
 }
 
 // Re-export from api_auth
-pub use api_auth::oci::unauthorized_with_www_authenticate;
+pub use api_auth::oci::{
+    log_unauthorized_with_www_authenticate, unauthorized_with_www_authenticate,
+};
 
 /// Extract OCI bearer token from Authorization header
 ///
@@ -168,10 +170,6 @@ fn validate_pull_identity(
 /// to unclaimed projects; runner and auth tokens have normal pull access.
 ///
 /// Use this for read operations during push flows (e.g. HEAD blob checks).
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
 pub async fn validate_pull_access(
     rqctx: &RequestContext<ApiContext>,
     repository: &ProjectResourceId,
@@ -181,7 +179,7 @@ pub async fn validate_pull_access(
     let scope = format!("repository:{repository_str}:pull");
 
     let token = extract_oci_bearer_token(rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, Some(&scope), &e))?;
     let identity = validate_pull_identity(context, &token, &repository_str)?;
 
     // Project tokens can pull from their own project regardless of claimed status
@@ -232,10 +230,6 @@ pub async fn validate_pull_access(
 /// Validates the bearer token as an authenticated user OCI token and checks push scope.
 /// Use this for simple write operations that don't need the full project creation flow.
 /// For operations that may create projects, use `validate_push_access` instead.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth and parse errors for security"
-)]
 pub async fn require_push_access(
     rqctx: &RequestContext<ApiContext>,
     repository: &str,
@@ -243,7 +237,7 @@ pub async fn require_push_access(
     let context = rqctx.context();
     let scope = format!("repository:{repository}:push");
     let token = extract_oci_bearer_token(rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, Some(&scope), &e))?;
 
     // Try project token first
     if let Ok(pk_claims) = context.token_key.validate_oci_project(&token) {
@@ -258,7 +252,7 @@ pub async fn require_push_access(
                     "error" => %e
                 );
             })
-            .map_err(|_| {
+            .map_err(|_err| {
                 HttpError::for_client_error(
                     None,
                     ClientErrorStatusCode::FORBIDDEN,
@@ -317,10 +311,6 @@ pub struct PushAccess {
 ///
 /// Requires a Bearer token (auth or public). Returns the project and optional claims,
 /// or an error if access is denied.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding auth errors for security"
-)]
 pub async fn validate_push_access(
     log: &Logger,
     rqctx: &RequestContext<ApiContext>,
@@ -332,7 +322,7 @@ pub async fn validate_push_access(
 
     // Bearer token is required (Docker obtains one from the token endpoint)
     let token = extract_oci_bearer_token(rqctx)
-        .map_err(|_| unauthorized_with_www_authenticate(rqctx, Some(&scope)))?;
+        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, Some(&scope), &e))?;
 
     // Project tokens bypass the standard auth flow — the key is the authorization
     if let Ok(pk_claims) = context.token_key.validate_oci_project(&token) {
@@ -434,10 +424,6 @@ async fn handle_existing_project(
 }
 
 /// Handle push to a claimed project (requires authentication and RBAC permission)
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding RBAC error details for security"
-)]
 fn handle_claimed_project(
     log: &Logger,
     rqctx: &RequestContext<ApiContext>,
@@ -465,7 +451,10 @@ fn handle_claimed_project(
     // Verify RBAC permission
     project
         .try_allowed(&context.rbac, auth_user, Permission::Create)
-        .map_err(|_| {
+        .inspect_err(|e| {
+            slog::info!(log, "OCI RBAC check failed"; "error" => %e);
+        })
+        .map_err(|_err| {
             HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::FORBIDDEN,
