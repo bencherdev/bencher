@@ -95,26 +95,12 @@ jobs:
         run: |
           echo "## OCI Conformance Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Admin Token" >> $GITHUB_STEP_SUMMARY
           if [ -f ./oci-conformance-results/test-output.log ]; then
             echo "<details>" >> $GITHUB_STEP_SUMMARY
             echo "<summary>Test Output</summary>" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             cat ./oci-conformance-results/test-output.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "</details>" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No test output found." >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Project Key" >> $GITHUB_STEP_SUMMARY
-          if [ -f ./oci-conformance-results/project-key/test-output.log ]; then
-            echo "<details>" >> $GITHUB_STEP_SUMMARY
-            echo "<summary>Test Output</summary>" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat ./oci-conformance-results/project-key/test-output.log >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             echo "</details>" >> $GITHUB_STEP_SUMMARY
           else
