@@ -248,9 +248,20 @@ pub async fn require_push_access(
     // Try project token first
     if let Ok(pk_claims) = context.token_key.validate_oci_project(&token) {
         validate_oci_scope(&pk_claims.oci, repository, &OciAction::Push)?;
-        context
-            .rate_limiting
-            .project_request(pk_claims.project_uuid())?;
+        if let Ok(repo_rid) = repository.parse::<ProjectResourceId>() {
+            let project = resolve_project(context, &repo_rid).await?;
+            if project.uuid != pk_claims.project_uuid() {
+                return Err(HttpError::for_client_error(
+                    None,
+                    ClientErrorStatusCode::FORBIDDEN,
+                    oci_error_body(
+                        OCI_ERROR_DENIED,
+                        "Project token not authorized for this repository",
+                    ),
+                ));
+            }
+            context.rate_limiting.project_request(project.uuid)?;
+        }
         return Ok(());
     }
 
