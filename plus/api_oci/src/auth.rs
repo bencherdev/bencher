@@ -259,16 +259,15 @@ pub async fn require_push_access(
     let claims = context
         .token_key
         .validate_oci_auth(&token)
-        .map_err(|_err| {
-            HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::UNAUTHORIZED,
-                oci_error_body(OCI_ERROR_UNAUTHORIZED, "Invalid or expired token"),
-            )
-        })?;
+        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, Some(&scope), &e))?;
     validate_oci_scope(&claims.oci, repository, &OciAction::Push)?;
 
     apply_user_rate_limit(&rqctx.log, context, &claims).await?;
+
+    if let Ok(repo_rid) = repository.parse::<ProjectResourceId>() {
+        let project = resolve_project(context, &repo_rid).await?;
+        context.rate_limiting.project_request(project.uuid)?;
+    }
 
     Ok(())
 }

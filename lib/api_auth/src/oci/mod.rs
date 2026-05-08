@@ -98,7 +98,7 @@ pub async fn auth_oci_token_get(
         (None, vec![])
     };
 
-    let jwt = match extract_basic_credentials(&rqctx) {
+    let jwt = match extract_basic_credentials(&rqctx)? {
         Some((username, password)) if password.starts_with(PROJECT_KEY_PREFIX) => {
             if let (Ok(project), Ok(project_key)) = (
                 username.parse::<ProjectResourceId>(),
@@ -379,19 +379,44 @@ async fn project_key_oci_token(
 
 /// Extract raw username and password from Basic auth header.
 ///
-/// Returns `None` if the header is missing or malformed.
-fn extract_basic_credentials(rqctx: &RequestContext<ApiContext>) -> Option<(String, String)> {
+/// Returns `Ok(None)` if no Authorization header or non-Basic scheme (anonymous).
+/// Returns `Ok(Some(...))` if valid Basic credentials were extracted.
+/// Returns `Err(...)` if the header is Basic but the payload is malformed.
+fn extract_basic_credentials(
+    rqctx: &RequestContext<ApiContext>,
+) -> Result<Option<(String, String)>, HttpError> {
     let headers = rqctx.request.headers();
-    let auth_header = headers.get(http::header::AUTHORIZATION)?;
-    let auth_str = auth_header.to_str().ok()?;
-    let (scheme, credentials) = auth_str.split_once(' ')?;
+    let Some(auth_header) = headers.get(http::header::AUTHORIZATION) else {
+        return Ok(None);
+    };
+    let auth_str = auth_header
+        .to_str()
+        .inspect_err(|e| {
+            slog::info!(&rqctx.log, "Invalid Authorization header encoding"; "error" => %e);
+        })
+        .map_err(|_err| unauthorized_with_www_authenticate(rqctx, None))?;
+    let Some((scheme, credentials)) = auth_str.split_once(' ') else {
+        return Ok(None);
+    };
     if !scheme.eq_ignore_ascii_case("Basic") {
-        return None;
+        return Ok(None);
     }
-    let decoded = STANDARD.decode(credentials).ok()?;
-    let decoded_str = String::from_utf8(decoded).ok()?;
-    let (username, password) = decoded_str.split_once(':')?;
-    Some((username.to_owned(), password.to_owned()))
+    let decoded = STANDARD
+        .decode(credentials)
+        .inspect_err(|e| {
+            slog::info!(&rqctx.log, "Invalid base64 in Basic auth"; "error" => %e);
+        })
+        .map_err(|_err| unauthorized_with_www_authenticate(rqctx, None))?;
+    let decoded_str = String::from_utf8(decoded)
+        .inspect_err(|e| {
+            slog::info!(&rqctx.log, "Invalid UTF-8 in Basic auth"; "error" => %e);
+        })
+        .map_err(|_err| unauthorized_with_www_authenticate(rqctx, None))?;
+    let Some((username, password)) = decoded_str.split_once(':') else {
+        slog::info!(&rqctx.log, "Missing colon in Basic auth credentials");
+        return Err(unauthorized_with_www_authenticate(rqctx, None));
+    };
+    Ok(Some((username.to_owned(), password.to_owned())))
 }
 
 /// Parse OCI scope string into repository and actions
