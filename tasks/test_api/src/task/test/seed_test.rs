@@ -672,7 +672,7 @@ impl SeedTest {
             .spawn()
             .and_then(|mut child| {
                 use std::io::Write as _;
-                if let Some(ref mut stdin) = child.stdin {
+                if let Some(mut stdin) = child.stdin.take() {
                     stdin.write_all(&mock_output.stdout)?;
                 }
                 child.wait_with_output()
