@@ -10,18 +10,20 @@ interface Props {
 	data: JsonProjectKeyCreated;
 }
 
-const PROJECT_KEY_PREFIX = "bencher_run_";
-const maskKey = (key: string) =>
-	`${PROJECT_KEY_PREFIX}${"*".repeat(key.length - PROJECT_KEY_PREFIX.length)}`;
+const SANITIZED_PROJECT_KEY = "bencher_run_******************************";
 
 const KeyCreated = (props: Props) => {
 	const [copied, setCopied] = createSignal(false);
 	const [revealed, setRevealed] = createSignal(false);
 
 	const copyKey = async () => {
-		await navigator.clipboard.writeText(props.data.key);
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
+		try {
+			await navigator.clipboard.writeText(props.data.key);
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		} catch (_e) {
+			// Clipboard API may be unavailable (non-HTTPS, denied permissions)
+		}
 	};
 
 	const viewPath = () => createdUuidPath(pathname(), props.data);
@@ -53,7 +55,7 @@ const KeyCreated = (props: Props) => {
 									id="project-key"
 									class="input is-family-monospace"
 									type="text"
-									value={revealed() ? props.data.key : maskKey(props.data.key)}
+									value={revealed() ? props.data.key : SANITIZED_PROJECT_KEY}
 									readonly
 								/>
 							</div>
