@@ -21,6 +21,7 @@ export interface Props {
 	resource: BencherResource;
 	operation: Operation;
 	config: PosterConfig;
+	onSuccess?: (data: object) => void;
 }
 
 export interface PosterConfig {
@@ -145,15 +146,19 @@ const Poster = (props: Props) => {
 		httpOperation(path, token, data)
 			.then((resp) => {
 				setSubmitting(false);
-				navigateNotify(
-					NotifyKind.OK,
-					`Hare's to your success! You've posted ${resourceSingular(
-						props.resource,
-					)}.`,
-					props.config?.path?.(pathname(), resp.data),
-					[BACK_PARAM],
-					null,
-				);
+				if (props.onSuccess) {
+					props.onSuccess(resp.data);
+				} else {
+					navigateNotify(
+						NotifyKind.OK,
+						`Hare's to your success! You've posted ${resourceSingular(
+							props.resource,
+						)}.`,
+						props.config?.path?.(pathname(), resp.data),
+						[BACK_PARAM],
+						null,
+					);
+				}
 			})
 			.catch((error) => {
 				setSubmitting(false);

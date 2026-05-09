@@ -15,6 +15,7 @@ export enum BencherResource {
 	ALERTS = "alerts",
 	USERS = "users",
 	TOKENS = "tokens",
+	PROJECT_KEYS = "project_keys",
 	HELP = "help",
 }
 
@@ -48,6 +49,8 @@ export const resourceSingular = (resource: BencherResource) => {
 			return "user";
 		case BencherResource.TOKENS:
 			return "token";
+		case BencherResource.PROJECT_KEYS:
+			return "project key";
 		case BencherResource.HELP:
 			return "help";
 	}
@@ -83,6 +86,8 @@ export const resourcePlural = (resource: BencherResource) => {
 			return "users";
 		case BencherResource.TOKENS:
 			return "tokens";
+		case BencherResource.PROJECT_KEYS:
+			return "project keys";
 		case BencherResource.HELP:
 			return "help";
 	}

@@ -10,6 +10,7 @@ interface Props {
 	params: Params;
 	resource: BencherResource;
 	operation?: Operation;
+	onSuccess?: (data: object) => void;
 }
 
 interface PosterPanelConfig {
@@ -36,6 +37,7 @@ const PosterPanel = (props: Props) => {
 				resource={props.resource}
 				operation={config()?.operation}
 				config={config()?.form}
+				onSuccess={props.onSuccess}
 			/>
 		</>
 	);

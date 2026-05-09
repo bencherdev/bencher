@@ -2,6 +2,7 @@ import billingConfig from "./organization/billing";
 import membersConfig from "./organization/members";
 import organizationsConfig from "./organization/organizations";
 import alertsConfig from "./project/alerts";
+import keysConfig from "./project/keys";
 import benchmarksConfig from "./project/benchmarks";
 import branchesConfig from "./project/branches";
 import measuresConfig from "./project/measures";
@@ -29,6 +30,7 @@ const consoleConfig = {
 	[BencherResource.METRICS]: metricsConfig,
 	[BencherResource.THRESHOLDS]: thresholdsConfig,
 	[BencherResource.ALERTS]: alertsConfig,
+	[BencherResource.PROJECT_KEYS]: keysConfig,
 	// User
 	[BencherResource.USERS]: usersConfig,
 	[BencherResource.TOKENS]: tokensConfig,
