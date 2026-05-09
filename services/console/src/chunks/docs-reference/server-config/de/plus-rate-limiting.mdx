@@ -9,9 +9,105 @@ Um zu verhindern, dass [`unclaimed` Projekte][unclaimed projects] erstellt werde
 |         window         |    86400     |    86400     |     Nein     |                                      Spezifiziert das Fenster für die Ratenbegrenzung in Sekunden. Standardmäßig auf einen Tag gesetzt.                                       |
 |    unclaimed_limit     |     255      |     255      |     Nein     | Kontrolliert die Ratenbegrenzung für [`unclaimed` Projekte][unclaimed projects]. Um zu verhindern, dass `unclaimed` Projekte erstellt werden, setzen Sie diesen Wert auf `0`. |
 |     claimed_limit      |    65536     |    65536     |     Nein     |                                                           Kontrolliert die Ratenbegrenzung für `claimed` Projekte.                                                            |
-|     oci_bandwidth      |  \{ ... \}   |     ---      |     Nein     |                                   Gibt tägliche OCI-Registry-Bandbreitenlimits pro Organisationsstufe an.                                                                     |
-| oci_bandwidth.unclaimed | 1073741824  | 1073741824   |     Nein     |                          Maximale Bytes pro Tag für nicht beanspruchte Organisationen (0 Mitglieder). Standardmäßig 1 GiB.                                                    |
-|   oci_bandwidth.free   | 10737418240  | 10737418240  |     Nein     |                          Maximale Bytes pro Tag für kostenlose (beansprucht, ohne bezahlten Plan) Organisationen. Standardmäßig 10 GiB.                                       |
-|   oci_bandwidth.plus   | 107374182400 | 107374182400 |     Nein     |                          Maximale Bytes pro Tag für Plus (Team/Enterprise) Organisationen. Standardmäßig 100 GiB.                                                             |
+
+#### `public`
+
+Der `public`-Ratenbegrenzer gilt pro IP-Adresse für nicht authentifizierte Anfragen.
+Jedes Unterfeld enthält `minute`-, `hour`- und `day`-Limits.
+Der gesamte Abschnitt ist optional.
+Wenn nicht angegeben, werden die aufgelisteten Standardwerte verwendet.
+
+|       Name       | Beispiel | Standard | Erforderlich |                           Beschreibung                                      |
+| :--------------: | :------: | :------: | :----------: | :-------------------------------------------------------------------------: |
+|     requests     | \{ ... \} |   ---   |     Nein     | Spezifiziert Anfrage-Ratenlimits pro IP-Adresse.                            |
+| requests.minute  |  1024   |  1024   |     Nein     | Maximale Anfragen pro Minute pro IP-Adresse.                                |
+|  requests.hour   |  4096   |  4096   |     Nein     | Maximale Anfragen pro Stunde pro IP-Adresse.                                |
+|   requests.day   |  8192   |  8192   |     Nein     | Maximale Anfragen pro Tag pro IP-Adresse.                                   |
+|     attempts     | \{ ... \} |   ---   |     Nein     | Spezifiziert Authentifizierungsversuch-Ratenlimits pro IP-Adresse.           |
+| attempts.minute  |   32    |   32    |     Nein     | Maximale Authentifizierungsversuche pro Minute pro IP-Adresse.              |
+|  attempts.hour   |   64    |   64    |     Nein     | Maximale Authentifizierungsversuche pro Stunde pro IP-Adresse.              |
+|   attempts.day   |   128   |   128   |     Nein     | Maximale Authentifizierungsversuche pro Tag pro IP-Adresse.                 |
+|       runs       | \{ ... \} |   ---   |     Nein     | Spezifiziert Benchmark-Lauf-Ratenlimits pro IP-Adresse für nicht beanspruchte Projekte. |
+|   runs.minute    |   64    |   64    |     Nein     | Maximale Benchmark-Läufe pro Minute pro IP-Adresse.                        |
+|    runs.hour     |   128   |   128   |     Nein     | Maximale Benchmark-Läufe pro Stunde pro IP-Adresse.                        |
+|     runs.day     |   256   |   256   |     Nein     | Maximale Benchmark-Läufe pro Tag pro IP-Adresse.                           |
+
+#### `user`
+
+Der `user`-Ratenbegrenzer gilt pro authentifiziertem Benutzer.
+Jedes Unterfeld enthält `minute`-, `hour`- und `day`-Limits.
+Der gesamte Abschnitt ist optional.
+Wenn nicht angegeben, werden die aufgelisteten Standardwerte verwendet.
+
+|         Name         | Beispiel | Standard | Erforderlich |                           Beschreibung                                      |
+| :------------------: | :------: | :------: | :----------: | :-------------------------------------------------------------------------: |
+|       requests       | \{ ... \} |   ---   |     Nein     | Spezifiziert Anfrage-Ratenlimits pro Benutzer.                              |
+|   requests.minute    |  2048   |  2048   |     Nein     | Maximale Anfragen pro Minute pro Benutzer.                                  |
+|    requests.hour     |  8192   |  8192   |     Nein     | Maximale Anfragen pro Stunde pro Benutzer.                                  |
+|     requests.day     |  16384  |  16384  |     Nein     | Maximale Anfragen pro Tag pro Benutzer.                                     |
+|       attempts       | \{ ... \} |   ---   |     Nein     | Spezifiziert Authentifizierungsversuch-Ratenlimits pro Benutzer.             |
+|   attempts.minute    |    2    |    2    |     Nein     | Maximale Authentifizierungsversuche pro Minute pro Benutzer.                |
+|    attempts.hour     |    4    |    4    |     Nein     | Maximale Authentifizierungsversuche pro Stunde pro Benutzer.                |
+|     attempts.day     |    8    |    8    |     Nein     | Maximale Authentifizierungsversuche pro Tag pro Benutzer.                   |
+|     credentials      | \{ ... \} |   ---   |     Nein     | Spezifiziert Anmeldedaten-Erstellungs-Ratenlimits pro Benutzer.             |
+|  credentials.minute  |    4    |    4    |     Nein     | Maximale Anmeldedaten-Erstellungen pro Minute pro Benutzer.                |
+|   credentials.hour   |    8    |    8    |     Nein     | Maximale Anmeldedaten-Erstellungen pro Stunde pro Benutzer.                |
+|   credentials.day    |   16    |   16    |     Nein     | Maximale Anmeldedaten-Erstellungen pro Tag pro Benutzer.                   |
+|    organizations     | \{ ... \} |   ---   |     Nein     | Spezifiziert Organisations-Erstellungs-Ratenlimits pro Benutzer.            |
+| organizations.minute |    2    |    2    |     Nein     | Maximale Organisations-Erstellungen pro Minute pro Benutzer.               |
+|  organizations.hour  |    4    |    4    |     Nein     | Maximale Organisations-Erstellungen pro Stunde pro Benutzer.               |
+|  organizations.day   |    8    |    8    |     Nein     | Maximale Organisations-Erstellungen pro Tag pro Benutzer.                  |
+|       invites        | \{ ... \} |   ---   |     Nein     | Spezifiziert Einladungs-Ratenlimits pro Benutzer.                           |
+|    invites.minute    |    8    |    8    |     Nein     | Maximale Einladungen pro Minute pro Benutzer.                              |
+|     invites.hour     |   16    |   16    |     Nein     | Maximale Einladungen pro Stunde pro Benutzer.                              |
+|     invites.day      |   32    |   32    |     Nein     | Maximale Einladungen pro Tag pro Benutzer.                                 |
+|         runs         | \{ ... \} |   ---   |     Nein     | Spezifiziert Benchmark-Lauf-Ratenlimits pro Benutzer.                       |
+|     runs.minute      |   64    |   64    |     Nein     | Maximale Benchmark-Läufe pro Minute pro Benutzer.                          |
+|      runs.hour       |  1024   |  1024   |     Nein     | Maximale Benchmark-Läufe pro Stunde pro Benutzer.                          |
+|       runs.day       |  4096   |  4096   |     Nein     | Maximale Benchmark-Läufe pro Tag pro Benutzer.                             |
+
+#### `project`
+
+Der `project`-Ratenbegrenzer gilt pro Projekt.
+Jedes Unterfeld enthält `minute`-, `hour`- und `day`-Limits.
+Der gesamte Abschnitt ist optional.
+Wenn nicht angegeben, werden die aufgelisteten Standardwerte verwendet.
+
+|       Name       | Beispiel | Standard | Erforderlich |                           Beschreibung                                      |
+| :--------------: | :------: | :------: | :----------: | :-------------------------------------------------------------------------: |
+|     requests     | \{ ... \} |   ---   |     Nein     | Spezifiziert Anfrage-Ratenlimits pro Projekt.                               |
+| requests.minute  |  2048   |  2048   |     Nein     | Maximale Anfragen pro Minute pro Projekt.                                   |
+|  requests.hour   |  8192   |  8192   |     Nein     | Maximale Anfragen pro Stunde pro Projekt.                                   |
+|   requests.day   |  16384  |  16384  |     Nein     | Maximale Anfragen pro Tag pro Projekt.                                      |
+|       runs       | \{ ... \} |   ---   |     Nein     | Spezifiziert Benchmark-Lauf-Ratenlimits pro Projekt.                        |
+|   runs.minute    |   64    |   64    |     Nein     | Maximale Benchmark-Läufe pro Minute pro Projekt.                           |
+|    runs.hour     |  1024   |  1024   |     Nein     | Maximale Benchmark-Läufe pro Stunde pro Projekt.                           |
+|     runs.day     |  4096   |  4096   |     Nein     | Maximale Benchmark-Läufe pro Tag pro Projekt.                              |
+
+#### `runner`
+
+Der `runner`-Ratenbegrenzer gilt pro Runner.
+Jedes Unterfeld enthält `minute`-, `hour`- und `day`-Limits.
+Der gesamte Abschnitt ist optional.
+Wenn nicht angegeben, werden die aufgelisteten Standardwerte verwendet.
+
+|       Name       | Beispiel | Standard | Erforderlich |                           Beschreibung                                      |
+| :--------------: | :------: | :------: | :----------: | :-------------------------------------------------------------------------: |
+|     requests     | \{ ... \} |   ---   |     Nein     | Spezifiziert Anfrage-Ratenlimits pro Runner.                                |
+| requests.minute  |   16    |   16    |     Nein     | Maximale Anfragen pro Minute pro Runner.                                    |
+|  requests.hour   |   256   |   256   |     Nein     | Maximale Anfragen pro Stunde pro Runner.                                    |
+|   requests.day   |  4096   |  4096   |     Nein     | Maximale Anfragen pro Tag pro Runner.                                       |
+
+#### `oci_bandwidth`
+
+Der `oci_bandwidth`-Ratenbegrenzer gibt tägliche OCI-Registry-Bandbreitenlimits pro Organisationsstufe an.
+Der gesamte Abschnitt ist optional.
+Wenn nicht angegeben, werden die aufgelisteten Standardwerte verwendet.
+
+|     Name    |   Beispiel   |   Standard   | Erforderlich |                           Beschreibung                                                    |
+| :---------: | :----------: | :----------: | :----------: | :---------------------------------------------------------------------------------------: |
+|  unclaimed  | 1073741824   | 1073741824   |     Nein     | Maximale Bytes pro Tag für nicht beanspruchte Organisationen (0 Mitglieder). Standardmäßig 1 GiB.   |
+|    free     | 10737418240  | 10737418240  |     Nein     | Maximale Bytes pro Tag für kostenlose (beansprucht, ohne bezahlten Plan) Organisationen. Standardmäßig 10 GiB. |
+|    plus     | 107374182400 | 107374182400 |     Nein     | Maximale Bytes pro Tag für Plus (Team/Enterprise) Organisationen. Standardmäßig 100 GiB.  |
 
 [unclaimed projects]: /de/docs/how-to/claim/#unclaimed-projects

@@ -11,9 +11,105 @@ Pour empêcher la création de projets [`unclaimed`][unclaimed projects], défin
 |         window         |    86400     |    86400     |  Non   |                                       Spécifie la période de limitation de débit en secondes. Défini par défaut à une journée.                                       |
 |    unclaimed_limit     |     255      |     255      |  Non   | Contrôle la limitation de débit pour les projets [`unclaimed`][unclaimed projects]. Pour empêcher la création de projets `unclaimed`, définissez cette valeur à `0`. |
 |     claimed_limit      |    65536     |    65536     |  Non   |                                                     Contrôle la limitation de débit pour les projets `claimed`.                                                      |
-|     oci_bandwidth      |  \{ ... \}   |     ---      |  Non   |                            Spécifie les limites quotidiennes de bande passante du registre OCI par niveau d'organisation.                                            |
-| oci_bandwidth.unclaimed | 1073741824  | 1073741824   |  Non   |                          Octets maximum par jour pour les organisations non réclamées (0 membres). Par défaut 1 Gio.                                                 |
-|   oci_bandwidth.free   | 10737418240  | 10737418240  |  Non   |                          Octets maximum par jour pour les organisations gratuites (réclamées, sans plan payant). Par défaut 10 Gio.                                  |
-|   oci_bandwidth.plus   | 107374182400 | 107374182400 |  Non   |                          Octets maximum par jour pour les organisations Plus (Team/Enterprise). Par défaut 100 Gio.                                                  |
+
+#### `public`
+
+Le limiteur de débit `public` s'applique par adresse IP pour les requêtes non authentifiées.
+Chaque sous-champ contient des limites `minute`, `hour` et `day`.
+Toute la section est facultative.
+Si elle n'est pas spécifiée, les valeurs par défaut énumérées seront utilisées.
+
+|       Nom        | Exemple | Défaut | Requis |                           Description                                          |
+| :--------------: | :-----: | :----: | :----: | :----------------------------------------------------------------------------: |
+|     requests     | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit des requêtes par IP.                              |
+| requests.minute  |  1024   | 1024  |  Non   | Requêtes maximales par minute par adresse IP.                                   |
+|  requests.hour   |  4096   | 4096  |  Non   | Requêtes maximales par heure par adresse IP.                                    |
+|   requests.day   |  8192   | 8192  |  Non   | Requêtes maximales par jour par adresse IP.                                     |
+|     attempts     | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit des tentatives d'authentification par IP.          |
+| attempts.minute  |   32    |  32   |  Non   | Tentatives d'authentification maximales par minute par adresse IP.               |
+|  attempts.hour   |   64    |  64   |  Non   | Tentatives d'authentification maximales par heure par adresse IP.                |
+|   attempts.day   |   128   |  128  |  Non   | Tentatives d'authentification maximales par jour par adresse IP.                 |
+|       runs       | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit des exécutions de benchmark par IP pour les projets non réclamés. |
+|   runs.minute    |   64    |  64   |  Non   | Exécutions de benchmark maximales par minute par adresse IP.                    |
+|    runs.hour     |   128   |  128  |  Non   | Exécutions de benchmark maximales par heure par adresse IP.                     |
+|     runs.day     |   256   |  256  |  Non   | Exécutions de benchmark maximales par jour par adresse IP.                      |
+
+#### `user`
+
+Le limiteur de débit `user` s'applique par utilisateur authentifié.
+Chaque sous-champ contient des limites `minute`, `hour` et `day`.
+Toute la section est facultative.
+Si elle n'est pas spécifiée, les valeurs par défaut énumérées seront utilisées.
+
+|         Nom          | Exemple | Défaut | Requis |                           Description                                          |
+| :------------------: | :-----: | :----: | :----: | :----------------------------------------------------------------------------: |
+|       requests       | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit des requêtes par utilisateur.                      |
+|   requests.minute    |  2048   | 2048  |  Non   | Requêtes maximales par minute par utilisateur.                                   |
+|    requests.hour     |  8192   | 8192  |  Non   | Requêtes maximales par heure par utilisateur.                                    |
+|     requests.day     |  16384  | 16384 |  Non   | Requêtes maximales par jour par utilisateur.                                     |
+|       attempts       | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit des tentatives d'authentification par utilisateur.  |
+|   attempts.minute    |    2    |   2   |  Non   | Tentatives d'authentification maximales par minute par utilisateur.               |
+|    attempts.hour     |    4    |   4   |  Non   | Tentatives d'authentification maximales par heure par utilisateur.                |
+|     attempts.day     |    8    |   8   |  Non   | Tentatives d'authentification maximales par jour par utilisateur.                 |
+|     credentials      | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit de création d'identifiants par utilisateur.         |
+|  credentials.minute  |    4    |   4   |  Non   | Créations d'identifiants maximales par minute par utilisateur.                   |
+|   credentials.hour   |    8    |   8   |  Non   | Créations d'identifiants maximales par heure par utilisateur.                    |
+|   credentials.day    |   16    |  16   |  Non   | Créations d'identifiants maximales par jour par utilisateur.                     |
+|    organizations     | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit de création d'organisations par utilisateur.        |
+| organizations.minute |    2    |   2   |  Non   | Créations d'organisations maximales par minute par utilisateur.                  |
+|  organizations.hour  |    4    |   4   |  Non   | Créations d'organisations maximales par heure par utilisateur.                   |
+|  organizations.day   |    8    |   8   |  Non   | Créations d'organisations maximales par jour par utilisateur.                    |
+|       invites        | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit des invitations par utilisateur.                    |
+|    invites.minute    |    8    |   8   |  Non   | Invitations maximales par minute par utilisateur.                                |
+|     invites.hour     |   16    |  16   |  Non   | Invitations maximales par heure par utilisateur.                                 |
+|     invites.day      |   32    |  32   |  Non   | Invitations maximales par jour par utilisateur.                                  |
+|         runs         | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit des exécutions de benchmark par utilisateur.        |
+|     runs.minute      |   64    |  64   |  Non   | Exécutions de benchmark maximales par minute par utilisateur.                    |
+|      runs.hour       |  1024   | 1024  |  Non   | Exécutions de benchmark maximales par heure par utilisateur.                     |
+|       runs.day       |  4096   | 4096  |  Non   | Exécutions de benchmark maximales par jour par utilisateur.                      |
+
+#### `project`
+
+Le limiteur de débit `project` s'applique par projet.
+Chaque sous-champ contient des limites `minute`, `hour` et `day`.
+Toute la section est facultative.
+Si elle n'est pas spécifiée, les valeurs par défaut énumérées seront utilisées.
+
+|       Nom        | Exemple | Défaut | Requis |                           Description                                          |
+| :--------------: | :-----: | :----: | :----: | :----------------------------------------------------------------------------: |
+|     requests     | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit des requêtes par projet.                           |
+| requests.minute  |  2048   | 2048  |  Non   | Requêtes maximales par minute par projet.                                        |
+|  requests.hour   |  8192   | 8192  |  Non   | Requêtes maximales par heure par projet.                                         |
+|   requests.day   |  16384  | 16384 |  Non   | Requêtes maximales par jour par projet.                                          |
+|       runs       | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit des exécutions de benchmark par projet.             |
+|   runs.minute    |   64    |  64   |  Non   | Exécutions de benchmark maximales par minute par projet.                         |
+|    runs.hour     |  1024   | 1024  |  Non   | Exécutions de benchmark maximales par heure par projet.                          |
+|     runs.day     |  4096   | 4096  |  Non   | Exécutions de benchmark maximales par jour par projet.                           |
+
+#### `runner`
+
+Le limiteur de débit `runner` s'applique par runner.
+Chaque sous-champ contient des limites `minute`, `hour` et `day`.
+Toute la section est facultative.
+Si elle n'est pas spécifiée, les valeurs par défaut énumérées seront utilisées.
+
+|       Nom        | Exemple | Défaut | Requis |                           Description                                          |
+| :--------------: | :-----: | :----: | :----: | :----------------------------------------------------------------------------: |
+|     requests     | \{ ... \} |  ---  |  Non   | Spécifie les limites de débit des requêtes par runner.                           |
+| requests.minute  |   16    |  16   |  Non   | Requêtes maximales par minute par runner.                                        |
+|  requests.hour   |   256   |  256  |  Non   | Requêtes maximales par heure par runner.                                         |
+|   requests.day   |  4096   | 4096  |  Non   | Requêtes maximales par jour par runner.                                          |
+
+#### `oci_bandwidth`
+
+Le `oci_bandwidth` spécifie les limites quotidiennes de bande passante du registre OCI par niveau d'organisation.
+Toute la section est facultative.
+Si elle n'est pas spécifiée, les valeurs par défaut énumérées seront utilisées.
+
+|     Nom     |   Exemple    |    Défaut    | Requis |                           Description                                                     |
+| :---------: | :----------: | :----------: | :----: | :---------------------------------------------------------------------------------------: |
+|  unclaimed  | 1073741824   | 1073741824   |  Non   | Octets maximum par jour pour les organisations non réclamées (0 membres). Par défaut 1 Gio.   |
+|    free     | 10737418240  | 10737418240  |  Non   | Octets maximum par jour pour les organisations gratuites (réclamées, sans plan payant). Par défaut 10 Gio. |
+|    plus     | 107374182400 | 107374182400 |  Non   | Octets maximum par jour pour les organisations Plus (Team/Enterprise). Par défaut 100 Gio. |
 
 [unclaimed projects]: /fr/docs/how-to/claim/#unclaimed-projects
