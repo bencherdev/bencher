@@ -295,7 +295,7 @@ pub async fn oci_upload_chunk(
     let project_uuid = project.uuid;
 
     // Check bandwidth limit before transfer
-    let org_id = check_oci_bandwidth(context, &project).await?;
+    let org_uuid = check_oci_bandwidth(context, &project).await?;
 
     // Parse upload ID
     let upload_id: UploadId = crate::error::parse_upload_id(&path.session_id)?;
@@ -381,7 +381,7 @@ pub async fn oci_upload_chunk(
     let new_size = stream_to_storage(body, storage, &upload_id, current_size).await?;
 
     // Record bandwidth usage for this chunk
-    record_oci_bandwidth(context, org_id, new_size - current_size);
+    record_oci_bandwidth(context, org_uuid, new_size - current_size);
 
     // Post-stream validation: verify bytes received matches Content-Range expected length.
     // Note: Data has already been appended to the upload session at this point.
@@ -455,7 +455,7 @@ pub async fn oci_upload_complete(
     let project_uuid = project.uuid;
 
     // Check bandwidth limit before transfer
-    let org_id = check_oci_bandwidth(context, &project).await?;
+    let org_uuid = check_oci_bandwidth(context, &project).await?;
 
     // Parse upload ID and expected digest
     let upload_id: UploadId = crate::error::parse_upload_id(&path.session_id)?;
@@ -498,7 +498,7 @@ pub async fn oci_upload_complete(
     };
 
     // Record bandwidth usage for the final chunk
-    record_oci_bandwidth(context, org_id, final_size - current_size);
+    record_oci_bandwidth(context, org_uuid, final_size - current_size);
 
     // Record metric
     #[cfg(feature = "otel")]

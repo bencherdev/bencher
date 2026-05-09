@@ -1,8 +1,6 @@
-use std::{
-    net::IpAddr,
-    path::{Path, PathBuf},
-    time::Duration,
-};
+use std::{net::IpAddr, path::Path, time::Duration};
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 use bencher_json::{
     DateTime, OrganizationUuid, PlanLevel, ProjectUuid, RunnerUuid, UserUuid,
@@ -376,16 +374,20 @@ impl RateLimiting {
             self.runner.snapshot(),
             self.bandwidth.snapshot(),
         );
-        let snapshot_path = Self::snapshot_path(db_path);
+        let snapshot_path = Self::snapshot_path(db_path)?;
+        let partial_path = snapshot_path.with_extension("json.partial");
         let json = serde_json::to_string(&snapshot).map_err(RateLimitingPersistError::Serialize)?;
-        std::fs::write(&snapshot_path, json)
-            .map_err(|e| RateLimitingPersistError::Write(e, snapshot_path.clone()))?;
-        slog::info!(log, "Saved rate limiting snapshot to {snapshot_path:?}");
+        std::fs::write(&partial_path, json)
+            .map_err(|e| RateLimitingPersistError::Write(e, partial_path.clone()))?;
+        std::fs::rename(&partial_path, &snapshot_path).map_err(|e| {
+            RateLimitingPersistError::Rename(e, partial_path, snapshot_path.clone())
+        })?;
+        slog::info!(log, "Saved rate limiting snapshot to {snapshot_path}");
         Ok(())
     }
 
     pub fn load(&self, db_path: &Path, log: &Logger) -> Result<(), RateLimitingPersistError> {
-        let snapshot_path = Self::snapshot_path(db_path);
+        let snapshot_path = Self::snapshot_path(db_path)?;
         if !snapshot_path.exists() {
             return Ok(());
         }
@@ -405,26 +407,29 @@ impl RateLimiting {
         self.project.restore(project);
         self.runner.restore(runner);
         self.bandwidth.restore(bandwidth);
-        slog::info!(log, "Restored rate limiting state from {snapshot_path:?}");
+        slog::info!(log, "Restored rate limiting state from {snapshot_path}");
         Ok(())
     }
 
-    fn snapshot_path(db_path: &Path) -> PathBuf {
-        db_path
-            .parent()
-            .unwrap_or_else(|| Path::new("."))
-            .join("rate_limiting.json")
+    fn snapshot_path(db_path: &Path) -> Result<Utf8PathBuf, RateLimitingPersistError> {
+        let db_path = Utf8Path::from_path(db_path).ok_or(RateLimitingPersistError::NonUtf8Path)?;
+        let parent = db_path.parent().unwrap_or(Utf8Path::new("."));
+        Ok(parent.join("rate_limiting.json"))
     }
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum RateLimitingPersistError {
+    #[error("Database path is not valid UTF-8")]
+    NonUtf8Path,
     #[error("Failed to serialize rate limiting snapshot: {0}")]
     Serialize(serde_json::Error),
     #[error("Failed to write rate limiting snapshot to {1}: {0}")]
-    Write(std::io::Error, PathBuf),
+    Write(std::io::Error, Utf8PathBuf),
+    #[error("Failed to rename {1} to {2}: {0}")]
+    Rename(std::io::Error, Utf8PathBuf, Utf8PathBuf),
     #[error("Failed to read rate limiting snapshot from {1}: {0}")]
-    Read(std::io::Error, PathBuf),
+    Read(std::io::Error, Utf8PathBuf),
     #[error("Failed to deserialize rate limiting snapshot: {0}")]
     Deserialize(serde_json::Error),
 }
