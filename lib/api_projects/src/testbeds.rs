@@ -125,6 +125,11 @@ async fn get_ls_inner(
         api_actor,
     )?;
 
+    #[cfg(feature = "plus")]
+    if api_actor.is_auth() {
+        context.rate_limiting.project_request(query_project.uuid)?;
+    }
+
     actor_conn!(context, api_actor, |conn| {
         let testbeds = get_ls_query(&query_project, &pagination_params, &query_params)
             .offset(pagination_params.offset())
@@ -228,6 +233,9 @@ async fn post_inner(
         Permission::Create,
     )?;
 
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
+
     let testbed = QueryTestbed::create(context, query_project.id, json_testbed).await?;
     testbed.into_json_for_project(auth_conn!(context), &query_project)
 }
@@ -311,6 +319,11 @@ async fn get_one_inner(
         api_actor,
     )?;
 
+    #[cfg(feature = "plus")]
+    if api_actor.is_auth() {
+        context.rate_limiting.project_request(query_project.uuid)?;
+    }
+
     actor_conn!(context, api_actor, |conn| {
         let testbed = QueryTestbed::belonging_to(&query_project)
             .filter(QueryTestbed::eq_resource_id(&path_params.testbed))
@@ -374,6 +387,9 @@ async fn patch_inner(
         Permission::Edit,
     )?;
 
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
+
     let now = context.clock.now();
     let (query_testbed, update_testbed) = auth_conn!(context, |conn| {
         let query_testbed =
@@ -429,6 +445,9 @@ async fn delete_inner(
         auth_user,
         Permission::Delete,
     )?;
+
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_testbed = QueryTestbed::from_resource_id(
         auth_conn!(context),

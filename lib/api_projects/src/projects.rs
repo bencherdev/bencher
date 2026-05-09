@@ -255,8 +255,13 @@ async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonProject, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?
-            .into_json(conn)
+        let query_project =
+            QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?;
+        #[cfg(feature = "plus")]
+        if api_actor.is_auth() {
+            context.rate_limiting.project_request(query_project.uuid)?;
+        }
+        query_project.into_json(conn)
     })
 }
 
@@ -304,6 +309,9 @@ async fn patch_inner(
         &auth_user,
         Permission::Edit,
     )?;
+
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
 
     // Check project visibility
     if let Some(visibility) = json_project.visibility() {
@@ -397,6 +405,8 @@ async fn delete_inner(
             .filter(QueryProject::eq_resource_id(&path_params.project))
             .first::<QueryProject>(auth_conn!(context))
             .map_err(resource_not_found_err!(Project, &path_params.project))?;
+        #[cfg(feature = "plus")]
+        context.rate_limiting.project_request(query_project.uuid)?;
         diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
             .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Project, query_project))?;
@@ -412,6 +422,9 @@ async fn delete_inner(
             auth_user,
             Permission::Delete,
         )?;
+
+        #[cfg(feature = "plus")]
+        context.rate_limiting.project_request(query_project.uuid)?;
 
         // Soft delete: replace slug/name with valid deleted sentinels to free UNIQUE constraints
         let now = context.clock.now();

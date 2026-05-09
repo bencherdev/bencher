@@ -125,6 +125,11 @@ async fn get_inner(
         api_actor,
     )?;
 
+    #[cfg(feature = "plus")]
+    if api_actor.is_auth() {
+        context.rate_limiting.project_request(project.uuid)?;
+    }
+
     let JsonPerfQuery {
         branches,
         heads,

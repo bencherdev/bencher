@@ -93,6 +93,11 @@ async fn get_one_inner(
         api_actor,
     )?;
 
+    #[cfg(feature = "plus")]
+    if api_actor.is_auth() {
+        context.rate_limiting.project_request(query_project.uuid)?;
+    }
+
     actor_conn!(context, api_actor, |conn| {
         view::metric_boundary::table
         .inner_join(

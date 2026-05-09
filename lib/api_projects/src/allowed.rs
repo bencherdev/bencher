@@ -52,14 +52,20 @@ async fn get_inner(
     path_params: ProjAllowedParams,
     auth_user: &AuthUser,
 ) -> Result<JsonAllowed, HttpError> {
-    Ok(JsonAllowed {
-        allowed: QueryProject::is_allowed(
-            auth_conn!(context),
-            &context.rbac,
-            &path_params.project,
-            auth_user,
-            Permission::from(path_params.permission).into(),
-        )
-        .is_ok(),
-    })
+    let allowed = if let Ok(query_project) = QueryProject::is_allowed(
+        auth_conn!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::from(path_params.permission).into(),
+    ) {
+        #[cfg(feature = "plus")]
+        context.rate_limiting.project_request(query_project.uuid)?;
+        #[cfg(not(feature = "plus"))]
+        drop(query_project);
+        true
+    } else {
+        false
+    };
+    Ok(JsonAllowed { allowed })
 }

@@ -122,6 +122,11 @@ async fn get_ls_inner(
         api_actor,
     )?;
 
+    #[cfg(feature = "plus")]
+    if api_actor.is_auth() {
+        context.rate_limiting.project_request(query_project.uuid)?;
+    }
+
     let benchmarks = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
@@ -223,6 +228,9 @@ async fn post_inner(
         Permission::Create,
     )?;
 
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
+
     QueryBenchmark::create(context, query_project.id, json_benchmark)
         .await
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
@@ -285,6 +293,11 @@ async fn get_one_inner(
         let query_project =
             QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?;
 
+        #[cfg(feature = "plus")]
+        if api_actor.is_auth() {
+            context.rate_limiting.project_request(query_project.uuid)?;
+        }
+
         QueryBenchmark::belonging_to(&query_project)
             .filter(QueryBenchmark::eq_resource_id(&path_params.benchmark))
             .first::<QueryBenchmark>(conn)
@@ -336,6 +349,9 @@ async fn patch_inner(
         auth_user,
         Permission::Edit,
     )?;
+
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_benchmark = QueryBenchmark::from_resource_id(
         auth_conn!(context),
@@ -389,6 +405,9 @@ async fn delete_inner(
         auth_user,
         Permission::Delete,
     )?;
+
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_benchmark = QueryBenchmark::from_resource_id(
         auth_conn!(context),

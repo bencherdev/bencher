@@ -118,6 +118,9 @@ async fn get_ls_inner(
         Permission::Manage,
     )?;
 
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
+
     let keys = get_ls_query(&pagination_params, &query_params, query_project.id)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
@@ -233,6 +236,8 @@ async fn post_inner(
     )?;
 
     #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
+    #[cfg(feature = "plus")]
     context
         .rate_limiting
         .create_credential(auth_user.user.uuid)?;
@@ -301,6 +306,9 @@ async fn get_one_inner(
         Permission::Manage,
     )?;
 
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
+
     auth_conn!(context, |conn| {
         QueryProjectKey::get_project_key(conn, query_project.id, path_params.key)?.into_json(conn)
     })
@@ -345,6 +353,9 @@ async fn patch_inner(
         auth_user,
         Permission::Manage,
     )?;
+
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_key =
         QueryProjectKey::get_project_key(auth_conn!(context), query_project.id, path_params.key)?;
@@ -398,6 +409,9 @@ async fn delete_inner(
         auth_user,
         Permission::Manage,
     )?;
+
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_key =
         QueryProjectKey::get_project_key(auth_conn!(context), query_project.id, path_params.key)?;

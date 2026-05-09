@@ -134,6 +134,11 @@ async fn get_ls_inner(
         api_actor,
     )?;
 
+    #[cfg(feature = "plus")]
+    if api_actor.is_auth() {
+        context.rate_limiting.project_request(query_project.uuid)?;
+    }
+
     let reports = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
@@ -307,6 +312,10 @@ async fn post_inner(
         &auth_user,
         Permission::Create,
     )?;
+
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
+
     let new_run_report = NewRunReport {
         report: json_report,
         idempotency_key: None,
@@ -397,6 +406,11 @@ async fn get_one_inner(
         api_actor,
     )?;
 
+    #[cfg(feature = "plus")]
+    if api_actor.is_auth() {
+        context.rate_limiting.project_request(query_project.uuid)?;
+    }
+
     actor_conn!(context, api_actor, |conn| {
         QueryReport::belonging_to(&query_project)
             .filter(schema::report::uuid.eq(path_params.report.to_string()))
@@ -443,6 +457,9 @@ async fn delete_inner(
         auth_user,
         Permission::Delete,
     )?;
+
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
 
     let (report_id, version_id) = QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))

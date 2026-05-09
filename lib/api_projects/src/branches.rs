@@ -125,6 +125,11 @@ async fn get_ls_inner(
         api_actor,
     )?;
 
+    #[cfg(feature = "plus")]
+    if api_actor.is_auth() {
+        context.rate_limiting.project_request(query_project.uuid)?;
+    }
+
     let branches = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
@@ -243,6 +248,9 @@ async fn post_inner(
         Permission::Create,
     )?;
 
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
+
     QueryBranch::create(log, context, query_project.id, json_branch)
         .await?
         .into_json_for_project(auth_conn!(context), &query_project)
@@ -323,6 +331,11 @@ async fn get_one_inner(
         let query_project =
             QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?;
 
+        #[cfg(feature = "plus")]
+        if api_actor.is_auth() {
+            context.rate_limiting.project_request(query_project.uuid)?;
+        }
+
         let query_branch = QueryBranch::belonging_to(&query_project)
             .filter(QueryBranch::eq_resource_id(&path_params.branch))
             .first::<QueryBranch>(conn)
@@ -393,6 +406,9 @@ async fn patch_inner(
         Permission::Edit,
     )?;
 
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
+
     let query_branch =
         QueryBranch::from_resource_id(auth_conn!(context), query_project.id, &path_params.branch)?;
 
@@ -454,6 +470,9 @@ async fn delete_inner(
         auth_user,
         Permission::Delete,
     )?;
+
+    #[cfg(feature = "plus")]
+    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_branch =
         QueryBranch::from_resource_id(auth_conn!(context), query_project.id, &path_params.branch)?;
