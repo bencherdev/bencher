@@ -12331,6 +12331,11 @@
               }
             ]
           },
+          "build_time": {
+            "nullable": true,
+            "description": "Track the build time of the benchmark command",
+            "type": "boolean"
+          },
           "cmd": {
             "nullable": true,
             "description": "Command override (like Docker CMD)",
@@ -12370,6 +12375,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "file_size": {
+            "nullable": true,
+            "description": "Track the file size of the output files instead of parsing their contents",
+            "type": "boolean"
           },
           "fold": {
             "nullable": true,

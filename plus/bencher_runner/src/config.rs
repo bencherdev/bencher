@@ -67,6 +67,14 @@ pub struct Config {
     #[serde(default)]
     pub network: bool,
 
+    /// Track the build time of the benchmark command.
+    #[serde(default)]
+    pub build_time: bool,
+
+    /// Track the file size of the output files instead of parsing their contents.
+    #[serde(default)]
+    pub file_size: bool,
+
     /// Optional entrypoint override for the container.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub entrypoint: Option<Vec<String>>,
@@ -215,6 +223,8 @@ impl Config {
             timeout_secs: default_timeout_secs(),
             file_paths: None,
             network: false,
+            build_time: false,
+            file_size: false,
             entrypoint: None,
             cmd: None,
             env: None,
@@ -316,6 +326,20 @@ impl Config {
     #[must_use]
     pub fn with_network(mut self, network: bool) -> Self {
         self.network = network;
+        self
+    }
+
+    /// Enable or disable build time tracking.
+    #[must_use]
+    pub fn with_build_time(mut self, build_time: bool) -> Self {
+        self.build_time = build_time;
+        self
+    }
+
+    /// Enable or disable file size tracking.
+    #[must_use]
+    pub fn with_file_size(mut self, file_size: bool) -> Self {
+        self.file_size = file_size;
         self
     }
 

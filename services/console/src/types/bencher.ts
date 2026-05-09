@@ -135,6 +135,10 @@ export interface JsonJobConfig {
 	timeout: Timeout;
 	/** File paths to read from the VM after job completion */
 	file_paths?: string[];
+	/** Track the build time of the benchmark command */
+	build_time?: boolean;
+	/** Track the file size of the output files instead of parsing their contents */
+	file_size?: boolean;
 	/** Benchmark harness suggested central tendency */
 	average?: JsonAverage;
 	/** Number of benchmark iterations for the runner to execute */

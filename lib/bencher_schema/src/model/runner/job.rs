@@ -339,6 +339,8 @@ impl PendingInsertJob {
             env: new_run_job.env,
             timeout,
             file_paths: new_run_job.file_paths,
+            build_time: new_run_job.build_time,
+            file_size: new_run_job.file_size,
             average: settings.average,
             iter: new_run_job.iter,
             fold: settings.fold,
