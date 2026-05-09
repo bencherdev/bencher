@@ -75,6 +75,74 @@
       "window": 86400,
       "unclaimed_limit": 255,
       "claimed_limit": 65536,
+      "public": {
+        "requests": {
+          "minute": 1024,
+          "hour": 4096,
+          "day": 8192
+        },
+        "attempts": {
+          "minute": 32,
+          "hour": 64,
+          "day": 128
+        },
+        "runs": {
+          "minute": 64,
+          "hour": 128,
+          "day": 256
+        }
+      },
+      "user": {
+        "requests": {
+          "minute": 2048,
+          "hour": 8192,
+          "day": 16384
+        },
+        "attempts": {
+          "minute": 2,
+          "hour": 4,
+          "day": 8
+        },
+        "credentials": {
+          "minute": 4,
+          "hour": 8,
+          "day": 16
+        },
+        "organizations": {
+          "minute": 2,
+          "hour": 4,
+          "day": 8
+        },
+        "invites": {
+          "minute": 8,
+          "hour": 16,
+          "day": 32
+        },
+        "runs": {
+          "minute": 64,
+          "hour": 1024,
+          "day": 4096
+        }
+      },
+      "project": {
+        "requests": {
+          "minute": 2048,
+          "hour": 8192,
+          "day": 16384
+        },
+        "runs": {
+          "minute": 64,
+          "hour": 1024,
+          "day": 4096
+        }
+      },
+      "runner": {
+        "requests": {
+          "minute": 16,
+          "hour": 256,
+          "day": 4096
+        }
+      },
       "oci_bandwidth": {
         "unclaimed": 1073741824,
         "free": 10737418240,

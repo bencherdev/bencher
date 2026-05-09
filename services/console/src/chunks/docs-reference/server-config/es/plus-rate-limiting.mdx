@@ -12,9 +12,105 @@ establezca el `unclaimed_limit` en `0`.
 |         window         |    86400     |    86400     |    No     |                                   Especifica la ventana de limitación de tasa en segundos. Establecido por defecto a un día.                                   |
 |    unclaimed_limit     |     255      |     255      |    No     | Controla la limitación de tasa para [proyectos `unclaimed`][unclaimed projects]. Para evitar que se creen proyectos `unclaimed`, establezca este valor en `0`. |
 |     claimed_limit      |    65536     |    65536     |    No     |                                                    Controla la limitación de tasa para proyectos `claimed`.                                                    |
-|     oci_bandwidth      |  \{ ... \}   |     ---      |    No     |                              Especifica los límites diarios de ancho de banda del registro OCI por nivel de organización.                                      |
-| oci_bandwidth.unclaimed | 1073741824  | 1073741824   |    No     |                          Bytes máximos por día para organizaciones no reclamadas (0 miembros). Por defecto 1 GiB.                                              |
-|   oci_bandwidth.free   | 10737418240  | 10737418240  |    No     |                          Bytes máximos por día para organizaciones gratuitas (reclamadas, sin plan de pago). Por defecto 10 GiB.                               |
-|   oci_bandwidth.plus   | 107374182400 | 107374182400 |    No     |                          Bytes máximos por día para organizaciones Plus (Team/Enterprise). Por defecto 100 GiB.                                                |
+
+#### `public`
+
+El limitador de tasa `public` se aplica por dirección IP para solicitudes no autenticadas.
+Cada subcampo contiene límites de `minute`, `hour` y `day`.
+Toda la sección es opcional.
+Si no se especifica, se utilizarán los valores predeterminados enumerados.
+
+|       Nombre     | Ejemplo | Por defecto | Requerido |                           Descripción                                         |
+| :--------------: | :-----: | :---------: | :-------: | :---------------------------------------------------------------------------: |
+|     requests     | \{ ... \} |    ---    |    No     | Especifica límites de tasa de solicitudes por IP.                              |
+| requests.minute  |  1024   |   1024    |    No     | Solicitudes máximas por minuto por dirección IP.                               |
+|  requests.hour   |  4096   |   4096    |    No     | Solicitudes máximas por hora por dirección IP.                                 |
+|   requests.day   |  8192   |   8192    |    No     | Solicitudes máximas por día por dirección IP.                                  |
+|     attempts     | \{ ... \} |    ---    |    No     | Especifica límites de tasa de intentos de autenticación por IP.                |
+| attempts.minute  |   32    |    32     |    No     | Intentos de autenticación máximos por minuto por dirección IP.                 |
+|  attempts.hour   |   64    |    64     |    No     | Intentos de autenticación máximos por hora por dirección IP.                   |
+|   attempts.day   |   128   |    128    |    No     | Intentos de autenticación máximos por día por dirección IP.                    |
+|       runs       | \{ ... \} |    ---    |    No     | Especifica límites de tasa de ejecuciones de benchmark por IP para proyectos no reclamados. |
+|   runs.minute    |   64    |    64     |    No     | Ejecuciones de benchmark máximas por minuto por dirección IP.                  |
+|    runs.hour     |   128   |    128    |    No     | Ejecuciones de benchmark máximas por hora por dirección IP.                    |
+|     runs.day     |   256   |    256    |    No     | Ejecuciones de benchmark máximas por día por dirección IP.                     |
+
+#### `user`
+
+El limitador de tasa `user` se aplica por usuario autenticado.
+Cada subcampo contiene límites de `minute`, `hour` y `day`.
+Toda la sección es opcional.
+Si no se especifica, se utilizarán los valores predeterminados enumerados.
+
+|         Nombre       | Ejemplo | Por defecto | Requerido |                           Descripción                                         |
+| :------------------: | :-----: | :---------: | :-------: | :---------------------------------------------------------------------------: |
+|       requests       | \{ ... \} |    ---    |    No     | Especifica límites de tasa de solicitudes por usuario.                         |
+|   requests.minute    |  2048   |   2048    |    No     | Solicitudes máximas por minuto por usuario.                                    |
+|    requests.hour     |  8192   |   8192    |    No     | Solicitudes máximas por hora por usuario.                                      |
+|     requests.day     |  16384  |   16384   |    No     | Solicitudes máximas por día por usuario.                                       |
+|       attempts       | \{ ... \} |    ---    |    No     | Especifica límites de tasa de intentos de autenticación por usuario.            |
+|   attempts.minute    |    2    |     2     |    No     | Intentos de autenticación máximos por minuto por usuario.                      |
+|    attempts.hour     |    4    |     4     |    No     | Intentos de autenticación máximos por hora por usuario.                        |
+|     attempts.day     |    8    |     8     |    No     | Intentos de autenticación máximos por día por usuario.                         |
+|     credentials      | \{ ... \} |    ---    |    No     | Especifica límites de tasa de creación de credenciales por usuario.             |
+|  credentials.minute  |    4    |     4     |    No     | Creaciones de credenciales máximas por minuto por usuario.                     |
+|   credentials.hour   |    8    |     8     |    No     | Creaciones de credenciales máximas por hora por usuario.                       |
+|   credentials.day    |   16    |    16     |    No     | Creaciones de credenciales máximas por día por usuario.                        |
+|    organizations     | \{ ... \} |    ---    |    No     | Especifica límites de tasa de creación de organizaciones por usuario.           |
+| organizations.minute |    2    |     2     |    No     | Creaciones de organizaciones máximas por minuto por usuario.                   |
+|  organizations.hour  |    4    |     4     |    No     | Creaciones de organizaciones máximas por hora por usuario.                     |
+|  organizations.day   |    8    |     8     |    No     | Creaciones de organizaciones máximas por día por usuario.                      |
+|       invites        | \{ ... \} |    ---    |    No     | Especifica límites de tasa de invitaciones por usuario.                        |
+|    invites.minute    |    8    |     8     |    No     | Invitaciones máximas por minuto por usuario.                                   |
+|     invites.hour     |   16    |    16     |    No     | Invitaciones máximas por hora por usuario.                                     |
+|     invites.day      |   32    |    32     |    No     | Invitaciones máximas por día por usuario.                                      |
+|         runs         | \{ ... \} |    ---    |    No     | Especifica límites de tasa de ejecuciones de benchmark por usuario.             |
+|     runs.minute      |   64    |    64     |    No     | Ejecuciones de benchmark máximas por minuto por usuario.                       |
+|      runs.hour       |  1024   |   1024    |    No     | Ejecuciones de benchmark máximas por hora por usuario.                         |
+|       runs.day       |  4096   |   4096    |    No     | Ejecuciones de benchmark máximas por día por usuario.                          |
+
+#### `project`
+
+El limitador de tasa `project` se aplica por proyecto.
+Cada subcampo contiene límites de `minute`, `hour` y `day`.
+Toda la sección es opcional.
+Si no se especifica, se utilizarán los valores predeterminados enumerados.
+
+|       Nombre     | Ejemplo | Por defecto | Requerido |                           Descripción                                         |
+| :--------------: | :-----: | :---------: | :-------: | :---------------------------------------------------------------------------: |
+|     requests     | \{ ... \} |    ---    |    No     | Especifica límites de tasa de solicitudes por proyecto.                        |
+| requests.minute  |  2048   |   2048    |    No     | Solicitudes máximas por minuto por proyecto.                                   |
+|  requests.hour   |  8192   |   8192    |    No     | Solicitudes máximas por hora por proyecto.                                     |
+|   requests.day   |  16384  |   16384   |    No     | Solicitudes máximas por día por proyecto.                                      |
+|       runs       | \{ ... \} |    ---    |    No     | Especifica límites de tasa de ejecuciones de benchmark por proyecto.            |
+|   runs.minute    |   64    |    64     |    No     | Ejecuciones de benchmark máximas por minuto por proyecto.                      |
+|    runs.hour     |  1024   |   1024    |    No     | Ejecuciones de benchmark máximas por hora por proyecto.                        |
+|     runs.day     |  4096   |   4096    |    No     | Ejecuciones de benchmark máximas por día por proyecto.                         |
+
+#### `runner`
+
+El limitador de tasa `runner` se aplica por runner.
+Cada subcampo contiene límites de `minute`, `hour` y `day`.
+Toda la sección es opcional.
+Si no se especifica, se utilizarán los valores predeterminados enumerados.
+
+|       Nombre     | Ejemplo | Por defecto | Requerido |                           Descripción                                         |
+| :--------------: | :-----: | :---------: | :-------: | :---------------------------------------------------------------------------: |
+|     requests     | \{ ... \} |    ---    |    No     | Especifica límites de tasa de solicitudes por runner.                          |
+| requests.minute  |   16    |    16     |    No     | Solicitudes máximas por minuto por runner.                                     |
+|  requests.hour   |   256   |    256    |    No     | Solicitudes máximas por hora por runner.                                       |
+|   requests.day   |  4096   |   4096    |    No     | Solicitudes máximas por día por runner.                                        |
+
+#### `oci_bandwidth`
+
+El `oci_bandwidth` especifica los límites diarios de ancho de banda del registro OCI por nivel de organización.
+Toda la sección es opcional.
+Si no se especifica, se utilizarán los valores predeterminados enumerados.
+
+|     Nombre  |   Ejemplo    | Por defecto  | Requerido |                           Descripción                                                     |
+| :---------: | :----------: | :----------: | :-------: | :---------------------------------------------------------------------------------------: |
+|  unclaimed  | 1073741824   | 1073741824   |    No     | Bytes máximos por día para organizaciones no reclamadas (0 miembros). Por defecto 1 GiB.   |
+|    free     | 10737418240  | 10737418240  |    No     | Bytes máximos por día para organizaciones gratuitas (reclamadas, sin plan de pago). Por defecto 10 GiB. |
+|    plus     | 107374182400 | 107374182400 |    No     | Bytes máximos por día para organizaciones Plus (Team/Enterprise). Por defecto 100 GiB.     |
 
 [unclaimed projects]: /es/docs/how-to/claim/#unclaimed-projects

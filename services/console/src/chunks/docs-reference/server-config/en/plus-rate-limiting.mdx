@@ -12,9 +12,105 @@ set the `unclaimed_limit` to `0`.
 |         window         |    86400     |    86400     |    No    |                                       Specifies the rate limiting window in seconds. Set to one day by default.                                       |
 |    unclaimed_limit     |     255      |     255      |    No    | Controls the rate limiting for [`unclaimed` projects][unclaimed projects]. To prevent `unclaimed` projects from being created, set this value to `0`. |
 |     claimed_limit      |    65536     |    65536     |    No    |                                                  Controls the rate limiting for `claimed` projects.                                                   |
-|     oci_bandwidth      |  \{ ... \}   |     ---      |    No    |                                   Specifies daily OCI registry bandwidth limits per organization tier.                                                |
-| oci_bandwidth.unclaimed | 1073741824  | 1073741824   |    No    |                          Maximum bytes per day for unclaimed organizations (0 members). Defaults to 1 GiB.                                            |
-|   oci_bandwidth.free   | 10737418240  | 10737418240  |    No    |                          Maximum bytes per day for free (claimed, no paid plan) organizations. Defaults to 10 GiB.                                    |
-|   oci_bandwidth.plus   | 107374182400 | 107374182400 |    No    |                          Maximum bytes per day for Plus (Team/Enterprise) organizations. Defaults to 100 GiB.                                         |
+
+#### `public`
+
+The `public` rate limiter applies per IP address for unauthenticated requests.
+Each sub-field contains `minute`, `hour`, and `day` limits.
+The entire section is optional.
+If not specified, the listed default values will be used.
+
+|       Name       | Example | Default | Required |                           Description                            |
+| :--------------: | :-----: | :-----: | :------: | :--------------------------------------------------------------: |
+|     requests     | \{ ... \} |   ---   |    No    | Specifies per-IP request rate limits.                            |
+| requests.minute  |  1024   |  1024   |    No    | Maximum requests per minute per IP address.                      |
+|  requests.hour   |  4096   |  4096   |    No    | Maximum requests per hour per IP address.                        |
+|   requests.day   |  8192   |  8192   |    No    | Maximum requests per day per IP address.                         |
+|     attempts     | \{ ... \} |   ---   |    No    | Specifies per-IP authentication attempt rate limits.             |
+| attempts.minute  |   32    |   32    |    No    | Maximum authentication attempts per minute per IP address.       |
+|  attempts.hour   |   64    |   64    |    No    | Maximum authentication attempts per hour per IP address.         |
+|   attempts.day   |   128   |   128   |    No    | Maximum authentication attempts per day per IP address.          |
+|       runs       | \{ ... \} |   ---   |    No    | Specifies per-IP benchmark run rate limits for unclaimed projects. |
+|   runs.minute    |   64    |   64    |    No    | Maximum benchmark runs per minute per IP address.                |
+|    runs.hour     |   128   |   128   |    No    | Maximum benchmark runs per hour per IP address.                  |
+|     runs.day     |   256   |   256   |    No    | Maximum benchmark runs per day per IP address.                   |
+
+#### `user`
+
+The `user` rate limiter applies per authenticated user.
+Each sub-field contains `minute`, `hour`, and `day` limits.
+The entire section is optional.
+If not specified, the listed default values will be used.
+
+|         Name         | Example | Default | Required |                           Description                            |
+| :------------------: | :-----: | :-----: | :------: | :--------------------------------------------------------------: |
+|       requests       | \{ ... \} |   ---   |    No    | Specifies per-user request rate limits.                          |
+|   requests.minute    |  2048   |  2048   |    No    | Maximum requests per minute per user.                            |
+|    requests.hour     |  8192   |  8192   |    No    | Maximum requests per hour per user.                              |
+|     requests.day     |  16384  |  16384  |    No    | Maximum requests per day per user.                               |
+|       attempts       | \{ ... \} |   ---   |    No    | Specifies per-user authentication attempt rate limits.           |
+|   attempts.minute    |    2    |    2    |    No    | Maximum authentication attempts per minute per user.             |
+|    attempts.hour     |    4    |    4    |    No    | Maximum authentication attempts per hour per user.               |
+|     attempts.day     |    8    |    8    |    No    | Maximum authentication attempts per day per user.                |
+|     credentials      | \{ ... \} |   ---   |    No    | Specifies per-user credential creation rate limits.              |
+|  credentials.minute  |    4    |    4    |    No    | Maximum credential creations per minute per user.                |
+|   credentials.hour   |    8    |    8    |    No    | Maximum credential creations per hour per user.                  |
+|   credentials.day    |   16    |   16    |    No    | Maximum credential creations per day per user.                   |
+|    organizations     | \{ ... \} |   ---   |    No    | Specifies per-user organization creation rate limits.            |
+| organizations.minute |    2    |    2    |    No    | Maximum organization creations per minute per user.              |
+|  organizations.hour  |    4    |    4    |    No    | Maximum organization creations per hour per user.                |
+|  organizations.day   |    8    |    8    |    No    | Maximum organization creations per day per user.                 |
+|       invites        | \{ ... \} |   ---   |    No    | Specifies per-user invite rate limits.                           |
+|    invites.minute    |    8    |    8    |    No    | Maximum invites per minute per user.                             |
+|     invites.hour     |   16    |   16    |    No    | Maximum invites per hour per user.                               |
+|     invites.day      |   32    |   32    |    No    | Maximum invites per day per user.                                |
+|         runs         | \{ ... \} |   ---   |    No    | Specifies per-user benchmark run rate limits.                    |
+|     runs.minute      |   64    |   64    |    No    | Maximum benchmark runs per minute per user.                      |
+|      runs.hour       |  1024   |  1024   |    No    | Maximum benchmark runs per hour per user.                        |
+|       runs.day       |  4096   |  4096   |    No    | Maximum benchmark runs per day per user.                         |
+
+#### `project`
+
+The `project` rate limiter applies per project.
+Each sub-field contains `minute`, `hour`, and `day` limits.
+The entire section is optional.
+If not specified, the listed default values will be used.
+
+|       Name       | Example | Default | Required |                           Description                            |
+| :--------------: | :-----: | :-----: | :------: | :--------------------------------------------------------------: |
+|     requests     | \{ ... \} |   ---   |    No    | Specifies per-project request rate limits.                       |
+| requests.minute  |  2048   |  2048   |    No    | Maximum requests per minute per project.                         |
+|  requests.hour   |  8192   |  8192   |    No    | Maximum requests per hour per project.                           |
+|   requests.day   |  16384  |  16384  |    No    | Maximum requests per day per project.                            |
+|       runs       | \{ ... \} |   ---   |    No    | Specifies per-project benchmark run rate limits.                 |
+|   runs.minute    |   64    |   64    |    No    | Maximum benchmark runs per minute per project.                   |
+|    runs.hour     |  1024   |  1024   |    No    | Maximum benchmark runs per hour per project.                     |
+|     runs.day     |  4096   |  4096   |    No    | Maximum benchmark runs per day per project.                      |
+
+#### `runner`
+
+The `runner` rate limiter applies per runner.
+Each sub-field contains `minute`, `hour`, and `day` limits.
+The entire section is optional.
+If not specified, the listed default values will be used.
+
+|       Name       | Example | Default | Required |                           Description                            |
+| :--------------: | :-----: | :-----: | :------: | :--------------------------------------------------------------: |
+|     requests     | \{ ... \} |   ---   |    No    | Specifies per-runner request rate limits.                        |
+| requests.minute  |   16    |   16    |    No    | Maximum requests per minute per runner.                          |
+|  requests.hour   |   256   |   256   |    No    | Maximum requests per hour per runner.                            |
+|   requests.day   |  4096   |  4096   |    No    | Maximum requests per day per runner.                             |
+
+#### `oci_bandwidth`
+
+The `oci_bandwidth` rate limiter specifies daily OCI registry bandwidth limits per organization tier.
+The entire section is optional.
+If not specified, the listed default values will be used.
+
+|     Name    |   Example    |   Default    | Required |                           Description                            |
+| :---------: | :----------: | :----------: | :------: | :--------------------------------------------------------------: |
+|  unclaimed  | 1073741824   | 1073741824   |    No    | Maximum bytes per day for unclaimed organizations (0 members). Defaults to 1 GiB.   |
+|    free     | 10737418240  | 10737418240  |    No    | Maximum bytes per day for free (claimed, no paid plan) organizations. Defaults to 10 GiB. |
+|    plus     | 107374182400 | 107374182400 |    No    | Maximum bytes per day for Plus (Team/Enterprise) organizations. Defaults to 100 GiB. |
 
 [unclaimed projects]: /docs/how-to/claim/#unclaimed-projects
