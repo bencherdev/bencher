@@ -117,14 +117,11 @@ async fn get_ls_inner(
     let query_project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
-
-    #[cfg(feature = "plus")]
-    if api_actor.is_auth() {
-        context.rate_limiting.project_request(query_project.uuid)?;
-    }
 
     let measures = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
@@ -222,13 +219,12 @@ async fn post_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Create,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     QueryMeasure::create(context, query_project.id, json_measure)
         .await
@@ -289,13 +285,14 @@ async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonMeasure, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        let query_project =
-            QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?;
-
-        #[cfg(feature = "plus")]
-        if api_actor.is_auth() {
-            context.rate_limiting.project_request(query_project.uuid)?;
-        }
+        let query_project = QueryProject::is_allowed_actor(
+            conn,
+            &context.rbac,
+            #[cfg(feature = "plus")]
+            &context.rate_limiting,
+            &path_params.project,
+            api_actor,
+        )?;
 
         QueryMeasure::belonging_to(&query_project)
             .filter(QueryMeasure::eq_resource_id(&path_params.measure))
@@ -344,13 +341,12 @@ async fn patch_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Edit,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_measure = QueryMeasure::from_resource_id(
         auth_conn!(context),
@@ -400,13 +396,12 @@ async fn delete_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Delete,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_measure = QueryMeasure::from_resource_id(
         auth_conn!(context),

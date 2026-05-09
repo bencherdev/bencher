@@ -121,14 +121,11 @@ async fn get_inner(
     let project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
-
-    #[cfg(feature = "plus")]
-    if api_actor.is_auth() {
-        context.rate_limiting.project_request(project.uuid)?;
-    }
 
     let JsonPerfQuery {
         branches,

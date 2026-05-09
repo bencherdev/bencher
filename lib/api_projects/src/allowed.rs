@@ -52,20 +52,17 @@ async fn get_inner(
     path_params: ProjAllowedParams,
     auth_user: &AuthUser,
 ) -> Result<JsonAllowed, HttpError> {
-    let allowed = if let Ok(query_project) = QueryProject::is_allowed(
+    match QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::from(path_params.permission).into(),
     ) {
-        #[cfg(feature = "plus")]
-        context.rate_limiting.project_request(query_project.uuid)?;
-        #[cfg(not(feature = "plus"))]
-        drop(query_project);
-        true
-    } else {
-        false
-    };
-    Ok(JsonAllowed { allowed })
+        Ok(_) => Ok(JsonAllowed { allowed: true }),
+        Err(e) if e.status_code == http::StatusCode::TOO_MANY_REQUESTS => Err(e),
+        Err(_) => Ok(JsonAllowed { allowed: false }),
+    }
 }

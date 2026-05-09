@@ -117,14 +117,11 @@ async fn get_ls_inner(
     let query_project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
-
-    #[cfg(feature = "plus")]
-    if api_actor.is_auth() {
-        context.rate_limiting.project_request(query_project.uuid)?;
-    }
 
     let plots = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
@@ -236,13 +233,13 @@ async fn post_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Create,
     )?;
 
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
     #[cfg(feature = "plus")]
     InsertPlot::rate_limit(context, query_project.id).await?;
     let query_plot = InsertPlot::from_json(context, &query_project, json_plot).await?;
@@ -306,14 +303,11 @@ async fn get_one_inner(
     let query_project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
-
-    #[cfg(feature = "plus")]
-    if api_actor.is_auth() {
-        context.rate_limiting.project_request(query_project.uuid)?;
-    }
 
     actor_conn!(context, api_actor, |conn| {
         QueryPlot::get_with_uuid(conn, &query_project, path_params.plot)
@@ -358,13 +352,12 @@ async fn patch_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Edit,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_plot =
         QueryPlot::get_with_uuid(auth_conn!(context), &query_project, path_params.plot)?;
@@ -410,13 +403,12 @@ async fn delete_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Delete,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_plot =
         QueryPlot::get_with_uuid(auth_conn!(context), &query_project, path_params.plot)?;

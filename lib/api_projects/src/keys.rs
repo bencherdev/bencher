@@ -113,13 +113,12 @@ async fn get_ls_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Manage,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     let keys = get_ls_query(&pagination_params, &query_params, query_project.id)
         .offset(pagination_params.offset())
@@ -230,13 +229,13 @@ async fn post_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Manage,
     )?;
 
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
     #[cfg(feature = "plus")]
     context
         .rate_limiting
@@ -301,13 +300,12 @@ async fn get_one_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Manage,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     auth_conn!(context, |conn| {
         QueryProjectKey::get_project_key(conn, query_project.id, path_params.key)?.into_json(conn)
@@ -349,13 +347,12 @@ async fn patch_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Manage,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_key =
         QueryProjectKey::get_project_key(auth_conn!(context), query_project.id, path_params.key)?;
@@ -405,13 +402,12 @@ async fn delete_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Manage,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_key =
         QueryProjectKey::get_project_key(auth_conn!(context), query_project.id, path_params.key)?;

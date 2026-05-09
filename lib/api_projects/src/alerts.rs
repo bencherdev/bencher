@@ -116,14 +116,11 @@ async fn get_ls_inner(
     let query_project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
-
-    #[cfg(feature = "plus")]
-    if api_actor.is_auth() {
-        context.rate_limiting.project_request(query_project.uuid)?;
-    }
 
     let alerts = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
@@ -352,14 +349,11 @@ async fn get_one_inner(
     let query_project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
-
-    #[cfg(feature = "plus")]
-    if api_actor.is_auth() {
-        context.rate_limiting.project_request(query_project.uuid)?;
-    }
 
     actor_conn!(context, api_actor, |conn| {
         QueryAlert::from_uuid(conn, query_project.id, path_params.alert)?.into_json(conn)
@@ -403,13 +397,12 @@ async fn patch_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Edit,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_alert =
         QueryAlert::from_uuid(auth_conn!(context), query_project.id, path_params.alert)?;

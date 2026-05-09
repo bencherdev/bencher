@@ -102,13 +102,10 @@ async fn get_ls_inner(
     let query_project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
-
-    if api_actor.is_auth() {
-        context.rate_limiting.project_request(query_project.uuid)?;
-    }
 
     let jobs = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
@@ -227,13 +224,10 @@ async fn get_one_inner(
     let query_project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
-
-    if api_actor.is_auth() {
-        context.rate_limiting.project_request(query_project.uuid)?;
-    }
 
     let job_uuid = path_params.job;
 

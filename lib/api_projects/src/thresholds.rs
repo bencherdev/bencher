@@ -126,14 +126,11 @@ async fn get_ls_inner(
     let query_project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
-
-    #[cfg(feature = "plus")]
-    if api_actor.is_auth() {
-        context.rate_limiting.project_request(query_project.uuid)?;
-    }
 
     let thresholds = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
@@ -284,13 +281,12 @@ async fn post_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Create,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     let project_id = query_project.id;
     // Verify that the branch, testbed, and measure are part of the same project
@@ -394,13 +390,14 @@ async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonThreshold, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        let query_project =
-            QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?;
-
-        #[cfg(feature = "plus")]
-        if api_actor.is_auth() {
-            context.rate_limiting.project_request(query_project.uuid)?;
-        }
+        let query_project = QueryProject::is_allowed_actor(
+            conn,
+            &context.rbac,
+            #[cfg(feature = "plus")]
+            &context.rate_limiting,
+            &path_params.project,
+            api_actor,
+        )?;
 
         let query_threshold =
             QueryThreshold::get_with_uuid(conn, &query_project, path_params.threshold)?;
@@ -476,13 +473,12 @@ async fn put_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Edit,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     // Get the current threshold
     let query_threshold =
@@ -528,13 +524,12 @@ async fn delete_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Delete,
     )?;
-
-    #[cfg(feature = "plus")]
-    context.rate_limiting.project_request(query_project.uuid)?;
 
     let query_threshold =
         QueryThreshold::get_with_uuid(auth_conn!(context), &query_project, path_params.threshold)?;
