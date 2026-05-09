@@ -362,6 +362,8 @@ async fn project_key_oci_token(
         ));
     }
 
+    context.rate_limiting.project_request(query_project.uuid)?;
+
     slog::info!(
         &rqctx.log,
         "Issuing OCI project token via project key";
