@@ -406,8 +406,6 @@ async fn delete_inner(
             .filter(QueryProject::eq_resource_id(&path_params.project))
             .first::<QueryProject>(auth_conn!(context))
             .map_err(resource_not_found_err!(Project, &path_params.project))?;
-        #[cfg(feature = "plus")]
-        context.rate_limiting.project_request(query_project.uuid)?;
         diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
             .execute(write_conn!(context))
             .map_err(resource_conflict_err!(Project, query_project))?;
