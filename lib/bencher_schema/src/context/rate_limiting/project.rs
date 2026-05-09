@@ -2,7 +2,9 @@ use bencher_json::{ProjectUuid, system::config::JsonProjectRateLimiter};
 
 use crate::context::{
     RateLimitingError,
-    rate_limiting::{RateLimiter, RateLimits, extract_rate_limits},
+    rate_limiting::{
+        RateLimiter, RateLimits, extract_rate_limits, snapshot::ProjectRateLimiterSnapshot,
+    },
 };
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 11;
@@ -107,6 +109,19 @@ impl ProjectRateLimiter {
         };
 
         Self::new(requests, runs)
+    }
+
+    pub fn snapshot(&self) -> ProjectRateLimiterSnapshot {
+        ProjectRateLimiterSnapshot {
+            requests: self.requests.snapshot(),
+            runs: self.runs.snapshot(),
+        }
+    }
+
+    pub fn restore(&self, snapshot: ProjectRateLimiterSnapshot) {
+        let ProjectRateLimiterSnapshot { requests, runs } = snapshot;
+        self.requests.restore(requests);
+        self.runs.restore(runs);
     }
 
     pub fn check_request(&self, project_uuid: ProjectUuid) -> Result<(), dropshot::HttpError> {

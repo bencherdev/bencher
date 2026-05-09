@@ -305,6 +305,11 @@ async fn into_context(
         rate_limiting,
     );
 
+    #[cfg(feature = "plus")]
+    if let Err(e) = rate_limiting.load(&database.path, log) {
+        slog::error!(log, "Failed to restore rate limiting state: {e}");
+    }
+
     debug!(log, "Creating API context");
     Ok(ApiContext {
         console_url,

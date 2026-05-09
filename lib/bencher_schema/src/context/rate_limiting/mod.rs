@@ -1,7 +1,12 @@
-use std::{net::IpAddr, time::Duration};
+use std::{
+    net::IpAddr,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 use bencher_json::{
-    DateTime, PlanLevel, ProjectUuid, RunnerUuid, UserUuid, system::config::JsonRateLimiting,
+    DateTime, OrganizationUuid, PlanLevel, ProjectUuid, RunnerUuid, UserUuid,
+    system::config::JsonRateLimiting,
 };
 use bencher_license::Licensor;
 #[cfg(feature = "otel")]
@@ -13,7 +18,7 @@ use slog::Logger;
 use crate::{
     error::{BencherResource, too_many_requests},
     model::{
-        organization::{OrganizationId, QueryOrganization, plan::LicenseUsage},
+        organization::{QueryOrganization, plan::LicenseUsage},
         project::{QueryProject, branch::QueryBranch, threshold::QueryThreshold},
     },
 };
@@ -24,6 +29,7 @@ mod public;
 mod rate_limiter;
 mod remote_ip;
 mod runner;
+pub(super) mod snapshot;
 mod user;
 
 use bandwidth::BandwidthRateLimiter;
@@ -31,6 +37,7 @@ use project::ProjectRateLimiter;
 use public::PublicRateLimiter;
 use rate_limiter::{RateLimiter, RateLimits};
 use runner::RunnerRateLimiter;
+use snapshot::RateLimitingSnapshot;
 use user::UserRateLimiter;
 
 use super::DbConnection;
@@ -346,20 +353,80 @@ impl RateLimiting {
 
     pub fn check_oci_bandwidth(
         &self,
-        org_id: OrganizationId,
+        org_uuid: OrganizationUuid,
         priority: bencher_json::Priority,
         organization: &QueryOrganization,
     ) -> Result<(), HttpError> {
-        self.bandwidth.check(org_id, priority, organization)
+        self.bandwidth.check(org_uuid, priority, organization)
     }
 
-    pub fn record_oci_bandwidth(&self, org_id: OrganizationId, bytes: u64) {
-        self.bandwidth.record(org_id, bytes);
+    pub fn record_oci_bandwidth(&self, org_uuid: OrganizationUuid, bytes: u64) {
+        self.bandwidth.record(org_uuid, bytes);
     }
 
     pub fn remote_ip(log: &Logger, headers: &HeaderMap) -> Option<IpAddr> {
         remote_ip::remote_ip(log, headers)
     }
+
+    pub fn save(&self, db_path: &Path, log: &Logger) -> Result<(), RateLimitingPersistError> {
+        let snapshot = RateLimitingSnapshot::new(
+            self.public.snapshot(),
+            self.user.snapshot(),
+            self.project.snapshot(),
+            self.runner.snapshot(),
+            self.bandwidth.snapshot(),
+        );
+        let snapshot_path = Self::snapshot_path(db_path);
+        let json = serde_json::to_string(&snapshot).map_err(RateLimitingPersistError::Serialize)?;
+        std::fs::write(&snapshot_path, json)
+            .map_err(|e| RateLimitingPersistError::Write(e, snapshot_path.clone()))?;
+        slog::info!(log, "Saved rate limiting snapshot to {snapshot_path:?}");
+        Ok(())
+    }
+
+    pub fn load(&self, db_path: &Path, log: &Logger) -> Result<(), RateLimitingPersistError> {
+        let snapshot_path = Self::snapshot_path(db_path);
+        if !snapshot_path.exists() {
+            return Ok(());
+        }
+        let json = std::fs::read_to_string(&snapshot_path)
+            .map_err(|e| RateLimitingPersistError::Read(e, snapshot_path.clone()))?;
+        let snapshot: RateLimitingSnapshot =
+            serde_json::from_str(&json).map_err(RateLimitingPersistError::Deserialize)?;
+        let RateLimitingSnapshot {
+            public,
+            user,
+            project,
+            runner,
+            bandwidth,
+        } = snapshot;
+        self.public.restore(public);
+        self.user.restore(user);
+        self.project.restore(project);
+        self.runner.restore(runner);
+        self.bandwidth.restore(bandwidth);
+        slog::info!(log, "Restored rate limiting state from {snapshot_path:?}");
+        Ok(())
+    }
+
+    fn snapshot_path(db_path: &Path) -> PathBuf {
+        db_path
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join("rate_limiting.json")
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RateLimitingPersistError {
+    #[error("Failed to serialize rate limiting snapshot: {0}")]
+    Serialize(serde_json::Error),
+    #[error("Failed to write rate limiting snapshot to {1}: {0}")]
+    Write(std::io::Error, PathBuf),
+    #[error("Failed to read rate limiting snapshot from {1}: {0}")]
+    Read(std::io::Error, PathBuf),
+    #[error("Failed to deserialize rate limiting snapshot: {0}")]
+    Deserialize(serde_json::Error),
 }
 
 macro_rules! extract_rate_limits {
