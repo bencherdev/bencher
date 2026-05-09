@@ -13,6 +13,7 @@ use crate::task::{is_dev, unwrap_admin_token, unwrap_url, unwrap_user_token};
 const KEY_ARG: &str = "--key";
 const DOCKER_IMAGE: &str = "ghcr.io/bencherdev/bencher:latest";
 const IMAGE_TAG: &str = "runner-test";
+const MOCK_IMAGE_TAG: &str = "runner-test-mock";
 
 #[derive(Debug)]
 pub struct RunnerTest {
@@ -259,6 +260,13 @@ impl RunnerTest {
             Ok(())
         };
 
+        // Run the image-only runner test (no --exec, ENTRYPOINT baked into image)
+        let image_only_result = if project_key_result.is_ok() {
+            run_image_only_runner_test(&self.url, &self.username, &self.token, spec)
+        } else {
+            Ok(())
+        };
+
         // Always kill runner daemons, even if the test failed
         if let Some((mut runner_child, reader_handle)) = runner_child_and_handle {
             let _kill = runner_child.kill();
@@ -274,6 +282,7 @@ impl RunnerTest {
         no_sandbox_result?;
         detach_result?;
         project_key_result?;
+        image_only_result?;
         println!("=== Runner Daemon Test Passed ===");
         Ok(())
     }
@@ -658,6 +667,91 @@ fn run_project_key_runner_test(url: &Url, admin_token: &Jwt, spec: &str) -> anyh
     Ok(())
 }
 
+/// Run the image-only runner smoke test: the image's ENTRYPOINT already
+/// includes the benchmark command (`bencher mock`), so no `--exec` is needed.
+fn run_image_only_runner_test(
+    url: &Url,
+    username: &str,
+    token: &Jwt,
+    spec: &str,
+) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("Running image-only runner smoke test against: {host}");
+
+    let registry = if cfg!(target_os = "macos") {
+        let port = registry_host(host)?
+            .rsplit_once(':')
+            .and_then(|(_, p)| p.parse::<u16>().ok())
+            .unwrap_or(bencher_json::BENCHER_API_PORT);
+        let docker_registry = format!("host.docker.internal:{port}");
+        println!("macOS detected, using Docker registry host: {docker_registry}");
+        ensure_hosts_entry()?;
+        ensure_insecure_registry(&docker_registry)?;
+        docker_registry
+    } else {
+        registry_for_api(host)?
+    };
+
+    let local_ref = format!("{registry}/{PROJECT_SLUG}:{MOCK_IMAGE_TAG}");
+
+    println!("Building mock image (ENTRYPOINT includes `mock`)...");
+    docker_build_mock_image(&local_ref)?;
+
+    println!("Logging in to {registry}...");
+    docker_login(&registry, username, token.as_ref())?;
+
+    println!("Pushing mock image to {registry}...");
+    docker_push(&local_ref)?;
+
+    println!("Submitting job via bencher run --image (no --exec)...");
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    let image_ref = format!("{PROJECT_SLUG}:{MOCK_IMAGE_TAG}");
+    let args = [
+        "run",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        "--project",
+        PROJECT_SLUG,
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+        "--image",
+        &image_ref,
+        "--spec",
+        spec,
+        "--format",
+        "json",
+        "--quiet",
+        "--job-timeout",
+        "120",
+        "--job-poll-interval",
+        "1",
+    ];
+    cmd.args(args).current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run (image-only) failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(json.project.slug.to_string(), PROJECT_SLUG);
+    #[cfg(feature = "plus")]
+    assert!(
+        json.job.is_some(),
+        "Expected job UUID in image-only report: {json:?}"
+    );
+
+    println!("Image-only runner smoke test passed!");
+    Ok(())
+}
+
 /// Ensure that `host.docker.internal` resolves on the host by adding it to
 /// `/etc/hosts` if not already present. Requires `sudo`.
 fn ensure_hosts_entry() -> anyhow::Result<()> {
@@ -968,6 +1062,46 @@ fn docker_build_local_image(tag: &str) -> anyhow::Result<()> {
 
     drop(std::fs::remove_file(&dockerfile_path));
     anyhow::ensure!(status.success(), "docker build failed");
+    Ok(())
+}
+
+/// Build a Docker image whose ENTRYPOINT runs `bencher mock`.
+///
+/// On macOS, builds from scratch with the local binary.
+/// On Linux, layers on top of the prebuilt Docker image.
+fn docker_build_mock_image(tag: &str) -> anyhow::Result<()> {
+    let dockerfile_path = std::env::temp_dir().join("Dockerfile.bencher-runner-mock-test");
+
+    if cfg!(target_os = "macos") {
+        let bencher_bin = assert_cmd::cargo::cargo_bin(BENCHER_CMD);
+        let build_context = bencher_bin.parent().expect("binary should have parent dir");
+
+        let dockerfile = "FROM scratch\nCOPY bencher /usr/bin/bencher\nENTRYPOINT [\"/usr/bin/bencher\", \"mock\"]\n";
+        std::fs::write(&dockerfile_path, dockerfile)?;
+
+        let status = Command::new("docker")
+            .args(["build", "-t", tag, "-f"])
+            .arg(&dockerfile_path)
+            .arg(build_context)
+            .status()?;
+
+        drop(std::fs::remove_file(&dockerfile_path));
+        anyhow::ensure!(status.success(), "docker build (mock) failed");
+    } else {
+        let dockerfile =
+            format!("FROM {DOCKER_IMAGE}\nENTRYPOINT [\"/usr/bin/bencher\", \"mock\"]\n");
+        std::fs::write(&dockerfile_path, &dockerfile)?;
+
+        let status = Command::new("docker")
+            .args(["build", "-t", tag, "-f"])
+            .arg(&dockerfile_path)
+            .arg(".")
+            .status()?;
+
+        drop(std::fs::remove_file(&dockerfile_path));
+        anyhow::ensure!(status.success(), "docker build (mock) failed");
+    }
+
     Ok(())
 }
 

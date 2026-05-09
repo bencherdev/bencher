@@ -646,6 +646,45 @@ impl SeedTest {
         let _json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
+        // bencher mock --seed 6 | bencher run --host http://localhost:61016 --key $PROJECT_KEY --project the-computer --format json --quiet
+        let mock_output = Command::cargo_bin(BENCHER_CMD)?
+            .args(["mock", "--seed", PERFECT_SEED])
+            .current_dir(CLI_DIR)
+            .output()?;
+        assert!(mock_output.status.success(), "{mock_output:?}");
+        let output = Command::cargo_bin(BENCHER_CMD)?
+            .args([
+                "run",
+                HOST_ARG,
+                host,
+                KEY_ARG,
+                project_key.as_str(),
+                PROJECT_ARG,
+                PROJECT_SLUG,
+                "--format",
+                "json",
+                "--quiet",
+            ])
+            .current_dir(CLI_DIR)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .and_then(|mut child| {
+                use std::io::Write as _;
+                if let Some(mut stdin) = child.stdin.take() {
+                    stdin.write_all(&mock_output.stdout)?;
+                }
+                child.wait_with_output()
+            })?;
+        assert!(
+            output.status.success(),
+            "piped bencher run failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let _json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout).unwrap();
+
         // cargo run -- threshold ls --host http://localhost:61016 the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args(["threshold", "ls", HOST_ARG, host, PROJECT_SLUG])

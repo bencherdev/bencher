@@ -146,10 +146,14 @@ impl TryFrom<CliRun> for Run {
         let sub_adapter: SubAdapter = (&cmd).into();
         #[cfg(feature = "plus")]
         let runner = if job.is_some() {
-            match cmd.try_into() {
-                Ok(runner) => Some(runner),
-                Err(RunError::NoCommand) => None,
-                Err(e) => return Err(e.into()),
+            if cmd.has_local_input() {
+                match cmd.try_into() {
+                    Ok(runner) => Some(runner),
+                    Err(RunError::NoCommand) => None,
+                    Err(e) => return Err(e.into()),
+                }
+            } else {
+                None
             }
         } else {
             Some(cmd.try_into()?)
