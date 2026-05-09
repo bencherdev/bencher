@@ -1,0 +1,27 @@
+---
+title: "Project Keys"
+description: "The Bencher Project Keys REST API"
+heading: "Project Keys REST API"
+sortOrder: 13
+paths:
+  - path: /v0/projects/{project}/keys
+    method: get
+    headers: auth
+    cli: project key list PROJECT
+  - path: /v0/projects/{project}/keys
+    method: post
+    headers: auth
+    cli: project key create PROJECT
+  - path: /v0/projects/{project}/keys/{key}
+    method: get
+    headers: auth
+    cli: project key view PROJECT KEY
+  - path: /v0/projects/{project}/keys/{key}
+    method: patch
+    headers: auth
+    cli: project key update PROJECT KEY
+  - path: /v0/projects/{project}/keys/{key}
+    method: delete
+    headers: auth
+    cli: project key revoke PROJECT KEY
+---
