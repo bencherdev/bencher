@@ -255,8 +255,15 @@ async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonProject, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?
-            .into_json(conn)
+        QueryProject::is_allowed_actor(
+            conn,
+            &context.rbac,
+            #[cfg(feature = "plus")]
+            &context.rate_limiting,
+            &path_params.project,
+            api_actor,
+        )?
+        .into_json(conn)
     })
 }
 
@@ -300,6 +307,8 @@ async fn patch_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         &auth_user,
         Permission::Edit,
@@ -408,6 +417,8 @@ async fn delete_inner(
         let query_project = QueryProject::is_allowed(
             auth_conn!(context),
             &context.rbac,
+            #[cfg(feature = "plus")]
+            &context.rate_limiting,
             &path_params.project,
             auth_user,
             Permission::Delete,

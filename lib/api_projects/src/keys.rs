@@ -113,6 +113,8 @@ async fn get_ls_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Manage,
@@ -227,6 +229,8 @@ async fn post_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Manage,
@@ -296,6 +300,8 @@ async fn get_one_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Manage,
@@ -341,6 +347,8 @@ async fn patch_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Manage,
@@ -394,6 +402,8 @@ async fn delete_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Manage,

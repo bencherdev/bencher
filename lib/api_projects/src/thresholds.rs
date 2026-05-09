@@ -126,6 +126,8 @@ async fn get_ls_inner(
     let query_project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
@@ -279,6 +281,8 @@ async fn post_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Create,
@@ -386,8 +390,14 @@ async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonThreshold, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        let query_project =
-            QueryProject::is_allowed_actor(conn, &context.rbac, &path_params.project, api_actor)?;
+        let query_project = QueryProject::is_allowed_actor(
+            conn,
+            &context.rbac,
+            #[cfg(feature = "plus")]
+            &context.rate_limiting,
+            &path_params.project,
+            api_actor,
+        )?;
 
         let query_threshold =
             QueryThreshold::get_with_uuid(conn, &query_project, path_params.threshold)?;
@@ -463,6 +473,8 @@ async fn put_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Edit,
@@ -512,6 +524,8 @@ async fn delete_inner(
     let query_project = QueryProject::is_allowed(
         auth_conn!(context),
         &context.rbac,
+        #[cfg(feature = "plus")]
+        &context.rate_limiting,
         &path_params.project,
         auth_user,
         Permission::Delete,

@@ -102,6 +102,7 @@ async fn get_ls_inner(
     let query_project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
@@ -223,6 +224,7 @@ async fn get_one_inner(
     let query_project = QueryProject::is_allowed_actor(
         actor_conn!(context, api_actor),
         &context.rbac,
+        &context.rate_limiting,
         &path_params.project,
         api_actor,
     )?;
