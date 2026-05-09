@@ -7,6 +7,7 @@ const AUDIENCE_INVITE: &str = "invite";
 const AUDIENCE_OAUTH: &str = "oauth";
 const AUDIENCE_OCI_PUBLIC: &str = "oci_public";
 const AUDIENCE_OCI_AUTH: &str = "oci_auth";
+const AUDIENCE_OCI_PROJECT: &str = "oci_project";
 const AUDIENCE_OCI_RUNNER: &str = "oci_runner";
 
 #[derive(Debug, Copy, Clone)]
@@ -18,6 +19,7 @@ pub enum Audience {
     OAuth,
     OciPublic,
     OciAuth,
+    OciProject,
     OciRunner,
 }
 
@@ -31,6 +33,7 @@ impl Audience {
             Self::OAuth => AUDIENCE_OAUTH,
             Self::OciPublic => AUDIENCE_OCI_PUBLIC,
             Self::OciAuth => AUDIENCE_OCI_AUTH,
+            Self::OciProject => AUDIENCE_OCI_PROJECT,
             Self::OciRunner => AUDIENCE_OCI_RUNNER,
         }
     }

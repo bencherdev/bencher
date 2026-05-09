@@ -52,9 +52,13 @@ pub async fn oci_base(rqctx: RequestContext<ApiContext>) -> Result<Response<Body
     let token = extract_oci_bearer_token(&rqctx)
         .map_err(|_| unauthorized_with_www_authenticate(&rqctx, None))?;
 
-    // Auth tokens (most common — authenticated Docker users), then public tokens
+    // Auth tokens (most common — authenticated Docker users), then project, then public tokens
     if let Ok(claims) = context.token_key.validate_oci_auth(&token) {
         apply_user_rate_limit(&rqctx.log, context, &claims).await?;
+    } else if let Ok(pk_claims) = context.token_key.validate_oci_project(&token) {
+        context
+            .rate_limiting
+            .project_request(pk_claims.project_uuid())?;
     } else if context.token_key.validate_oci_public(&token).is_ok() {
         apply_public_rate_limit(&rqctx.log, context, &rqctx)?;
     } else {

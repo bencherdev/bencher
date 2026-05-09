@@ -16,13 +16,13 @@
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_json::oci::{OCI_ERROR_DENIED, OCI_ERROR_UNAUTHORIZED, oci_error_body};
-use bencher_json::{Email, Jwt, ProjectResourceId};
+use bencher_json::{Email, Jwt, PROJECT_KEY_PREFIX, ProjectKey, ProjectKeyHash, ProjectResourceId};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::ApiContext,
     error::issue_error,
     model::{
-        project::QueryProject,
+        project::{QueryProject, key::QueryProjectKey},
         user::{QueryUser, auth::AuthUser},
     },
     public_conn,
@@ -73,8 +73,11 @@ pub async fn auth_oci_token_options(
 
 /// OCI token endpoint
 ///
-/// Authenticates users via Basic auth (email:bencher-api-token)
-/// and returns a short-lived JWT for OCI operations.
+/// Authenticates via Basic auth and returns a short-lived JWT for OCI operations.
+/// Supports two credential types:
+/// - `email:api-key-jwt`: user authentication
+/// - `project-slug-or-uuid:bencher_run_xxxxx`: project key authentication
+///
 /// If no Basic auth credentials are provided, issues a public (anonymous) OCI token.
 #[endpoint {
     method = GET,
@@ -95,20 +98,49 @@ pub async fn auth_oci_token_get(
         (None, vec![])
     };
 
-    // Try to extract Basic auth — if absent, issue a public (anonymous) token
-    let jwt = if let Ok((email, api_token)) = extract_basic_auth(&rqctx) {
-        auth_oci_token(
-            &rqctx, context, &query, &email, &api_token, repository, actions,
-        )
-        .await?
-    } else {
-        // Anonymous: issue a public OCI token with no identity or RBAC checks
-        context
+    let jwt = match extract_basic_credentials(&rqctx)? {
+        Some((username, password)) if password.starts_with(PROJECT_KEY_PREFIX) => {
+            if let (Ok(project), Ok(project_key)) = (
+                username.parse::<ProjectResourceId>(),
+                password.parse::<ProjectKey>(),
+            ) {
+                project_key_oci_token(
+                    &rqctx,
+                    context,
+                    &query,
+                    &project,
+                    &project_key,
+                    repository,
+                    actions,
+                )
+                .await?
+            } else {
+                return Err(unauthorized_with_www_authenticate(
+                    &rqctx,
+                    query.scope.as_deref(),
+                ));
+            }
+        },
+        Some((username, password)) => {
+            if let (Ok(email), Ok(api_token)) = (username.parse::<Email>(), password.parse::<Jwt>())
+            {
+                auth_oci_token(
+                    &rqctx, context, &query, &email, &api_token, repository, actions,
+                )
+                .await?
+            } else {
+                return Err(unauthorized_with_www_authenticate(
+                    &rqctx,
+                    query.scope.as_deref(),
+                ));
+            }
+        },
+        None => context
             .token_key
             .new_oci_public(OCI_TOKEN_TTL, repository, actions)
             .map_err(|e| {
                 HttpError::for_internal_error(format!("Failed to create public OCI token: {e}"))
-            })?
+            })?,
     };
 
     let response = TokenResponse {
@@ -129,10 +161,6 @@ pub async fn auth_oci_token_get(
 }
 
 /// Issue an authenticated OCI token after validating credentials and RBAC.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding API key validation error for security"
-)]
 async fn auth_oci_token(
     rqctx: &RequestContext<ApiContext>,
     context: &ApiContext,
@@ -142,18 +170,17 @@ async fn auth_oci_token(
     repository: Option<String>,
     actions: Vec<OciAction>,
 ) -> Result<Jwt, HttpError> {
+    let scope = query.scope.as_deref();
+
     // Validate the API token
     let claims = context
         .token_key
         .validate_api_key(api_token)
-        .map_err(|_| unauthorized_with_www_authenticate(rqctx, query.scope.as_deref()))?;
+        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
     // Verify the email matches the token subject
     if claims.email() != email {
-        return Err(unauthorized_with_www_authenticate(
-            rqctx,
-            query.scope.as_deref(),
-        ));
+        return Err(unauthorized_with_www_authenticate(rqctx, scope));
     }
 
     // Check admin status for pull-only requests
@@ -164,9 +191,9 @@ async fn auth_oci_token(
     if actions.contains(&OciAction::Pull) && !actions.contains(&OciAction::Push) {
         let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, email)
-            .map_err(|_| unauthorized_with_www_authenticate(rqctx, query.scope.as_deref()))?;
+            .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
         let auth_user = AuthUser::load(conn, query_user)
-            .map_err(|_| unauthorized_with_www_authenticate(rqctx, query.scope.as_deref()))?;
+            .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
         if !auth_user.is_admin(&context.rbac) {
             return Err(HttpError::for_client_error(
@@ -186,27 +213,28 @@ async fn auth_oci_token(
         if let Ok(query_project) = QueryProject::from_resource_id(conn, &project_id) {
             let is_claimed = query_project
                 .organization(conn)
-                .map_err(|_| {
-                    HttpError::for_internal_error("Failed to query organization".to_owned())
+                .map_err(|e| {
+                    HttpError::for_internal_error(format!("Failed to query organization: {e}"))
                 })?
                 .is_claimed(conn)
-                .map_err(|_| {
-                    HttpError::for_internal_error(
-                        "Failed to check organization claim status".to_owned(),
-                    )
+                .map_err(|e| {
+                    HttpError::for_internal_error(format!(
+                        "Failed to check organization claim status: {e}"
+                    ))
                 })?;
 
             if is_claimed {
-                let query_user = QueryUser::get_with_email(conn, email).map_err(|_| {
-                    unauthorized_with_www_authenticate(rqctx, query.scope.as_deref())
-                })?;
-                let auth_user = AuthUser::load(conn, query_user).map_err(|_| {
-                    unauthorized_with_www_authenticate(rqctx, query.scope.as_deref())
-                })?;
+                let query_user = QueryUser::get_with_email(conn, email)
+                    .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
+                let auth_user = AuthUser::load(conn, query_user)
+                    .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
                 query_project
                     .try_allowed(&context.rbac, &auth_user, Permission::Create)
-                    .map_err(|_| {
+                    .inspect_err(|e| {
+                        slog::info!(&rqctx.log, "OCI RBAC check failed"; "error" => %e);
+                    })
+                    .map_err(|_err| {
                         HttpError::for_client_error(
                             None,
                             ClientErrorStatusCode::FORBIDDEN,
@@ -272,76 +300,125 @@ pub fn unauthorized_with_www_authenticate(
     error
 }
 
-/// Extract email and API token from Basic auth header
-#[expect(
-    clippy::map_err_ignore,
-    reason = "Intentionally discarding decode errors for security"
-)]
-fn extract_basic_auth(rqctx: &RequestContext<ApiContext>) -> Result<(Email, Jwt), HttpError> {
-    let headers = rqctx.request.headers();
+pub fn log_unauthorized_with_www_authenticate(
+    rqctx: &RequestContext<ApiContext>,
+    scope: Option<&str>,
+    error: &dyn std::fmt::Display,
+) -> HttpError {
+    slog::info!(&rqctx.log, "OCI auth failed"; "error" => %error);
+    unauthorized_with_www_authenticate(rqctx, scope)
+}
 
-    let auth_header = headers
-        .get(http::header::AUTHORIZATION)
-        .ok_or_else(|| unauthorized_with_www_authenticate(rqctx, None))?;
+/// Issue a project-scoped OCI token after validating a project key.
+async fn project_key_oci_token(
+    rqctx: &RequestContext<ApiContext>,
+    context: &ApiContext,
+    query: &TokenQuery,
+    project_rid: &ProjectResourceId,
+    project_key: &ProjectKey,
+    repository: Option<String>,
+    actions: Vec<OciAction>,
+) -> Result<Jwt, HttpError> {
+    let scope = query.scope.as_deref();
 
-    let auth_str = auth_header.to_str().map_err(|_| {
-        HttpError::for_client_error(
+    // Pull-only requests are not allowed for project key auth.
+    // Only bare metal runners should be pulling, and they use runner tokens.
+    if actions.contains(&OciAction::Pull) && !actions.contains(&OciAction::Push) {
+        return Err(HttpError::for_client_error(
             None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid Authorization header encoding".to_owned(),
-        )
-    })?;
-
-    let (scheme, credentials) = auth_str
-        .split_once(' ')
-        .ok_or_else(|| unauthorized_with_www_authenticate(rqctx, None))?;
-
-    if !scheme.eq_ignore_ascii_case("Basic") {
-        return Err(unauthorized_with_www_authenticate(rqctx, None));
+            ClientErrorStatusCode::FORBIDDEN,
+            oci_error_body(
+                OCI_ERROR_DENIED,
+                "Project keys cannot be used for pull-only access. Use a runner token to pull.",
+            ),
+        ));
     }
 
-    // Decode base64 credentials
-    let decoded = STANDARD.decode(credentials).map_err(|_| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid base64 encoding in Authorization header".to_owned(),
-        )
-    })?;
+    let key_hash = ProjectKeyHash::from(project_key);
+    let now = context.clock.now();
 
-    let decoded_str = String::from_utf8(decoded).map_err(|_| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid UTF-8 in Authorization credentials".to_owned(),
-        )
-    })?;
+    let query_key = QueryProjectKey::from_hash(public_conn!(context), &key_hash, now)
+        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
-    let (username, password) = decoded_str.split_once(':').ok_or_else(|| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid Basic auth format (expected username:password)".to_owned(),
-        )
-    })?;
+    let query_project = QueryProject::get(public_conn!(context), query_key.project_id)
+        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
-    let email: Email = username.parse().map_err(|_| {
-        HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid email format in username".to_owned(),
-        )
-    })?;
+    if !query_project.matches_resource_id(project_rid) {
+        return Err(unauthorized_with_www_authenticate(rqctx, scope));
+    }
 
-    let api_token: Jwt = password.parse().map_err(|_| {
-        HttpError::for_client_error(
+    // If scope specifies a repository, verify it matches the key's project
+    if let Some(repo_name) = &repository
+        && let Ok(repo_rid) = repo_name.parse::<ProjectResourceId>()
+        && !query_project.matches_resource_id(&repo_rid)
+    {
+        return Err(HttpError::for_client_error(
             None,
-            ClientErrorStatusCode::BAD_REQUEST,
-            "Invalid API token format in password".to_owned(),
-        )
-    })?;
+            ClientErrorStatusCode::FORBIDDEN,
+            oci_error_body(
+                OCI_ERROR_DENIED,
+                "Project key is not authorized for the requested repository",
+            ),
+        ));
+    }
 
-    Ok((email, api_token))
+    context.rate_limiting.project_request(query_project.uuid)?;
+
+    slog::info!(
+        &rqctx.log,
+        "Issuing OCI project token via project key";
+        "project_key_uuid" => %query_key.uuid,
+        "project_uuid" => %query_project.uuid
+    );
+
+    context
+        .token_key
+        .new_oci_project(query_project.uuid, OCI_TOKEN_TTL, repository, actions)
+        .map_err(|e| {
+            HttpError::for_internal_error(format!("Failed to create OCI project token: {e}"))
+        })
+}
+
+/// Extract raw username and password from Basic auth header.
+///
+/// Returns `Ok(None)` if no Authorization header or non-Basic scheme (anonymous).
+/// Returns `Ok(Some(...))` if valid Basic credentials were extracted.
+/// Returns `Err(...)` if the header is Basic but the payload is malformed.
+fn extract_basic_credentials(
+    rqctx: &RequestContext<ApiContext>,
+) -> Result<Option<(String, String)>, HttpError> {
+    let headers = rqctx.request.headers();
+    let Some(auth_header) = headers.get(http::header::AUTHORIZATION) else {
+        return Ok(None);
+    };
+    let auth_str = auth_header
+        .to_str()
+        .inspect_err(|e| {
+            slog::info!(&rqctx.log, "Invalid Authorization header encoding"; "error" => %e);
+        })
+        .map_err(|_err| unauthorized_with_www_authenticate(rqctx, None))?;
+    let Some((scheme, credentials)) = auth_str.split_once(' ') else {
+        return Ok(None);
+    };
+    if !scheme.eq_ignore_ascii_case("Basic") {
+        return Ok(None);
+    }
+    let decoded = STANDARD
+        .decode(credentials)
+        .inspect_err(|e| {
+            slog::info!(&rqctx.log, "Invalid base64 in Basic auth"; "error" => %e);
+        })
+        .map_err(|_err| unauthorized_with_www_authenticate(rqctx, None))?;
+    let decoded_str = String::from_utf8(decoded)
+        .inspect_err(|e| {
+            slog::info!(&rqctx.log, "Invalid UTF-8 in Basic auth"; "error" => %e);
+        })
+        .map_err(|_err| unauthorized_with_www_authenticate(rqctx, None))?;
+    let Some((username, password)) = decoded_str.split_once(':') else {
+        slog::info!(&rqctx.log, "Missing colon in Basic auth credentials");
+        return Err(unauthorized_with_www_authenticate(rqctx, None));
+    };
+    Ok(Some((username.to_owned(), password.to_owned())))
 }
 
 /// Parse OCI scope string into repository and actions

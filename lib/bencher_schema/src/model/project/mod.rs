@@ -79,6 +79,13 @@ impl QueryProject {
     fn_eq_resource_id!(project, ProjectResourceId);
     fn_from_resource_id!(project, Project, ProjectResourceId, not_deleted);
 
+    pub fn matches_resource_id(&self, resource_id: &ProjectResourceId) -> bool {
+        match resource_id {
+            ProjectResourceId::Slug(slug) => self.slug == *slug,
+            ProjectResourceId::Uuid(uuid) => self.uuid == *uuid,
+        }
+    }
+
     fn_get!(project, ProjectId, not_deleted);
     fn_get_uuid!(project, ProjectId, ProjectUuid, not_deleted);
     fn_from_uuid!(

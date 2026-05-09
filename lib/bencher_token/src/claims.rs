@@ -1,6 +1,8 @@
 #[cfg(feature = "plus")]
 use bencher_json::PlanLevel;
 #[cfg(feature = "plus")]
+use bencher_json::ProjectUuid;
+#[cfg(feature = "plus")]
 use bencher_json::RunnerUuid;
 use bencher_json::{
     DateTime, Email, Jwt, OrganizationUuid, organization::member::OrganizationRole,
@@ -292,6 +294,56 @@ impl TryFrom<RunnerOciTokenClaims> for RunnerOciClaims {
 #[cfg(feature = "plus")]
 impl RunnerOciClaims {
     pub fn runner_uuid(&self) -> RunnerUuid {
+        self.sub
+    }
+}
+
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct ProjectOciTokenClaims {
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub iss: String,
+    pub sub: ProjectUuid,
+    pub oci: Option<OciScopeClaims>,
+}
+
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone)]
+pub struct ProjectOciClaims {
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub iss: String,
+    pub sub: ProjectUuid,
+    pub oci: OciScopeClaims,
+}
+
+#[cfg(feature = "plus")]
+impl TryFrom<ProjectOciTokenClaims> for ProjectOciClaims {
+    type Error = TokenError;
+
+    fn try_from(claims: ProjectOciTokenClaims) -> Result<Self, Self::Error> {
+        match claims.oci {
+            Some(oci) => Ok(Self {
+                aud: claims.aud,
+                exp: claims.exp,
+                iat: claims.iat,
+                iss: claims.iss,
+                sub: claims.sub,
+                oci,
+            }),
+            None => Err(TokenError::OciProject {
+                error: JsonWebTokenErrorKind::MissingRequiredClaim("oci".into()).into(),
+            }),
+        }
+    }
+}
+
+#[cfg(feature = "plus")]
+impl ProjectOciClaims {
+    pub fn project_uuid(&self) -> ProjectUuid {
         self.sub
     }
 }

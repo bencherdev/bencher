@@ -6,8 +6,7 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use bencher_json::Jwt;
-use bencher_json::Url;
+use bencher_json::{Jwt, Url};
 
 use crate::parser::TaskOci;
 use crate::task::is_dev;
