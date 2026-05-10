@@ -152,7 +152,6 @@ fn attach_job_with_spec(
     let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
-        "image": "project/bench:latest",
         "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
         "timeout": 3600
     });

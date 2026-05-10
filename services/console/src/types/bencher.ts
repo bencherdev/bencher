@@ -119,14 +119,14 @@ export type Timeout = number;
  * disk, network) are in the associated spec.
  */
 export interface JsonJobConfig {
-	/** OCI image reference (e.g., `registry.bencher.dev/project/bench:latest`) */
-	image: string;
 	/** Registry URL for pulling the OCI image (e.g., `https://registry.bencher.dev`) */
 	registry: Url;
 	/** Project UUID for OCI authentication scoping */
 	project: Uuid;
 	/** Image digest - must be immutable (e.g., "sha256:abc123...") */
 	digest: ImageDigest;
+	/** OCI image reference (e.g., `project/bench:latest`) */
+	image?: string;
 	/** Entrypoint override (like Docker ENTRYPOINT) */
 	entrypoint?: string[];
 	/** Command override (like Docker CMD) */

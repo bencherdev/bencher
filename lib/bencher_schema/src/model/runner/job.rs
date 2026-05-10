@@ -333,8 +333,8 @@ impl PendingInsertJob {
         let config = JsonJobConfig {
             registry: registry_url,
             project: query_project.uuid,
-            image: new_run_job.image,
             digest,
+            image: Some(new_run_job.image),
             entrypoint: new_run_job.entrypoint,
             cmd: new_run_job.cmd,
             env: new_run_job.env,

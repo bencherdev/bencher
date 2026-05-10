@@ -12391,7 +12391,8 @@
             ]
           },
           "image": {
-            "description": "OCI image reference (e.g., `registry.bencher.dev/project/bench:latest`)",
+            "nullable": true,
+            "description": "OCI image reference (e.g., `project/bench:latest`)",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ImageReference"
@@ -12434,7 +12435,6 @@
         },
         "required": [
           "digest",
-          "image",
           "project",
           "registry",
           "timeout"

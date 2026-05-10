@@ -28,13 +28,7 @@ fn check_sandbox_allowed(
     }
 }
 
-#[expect(
-    clippy::print_stdout,
-    clippy::print_stderr,
-    clippy::use_debug,
-    clippy::too_many_lines,
-    reason = "sequential job execution steps"
-)]
+#[expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
 pub fn execute_job(
     config: &UpConfig,
     job: &JsonClaimedJob,
@@ -63,23 +57,7 @@ pub fn execute_job(
 
     let cancel_flag = Arc::new(AtomicBool::new(false));
     let stop_flag = Arc::new(AtomicBool::new(false));
-
-    // Spawn heartbeat thread, pinned to housekeeping cores
-    let ws_heartbeat = Arc::clone(ws);
-    let cancel_heartbeat = Arc::clone(&cancel_flag);
-    let stop_heartbeat = Arc::clone(&stop_flag);
-    let housekeeping_cores = config
-        .cpu_layout
-        .as_ref()
-        .map(|l| l.housekeeping.clone())
-        .unwrap_or_default();
-    let heartbeat = std::thread::spawn(move || {
-        // Pin this thread to housekeeping cores to avoid interfering with benchmarks
-        if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
-            eprintln!("Warning: failed to pin heartbeat thread to housekeeping cores: {e}");
-        }
-        heartbeat_loop(&ws_heartbeat, &cancel_heartbeat, &stop_heartbeat);
-    });
+    let heartbeat = spawn_heartbeat_thread(config, ws, &cancel_flag, &stop_flag);
 
     // Execute benchmark iterations — pass cancel_flag so the vsock poll loop
     // can abort early when the server sends a cancellation message.
@@ -90,41 +68,24 @@ pub fn execute_job(
 
     let build_time = job_config.build_time;
     let file_size = job_config.file_size;
-    let benchmark_name = build_time
-        .then(|| {
-            let name: String = job_config
-                .entrypoint
-                .iter()
-                .flatten()
-                .chain(job_config.cmd.iter().flatten())
-                .cloned()
-                .collect::<Vec<_>>()
-                .join(" ");
-            if name.is_empty() {
-                job.config.image.to_string()
-            } else {
-                name
-            }
-            .parse::<bencher_json::BenchmarkName>()
-        })
-        .transpose()
-        .map_err(|e| format!("Invalid benchmark name for build time: {e}"));
-    let benchmark_name = match benchmark_name {
-        Ok(name) => name,
-        Err(error) => {
-            return JobFinishResult::Failed {
-                error,
-                results: Vec::new(),
-            };
-        },
+    let benchmark_name = if build_time {
+        match build_benchmark_name(job) {
+            Ok(name) => Some(name),
+            Err(error) => {
+                return JobFinishResult::Failed {
+                    error,
+                    results: Vec::new(),
+                };
+            },
+        }
+    } else {
+        None
     };
 
     for iteration in 0..iter_count {
-        // Check cancel before each iteration for responsive cancellation
         if cancel_flag.load(Ordering::SeqCst) {
             break;
         }
-
         println!(
             "Starting iteration {}/{iter_count} for job {}",
             iteration + 1,
@@ -132,42 +93,34 @@ pub fn execute_job(
         );
         let start = build_time.then(std::time::Instant::now);
         let result = crate::execute(&job_config, Some(&cancel_flag));
-        let build_time_elapsed = start.map(|s| s.elapsed());
-
+        let elapsed = start.map(|s| s.elapsed());
         match result {
             Ok(output) => {
                 last_exit_code = output.exit_code;
                 if !output.stdout.is_empty() {
                     last_stdout_preview = Some(output.stdout.clone());
                 }
-                if output.exit_code != 0 && !allow_failure {
-                    // Non-zero exit code fails the job (matches CLI behavior)
-                    results.push(output_to_iteration(
-                        output,
-                        build_time_elapsed,
-                        file_size,
-                        benchmark_name.as_ref(),
-                    ));
+                let failed = output.exit_code != 0 && !allow_failure;
+                results.push(output_to_iteration(
+                    output,
+                    elapsed,
+                    file_size,
+                    benchmark_name.as_ref(),
+                ));
+                if failed {
                     failed_error = Some(format!(
                         "Benchmark exited with non-zero exit code: {last_exit_code}"
                     ));
                     break;
                 }
-                results.push(output_to_iteration(
-                    output,
-                    build_time_elapsed,
-                    file_size,
-                    benchmark_name.as_ref(),
-                ));
+            },
+            Err(e) if allow_failure => {
+                eprintln!(
+                    "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
+                    iteration + 1
+                );
             },
             Err(e) => {
-                if allow_failure {
-                    eprintln!(
-                        "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
-                        iteration + 1
-                    );
-                    continue;
-                }
                 failed_error = Some(e.to_string());
                 break;
             },
@@ -199,12 +152,36 @@ pub fn execute_job(
     }
 }
 
-/// Convert a [`RunOutput`](crate::RunOutput) into a [`JsonIterationOutput`].
+/// Derive the benchmark name for build-time tracking from the job config.
 ///
-/// When `build_time` or `file_size` is enabled, injects BMF JSON metrics into the
-/// `output` field. Since `output` takes precedence over `stdout` in server-side
-/// result processing, `stdout` is preserved for debugging while `output` carries
-/// the metrics.
+/// Precedence: entrypoint+cmd joined string (matches CLI behavior),
+/// then image reference, then project@digest as last resort.
+fn build_benchmark_name(job: &JsonClaimedJob) -> Result<bencher_json::BenchmarkName, String> {
+    let name: String = job
+        .config
+        .entrypoint
+        .iter()
+        .flatten()
+        .chain(job.config.cmd.iter().flatten())
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(" ");
+    if !name.is_empty() {
+        return name
+            .parse()
+            .map_err(|e| format!("Invalid benchmark name for build time: {e}"));
+    }
+    if let Some(image) = &job.config.image {
+        return image
+            .to_string()
+            .parse()
+            .map_err(|e| format!("Invalid benchmark name for build time: {e}"));
+    }
+    format!("{}@{}", job.config.project, job.config.digest)
+        .parse()
+        .map_err(|e| format!("Invalid benchmark name for build time: {e}"))
+}
+
 fn output_to_iteration(
     output: crate::RunOutput,
     build_time: Option<Duration>,
@@ -229,12 +206,6 @@ fn output_to_iteration(
     }
 }
 
-/// Build the `output` field for a [`JsonIterationOutput`].
-///
-/// - No metrics enabled: return file contents as-is (existing behavior).
-/// - `build_time` only: return BMF JSON with build-time metric.
-/// - `file_size` only: return BMF JSON with file-size metrics (replacing file contents).
-/// - Both: return combined BMF JSON with both metric types.
 fn build_metric_output(
     build_time: Option<Duration>,
     file_size: bool,
@@ -390,6 +361,29 @@ fn build_config_from_job(
     Ok(runner_config)
 }
 
+#[expect(clippy::print_stderr)]
+fn spawn_heartbeat_thread(
+    config: &UpConfig,
+    ws: &Arc<Mutex<JobChannel>>,
+    cancel_flag: &Arc<AtomicBool>,
+    stop_flag: &Arc<AtomicBool>,
+) -> std::thread::JoinHandle<()> {
+    let ws_heartbeat = Arc::clone(ws);
+    let cancel_heartbeat = Arc::clone(cancel_flag);
+    let stop_heartbeat = Arc::clone(stop_flag);
+    let housekeeping_cores = config
+        .cpu_layout
+        .as_ref()
+        .map(|l| l.housekeeping.clone())
+        .unwrap_or_default();
+    std::thread::spawn(move || {
+        if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
+            eprintln!("Warning: failed to pin heartbeat thread to housekeeping cores: {e}");
+        }
+        heartbeat_loop(&ws_heartbeat, &cancel_heartbeat, &stop_heartbeat);
+    })
+}
+
 #[expect(clippy::print_stderr, clippy::use_debug)]
 fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_flag: &AtomicBool) {
     loop {
@@ -490,7 +484,6 @@ mod tests {
             "config": {
                 "registry": "https://registry.bencher.dev",
                 "project": "11111111-2222-3333-4444-555555555555",
-                "image": "project/bench:latest",
                 "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
                 "entrypoint": entrypoint,
                 "cmd": cmd,
@@ -601,7 +594,6 @@ mod tests {
             "config": {
                 "registry": "http://localhost:61016",
                 "project": "11111111-2222-3333-4444-555555555555",
-                "image": "project/bench:latest",
                 "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
                 "timeout": 300,
             },
@@ -825,7 +817,6 @@ mod tests {
             "config": {
                 "registry": "https://registry.bencher.dev",
                 "project": "11111111-2222-3333-4444-555555555555",
-                "image": "project/bench:latest",
                 "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
                 "timeout": 300,
                 "build_time": true,
@@ -855,7 +846,6 @@ mod tests {
             "config": {
                 "registry": "https://registry.bencher.dev",
                 "project": "11111111-2222-3333-4444-555555555555",
-                "image": "project/bench:latest",
                 "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
                 "timeout": 300,
                 "file_size": true,

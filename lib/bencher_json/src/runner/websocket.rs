@@ -225,7 +225,6 @@ mod tests {
             "config": {
                 "registry": "https://registry.bencher.dev",
                 "project": "11111111-2222-3333-4444-555555555555",
-                "image": "project/bench:latest",
                 "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
                 "timeout": 300
             },

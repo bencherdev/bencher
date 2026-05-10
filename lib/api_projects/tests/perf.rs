@@ -407,7 +407,6 @@ fn create_job(server: &TestServer, report_id: i32, spec_id: i32, project_id: i32
     let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
         "project": bencher_json::ProjectUuid::new(),
-        "image": "project/bench:latest",
         "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
         "timeout": 300
     });
