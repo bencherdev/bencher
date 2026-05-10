@@ -124,6 +124,9 @@ export const validU32 = (input: undefined | number | string): boolean => {
 	return Number.isInteger(num) && num >= 0 && num <= 4_294_967_295;
 };
 
+export const validNonZeroU32 = (input: undefined | number | string): boolean =>
+	validU32(input) && Number(input) > 0;
+
 const validNumberStr = (
 	numberStr: undefined | number | string,
 	validator: (input: number) => boolean,

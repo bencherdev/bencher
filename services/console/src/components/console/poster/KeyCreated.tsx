@@ -21,8 +21,12 @@ const KeyCreated = (props: Props) => {
 			await navigator.clipboard.writeText(props.data.key);
 			setCopied(true);
 			setTimeout(() => setCopied(false), 2000);
-		} catch (_e) {
-			// Clipboard API may be unavailable (non-HTTPS, denied permissions)
+		} catch (e) {
+			console.error(e);
+			const input = document.getElementById(
+				"project-key",
+			) as HTMLInputElement | null;
+			input?.select();
 		}
 	};
 

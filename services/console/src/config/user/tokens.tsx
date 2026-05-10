@@ -2,7 +2,7 @@ import FieldKind from "../../components/field/kind";
 import IconTitle from "../../components/site/IconTitle";
 import { getUserRaw, isSameUser } from "../../util/auth";
 import type { Params } from "../../util/url";
-import { validResourceName, validU32 } from "../../util/valid";
+import { validNonZeroU32, validResourceName } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation } from "../types";
 import { addPath, createdUuidPath, parentPath, viewUuidPath } from "../util";
 
@@ -21,7 +21,7 @@ const TOKEN_FIELDS = {
 		placeholder: "525600",
 		icon: "fas fa-stopwatch",
 		help: "Must be an integer greater than zero",
-		validate: validU32,
+		validate: validNonZeroU32,
 	},
 };
 
