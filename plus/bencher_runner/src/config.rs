@@ -67,14 +67,6 @@ pub struct Config {
     #[serde(default)]
     pub network: bool,
 
-    /// Track the build time of the benchmark command.
-    #[serde(default)]
-    pub build_time: bool,
-
-    /// Track the file size of the output files instead of parsing their contents.
-    #[serde(default)]
-    pub file_size: bool,
-
     /// Optional entrypoint override for the container.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub entrypoint: Option<Vec<String>>,
@@ -86,6 +78,14 @@ pub struct Config {
     /// Optional environment variables for the container.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub env: Option<HashMap<String, String>>,
+
+    /// Track the build time of the benchmark command.
+    #[serde(default)]
+    pub build_time: bool,
+
+    /// Track the file size of the output files instead of parsing their contents.
+    #[serde(default)]
+    pub file_size: bool,
 
     /// Maximum size in bytes for collected stdout/stderr.
     ///
@@ -223,11 +223,11 @@ impl Config {
             timeout_secs: default_timeout_secs(),
             file_paths: None,
             network: false,
-            build_time: false,
-            file_size: false,
             entrypoint: None,
             cmd: None,
             env: None,
+            build_time: false,
+            file_size: false,
             max_output_size: default_max_output_size(),
             max_file_count: default_max_file_count(),
             max_content_size: default_max_content_size(),

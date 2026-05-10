@@ -11,6 +11,12 @@ use super::UpConfig;
 use super::state_machine::JobFinishResult;
 use super::websocket::JobChannel;
 
+// NUL bytes are invalid in file paths on all OSes (POSIX and Windows),
+// so this key can never collide with a real file collected from the VM.
+// The server ignores keys (`output.into_values()`), but a collision in
+// the BTreeMap would silently drop one entry.
+const METRIC_OUTPUT_KEY: &str = "\0bencher";
+
 /// Check whether the sandbox configuration is allowed by the runner.
 ///
 /// Returns `Ok(())` if the job may proceed, or `Err` with a human-readable
@@ -272,7 +278,7 @@ fn build_metric_output(
     let results = JsonNewMetric::results(metric_results);
     let bmf_json = serde_json::to_string(&results).unwrap_or_default();
     let mut output = BTreeMap::new();
-    output.insert(Utf8PathBuf::from("bencher"), bmf_json);
+    output.insert(Utf8PathBuf::from(METRIC_OUTPUT_KEY), bmf_json);
     Some(output)
 }
 
