@@ -179,6 +179,7 @@ pub fn insert_test_job_with_timeout(
     let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
+        "image": "project/bench:latest",
         "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
         "timeout": timeout_secs
     });
@@ -228,6 +229,7 @@ pub fn insert_test_job_full(
     let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
+        "image": "project/bench:latest",
         "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
         "timeout": 3600
     });
@@ -276,6 +278,7 @@ pub fn insert_test_job_with_optional_fields(
     let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
+        "image": "project/bench:latest",
         "digest": "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
         "entrypoint": ["/bin/sh", "-c"],
         "cmd": ["cargo", "bench"],
@@ -412,6 +415,7 @@ pub fn insert_test_job_with_timestamp(
     let config = serde_json::json!({
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
+        "image": "project/bench:latest",
         "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
         "timeout": 3600
     });

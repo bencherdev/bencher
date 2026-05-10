@@ -119,6 +119,8 @@ export type Timeout = number;
  * disk, network) are in the associated spec.
  */
 export interface JsonJobConfig {
+	/** OCI image reference (e.g., `registry.bencher.dev/project/bench:latest`) */
+	image: string;
 	/** Registry URL for pulling the OCI image (e.g., `https://registry.bencher.dev`) */
 	registry: Url;
 	/** Project UUID for OCI authentication scoping */

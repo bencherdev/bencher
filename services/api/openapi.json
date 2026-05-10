@@ -12390,6 +12390,14 @@
               }
             ]
           },
+          "image": {
+            "description": "OCI image reference (e.g., `registry.bencher.dev/project/bench:latest`)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageReference"
+              }
+            ]
+          },
           "iter": {
             "nullable": true,
             "description": "Number of benchmark iterations for the runner to execute",
@@ -12426,6 +12434,7 @@
         },
         "required": [
           "digest",
+          "image",
           "project",
           "registry",
           "timeout"

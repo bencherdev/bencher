@@ -269,6 +269,7 @@ fn validate_collection_sizes(
 struct JsonUncheckedJobConfig {
     pub registry: Url,
     pub project: ProjectUuid,
+    pub image: ImageReference,
     pub digest: ImageDigest,
     pub entrypoint: Option<Vec<String>>,
     pub cmd: Option<Vec<String>>,
@@ -291,6 +292,7 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
         let JsonUncheckedJobConfig {
             registry,
             project,
+            image,
             digest,
             entrypoint,
             cmd,
@@ -314,6 +316,7 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
         Ok(JsonJobConfig {
             registry,
             project,
+            image,
             digest,
             entrypoint,
             cmd,
@@ -348,6 +351,8 @@ pub struct JsonJobConfig {
     pub registry: Url,
     /// Project UUID for OCI authentication scoping
     pub project: ProjectUuid,
+    /// OCI image reference (e.g., `project/bench:latest`)
+    pub image: ImageReference,
     /// Image digest - must be immutable (e.g., "sha256:abc123...")
     pub digest: ImageDigest,
     /// Entrypoint override (like Docker ENTRYPOINT)
@@ -547,7 +552,7 @@ mod tests {
             .map(|i| (format!("KEY{i}"), format!("val{i}")))
             .collect();
         format!(
-            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","digest":"sha256:{digest}","entrypoint":{entrypoint},"cmd":{cmd},"env":{env},"timeout":300,"file_paths":{file_paths}}}"#,
+            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","image":"project/bench:latest","digest":"sha256:{digest}","entrypoint":{entrypoint},"cmd":{cmd},"env":{env},"timeout":300,"file_paths":{file_paths}}}"#,
             digest = "a".repeat(64),
             entrypoint = serde_json::to_string(&entrypoint).unwrap(),
             cmd = serde_json::to_string(&cmd).unwrap(),
@@ -625,7 +630,7 @@ mod tests {
     #[test]
     fn job_config_build_time_round_trip() {
         let json = format!(
-            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","digest":"sha256:{digest}","timeout":300,"build_time":true}}"#,
+            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","image":"project/bench:latest","digest":"sha256:{digest}","timeout":300,"build_time":true}}"#,
             digest = "a".repeat(64),
         );
         let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
@@ -641,7 +646,7 @@ mod tests {
     #[test]
     fn job_config_file_size_round_trip() {
         let json = format!(
-            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","digest":"sha256:{digest}","timeout":300,"file_size":true}}"#,
+            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","image":"project/bench:latest","digest":"sha256:{digest}","timeout":300,"file_size":true}}"#,
             digest = "a".repeat(64),
         );
         let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
@@ -655,7 +660,7 @@ mod tests {
     #[test]
     fn job_config_backwards_compat_no_build_time_or_file_size() {
         let json = format!(
-            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","digest":"sha256:{digest}","timeout":300}}"#,
+            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","image":"project/bench:latest","digest":"sha256:{digest}","timeout":300}}"#,
             digest = "a".repeat(64),
         );
         let config: JsonJobConfig = serde_json::from_str(&json).unwrap();

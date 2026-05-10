@@ -1628,6 +1628,7 @@ mod tests {
             config: serde_json::from_value(serde_json::json!({
                 "registry": "https://registry.example.com",
                 "project": "00000000-0000-0000-0000-000000000000",
+                "image": "project/bench:latest",
                 "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
                 "timeout": 300
             }))

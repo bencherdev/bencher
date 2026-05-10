@@ -90,26 +90,33 @@ pub fn execute_job(
 
     let build_time = job_config.build_time;
     let file_size = job_config.file_size;
-    let benchmark_name: Option<bencher_json::BenchmarkName> = if build_time {
-        let name: String = job_config
-            .entrypoint
-            .iter()
-            .flatten()
-            .chain(job_config.cmd.iter().flatten())
-            .cloned()
-            .collect::<Vec<_>>()
-            .join(" ");
-        match name.parse() {
-            Ok(parsed) => Some(parsed),
-            Err(e) => {
-                return JobFinishResult::Failed {
-                    error: format!("Invalid benchmark name for build time: {e}"),
-                    results: Vec::new(),
-                };
-            },
-        }
-    } else {
-        None
+    let benchmark_name = build_time
+        .then(|| {
+            let name: String = job_config
+                .entrypoint
+                .iter()
+                .flatten()
+                .chain(job_config.cmd.iter().flatten())
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(" ");
+            if name.is_empty() {
+                job.config.image.to_string()
+            } else {
+                name
+            }
+            .parse::<bencher_json::BenchmarkName>()
+        })
+        .transpose()
+        .map_err(|e| format!("Invalid benchmark name for build time: {e}"));
+    let benchmark_name = match benchmark_name {
+        Ok(name) => name,
+        Err(error) => {
+            return JobFinishResult::Failed {
+                error,
+                results: Vec::new(),
+            };
+        },
     };
 
     for iteration in 0..iter_count {
@@ -483,6 +490,7 @@ mod tests {
             "config": {
                 "registry": "https://registry.bencher.dev",
                 "project": "11111111-2222-3333-4444-555555555555",
+                "image": "project/bench:latest",
                 "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
                 "entrypoint": entrypoint,
                 "cmd": cmd,
@@ -593,6 +601,7 @@ mod tests {
             "config": {
                 "registry": "http://localhost:61016",
                 "project": "11111111-2222-3333-4444-555555555555",
+                "image": "project/bench:latest",
                 "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
                 "timeout": 300,
             },
@@ -816,6 +825,7 @@ mod tests {
             "config": {
                 "registry": "https://registry.bencher.dev",
                 "project": "11111111-2222-3333-4444-555555555555",
+                "image": "project/bench:latest",
                 "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
                 "timeout": 300,
                 "build_time": true,
@@ -845,6 +855,7 @@ mod tests {
             "config": {
                 "registry": "https://registry.bencher.dev",
                 "project": "11111111-2222-3333-4444-555555555555",
+                "image": "project/bench:latest",
                 "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
                 "timeout": 300,
                 "file_size": true,
