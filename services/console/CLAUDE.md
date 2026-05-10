@@ -20,6 +20,7 @@ please alert the developer working with you and indicate that this is the case b
 - Types are generated from Rust via typeshare - do not manually edit `src/types/bencher.ts`
 - Use Astro slots and component props for dynamic content. Do not use `set:html` with string interpolation. Astro's native templating keeps content type-safe and eliminates XSS risk.
 - When there are significant page-specific styles, extract them to a dedicated partial (e.g., `_pricing.scss`) in `src/styles/` and `@use` it from `styles.scss`.
+- Do NOT use emdashes (`—`) in UI copy
 
 
 ## Building & Running

@@ -1,18 +1,18 @@
+import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
 import IconTitle from "../../components/site/IconTitle";
-import { getUserRaw, isSameUser } from "../../util/auth";
-import type { Params } from "../../util/url";
+import { isAllowedProjectManage } from "../../util/auth";
 import { validNonZeroU32, validResourceName } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation } from "../types";
 import { addPath, createdUuidPath, parentPath, viewUuidPath } from "../util";
 
-export const TOKEN_ICON = "fas fa-stroopwafel";
+export const KEY_ICON = "fas fa-key";
 
-const TOKEN_FIELDS = {
+const KEY_FIELDS = {
 	name: {
 		type: "text",
-		placeholder: "Token Name",
-		icon: TOKEN_ICON,
+		placeholder: "Key Name",
+		icon: KEY_ICON,
 		help: "Must be a non-empty string",
 		validate: validResourceName,
 	},
@@ -25,46 +25,39 @@ const TOKEN_FIELDS = {
 	},
 };
 
-const tokensConfig = {
+const keysConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: <IconTitle icon={TOKEN_ICON} title="API Tokens" />,
-			name: "API Tokens",
+			title: <IconTitle icon={KEY_ICON} title="Project Keys" />,
+			name: "Project Keys",
 			buttons: [
 				{ kind: Button.SEARCH },
 				{
 					kind: Button.ADD,
-					title: "API Token",
+					title: "Project Key",
 					path: addPath,
-					is_allowed: async (_apiUrl: string, params: Params) => {
-						const user = getUserRaw();
-						return (
-							user.user.uuid === params?.user ||
-							user.user.slug === params?.user ||
-							user.user.admin
-						);
-					},
+					is_allowed: isAllowedProjectManage,
 				},
 				{ kind: Button.REVOKED },
 				{ kind: Button.REFRESH },
 			],
 		},
 		table: {
-			url: (params: Params) => `/v0/users/${params?.user}/tokens`,
+			url: (params: Params) => `/v0/projects/${params?.project}/keys`,
 			add: {
 				prefix: (
 					<div>
-						<h4>🐰 Create your first API token!</h4>
+						<h4>🐰 Create your first project key!</h4>
 						<p>
-							It's easy to create an API token.
+							It's easy to create a project key.
 							<br />
 							Tap below to get started.
 						</p>
 					</div>
 				),
 				path: addPath,
-				text: "Add an API Token",
+				text: "Add a Project Key",
 			},
 			row: {
 				key: "name",
@@ -74,18 +67,18 @@ const tokensConfig = {
 					path: viewUuidPath,
 				},
 			},
-			name: "tokens",
+			name: "keys",
 		},
 	},
 	[Operation.ADD]: {
 		operation: Operation.ADD,
 		header: {
-			title: "Add API Token",
+			title: "Add Project Key",
 			path: parentPath,
-			path_to: "API Tokens",
+			path_to: "Project Keys",
 		},
 		form: {
-			url: (params: Params) => `/v0/users/${params?.user}/tokens`,
+			url: (params: Params) => `/v0/projects/${params?.project}/keys`,
 			fields: [
 				{
 					kind: FieldKind.INPUT,
@@ -94,7 +87,7 @@ const tokensConfig = {
 					value: "",
 					valid: null,
 					validate: true,
-					config: TOKEN_FIELDS.name,
+					config: KEY_FIELDS.name,
 				},
 				{
 					kind: FieldKind.NUMBER,
@@ -104,7 +97,7 @@ const tokensConfig = {
 					valid: true,
 					validate: true,
 					nullable: true,
-					config: TOKEN_FIELDS.ttl,
+					config: KEY_FIELDS.ttl,
 				},
 			],
 			path: createdUuidPath,
@@ -115,25 +108,25 @@ const tokensConfig = {
 		header: {
 			key: "name",
 			path: parentPath,
-			path_to: "API Tokens",
+			path_to: "Project Keys",
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (params: Params) =>
-				`/v0/users/${params?.user}/tokens/${params?.token}`,
+				`/v0/projects/${params?.project}/keys/${params?.key}`,
 			top_buttons: [
 				{
 					kind: ActionButton.REVOKED,
-					subtitle: "API Token",
+					subtitle: "Project Key",
 				},
 			],
 			cards: [
 				{
 					kind: Card.FIELD,
-					label: "API Token Name",
+					label: "Project Key Name",
 					key: "name",
 					display: Display.RAW,
-					is_allowed: (_params: Params) => true,
+					is_allowed: isAllowedProjectManage,
 					field: {
 						kind: FieldKind.INPUT,
 						label: "Name",
@@ -141,40 +134,30 @@ const tokensConfig = {
 						value: "",
 						valid: null,
 						validate: true,
-						config: TOKEN_FIELDS.name,
+						config: KEY_FIELDS.name,
 					},
 				},
 				{
 					kind: Card.FIELD,
-					label: "API Token UUID",
+					label: "Project Key UUID",
 					key: "uuid",
 					display: Display.RAW,
 				},
 				{
 					kind: Card.FIELD,
-					label: (
-						<>
-							API Token (<code>BENCHER_API_TOKEN</code>)
-						</>
-					),
-					key: "token",
-					display: Display.RAW,
-				},
-				{
-					kind: Card.FIELD,
-					label: "API Token Creation",
+					label: "Project Key Creation",
 					key: "creation",
 					display: Display.RAW,
 				},
 				{
 					kind: Card.FIELD,
-					label: "API Token Expiration",
+					label: "Project Key Expiration",
 					key: "expiration",
 					display: Display.RAW,
 				},
 				{
 					kind: Card.FIELD,
-					label: "API Token Revocation",
+					label: "Project Key Revocation",
 					key: "revoked",
 					display: Display.RAW,
 				},
@@ -182,14 +165,14 @@ const tokensConfig = {
 			buttons: [
 				{
 					kind: ActionButton.REVOKE,
-					subtitle: "API Token",
+					subtitle: "Project Key",
 					path: (params: Params) =>
-						`/v0/users/${params?.user}/tokens/${params?.token}`,
-					is_allowed: isSameUser,
+						`/v0/projects/${params?.project}/keys/${params?.key}`,
+					is_allowed: isAllowedProjectManage,
 				},
 			],
 		},
 	},
 };
 
-export default tokensConfig;
+export default keysConfig;

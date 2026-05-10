@@ -10,6 +10,7 @@ enum Section {
 	MEASURES = "measures",
 	THRESHOLDS = "thresholds",
 	ALERTS = "alerts",
+	KEYS = "keys",
 	SETTINGS = "settings",
 }
 
@@ -82,6 +83,9 @@ const ProjectMenuInner = (props: {
 							</div>
 						</nav>
 					</a>
+				</li>
+				<li>
+					<a href={path(Section.KEYS)}>Keys</a>
 				</li>
 				<li>
 					<a href={path(Section.SETTINGS)}>Settings</a>
