@@ -4,7 +4,7 @@ mod inner;
 
 use inner::RateLimiterInner;
 
-use crate::context::RateLimitingError;
+use crate::context::{RateLimitingError, rate_limiting::snapshot::RateLimiterSnapshot};
 
 const MINUTE: Duration = Duration::from_secs(60);
 const HOUR: Duration = Duration::from_secs(60 * 60);
@@ -61,6 +61,21 @@ where
         );
 
         Self { minute, hour, day }
+    }
+
+    pub fn snapshot(&self) -> RateLimiterSnapshot<K> {
+        RateLimiterSnapshot {
+            minute: self.minute.snapshot(),
+            hour: self.hour.snapshot(),
+            day: self.day.snapshot(),
+        }
+    }
+
+    pub fn restore(&self, snapshot: RateLimiterSnapshot<K>) {
+        let RateLimiterSnapshot { minute, hour, day } = snapshot;
+        self.minute.restore(minute);
+        self.hour.restore(hour);
+        self.day.restore(day);
     }
 
     pub fn check(&self, key: K) -> Result<(), dropshot::HttpError> {

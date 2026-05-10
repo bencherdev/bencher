@@ -174,7 +174,7 @@ pub async fn oci_blob_get(
     let project_uuid = project.uuid;
 
     // Check bandwidth limit before transfer
-    let org_id = check_oci_bandwidth(context, &project).await?;
+    let org_uuid = check_oci_bandwidth(context, &project).await?;
 
     // Parse digest
     let digest: Digest = crate::error::parse_digest(&path.reference)?;
@@ -189,7 +189,7 @@ pub async fn oci_blob_get(
         .map_err(storage_error)?;
 
     // Record bandwidth usage
-    record_oci_bandwidth(context, org_id, size);
+    record_oci_bandwidth(context, org_uuid, size);
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -311,7 +311,7 @@ pub async fn oci_upload_start(
     let storage = context.oci_storage();
 
     // Check bandwidth limit before any potential data transfer (mount)
-    let org_id = check_oci_bandwidth(context, &push_access.project).await?;
+    let org_uuid = check_oci_bandwidth(context, &push_access.project).await?;
 
     // Handle cross-repository mount if requested
     if let (Some(digest_str), Some(from_name)) = (&query.digest, &query.from) {
@@ -333,7 +333,7 @@ pub async fn oci_upload_start(
             {
                 // Record bandwidth for the mounted blob
                 if let Ok(size) = storage.get_blob_size(&project_uuid, &digest).await {
-                    record_oci_bandwidth(context, org_id, size);
+                    record_oci_bandwidth(context, org_uuid, size);
                 }
 
                 // Mount successful - return 201 Created
@@ -429,7 +429,7 @@ pub async fn oci_upload_monolithic(
     let project_uuid = push_access.project.uuid;
 
     // Check bandwidth limit before transfer
-    let org_id = check_oci_bandwidth(context, &push_access.project).await?;
+    let org_uuid = check_oci_bandwidth(context, &push_access.project).await?;
 
     // Get storage
     let storage = context.oci_storage();
@@ -466,7 +466,7 @@ pub async fn oci_upload_monolithic(
     };
 
     // Record bandwidth usage
-    record_oci_bandwidth(context, org_id, final_size);
+    record_oci_bandwidth(context, org_uuid, final_size);
 
     // Record metric
     #[cfg(feature = "otel")]

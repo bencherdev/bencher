@@ -4,7 +4,9 @@ use bencher_json::system::config::JsonPublicRateLimiter;
 
 use crate::context::{
     RateLimitingError,
-    rate_limiting::{RateLimiter, RateLimits, extract_rate_limits},
+    rate_limiting::{
+        RateLimiter, RateLimits, extract_rate_limits, snapshot::PublicRateLimiterSnapshot,
+    },
 };
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 10;
@@ -151,6 +153,25 @@ impl PublicRateLimiter {
         };
 
         Self::new(requests, attempts, runs)
+    }
+
+    pub fn snapshot(&self) -> PublicRateLimiterSnapshot {
+        PublicRateLimiterSnapshot {
+            requests: self.requests.snapshot(),
+            attempts: self.attempts.snapshot(),
+            runs: self.runs.snapshot(),
+        }
+    }
+
+    pub fn restore(&self, snapshot: PublicRateLimiterSnapshot) {
+        let PublicRateLimiterSnapshot {
+            requests,
+            attempts,
+            runs,
+        } = snapshot;
+        self.requests.restore(requests);
+        self.attempts.restore(attempts);
+        self.runs.restore(runs);
     }
 
     pub fn check_request(&self, ip: IpAddr) -> Result<(), dropshot::HttpError> {

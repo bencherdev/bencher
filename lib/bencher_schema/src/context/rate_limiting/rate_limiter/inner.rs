@@ -1,5 +1,5 @@
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     hash::Hash,
     time::{Duration, SystemTime},
 };
@@ -7,7 +7,11 @@ use std::{
 use dashmap::DashMap;
 use dropshot::HttpError;
 
-use crate::{context::RateLimitingError, error::too_many_requests};
+use crate::context::{
+    RateLimitingError,
+    rate_limiting::snapshot::{EpochSecs, RateLimiterInnerSnapshot},
+};
+use crate::error::too_many_requests;
 
 // Set the default capacity to `1` to minimize the overhead of traffic from disparate sources by default.
 // If an IP is being abusive, we will have to reallocate quite a few times before they hit their limit.
@@ -40,6 +44,43 @@ where
             #[cfg(feature = "otel")]
             api_counter_max,
             error,
+        }
+    }
+
+    pub fn snapshot(&self) -> RateLimiterInnerSnapshot<K>
+    where
+        K: Clone,
+    {
+        let now = SystemTime::now();
+        let cutoff = now - self.window;
+        let mut events = HashMap::new();
+        for entry in &self.event_map {
+            let timestamps: Vec<EpochSecs> = entry
+                .value()
+                .iter()
+                .filter(|&&t| t >= cutoff)
+                .filter_map(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs())
+                .collect();
+            if !timestamps.is_empty() {
+                events.insert(entry.key().clone(), timestamps);
+            }
+        }
+        RateLimiterInnerSnapshot { events }
+    }
+
+    pub fn restore(&self, snapshot: RateLimiterInnerSnapshot<K>) {
+        let now = SystemTime::now();
+        let cutoff = now - self.window;
+        for (key, timestamps) in snapshot.events {
+            let times: VecDeque<SystemTime> = timestamps
+                .into_iter()
+                .filter_map(|secs| SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(secs)))
+                .filter(|&t| t >= cutoff)
+                .collect();
+            if !times.is_empty() {
+                self.event_map.insert(key, times);
+            }
         }
     }
 

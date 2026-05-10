@@ -9,6 +9,8 @@ use bencher_config::{Config, ConfigTx};
 use bencher_json::BENCHER_API_VERSION;
 #[cfg(feature = "plus")]
 use bencher_json::system::config::JsonLitestream;
+use bencher_schema::context::ApiContext;
+use dropshot::HttpServer;
 use futures_concurrency::future::Race as _;
 use futures_util::FutureExt as _;
 #[cfg(feature = "sentry")]
@@ -18,6 +20,7 @@ use slog::{Logger, error, info};
 use tokio::process::Command;
 #[cfg(feature = "plus")]
 use tokio::sync;
+#[cfg(feature = "plus")]
 use tokio::task::JoinHandle;
 use tokio_rustls::rustls::crypto::{CryptoProvider, ring};
 
@@ -39,8 +42,6 @@ pub enum ApiError {
     CtrlC(std::io::Error),
     #[error("Shutting down server: {0}")]
     RunServer(String),
-    #[error("Failed to join handle: {0}")]
-    JoinHandle(tokio::task::JoinError),
 }
 
 #[tokio::main]
@@ -104,7 +105,8 @@ async fn run(
         // Wait for Litestream to start replicating
         replicate_rx.await.map_err(LitestreamError::ReplicateRecv)?;
 
-        let api_handle = run_api_server(config);
+        let server = create_api_server(config).await?;
+        let shutdown_wait = server.wait_for_shutdown();
         let result = (
             tokio::signal::ctrl_c().map(|r| r.map_err(ApiError::CtrlC)),
             async {
@@ -113,21 +115,34 @@ async fn run(
                     .map_err(LitestreamError::JoinHandle)?
                     .map_err(Into::into)
             },
-            async { api_handle.await.map_err(ApiError::JoinHandle)? },
+            shutdown_wait.map(|r| r.map_err(ApiError::RunServer)),
         )
             .race()
             .await;
 
+        save_rate_limiting(log, &server);
+        if let Err(e) = server.close().await {
+            error!(log, "Server close error: {e}");
+        }
+
         return result;
     }
 
-    let api_handle = run_api_server(config);
-    (
+    let server = create_api_server(config).await?;
+    let shutdown_wait = server.wait_for_shutdown();
+    let result = (
         tokio::signal::ctrl_c().map(|r| r.map_err(ApiError::CtrlC)),
-        async { api_handle.await.map_err(ApiError::JoinHandle)? },
+        shutdown_wait.map(|r| r.map_err(ApiError::RunServer)),
     )
         .race()
-        .await
+        .await;
+
+    save_rate_limiting(log, &server);
+    if let Err(e) = server.close().await {
+        error!(log, "Server close error: {e}");
+    }
+
+    result
 }
 
 #[cfg(all(feature = "plus", feature = "sentry"))]
@@ -234,17 +249,27 @@ fn run_litestream(
     }))
 }
 
-fn run_api_server(config: Config) -> JoinHandle<Result<(), ApiError>> {
+async fn create_api_server(config: Config) -> Result<HttpServer<ApiContext>, ApiError> {
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ServerStartup);
 
     let config_tx = ConfigTx { config };
-    tokio::spawn(async move {
-        config_tx
-            .into_server::<Api>()
-            .await
-            .map_err(ApiError::ConfigTxError)?
-            .await
-            .map_err(ApiError::RunServer)
-    })
+    config_tx
+        .into_server::<Api>()
+        .await
+        .map_err(ApiError::ConfigTxError)
+}
+
+fn save_rate_limiting(log: &Logger, server: &HttpServer<ApiContext>) {
+    #[cfg(feature = "plus")]
+    {
+        let ctx = server.app_private();
+        if let Err(e) = ctx.rate_limiting.save(&ctx.database.path, log) {
+            error!(log, "Failed to save rate limiting state: {e}");
+        }
+    }
+    #[cfg(not(feature = "plus"))]
+    {
+        let _ = (log, server);
+    }
 }

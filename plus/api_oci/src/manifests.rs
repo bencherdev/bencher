@@ -161,7 +161,7 @@ pub async fn oci_manifest_get(
     let project_uuid = project.uuid;
 
     // Check bandwidth limit before transfer
-    let org_id = check_oci_bandwidth(context, &project).await?;
+    let org_uuid = check_oci_bandwidth(context, &project).await?;
 
     // Parse reference (pull operation: unparseable → 404 MANIFEST_UNKNOWN)
     let reference = parse_reference_for_pull(&path.reference)?;
@@ -179,7 +179,7 @@ pub async fn oci_manifest_get(
         .map_err(storage_error)?;
 
     // Record bandwidth usage
-    record_oci_bandwidth(context, org_id, manifest.len() as u64);
+    record_oci_bandwidth(context, org_uuid, manifest.len() as u64);
 
     // Record metric
     #[cfg(feature = "otel")]
@@ -231,7 +231,7 @@ pub async fn oci_manifest_put(
     let project_uuid = push_access.project.uuid;
 
     // Check bandwidth limit before transfer
-    let org_id = check_oci_bandwidth(context, &push_access.project).await?;
+    let org_uuid = check_oci_bandwidth(context, &push_access.project).await?;
 
     // Parse reference
     let reference = parse_reference(&path.reference)?;
@@ -303,7 +303,7 @@ pub async fn oci_manifest_put(
         .map_err(storage_error)?;
 
     // Record bandwidth usage
-    record_oci_bandwidth(context, org_id, body_bytes.len() as u64);
+    record_oci_bandwidth(context, org_uuid, body_bytes.len() as u64);
 
     // Record metric
     #[cfg(feature = "otel")]

@@ -2,7 +2,9 @@ use bencher_json::{UserUuid, system::config::JsonUserRateLimiter};
 
 use crate::context::{
     RateLimitingError,
-    rate_limiting::{RateLimiter, RateLimits, extract_rate_limits},
+    rate_limiting::{
+        RateLimiter, RateLimits, extract_rate_limits, snapshot::UserRateLimiterSnapshot,
+    },
 };
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 11;
@@ -285,6 +287,34 @@ impl UserRateLimiter {
             invites,
             runs,
         )
+    }
+
+    pub fn snapshot(&self) -> UserRateLimiterSnapshot {
+        UserRateLimiterSnapshot {
+            requests: self.requests.snapshot(),
+            attempts: self.attempts.snapshot(),
+            credentials: self.credentials.snapshot(),
+            organizations: self.organizations.snapshot(),
+            invites: self.invites.snapshot(),
+            runs: self.runs.snapshot(),
+        }
+    }
+
+    pub fn restore(&self, snapshot: UserRateLimiterSnapshot) {
+        let UserRateLimiterSnapshot {
+            requests,
+            attempts,
+            credentials,
+            organizations,
+            invites,
+            runs,
+        } = snapshot;
+        self.requests.restore(requests);
+        self.attempts.restore(attempts);
+        self.credentials.restore(credentials);
+        self.organizations.restore(organizations);
+        self.invites.restore(invites);
+        self.runs.restore(runs);
     }
 
     pub fn check_request(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {

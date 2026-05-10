@@ -11,12 +11,12 @@ use bencher_json::oci::{
     OCI_ERROR_DENIED, OCI_ERROR_NAME_UNKNOWN, OCI_ERROR_UNAUTHORIZED, OCI_ERROR_UNSUPPORTED,
     oci_error_body,
 };
-use bencher_json::{Jwt, ProjectResourceId, ResourceName};
+use bencher_json::{Jwt, OrganizationUuid, ProjectResourceId, ResourceName};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::{ApiContext, RateLimiting},
     model::{
-        organization::{OrganizationId, QueryOrganization},
+        organization::QueryOrganization,
         project::QueryProject,
         user::{QueryUser, auth::AuthUser, public::PublicUser},
     },
@@ -688,21 +688,21 @@ async fn build_public_user(
 
 /// Check bandwidth limit for a project's organization. Call BEFORE data transfer.
 ///
-/// Returns the organization ID for use in `record_oci_bandwidth` without a second DB lookup.
+/// Returns the organization UUID for use in `record_oci_bandwidth` without a second DB lookup.
 pub(crate) async fn check_oci_bandwidth(
     context: &ApiContext,
     project: &QueryProject,
-) -> Result<OrganizationId, HttpError> {
+) -> Result<OrganizationUuid, HttpError> {
     let conn = public_conn!(context);
     let organization = project.organization(conn)?;
     let priority = organization.oci_bandwidth_priority(conn, &context.licensor)?;
     context
         .rate_limiting
-        .check_oci_bandwidth(organization.id, priority, &organization)?;
-    Ok(organization.id)
+        .check_oci_bandwidth(organization.uuid, priority, &organization)?;
+    Ok(organization.uuid)
 }
 
 /// Record bytes transferred. Call AFTER successful data transfer.
-pub(crate) fn record_oci_bandwidth(context: &ApiContext, org_id: OrganizationId, bytes: u64) {
-    context.rate_limiting.record_oci_bandwidth(org_id, bytes);
+pub(crate) fn record_oci_bandwidth(context: &ApiContext, org_uuid: OrganizationUuid, bytes: u64) {
+    context.rate_limiting.record_oci_bandwidth(org_uuid, bytes);
 }
