@@ -79,6 +79,14 @@ pub struct Config {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub env: Option<HashMap<String, String>>,
 
+    /// Track the build time of the benchmark command.
+    #[serde(default)]
+    pub build_time: bool,
+
+    /// Track the file size of the output files instead of parsing their contents.
+    #[serde(default)]
+    pub file_size: bool,
+
     /// Maximum size in bytes for collected stdout/stderr.
     ///
     /// This limit is enforced on both sides: the guest-side init process
@@ -218,6 +226,8 @@ impl Config {
             entrypoint: None,
             cmd: None,
             env: None,
+            build_time: false,
+            file_size: false,
             max_output_size: default_max_output_size(),
             max_file_count: default_max_file_count(),
             max_content_size: default_max_content_size(),
@@ -316,6 +326,20 @@ impl Config {
     #[must_use]
     pub fn with_network(mut self, network: bool) -> Self {
         self.network = network;
+        self
+    }
+
+    /// Enable or disable build time tracking.
+    #[must_use]
+    pub fn with_build_time(mut self, build_time: bool) -> Self {
+        self.build_time = build_time;
+        self
+    }
+
+    /// Enable or disable file size tracking.
+    #[must_use]
+    pub fn with_file_size(mut self, file_size: bool) -> Self {
+        self.file_size = file_size;
         self
     }
 

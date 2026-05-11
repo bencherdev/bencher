@@ -1,13 +1,21 @@
+use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use bencher_json::JsonClaimedJob;
 use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
+use camino::Utf8PathBuf;
 
 use super::UpConfig;
 use super::state_machine::JobFinishResult;
 use super::websocket::JobChannel;
+
+// NUL bytes are invalid in file paths on all OSes (POSIX and Windows),
+// so this key can never collide with a real file collected from the VM.
+// The server ignores keys (`output.into_values()`), but a collision in
+// the BTreeMap would silently drop one entry.
+const METRIC_OUTPUT_KEY: &str = "\0bencher";
 
 /// Check whether the sandbox configuration is allowed by the runner.
 ///
@@ -55,23 +63,7 @@ pub fn execute_job(
 
     let cancel_flag = Arc::new(AtomicBool::new(false));
     let stop_flag = Arc::new(AtomicBool::new(false));
-
-    // Spawn heartbeat thread, pinned to housekeeping cores
-    let ws_heartbeat = Arc::clone(ws);
-    let cancel_heartbeat = Arc::clone(&cancel_flag);
-    let stop_heartbeat = Arc::clone(&stop_flag);
-    let housekeeping_cores = config
-        .cpu_layout
-        .as_ref()
-        .map(|l| l.housekeeping.clone())
-        .unwrap_or_default();
-    let heartbeat = std::thread::spawn(move || {
-        // Pin this thread to housekeeping cores to avoid interfering with benchmarks
-        if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
-            eprintln!("Warning: failed to pin heartbeat thread to housekeeping cores: {e}");
-        }
-        heartbeat_loop(&ws_heartbeat, &cancel_heartbeat, &stop_heartbeat);
-    });
+    let heartbeat = spawn_heartbeat_thread(config, ws, &cancel_flag, &stop_flag);
 
     // Execute benchmark iterations — pass cancel_flag so the vsock poll loop
     // can abort early when the server sends a cancellation message.
@@ -80,43 +72,59 @@ pub fn execute_job(
     let mut last_stdout_preview = None;
     let mut failed_error = None;
 
+    let build_time = job_config.build_time;
+    let file_size = job_config.file_size;
+    let benchmark_name = if build_time {
+        match build_benchmark_name(job) {
+            Ok(name) => Some(name),
+            Err(e) => {
+                eprintln!("Warning: failed to derive benchmark name for build time: {e}");
+                None
+            },
+        }
+    } else {
+        None
+    };
+
     for iteration in 0..iter_count {
-        // Check cancel before each iteration for responsive cancellation
         if cancel_flag.load(Ordering::SeqCst) {
             break;
         }
-
         println!(
             "Starting iteration {}/{iter_count} for job {}",
             iteration + 1,
             job.uuid
         );
+        let start = build_time.then(std::time::Instant::now);
         let result = crate::execute(&job_config, Some(&cancel_flag));
-
+        let elapsed = start.map(|s| s.elapsed());
         match result {
             Ok(output) => {
                 last_exit_code = output.exit_code;
                 if !output.stdout.is_empty() {
                     last_stdout_preview = Some(output.stdout.clone());
                 }
-                if output.exit_code != 0 && !allow_failure {
-                    // Non-zero exit code fails the job (matches CLI behavior)
-                    results.push(output_to_iteration(output));
+                let failed = output.exit_code != 0 && !allow_failure;
+                results.push(output_to_iteration(
+                    output,
+                    elapsed,
+                    file_size,
+                    benchmark_name.as_ref(),
+                ));
+                if failed {
                     failed_error = Some(format!(
                         "Benchmark exited with non-zero exit code: {last_exit_code}"
                     ));
                     break;
                 }
-                results.push(output_to_iteration(output));
+            },
+            Err(e) if allow_failure => {
+                eprintln!(
+                    "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
+                    iteration + 1
+                );
             },
             Err(e) => {
-                if allow_failure {
-                    eprintln!(
-                        "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
-                        iteration + 1
-                    );
-                    continue;
-                }
                 failed_error = Some(e.to_string());
                 break;
             },
@@ -148,14 +156,39 @@ pub fn execute_job(
     }
 }
 
-/// Convert a [`RunOutput`](crate::RunOutput) into a [`JsonIterationOutput`].
-fn output_to_iteration(output: crate::RunOutput) -> JsonIterationOutput {
-    let file_output = output.output_files.map(|files| {
-        files
-            .into_iter()
-            .map(|(path, bytes)| (path, String::from_utf8_lossy(&bytes).into_owned()))
-            .collect::<std::collections::BTreeMap<_, _>>()
-    });
+/// Derive the benchmark name for build-time tracking from the job config.
+///
+/// Precedence: entrypoint+cmd joined string (matches CLI behavior),
+/// then image reference, then project@digest as last resort.
+fn build_benchmark_name(
+    job: &JsonClaimedJob,
+) -> Result<bencher_json::BenchmarkName, bencher_json::ValidError> {
+    let name: String = job
+        .config
+        .entrypoint
+        .iter()
+        .flatten()
+        .chain(job.config.cmd.iter().flatten())
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(" ");
+    if !name.is_empty() {
+        return name.parse();
+    }
+    if let Some(image) = &job.config.image {
+        return image.to_string().parse();
+    }
+    format!("{}@{}", job.config.project, job.config.digest).parse()
+}
+
+fn output_to_iteration(
+    output: crate::RunOutput,
+    build_time: Option<Duration>,
+    file_size: bool,
+    benchmark_name: Option<&bencher_json::BenchmarkName>,
+) -> JsonIterationOutput {
+    let file_output =
+        build_metric_output(build_time, file_size, output.output_files, benchmark_name);
     JsonIterationOutput {
         exit_code: output.exit_code,
         stdout: if output.stdout.is_empty() {
@@ -170,6 +203,89 @@ fn output_to_iteration(output: crate::RunOutput) -> JsonIterationOutput {
         },
         output: file_output,
     }
+}
+
+#[expect(clippy::print_stderr)]
+fn build_metric_output(
+    build_time: Option<Duration>,
+    file_size: bool,
+    output_files: Option<HashMap<Utf8PathBuf, Vec<u8>>>,
+    benchmark_name: Option<&bencher_json::BenchmarkName>,
+) -> Option<BTreeMap<Utf8PathBuf, String>> {
+    use bencher_json::{
+        JsonNewMetric,
+        project::measure::built_in::{self, BuiltInMeasure as _},
+        project::metric::MetricResults,
+    };
+
+    let has_metrics = build_time.is_some() || file_size;
+    if !has_metrics {
+        return output_files.map(|files| {
+            files
+                .into_iter()
+                .map(|(path, bytes)| (path, String::from_utf8_lossy(&bytes).into_owned()))
+                .collect()
+        });
+    }
+
+    let mut metric_results: MetricResults = Vec::new();
+
+    if let Some(duration) = build_time
+        && let Some(name) = benchmark_name
+    {
+        let seconds = (duration.as_secs_f64() * 100.0).round() / 100.0;
+        metric_results.push((
+            name.clone(),
+            vec![(
+                built_in::json::BuildTime::name_id(),
+                JsonNewMetric {
+                    value: seconds.into(),
+                    ..Default::default()
+                },
+            )],
+        ));
+    }
+
+    if file_size && let Some(files) = &output_files {
+        for (path, bytes) in files {
+            let file_name = path.file_name().unwrap_or(path.as_str());
+            match file_name.parse() {
+                Ok(name) => {
+                    #[expect(clippy::cast_precision_loss)]
+                    let size = bytes.len() as f64;
+                    metric_results.push((
+                        name,
+                        vec![(
+                            built_in::json::FileSize::name_id(),
+                            JsonNewMetric {
+                                value: size.into(),
+                                ..Default::default()
+                            },
+                        )],
+                    ));
+                },
+                Err(e) => {
+                    eprintln!("Warning: skipping file size metric for {path}: {e}");
+                },
+            }
+        }
+    }
+
+    if metric_results.is_empty() {
+        return None;
+    }
+
+    let results = JsonNewMetric::results(metric_results);
+    let bmf_json = match serde_json::to_string(&results) {
+        Ok(json) => json,
+        Err(e) => {
+            eprintln!("Warning: failed to serialize build metrics: {e}");
+            return None;
+        },
+    };
+    let mut output = BTreeMap::new();
+    output.insert(Utf8PathBuf::from(METRIC_OUTPUT_KEY), bmf_json);
+    Some(output)
 }
 
 /// Build a runner Config from the claimed job and up config.
@@ -212,6 +328,8 @@ fn build_config_from_job(
         .with_disk(spec.disk)
         .with_timeout_secs(u64::from(u32::from(config.timeout)))
         .with_network(spec.network)
+        .with_build_time(config.build_time.unwrap_or_default())
+        .with_file_size(config.file_size.unwrap_or_default())
         .with_entrypoint_opt(config.entrypoint.clone())
         .with_cmd_opt(config.cmd.clone())
         .with_env_opt(config.env.clone());
@@ -253,6 +371,29 @@ fn build_config_from_job(
     runner_config = runner_config.with_sandbox(spec.sandbox);
 
     Ok(runner_config)
+}
+
+#[expect(clippy::print_stderr)]
+fn spawn_heartbeat_thread(
+    config: &UpConfig,
+    ws: &Arc<Mutex<JobChannel>>,
+    cancel_flag: &Arc<AtomicBool>,
+    stop_flag: &Arc<AtomicBool>,
+) -> std::thread::JoinHandle<()> {
+    let ws_heartbeat = Arc::clone(ws);
+    let cancel_heartbeat = Arc::clone(cancel_flag);
+    let stop_heartbeat = Arc::clone(stop_flag);
+    let housekeeping_cores = config
+        .cpu_layout
+        .as_ref()
+        .map(|l| l.housekeeping.clone())
+        .unwrap_or_default();
+    std::thread::spawn(move || {
+        if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
+            eprintln!("Warning: failed to pin heartbeat thread to housekeeping cores: {e}");
+        }
+        heartbeat_loop(&ws_heartbeat, &cancel_heartbeat, &stop_heartbeat);
+    })
 }
 
 #[expect(clippy::print_stderr, clippy::use_debug)]
@@ -334,7 +475,7 @@ mod tests {
         network: bool,
         entrypoint: Option<Vec<String>>,
         cmd: Option<Vec<String>>,
-        env: Option<std::collections::HashMap<String, String>>,
+        env: Option<HashMap<String, String>>,
         file_paths: Option<Vec<String>>,
     ) -> JsonClaimedJob {
         let json = serde_json::json!({
@@ -530,7 +671,7 @@ mod tests {
     #[test]
     fn env_vars() {
         let up_config = test_up_config();
-        let mut env = std::collections::HashMap::new();
+        let mut env = HashMap::new();
         env.insert("RUST_LOG".to_owned(), "debug".to_owned());
         env.insert("CI".to_owned(), "true".to_owned());
 
@@ -599,7 +740,7 @@ mod tests {
     #[test]
     fn all_options() {
         let up_config = test_up_config();
-        let mut env = std::collections::HashMap::new();
+        let mut env = HashMap::new();
         env.insert("KEY".to_owned(), "value".to_owned());
 
         let job = test_job_with_options(
@@ -668,5 +809,263 @@ mod tests {
     #[test]
     fn sandbox_none_allowed_with_flag() {
         assert!(check_sandbox_allowed(None, true).is_ok());
+    }
+
+    // --- build_config_from_job: build_time / file_size ---
+
+    #[test]
+    fn build_time_passed_through() {
+        let up_config = test_up_config();
+        let json = serde_json::json!({
+            "uuid": "550e8400-e29b-41d4-a716-446655440000",
+            "spec": {
+                "uuid": "00000000-0000-0000-0000-000000000001",
+                "name": "test-spec", "slug": "test-spec",
+                "os": "linux", "architecture": "x86_64",
+                "cpu": 1, "memory": mib_to_bytes(512), "disk": mib_to_bytes(1024),
+                "network": false,
+                "created": "2025-01-01T00:00:00Z", "modified": "2025-01-01T00:00:00Z"
+            },
+            "config": {
+                "registry": "https://registry.bencher.dev",
+                "project": "11111111-2222-3333-4444-555555555555",
+                "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+                "timeout": 300,
+                "build_time": true,
+            },
+            "oci_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
+            "timeout": 300,
+            "created": "2025-01-01T00:00:00Z"
+        });
+        let job: JsonClaimedJob = serde_json::from_value(json).unwrap();
+        let result = build_config_from_job(&up_config, &job).unwrap();
+        assert!(result.build_time);
+    }
+
+    #[test]
+    fn file_size_passed_through() {
+        let up_config = test_up_config();
+        let json = serde_json::json!({
+            "uuid": "550e8400-e29b-41d4-a716-446655440000",
+            "spec": {
+                "uuid": "00000000-0000-0000-0000-000000000001",
+                "name": "test-spec", "slug": "test-spec",
+                "os": "linux", "architecture": "x86_64",
+                "cpu": 1, "memory": mib_to_bytes(512), "disk": mib_to_bytes(1024),
+                "network": false,
+                "created": "2025-01-01T00:00:00Z", "modified": "2025-01-01T00:00:00Z"
+            },
+            "config": {
+                "registry": "https://registry.bencher.dev",
+                "project": "11111111-2222-3333-4444-555555555555",
+                "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+                "timeout": 300,
+                "file_size": true,
+            },
+            "oci_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
+            "timeout": 300,
+            "created": "2025-01-01T00:00:00Z"
+        });
+        let job: JsonClaimedJob = serde_json::from_value(json).unwrap();
+        let result = build_config_from_job(&up_config, &job).unwrap();
+        assert!(result.file_size);
+    }
+
+    #[test]
+    fn build_time_default_false() {
+        let up_config = test_up_config();
+        let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
+        let result = build_config_from_job(&up_config, &job).unwrap();
+        assert!(!result.build_time);
+    }
+
+    #[test]
+    fn file_size_default_false() {
+        let up_config = test_up_config();
+        let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
+        let result = build_config_from_job(&up_config, &job).unwrap();
+        assert!(!result.file_size);
+    }
+
+    // --- output_to_iteration ---
+
+    fn default_benchmark_name() -> bencher_json::BenchmarkName {
+        "benchmark".parse().unwrap()
+    }
+
+    fn test_output(stdout: &str, output_files: Option<Vec<(&str, &[u8])>>) -> crate::RunOutput {
+        crate::RunOutput {
+            exit_code: 0,
+            stdout: stdout.to_owned(),
+            stderr: "some stderr".to_owned(),
+            output_files: output_files.map(|files| {
+                files
+                    .into_iter()
+                    .map(|(k, v)| (Utf8PathBuf::from(k), v.to_vec()))
+                    .collect()
+            }),
+        }
+    }
+
+    #[test]
+    fn output_no_metrics_no_files() {
+        let output = test_output("hello stdout", None);
+        let result = output_to_iteration(output, None, false, None);
+        assert_eq!(result.exit_code, 0);
+        assert_eq!(result.stdout.as_deref(), Some("hello stdout"));
+        assert_eq!(result.stderr.as_deref(), Some("some stderr"));
+        assert!(result.output.is_none());
+    }
+
+    #[test]
+    fn output_no_metrics_with_files() {
+        let output = test_output("hello", Some(vec![("/tmp/out.json", b"{\"data\":1}")]));
+        let result = output_to_iteration(output, None, false, None);
+        assert_eq!(result.stdout.as_deref(), Some("hello"));
+        let files = result.output.unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(
+            files
+                .get(Utf8PathBuf::from("/tmp/out.json").as_path())
+                .unwrap(),
+            "{\"data\":1}"
+        );
+    }
+
+    #[test]
+    fn output_build_time_only_no_files() {
+        let name = default_benchmark_name();
+        let duration = Duration::from_millis(3140);
+        let output = test_output("hello", None);
+        let result = output_to_iteration(output, Some(duration), false, Some(&name));
+        assert_eq!(result.stdout.as_deref(), Some("hello"));
+        let files = result.output.unwrap();
+        assert_eq!(files.len(), 1);
+        let bmf_json = files.values().next().unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
+        let benchmark = parsed.get("benchmark").unwrap();
+        let build_time = benchmark.get("build-time").unwrap();
+        let value = build_time.get("value").unwrap().as_f64().unwrap();
+        #[expect(clippy::approx_constant)]
+        let expected = 3.14;
+        assert!((value - expected).abs() < 0.01);
+    }
+
+    #[test]
+    fn output_build_time_replaces_file_contents() {
+        let name = default_benchmark_name();
+        let duration = Duration::from_secs(1);
+        let output = test_output("hello", Some(vec![("/tmp/out.json", b"file data")]));
+        let result = output_to_iteration(output, Some(duration), false, Some(&name));
+        assert_eq!(result.stdout.as_deref(), Some("hello"));
+        let files = result.output.unwrap();
+        assert!(files.values().any(|v| v.contains("build-time")));
+        assert!(!files.values().any(|v| v.contains("file data")));
+    }
+
+    #[test]
+    fn output_file_size_with_files() {
+        let output = test_output("hello", Some(vec![("/tmp/out.bin", &[0u8; 1024])]));
+        let result = output_to_iteration(output, None, true, None);
+        assert_eq!(result.stdout.as_deref(), Some("hello"));
+        let files = result.output.unwrap();
+        let bmf_json = files.values().next().unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
+        let file_entry = parsed.get("out.bin").unwrap();
+        let file_size = file_entry.get("file-size").unwrap();
+        let value = file_size.get("value").unwrap().as_f64().unwrap();
+        assert!((value - 1024.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn output_file_size_no_files() {
+        let output = test_output("hello", None);
+        let result = output_to_iteration(output, None, true, None);
+        assert_eq!(result.stdout.as_deref(), Some("hello"));
+        assert!(result.output.is_none());
+    }
+
+    #[test]
+    fn output_build_time_and_file_size() {
+        let name: bencher_json::BenchmarkName = "-c cargo bench".parse().unwrap();
+        let duration = Duration::from_millis(2500);
+        let output = test_output("hello", Some(vec![("/tmp/result.bin", &[0u8; 512])]));
+        let result = output_to_iteration(output, Some(duration), true, Some(&name));
+        assert_eq!(result.stdout.as_deref(), Some("hello"));
+        let files = result.output.unwrap();
+        let bmf_json = files.values().next().unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
+        assert!(
+            parsed
+                .get("-c cargo bench")
+                .unwrap()
+                .get("build-time")
+                .is_some()
+        );
+        assert!(parsed.get("result.bin").unwrap().get("file-size").is_some());
+    }
+
+    #[test]
+    fn output_build_time_and_file_size_no_files() {
+        let name = default_benchmark_name();
+        let duration = Duration::from_secs(5);
+        let output = test_output("hello", None);
+        let result = output_to_iteration(output, Some(duration), true, Some(&name));
+        assert_eq!(result.stdout.as_deref(), Some("hello"));
+        let files = result.output.unwrap();
+        let bmf_json = files.values().next().unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
+        assert!(parsed.get("benchmark").unwrap().get("build-time").is_some());
+    }
+
+    #[test]
+    fn output_preserves_exit_code() {
+        let name = default_benchmark_name();
+        let mut output = test_output("hello", None);
+        output.exit_code = 42;
+        let result = output_to_iteration(output, Some(Duration::from_secs(1)), true, Some(&name));
+        assert_eq!(result.exit_code, 42);
+    }
+
+    #[test]
+    fn output_preserves_stderr() {
+        let name = default_benchmark_name();
+        let output = test_output("hello", None);
+        let result = output_to_iteration(output, Some(Duration::from_secs(1)), false, Some(&name));
+        assert_eq!(result.stderr.as_deref(), Some("some stderr"));
+    }
+
+    #[test]
+    fn output_build_time_uses_command_name() {
+        let name: bencher_json::BenchmarkName = "/bin/sh -c cargo build".parse().unwrap();
+        let duration = Duration::from_millis(1500);
+        let output = test_output("hello", None);
+        let result = output_to_iteration(output, Some(duration), false, Some(&name));
+        let files = result.output.unwrap();
+        let bmf_json = files.values().next().unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
+        assert!(parsed.get("/bin/sh -c cargo build").is_some());
+        assert!(parsed.get("benchmark").is_none());
+    }
+
+    #[test]
+    fn output_build_time_entrypoint_and_cmd_combined() {
+        let name: bencher_json::BenchmarkName = "/bin/sh -c cargo bench".parse().unwrap();
+        let duration = Duration::from_millis(1500);
+        let output = test_output("hello", None);
+        let result = output_to_iteration(output, Some(duration), false, Some(&name));
+        let files = result.output.unwrap();
+        let bmf_json = files.values().next().unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
+        assert!(parsed.get("/bin/sh -c cargo bench").is_some());
+    }
+
+    #[test]
+    fn output_no_build_time_no_benchmark_name() {
+        let duration = Duration::from_millis(1500);
+        let output = test_output("hello", None);
+        let result = output_to_iteration(output, Some(duration), false, None);
+        // build_time duration is set but no benchmark_name → no build-time metric
+        assert!(result.output.is_none());
     }
 }

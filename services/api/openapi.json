@@ -12331,6 +12331,11 @@
               }
             ]
           },
+          "build_time": {
+            "nullable": true,
+            "description": "Track the build time of the benchmark command",
+            "type": "boolean"
+          },
           "cmd": {
             "nullable": true,
             "description": "Command override (like Docker CMD)",
@@ -12371,12 +12376,26 @@
               "type": "string"
             }
           },
+          "file_size": {
+            "nullable": true,
+            "description": "Track the file size of the output files instead of parsing their contents",
+            "type": "boolean"
+          },
           "fold": {
             "nullable": true,
             "description": "Fold operation for combining multiple iteration results",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonFold"
+              }
+            ]
+          },
+          "image": {
+            "nullable": true,
+            "description": "OCI image reference (e.g., `project/bench:latest`)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageReference"
               }
             ]
           },

@@ -270,11 +270,14 @@ struct JsonUncheckedJobConfig {
     pub registry: Url,
     pub project: ProjectUuid,
     pub digest: ImageDigest,
+    pub image: Option<ImageReference>,
     pub entrypoint: Option<Vec<String>>,
     pub cmd: Option<Vec<String>>,
     pub env: Option<HashMap<String, String>>,
     pub timeout: Timeout,
     pub file_paths: Option<Vec<Utf8PathBuf>>,
+    pub build_time: Option<bool>,
+    pub file_size: Option<bool>,
     pub average: Option<JsonAverage>,
     pub iter: Option<Iteration>,
     pub fold: Option<JsonFold>,
@@ -290,11 +293,14 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
             registry,
             project,
             digest,
+            image,
             entrypoint,
             cmd,
             env,
             timeout,
             file_paths,
+            build_time,
+            file_size,
             average,
             iter,
             fold,
@@ -311,11 +317,14 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
             registry,
             project,
             digest,
+            image,
             entrypoint,
             cmd,
             env,
             timeout,
             file_paths,
+            build_time,
+            file_size,
             average,
             iter,
             fold,
@@ -344,6 +353,9 @@ pub struct JsonJobConfig {
     pub project: ProjectUuid,
     /// Image digest - must be immutable (e.g., "sha256:abc123...")
     pub digest: ImageDigest,
+    /// OCI image reference (e.g., `project/bench:latest`)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<ImageReference>,
     /// Entrypoint override (like Docker ENTRYPOINT)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub entrypoint: Option<Vec<String>>,
@@ -359,6 +371,12 @@ pub struct JsonJobConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "schema", schemars(with = "Option<Vec<String>>"))]
     pub file_paths: Option<Vec<Utf8PathBuf>>,
+    /// Track the build time of the benchmark command
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub build_time: Option<bool>,
+    /// Track the file size of the output files instead of parsing their contents
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_size: Option<bool>,
     /// Benchmark harness suggested central tendency
     #[serde(skip_serializing_if = "Option::is_none")]
     pub average: Option<JsonAverage>,
@@ -606,6 +624,49 @@ mod tests {
         let json = job_config_json(0, 0, 0, MAX_ENV_LEN);
         let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(config.env.as_ref().unwrap().len(), MAX_ENV_LEN);
+    }
+
+    // --- JsonJobConfig build_time / file_size ---
+
+    #[test]
+    fn job_config_build_time_round_trip() {
+        let json = format!(
+            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","digest":"sha256:{digest}","timeout":300,"build_time":true}}"#,
+            digest = "a".repeat(64),
+        );
+        let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.build_time, Some(true));
+        assert_eq!(config.file_size, None);
+
+        let serialized = serde_json::to_string(&config).unwrap();
+        let re_parsed: JsonJobConfig = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(re_parsed.build_time, Some(true));
+        assert_eq!(re_parsed.file_size, None);
+    }
+
+    #[test]
+    fn job_config_file_size_round_trip() {
+        let json = format!(
+            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","digest":"sha256:{digest}","timeout":300,"file_size":true}}"#,
+            digest = "a".repeat(64),
+        );
+        let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.file_size, Some(true));
+
+        let serialized = serde_json::to_string(&config).unwrap();
+        let re_parsed: JsonJobConfig = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(re_parsed.file_size, Some(true));
+    }
+
+    #[test]
+    fn job_config_backwards_compat_no_build_time_or_file_size() {
+        let json = format!(
+            r#"{{"registry":"https://registry.bencher.dev","project":"00000000-0000-0000-0000-000000000000","digest":"sha256:{digest}","timeout":300}}"#,
+            digest = "a".repeat(64),
+        );
+        let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.build_time, None);
+        assert_eq!(config.file_size, None);
     }
 
     // --- JsonNewRunJob validation tests ---
