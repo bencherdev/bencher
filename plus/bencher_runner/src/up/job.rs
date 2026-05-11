@@ -77,11 +77,9 @@ pub fn execute_job(
     let benchmark_name = if build_time {
         match build_benchmark_name(job) {
             Ok(name) => Some(name),
-            Err(error) => {
-                return JobFinishResult::Failed {
-                    error,
-                    results: Vec::new(),
-                };
+            Err(e) => {
+                eprintln!("Warning: failed to derive benchmark name for build time: {e}");
+                None
             },
         }
     } else {
@@ -162,7 +160,9 @@ pub fn execute_job(
 ///
 /// Precedence: entrypoint+cmd joined string (matches CLI behavior),
 /// then image reference, then project@digest as last resort.
-fn build_benchmark_name(job: &JsonClaimedJob) -> Result<bencher_json::BenchmarkName, String> {
+fn build_benchmark_name(
+    job: &JsonClaimedJob,
+) -> Result<bencher_json::BenchmarkName, bencher_json::ValidError> {
     let name: String = job
         .config
         .entrypoint
@@ -173,19 +173,12 @@ fn build_benchmark_name(job: &JsonClaimedJob) -> Result<bencher_json::BenchmarkN
         .collect::<Vec<_>>()
         .join(" ");
     if !name.is_empty() {
-        return name
-            .parse()
-            .map_err(|e| format!("Invalid benchmark name for build time: {e}"));
+        return name.parse();
     }
     if let Some(image) = &job.config.image {
-        return image
-            .to_string()
-            .parse()
-            .map_err(|e| format!("Invalid benchmark name for build time: {e}"));
+        return image.to_string().parse();
     }
-    format!("{}@{}", job.config.project, job.config.digest)
-        .parse()
-        .map_err(|e| format!("Invalid benchmark name for build time: {e}"))
+    format!("{}@{}", job.config.project, job.config.digest).parse()
 }
 
 fn output_to_iteration(
@@ -212,6 +205,7 @@ fn output_to_iteration(
     }
 }
 
+#[expect(clippy::print_stderr)]
 fn build_metric_output(
     build_time: Option<Duration>,
     file_size: bool,
@@ -254,19 +248,25 @@ fn build_metric_output(
 
     if file_size && let Some(files) = &output_files {
         for (path, bytes) in files {
-            if let Ok(name) = path.file_name().unwrap_or(path.as_str()).parse() {
-                #[expect(clippy::cast_precision_loss)]
-                let size = bytes.len() as f64;
-                metric_results.push((
-                    name,
-                    vec![(
-                        built_in::json::FileSize::name_id(),
-                        JsonNewMetric {
-                            value: size.into(),
-                            ..Default::default()
-                        },
-                    )],
-                ));
+            let file_name = path.file_name().unwrap_or(path.as_str());
+            match file_name.parse() {
+                Ok(name) => {
+                    #[expect(clippy::cast_precision_loss)]
+                    let size = bytes.len() as f64;
+                    metric_results.push((
+                        name,
+                        vec![(
+                            built_in::json::FileSize::name_id(),
+                            JsonNewMetric {
+                                value: size.into(),
+                                ..Default::default()
+                            },
+                        )],
+                    ));
+                },
+                Err(e) => {
+                    eprintln!("Warning: skipping file size metric for {path}: {e}");
+                },
             }
         }
     }
@@ -276,7 +276,13 @@ fn build_metric_output(
     }
 
     let results = JsonNewMetric::results(metric_results);
-    let bmf_json = serde_json::to_string(&results).unwrap_or_default();
+    let bmf_json = match serde_json::to_string(&results) {
+        Ok(json) => json,
+        Err(e) => {
+            eprintln!("Warning: failed to serialize build metrics: {e}");
+            return None;
+        },
+    };
     let mut output = BTreeMap::new();
     output.insert(Utf8PathBuf::from(METRIC_OUTPUT_KEY), bmf_json);
     Some(output)
@@ -469,7 +475,7 @@ mod tests {
         network: bool,
         entrypoint: Option<Vec<String>>,
         cmd: Option<Vec<String>>,
-        env: Option<std::collections::HashMap<String, String>>,
+        env: Option<HashMap<String, String>>,
         file_paths: Option<Vec<String>>,
     ) -> JsonClaimedJob {
         let json = serde_json::json!({
@@ -665,7 +671,7 @@ mod tests {
     #[test]
     fn env_vars() {
         let up_config = test_up_config();
-        let mut env = std::collections::HashMap::new();
+        let mut env = HashMap::new();
         env.insert("RUST_LOG".to_owned(), "debug".to_owned());
         env.insert("CI".to_owned(), "true".to_owned());
 
@@ -734,7 +740,7 @@ mod tests {
     #[test]
     fn all_options() {
         let up_config = test_up_config();
-        let mut env = std::collections::HashMap::new();
+        let mut env = HashMap::new();
         env.insert("KEY".to_owned(), "value".to_owned());
 
         let job = test_job_with_options(
@@ -940,7 +946,9 @@ mod tests {
         let benchmark = parsed.get("benchmark").unwrap();
         let build_time = benchmark.get("build-time").unwrap();
         let value = build_time.get("value").unwrap().as_f64().unwrap();
-        assert!((value - 3.14).abs() < 0.01);
+        #[expect(clippy::approx_constant)]
+        let expected = 3.14;
+        assert!((value - expected).abs() < 0.01);
     }
 
     #[test]
