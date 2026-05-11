@@ -100,10 +100,10 @@ async fn run(
         .as_ref()
         .and_then(|plus| plus.litestream.clone())
     {
-        let (replicate_tx, replicate_rx) = sync::oneshot::channel();
-        let litestream_handle = run_litestream(log, &config, litestream, replicate_tx)?;
-        // Wait for Litestream to start replicating
-        replicate_rx.await.map_err(LitestreamError::ReplicateRecv)?;
+        let (restore_tx, restore_rx) = sync::oneshot::channel();
+        let litestream_handle = run_litestream(log, &config, litestream, restore_tx)?;
+        // Wait for Litestream restore to complete (replicate starts in background)
+        restore_rx.await.map_err(LitestreamError::RestoreRecv)?;
 
         let server = create_api_server(config).await?;
         let shutdown_wait = server.wait_for_shutdown();
@@ -119,6 +119,10 @@ async fn run(
         )
             .race()
             .await;
+
+        info!(log, "Draining database write lock");
+        let guard = server.app_private().database.connection.lock().await;
+        drop(guard);
 
         save_rate_limiting(log, &server);
         if let Err(e) = server.close().await {
@@ -136,6 +140,10 @@ async fn run(
     )
         .race()
         .await;
+
+    info!(log, "Draining database write lock");
+    let guard = server.app_private().database.connection.lock().await;
+    drop(guard);
 
     save_rate_limiting(log, &server);
     if let Err(e) = server.close().await {
@@ -179,10 +187,10 @@ pub enum LitestreamError {
     Restore(std::io::Error),
     #[error("Failed to run `litestream replicate`: {0}")]
     Replicate(std::io::Error),
-    #[error("Failed to send replication start message")]
-    ReplicateSend(()),
-    #[error("Failed to receive replication start message")]
-    ReplicateRecv(sync::oneshot::error::RecvError),
+    #[error("Failed to send restore completion message")]
+    RestoreSend(()),
+    #[error("Failed to receive restore completion message")]
+    RestoreRecv(sync::oneshot::error::RecvError),
     #[error("Failed to replicate: {0}")]
     ReplicateExit(std::process::ExitStatus),
     #[error("Failed to join Litestream handle: {0}")]
@@ -194,7 +202,7 @@ fn run_litestream(
     log: &Logger,
     config: &Config,
     litestream: JsonLitestream,
-    replicate_tx: sync::oneshot::Sender<()>,
+    restore_tx: sync::oneshot::Sender<()>,
 ) -> Result<JoinHandle<Result<(), LitestreamError>>, LitestreamError> {
     // Get the absolute database path from the config
     let db_path = if config.database.file.is_absolute() {
@@ -230,6 +238,9 @@ fn run_litestream(
             .map_err(LitestreamError::Restore)?;
         slog::info!(litestream_logger, "Litestream restore: {restore:?}");
 
+        // Signal the server that restore is complete (DB file exists)
+        restore_tx.send(()).map_err(LitestreamError::RestoreSend)?;
+
         // https://litestream.io/reference/replicate/
         let mut replicate = Command::new("litestream")
             .arg("replicate")
@@ -238,10 +249,6 @@ fn run_litestream(
             .arg("-no-expand-env")
             .spawn()
             .map_err(LitestreamError::Replicate)?;
-        // Let the server know that Litestream is running
-        replicate_tx
-            .send(())
-            .map_err(LitestreamError::ReplicateSend)?;
         // Litestream should run indefinitely
         Err(LitestreamError::ReplicateExit(
             replicate.wait().await.map_err(LitestreamError::Replicate)?,

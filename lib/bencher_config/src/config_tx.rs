@@ -144,12 +144,6 @@ impl ConfigTx {
         });
         let config_dropshot = into_config_dropshot(server);
 
-        #[cfg(feature = "plus")]
-        spawn_job_recovery(log, &context).await;
-
-        #[cfg(feature = "plus")]
-        spawn_stats(log, &context).await?;
-
         let mut api_description = ApiDescription::new();
         debug!(log, "Registering server APIs");
         R::register(
@@ -160,7 +154,7 @@ impl ConfigTx {
         )
         .map_err(ConfigTxError::Register)?;
 
-        Ok(dropshot::HttpServerStarter::new_with_tls(
+        let server = dropshot::HttpServerStarter::new_with_tls(
             &config_dropshot,
             api_description,
             context,
@@ -168,7 +162,15 @@ impl ConfigTx {
             tls,
         )
         .map_err(ConfigTxError::CreateServer)?
-        .start())
+        .start();
+
+        #[cfg(feature = "plus")]
+        spawn_job_recovery(log, server.app_private()).await;
+
+        #[cfg(feature = "plus")]
+        spawn_stats(log, server.app_private()).await?;
+
+        Ok(server)
     }
 }
 
@@ -466,6 +468,7 @@ fn connection_pool(
 
     Pool::builder()
         .max_size(max_size)
+        .min_idle(Some(0))
         .connection_timeout(connection_timeout)
         .connection_customizer(Box::new(customizer))
         .build(connection_manager)
