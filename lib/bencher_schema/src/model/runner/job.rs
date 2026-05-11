@@ -66,6 +66,41 @@ impl QueryJob {
     fn_get_uuid!(job, JobId, JobUuid);
     fn_from_uuid!(job, JobUuid, Job);
 
+    #[cfg(feature = "plus")]
+    #[expect(
+        clippy::integer_division,
+        reason = "ceiling division: (secs + 59) / 60 converts seconds to minutes"
+    )]
+    pub fn runner_minutes_usage(
+        conn: &mut DbConnection,
+        organization_id: OrganizationId,
+        start_time: DateTime,
+        end_time: DateTime,
+    ) -> Result<u32, HttpError> {
+        let total_seconds: i64 = schema::job_duration_by_report::table
+            .inner_join(schema::report::table.inner_join(schema::project::table))
+            .filter(schema::project::organization_id.eq(organization_id))
+            .filter(schema::report::end_time.ge(start_time))
+            .filter(schema::report::end_time.le(end_time))
+            .select(diesel::dsl::sum(
+                schema::job_duration_by_report::job_duration,
+            ))
+            .get_result::<Option<i64>>(conn)
+            .map_err(resource_not_found_err!(
+                Job,
+                (organization_id, start_time, end_time)
+            ))?
+            .unwrap_or(0)
+            .max(0);
+        ((total_seconds + 59) / 60).try_into().map_err(|e| {
+            issue_error(
+                "Failed to count runner minutes usage",
+                &format!("Failed to count runner minutes usage for organization ({organization_id}) between {start_time} and {end_time}."),
+                e,
+            )
+        })
+    }
+
     /// Process benchmark results from a completed job into the report.
     ///
     /// Looks up the report and branch, parses benchmark output via the adapter,
@@ -600,6 +635,67 @@ mod tests {
             licensed_plan(PlanLevel::Enterprise).priority(true),
             Priority::Plus
         );
+    }
+
+    // --- runner_minutes_usage tests ---
+
+    #[test]
+    fn runner_minutes_no_jobs() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let result = QueryJob::runner_minutes_usage(
+            &mut conn,
+            base.organization_id,
+            DateTime::TEST,
+            DateTime::TEST,
+        )
+        .unwrap();
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn runner_minutes_exact_boundary() {
+        let mut conn = setup_test_db();
+        let report_id = create_report_for_job_duration_test(&mut conn);
+        let base_org_id: OrganizationId = schema::project::table
+            .select(schema::project::organization_id)
+            .first(&mut conn)
+            .unwrap();
+        insert_job_duration(&mut conn, report_id, 60).unwrap();
+        let result =
+            QueryJob::runner_minutes_usage(&mut conn, base_org_id, DateTime::TEST, DateTime::TEST)
+                .unwrap();
+        assert_eq!(result, 1);
+    }
+
+    #[test]
+    fn runner_minutes_partial_minute() {
+        let mut conn = setup_test_db();
+        let report_id = create_report_for_job_duration_test(&mut conn);
+        let base_org_id: OrganizationId = schema::project::table
+            .select(schema::project::organization_id)
+            .first(&mut conn)
+            .unwrap();
+        insert_job_duration(&mut conn, report_id, 61).unwrap();
+        let result =
+            QueryJob::runner_minutes_usage(&mut conn, base_org_id, DateTime::TEST, DateTime::TEST)
+                .unwrap();
+        assert_eq!(result, 2);
+    }
+
+    #[test]
+    fn runner_minutes_one_second() {
+        let mut conn = setup_test_db();
+        let report_id = create_report_for_job_duration_test(&mut conn);
+        let base_org_id: OrganizationId = schema::project::table
+            .select(schema::project::organization_id)
+            .first(&mut conn)
+            .unwrap();
+        insert_job_duration(&mut conn, report_id, 1).unwrap();
+        let result =
+            QueryJob::runner_minutes_usage(&mut conn, base_org_id, DateTime::TEST, DateTime::TEST)
+                .unwrap();
+        assert_eq!(result, 1);
     }
 
     // --- insert_job_duration tests ---

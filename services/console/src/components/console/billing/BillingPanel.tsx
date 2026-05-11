@@ -24,6 +24,7 @@ import {
 	fmtUsd,
 	planLevel,
 	planLevelPrice,
+	runnerMinutePrice,
 	suggestedMetrics,
 } from "../../../util/convert";
 import { httpGet, httpPatch } from "../../../util/http";
@@ -187,8 +188,19 @@ const manageSubscription = (
 const CloudMeteredPanel = (props: {
 	usage: Resource<null | JsonUsage>;
 }) => {
-	const price = createMemo(() => planLevelPrice(props.usage()?.plan?.level));
-	const estCost = createMemo(() => (props.usage()?.usage ?? 0) * price());
+	const metricPrice = createMemo(() =>
+		planLevelPrice(props.usage()?.plan?.level),
+	);
+	const estMetricsCost = createMemo(
+		() => (props.usage()?.metrics ?? 0) * metricPrice(),
+	);
+	const minutePrice = createMemo(() =>
+		runnerMinutePrice(props.usage()?.plan?.level),
+	);
+	const estRunnerCost = createMemo(
+		() => (props.usage()?.runner_minutes ?? 0) * minutePrice(),
+	);
+	const estTotalCost = createMemo(() => estMetricsCost() + estRunnerCost());
 
 	return (
 		<div class="content">
@@ -199,11 +211,20 @@ const CloudMeteredPanel = (props: {
 				{fmtDate(props.usage()?.start_time)} -{" "}
 				{fmtDate(props.usage()?.end_time)}
 			</h3>
-			<h4>Cost per Metric: {fmtUsd(price())}</h4>
+			<h4>Cost per Metric: {fmtUsd(metricPrice())}</h4>
 			<h4>
-				Estimated Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}
+				Estimated Metrics Used: {props.usage()?.metrics?.toLocaleString() ?? 0}
 			</h4>
-			<h4>Current Estimated Cost: {fmtUsd(estCost())}</h4>
+			<h4>Estimated Metrics Cost: {fmtUsd(estMetricsCost())}</h4>
+			<br />
+			<h4>Cost per Runner Minute: {fmtUsd(minutePrice())}</h4>
+			<h4>
+				Estimated Runner Minutes Used:{" "}
+				{props.usage()?.runner_minutes?.toLocaleString() ?? 0}
+			</h4>
+			<h4>Estimated Runner Cost: {fmtUsd(estRunnerCost())}</h4>
+			<br />
+			<h4>Current Estimated Total: {fmtUsd(estTotalCost())}</h4>
 			<br />
 			<PaymentMethod usage={props.usage} />
 			<br />
@@ -345,7 +366,11 @@ const SelfHostedFreePanel = (props: {
 					{fmtDate(props.usage()?.start_time)} -{" "}
 					{fmtDate(props.usage()?.end_time)}
 				</h3>
-				<h4>Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}</h4>
+				<h4>Metrics Used: {props.usage()?.metrics?.toLocaleString() ?? 0}</h4>
+				<h4>
+					Runner Minutes Used:{" "}
+					{props.usage()?.runner_minutes?.toLocaleString() ?? 0}
+				</h4>
 				<br />
 			</Show>
 			<h2 class="title is-2">How to get a Bencher Self-Hosted License Key</h2>
@@ -373,7 +398,7 @@ const SelfHostedFreePanel = (props: {
 					<li>Select "Self-Hosted License"</li>
 					<li>
 						Enter your desired number of metrics for the <i>year</i> (Suggested:{" "}
-						{suggestedMetrics(props.usage()?.usage).toLocaleString()})
+						{suggestedMetrics(props.usage()?.metrics).toLocaleString()})
 					</li>
 					<li>
 						Enter your "Self-Hosted Organization UUID":{" "}
@@ -459,12 +484,16 @@ const SelfHostedLicensedPanel = (props: {
 				Entitlements:{" "}
 				{props.usage()?.license?.entitlements?.toLocaleString() ?? 0}
 			</h4>
-			<h4>Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}</h4>
+			<h4>Metrics Used: {props.usage()?.metrics?.toLocaleString() ?? 0}</h4>
+			<h4>
+				Runner Minutes Used:{" "}
+				{props.usage()?.runner_minutes?.toLocaleString() ?? 0}
+			</h4>
 			<h4>
 				Metrics Remaining:{" "}
 				{(
 					(props.usage()?.license?.entitlements ?? 0) -
-					(props.usage()?.usage ?? 0)
+					(props.usage()?.metrics ?? 0)
 				).toLocaleString()}
 			</h4>
 			<br />

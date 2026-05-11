@@ -1136,7 +1136,9 @@ export interface JsonUsage {
 	/** The end time of the usage. */
 	end_time: string;
 	/** The metrics usage amount. */
-	usage?: number;
+	metrics?: number;
+	/** The runner minutes usage amount. */
+	runner_minutes?: number;
 }
 
 export enum OrganizationPermission {

@@ -137,8 +137,18 @@ export const planLevelPrice = (level: undefined | PlanLevel) => {
 	}
 };
 
-export const suggestedMetrics = (usage: undefined | number) =>
-	(Math.round((usage ?? 1) / 1_000) + 1) * 12_000;
+export const runnerMinutePrice = (level: undefined | PlanLevel) => {
+	switch (level) {
+		case PlanLevel.Team:
+		case PlanLevel.Enterprise:
+			return 0.01666;
+		default:
+			return 0.0;
+	}
+};
+
+export const suggestedMetrics = (metrics: undefined | number) =>
+	(Math.round((metrics ?? 1) / 1_000) + 1) * 12_000;
 
 export const fmtUsd = (usd: undefined | number) => {
 	const numberFmd = new Intl.NumberFormat("en-US", {
