@@ -7,7 +7,7 @@ use bencher_json::{
 use bencher_schema::{
     actor_conn,
     context::ApiContext,
-    error::resource_not_found_err,
+    error::{resource_not_found_err, with_auth_hint},
     model::{project::QueryProject, runner::QueryJob, user::actor::ApiActor},
     schema,
 };
@@ -80,7 +80,8 @@ pub async fn proj_jobs_get(
         query_params.into_inner(),
         &api_actor,
     )
-    .await?;
+    .await
+    .map_err(with_auth_hint)?;
     Ok(Get::response_ok_with_total_count(
         json,
         api_actor.is_auth(),
@@ -211,7 +212,8 @@ pub async fn proj_job_get(
         &api_actor,
         &rqctx.log,
     )
-    .await?;
+    .await
+    .map_err(with_auth_hint)?;
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 

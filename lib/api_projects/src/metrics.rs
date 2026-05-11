@@ -6,7 +6,7 @@ use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
     actor_conn,
     context::{ApiContext, DbConnection},
-    error::resource_not_found_err,
+    error::{resource_not_found_err, with_auth_hint},
     model::{
         project::{
             QueryProject,
@@ -77,7 +77,9 @@ pub async fn proj_metric_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &api_actor).await?;
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &api_actor)
+        .await
+        .map_err(with_auth_hint)?;
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 

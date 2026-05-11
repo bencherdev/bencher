@@ -11,7 +11,7 @@ use bencher_rbac::project::Permission;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{conflict_error, resource_conflict_err, resource_not_found_err},
+    error::{conflict_error, resource_conflict_err, resource_not_found_err, with_token_hint},
     model::{
         project::{
             ProjectId, QueryProject,
@@ -99,7 +99,8 @@ pub async fn proj_keys_get(
         query_params.into_inner(),
         &auth_user,
     )
-    .await?;
+    .await
+    .map_err(with_token_hint)?;
     Ok(Get::auth_response_ok_with_total_count(json, total_count))
 }
 
@@ -216,7 +217,8 @@ pub async fn proj_key_post(
         body.into_inner(),
         &auth_user,
     )
-    .await?;
+    .await
+    .map_err(with_token_hint)?;
     Ok(Post::auth_response_created(json))
 }
 
@@ -288,7 +290,9 @@ pub async fn proj_key_get(
     path_params: Path<ProjKeyParams>,
 ) -> Result<ResponseOk<JsonProjectKey>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(with_token_hint)?;
     Ok(Get::auth_response_ok(json))
 }
 
@@ -334,7 +338,8 @@ pub async fn proj_key_patch(
         body.into_inner(),
         &auth_user,
     )
-    .await?;
+    .await
+    .map_err(with_token_hint)?;
     Ok(Patch::auth_response_ok(json))
 }
 
@@ -390,7 +395,9 @@ pub async fn proj_key_delete(
     path_params: Path<ProjKeyParams>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(with_token_hint)?;
     Ok(Delete::auth_response_deleted())
 }
 

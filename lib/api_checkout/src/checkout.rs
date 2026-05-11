@@ -9,7 +9,7 @@ use bencher_rbac::organization::Permission;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{bad_request_error, forbidden_error, issue_error},
+    error::{bad_request_error, forbidden_error, issue_error, with_token_hint},
     model::{
         organization::QueryOrganization,
         user::auth::{AuthUser, BearerToken},
@@ -46,7 +46,8 @@ pub async fn checkouts_post(
             sentry::capture_error(&e);
             #[cfg(not(feature = "sentry"))]
             let _ = e;
-        })?;
+        })
+        .map_err(with_token_hint)?;
     Ok(Post::auth_response_created(json))
 }
 

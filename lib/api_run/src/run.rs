@@ -4,7 +4,7 @@ use bencher_rbac::project::Permission;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{bad_request_error, forbidden_error, unauthorized_error},
+    error::{bad_request_error, forbidden_error, unauthorized_error, with_auth_hint},
     model::{
         project::{
             QueryProject,
@@ -62,28 +62,26 @@ pub async fn run_post(
     .await?;
 
     let json = match api_actor {
-        ApiActor::ProjectKey(project_key_actor) => {
-            post_inner_project_key(
-                &rqctx.log,
-                rqctx.context(),
-                project_key_actor,
-                #[cfg(feature = "plus")]
-                rqctx.request.headers(),
-                body.into_inner(),
-            )
-            .await?
-        },
-        ApiActor::Public(public_user) => {
-            post_inner(
-                &rqctx.log,
-                rqctx.context(),
-                &public_user,
-                #[cfg(feature = "plus")]
-                rqctx.request.headers(),
-                body.into_inner(),
-            )
-            .await?
-        },
+        ApiActor::ProjectKey(project_key_actor) => post_inner_project_key(
+            &rqctx.log,
+            rqctx.context(),
+            project_key_actor,
+            #[cfg(feature = "plus")]
+            rqctx.request.headers(),
+            body.into_inner(),
+        )
+        .await
+        .map_err(with_auth_hint)?,
+        ApiActor::Public(public_user) => post_inner(
+            &rqctx.log,
+            rqctx.context(),
+            &public_user,
+            #[cfg(feature = "plus")]
+            rqctx.request.headers(),
+            body.into_inner(),
+        )
+        .await
+        .map_err(with_auth_hint)?,
     };
 
     Ok(Post::auth_response_created(json))

@@ -18,7 +18,7 @@ use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
     actor_conn,
     context::{ApiContext, DbConnection},
-    error::{bad_request_error, resource_not_found_err},
+    error::{bad_request_error, resource_not_found_err, with_auth_hint},
     model::{
         project::{
             QueryProject,
@@ -107,7 +107,8 @@ pub async fn proj_perf_get(
         json_perf_query,
         &api_actor,
     )
-    .await?;
+    .await
+    .map_err(with_auth_hint)?;
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 

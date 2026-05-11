@@ -6,7 +6,7 @@ use bencher_json::{
 use bencher_plot::LinePlot;
 use bencher_schema::{
     context::ApiContext,
-    error::{bad_request_error, issue_error},
+    error::{bad_request_error, issue_error, with_auth_hint},
     model::user::actor::{ApiActor, PubProjectBearerToken},
 };
 use dropshot::{Body, HttpError, Path, Query, RequestContext, endpoint};
@@ -71,7 +71,8 @@ pub async fn proj_perf_img_get(
         json_perf_query,
         &api_actor,
     )
-    .await?;
+    .await
+    .map_err(with_auth_hint)?;
 
     Response::builder()
         .status(http::StatusCode::OK)

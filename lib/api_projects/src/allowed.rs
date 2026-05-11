@@ -3,6 +3,7 @@ use bencher_json::{JsonAllowed, ProjectResourceId, project::ProjectPermission};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
+    error::with_token_hint,
     model::{
         project::{QueryProject, project_role::Permission},
         user::auth::{AuthUser, BearerToken},
@@ -43,7 +44,9 @@ pub async fn proj_allowed_get(
     path_params: Path<ProjAllowedParams>,
 ) -> Result<ResponseOk<JsonAllowed>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = get_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    let json = get_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(with_token_hint)?;
     Ok(Get::auth_response_ok(json))
 }
 
