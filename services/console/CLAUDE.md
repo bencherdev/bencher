@@ -112,3 +112,9 @@ Pagefind runs as a post-build step against `dist/` and writes a static index int
 
 The changelog lives at [`services/console/src/chunks/docs-reference/changelog/en/changelog.mdx`](./src/chunks/docs-reference/changelog/en/changelog.mdx).
 It is imported by the content pages in [`services/console/src/content/docs-reference/{lang}/changelog.mdx`](./src/content/docs-reference/{lang}/changelog.mdx).
+There is also a symlink at the repo root (`changelog.md`) that points to this file.
+
+When adding a changelog entry:
+1. If no `## Pending` section exists at the top, add one (e.g. `## Pending \`vX.Y.Z\``) above the latest released version.
+2. Append your entry to the **bottom** of the `Pending` section so entries stay in chronological order.
+3. Do not remove or reorder existing entries.

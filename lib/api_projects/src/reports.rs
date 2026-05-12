@@ -18,7 +18,10 @@ use bencher_schema::model::project::testbed::RunTestbed;
 use bencher_schema::{
     actor_conn, auth_conn,
     context::ApiContext,
-    error::{bad_request_error, resource_conflict_err, resource_not_found_err},
+    error::{
+        bad_request_error, resource_conflict_err, resource_not_found_err, with_auth_hint,
+        with_token_hint,
+    },
     model::{
         project::{
             QueryProject,
@@ -111,7 +114,8 @@ pub async fn proj_reports_get(
         json_report_query,
         &api_actor,
     )
-    .await?;
+    .await
+    .map_err(with_auth_hint)?;
     Ok(Get::response_ok_with_total_count(
         json,
         api_actor.is_auth(),
@@ -290,7 +294,8 @@ pub async fn proj_report_post(
         body.into_inner(),
         auth_user,
     )
-    .await?;
+    .await
+    .map_err(with_token_hint)?;
     Ok(Post::auth_response_created(json))
 }
 
@@ -385,7 +390,8 @@ pub async fn proj_report_get(
         path_params.into_inner(),
         &api_actor,
     )
-    .await?;
+    .await
+    .map_err(with_auth_hint)?;
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
@@ -433,7 +439,9 @@ pub async fn proj_report_delete(
     path_params: Path<ProjReportParams>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(with_token_hint)?;
     Ok(Delete::auth_response_deleted())
 }
 

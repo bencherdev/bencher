@@ -15,7 +15,7 @@ use bencher_schema::{
     context::ApiContext,
     error::{
         BencherResource, bad_request_error, resource_conflict_err, resource_not_found_err,
-        resource_not_found_error,
+        resource_not_found_error, with_auth_hint, with_token_hint,
     },
     model::{
         project::{
@@ -108,7 +108,8 @@ pub async fn proj_thresholds_get(
         json_threshold_query,
         &api_actor,
     )
-    .await?;
+    .await
+    .map_err(with_auth_hint)?;
     Ok(Get::response_ok_with_total_count(
         json,
         api_actor.is_auth(),
@@ -264,7 +265,8 @@ pub async fn proj_threshold_post(
         &body.into_inner(),
         &auth_user,
     )
-    .await?;
+    .await
+    .map_err(with_token_hint)?;
     Ok(Post::auth_response_created(json))
 }
 
@@ -379,7 +381,8 @@ pub async fn proj_threshold_get(
         query_params.into_inner(),
         &api_actor,
     )
-    .await?;
+    .await
+    .map_err(with_auth_hint)?;
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
@@ -450,7 +453,8 @@ pub async fn proj_threshold_put(
         body.into_inner(),
         &auth_user,
     )
-    .await?;
+    .await
+    .map_err(with_token_hint)?;
     Ok(Put::auth_response_ok(json))
 }
 
@@ -511,7 +515,9 @@ pub async fn proj_threshold_delete(
     path_params: Path<ProjThresholdParams>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(with_token_hint)?;
     Ok(Delete::auth_response_deleted())
 }
 

@@ -12,7 +12,10 @@ use bencher_schema::model::organization::plan::PlanKind;
 use bencher_schema::{
     actor_conn, auth_conn,
     context::ApiContext,
-    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
+    error::{
+        forbidden_error, resource_conflict_err, resource_not_found_err, with_auth_hint,
+        with_token_hint,
+    },
     model::{
         project::{QueryProject, UpdateProject},
         user::{
@@ -98,7 +101,8 @@ pub async fn projects_get(
         query_params.into_inner(),
         &api_actor,
     )
-    .await?;
+    .await
+    .map_err(with_auth_hint)?;
     Ok(Get::response_ok_with_total_count(
         json,
         api_actor.is_auth(),
@@ -245,7 +249,9 @@ pub async fn project_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &api_actor).await?;
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &api_actor)
+        .await
+        .map_err(with_auth_hint)?;
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
@@ -292,7 +298,8 @@ pub async fn project_patch(
         body.into_inner(),
         auth_user,
     )
-    .await?;
+    .await
+    .map_err(with_token_hint)?;
     Ok(Patch::auth_response_ok(json))
 }
 
@@ -378,7 +385,8 @@ pub async fn project_delete(
         query_params.into_inner(),
         &auth_user,
     )
-    .await?;
+    .await
+    .map_err(with_token_hint)?;
     Ok(Delete::auth_response_deleted())
 }
 

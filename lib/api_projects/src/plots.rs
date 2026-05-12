@@ -10,7 +10,7 @@ use bencher_rbac::project::Permission;
 use bencher_schema::{
     actor_conn, auth_conn,
     context::ApiContext,
-    error::{resource_conflict_err, resource_not_found_err},
+    error::{resource_conflict_err, resource_not_found_err, with_auth_hint, with_token_hint},
     model::{
         project::{
             QueryProject,
@@ -99,7 +99,8 @@ pub async fn proj_plots_get(
         pagination_params.into_inner(),
         query_params.into_inner(),
     )
-    .await?;
+    .await
+    .map_err(with_auth_hint)?;
     Ok(Get::response_ok_with_total_count(
         json,
         api_actor.is_auth(),
@@ -219,7 +220,8 @@ pub async fn proj_plot_post(
         body.into_inner(),
         &auth_user,
     )
-    .await?;
+    .await
+    .map_err(with_token_hint)?;
     Ok(Post::auth_response_created(json))
 }
 
@@ -291,7 +293,9 @@ pub async fn proj_plot_get(
         bearer_token,
     )
     .await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &api_actor).await?;
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &api_actor)
+        .await
+        .map_err(with_auth_hint)?;
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
@@ -338,7 +342,8 @@ pub async fn proj_plot_patch(
         body.into_inner(),
         &auth_user,
     )
-    .await?;
+    .await
+    .map_err(with_token_hint)?;
     Ok(Patch::auth_response_ok(json))
 }
 
@@ -390,7 +395,9 @@ pub async fn proj_plot_delete(
     path_params: Path<ProjPlotParams>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(with_token_hint)?;
     Ok(Delete::auth_response_deleted())
 }
 

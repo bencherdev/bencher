@@ -5,6 +5,7 @@ use dropshot::{ClientErrorStatusCode, ErrorStatusCode, HttpError};
 use thiserror::Error;
 
 pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`. Where `<bencher.api.token>` is your Bencher API token.";
+pub const BEARER_AUTH_FORMAT: &str = "Expected format is `Authorization: Bearer <token>`. Where `<token>` is your Bencher API token or project API key (`bencher_run_...`).";
 
 #[derive(Debug, Clone, Copy)]
 pub enum BencherResource {
@@ -208,8 +209,24 @@ where
     E: fmt::Display,
 {
     not_found_error(format!(
-        "{resource} ({value:?}) not found: {error}\n{resource} may be private and require authentication or it may not exist.\n{BEARER_TOKEN_FORMAT}"
+        "{resource} ({value:?}) not found: {error}\n{resource} may be private and require authentication or it may not exist."
     ))
+}
+
+pub fn with_token_hint(mut err: HttpError) -> HttpError {
+    if err.status_code == ClientErrorStatusCode::NOT_FOUND {
+        err.external_message = format!("{}\n{BEARER_TOKEN_FORMAT}", err.external_message);
+        err.internal_message = format!("{}\n{BEARER_TOKEN_FORMAT}", err.internal_message);
+    }
+    err
+}
+
+pub fn with_auth_hint(mut err: HttpError) -> HttpError {
+    if err.status_code == ClientErrorStatusCode::NOT_FOUND {
+        err.external_message = format!("{}\n{BEARER_AUTH_FORMAT}", err.external_message);
+        err.internal_message = format!("{}\n{BEARER_AUTH_FORMAT}", err.internal_message);
+    }
+    err
 }
 
 pub fn resource_conflict_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError
