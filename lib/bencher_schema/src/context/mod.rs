@@ -8,6 +8,8 @@ use bencher_google_client::GoogleClient;
 use bencher_license::Licensor;
 #[cfg(feature = "plus")]
 use bencher_oci_storage::OciStorage;
+use std::sync::Arc;
+
 use bencher_token::TokenKey;
 #[cfg(feature = "plus")]
 use dropshot::HttpError;
@@ -52,7 +54,7 @@ pub struct ApiContext {
     pub messenger: Messenger,
     pub database: Database,
     #[cfg(feature = "plus")]
-    pub rate_limiting: RateLimiting,
+    pub rate_limiting: Arc<RateLimiting>,
     #[cfg(feature = "plus")]
     pub github_client: Option<GitHubClient>,
     #[cfg(feature = "plus")]

@@ -100,10 +100,10 @@ async fn run(
         .as_ref()
         .and_then(|plus| plus.litestream.clone())
     {
-        let (replicate_tx, replicate_rx) = sync::oneshot::channel();
-        let litestream_handle = run_litestream(log, &config, litestream, replicate_tx)?;
-        // Wait for Litestream to start replicating
-        replicate_rx.await.map_err(LitestreamError::ReplicateRecv)?;
+        let (restore_tx, restore_rx) = sync::oneshot::channel();
+        let litestream_handle = run_litestream(log, &config, litestream, restore_tx)?;
+        // Wait for Litestream restore to complete (replicate starts in background)
+        restore_rx.await.map_err(LitestreamError::RestoreRecv)?;
 
         let server = create_api_server(config).await?;
         let shutdown_wait = server.wait_for_shutdown();
@@ -120,10 +120,7 @@ async fn run(
             .race()
             .await;
 
-        save_rate_limiting(log, &server);
-        if let Err(e) = server.close().await {
-            error!(log, "Server close error: {e}");
-        }
+        shutdown(log, server).await;
 
         return result;
     }
@@ -137,12 +134,26 @@ async fn run(
         .race()
         .await;
 
-    save_rate_limiting(log, &server);
+    shutdown(log, server).await;
+
+    result
+}
+
+async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {
+    #[cfg(feature = "plus")]
+    let save_rate_limiting = {
+        let ctx = server.app_private();
+        let rate_limiting = ctx.rate_limiting.clone();
+        let database_path = ctx.database.path.clone();
+        move || rate_limiting.save(&database_path, log)
+    };
     if let Err(e) = server.close().await {
         error!(log, "Server close error: {e}");
     }
-
-    result
+    #[cfg(feature = "plus")]
+    if let Err(e) = save_rate_limiting() {
+        error!(log, "Failed to save rate limiting state: {e}");
+    }
 }
 
 #[cfg(all(feature = "plus", feature = "sentry"))]
@@ -179,10 +190,18 @@ pub enum LitestreamError {
     Restore(std::io::Error),
     #[error("Failed to run `litestream replicate`: {0}")]
     Replicate(std::io::Error),
-    #[error("Failed to send replication start message")]
-    ReplicateSend(()),
-    #[error("Failed to receive replication start message")]
-    ReplicateRecv(sync::oneshot::error::RecvError),
+    #[error("Failed to restore (exit status {status})\nstdout: {stdout}\nstderr: {stderr}")]
+    RestoreExit {
+        status: std::process::ExitStatus,
+        stdout: String,
+        stderr: String,
+    },
+    #[error(
+        "Failed to send restore completion message: receiver dropped, server likely crashed during startup"
+    )]
+    RestoreSend(()),
+    #[error("Failed to receive restore completion message")]
+    RestoreRecv(sync::oneshot::error::RecvError),
     #[error("Failed to replicate: {0}")]
     ReplicateExit(std::process::ExitStatus),
     #[error("Failed to join Litestream handle: {0}")]
@@ -194,7 +213,7 @@ fn run_litestream(
     log: &Logger,
     config: &Config,
     litestream: JsonLitestream,
-    replicate_tx: sync::oneshot::Sender<()>,
+    restore_tx: sync::oneshot::Sender<()>,
 ) -> Result<JoinHandle<Result<(), LitestreamError>>, LitestreamError> {
     // Get the absolute database path from the config
     let db_path = if config.database.file.is_absolute() {
@@ -229,6 +248,16 @@ fn run_litestream(
             .await
             .map_err(LitestreamError::Restore)?;
         slog::info!(litestream_logger, "Litestream restore: {restore:?}");
+        if !restore.status.success() {
+            return Err(LitestreamError::RestoreExit {
+                status: restore.status,
+                stdout: String::from_utf8_lossy(&restore.stdout).into_owned(),
+                stderr: String::from_utf8_lossy(&restore.stderr).into_owned(),
+            });
+        }
+
+        // Signal the server that restore is complete (DB file exists)
+        restore_tx.send(()).map_err(LitestreamError::RestoreSend)?;
 
         // https://litestream.io/reference/replicate/
         let mut replicate = Command::new("litestream")
@@ -238,10 +267,6 @@ fn run_litestream(
             .arg("-no-expand-env")
             .spawn()
             .map_err(LitestreamError::Replicate)?;
-        // Let the server know that Litestream is running
-        replicate_tx
-            .send(())
-            .map_err(LitestreamError::ReplicateSend)?;
         // Litestream should run indefinitely
         Err(LitestreamError::ReplicateExit(
             replicate.wait().await.map_err(LitestreamError::Replicate)?,
@@ -258,18 +283,4 @@ async fn create_api_server(config: Config) -> Result<HttpServer<ApiContext>, Api
         .into_server::<Api>()
         .await
         .map_err(ApiError::ConfigTxError)
-}
-
-fn save_rate_limiting(log: &Logger, server: &HttpServer<ApiContext>) {
-    #[cfg(feature = "plus")]
-    {
-        let ctx = server.app_private();
-        if let Err(e) = ctx.rate_limiting.save(&ctx.database.path, log) {
-            error!(log, "Failed to save rate limiting state: {e}");
-        }
-    }
-    #[cfg(not(feature = "plus"))]
-    {
-        let _ = (log, server);
-    }
 }

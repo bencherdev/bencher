@@ -115,7 +115,7 @@ impl TestServer {
             rbac,
             messenger: Messenger::default(),
             database,
-            rate_limiting: bencher_schema::context::RateLimiting::max(),
+            rate_limiting: Arc::new(bencher_schema::context::RateLimiting::max()),
             github_client: None,
             google_client: None,
             indexer: None,

@@ -144,12 +144,6 @@ impl ConfigTx {
         });
         let config_dropshot = into_config_dropshot(server);
 
-        #[cfg(feature = "plus")]
-        spawn_job_recovery(log, &context).await;
-
-        #[cfg(feature = "plus")]
-        spawn_stats(log, &context).await?;
-
         let mut api_description = ApiDescription::new();
         debug!(log, "Registering server APIs");
         R::register(
@@ -160,7 +154,7 @@ impl ConfigTx {
         )
         .map_err(ConfigTxError::Register)?;
 
-        Ok(dropshot::HttpServerStarter::new_with_tls(
+        let server = dropshot::HttpServerStarter::new_with_tls(
             &config_dropshot,
             api_description,
             context,
@@ -168,7 +162,18 @@ impl ConfigTx {
             tls,
         )
         .map_err(ConfigTxError::CreateServer)?
-        .start())
+        .start();
+
+        // The server is already accepting connections. Requests may arrive before
+        // job recovery completes; this is safe because recovery only affects heartbeat
+        // timeout scheduling, not request handling correctness.
+        #[cfg(feature = "plus")]
+        spawn_job_recovery(log, server.app_private()).await;
+
+        #[cfg(feature = "plus")]
+        spawn_stats(log, server.app_private()).await?;
+
+        Ok(server)
     }
 }
 
@@ -297,13 +302,13 @@ async fn into_context(
     let is_bencher_cloud = bencher_json::is_bencher_cloud(&console_url) && biller.is_some();
 
     #[cfg(feature = "plus")]
-    let rate_limiting = RateLimiting::new(
+    let rate_limiting = Arc::new(RateLimiting::new(
         log,
         &mut *database.connection.lock().await,
         &licensor,
         is_bencher_cloud,
         rate_limiting,
-    );
+    ));
 
     #[cfg(feature = "plus")]
     if let Err(e) = rate_limiting.load(&database.path, log) {
