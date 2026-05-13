@@ -86,10 +86,13 @@ impl QueryJob {
                 schema::job_duration_by_report::job_duration,
             ))
             .get_result::<Option<i64>>(conn)
-            .map_err(resource_not_found_err!(
-                Job,
-                (organization_id, start_time, end_time)
-            ))?
+            .map_err(|e| {
+                issue_error(
+                    "Failed to query runner minutes usage",
+                    &format!("Failed to query runner minutes usage for organization ({organization_id}) between {start_time} and {end_time}."),
+                    e,
+                )
+            })?
             .unwrap_or(0)
             .max(0);
         ((total_seconds + 59) / 60).try_into().map_err(|e| {

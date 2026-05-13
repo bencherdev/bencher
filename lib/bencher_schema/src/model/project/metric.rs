@@ -4,8 +4,6 @@ use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 #[cfg(feature = "plus")]
-use crate::error::resource_not_found_err;
-#[cfg(feature = "plus")]
 use crate::model::organization::OrganizationId;
 #[cfg(feature = "plus")]
 use crate::schema;
@@ -56,7 +54,13 @@ impl QueryMetric {
             .filter(schema::report::end_time.le(end_time))
             .count()
             .get_result::<i64>(conn)
-            .map_err(resource_not_found_err!(Metric, (organization_id, start_time, end_time)))?
+            .map_err(|e| {
+                crate::error::issue_error(
+                    "Failed to count metric usage",
+                    &format!("Failed to count metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
+                    e,
+                )
+            })?
             .try_into()
             .map_err(|e| {
                 crate::error::issue_error(
