@@ -123,12 +123,7 @@ async fn run(
             .race()
             .await;
 
-        drain_write_lock(log, server.app_private()).await;
-
-        save_rate_limiting(log, &server);
-        if let Err(e) = server.close().await {
-            error!(log, "Server close error: {e}");
-        }
+        shutdown(log, server).await;
 
         return result;
     }
@@ -142,21 +137,32 @@ async fn run(
         .race()
         .await;
 
-    drain_write_lock(log, server.app_private()).await;
-
-    save_rate_limiting(log, &server);
-    if let Err(e) = server.close().await {
-        error!(log, "Server close error: {e}");
-    }
+    shutdown(log, server).await;
 
     result
 }
 
+async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {
+    drain_write_lock(log, server.app_private()).await;
+    save_rate_limiting(log, &server);
+    if let Err(e) = server.close().await {
+        error!(log, "Server close error: {e}");
+    }
+}
+
 async fn drain_write_lock(log: &Logger, context: &ApiContext) {
     info!(log, "Draining database write lock");
-    match tokio::time::timeout(DRAIN_WRITE_LOCK_TIMEOUT, context.database.connection.lock()).await {
-        Ok(guard) => drop(guard),
-        Err(_) => error!(log, "Timed out draining database write lock"),
+    if let Ok(guard) =
+        tokio::time::timeout(DRAIN_WRITE_LOCK_TIMEOUT, context.database.connection.lock()).await
+    {
+        drop(guard);
+    } else {
+        error!(log, "Timed out draining database write lock");
+        #[cfg(feature = "sentry")]
+        sentry::capture_message(
+            "Timed out draining database write lock",
+            sentry::Level::Error,
+        );
     }
 }
 
@@ -194,6 +200,8 @@ pub enum LitestreamError {
     Restore(std::io::Error),
     #[error("Failed to run `litestream replicate`: {0}")]
     Replicate(std::io::Error),
+    #[error("Failed to restore: {0}")]
+    RestoreExit(std::process::ExitStatus),
     #[error("Failed to send restore completion message")]
     RestoreSend(()),
     #[error("Failed to receive restore completion message")]
@@ -244,6 +252,9 @@ fn run_litestream(
             .await
             .map_err(LitestreamError::Restore)?;
         slog::info!(litestream_logger, "Litestream restore: {restore:?}");
+        if !restore.status.success() {
+            return Err(LitestreamError::RestoreExit(restore.status));
+        }
 
         // Signal the server that restore is complete (DB file exists)
         restore_tx.send(()).map_err(LitestreamError::RestoreSend)?;

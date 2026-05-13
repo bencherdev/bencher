@@ -164,6 +164,9 @@ impl ConfigTx {
         .map_err(ConfigTxError::CreateServer)?
         .start();
 
+        // The server is already accepting connections. Requests may arrive before
+        // job recovery completes; this is safe because recovery only affects heartbeat
+        // timeout scheduling, not request handling correctness.
         #[cfg(feature = "plus")]
         spawn_job_recovery(log, server.app_private()).await;
 
