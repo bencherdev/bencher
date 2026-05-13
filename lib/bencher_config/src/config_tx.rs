@@ -302,13 +302,13 @@ async fn into_context(
     let is_bencher_cloud = bencher_json::is_bencher_cloud(&console_url) && biller.is_some();
 
     #[cfg(feature = "plus")]
-    let rate_limiting = RateLimiting::new(
+    let rate_limiting = Arc::new(RateLimiting::new(
         log,
         &mut *database.connection.lock().await,
         &licensor,
         is_bencher_cloud,
         rate_limiting,
-    );
+    ));
 
     #[cfg(feature = "plus")]
     if let Err(e) = rate_limiting.load(&database.path, log) {

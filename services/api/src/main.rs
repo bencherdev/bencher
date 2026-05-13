@@ -3,7 +3,6 @@
 #[cfg(feature = "sentry")]
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 
 use bencher_api::api::Api;
 use bencher_config::{Config, ConfigTx};
@@ -24,8 +23,6 @@ use tokio::sync;
 #[cfg(feature = "plus")]
 use tokio::task::JoinHandle;
 use tokio_rustls::rustls::crypto::{CryptoProvider, ring};
-
-const DRAIN_WRITE_LOCK_TIMEOUT: Duration = Duration::from_secs(3);
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
@@ -143,26 +140,19 @@ async fn run(
 }
 
 async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {
-    drain_write_lock(log, server.app_private()).await;
-    save_rate_limiting(log, &server);
+    #[cfg(feature = "plus")]
+    let save_rate_limiting = {
+        let ctx = server.app_private();
+        let rate_limiting = ctx.rate_limiting.clone();
+        let database_path = ctx.database.path.clone();
+        move || rate_limiting.save(&database_path, log)
+    };
     if let Err(e) = server.close().await {
         error!(log, "Server close error: {e}");
     }
-}
-
-async fn drain_write_lock(log: &Logger, context: &ApiContext) {
-    info!(log, "Draining database write lock");
-    if let Ok(guard) =
-        tokio::time::timeout(DRAIN_WRITE_LOCK_TIMEOUT, context.database.connection.lock()).await
-    {
-        drop(guard);
-    } else {
-        error!(log, "Timed out draining database write lock");
-        #[cfg(feature = "sentry")]
-        sentry::capture_message(
-            "Timed out draining database write lock",
-            sentry::Level::Error,
-        );
+    #[cfg(feature = "plus")]
+    if let Err(e) = save_rate_limiting() {
+        error!(log, "Failed to save rate limiting state: {e}");
     }
 }
 
@@ -200,9 +190,15 @@ pub enum LitestreamError {
     Restore(std::io::Error),
     #[error("Failed to run `litestream replicate`: {0}")]
     Replicate(std::io::Error),
-    #[error("Failed to restore: {0}")]
-    RestoreExit(std::process::ExitStatus),
-    #[error("Failed to send restore completion message")]
+    #[error("Failed to restore (exit status {status})\nstdout: {stdout}\nstderr: {stderr}")]
+    RestoreExit {
+        status: std::process::ExitStatus,
+        stdout: String,
+        stderr: String,
+    },
+    #[error(
+        "Failed to send restore completion message: receiver dropped, server likely crashed during startup"
+    )]
     RestoreSend(()),
     #[error("Failed to receive restore completion message")]
     RestoreRecv(sync::oneshot::error::RecvError),
@@ -253,7 +249,11 @@ fn run_litestream(
             .map_err(LitestreamError::Restore)?;
         slog::info!(litestream_logger, "Litestream restore: {restore:?}");
         if !restore.status.success() {
-            return Err(LitestreamError::RestoreExit(restore.status));
+            return Err(LitestreamError::RestoreExit {
+                status: restore.status,
+                stdout: String::from_utf8_lossy(&restore.stdout).into_owned(),
+                stderr: String::from_utf8_lossy(&restore.stderr).into_owned(),
+            });
         }
 
         // Signal the server that restore is complete (DB file exists)
@@ -283,18 +283,4 @@ async fn create_api_server(config: Config) -> Result<HttpServer<ApiContext>, Api
         .into_server::<Api>()
         .await
         .map_err(ApiError::ConfigTxError)
-}
-
-fn save_rate_limiting(log: &Logger, server: &HttpServer<ApiContext>) {
-    #[cfg(feature = "plus")]
-    {
-        let ctx = server.app_private();
-        if let Err(e) = ctx.rate_limiting.save(&ctx.database.path, log) {
-            error!(log, "Failed to save rate limiting state: {e}");
-        }
-    }
-    #[cfg(not(feature = "plus"))]
-    {
-        let _ = (log, server);
-    }
 }
