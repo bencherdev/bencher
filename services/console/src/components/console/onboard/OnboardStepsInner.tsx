@@ -10,8 +10,8 @@ export interface Props {
 }
 
 export enum OnboardStep {
-	API_TOKEN = 1,
-	PROJECT = 2,
+	PROJECT = 1,
+	KEY = 2,
 	RUN = 3,
 	INVITE = 4,
 	PLAN = 5,
@@ -19,10 +19,10 @@ export enum OnboardStep {
 
 const stepPath = (step: OnboardStep) => {
 	switch (step) {
-		case OnboardStep.API_TOKEN:
-			return "/console/onboard/token";
 		case OnboardStep.PROJECT:
 			return "/console/onboard/project";
+		case OnboardStep.KEY:
+			return "/console/onboard/key";
 		case OnboardStep.RUN:
 			return "/console/onboard/run";
 		case OnboardStep.INVITE:
@@ -57,8 +57,8 @@ const OnboardStepsInner = (props: Props) => {
 							<ul>
 								<For
 									each={[
-										OnboardStep.API_TOKEN,
 										OnboardStep.PROJECT,
+										OnboardStep.KEY,
 										OnboardStep.RUN,
 										OnboardStep.INVITE,
 										OnboardStep.PLAN,

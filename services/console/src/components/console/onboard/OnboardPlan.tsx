@@ -3,6 +3,7 @@ import { createEffect, createMemo, createResource } from "solid-js";
 import type { JsonOrganization, PlanLevel } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
+import { removeOnboardProjectKey } from "../../../util/onboard";
 import { getOrganization, setOrganization } from "../../../util/organization";
 import { useSearchParams } from "../../../util/url";
 import {
@@ -22,6 +23,7 @@ export interface Props {
 }
 
 const OnboardPlan = (props: Props) => {
+	removeOnboardProjectKey();
 	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();

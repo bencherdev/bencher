@@ -322,7 +322,7 @@ const OnboardProject = (props: Props) => {
 
 								<a
 									class="button is-primary is-fullwidth"
-									href={`/console/onboard/run${planParam(plan())}`}
+									href={`/console/onboard/key${planParam(plan())}`}
 								>
 									<span class="icon-text">
 										<span>Next Step</span>
