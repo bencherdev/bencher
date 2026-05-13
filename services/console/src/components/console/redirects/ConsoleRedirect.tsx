@@ -3,6 +3,7 @@ import { createMemo, createResource } from "solid-js";
 import type { JsonOrganization, JsonProject } from "../../../types/bencher";
 import { authUser, removeUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
+import { removeOnboardProjectKey } from "../../../util/onboard";
 import {
 	NOTIFY_KIND_PARAM,
 	NOTIFY_TEXT_PARAM,
@@ -24,6 +25,7 @@ export interface Props {
 }
 
 const ConsoleRedirect = (props: Props) => {
+	removeOnboardProjectKey();
 	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const navigate = useNavigate();
