@@ -698,6 +698,21 @@ mod tests {
         assert_eq!(result, 1);
     }
 
+    #[test]
+    fn runner_minutes_zero_seconds() {
+        let mut conn = setup_test_db();
+        let report_id = create_report_for_job_duration_test(&mut conn);
+        let base_org_id: OrganizationId = schema::project::table
+            .select(schema::project::organization_id)
+            .first(&mut conn)
+            .unwrap();
+        insert_job_duration(&mut conn, report_id, 0).unwrap();
+        let result =
+            QueryJob::runner_minutes_usage(&mut conn, base_org_id, DateTime::TEST, DateTime::TEST)
+                .unwrap();
+        assert_eq!(result, 0);
+    }
+
     // --- insert_job_duration tests ---
 
     /// Helper to create a report and return its `ReportId` for `job_duration` tests.

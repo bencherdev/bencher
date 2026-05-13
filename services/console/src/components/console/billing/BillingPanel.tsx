@@ -217,7 +217,7 @@ const CloudMeteredPanel = (props: {
 			</h4>
 			<h4>Estimated Metrics Cost: {fmtUsd(estMetricsCost())}</h4>
 			<br />
-			<h4>Cost per Runner Minute: {fmtUsd(minutePrice())}</h4>
+			<h4>Cost per Runner Minute: ${minutePrice().toFixed(5)} / min</h4>
 			<h4>
 				Estimated Runner Minutes Used:{" "}
 				{props.usage()?.runner_minutes?.toLocaleString() ?? 0}
