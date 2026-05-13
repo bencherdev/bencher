@@ -468,7 +468,6 @@ fn connection_pool(
 
     Pool::builder()
         .max_size(max_size)
-        .min_idle(Some(0))
         .connection_timeout(connection_timeout)
         .connection_customizer(Box::new(customizer))
         .build(connection_manager)

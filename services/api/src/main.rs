@@ -3,6 +3,7 @@
 #[cfg(feature = "sentry")]
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use bencher_api::api::Api;
 use bencher_config::{Config, ConfigTx};
@@ -23,6 +24,8 @@ use tokio::sync;
 #[cfg(feature = "plus")]
 use tokio::task::JoinHandle;
 use tokio_rustls::rustls::crypto::{CryptoProvider, ring};
+
+const DRAIN_WRITE_LOCK_TIMEOUT: Duration = Duration::from_secs(3);
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
@@ -120,9 +123,7 @@ async fn run(
             .race()
             .await;
 
-        info!(log, "Draining database write lock");
-        let guard = server.app_private().database.connection.lock().await;
-        drop(guard);
+        drain_write_lock(log, server.app_private()).await;
 
         save_rate_limiting(log, &server);
         if let Err(e) = server.close().await {
@@ -141,9 +142,7 @@ async fn run(
         .race()
         .await;
 
-    info!(log, "Draining database write lock");
-    let guard = server.app_private().database.connection.lock().await;
-    drop(guard);
+    drain_write_lock(log, server.app_private()).await;
 
     save_rate_limiting(log, &server);
     if let Err(e) = server.close().await {
@@ -151,6 +150,14 @@ async fn run(
     }
 
     result
+}
+
+async fn drain_write_lock(log: &Logger, context: &ApiContext) {
+    info!(log, "Draining database write lock");
+    match tokio::time::timeout(DRAIN_WRITE_LOCK_TIMEOUT, context.database.connection.lock()).await {
+        Ok(guard) => drop(guard),
+        Err(_) => error!(log, "Timed out draining database write lock"),
+    }
 }
 
 #[cfg(all(feature = "plus", feature = "sentry"))]
