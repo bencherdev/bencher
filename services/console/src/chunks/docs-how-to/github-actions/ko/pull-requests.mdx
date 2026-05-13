@@ -44,9 +44,9 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 10. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
     더 많은 세부 사항은 [`--project` 문서][project option]를 참조하세요.
     (예: `--project project-abc4567-wxyz123456789`)
-11. `--token` 옵션을 `BENCHER_API_TOKEN` **레포지토리** 시크릿으로 설정합니다.
-    더 많은 세부 사항은 [`--token` 문서][token option]를 참조하세요.
-    (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+11. `--key` 옵션을 `BENCHER_API_KEY` **레포지토리** 시크릿으로 설정합니다.
+    더 많은 세부 사항은 [`--key` 문서][key option]를 참조하세요.
+    (예: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 12. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름을 `--branch` 옵션으로 설정합니다.
     전체 개요는 [`--branch` 문서][branch option]를 참조하세요.
     (예: `--branch "$GITHUB_HEAD_REF"`)
@@ -96,7 +96,7 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 
 [bencher run]: /ko/docs/explanation/bencher-run/
 [project option]: /ko/docs/explanation/bencher-run/#--project-project
-[token option]: /ko/docs/explanation/bencher-run/#--token-token
+[key option]: /ko/docs/explanation/bencher-run/#--key-key
 [branch option]: /ko/docs/explanation/branches/#--branch-branch
 [start point]: /ko/docs/explanation/branches/#--start-point-branch
 [start point hash]: /ko/docs/explanation/branches/#--start-point-hash-hash

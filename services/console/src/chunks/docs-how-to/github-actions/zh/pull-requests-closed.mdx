@@ -33,9 +33,9 @@ import PullRequestsClosedCode from "../pull-requests-closed-code.mdx";
 9. 设置 `--project` 选项为项目的 slug。
     查看 [`--project` 文档][project option] 以获取更多详细信息。
     (例如：`--project project-abc4567-wxyz123456789`)
-10. 将 `--token` 选项设置为 `BENCHER_API_TOKEN` **存储库**密钥。
-    查看 [`--token` 文档][token option] 以获取更多详细信息。
-    (例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. 将 `--key` 选项设置为 `BENCHER_API_KEY` **存储库**密钥。
+    查看 [`--key` 文档][key option] 以获取更多详细信息。
+    (例如：`--key '${{ secrets.BENCHER_API_KEY }}'`)
 11. 使用 [GitHub Actions `GITHUB_HEAD_REF` 默认环境变量][github default environment variables] 将 `--branch` 选项设置为 PR 分支名称。
     (例如：`--branch "$GITHUB_HEAD_REF"`)
 
@@ -47,6 +47,6 @@ import PullRequestsClosedCode from "../pull-requests-closed-code.mdx";
 [github default environment variables]: https://docs.github.com/zh/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
-[token option]: /zh/docs/explanation/bencher-run/#--token-token
+[key option]: /zh/docs/explanation/bencher-run/#--key-key
 
 [pull requests from forks]: #pull-requests-from-forks

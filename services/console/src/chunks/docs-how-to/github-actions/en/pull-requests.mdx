@@ -54,9 +54,9 @@ then you can simply create another workflow to run `on` `pull_request` events fr
 10. Set the `--project` option to the Project slug.
     See [the `--project` docs][project option] for more details.
     (ex: `--project project-abc4567-wxyz123456789`)
-11. Set the `--token` option to the `BENCHER_API_TOKEN` **Repository** secret.
-    See [the `--token` docs][token option] for more details.
-    (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+11. Set the `--key` option to the `BENCHER_API_KEY` **Repository** secret.
+    See [the `--key` docs][key option] for more details.
+    (ex: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 12. Set the `--branch` option to the PR branch name
     using [the GitHub Actions `GITHUB_HEAD_REF` default environment variable][github default environment variables].
     See [the `--branch` docs][branch option] for a full overview.
@@ -109,7 +109,7 @@ then you can simply create another workflow to run `on` `pull_request` events fr
 
 [bencher run]: /docs/explanation/bencher-run/
 [project option]: /docs/explanation/bencher-run/#--project-project
-[token option]: /docs/explanation/bencher-run/#--token-token
+[key option]: /docs/explanation/bencher-run/#--key-key
 [branch option]: /docs/explanation/branches/#--branch-branch
 [start point]: /docs/explanation/branches/#--start-point-branch
 [start point hash]: /docs/explanation/branches/#--start-point-hash-hash

@@ -41,9 +41,9 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 13. Установите параметр `--project` в значение Project slug.
     Подробности смотрите в [документации `--project`][project option].
     (например, `--project project-abc4567-wxyz123456789`)
-14. Установите параметр `--token` в значение секрета **Repository** `BENCHER_API_TOKEN`.
-    Подробности смотрите в [документации `--token`][token option].
-    (например, `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+14. Установите параметр `--key` в значение секрета **Repository** `BENCHER_API_KEY`.
+    Подробности смотрите в [документации `--key`][key option].
+    (например, `--key '${{ secrets.BENCHER_API_KEY }}'`)
 15. Установите параметр `--branch` на имя ветки PR форка
     с использованием [промежуточной переменной среды][github intermediate environment variable].
     Полный обзор см. в [документации `--branch`][branch option].
@@ -103,7 +103,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 
 [bencher run]: /ru/docs/explanation/bencher-run/
 [project option]: /ru/docs/explanation/bencher-run/#--project-project
-[token option]: /ru/docs/explanation/bencher-run/#--token-token
+[key option]: /ru/docs/explanation/bencher-run/#--key-key
 [branch option]: /ru/docs/explanation/branches/#--branch-branch
 [hash option]: /ru/docs/explanation/branches/#--hash-hash
 [start point]: /ru/docs/explanation/branches/#--start-point-branch

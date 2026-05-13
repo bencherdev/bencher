@@ -46,9 +46,9 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 10. 将 `--project` 选项设置为项目 slug。
     查看 [`--project` 文档][project option] 以获取详细信息。
     （例如：`--project project-abc4567-wxyz123456789`）
-11. 将 `--token` 选项设置为 `BENCHER_API_TOKEN` **仓库**密钥。
-    查看 [`--token` 文档][token option] 以获取详细信息。
-    （例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`）
+11. 将 `--key` 选项设置为 `BENCHER_API_KEY` **仓库**密钥。
+    查看 [`--key` 文档][key option] 以获取详细信息。
+    （例如：`--key '${{ secrets.BENCHER_API_KEY }}'`）
 12. 使用 [GitHub Actions `GITHUB_HEAD_REF` 默认环境变量][github default environment variables] 设置 `--branch` 选项为 PR 分支名称。
     查看 [`--branch` 文档][branch option] 以获取完整概览。
     （例如：`--branch "$GITHUB_HEAD_REF"`）
@@ -95,7 +95,7 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 
 [bencher run]: /zh/docs/explanation/bencher-run/
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
-[token option]: /zh/docs/explanation/bencher-run/#--token-token
+[key option]: /zh/docs/explanation/bencher-run/#--key-key
 [branch option]: /zh/docs/explanation/branches/#--branch-branch
 [start point]: /zh/docs/explanation/branches/#--start-point-branch
 [start point hash]: /zh/docs/explanation/branches/#--start-point-hash-hash

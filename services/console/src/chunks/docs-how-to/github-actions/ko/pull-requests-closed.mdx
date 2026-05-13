@@ -27,9 +27,9 @@ PR이 닫힌 후 PR 브랜치를 정리하려면 `closed` 타입의 `pull_reques
 9.  프로젝트 슬러그로 `--project` 옵션을 설정하십시오.
     자세한 내용은 [`--project` 문서][project option]를 참조하십시오.
     (예: `--project project-abc4567-wxyz123456789`)
-10. `--token` 옵션을 `BENCHER_API_TOKEN` **저장소** 시크릿으로 설정하십시오.
-    자세한 내용은 [`--token` 문서][token option]를 참조하십시오.
-    (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. `--key` 옵션을 `BENCHER_API_KEY` **저장소** 시크릿으로 설정하십시오.
+    자세한 내용은 [`--key` 문서][key option]를 참조하십시오.
+    (예: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 11. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름으로 `--branch` 옵션을 설정하십시오.
     (예: `--branch "$GITHUB_HEAD_REF"`)
 
@@ -40,6 +40,6 @@ PR이 닫힌 후 PR 브랜치를 정리하려면 `closed` 타입의 `pull_reques
 [github default environment variables]: https://docs.github.com/ko/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /ko/docs/explanation/bencher-run/#--project-project
-[token option]: /ko/docs/explanation/bencher-run/#--token-token
+[key option]: /ko/docs/explanation/bencher-run/#--key-key
 
 [pull requests from forks]: #pull-requests-from-forks

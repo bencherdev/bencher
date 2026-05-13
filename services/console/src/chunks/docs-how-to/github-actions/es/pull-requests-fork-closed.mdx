@@ -29,9 +29,9 @@ Este flujo de trabajo archivará la rama del PR del fork utilizando el comando `
 8. Establece la opción `--project` con el slug del Proyecto.
    Consulta [los documentos de la opción `--project`][project option] para más detalles.
    (ej: `--project project-abc4567-wxyz123456789`)
-9. Establece la opción `--token` con el secreto **Repositorio** `BENCHER_API_TOKEN`.
-   Consulta [los documentos de la opción `--token`][token option] para más detalles.
-   (ej: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+9. Establece la opción `--key` con el secreto **Repositorio** `BENCHER_API_KEY`.
+   Consulta [los documentos de la opción `--key`][key option] para más detalles.
+   (ej: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 10. Establece la opción `--branch` con el nombre de la rama del PR
     usando [la variable de entorno predeterminada `GITHUB_HEAD_REF` de GitHub Actions][github default environment variables].
     (ej: `--branch "$GITHUB_HEAD_REF"`)
@@ -43,4 +43,4 @@ Este flujo de trabajo archivará la rama del PR del fork utilizando el comando `
 [github default environment variables]: https://docs.github.com/es/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /es/docs/explanation/bencher-run/#--project-project
-[token option]: /es/docs/explanation/bencher-run/#--token-token
+[key option]: /es/docs/explanation/bencher-run/#--key-key

@@ -10,7 +10,7 @@ benchmark_mr_branch:
     - |
       bencher run \
       --project project-abc4567-wxyz123456789 \
-      --token "$BENCHER_API_TOKEN" \
+      --key "$BENCHER_API_KEY" \
       --branch "$CI_COMMIT_REF_NAME" \
       --start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \
       --start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA" \

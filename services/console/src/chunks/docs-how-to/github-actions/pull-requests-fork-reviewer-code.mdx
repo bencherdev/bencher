@@ -25,7 +25,7 @@ jobs:
         run: |
           bencher run \
           --project project-abc4567-wxyz123456789 \
-          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --key '${{ secrets.BENCHER_API_KEY }}' \
           --branch '${{ github.event.number }}/merge' \
           --branch-start-point '${{ github.base_ref }}' \
           --branch-start-point-hash '${{ github.event.pull_request.base.sha }}' \

@@ -4,16 +4,16 @@
 - [풀 리퀘스트][pull requests]
 - [포크로부터의 풀 리퀘스트][fork pull requests]
 
-진행하기 전에 [API 토큰을 생성][create an api token]하고, 이를 `BENCHER_API_TOKEN`이라는 **저장소** 비밀로 설정했는지 확인하세요!
+진행하기 전에 [API 토큰을 생성][create an api token]하고, 이를 `BENCHER_API_KEY`이라는 **저장소** 비밀로 설정했는지 확인하세요!
 `Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`로 이동합니다.
-비밀 이름을 `BENCHER_API_TOKEN`으로 지정하고 비밀값을 API 토큰으로 설정하세요.
+비밀 이름을 `BENCHER_API_KEY`으로 지정하고 비밀값을 API 토큰으로 설정하세요.
 
 GitHub Actions에서,
 [비밀은 포크된 리포지토리에서 워크플로우가 트리거될 때 실행자에게 전달되지 않습니다][github actions secrets].
 따라서 아래의 워크플로 중 하나를 저장소에 풀 리퀘스트로 추가할 때는 _같은_ 저장소의 브랜치를 사용해야 합니다.
 포크로부터 풀 리퀘스트로 Bencher를 추가하면,
-`BENCHER_API_TOKEN` 비밀은 사용 가능하지 않습니다.
-`${{ secrets.BENCHER_API_TOKEN }}`는 빈 문자열이 될 것입니다.
+`BENCHER_API_KEY` 비밀은 사용 가능하지 않습니다.
+`${{ secrets.BENCHER_API_KEY }}`는 빈 문자열이 될 것입니다.
 
 [github actions secrets]: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 

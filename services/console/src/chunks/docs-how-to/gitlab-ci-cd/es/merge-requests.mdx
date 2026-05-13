@@ -28,9 +28,9 @@ Para detectar regresiones de rendimiento en las Solicitudes de Fusión, necesita
 7. Configura la opción `--project` al slug del Proyecto.
    Consulta la documentación de [la opción `--project`][project option] para más detalles.
    (ej: `--project project-abc4567-wxyz123456789`)
-8. Configura la opción `--token` a la variable de entorno enmascarada `BENCHER_API_TOKEN`.
-   Consulta la documentación de [la opción `--token`][token option] para más detalles.
-   (ej: `--token "$BENCHER_API_TOKEN"`)
+8. Configura la opción `--key` a la variable de entorno enmascarada `BENCHER_API_KEY`.
+   Consulta la documentación de [la opción `--key`][key option] para más detalles.
+   (ej: `--key "$BENCHER_API_KEY"`)
 9. Configura la opción `--branch` al nombre de la rama MR
    utilizando [una variable predefinida de GitLab CI/CD][gitlab ci cd redefined variables].
    Consulta la documentación de [la opción `--branch`][branch option] para una visión completa.
@@ -74,7 +74,7 @@ Para detectar regresiones de rendimiento en las Solicitudes de Fusión, necesita
 [install bencher cli]: /es/docs/how-to/install-cli/#install-cli-with-script
 [bencher run]: /es/docs/explanation/bencher-run/
 [project option]: /es/docs/explanation/bencher-run/#--project-project
-[token option]: /es/docs/explanation/bencher-run/#--token-token
+[key option]: /es/docs/explanation/bencher-run/#--key-key
 [branch option]: /es/docs/explanation/branches/#--branch-branch
 [start point]: /es/docs/explanation/branches/#--start-point-branch
 [start point hash]: /es/docs/explanation/branches/#--start-point-hash-hash

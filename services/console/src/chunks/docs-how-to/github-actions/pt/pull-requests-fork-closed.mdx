@@ -29,9 +29,9 @@ Este fluxo de trabalho arquivará o branch de PR do fork usando o comando `bench
 8. Defina a opção `--project` para o slug do Projeto.
    Consulte [a documentação de `--project`][project option] para mais detalhes.
    (ex: `--project project-abc4567-wxyz123456789`)
-9. Defina a opção `--token` para o segredo de **Repositório** `BENCHER_API_TOKEN`.
-   Consulte [a documentação de `--token`][token option] para mais detalhes.
-   (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+9. Defina a opção `--key` para o segredo de **Repositório** `BENCHER_API_KEY`.
+   Consulte [a documentação de `--key`][key option] para mais detalhes.
+   (ex: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 10. Defina a opção `--branch` para o nome do branch de PR
     usando [a variável de ambiente padrão `GITHUB_HEAD_REF` do GitHub Actions][github default environment variables].
     (ex: `--branch "$GITHUB_HEAD_REF"`)
@@ -43,4 +43,4 @@ Este fluxo de trabalho arquivará o branch de PR do fork usando o comando `bench
 [github default environment variables]: https://docs.github.com/pt/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /pt/docs/explanation/bencher-run/#--project-project
-[token option]: /pt/docs/explanation/bencher-run/#--token-token
+[key option]: /pt/docs/explanation/bencher-run/#--key-key

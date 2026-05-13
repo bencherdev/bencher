@@ -33,9 +33,9 @@ Dieser Workflow archiviert den PR-Branch mit dem Befehl `bencher archive`.
 9. Setzen Sie die `--project` Option auf den Project-Slug.
     Siehe [die `--project` Doku][project option] für weitere Details.
     (z.B.: `--project project-abc4567-wxyz123456789`)
-10. Setzen Sie die `--token` Option auf das **Repository**-Geheimnis `BENCHER_API_TOKEN`.
-    Siehe [die `--token` Doku][token option] für weitere Details.
-    (z.B.: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. Setzen Sie die `--key` Option auf das **Repository**-Geheimnis `BENCHER_API_KEY`.
+    Siehe [die `--key` Doku][key option] für weitere Details.
+    (z.B.: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 11. Setzen Sie die `--branch` Option auf den PR-Branch-Namen
     unter Verwendung der [GitHub Actions `GITHUB_HEAD_REF` Standardumgebungsvariable][github default environment variables].
     (z.B.: `--branch "$GITHUB_HEAD_REF"`)
@@ -48,6 +48,6 @@ Dieser Workflow archiviert den PR-Branch mit dem Befehl `bencher archive`.
 [github default environment variables]: https://docs.github.com/de/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /de/docs/explanation/bencher-run/#--project-project
-[token option]: /de/docs/explanation/bencher-run/#--token-token
+[key option]: /de/docs/explanation/bencher-run/#--key-key
 
 [pull requests from forks]: #pull-requests-from-forks

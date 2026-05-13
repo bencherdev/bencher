@@ -37,9 +37,9 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 13. `--project` オプションをプロジェクトスラッグに設定します。
     詳細は、[`--project` ドキュメント][project option]をご覧ください。
     (例: `--project project-abc4567-wxyz123456789`)
-14. `--token` オプションを `BENCHER_API_TOKEN` **リポジトリ**シークレットに設定します。
-    詳細は、[`--token` ドキュメント][token option]をご覧ください。
-    (例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+14. `--key` オプションを `BENCHER_API_KEY` **リポジトリ**シークレットに設定します。
+    詳細は、[`--key` ドキュメント][key option]をご覧ください。
+    (例: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 15. [中間環境変数][github intermediate environment variable]を使用して、フォーク PR ブランチ名に `--branch` オプションを設定します。
     完全な概要については、[`--branch` ドキュメント][branch option]を参照してください。
     (例: `--branch "$PR_HEAD"`)
@@ -92,7 +92,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 
 [bencher run]: /ja/docs/explanation/bencher-run/
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
-[token option]: /ja/docs/explanation/bencher-run/#--token-token
+[key option]: /ja/docs/explanation/bencher-run/#--key-key
 [branch option]: /ja/docs/explanation/branches/#--branch-branch
 [hash option]: /ja/docs/explanation/branches/#--hash-hash
 [start point]: /ja/docs/explanation/branches/#--start-point-branch

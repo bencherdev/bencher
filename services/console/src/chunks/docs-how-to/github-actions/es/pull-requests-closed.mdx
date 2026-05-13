@@ -31,9 +31,9 @@ Para limpiar la rama de PR después de que su PR esté cerrado, puedes crear un 
 9.  Configura la opción `--project` al identificador del Proyecto.
     Consulta [la documentación de `--project`][project option] para más detalles.
     (ej: `--project project-abc4567-wxyz123456789`)
-10. Configura la opción `--token` al secreto de **Repository** `BENCHER_API_TOKEN`.
-    Consulta [la documentación de `--token`][token option] para más detalles.
-    (ej: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. Configura la opción `--key` al secreto de **Repository** `BENCHER_API_KEY`.
+    Consulta [la documentación de `--key`][key option] para más detalles.
+    (ej: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 11. Configura la opción `--branch` al nombre de la rama PR
     usando [la variable de entorno predeterminada `GITHUB_HEAD_REF` de GitHub Actions][github default environment variables].
     (ej: `--branch "$GITHUB_HEAD_REF"`)
@@ -46,6 +46,6 @@ Para limpiar la rama de PR después de que su PR esté cerrado, puedes crear un 
 [github default environment variables]: https://docs.github.com/es/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /es/docs/explanation/bencher-run/#--project-project
-[token option]: /es/docs/explanation/bencher-run/#--token-token
+[key option]: /es/docs/explanation/bencher-run/#--key-key
 
 [pull requests from forks]: #pull-requests-from-forks

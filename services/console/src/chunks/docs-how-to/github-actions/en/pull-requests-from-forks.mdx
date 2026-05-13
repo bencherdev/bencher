@@ -6,7 +6,7 @@ import PullRequestsForkClosed from "./pull-requests-fork-closed.mdx";
 
 If you plan to accept pull requests from forks, as is often the case in public open source projects,
 then you will need to handle things a little differently.
-For security reasons, secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are not available in GitHub Actions for fork PRs.
+For security reasons, secrets such as your `BENCHER_API_KEY` and the `GITHUB_TOKEN` are not available in GitHub Actions for fork PRs.
 That is if an external contributor opens up a PR from a fork the above example will **not** work.
 See this [GitHub Security Lab write up][github actions pwn requests]
 and [this blog post][nathandavison.com blog]
@@ -18,10 +18,10 @@ on preventing pwn requests for a full overview.
 This is the safe and suggested way to add [Continuous Benchmarking][continuous benchmarking] to fork pull requests.
 It requires two separate workflows.
 The first workflow runs and caches the benchmark results in the `pull_request` context.
-No secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are available there.
+No secrets such as your `BENCHER_API_KEY` and the `GITHUB_TOKEN` are available there.
 Then a second workflow downloads the cached benchmark results in the `workflow_run` context and uploads them to Bencher.
 This works because `workflow_run` runs in the context of the repository's default branch,
-where secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are available.
+where secrets such as your `BENCHER_API_KEY` and the `GITHUB_TOKEN` are available.
 The pull request number, head branch, and base branch used in the initial `pull_request` workflow
 must also be explicitly passed into the `workflow_run` workflow since they are not available there.
 These workflows will only run if they exist on the _default_ branch.

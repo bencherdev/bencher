@@ -37,9 +37,9 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 13. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
     더 자세한 내용은 [`--project` 문서][project option]를 참조하세요.
     (예: `--project project-abc4567-wxyz123456789`)
-14. `--token` 옵션을 `BENCHER_API_TOKEN` **Repository** 시크릿으로 설정합니다.
-    더 자세한 내용은 [`--token` 문서][token option]를 참조하세요.
-    (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+14. `--key` 옵션을 `BENCHER_API_KEY` **Repository** 시크릿으로 설정합니다.
+    더 자세한 내용은 [`--key` 문서][key option]를 참조하세요.
+    (예: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 15. `--branch` 옵션을 포크 PR 브랜치 이름으로 설정합니다
     [중간 환경 변수][github intermediate environment variable]를 사용하여.
     전체 개요는 [`--branch` 문서][branch option]를 참조하세요.
@@ -98,7 +98,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 
 [bencher run]: /ko/docs/explanation/bencher-run/
 [project option]: /ko/docs/explanation/bencher-run/#--project-project
-[token option]: /ko/docs/explanation/bencher-run/#--token-token
+[key option]: /ko/docs/explanation/bencher-run/#--key-key
 [branch option]: /ko/docs/explanation/branches/#--branch-branch
 [hash option]: /ko/docs/explanation/branches/#--hash-hash
 [start point]: /ko/docs/explanation/branches/#--start-point-branch

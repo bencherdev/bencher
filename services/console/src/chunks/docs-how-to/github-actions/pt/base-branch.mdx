@@ -34,9 +34,9 @@ Essa linha de base histórica pode então ser usada para detectar regressões de
 9. Configure a opção `--project` para o slug do Projeto.
    Veja [os documentos de `--project`][project option] para mais detalhes.
    (ex: `--project project-abc4567-wxyz123456789`)
-10. Configure a opção `--token` para o segredo **Repositorio** `BENCHER_API_TOKEN`.
-   Veja [os documentos de `--token`][token option] para mais detalhes.
-   (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. Configure a opção `--key` para o segredo **Repositorio** `BENCHER_API_KEY`.
+   Veja [os documentos de `--key`][key option] para mais detalhes.
+   (ex: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 11. Configure a opção `--branch` para o nome da Ramificação base.
     Veja [os documentos de `--branch`][branch option] para uma visão geral completa.
     (ex: `--branch main`)
@@ -84,7 +84,7 @@ Essa linha de base histórica pode então ser usada para detectar regressões de
 [statistical continuous benchmarking]: /pt/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
 [bencher run]: /pt/docs/explanation/bencher-run/
 [project option]: /pt/docs/explanation/bencher-run/#--project-project
-[token option]: /pt/docs/explanation/bencher-run/#--token-token
+[key option]: /pt/docs/explanation/bencher-run/#--key-key
 [branch option]: /pt/docs/explanation/branches/#--branch-branch
 [testbed option]: /pt/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /pt/docs/explanation/thresholds/#--threshold-measure-measure
