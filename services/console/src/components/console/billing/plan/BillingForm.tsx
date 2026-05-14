@@ -193,7 +193,11 @@ const FreeUsage = (props: { usage: Resource<null | JsonUsage> }) => {
 						{fmtDate(props.usage()?.start_time)} -{" "}
 						{fmtDate(props.usage()?.end_time)}
 					</h3>
-					<h4>Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}</h4>
+					<h4>Metrics Used: {props.usage()?.metrics?.toLocaleString() ?? 0}</h4>
+					<h4>
+						Runner Minutes Used:{" "}
+						{props.usage()?.runner_minutes?.toLocaleString() ?? 0}
+					</h4>
 				</div>
 			</div>
 		</div>

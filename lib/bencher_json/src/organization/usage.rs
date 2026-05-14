@@ -26,7 +26,9 @@ pub struct JsonUsage {
     /// The end time of the usage.
     pub end_time: DateTime,
     /// The metrics usage amount.
-    pub usage: Option<u32>,
+    pub metrics: Option<u32>,
+    /// The runner minutes usage amount.
+    pub runner_minutes: Option<u32>,
 }
 
 #[typeshare::typeshare]

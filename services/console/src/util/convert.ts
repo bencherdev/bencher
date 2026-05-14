@@ -137,15 +137,35 @@ export const planLevelPrice = (level: undefined | PlanLevel) => {
 	}
 };
 
-export const suggestedMetrics = (usage: undefined | number) =>
-	(Math.round((usage ?? 1) / 1_000) + 1) * 12_000;
+export const runnerMinutePrice = (level: undefined | PlanLevel) => {
+	switch (level) {
+		case PlanLevel.Team:
+		case PlanLevel.Enterprise:
+			return 0.01666;
+		default:
+			return 0.0;
+	}
+};
+
+export const suggestedMetrics = (metrics: undefined | number) =>
+	(Math.round((metrics ?? 1) / 1_000) + 1) * 12_000;
 
 export const fmtUsd = (usd: undefined | number) => {
-	const numberFmd = new Intl.NumberFormat("en-US", {
+	const numberFmt = new Intl.NumberFormat("en-US", {
 		style: "currency",
 		currency: "USD",
 	});
-	return numberFmd.format(usd ?? 0);
+	return numberFmt.format(usd ?? 0);
+};
+
+export const fmtUsdPrecise = (usd: undefined | number) => {
+	const numberFmt = new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency: "USD",
+		minimumFractionDigits: 5,
+		maximumFractionDigits: 5,
+	});
+	return numberFmt.format(usd ?? 0);
 };
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Base64#the_unicode_problem

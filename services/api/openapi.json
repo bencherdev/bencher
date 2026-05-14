@@ -2767,8 +2767,8 @@
           "organizations",
           "usage"
         ],
-        "summary": "View organization metrics usage",
-        "description": "View the metrics usage of an organization. The user must have `manage` permissions for the organization. ➕ Bencher Plus: This endpoint offers an estimate of metered usage and exact usage for licensed organizations, both on Bencher Cloud and Bencher Self-Hosted.",
+        "summary": "View organization usage",
+        "description": "View the metrics and bare metal runner minutes usage of an organization. The user must have `manage` permissions for the organization. ➕ Bencher Plus: This endpoint offers an estimate of metered usage and exact usage for licensed organizations, both on Bencher Cloud and Bencher Self-Hosted.",
         "operationId": "org_usage_get",
         "parameters": [
           {
@@ -17072,6 +17072,13 @@
               }
             ]
           },
+          "metrics": {
+            "nullable": true,
+            "description": "The metrics usage amount.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
           "organization": {
             "description": "The organization UUID.",
             "allOf": [
@@ -17089,6 +17096,13 @@
               }
             ]
           },
+          "runner_minutes": {
+            "nullable": true,
+            "description": "The runner minutes usage amount.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
           "start_time": {
             "description": "The start time of the usage.",
             "allOf": [
@@ -17096,13 +17110,6 @@
                 "$ref": "#/components/schemas/DateTime"
               }
             ]
-          },
-          "usage": {
-            "nullable": true,
-            "description": "The metrics usage amount.",
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
           }
         },
         "required": [

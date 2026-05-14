@@ -66,6 +66,40 @@ impl QueryJob {
     fn_get_uuid!(job, JobId, JobUuid);
     fn_from_uuid!(job, JobUuid, Job);
 
+    #[cfg(feature = "plus")]
+    pub fn runner_minutes_usage(
+        conn: &mut DbConnection,
+        organization_id: OrganizationId,
+        start_time: DateTime,
+        end_time: DateTime,
+    ) -> Result<u32, HttpError> {
+        schema::job_duration_by_report::table
+            .inner_join(schema::report::table.inner_join(schema::project::table))
+            .filter(schema::project::organization_id.eq(organization_id))
+            .filter(schema::report::end_time.ge(start_time))
+            .filter(schema::report::end_time.le(end_time))
+            .select(diesel::dsl::sum(
+                (schema::job_duration_by_report::job_duration + 59) / 60,
+            ))
+            .get_result::<Option<i64>>(conn)
+            .map_err(|e| {
+                issue_error(
+                    "Failed to query runner minutes usage",
+                    &format!("Failed to query runner minutes usage for organization ({organization_id}) between {start_time} and {end_time}."),
+                    e,
+                )
+            })?
+            .unwrap_or_default()
+            .try_into()
+            .map_err(|e| {
+                issue_error(
+                    "Failed to count runner minutes usage",
+                    &format!("Failed to count runner minutes usage for organization ({organization_id}) between {start_time} and {end_time}."),
+                    e,
+                )
+            })
+    }
+
     /// Process benchmark results from a completed job into the report.
     ///
     /// Looks up the report and branch, parses benchmark output via the adapter,
@@ -602,10 +636,80 @@ mod tests {
         );
     }
 
+    // --- runner_minutes_usage tests ---
+
+    #[test]
+    fn runner_minutes_no_jobs() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let result = QueryJob::runner_minutes_usage(
+            &mut conn,
+            base.organization_id,
+            DateTime::TEST,
+            DateTime::TEST,
+        )
+        .unwrap();
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn runner_minutes_exact_boundary() {
+        let mut conn = setup_test_db();
+        let (report_id, org_id) = create_report_for_job_duration_test(&mut conn);
+        insert_job_duration(&mut conn, report_id, 60).unwrap();
+        let result =
+            QueryJob::runner_minutes_usage(&mut conn, org_id, DateTime::TEST, DateTime::TEST)
+                .unwrap();
+        assert_eq!(result, 1);
+    }
+
+    #[test]
+    fn runner_minutes_partial_minute() {
+        let mut conn = setup_test_db();
+        let (report_id, org_id) = create_report_for_job_duration_test(&mut conn);
+        insert_job_duration(&mut conn, report_id, 61).unwrap();
+        let result =
+            QueryJob::runner_minutes_usage(&mut conn, org_id, DateTime::TEST, DateTime::TEST)
+                .unwrap();
+        assert_eq!(result, 2);
+    }
+
+    #[test]
+    fn runner_minutes_one_second() {
+        let mut conn = setup_test_db();
+        let (report_id, org_id) = create_report_for_job_duration_test(&mut conn);
+        insert_job_duration(&mut conn, report_id, 1).unwrap();
+        let result =
+            QueryJob::runner_minutes_usage(&mut conn, org_id, DateTime::TEST, DateTime::TEST)
+                .unwrap();
+        assert_eq!(result, 1);
+    }
+
+    #[test]
+    fn runner_minutes_zero_seconds() {
+        let mut conn = setup_test_db();
+        let (report_id, org_id) = create_report_for_job_duration_test(&mut conn);
+        insert_job_duration(&mut conn, report_id, 0).unwrap();
+        let result =
+            QueryJob::runner_minutes_usage(&mut conn, org_id, DateTime::TEST, DateTime::TEST)
+                .unwrap();
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn runner_minutes_outside_range() {
+        let mut conn = setup_test_db();
+        let (report_id, org_id) = create_report_for_job_duration_test(&mut conn);
+        insert_job_duration(&mut conn, report_id, 120).unwrap();
+        let start = DateTime::from(DateTime::TEST.into_inner() + chrono::Duration::seconds(100));
+        let end = DateTime::from(DateTime::TEST.into_inner() + chrono::Duration::seconds(200));
+        let result = QueryJob::runner_minutes_usage(&mut conn, org_id, start, end).unwrap();
+        assert_eq!(result, 0);
+    }
+
     // --- insert_job_duration tests ---
 
-    /// Helper to create a report and return its `ReportId` for `job_duration` tests.
-    fn create_report_for_job_duration_test(conn: &mut DbConnection) -> ReportId {
+    fn create_report_for_job_duration_test(conn: &mut DbConnection) -> (ReportId, OrganizationId) {
         let base = create_base_entities(conn);
         let branch = create_branch_with_head(
             conn,
@@ -648,13 +752,14 @@ mod tests {
 
             diesel::select(last_insert_rowid()).get_result::<ReportId>(conn)
         })
+        .map(|report_id| (report_id, base.organization_id))
         .expect("Failed to insert report")
     }
 
     #[test]
     fn insert_job_duration_basic() {
         let mut conn = setup_test_db();
-        let report_id = create_report_for_job_duration_test(&mut conn);
+        let (report_id, _) = create_report_for_job_duration_test(&mut conn);
 
         insert_job_duration(&mut conn, report_id, 42).expect("Insert failed");
 
@@ -669,7 +774,7 @@ mod tests {
     #[test]
     fn insert_job_duration_idempotent() {
         let mut conn = setup_test_db();
-        let report_id = create_report_for_job_duration_test(&mut conn);
+        let (report_id, _) = create_report_for_job_duration_test(&mut conn);
 
         // First insert
         insert_job_duration(&mut conn, report_id, 100).expect("First insert failed");

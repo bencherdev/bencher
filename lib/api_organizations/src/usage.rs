@@ -13,8 +13,9 @@ use bencher_schema::{
     context::{ApiContext, DbConnection},
     error::{forbidden_error, issue_error, payment_required_error, resource_not_found_err},
     model::{
-        organization::{QueryOrganization, plan::QueryPlan},
+        organization::{OrganizationId, QueryOrganization, plan::QueryPlan},
         project::metric::QueryMetric,
+        runner::job::QueryJob,
         user::auth::{AuthUser, BearerToken},
     },
 };
@@ -44,9 +45,9 @@ pub async fn org_usage_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
-/// View organization metrics usage
+/// View organization usage
 ///
-/// View the metrics usage of an organization.
+/// View the metrics and bare metal runner minutes usage of an organization.
 /// The user must have `manage` permissions for the organization.
 /// ➕ Bencher Plus: This endpoint offers an estimate of metered usage
 /// and exact usage for licensed organizations, both on Bencher Cloud and Bencher Self-Hosted.
@@ -99,7 +100,7 @@ async fn get_inner(
         if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
             let start_time = json_plan.current_period_start;
             let end_time = json_plan.current_period_end;
-            let usage = QueryMetric::usage(
+            let (metrics, runner_minutes) = query_usage(
                 auth_conn!(context),
                 query_organization.id,
                 start_time,
@@ -112,7 +113,8 @@ async fn get_inner(
                 license: None,
                 start_time,
                 end_time,
-                usage: Some(usage),
+                metrics: Some(metrics),
+                runner_minutes: Some(runner_minutes),
             })
         // Licensed plan
         } else if let Some(json_plan) = query_plan.to_licensed_plan(biller, licensor).await? {
@@ -134,7 +136,8 @@ async fn get_inner(
                 license: Some(json_license),
                 start_time,
                 end_time,
-                usage: None,
+                metrics: None,
+                runner_minutes: None,
             })
         } else {
             Err(issue_error(
@@ -152,7 +155,7 @@ async fn get_inner(
             .map_err(payment_required_error)?;
         let start_time = json_license.issued_at;
         let end_time = json_license.expiration;
-        let usage = QueryMetric::usage(
+        let (metrics, runner_minutes) = query_usage(
             auth_conn!(context),
             query_organization.id,
             start_time,
@@ -165,7 +168,8 @@ async fn get_inner(
             license: Some(json_license),
             start_time,
             end_time,
-            usage: Some(usage),
+            metrics: Some(metrics),
+            runner_minutes: Some(runner_minutes),
         })
     // Self-Hosted Free
     } else {
@@ -177,6 +181,18 @@ async fn get_inner(
     }
 }
 
+fn query_usage(
+    conn: &mut DbConnection,
+    organization_id: OrganizationId,
+    start_time: DateTime,
+    end_time: DateTime,
+) -> Result<(u32, u32), HttpError> {
+    let metrics = QueryMetric::usage(conn, organization_id, start_time, end_time)?;
+    let runner_minutes =
+        QueryJob::runner_minutes_usage(conn, organization_id, start_time, end_time)?;
+    Ok((metrics, runner_minutes))
+}
+
 fn free_plan_usage(
     conn: &mut DbConnection,
     query_organization: &QueryOrganization,
@@ -184,7 +200,7 @@ fn free_plan_usage(
 ) -> Result<JsonUsage, HttpError> {
     let end_time = DateTime::now();
     let start_time = (end_time.into_inner() - DEFAULT_USAGE_HISTORY).into();
-    let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
+    let (metrics, runner_minutes) = query_usage(conn, query_organization.id, start_time, end_time)?;
     Ok(JsonUsage {
         organization: query_organization.uuid,
         kind,
@@ -192,6 +208,7 @@ fn free_plan_usage(
         license: None,
         start_time,
         end_time,
-        usage: Some(usage),
+        metrics: Some(metrics),
+        runner_minutes: Some(runner_minutes),
     })
 }
