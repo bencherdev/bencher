@@ -12,7 +12,7 @@ enum HttpMethod {
 	DELETE = "DELETE",
 }
 
-const RETRY_MAX_ATTEMPTS = 10;
+const MAX_ATTEMPTS = 10;
 const RETRY_INITIAL_DELAY_MS = 1000;
 const RETRY_BACKOFF_MULTIPLIER = 2;
 const RETRY_MAX_DELAY_MS = 5000;
@@ -47,7 +47,7 @@ api.interceptors.response.use(
 
 		const retryCount = config.__retryCount ?? 0;
 
-		if (!isRetryableError(error) || retryCount >= RETRY_MAX_ATTEMPTS - 1) {
+		if (!isRetryableError(error) || retryCount >= MAX_ATTEMPTS - 1) {
 			if (retryCount > 0) {
 				setApiState(ApiState.DISCONNECTED);
 			}
