@@ -1,0 +1,36 @@
+@keyframes reconnecting-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.reconnecting-banner {
+  background-color: var(--bulma-scheme-main-bis);
+  color: var(--bulma-text);
+  padding: 1rem 1.25rem;
+  border-radius: var(--bulma-radius);
+  border-left: 4px solid;
+}
+
+.reconnecting-banner.is-warning {
+  border-left-color: var(--bulma-warning);
+}
+
+.reconnecting-banner.is-danger {
+  border-left-color: var(--bulma-danger);
+}
+
+.reconnecting-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--bulma-warning);
+  animation: reconnecting-pulse 1.5s ease-in-out infinite;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+}

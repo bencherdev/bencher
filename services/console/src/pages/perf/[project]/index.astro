@@ -9,6 +9,7 @@ import PublicProject from "../../../components/perf/PublicProject";
 import type { JsonProject } from "../../../types/bencher";
 import Tetris from "../../../components/site/Tetris.astro";
 import Notification from "../../../components/site/Notification";
+import ReconnectingBanner from "../../../components/site/ReconnectingBanner";
 import { fetchSSR, hasPerfImage } from "../../../components/perf/util";
 import FallbackPerfPanel from "../../../components/console/perf/FallbackPerfPanel.astro";
 import * as Sentry from "@sentry/astro";
@@ -80,6 +81,7 @@ if (hasPerfImage(Astro.url)) {
   </section>
   :
   <>
+    <ReconnectingBanner client:only="solid-js" />
     <Notification client:only="solid-js" />
     <PublicProject client:only="solid-js" apiUrl={BENCHER_API_URL} isBencherCloud={IS_BENCHER_CLOUD} params={params} project={jsonProject}>
       <section slot="fallback" class="section">
