@@ -1,4 +1,6 @@
+import type { AxiosError, InternalAxiosRequestConfig } from "axios";
 import axios from "axios";
+import { ApiState, setApiState } from "./connectivity";
 
 export const X_TOTAL_COUNT = "x-total-count";
 
@@ -9,6 +11,62 @@ enum HttpMethod {
 	PATCH = "PATCH",
 	DELETE = "DELETE",
 }
+
+const RETRY_MAX_ATTEMPTS = 10;
+const RETRY_INITIAL_DELAY_MS = 1000;
+const RETRY_BACKOFF_MULTIPLIER = 2;
+const RETRY_MAX_DELAY_MS = 5000;
+const RETRYABLE_STATUSES = [502, 503, 504];
+
+interface RetryConfig extends InternalAxiosRequestConfig {
+	__retryCount?: number;
+}
+
+const isRetryableError = (error: AxiosError): boolean => {
+	if (!error.response) {
+		return true;
+	}
+	return RETRYABLE_STATUSES.includes(error.response.status);
+};
+
+const sleep = (ms: number): Promise<void> =>
+	new Promise((resolve) => setTimeout(resolve, ms));
+
+const api = axios.create();
+
+api.interceptors.response.use(
+	(response) => {
+		setApiState(ApiState.CONNECTED);
+		return response;
+	},
+	async (error: AxiosError) => {
+		const config = error.config as undefined | RetryConfig;
+		if (!config) {
+			return Promise.reject(error);
+		}
+
+		const retryCount = config.__retryCount ?? 0;
+
+		if (!isRetryableError(error) || retryCount >= RETRY_MAX_ATTEMPTS - 1) {
+			if (retryCount > 0) {
+				setApiState(ApiState.DISCONNECTED);
+			}
+			return Promise.reject(error);
+		}
+
+		config.__retryCount = retryCount + 1;
+		setApiState(ApiState.RECONNECTING);
+
+		const delay = Math.min(
+			RETRY_INITIAL_DELAY_MS *
+				RETRY_BACKOFF_MULTIPLIER ** (config.__retryCount - 1),
+			RETRY_MAX_DELAY_MS,
+		);
+		await sleep(delay);
+
+		return api(config);
+	},
+);
 
 // Due to how Astro works, this hostname, that is the `apiUrl`
 // must be explicitly passed down from each page.
@@ -28,7 +86,7 @@ export const httpGet = async (
 	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
-) => axios(getOptions(hostname, pathname, token));
+) => api(getOptions(hostname, pathname, token));
 export const getOptions = (
 	hostname: string,
 	pathname: string,
@@ -46,7 +104,7 @@ export const httpPost = async (
 	pathname: string,
 	token: undefined | null | string,
 	data: object,
-) => axios(postOptions(hostname, pathname, token, data));
+) => api(postOptions(hostname, pathname, token, data));
 export const postOptions = (
 	hostname: string,
 	pathname: string,
@@ -61,7 +119,7 @@ export const httpPut = async (
 	pathname: string,
 	token: undefined | null | string,
 	data: object,
-) => axios(putOptions(hostname, pathname, token, data));
+) => api(putOptions(hostname, pathname, token, data));
 export const putOptions = (
 	hostname: string,
 	pathname: string,
@@ -76,7 +134,7 @@ export const httpPatch = async (
 	pathname: string,
 	token: undefined | null | string,
 	data: object,
-) => axios(pathOptions(hostname, pathname, token, data));
+) => api(pathOptions(hostname, pathname, token, data));
 export const pathOptions = (
 	hostname: string,
 	pathname: string,
@@ -90,7 +148,7 @@ export const httpDelete = async (
 	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
-) => axios(deleteOptions(hostname, pathname, token));
+) => api(deleteOptions(hostname, pathname, token));
 export const deleteOptions = (
 	hostname: string,
 	pathname: string,
