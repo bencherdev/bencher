@@ -89,16 +89,15 @@ impl QueryJob {
                     e,
                 )
             })?
-            .unwrap_or(0)
-            .max(0)
+            .unwrap_or_default()
             .try_into()
             .map_err(|e| {
-            issue_error(
-                "Failed to count runner minutes usage",
-                &format!("Failed to count runner minutes usage for organization ({organization_id}) between {start_time} and {end_time}."),
-                e,
-            )
-        })
+                issue_error(
+                    "Failed to count runner minutes usage",
+                    &format!("Failed to count runner minutes usage for organization ({organization_id}) between {start_time} and {end_time}."),
+                    e,
+                )
+            })
     }
 
     /// Process benchmark results from a completed job into the report.
@@ -702,8 +701,9 @@ mod tests {
         let mut conn = setup_test_db();
         let (report_id, org_id) = create_report_for_job_duration_test(&mut conn);
         insert_job_duration(&mut conn, report_id, 120).unwrap();
-        let after = DateTime::from(DateTime::TEST.into_inner() + chrono::Duration::seconds(100));
-        let result = QueryJob::runner_minutes_usage(&mut conn, org_id, after, after).unwrap();
+        let start = DateTime::from(DateTime::TEST.into_inner() + chrono::Duration::seconds(100));
+        let end = DateTime::from(DateTime::TEST.into_inner() + chrono::Duration::seconds(200));
+        let result = QueryJob::runner_minutes_usage(&mut conn, org_id, start, end).unwrap();
         assert_eq!(result, 0);
     }
 

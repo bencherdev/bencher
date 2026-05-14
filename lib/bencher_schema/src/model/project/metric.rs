@@ -66,9 +66,9 @@ impl QueryMetric {
                 crate::error::issue_error(
                     "Failed to count metric usage",
                     &format!("Failed to count metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
-                e
-                )}
-            )
+                    e,
+                )
+            })
     }
 
     pub fn into_json(self) -> JsonMetric {
