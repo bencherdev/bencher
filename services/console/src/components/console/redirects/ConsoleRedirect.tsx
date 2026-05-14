@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/astro";
-import { createMemo, createResource } from "solid-js";
+import { createMemo, createResource, onMount } from "solid-js";
 import type { JsonOrganization, JsonProject } from "../../../types/bencher";
 import { authUser, removeUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
@@ -25,7 +25,7 @@ export interface Props {
 }
 
 const ConsoleRedirect = (props: Props) => {
-	removeOnboardProjectKey();
+	onMount(() => removeOnboardProjectKey());
 	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const navigate = useNavigate();
