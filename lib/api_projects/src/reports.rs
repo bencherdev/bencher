@@ -268,7 +268,8 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 /// Create a report
 ///
 /// Create a report for a project.
-/// The user must have `create` permissions for the project.
+/// The user must have `create` permissions for the project,
+/// or provide a valid project key for the project.
 /// If using the Bencher CLI, it is recommended to use the `bencher run` subcommand
 /// instead of trying to create a report manually.
 #[endpoint {
@@ -282,20 +283,27 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 // bisect more complex logic will be required.
 pub async fn proj_report_post(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjReportsParams>,
     body: TypedBody<JsonNewReport>,
 ) -> Result<ResponseCreated<JsonReport>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = post_inner(
         &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
-        auth_user,
+        api_actor,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Post::auth_response_created(json))
 }
 
@@ -304,16 +312,16 @@ async fn post_inner(
     context: &ApiContext,
     path_params: ProjReportsParams,
     json_report: JsonNewReport,
-    auth_user: AuthUser,
+    api_actor: ApiActor,
 ) -> Result<JsonReport, HttpError> {
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        &auth_user,
+        &api_actor,
         Permission::Create,
     )?;
 
@@ -330,14 +338,7 @@ async fn post_inner(
         job: None,
     };
 
-    QueryReport::create(
-        log,
-        context,
-        &query_project,
-        new_run_report,
-        &auth_user.into(),
-    )
-    .await
+    QueryReport::create(log, context, &query_project, new_run_report, &api_actor).await
 }
 
 #[derive(Deserialize, JsonSchema)]

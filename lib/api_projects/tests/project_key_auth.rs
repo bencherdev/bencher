@@ -6,11 +6,12 @@
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args
 )]
-//! Integration tests for project key authentication on GET endpoints.
+//! Integration tests for project key authentication.
 
 use bencher_api_tests::TestServer;
 use bencher_json::{
-    JsonBranch, JsonBranches, JsonProject, JsonProjectKeyCreated, JsonProjects, ProjectKey,
+    JsonBenchmark, JsonBranch, JsonBranches, JsonMeasure, JsonProject, JsonProjectKeyCreated,
+    JsonProjects, JsonTestbed, JsonThreshold, ProjectKey,
 };
 use http::StatusCode;
 
@@ -342,9 +343,9 @@ async fn project_key_cannot_list_keys() {
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }
 
-// Negative: project key cannot write (POST requires user auth)
+// POST /v0/projects/{project}/branches - create branch with key
 #[tokio::test]
-async fn project_key_cannot_write() {
+async fn project_key_can_create_branch() {
     let (server, project_slug, _token, key) = setup().await;
 
     let resp = server
@@ -354,12 +355,196 @@ async fn project_key_cannot_write() {
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(key.as_ref()),
         )
-        .json(&serde_json::json!({"name": "new-branch"}))
+        .json(&serde_json::json!({"name": "key-branch"}))
         .send()
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let branch: JsonBranch = resp.json().await.expect("Failed to parse response");
+    let name: &str = branch.name.as_ref();
+    assert_eq!(name, "key-branch");
+}
+
+// POST /v0/projects/{project}/testbeds - create testbed with key
+#[tokio::test]
+async fn project_key_can_create_testbed() {
+    let (server, project_slug, _token, key) = setup().await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({"name": "key-testbed"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let testbed: JsonTestbed = resp.json().await.expect("Failed to parse response");
+    let name: &str = testbed.name.as_ref();
+    assert_eq!(name, "key-testbed");
+}
+
+// POST /v0/projects/{project}/benchmarks - create benchmark with key
+#[tokio::test]
+async fn project_key_can_create_benchmark() {
+    let (server, project_slug, _token, key) = setup().await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/benchmarks", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({"name": "key-benchmark"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let benchmark: JsonBenchmark = resp.json().await.expect("Failed to parse response");
+    let name: &str = benchmark.name.as_ref();
+    assert_eq!(name, "key-benchmark");
+}
+
+// POST /v0/projects/{project}/measures - create measure with key
+#[tokio::test]
+async fn project_key_can_create_measure() {
+    let (server, project_slug, _token, key) = setup().await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/measures", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({"name": "key-measure", "units": "ns/iter"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let measure: JsonMeasure = resp.json().await.expect("Failed to parse response");
+    let name: &str = measure.name.as_ref();
+    assert_eq!(name, "key-measure");
+}
+
+// POST /v0/projects/{project}/thresholds - create threshold with key
+#[tokio::test]
+async fn project_key_can_create_threshold() {
+    let (server, project_slug, token, key) = setup().await;
+
+    // Create branch, testbed, and measure using JWT auth
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "threshold-branch"}))
+        .send()
+        .await
+        .expect("Failed to create branch");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "threshold-testbed"}))
+        .send()
+        .await
+        .expect("Failed to create testbed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/measures", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "threshold-measure", "units": "ns/iter"}))
+        .send()
+        .await
+        .expect("Failed to create measure");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Create threshold using project key
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/thresholds", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({
+            "branch": "threshold-branch",
+            "testbed": "threshold-testbed",
+            "measure": "threshold-measure",
+            "test": "percentage",
+            "upper_boundary": 0.25
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let _threshold: JsonThreshold = resp.json().await.expect("Failed to parse response");
+}
+
+// Negative: project key cannot create in wrong project
+#[tokio::test]
+async fn project_key_cannot_create_in_wrong_project() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Key User", "keycrosscreate@example.com")
+        .await;
+    let org = server.create_org(&user, "Cross Create Org").await;
+    let project_a = server.create_project(&user, &org, "Create A").await;
+    let project_b = server.create_project(&user, &org, "Create B").await;
+
+    let slug_a: &str = project_a.slug.as_ref();
+    let slug_b: &str = project_b.slug.as_ref();
+
+    // Create key for project A
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/keys", slug_a)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({"name": "cross-key"}))
+        .send()
+        .await
+        .expect("Failed to create key");
+    let key_created: JsonProjectKeyCreated = resp.json().await.expect("Failed to parse key");
+
+    // Try to create a branch in project B with project A's key
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", slug_b)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key_created.key.as_ref()),
+        )
+        .json(&serde_json::json!({"name": "cross-branch"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // Negative: revoked project key is rejected

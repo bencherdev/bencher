@@ -114,6 +114,13 @@ pub struct JsonUpdateAlert {
     pub status: Option<UpdateAlertStatus>,
 }
 
+impl JsonUpdateAlert {
+    pub fn is_status_only(&self) -> bool {
+        let Self { status: _ } = self;
+        true
+    }
+}
+
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

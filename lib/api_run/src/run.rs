@@ -4,7 +4,7 @@ use bencher_rbac::project::Permission;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{bad_request_error, forbidden_error, unauthorized_error, with_auth_hint},
+    error::{bad_request_error, unauthorized_error, with_auth_hint},
     model::{
         project::{
             QueryProject,
@@ -176,11 +176,7 @@ async fn post_inner_project_key(
     // Verify the run targets this project (if explicitly specified)
     if let Some(project_rid) = json_run.project.as_ref() {
         let target = QueryProject::from_resource_id(auth_conn!(context), project_rid)?;
-        if target.id != project_key_actor.project_id {
-            return Err(forbidden_error(
-                "Project key is not authorized for the specified project",
-            ));
-        }
+        project_key_actor.verify_project(target.id)?;
     }
 
     slog::info!(log, "New run via project key"; "project" => ?query_project.uuid);

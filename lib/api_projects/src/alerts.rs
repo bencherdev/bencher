@@ -7,16 +7,13 @@ use bencher_rbac::project::Permission;
 use bencher_schema::{
     actor_conn, auth_conn,
     context::ApiContext,
-    error::{resource_conflict_err, resource_not_found_err, with_auth_hint, with_token_hint},
+    error::{forbidden_error, resource_conflict_err, resource_not_found_err, with_auth_hint},
     model::{
         project::{
             QueryProject,
             threshold::alert::{QueryAlert, UpdateAlert},
         },
-        user::{
-            actor::{ApiActor, PubProjectBearerToken},
-            auth::{AuthUser, BearerToken},
-        },
+        user::actor::{ApiActor, PubProjectBearerToken},
     },
     schema, write_conn,
 };
@@ -366,8 +363,9 @@ async fn get_one_inner(
 /// Update an alert
 ///
 /// Update an alert for a project.
-/// The user must have `edit` permissions for the project.
-/// Use this endpoint to dismiss an alert.
+/// The user must have `edit` permissions for the project,
+/// or provide a valid project key for the project (status only).
+/// Use this endpoint to dismiss or reactivate an alert.
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/alerts/{alert}",
@@ -375,42 +373,52 @@ async fn get_one_inner(
 }]
 pub async fn proj_alert_patch(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjAlertParams>,
     body: TypedBody<JsonUpdateAlert>,
 ) -> Result<ResponseOk<JsonAlert>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = patch_inner(
         rqctx.context(),
+        &api_actor,
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Patch::auth_response_ok(json))
 }
 
 async fn patch_inner(
     context: &ApiContext,
+    api_actor: &ApiActor,
     path_params: ProjAlertParams,
     json_alert: JsonUpdateAlert,
-    auth_user: &AuthUser,
 ) -> Result<JsonAlert, HttpError> {
-    // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    if matches!(api_actor, ApiActor::ProjectKey(_)) && !json_alert.is_status_only() {
+        return Err(forbidden_error("Project keys can only update alert status"));
+    }
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Edit,
     )?;
-
     let query_alert =
         QueryAlert::from_uuid(auth_conn!(context), query_project.id, path_params.alert)?;
-    let update_alert = UpdateAlert::from(json_alert.clone());
+
+    let now = context.clock.now();
+    let update_alert = UpdateAlert::status_change(json_alert.status, now);
     diesel::update(schema::alert::table.filter(schema::alert::id.eq(query_alert.id)))
         .set(&update_alert)
         .execute(write_conn!(context))

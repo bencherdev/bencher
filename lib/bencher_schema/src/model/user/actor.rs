@@ -33,6 +33,16 @@ pub struct ProjectKeyActor {
     pub project_id: ProjectId,
 }
 
+impl ProjectKeyActor {
+    pub fn verify_project(&self, project_id: ProjectId) -> Result<(), HttpError> {
+        if project_id == self.project_id {
+            Ok(())
+        } else {
+            Err(unauthorized_error(INVALID_PROJECT_KEY))
+        }
+    }
+}
+
 impl From<super::auth::AuthUser> for ApiActor {
     fn from(auth_user: super::auth::AuthUser) -> Self {
         Self::Public(PublicUser::from(auth_user))

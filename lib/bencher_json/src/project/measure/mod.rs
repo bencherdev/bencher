@@ -90,3 +90,15 @@ pub struct JsonUpdateMeasure {
     /// Set whether the measure is archived.
     pub archived: Option<bool>,
 }
+
+impl JsonUpdateMeasure {
+    pub fn is_rename(&self) -> bool {
+        let Self {
+            name,
+            slug,
+            units: _,
+            archived: _,
+        } = self;
+        name.is_some() || slug.is_some()
+    }
+}

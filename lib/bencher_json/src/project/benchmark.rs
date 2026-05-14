@@ -68,3 +68,14 @@ pub struct JsonUpdateBenchmark {
     /// Set whether the benchmark is archived.
     pub archived: Option<bool>,
 }
+
+impl JsonUpdateBenchmark {
+    pub fn is_rename(&self) -> bool {
+        let Self {
+            name,
+            slug,
+            archived: _,
+        } = self;
+        name.is_some() || slug.is_some()
+    }
+}

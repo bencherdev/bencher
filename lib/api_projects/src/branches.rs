@@ -11,8 +11,8 @@ use bencher_schema::{
     actor_conn, auth_conn,
     context::ApiContext,
     error::{
-        BencherResource, resource_conflict_err, resource_not_found_err, resource_not_found_error,
-        with_auth_hint, with_token_hint,
+        BencherResource, forbidden_error, resource_conflict_err, resource_not_found_err,
+        resource_not_found_error, with_auth_hint, with_token_hint,
     },
     model::{
         project::{
@@ -207,7 +207,8 @@ fn get_ls_query<'q>(
 /// Create a branch
 ///
 /// Create a branch for a project.
-/// The user must have `create` permissions for the project.
+/// The user must have `create` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/branches",
@@ -215,20 +216,27 @@ fn get_ls_query<'q>(
 }]
 pub async fn proj_branch_post(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjBranchesParams>,
     body: TypedBody<JsonNewBranch>,
 ) -> Result<ResponseCreated<JsonBranch>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = post_inner(
         &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
+        &api_actor,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Post::auth_response_created(json))
 }
 
@@ -237,16 +245,16 @@ async fn post_inner(
     context: &ApiContext,
     path_params: ProjBranchesParams,
     json_branch: JsonNewBranch,
-    auth_user: &AuthUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonBranch, HttpError> {
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Create,
     )?;
 
@@ -367,7 +375,8 @@ async fn get_one_inner(
 /// Update a branch
 ///
 /// Update a branch for a project.
-/// The user must have `edit` permissions for the project.
+/// The user must have `edit` permissions for the project,
+/// or provide a valid project key for the project (no rename).
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/branches/{branch}",
@@ -375,41 +384,49 @@ async fn get_one_inner(
 }]
 pub async fn proj_branch_patch(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjBranchParams>,
     body: TypedBody<JsonUpdateBranch>,
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = patch_inner(
         &rqctx.log,
         rqctx.context(),
+        &api_actor,
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Patch::auth_response_ok(json))
 }
 
 async fn patch_inner(
     log: &Logger,
     context: &ApiContext,
+    api_actor: &ApiActor,
     path_params: ProjBranchParams,
     json_branch: JsonUpdateBranch,
-    auth_user: &AuthUser,
 ) -> Result<JsonBranch, HttpError> {
-    // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    if matches!(api_actor, ApiActor::ProjectKey(_)) && json_branch.is_rename() {
+        return Err(forbidden_error("Project keys cannot rename branches"));
+    }
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Edit,
     )?;
-
     let query_branch =
         QueryBranch::from_resource_id(auth_conn!(context), query_project.id, &path_params.branch)?;
 
