@@ -1,7 +1,7 @@
 use bencher_json::{ProjectKeyUuid, ProjectResourceId, ResourceName};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliBackend, CliPagination};
+use crate::parser::{CliPagination, CliProjectBackend};
 
 #[derive(Subcommand, Debug)]
 pub enum CliProjectKey {
@@ -43,7 +43,7 @@ pub struct CliProjectKeyList {
     pub pagination: CliPagination<CliProjectKeysSort>,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -67,7 +67,7 @@ pub struct CliProjectKeyCreate {
     pub ttl: Option<u32>,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -79,7 +79,7 @@ pub struct CliProjectKeyView {
     pub uuid: ProjectKeyUuid,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -95,7 +95,7 @@ pub struct CliProjectKeyUpdate {
     pub name: Option<ResourceName>,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -107,5 +107,5 @@ pub struct CliProjectKeyRevoke {
     pub uuid: ProjectKeyUuid,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }

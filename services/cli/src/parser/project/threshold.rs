@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use clap::{ArgGroup, Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliBackend, CliPagination};
+use crate::parser::{CliPagination, CliProjectBackend};
 
 #[derive(Subcommand, Debug)]
 pub enum CliThreshold {
@@ -50,7 +50,7 @@ pub struct CliThresholdList {
     pub archived: bool,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -83,7 +83,7 @@ pub struct CliThresholdCreate {
     pub model: CliModel,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -148,7 +148,7 @@ pub struct CliThresholdView {
     pub model: Option<ModelUuid>,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -163,7 +163,7 @@ pub struct CliThresholdUpdate {
     pub model: CliUpdateModel,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -212,5 +212,5 @@ pub struct CliThresholdDelete {
     pub threshold: ThresholdUuid,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }

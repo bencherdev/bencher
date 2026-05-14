@@ -5,7 +5,7 @@ use bencher_json::{
 };
 use clap::{Parser, ValueEnum};
 
-use crate::parser::{CliBackend, ElidedOption};
+use crate::parser::{CliProjectBackend, ElidedOption};
 
 #[derive(Parser, Debug)]
 #[expect(clippy::option_option)]
@@ -53,7 +53,7 @@ pub struct CliPerf {
     pub table: Option<Option<CliPerfTableStyle>>,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 /// Supported Table Formats

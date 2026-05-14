@@ -1,7 +1,7 @@
 use bencher_json::{MeasureResourceId, MeasureSlug, ProjectResourceId, ResourceName};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliArchived, CliBackend, CliPagination};
+use crate::parser::{CliArchived, CliPagination, CliProjectBackend};
 
 #[derive(Subcommand, Debug)]
 pub enum CliMeasure {
@@ -43,7 +43,7 @@ pub struct CliMeasureList {
     pub archived: bool,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -71,7 +71,7 @@ pub struct CliMeasureCreate {
     pub units: ResourceName,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -83,7 +83,7 @@ pub struct CliMeasureView {
     pub measure: MeasureResourceId,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -110,7 +110,7 @@ pub struct CliMeasureUpdate {
     pub archived: CliArchived,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -122,5 +122,5 @@ pub struct CliMeasureDelete {
     pub measure: MeasureResourceId,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
