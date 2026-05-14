@@ -67,23 +67,19 @@ impl QueryJob {
     fn_from_uuid!(job, JobUuid, Job);
 
     #[cfg(feature = "plus")]
-    #[expect(
-        clippy::integer_division,
-        reason = "ceiling division: (secs + 59) / 60 converts seconds to minutes"
-    )]
     pub fn runner_minutes_usage(
         conn: &mut DbConnection,
         organization_id: OrganizationId,
         start_time: DateTime,
         end_time: DateTime,
     ) -> Result<u32, HttpError> {
-        let total_seconds: i64 = schema::job_duration_by_report::table
+        schema::job_duration_by_report::table
             .inner_join(schema::report::table.inner_join(schema::project::table))
             .filter(schema::project::organization_id.eq(organization_id))
             .filter(schema::report::end_time.ge(start_time))
             .filter(schema::report::end_time.le(end_time))
             .select(diesel::dsl::sum(
-                schema::job_duration_by_report::job_duration,
+                (schema::job_duration_by_report::job_duration + 59) / 60,
             ))
             .get_result::<Option<i64>>(conn)
             .map_err(|e| {
@@ -94,8 +90,9 @@ impl QueryJob {
                 )
             })?
             .unwrap_or(0)
-            .max(0);
-        ((total_seconds + 59) / 60).try_into().map_err(|e| {
+            .max(0)
+            .try_into()
+            .map_err(|e| {
             issue_error(
                 "Failed to count runner minutes usage",
                 &format!("Failed to count runner minutes usage for organization ({organization_id}) between {start_time} and {end_time}."),
@@ -659,14 +656,10 @@ mod tests {
     #[test]
     fn runner_minutes_exact_boundary() {
         let mut conn = setup_test_db();
-        let report_id = create_report_for_job_duration_test(&mut conn);
-        let base_org_id: OrganizationId = schema::project::table
-            .select(schema::project::organization_id)
-            .first(&mut conn)
-            .unwrap();
+        let (report_id, org_id) = create_report_for_job_duration_test(&mut conn);
         insert_job_duration(&mut conn, report_id, 60).unwrap();
         let result =
-            QueryJob::runner_minutes_usage(&mut conn, base_org_id, DateTime::TEST, DateTime::TEST)
+            QueryJob::runner_minutes_usage(&mut conn, org_id, DateTime::TEST, DateTime::TEST)
                 .unwrap();
         assert_eq!(result, 1);
     }
@@ -674,14 +667,10 @@ mod tests {
     #[test]
     fn runner_minutes_partial_minute() {
         let mut conn = setup_test_db();
-        let report_id = create_report_for_job_duration_test(&mut conn);
-        let base_org_id: OrganizationId = schema::project::table
-            .select(schema::project::organization_id)
-            .first(&mut conn)
-            .unwrap();
+        let (report_id, org_id) = create_report_for_job_duration_test(&mut conn);
         insert_job_duration(&mut conn, report_id, 61).unwrap();
         let result =
-            QueryJob::runner_minutes_usage(&mut conn, base_org_id, DateTime::TEST, DateTime::TEST)
+            QueryJob::runner_minutes_usage(&mut conn, org_id, DateTime::TEST, DateTime::TEST)
                 .unwrap();
         assert_eq!(result, 2);
     }
@@ -689,14 +678,10 @@ mod tests {
     #[test]
     fn runner_minutes_one_second() {
         let mut conn = setup_test_db();
-        let report_id = create_report_for_job_duration_test(&mut conn);
-        let base_org_id: OrganizationId = schema::project::table
-            .select(schema::project::organization_id)
-            .first(&mut conn)
-            .unwrap();
+        let (report_id, org_id) = create_report_for_job_duration_test(&mut conn);
         insert_job_duration(&mut conn, report_id, 1).unwrap();
         let result =
-            QueryJob::runner_minutes_usage(&mut conn, base_org_id, DateTime::TEST, DateTime::TEST)
+            QueryJob::runner_minutes_usage(&mut conn, org_id, DateTime::TEST, DateTime::TEST)
                 .unwrap();
         assert_eq!(result, 1);
     }
@@ -704,22 +689,27 @@ mod tests {
     #[test]
     fn runner_minutes_zero_seconds() {
         let mut conn = setup_test_db();
-        let report_id = create_report_for_job_duration_test(&mut conn);
-        let base_org_id: OrganizationId = schema::project::table
-            .select(schema::project::organization_id)
-            .first(&mut conn)
-            .unwrap();
+        let (report_id, org_id) = create_report_for_job_duration_test(&mut conn);
         insert_job_duration(&mut conn, report_id, 0).unwrap();
         let result =
-            QueryJob::runner_minutes_usage(&mut conn, base_org_id, DateTime::TEST, DateTime::TEST)
+            QueryJob::runner_minutes_usage(&mut conn, org_id, DateTime::TEST, DateTime::TEST)
                 .unwrap();
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn runner_minutes_outside_range() {
+        let mut conn = setup_test_db();
+        let (report_id, org_id) = create_report_for_job_duration_test(&mut conn);
+        insert_job_duration(&mut conn, report_id, 120).unwrap();
+        let after = DateTime::from(DateTime::TEST.into_inner() + chrono::Duration::seconds(100));
+        let result = QueryJob::runner_minutes_usage(&mut conn, org_id, after, after).unwrap();
         assert_eq!(result, 0);
     }
 
     // --- insert_job_duration tests ---
 
-    /// Helper to create a report and return its `ReportId` for `job_duration` tests.
-    fn create_report_for_job_duration_test(conn: &mut DbConnection) -> ReportId {
+    fn create_report_for_job_duration_test(conn: &mut DbConnection) -> (ReportId, OrganizationId) {
         let base = create_base_entities(conn);
         let branch = create_branch_with_head(
             conn,
@@ -762,13 +752,14 @@ mod tests {
 
             diesel::select(last_insert_rowid()).get_result::<ReportId>(conn)
         })
+        .map(|report_id| (report_id, base.organization_id))
         .expect("Failed to insert report")
     }
 
     #[test]
     fn insert_job_duration_basic() {
         let mut conn = setup_test_db();
-        let report_id = create_report_for_job_duration_test(&mut conn);
+        let (report_id, _) = create_report_for_job_duration_test(&mut conn);
 
         insert_job_duration(&mut conn, report_id, 42).expect("Insert failed");
 
@@ -783,7 +774,7 @@ mod tests {
     #[test]
     fn insert_job_duration_idempotent() {
         let mut conn = setup_test_db();
-        let report_id = create_report_for_job_duration_test(&mut conn);
+        let (report_id, _) = create_report_for_job_duration_test(&mut conn);
 
         // First insert
         insert_job_duration(&mut conn, report_id, 100).expect("First insert failed");
