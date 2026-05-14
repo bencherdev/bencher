@@ -8,6 +8,7 @@ members = [
     "tasks/*",
     "xtask",
 ]
+default-members = ["services/cli"]
 exclude = ["services/benchers", "services/cargo-bencher"]
 resolver = "3"
 
