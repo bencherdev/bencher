@@ -1,8 +1,9 @@
 import * as Sentry from "@sentry/astro";
-import { createMemo, createResource } from "solid-js";
+import { createMemo, createResource, onMount } from "solid-js";
 import type { JsonOrganization, JsonProject } from "../../../types/bencher";
 import { authUser, removeUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
+import { removeOnboardProjectKey } from "../../../util/onboard";
 import {
 	NOTIFY_KIND_PARAM,
 	NOTIFY_TEXT_PARAM,
@@ -24,6 +25,7 @@ export interface Props {
 }
 
 const ConsoleRedirect = (props: Props) => {
+	onMount(() => removeOnboardProjectKey());
 	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const navigate = useNavigate();
@@ -145,7 +147,7 @@ const ConsoleRedirect = (props: Props) => {
 				switch (projects?.length) {
 					case 0:
 						navigate(
-							forwardParams("/console/onboard/token", [PLAN_PARAM], []),
+							forwardParams("/console/onboard/project", [PLAN_PARAM], []),
 							{ replace: true },
 						);
 						break;

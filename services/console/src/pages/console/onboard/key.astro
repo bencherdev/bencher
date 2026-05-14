@@ -1,0 +1,74 @@
+---
+export const prerender = false;
+
+import { BENCHER_API_URL } from "astro:env/server";
+
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import OnboardKey from "../../../components/console/onboard/OnboardKey";
+import OnboardStepsFallback from "../../../components/console/onboard/OnboardStepsFallback";
+import { OnboardStep } from "../../../components/console/onboard/OnboardStepsInner";
+import ThemeScript from "../../../components/navbar/theme/ThemeScript.astro";
+---
+
+<BaseLayout
+  title="Project API Key"
+  description="Setup a new project API key for Bencher"
+>
+  <div slot="navbar" />
+
+  <OnboardKey client:only="solid-js" apiUrl={BENCHER_API_URL} >
+    <div slot="fallback">
+      <OnboardStepsFallback step={OnboardStep.KEY} />
+      <section class="section">
+        <div class="container">
+          <div class="columns is-centered">
+            <div class="column is-half">
+              <div class="content has-text-centered">
+                <h1 class="title is-1">Use this project API key</h1>
+                <h2 class="subtitle is-4">
+                  Authenticate with Bencher using this project API key.
+                </h2>
+                <article class="message is-warning">
+                  <div class="message-body">
+                    Save this key! It will only be shown during onboarding.
+                  </div>
+                </article>
+                <figure class="frame">
+                  <pre data-language="plaintext">
+                  </pre>
+                  <button
+                    class="button is-fullwidth"
+                    title="Copy project API key to clipboard"
+                  >
+                    <span class="icon-text">
+                      <span class="icon">
+                        <i class="far fa-copy" />
+                      </span>
+                      <span>Copy to Clipboard</span>
+                    </span>
+                  </button>
+                </figure>
+                <br />
+                <br />
+                <a
+                  class="button is-primary is-fullwidth"
+                >
+                  <span class="icon-text">
+                    <span>Next Step</span>
+                    <span class="icon">
+                      <i class="fas fa-chevron-right" />
+                    </span>
+                  </span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </OnboardKey>
+
+  <div slot="footer" />
+
+  <ThemeScript />
+</BaseLayout>

@@ -1,14 +1,19 @@
 import * as Sentry from "@sentry/astro";
-import { new_slug } from "bencher_valid";
 import { createEffect, createMemo, createResource } from "solid-js";
 import type {
+	JsonNewProjectKey,
 	JsonOrganization,
 	JsonProject,
+	JsonProjectKey,
+	JsonProjectKeyCreated,
 	PlanLevel,
 } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
-import { httpGet } from "../../../util/http";
-import { getOnboardProjectKey } from "../../../util/onboard";
+import { httpGet, httpPost } from "../../../util/http";
+import {
+	getOnboardProjectKey,
+	setOnboardProjectKey,
+} from "../../../util/onboard";
 import { getOrganization, setOrganization } from "../../../util/organization";
 import { useSearchParams } from "../../../util/url";
 import {
@@ -24,10 +29,9 @@ import { OnboardStep } from "./OnboardStepsInner";
 
 export interface Props {
 	apiUrl: string;
-	isBencherCloud: boolean;
 }
 
-const OnboardRun = (props: Props) => {
+const OnboardKey = (props: Props) => {
 	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -63,10 +67,10 @@ const OnboardRun = (props: Props) => {
 			return [cachedOrganization];
 		}
 		if (!fetcher.bencher_valid) {
-			return undefined;
+			return;
 		}
 		if (!validJwt(fetcher.token)) {
-			return null;
+			return;
 		}
 		const path = "/v0/organizations";
 		return await httpGet(props.apiUrl, path, fetcher.token)
@@ -76,10 +80,10 @@ const OnboardRun = (props: Props) => {
 			.catch((error) => {
 				console.error(error);
 				Sentry.captureException(error);
-				return null;
+				return;
 			});
 	};
-	const [organizations] = createResource<null | JsonOrganization[]>(
+	const [organizations] = createResource<undefined | JsonOrganization[]>(
 		orgsFetcher,
 		getOrganizations,
 	);
@@ -109,19 +113,10 @@ const OnboardRun = (props: Props) => {
 		organization: undefined | JsonOrganization;
 	}) => {
 		if (!fetcher.bencher_valid) {
-			return undefined;
+			return;
 		}
-		if (!validJwt(fetcher.token)) {
-			return null;
-		}
-		if (organizations.loading) {
-			return undefined;
-		}
-		if (fetcher.organization === undefined) {
-			return undefined;
-		}
-		if (fetcher.organization === null) {
-			return null;
+		if (!validJwt(fetcher.token) || fetcher.organization === undefined) {
+			return;
 		}
 		const path = `/v0/organizations/${fetcher.organization?.slug}/projects`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
@@ -131,55 +126,147 @@ const OnboardRun = (props: Props) => {
 			.catch((error) => {
 				console.error(error);
 				Sentry.captureException(error);
-				return null;
+				return;
 			});
 	};
-	const [projects] = createResource<null | JsonProject[]>(
+	const [projects] = createResource<undefined | JsonProject[]>(
 		projectsFetcher,
 		getProjects,
 	);
 
-	const runCode = createMemo(() => {
+	const project = createMemo(() => {
 		const orgProjects = projects();
-		const project =
-			Array.isArray(orgProjects) && (orgProjects?.length ?? 0) > 0
-				? (orgProjects?.[0] as JsonProject)
-				: {
-						slug: bencher_valid()
-							? new_slug(`${user?.user?.name}'s project`)
-							: "",
-					};
-		const key = getOnboardProjectKey() ?? "YOUR_KEY_HERE";
-		const host = props.isBencherCloud ? "" : `--host ${props.apiUrl} `;
-		return `bencher run --project ${project.slug} --key ${key} ${host}bencher mock`;
+		return Array.isArray(orgProjects) && (orgProjects?.length ?? 0) > 0
+			? (orgProjects?.[0] as JsonProject)
+			: undefined;
+	});
+
+	const keyName = createMemo(() => `${user?.user?.name}'s key`);
+
+	const keysFetcher = createMemo(() => {
+		return {
+			bencher_valid: bencher_valid(),
+			token: user.token,
+			project: project(),
+		};
+	});
+	const getKeys = async (fetcher: {
+		bencher_valid: InitValid;
+		token: string;
+		project: undefined | JsonProject;
+	}) => {
+		if (!fetcher.bencher_valid) {
+			return;
+		}
+		if (!validJwt(fetcher.token) || fetcher.project === undefined) {
+			return;
+		}
+		const path = `/v0/projects/${
+			fetcher.project?.slug
+		}/keys?name=${encodeURIComponent(keyName())}`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
+			.then((resp) => {
+				return resp?.data;
+			})
+			.catch((error) => {
+				console.error(error);
+				Sentry.captureException(error);
+				return;
+			});
+	};
+	const [apiKeys] = createResource<undefined | JsonProjectKey[]>(
+		keysFetcher,
+		getKeys,
+	);
+
+	const keyFetcher = createMemo(() => {
+		return {
+			bencher_valid: bencher_valid(),
+			token: user.token,
+			project: project(),
+			keys: apiKeys(),
+		};
+	});
+	const getKey = async (fetcher: {
+		bencher_valid: InitValid;
+		token: string;
+		project: undefined | JsonProject;
+		keys: undefined | JsonProjectKey[];
+	}) => {
+		if (!fetcher.bencher_valid) {
+			return;
+		}
+		if (
+			!validJwt(fetcher.token) ||
+			fetcher.project === undefined ||
+			fetcher.keys === undefined
+		) {
+			return;
+		}
+		if (fetcher.keys.length > 0) {
+			return fetcher.keys[0];
+		}
+		const path = `/v0/projects/${fetcher.project?.slug}/keys`;
+		const data: JsonNewProjectKey = {
+			name: keyName(),
+		};
+		return await httpPost(props.apiUrl, path, fetcher.token, data)
+			.then((resp) => {
+				const created = resp?.data as JsonProjectKeyCreated;
+				if (created?.key) {
+					setOnboardProjectKey(created.key);
+				}
+				return created;
+			})
+			.catch((error) => {
+				console.error(error);
+				Sentry.captureException(error);
+				return;
+			});
+	};
+	const [apiKey] = createResource<
+		undefined | JsonProjectKey | JsonProjectKeyCreated
+	>(keyFetcher, getKey);
+
+	const keyValue = createMemo(() => {
+		const key = apiKey();
+		if (key && "key" in key) {
+			return (key as JsonProjectKeyCreated).key;
+		}
+		return getOnboardProjectKey() ?? "";
 	});
 
 	return (
 		<>
-			<OnboardSteps step={OnboardStep.RUN} plan={plan} />
+			<OnboardSteps step={OnboardStep.KEY} plan={plan} />
 
 			<section class="section">
 				<div class="container">
 					<div class="columns is-centered">
 						<div class="column is-half">
 							<div class="content has-text-centered">
-								<h1 class="title is-1">Track your benchmarks</h1>
+								<h1 class="title is-1">Use this project API key</h1>
 								<h2 class="subtitle is-4">
-									Install the Bencher CLI and run your first benchmarks.
+									Authenticate with Bencher using this project API key.
 								</h2>
+								<article class="message is-warning">
+									<div class="message-body">
+										Save this key! It will only be shown during onboarding.
+									</div>
+								</article>
 								<figure class="frame">
 									<pre data-language="plaintext">
 										<code>
-											<div class="code">{runCode()}</div>
+											<div class="code">{keyValue()}</div>
 										</code>
 									</pre>
-									<CopyButton text={runCode()} />
+									<CopyButton text={keyValue()} />
 								</figure>
 								<br />
 								<br />
 								<a
 									class="button is-primary is-fullwidth"
-									href={`/console/onboard/invite${planParam(plan())}`}
+									href={`/console/onboard/run${planParam(plan())}`}
 								>
 									<span class="icon-text">
 										<span>Next Step</span>
@@ -197,4 +284,4 @@ const OnboardRun = (props: Props) => {
 	);
 };
 
-export default OnboardRun;
+export default OnboardKey;

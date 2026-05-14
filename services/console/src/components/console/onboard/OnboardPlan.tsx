@@ -100,9 +100,6 @@ const OnboardPlan = (props: Props) => {
 						<div class="column is-half">
 							<div class="content has-text-centered">
 								<h1 class="title is-1">Activate your account</h1>
-								<h2 class="subtitle is-4">
-									All plans come with a 60-day money-back guarantee.
-								</h2>
 							</div>
 							<br />
 							<BillingPanel
