@@ -1,7 +1,7 @@
 use bencher_json::{AlertUuid, ProjectResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliBackend, CliPagination};
+use crate::parser::{CliPagination, CliProjectBackend};
 
 #[derive(Subcommand, Debug)]
 pub enum CliAlert {
@@ -33,7 +33,7 @@ pub struct CliAlertList {
     pub archived: bool,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -65,7 +65,7 @@ pub struct CliAlertView {
     pub alert: AlertUuid,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -81,7 +81,7 @@ pub struct CliAlertUpdate {
     pub status: Option<CliAlertStatusUpdate>,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone)]

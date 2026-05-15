@@ -8,7 +8,7 @@ use bencher_parser::check_env;
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
-use crate::parser::CliBackend;
+use crate::parser::CliProjectBackend;
 
 use super::project::report::{
     CliReportAdapter, CliReportAverage, CliReportFold, CliReportThresholds,
@@ -84,7 +84,7 @@ pub struct CliRun {
     pub job: CliRunJob,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Args, Debug)]

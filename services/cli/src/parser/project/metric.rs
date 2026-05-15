@@ -1,7 +1,7 @@
 use bencher_json::{MetricUuid, ProjectResourceId};
 use clap::{Parser, Subcommand};
 
-use crate::parser::CliBackend;
+use crate::parser::CliProjectBackend;
 
 #[derive(Subcommand, Debug)]
 pub enum CliMetric {
@@ -19,5 +19,5 @@ pub struct CliMetricView {
     pub metric: MetricUuid,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }

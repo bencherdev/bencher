@@ -3,7 +3,7 @@ use bencher_json::{
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliArchived, CliBackend, CliPagination};
+use crate::parser::{CliArchived, CliPagination, CliProjectBackend};
 
 #[derive(Subcommand, Debug)]
 pub enum CliBranch {
@@ -45,7 +45,7 @@ pub struct CliBranchList {
     pub archived: bool,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -72,7 +72,7 @@ pub struct CliBranchCreate {
     pub start_point: CliStartPointCreate,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[expect(clippy::doc_markdown, clippy::struct_field_names)]
@@ -114,7 +114,7 @@ pub struct CliBranchView {
     pub head: Option<HeadUuid>,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -140,7 +140,7 @@ pub struct CliBranchUpdate {
     pub archived: CliArchived,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }
 
 #[expect(clippy::struct_field_names)]
@@ -186,5 +186,5 @@ pub struct CliBranchDelete {
     pub branch: BranchResourceId,
 
     #[clap(flatten)]
-    pub backend: CliBackend,
+    pub backend: CliProjectBackend,
 }

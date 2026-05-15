@@ -147,8 +147,9 @@ pub struct CliBackend {
     #[clap(long, value_name = "URL", env = "BENCHER_HOST", default_value = BENCHER_API_URL_STR)]
     pub host: Url,
 
-    #[clap(flatten)]
-    pub credential: CliCredential,
+    /// User API token (JWT)
+    #[clap(long, env = "BENCHER_API_TOKEN")]
+    pub token: Option<Jwt>,
 
     /// Allow insecure connections to an HTTPS host
     #[clap(long)]
@@ -177,10 +178,9 @@ pub struct CliBackend {
 
 #[derive(Args, Debug)]
 #[clap(group(ArgGroup::new("bencher_credential").args(["token", "key"]).multiple(false)))]
-pub struct CliCredential {
-    /// User API token (JWT)
-    #[clap(long, env = "BENCHER_API_TOKEN")]
-    pub token: Option<Jwt>,
+pub struct CliProjectBackend {
+    #[clap(flatten)]
+    pub backend: CliBackend,
 
     /// Project-scoped API key
     #[clap(long, env = "BENCHER_API_KEY")]
