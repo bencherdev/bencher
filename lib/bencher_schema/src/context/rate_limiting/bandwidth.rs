@@ -12,8 +12,8 @@ use crate::{
 };
 
 use super::DAY;
-use super::epoch_minute;
-use super::snapshot::{BandwidthRateLimiterSnapshot, EpochMinutes};
+use super::epoch_bucket;
+use super::snapshot::{BandwidthRateLimiterSnapshot, EpochBucket};
 
 const DEFAULT_UNCLAIMED_BANDWIDTH: u64 = 1 << 30;
 const DEFAULT_FREE_BANDWIDTH: u64 = 10 << 30;
@@ -65,29 +65,29 @@ impl BandwidthRateLimiter {
         }
     }
 
-    fn cutoff_minute(now: SystemTime) -> u64 {
+    fn cutoff_bucket(now: SystemTime) -> u64 {
         let now_secs = now
             .duration_since(SystemTime::UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
-        epoch_minute(now_secs.saturating_sub(DAY.as_secs()))
+        epoch_bucket(now_secs.saturating_sub(DAY.as_secs()), DAY.as_secs())
     }
 
-    fn now_minute(now: SystemTime) -> u64 {
+    fn now_bucket(now: SystemTime) -> u64 {
         let now_secs = now
             .duration_since(SystemTime::UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
-        epoch_minute(now_secs)
+        epoch_bucket(now_secs, DAY.as_secs())
     }
 
     pub fn snapshot(&self) -> BandwidthRateLimiterSnapshot {
-        let cutoff_minute = Self::cutoff_minute(SystemTime::now());
+        let cutoff = Self::cutoff_bucket(SystemTime::now());
         let mut events = HashMap::new();
         for entry in &self.event_map {
-            let buckets: Vec<(EpochMinutes, u64)> = entry
+            let buckets: Vec<(EpochBucket, u64)> = entry
                 .value()
                 .buckets
                 .iter()
-                .filter(|(minute, _)| *minute >= cutoff_minute)
+                .filter(|(bucket, _)| *bucket >= cutoff)
                 .copied()
                 .collect();
             if !buckets.is_empty() {
@@ -98,11 +98,11 @@ impl BandwidthRateLimiter {
     }
 
     pub fn restore(&self, snapshot: BandwidthRateLimiterSnapshot) {
-        let cutoff_minute = Self::cutoff_minute(SystemTime::now());
+        let cutoff = Self::cutoff_bucket(SystemTime::now());
         for (org_uuid, buckets) in snapshot.events {
             let filtered: VecDeque<(u64, u64)> = buckets
                 .into_iter()
-                .filter(|(minute, _)| *minute >= cutoff_minute)
+                .filter(|(bucket, _)| *bucket >= cutoff)
                 .collect();
             let total_bytes: u64 = filtered.iter().map(|(_, b)| b).sum();
             if total_bytes > 0 {
@@ -118,9 +118,9 @@ impl BandwidthRateLimiter {
     }
 
     pub fn prune(&self) {
-        let cutoff_minute = Self::cutoff_minute(SystemTime::now());
+        let cutoff = Self::cutoff_bucket(SystemTime::now());
         self.event_map.retain(|_, bw| {
-            bw.prune(cutoff_minute);
+            bw.prune(cutoff);
             bw.total_bytes > 0
         });
     }
@@ -150,10 +150,10 @@ impl BandwidthRateLimiter {
         now: SystemTime,
     ) -> Result<(), HttpError> {
         let limit = self.limit_for_priority(priority);
-        let cutoff_minute = Self::cutoff_minute(now);
+        let cutoff = Self::cutoff_bucket(now);
 
         let total_bytes = if let Some(mut bw) = self.event_map.get_mut(&org_uuid) {
-            bw.prune(cutoff_minute);
+            bw.prune(cutoff);
             bw.total_bytes
         } else {
             0
@@ -177,11 +177,11 @@ impl BandwidthRateLimiter {
         if bytes == 0 {
             return;
         }
-        let now_minute = Self::now_minute(now);
+        let now_bucket = Self::now_bucket(now);
         self.event_map
             .entry(org_uuid)
             .or_default()
-            .record(now_minute, bytes);
+            .record(now_bucket, bytes);
     }
 }
 
@@ -192,11 +192,11 @@ struct BucketedBandwidth {
 }
 
 impl BucketedBandwidth {
-    fn prune(&mut self, cutoff_minute: u64) {
+    fn prune(&mut self, cutoff: u64) {
         while self
             .buckets
             .front()
-            .is_some_and(|(minute, _)| *minute < cutoff_minute)
+            .is_some_and(|(bucket, _)| *bucket < cutoff)
         {
             if let Some((_, bytes)) = self.buckets.pop_front() {
                 self.total_bytes = self.total_bytes.saturating_sub(bytes);
@@ -204,15 +204,15 @@ impl BucketedBandwidth {
         }
     }
 
-    fn record(&mut self, now_minute: u64, bytes: u64) {
-        if let Some((minute, bucket_bytes)) = self.buckets.back_mut()
-            && *minute == now_minute
+    fn record(&mut self, now_bucket: u64, bytes: u64) {
+        if let Some((bucket, bucket_bytes)) = self.buckets.back_mut()
+            && *bucket == now_bucket
         {
             *bucket_bytes = bucket_bytes.saturating_add(bytes);
             self.total_bytes = self.total_bytes.saturating_add(bytes);
             return;
         }
-        self.buckets.push_back((now_minute, bytes));
+        self.buckets.push_back((now_bucket, bytes));
         self.total_bytes = self.total_bytes.saturating_add(bytes);
     }
 }
@@ -224,7 +224,7 @@ mod tests {
     use super::*;
 
     fn test_now() -> SystemTime {
-        SystemTime::UNIX_EPOCH + Duration::from_secs(100_000)
+        SystemTime::UNIX_EPOCH + Duration::from_secs(86_400 * 3)
     }
 
     fn org_uuid() -> OrganizationUuid {
@@ -318,16 +318,17 @@ mod tests {
         let org_uuid = org_uuid();
         let org = org();
 
-        let old_minute = epoch_minute(
+        let old_bucket = epoch_bucket(
             (now - Duration::from_secs(25 * 60 * 60))
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
+            DAY.as_secs(),
         );
         limiter.event_map.insert(
             org_uuid,
             BucketedBandwidth {
-                buckets: VecDeque::from([(old_minute, 500)]),
+                buckets: VecDeque::from([(old_bucket, 500)]),
                 total_bytes: 500,
             },
         );

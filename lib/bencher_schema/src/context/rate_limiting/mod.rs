@@ -42,11 +42,9 @@ use super::DbConnection;
 
 pub(super) const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
-const SECONDS_PER_MINUTE: u64 = 60;
-
 #[expect(clippy::integer_division)]
-pub(super) fn epoch_minute(epoch_secs: u64) -> u64 {
-    epoch_secs / SECONDS_PER_MINUTE
+pub(super) fn epoch_bucket(epoch_secs: u64, bucket_secs: u64) -> u64 {
+    epoch_secs / bucket_secs
 }
 
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;

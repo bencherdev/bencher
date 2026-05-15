@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash, net::IpAddr};
 use bencher_json::{OrganizationUuid, ProjectUuid, RunnerUuid, UserUuid};
 use serde::{Deserialize, Serialize};
 
-pub(super) type EpochMinutes = u64;
+pub(super) type EpochBucket = u64;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct RateLimitingSnapshot {
@@ -34,7 +34,7 @@ impl RateLimitingSnapshot {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct RateLimiterInnerSnapshot<K: Eq + Hash> {
-    pub events: HashMap<K, Vec<(EpochMinutes, u32)>>,
+    pub events: HashMap<K, Vec<(EpochBucket, u32)>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -74,7 +74,7 @@ pub(super) struct RunnerRateLimiterSnapshot {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct BandwidthRateLimiterSnapshot {
-    pub events: HashMap<OrganizationUuid, Vec<(EpochMinutes, u64)>>,
+    pub events: HashMap<OrganizationUuid, Vec<(EpochBucket, u64)>>,
 }
 
 #[cfg(test)]
@@ -83,13 +83,14 @@ mod tests {
 
     use super::*;
 
-    fn now_epoch_minutes() -> EpochMinutes {
-        use super::super::epoch_minute;
-        epoch_minute(
+    fn now_epoch_bucket() -> EpochBucket {
+        use super::super::epoch_bucket;
+        epoch_bucket(
             SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
+            60,
         )
     }
 
@@ -109,7 +110,7 @@ mod tests {
 
     #[test]
     fn round_trip_json() {
-        let now = now_epoch_minutes();
+        let now = now_epoch_bucket();
         let ip: IpAddr = "192.168.1.1".parse().unwrap();
         let mut events = HashMap::new();
         events.insert(ip, vec![(now, 2), (now - 1, 1)]);
@@ -186,6 +187,7 @@ mod tests {
 
     #[test]
     fn save_load_expired_entries_filtered() {
+        use super::super::epoch_bucket;
         use crate::context::RateLimiting;
 
         let dir = tempfile::tempdir().unwrap();
@@ -193,19 +195,26 @@ mod tests {
         let snapshot_path = dir.path().join("rate_limiting.json");
         let log = slog::Logger::root(slog::Discard, slog::o!());
 
-        let old_minutes = now_epoch_minutes() - 120;
+        let now_secs = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let old_secs = now_secs - 7200;
         let ip: IpAddr = "10.0.0.1".parse().unwrap();
-        let mut events = HashMap::new();
-        events.insert(ip, vec![(old_minutes, 1)]);
+
+        let mut minute_events = HashMap::new();
+        minute_events.insert(ip, vec![(epoch_bucket(old_secs, 60), 1)]);
+        let mut hour_events = HashMap::new();
+        hour_events.insert(ip, vec![(epoch_bucket(old_secs, 3600), 1)]);
 
         let snapshot = RateLimitingSnapshot {
             public: PublicRateLimiterSnapshot {
                 requests: RateLimiterSnapshot {
                     minute: RateLimiterInnerSnapshot {
-                        events: events.clone(),
+                        events: minute_events,
                     },
                     hour: RateLimiterInnerSnapshot {
-                        events: events.clone(),
+                        events: hour_events,
                     },
                     day: empty_inner_snapshot(),
                 },

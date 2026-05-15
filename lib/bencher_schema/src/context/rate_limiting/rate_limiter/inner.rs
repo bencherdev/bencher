@@ -9,11 +9,11 @@ use dropshot::HttpError;
 
 use crate::context::{
     RateLimitingError,
-    rate_limiting::snapshot::{EpochMinutes, RateLimiterInnerSnapshot},
+    rate_limiting::snapshot::{EpochBucket, RateLimiterInnerSnapshot},
 };
 use crate::error::too_many_requests;
 
-use super::super::epoch_minute;
+use super::super::epoch_bucket;
 
 const DEFAULT_CAPACITY: usize = 1;
 
@@ -50,23 +50,24 @@ where
         let now_secs = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
-        let now_minute = epoch_minute(now_secs);
-        let cutoff_minute = epoch_minute(now_secs.saturating_sub(self.window.as_secs()));
-        (now_minute, cutoff_minute)
+        let bucket_secs = self.window.as_secs();
+        let now_bucket = epoch_bucket(now_secs, bucket_secs);
+        let cutoff_bucket = epoch_bucket(now_secs.saturating_sub(bucket_secs), bucket_secs);
+        (now_bucket, cutoff_bucket)
     }
 
     pub fn snapshot(&self) -> RateLimiterInnerSnapshot<K>
     where
         K: Clone,
     {
-        let (_, cutoff_minute) = self.now_and_cutoff();
+        let (_, cutoff) = self.now_and_cutoff();
         let mut events = HashMap::new();
         for entry in &self.event_map {
-            let buckets: Vec<(EpochMinutes, u32)> = entry
+            let buckets: Vec<(EpochBucket, u32)> = entry
                 .value()
                 .buckets
                 .iter()
-                .filter(|(minute, _)| *minute >= cutoff_minute)
+                .filter(|(bucket, _)| *bucket >= cutoff)
                 .copied()
                 .collect();
             if !buckets.is_empty() {
@@ -77,11 +78,11 @@ where
     }
 
     pub fn restore(&self, snapshot: RateLimiterInnerSnapshot<K>) {
-        let (_, cutoff_minute) = self.now_and_cutoff();
+        let (_, cutoff) = self.now_and_cutoff();
         for (key, buckets) in snapshot.events {
             let filtered: VecDeque<(u64, u32)> = buckets
                 .into_iter()
-                .filter(|(minute, _)| *minute >= cutoff_minute)
+                .filter(|(bucket, _)| *bucket >= cutoff)
                 .collect();
             let total: usize = filtered.iter().map(|(_, c)| *c as usize).sum();
             if total > 0 {
@@ -97,28 +98,28 @@ where
     }
 
     pub fn prune(&self) {
-        let (_, cutoff_minute) = self.now_and_cutoff();
+        let (_, cutoff) = self.now_and_cutoff();
         self.event_map.retain(|_, events| {
-            events.prune(cutoff_minute);
+            events.prune(cutoff);
             events.total > 0
         });
     }
 
     pub fn check(&self, key: K) -> Result<(), HttpError> {
-        let (now_minute, cutoff_minute) = self.now_and_cutoff();
+        let (now_bucket, cutoff) = self.now_and_cutoff();
 
         let mut entry = self
             .event_map
             .entry(key)
             .or_insert_with(|| BucketedEvents::with_capacity(DEFAULT_CAPACITY));
-        entry.prune(cutoff_minute);
+        entry.prune(cutoff);
 
         if entry.total < self.limit {
-            entry.record(now_minute);
+            entry.record(now_bucket);
             Ok(())
         } else {
             entry.evict_oldest();
-            entry.record(now_minute);
+            entry.record(now_bucket);
 
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(self.api_counter_max);
@@ -141,11 +142,11 @@ impl BucketedEvents {
         }
     }
 
-    fn prune(&mut self, cutoff_minute: u64) {
+    fn prune(&mut self, cutoff: u64) {
         while self
             .buckets
             .front()
-            .is_some_and(|(minute, _)| *minute < cutoff_minute)
+            .is_some_and(|(bucket, _)| *bucket < cutoff)
         {
             if let Some((_, count)) = self.buckets.pop_front() {
                 self.total -= count as usize;
@@ -153,15 +154,15 @@ impl BucketedEvents {
         }
     }
 
-    fn record(&mut self, now_minute: u64) {
-        if let Some((minute, count)) = self.buckets.back_mut()
-            && *minute == now_minute
+    fn record(&mut self, now_bucket: u64) {
+        if let Some((bucket, count)) = self.buckets.back_mut()
+            && *bucket == now_bucket
         {
             *count += 1;
             self.total += 1;
             return;
         }
-        self.buckets.push_back((now_minute, 1));
+        self.buckets.push_back((now_bucket, 1));
         self.total += 1;
     }
 
