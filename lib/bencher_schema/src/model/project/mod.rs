@@ -447,7 +447,7 @@ impl QueryProject {
         }
     }
 
-    pub fn is_allowed_actor(
+    pub fn is_allowed_actor_pub(
         conn: &mut DbConnection,
         rbac: &Rbac,
         #[cfg(feature = "plus")] rate_limiting: &crate::context::RateLimiting,
@@ -477,11 +477,39 @@ impl QueryProject {
             },
             ApiActor::ProjectKey(project_key_actor) => {
                 let query_project = Self::from_resource_id(conn, project)?;
-                if query_project.id == project_key_actor.project_id {
-                    Ok(query_project)
-                } else {
-                    Err(unauthorized_error(project))
-                }
+                project_key_actor.verify_project(query_project.id)?;
+                Ok(query_project)
+            },
+        }
+    }
+
+    pub fn is_allowed_actor_auth(
+        conn: &mut DbConnection,
+        rbac: &Rbac,
+        #[cfg(feature = "plus")] rate_limiting: &crate::context::RateLimiting,
+        project: &ProjectResourceId,
+        api_actor: &ApiActor,
+        permission: Permission,
+    ) -> Result<Self, HttpError> {
+        match api_actor {
+            ApiActor::Public(PublicUser::Public(_)) => {
+                Err(unauthorized_error("Authentication required"))
+            },
+            ApiActor::Public(PublicUser::Auth(auth_user)) => Self::is_allowed(
+                conn,
+                rbac,
+                #[cfg(feature = "plus")]
+                rate_limiting,
+                project,
+                auth_user,
+                permission,
+            ),
+            ApiActor::ProjectKey(project_key_actor) => {
+                let query_project = Self::from_resource_id(conn, project)?;
+                project_key_actor.verify_project(query_project.id)?;
+                #[cfg(feature = "plus")]
+                rate_limiting.project_request(query_project.uuid)?;
+                Ok(query_project)
             },
         }
     }

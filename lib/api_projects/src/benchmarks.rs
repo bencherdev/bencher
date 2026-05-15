@@ -11,7 +11,10 @@ use bencher_rbac::project::Permission;
 use bencher_schema::{
     actor_conn, auth_conn,
     context::ApiContext,
-    error::{resource_conflict_err, resource_not_found_err, with_auth_hint, with_token_hint},
+    error::{
+        forbidden_error, resource_conflict_err, resource_not_found_err, with_auth_hint,
+        with_token_hint,
+    },
     model::{
         project::{
             QueryProject,
@@ -116,7 +119,7 @@ async fn get_ls_inner(
     pagination_params: ProjBenchmarksPagination,
     query_params: ProjBenchmarksQuery,
 ) -> Result<(JsonBenchmarks, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]
@@ -188,7 +191,8 @@ fn get_ls_query<'q>(
 /// Create a benchmark
 ///
 /// Create a benchmark for a project.
-/// The user must have `create` permissions for the project.
+/// The user must have `create` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/benchmarks",
@@ -196,19 +200,26 @@ fn get_ls_query<'q>(
 }]
 pub async fn proj_benchmark_post(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjBenchmarksParams>,
     body: TypedBody<JsonNewBenchmark>,
 ) -> Result<ResponseCreated<JsonBenchmark>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
+        &api_actor,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Post::auth_response_created(json))
 }
 
@@ -216,16 +227,16 @@ async fn post_inner(
     context: &ApiContext,
     path_params: ProjBenchmarksParams,
     json_benchmark: JsonNewBenchmark,
-    auth_user: &AuthUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonBenchmark, HttpError> {
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Create,
     )?;
 
@@ -290,7 +301,7 @@ async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonBenchmark, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        let query_project = QueryProject::is_allowed_actor(
+        let query_project = QueryProject::is_allowed_actor_pub(
             conn,
             &context.rbac,
             #[cfg(feature = "plus")]
@@ -313,7 +324,8 @@ async fn get_one_inner(
 /// Update a benchmark
 ///
 /// Update a benchmark for a project.
-/// The user must have `edit` permissions for the project.
+/// The user must have `edit` permissions for the project,
+/// or provide a valid project key for the project (no rename).
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/benchmarks/{benchmark}",
@@ -321,39 +333,47 @@ async fn get_one_inner(
 }]
 pub async fn proj_benchmark_patch(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjBenchmarkParams>,
     body: TypedBody<JsonUpdateBenchmark>,
 ) -> Result<ResponseOk<JsonBenchmark>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = patch_inner(
         rqctx.context(),
+        &api_actor,
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Patch::auth_response_ok(json))
 }
 
 async fn patch_inner(
     context: &ApiContext,
+    api_actor: &ApiActor,
     path_params: ProjBenchmarkParams,
     json_benchmark: JsonUpdateBenchmark,
-    auth_user: &AuthUser,
 ) -> Result<JsonBenchmark, HttpError> {
-    // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    if matches!(api_actor, ApiActor::ProjectKey(_)) && json_benchmark.is_rename() {
+        return Err(forbidden_error("Project keys cannot rename benchmarks"));
+    }
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Edit,
     )?;
-
     let query_benchmark = QueryBenchmark::from_resource_id(
         auth_conn!(context),
         query_project.id,

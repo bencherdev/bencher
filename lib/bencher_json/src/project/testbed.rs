@@ -108,6 +108,33 @@ pub enum JsonUpdateTestbed {
     Null(JsonTestbedPatchNull),
 }
 
+impl JsonUpdateTestbed {
+    pub fn is_rename(&self) -> bool {
+        match self {
+            Self::Patch(patch) => {
+                let JsonTestbedPatch {
+                    name,
+                    slug,
+                    #[cfg(feature = "plus")]
+                        spec: _,
+                    archived: _,
+                } = patch;
+                name.is_some() || slug.is_some()
+            },
+            Self::Null(patch_null) => {
+                let JsonTestbedPatchNull {
+                    name,
+                    slug,
+                    #[cfg(feature = "plus")]
+                        spec: (),
+                    archived: _,
+                } = patch_null;
+                name.is_some() || slug.is_some()
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonTestbedPatch {

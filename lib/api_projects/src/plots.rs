@@ -115,7 +115,7 @@ async fn get_ls_inner(
     pagination_params: ProjPlotsPagination,
     query_params: ProjPlotsQuery,
 ) -> Result<(JsonPlots, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]
@@ -304,7 +304,7 @@ async fn get_one_inner(
     path_params: ProjPlotParams,
     api_actor: &ApiActor,
 ) -> Result<JsonPlot, HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]

@@ -133,6 +133,18 @@ pub struct JsonUpdateBranch {
     pub archived: Option<bool>,
 }
 
+impl JsonUpdateBranch {
+    pub fn is_rename(&self) -> bool {
+        let Self {
+            name,
+            slug,
+            start_point: _,
+            archived: _,
+        } = self;
+        name.is_some() || slug.is_some()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateStartPoint {

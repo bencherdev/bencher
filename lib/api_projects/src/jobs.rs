@@ -100,7 +100,7 @@ async fn get_ls_inner(
     query_params: ProjJobsQuery,
     api_actor: &ApiActor,
 ) -> Result<(JsonJobs, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         &context.rate_limiting,
@@ -223,7 +223,7 @@ async fn get_one_inner(
     api_actor: &ApiActor,
     log: &slog::Logger,
 ) -> Result<JsonJob, HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         &context.rate_limiting,

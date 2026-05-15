@@ -10,7 +10,10 @@ use bencher_rbac::project::Permission;
 use bencher_schema::{
     actor_conn, auth_conn,
     context::ApiContext,
-    error::{resource_conflict_err, resource_not_found_err, with_auth_hint, with_token_hint},
+    error::{
+        forbidden_error, resource_conflict_err, resource_not_found_err, with_auth_hint,
+        with_token_hint,
+    },
     model::{
         project::{
             QueryProject,
@@ -115,7 +118,7 @@ async fn get_ls_inner(
     pagination_params: ProjMeasuresPagination,
     query_params: ProjMeasuresQuery,
 ) -> Result<(JsonMeasures, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]
@@ -187,7 +190,8 @@ fn get_ls_query<'q>(
 /// Create a measure
 ///
 /// Create a measure for a project.
-/// The user must have `create` permissions for the project.
+/// The user must have `create` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/measures",
@@ -195,19 +199,26 @@ fn get_ls_query<'q>(
 }]
 pub async fn proj_measure_post(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjMeasuresParams>,
     body: TypedBody<JsonNewMeasure>,
 ) -> Result<ResponseCreated<JsonMeasure>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
+        &api_actor,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Post::auth_response_created(json))
 }
 
@@ -215,16 +226,16 @@ async fn post_inner(
     context: &ApiContext,
     path_params: ProjMeasuresParams,
     json_measure: JsonNewMeasure,
-    auth_user: &AuthUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonMeasure, HttpError> {
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Create,
     )?;
 
@@ -289,7 +300,7 @@ async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonMeasure, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        let query_project = QueryProject::is_allowed_actor(
+        let query_project = QueryProject::is_allowed_actor_pub(
             conn,
             &context.rbac,
             #[cfg(feature = "plus")]
@@ -312,7 +323,8 @@ async fn get_one_inner(
 /// Update a measure
 ///
 /// Update a measure for a project.
-/// The user must have `edit` permissions for the project.
+/// The user must have `edit` permissions for the project,
+/// or provide a valid project key for the project (no rename).
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/measures/{measure}",
@@ -320,39 +332,47 @@ async fn get_one_inner(
 }]
 pub async fn proj_measure_patch(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjMeasureParams>,
     body: TypedBody<JsonUpdateMeasure>,
 ) -> Result<ResponseOk<JsonMeasure>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = patch_inner(
         rqctx.context(),
+        &api_actor,
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Patch::auth_response_ok(json))
 }
 
 async fn patch_inner(
     context: &ApiContext,
+    api_actor: &ApiActor,
     path_params: ProjMeasureParams,
     json_measure: JsonUpdateMeasure,
-    auth_user: &AuthUser,
 ) -> Result<JsonMeasure, HttpError> {
-    // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    if matches!(api_actor, ApiActor::ProjectKey(_)) && json_measure.is_rename() {
+        return Err(forbidden_error("Project keys cannot rename measures"));
+    }
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Edit,
     )?;
-
     let query_measure = QueryMeasure::from_resource_id(
         auth_conn!(context),
         query_project.id,

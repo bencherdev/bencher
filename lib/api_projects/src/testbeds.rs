@@ -14,7 +14,10 @@ use bencher_schema::model::spec::QuerySpec;
 use bencher_schema::{
     actor_conn, auth_conn,
     context::ApiContext,
-    error::{resource_conflict_err, resource_not_found_err, with_auth_hint, with_token_hint},
+    error::{
+        forbidden_error, resource_conflict_err, resource_not_found_err, with_auth_hint,
+        with_token_hint,
+    },
     model::{
         project::{
             QueryProject,
@@ -119,7 +122,7 @@ async fn get_ls_inner(
     pagination_params: ProjTestbedsPagination,
     query_params: ProjTestbedsQuery,
 ) -> Result<(JsonTestbeds, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]
@@ -193,7 +196,8 @@ fn get_ls_query<'q>(
 /// Create a testbed
 ///
 /// Create a testbed for a project.
-/// The user must have `create` permissions for the project.
+/// The user must have `create` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/testbeds",
@@ -201,19 +205,26 @@ fn get_ls_query<'q>(
 }]
 pub async fn proj_testbed_post(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjTestbedsParams>,
     body: TypedBody<JsonNewTestbed>,
 ) -> Result<ResponseCreated<JsonTestbed>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
+        &api_actor,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Post::auth_response_created(json))
 }
 
@@ -221,16 +232,16 @@ async fn post_inner(
     context: &ApiContext,
     path_params: ProjTestbedsParams,
     json_testbed: JsonNewTestbed,
-    auth_user: &AuthUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonTestbed, HttpError> {
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Create,
     )?;
 
@@ -311,7 +322,7 @@ async fn get_one_inner(
     query_params: ProjTestbedQuery,
     api_actor: &ApiActor,
 ) -> Result<JsonTestbed, HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]
@@ -344,7 +355,8 @@ async fn get_one_inner(
 /// Update a testbed
 ///
 /// Update a testbed for a project.
-/// The user must have `edit` permissions for the project.
+/// The user must have `edit` permissions for the project,
+/// or provide a valid project key for the project (no rename).
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/testbeds/{testbed}",
@@ -352,40 +364,47 @@ async fn get_one_inner(
 }]
 pub async fn proj_testbed_patch(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjTestbedParams>,
     body: TypedBody<JsonUpdateTestbed>,
 ) -> Result<ResponseOk<JsonTestbed>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let context = rqctx.context();
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = patch_inner(
-        context,
+        rqctx.context(),
+        &api_actor,
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Patch::auth_response_ok(json))
 }
 
 async fn patch_inner(
     context: &ApiContext,
+    api_actor: &ApiActor,
     path_params: ProjTestbedParams,
     json_testbed: JsonUpdateTestbed,
-    auth_user: &AuthUser,
 ) -> Result<JsonTestbed, HttpError> {
-    // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    if matches!(api_actor, ApiActor::ProjectKey(_)) && json_testbed.is_rename() {
+        return Err(forbidden_error("Project keys cannot rename testbeds"));
+    }
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Edit,
     )?;
-
     let now = context.clock.now();
     let (query_testbed, update_testbed) = auth_conn!(context, |conn| {
         let query_testbed =

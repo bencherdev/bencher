@@ -3418,7 +3418,7 @@
           "alerts"
         ],
         "summary": "Update an alert",
-        "description": "Update an alert for a project. The user must have `edit` permissions for the project. Use this endpoint to dismiss an alert.",
+        "description": "Update an alert for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project (status only). Use this endpoint to dismiss or reactivate an alert.",
         "operationId": "proj_alert_patch",
         "parameters": [
           {
@@ -3736,7 +3736,7 @@
           "benchmarks"
         ],
         "summary": "Create a benchmark",
-        "description": "Create a benchmark for a project. The user must have `create` permissions for the project.",
+        "description": "Create a benchmark for a project. The user must have `create` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_benchmark_post",
         "parameters": [
           {
@@ -3984,7 +3984,7 @@
           "benchmarks"
         ],
         "summary": "Update a benchmark",
-        "description": "Update a benchmark for a project. The user must have `edit` permissions for the project.",
+        "description": "Update a benchmark for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project (no rename).",
         "operationId": "proj_benchmark_patch",
         "parameters": [
           {
@@ -4218,7 +4218,7 @@
           "branches"
         ],
         "summary": "Create a branch",
-        "description": "Create a branch for a project. The user must have `create` permissions for the project.",
+        "description": "Create a branch for a project. The user must have `create` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_branch_post",
         "parameters": [
           {
@@ -4474,7 +4474,7 @@
           "branches"
         ],
         "summary": "Update a branch",
-        "description": "Update a branch for a project. The user must have `edit` permissions for the project.",
+        "description": "Update a branch for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project (no rename).",
         "operationId": "proj_branch_patch",
         "parameters": [
           {
@@ -5399,7 +5399,7 @@
           "measures"
         ],
         "summary": "Create a measure",
-        "description": "Create a measure for a project. The user must have `create` permissions for the project.",
+        "description": "Create a measure for a project. The user must have `create` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_measure_post",
         "parameters": [
           {
@@ -5647,7 +5647,7 @@
           "measures"
         ],
         "summary": "Update a measure",
-        "description": "Update a measure for a project. The user must have `edit` permissions for the project.",
+        "description": "Update a measure for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project (no rename).",
         "operationId": "proj_measure_patch",
         "parameters": [
           {
@@ -6716,7 +6716,7 @@
           "reports"
         ],
         "summary": "Create a report",
-        "description": "Create a report for a project. The user must have `create` permissions for the project. If using the Bencher CLI, it is recommended to use the `bencher run` subcommand instead of trying to create a report manually.",
+        "description": "Create a report for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. If using the Bencher CLI, it is recommended to use the `bencher run` subcommand instead of trying to create a report manually.",
         "operationId": "proj_report_post",
         "parameters": [
           {
@@ -7104,7 +7104,7 @@
           "testbeds"
         ],
         "summary": "Create a testbed",
-        "description": "Create a testbed for a project. The user must have `create` permissions for the project.",
+        "description": "Create a testbed for a project. The user must have `create` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_testbed_post",
         "parameters": [
           {
@@ -7360,7 +7360,7 @@
           "testbeds"
         ],
         "summary": "Update a testbed",
-        "description": "Update a testbed for a project. The user must have `edit` permissions for the project.",
+        "description": "Update a testbed for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project (no rename).",
         "operationId": "proj_testbed_patch",
         "parameters": [
           {
@@ -7605,7 +7605,7 @@
           "thresholds"
         ],
         "summary": "Create a threshold",
-        "description": "Create a threshold for a project. The user must have `create` permissions for the project. There can only be one threshold for any unique combination of: branch, testbed, and measure.",
+        "description": "Create a threshold for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. There can only be one threshold for any unique combination of: branch, testbed, and measure.",
         "operationId": "proj_threshold_post",
         "parameters": [
           {
@@ -7784,7 +7784,7 @@
           "thresholds"
         ],
         "summary": "Update a threshold",
-        "description": "Update a threshold for a project. The user must have `edit` permissions for the project. The new model will be added to the threshold and used going forward. The old model will be replaced but still show up in the report history and alerts created when it was active.",
+        "description": "Update a threshold for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project. The new model will be added to the threshold and used going forward. The old model will be replaced but still show up in the report history and alerts created when it was active.",
         "operationId": "proj_threshold_put",
         "parameters": [
           {

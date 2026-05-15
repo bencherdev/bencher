@@ -124,7 +124,7 @@ async fn get_ls_inner(
     query_params: JsonThresholdQuery,
     api_actor: &ApiActor,
 ) -> Result<(JsonThresholds, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]
@@ -245,7 +245,8 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 /// Create a threshold
 ///
 /// Create a threshold for a project.
-/// The user must have `create` permissions for the project.
+/// The user must have `create` permissions for the project,
+/// or provide a valid project key for the project.
 /// There can only be one threshold for any unique combination of: branch, testbed, and measure.
 #[endpoint {
     method = POST,
@@ -254,19 +255,26 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 }]
 pub async fn proj_threshold_post(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjThresholdsParams>,
     body: TypedBody<JsonNewThreshold>,
 ) -> Result<ResponseCreated<JsonThreshold>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
         &body.into_inner(),
-        &auth_user,
+        &api_actor,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Post::auth_response_created(json))
 }
 
@@ -274,19 +282,19 @@ async fn post_inner(
     context: &ApiContext,
     path_params: ProjThresholdsParams,
     json_threshold: &JsonNewThreshold,
-    auth_user: &AuthUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonThreshold, HttpError> {
     // Validate the new model
     json_threshold.model.validate().map_err(bad_request_error)?;
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Create,
     )?;
 
@@ -393,7 +401,7 @@ async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonThreshold, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        let query_project = QueryProject::is_allowed_actor(
+        let query_project = QueryProject::is_allowed_actor_pub(
             conn,
             &context.rbac,
             #[cfg(feature = "plus")]
@@ -432,7 +440,8 @@ async fn get_one_inner(
 /// Update a threshold
 ///
 /// Update a threshold for a project.
-/// The user must have `edit` permissions for the project.
+/// The user must have `edit` permissions for the project,
+/// or provide a valid project key for the project.
 /// The new model will be added to the threshold and used going forward.
 /// The old model will be replaced but still show up in the report history and alerts created when it was active.
 #[endpoint {
@@ -442,19 +451,26 @@ async fn get_one_inner(
 }]
 pub async fn proj_threshold_put(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjThresholdParams>,
     body: TypedBody<JsonUpdateThreshold>,
 ) -> Result<ResponseOk<JsonThreshold>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = put_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
+        &api_actor,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Put::auth_response_ok(json))
 }
 
@@ -462,7 +478,7 @@ async fn put_inner(
     context: &ApiContext,
     path_params: ProjThresholdParams,
     json_threshold: JsonUpdateThreshold,
-    auth_user: &AuthUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonThreshold, HttpError> {
     // Validate the new model
     let model = match json_threshold {
@@ -474,13 +490,13 @@ async fn put_inner(
     };
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Edit,
     )?;
 
