@@ -177,6 +177,7 @@ pub struct CliBackend {
 }
 
 #[derive(Args, Debug)]
+#[clap(group(ArgGroup::new("bencher_credential").args(["token", "key"]).multiple(false)))]
 pub struct CliProjectBackend {
     #[clap(flatten)]
     pub backend: CliBackend,
