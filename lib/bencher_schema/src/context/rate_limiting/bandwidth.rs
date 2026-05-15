@@ -152,12 +152,12 @@ impl BandwidthRateLimiter {
         let limit = self.limit_for_priority(priority);
         let cutoff_minute = Self::cutoff_minute(now);
 
-        self.event_map.retain(|_, bw| {
+        let total_bytes = if let Some(mut bw) = self.event_map.get_mut(&org_uuid) {
             bw.prune(cutoff_minute);
-            bw.total_bytes > 0
-        });
-
-        let total_bytes = self.event_map.get(&org_uuid).map_or(0, |bw| bw.total_bytes);
+            bw.total_bytes
+        } else {
+            0
+        };
 
         if total_bytes >= limit {
             Err(too_many_requests(RateLimitingError::OciBandwidth {

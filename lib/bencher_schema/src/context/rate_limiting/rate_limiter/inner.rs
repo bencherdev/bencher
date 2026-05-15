@@ -107,15 +107,11 @@ where
     pub fn check(&self, key: K) -> Result<(), HttpError> {
         let (now_minute, cutoff_minute) = self.now_and_cutoff();
 
-        self.event_map.retain(|_, events| {
-            events.prune(cutoff_minute);
-            events.total > 0
-        });
-
         let mut entry = self
             .event_map
             .entry(key)
             .or_insert_with(|| BucketedEvents::with_capacity(DEFAULT_CAPACITY));
+        entry.prune(cutoff_minute);
 
         if entry.total < self.limit {
             entry.record(now_minute);
