@@ -14,7 +14,7 @@ plus = [
     "dep:bencher_google_client",
     "dep:bencher_google_index",
     "dep:bencher_oci_storage",
-    "dep:dashmap",
+    "dep:bencher_rate_limiter",
     "dep:http",
     "dep:reqwest",
     "dep:serde",
@@ -46,6 +46,7 @@ bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_license = { workspace = true, optional = true }
 bencher_oci_storage = { workspace = true, optional = true }
 bencher_otel = { workspace = true, optional = true }
+bencher_rate_limiter = { workspace = true, optional = true }
 bencher_rank.workspace = true
 bencher_rbac.workspace = true
 bencher_recaptcha = { workspace = true, optional = true }
@@ -53,7 +54,7 @@ bencher_token.workspace = true
 camino.workspace = true
 chrono.workspace = true
 css-inline.workspace = true
-dashmap = { workspace = true, optional = true }
+dashmap.workspace = true
 derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite", "32-column-tables"] }
 diesel_migrations.workspace = true

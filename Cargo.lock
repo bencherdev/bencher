@@ -1478,6 +1478,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_rate_limiter"
+version = "0.6.5"
+dependencies = [
+ "dashmap",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "bencher_rbac"
 version = "0.6.5"
 dependencies = [
@@ -1573,6 +1582,7 @@ dependencies = [
  "bencher_oci_storage",
  "bencher_otel",
  "bencher_rank",
+ "bencher_rate_limiter",
  "bencher_rbac",
  "bencher_recaptcha",
  "bencher_token",

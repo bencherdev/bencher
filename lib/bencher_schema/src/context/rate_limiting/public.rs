@@ -1,13 +1,9 @@
 use std::net::IpAddr;
 
 use bencher_json::system::config::JsonPublicRateLimiter;
+use bencher_rate_limiter::{RateLimiter, RateLimits};
 
-use crate::context::{
-    RateLimitingError,
-    rate_limiting::{
-        RateLimiter, RateLimits, extract_rate_limits, snapshot::PublicRateLimiterSnapshot,
-    },
-};
+use crate::context::{RateLimitingError, rate_limiting::snapshot::PublicRateLimiterSnapshot};
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 10;
 const DEFAULT_REQUESTS_PER_HOUR_LIMIT: usize = 1 << 12;
@@ -59,26 +55,41 @@ impl From<JsonPublicRateLimiter> for PublicRateLimiter {
             runs,
         } = json;
 
-        let requests = extract_rate_limits!(
-            requests,
-            DEFAULT_REQUESTS_PER_MINUTE_LIMIT,
-            DEFAULT_REQUESTS_PER_HOUR_LIMIT,
-            DEFAULT_REQUESTS_PER_DAY_LIMIT
-        );
+        let requests = RateLimits {
+            minute: requests
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_REQUESTS_PER_MINUTE_LIMIT),
+            hour: requests
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_REQUESTS_PER_HOUR_LIMIT),
+            day: requests
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_REQUESTS_PER_DAY_LIMIT),
+        };
 
-        let attempts = extract_rate_limits!(
-            attempts,
-            DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT,
-            DEFAULT_ATTEMPTS_PER_HOUR_LIMIT,
-            DEFAULT_ATTEMPTS_PER_DAY_LIMIT
-        );
+        let attempts = RateLimits {
+            minute: attempts
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT),
+            hour: attempts
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_ATTEMPTS_PER_HOUR_LIMIT),
+            day: attempts
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_ATTEMPTS_PER_DAY_LIMIT),
+        };
 
-        let runs = extract_rate_limits!(
-            runs,
-            DEFAULT_RUNS_PER_MINUTE_LIMIT,
-            DEFAULT_RUNS_PER_HOUR_LIMIT,
-            DEFAULT_RUNS_PER_DAY_LIMIT
-        );
+        let runs = RateLimits {
+            minute: runs
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_RUNS_PER_MINUTE_LIMIT),
+            hour: runs
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_RUNS_PER_HOUR_LIMIT),
+            day: runs
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_RUNS_PER_DAY_LIMIT),
+        };
 
         Self::new(requests, attempts, runs)
     }
@@ -86,73 +97,21 @@ impl From<JsonPublicRateLimiter> for PublicRateLimiter {
 
 impl PublicRateLimiter {
     pub fn new(requests: RateLimits, attempts: RateLimits, runs: RateLimits) -> Self {
-        let RateLimits { minute, hour, day } = requests;
-        let requests = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &|interval| {
-                bencher_otel::ApiCounter::RequestMax(
-                    interval,
-                    bencher_otel::AuthorizationKind::Public,
-                )
-            },
-            RateLimitingError::IpAddressRequests,
-        );
-
-        let RateLimits { minute, hour, day } = attempts;
-        let attempts = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &|interval| {
-                bencher_otel::ApiCounter::UserAttemptMax(
-                    interval,
-                    bencher_otel::AuthorizationKind::Public,
-                )
-            },
-            RateLimitingError::IpAddressRequests,
-        );
-
-        let RateLimits { minute, hour, day } = runs;
-        let runs = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &bencher_otel::ApiCounter::RunUnclaimedMax,
-            RateLimitingError::UnclaimedRun,
-        );
-
         Self {
-            requests,
-            attempts,
-            runs,
+            requests: RateLimiter::new(requests),
+            attempts: RateLimiter::new(attempts),
+            runs: RateLimiter::new(runs),
         }
     }
 
     pub fn max() -> Self {
-        let requests = RateLimits {
+        let max = RateLimits {
             minute: usize::MAX,
             hour: usize::MAX,
             day: usize::MAX,
         };
 
-        let attempts = RateLimits {
-            minute: usize::MAX,
-            hour: usize::MAX,
-            day: usize::MAX,
-        };
-
-        let runs = RateLimits {
-            minute: usize::MAX,
-            hour: usize::MAX,
-            day: usize::MAX,
-        };
-
-        Self::new(requests, attempts, runs)
+        Self::new(max, max, max)
     }
 
     pub fn prune(&self) {
@@ -181,14 +140,46 @@ impl PublicRateLimiter {
     }
 
     pub fn check_request(&self, ip: IpAddr) -> Result<(), dropshot::HttpError> {
-        self.requests.check(ip)
+        if self.requests.check(ip) {
+            Ok(())
+        } else {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
+                bencher_otel::IntervalKind::Minute,
+                bencher_otel::AuthorizationKind::Public,
+            ));
+            Err(crate::error::too_many_requests(
+                RateLimitingError::IpAddressRequests,
+            ))
+        }
     }
 
     pub fn check_attempt(&self, ip: IpAddr) -> Result<(), dropshot::HttpError> {
-        self.attempts.check(ip)
+        if self.attempts.check(ip) {
+            Ok(())
+        } else {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAttemptMax(
+                bencher_otel::IntervalKind::Minute,
+                bencher_otel::AuthorizationKind::Public,
+            ));
+            Err(crate::error::too_many_requests(
+                RateLimitingError::IpAddressRequests,
+            ))
+        }
     }
 
     pub fn check_run(&self, ip: IpAddr) -> Result<(), dropshot::HttpError> {
-        self.runs.check(ip)
+        if self.runs.check(ip) {
+            Ok(())
+        } else {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimedMax(
+                bencher_otel::IntervalKind::Minute,
+            ));
+            Err(crate::error::too_many_requests(
+                RateLimitingError::UnclaimedRun,
+            ))
+        }
     }
 }

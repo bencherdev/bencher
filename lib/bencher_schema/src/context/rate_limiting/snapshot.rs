@@ -1,9 +1,10 @@
-use std::{collections::HashMap, hash::Hash, net::IpAddr};
+use std::net::IpAddr;
 
 use bencher_json::{OrganizationUuid, ProjectUuid, RunnerUuid, UserUuid};
+use bencher_rate_limiter::snapshot::{
+    BandwidthSnapshot, RateLimiterSnapshot as GenericRateLimiterSnapshot,
+};
 use serde::{Deserialize, Serialize};
-
-pub(super) type EpochBucket = u64;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct RateLimitingSnapshot {
@@ -11,7 +12,7 @@ pub(super) struct RateLimitingSnapshot {
     pub user: UserRateLimiterSnapshot,
     pub project: ProjectRateLimiterSnapshot,
     pub runner: RunnerRateLimiterSnapshot,
-    pub bandwidth: BandwidthRateLimiterSnapshot,
+    pub bandwidth: BandwidthSnapshot<OrganizationUuid>,
 }
 
 impl RateLimitingSnapshot {
@@ -20,7 +21,7 @@ impl RateLimitingSnapshot {
         user: UserRateLimiterSnapshot,
         project: ProjectRateLimiterSnapshot,
         runner: RunnerRateLimiterSnapshot,
-        bandwidth: BandwidthRateLimiterSnapshot,
+        bandwidth: BandwidthSnapshot<OrganizationUuid>,
     ) -> Self {
         Self {
             public,
@@ -33,96 +34,74 @@ impl RateLimitingSnapshot {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(super) struct RateLimiterInnerSnapshot<K: Eq + Hash> {
-    pub events: HashMap<K, Vec<(EpochBucket, u32)>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub(super) struct RateLimiterSnapshot<K: Eq + Hash> {
-    pub minute: RateLimiterInnerSnapshot<K>,
-    pub hour: RateLimiterInnerSnapshot<K>,
-    pub day: RateLimiterInnerSnapshot<K>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub(super) struct PublicRateLimiterSnapshot {
-    pub requests: RateLimiterSnapshot<IpAddr>,
-    pub attempts: RateLimiterSnapshot<IpAddr>,
-    pub runs: RateLimiterSnapshot<IpAddr>,
+    pub requests: GenericRateLimiterSnapshot<IpAddr>,
+    pub attempts: GenericRateLimiterSnapshot<IpAddr>,
+    pub runs: GenericRateLimiterSnapshot<IpAddr>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct UserRateLimiterSnapshot {
-    pub requests: RateLimiterSnapshot<UserUuid>,
-    pub attempts: RateLimiterSnapshot<UserUuid>,
-    pub credentials: RateLimiterSnapshot<UserUuid>,
-    pub organizations: RateLimiterSnapshot<UserUuid>,
-    pub invites: RateLimiterSnapshot<UserUuid>,
-    pub runs: RateLimiterSnapshot<UserUuid>,
+    pub requests: GenericRateLimiterSnapshot<UserUuid>,
+    pub attempts: GenericRateLimiterSnapshot<UserUuid>,
+    pub credentials: GenericRateLimiterSnapshot<UserUuid>,
+    pub organizations: GenericRateLimiterSnapshot<UserUuid>,
+    pub invites: GenericRateLimiterSnapshot<UserUuid>,
+    pub runs: GenericRateLimiterSnapshot<UserUuid>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct ProjectRateLimiterSnapshot {
-    pub requests: RateLimiterSnapshot<ProjectUuid>,
-    pub runs: RateLimiterSnapshot<ProjectUuid>,
+    pub requests: GenericRateLimiterSnapshot<ProjectUuid>,
+    pub runs: GenericRateLimiterSnapshot<ProjectUuid>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct RunnerRateLimiterSnapshot {
-    pub requests: RateLimiterSnapshot<RunnerUuid>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub(super) struct BandwidthRateLimiterSnapshot {
-    pub events: HashMap<OrganizationUuid, Vec<(EpochBucket, u64)>>,
+    pub requests: GenericRateLimiterSnapshot<RunnerUuid>,
 }
 
 #[cfg(test)]
 mod tests {
-    use std::time::SystemTime;
+    use std::{collections::HashMap, hash::Hash, time::SystemTime};
+
+    use bencher_rate_limiter::snapshot::WindowSnapshot;
 
     use super::*;
 
-    fn now_epoch_bucket() -> EpochBucket {
-        use super::super::epoch_bucket;
-        epoch_bucket(
-            SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            60,
-        )
-    }
-
-    fn empty_inner_snapshot<K: Eq + Hash>() -> RateLimiterInnerSnapshot<K> {
-        RateLimiterInnerSnapshot {
+    fn empty_window_snapshot<K: Eq + Hash>() -> WindowSnapshot<K> {
+        WindowSnapshot {
             events: HashMap::new(),
         }
     }
 
-    fn empty_limiter_snapshot<K: Eq + Hash>() -> RateLimiterSnapshot<K> {
-        RateLimiterSnapshot {
-            minute: empty_inner_snapshot(),
-            hour: empty_inner_snapshot(),
-            day: empty_inner_snapshot(),
+    fn empty_limiter_snapshot<K: Eq + Hash>() -> GenericRateLimiterSnapshot<K> {
+        GenericRateLimiterSnapshot {
+            minute: empty_window_snapshot(),
+            hour: empty_window_snapshot(),
+            day: empty_window_snapshot(),
         }
     }
 
     #[test]
     fn round_trip_json() {
-        let now = now_epoch_bucket();
+        let now = bencher_rate_limiter::epoch_bucket(
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            60,
+        );
         let ip: IpAddr = "192.168.1.1".parse().unwrap();
-        let mut events = HashMap::new();
-        events.insert(ip, vec![(now, 2), (now - 1, 1)]);
 
         let snapshot = RateLimitingSnapshot {
             public: PublicRateLimiterSnapshot {
-                requests: RateLimiterSnapshot {
-                    minute: RateLimiterInnerSnapshot {
-                        events: events.clone(),
+                requests: GenericRateLimiterSnapshot {
+                    minute: WindowSnapshot {
+                        events: HashMap::from([(ip, vec![(now, 2), (now - 1, 1)])]),
                     },
-                    hour: empty_inner_snapshot(),
-                    day: empty_inner_snapshot(),
+                    hour: empty_window_snapshot(),
+                    day: empty_window_snapshot(),
                 },
                 attempts: empty_limiter_snapshot(),
                 runs: empty_limiter_snapshot(),
@@ -142,7 +121,7 @@ mod tests {
             runner: RunnerRateLimiterSnapshot {
                 requests: empty_limiter_snapshot(),
             },
-            bandwidth: BandwidthRateLimiterSnapshot {
+            bandwidth: BandwidthSnapshot {
                 events: HashMap::new(),
             },
         };
@@ -187,7 +166,6 @@ mod tests {
 
     #[test]
     fn save_load_expired_entries_filtered() {
-        use super::super::epoch_bucket;
         use crate::context::RateLimiting;
 
         let dir = tempfile::tempdir().unwrap();
@@ -202,21 +180,22 @@ mod tests {
         let old_secs = now_secs - 7200;
         let ip: IpAddr = "10.0.0.1".parse().unwrap();
 
-        let mut minute_events = HashMap::new();
-        minute_events.insert(ip, vec![(epoch_bucket(old_secs, 60), 1)]);
-        let mut hour_events = HashMap::new();
-        hour_events.insert(ip, vec![(epoch_bucket(old_secs, 3600), 1)]);
-
         let snapshot = RateLimitingSnapshot {
             public: PublicRateLimiterSnapshot {
-                requests: RateLimiterSnapshot {
-                    minute: RateLimiterInnerSnapshot {
-                        events: minute_events,
+                requests: GenericRateLimiterSnapshot {
+                    minute: WindowSnapshot {
+                        events: HashMap::from([(
+                            ip,
+                            vec![(bencher_rate_limiter::epoch_bucket(old_secs, 60), 1)],
+                        )]),
                     },
-                    hour: RateLimiterInnerSnapshot {
-                        events: hour_events,
+                    hour: WindowSnapshot {
+                        events: HashMap::from([(
+                            ip,
+                            vec![(bencher_rate_limiter::epoch_bucket(old_secs, 3600), 1)],
+                        )]),
                     },
-                    day: empty_inner_snapshot(),
+                    day: empty_window_snapshot(),
                 },
                 attempts: empty_limiter_snapshot(),
                 runs: empty_limiter_snapshot(),
@@ -236,7 +215,7 @@ mod tests {
             runner: RunnerRateLimiterSnapshot {
                 requests: empty_limiter_snapshot(),
             },
-            bandwidth: BandwidthRateLimiterSnapshot {
+            bandwidth: BandwidthSnapshot {
                 events: HashMap::new(),
             },
         };

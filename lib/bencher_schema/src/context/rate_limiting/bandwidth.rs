@@ -1,19 +1,15 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    time::SystemTime,
-};
+use std::time::{Duration, SystemTime};
 
 use bencher_json::{OrganizationUuid, Priority, system::config::JsonOciBandwidth};
-use dashmap::DashMap;
+use bencher_rate_limiter::BandwidthLimiter;
+use bencher_rate_limiter::snapshot::BandwidthSnapshot;
 use dropshot::HttpError;
 
 use crate::{
     context::RateLimitingError, error::too_many_requests, model::organization::QueryOrganization,
 };
 
-use super::DAY;
-use super::epoch_bucket;
-use super::snapshot::{BandwidthRateLimiterSnapshot, EpochBucket};
+const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
 const DEFAULT_UNCLAIMED_BANDWIDTH: u64 = 1 << 30;
 const DEFAULT_FREE_BANDWIDTH: u64 = 10 << 30;
@@ -22,7 +18,7 @@ const DEFAULT_PLUS_BANDWIDTH: u64 = 100 << 30;
 const BYTES_PER_GIB: u64 = 1 << 30;
 
 pub(super) struct BandwidthRateLimiter {
-    event_map: DashMap<OrganizationUuid, BucketedBandwidth>,
+    limiter: BandwidthLimiter<OrganizationUuid>,
     unclaimed_limit: u64,
     free_limit: u64,
     plus_limit: u64,
@@ -31,7 +27,7 @@ pub(super) struct BandwidthRateLimiter {
 impl Default for BandwidthRateLimiter {
     fn default() -> Self {
         Self {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: DEFAULT_UNCLAIMED_BANDWIDTH,
             free_limit: DEFAULT_FREE_BANDWIDTH,
             plus_limit: DEFAULT_PLUS_BANDWIDTH,
@@ -47,7 +43,7 @@ impl From<JsonOciBandwidth> for BandwidthRateLimiter {
             plus,
         } = json;
         Self {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: unclaimed.unwrap_or(DEFAULT_UNCLAIMED_BANDWIDTH),
             free_limit: free.unwrap_or(DEFAULT_FREE_BANDWIDTH),
             plus_limit: plus.unwrap_or(DEFAULT_PLUS_BANDWIDTH),
@@ -58,71 +54,23 @@ impl From<JsonOciBandwidth> for BandwidthRateLimiter {
 impl BandwidthRateLimiter {
     pub fn max() -> Self {
         Self {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: u64::MAX,
             free_limit: u64::MAX,
             plus_limit: u64::MAX,
         }
     }
 
-    fn cutoff_bucket(now: SystemTime) -> u64 {
-        let now_secs = now
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs());
-        epoch_bucket(now_secs.saturating_sub(DAY.as_secs()), DAY.as_secs())
+    pub fn snapshot(&self) -> BandwidthSnapshot<OrganizationUuid> {
+        self.limiter.snapshot()
     }
 
-    fn now_bucket(now: SystemTime) -> u64 {
-        let now_secs = now
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs());
-        epoch_bucket(now_secs, DAY.as_secs())
-    }
-
-    pub fn snapshot(&self) -> BandwidthRateLimiterSnapshot {
-        let cutoff = Self::cutoff_bucket(SystemTime::now());
-        let mut events = HashMap::new();
-        for entry in &self.event_map {
-            let buckets: Vec<(EpochBucket, u64)> = entry
-                .value()
-                .buckets
-                .iter()
-                .filter(|(bucket, _)| *bucket >= cutoff)
-                .copied()
-                .collect();
-            if !buckets.is_empty() {
-                events.insert(*entry.key(), buckets);
-            }
-        }
-        BandwidthRateLimiterSnapshot { events }
-    }
-
-    pub fn restore(&self, snapshot: BandwidthRateLimiterSnapshot) {
-        let cutoff = Self::cutoff_bucket(SystemTime::now());
-        for (org_uuid, buckets) in snapshot.events {
-            let filtered: VecDeque<(u64, u64)> = buckets
-                .into_iter()
-                .filter(|(bucket, _)| *bucket >= cutoff)
-                .collect();
-            let total_bytes: u64 = filtered.iter().map(|(_, b)| b).sum();
-            if total_bytes > 0 {
-                self.event_map.insert(
-                    org_uuid,
-                    BucketedBandwidth {
-                        buckets: filtered,
-                        total_bytes,
-                    },
-                );
-            }
-        }
+    pub fn restore(&self, snapshot: BandwidthSnapshot<OrganizationUuid>) {
+        self.limiter.restore(snapshot);
     }
 
     pub fn prune(&self) {
-        let cutoff = Self::cutoff_bucket(SystemTime::now());
-        self.event_map.retain(|_, bw| {
-            bw.prune(cutoff);
-            bw.total_bytes > 0
-        });
+        self.limiter.prune();
     }
 
     fn limit_for_priority(&self, priority: Priority) -> u64 {
@@ -150,70 +98,24 @@ impl BandwidthRateLimiter {
         now: SystemTime,
     ) -> Result<(), HttpError> {
         let limit = self.limit_for_priority(priority);
-        let cutoff = Self::cutoff_bucket(now);
 
-        let total_bytes = if let Some(mut bw) = self.event_map.get_mut(&org_uuid) {
-            bw.prune(cutoff);
-            bw.total_bytes
+        if self.limiter.check_at(&org_uuid, limit, now) {
+            Ok(())
         } else {
-            0
-        };
-
-        if total_bytes >= limit {
             Err(too_many_requests(RateLimitingError::OciBandwidth {
                 organization: organization.clone(),
                 limit_gib: limit.saturating_div(BYTES_PER_GIB),
             }))
-        } else {
-            Ok(())
         }
     }
 
     pub fn record(&self, org_uuid: OrganizationUuid, bytes: u64) {
-        self.record_at(org_uuid, bytes, SystemTime::now());
+        self.limiter.record(org_uuid, bytes);
     }
 
+    #[cfg(test)]
     fn record_at(&self, org_uuid: OrganizationUuid, bytes: u64, now: SystemTime) {
-        if bytes == 0 {
-            return;
-        }
-        let now_bucket = Self::now_bucket(now);
-        self.event_map
-            .entry(org_uuid)
-            .or_default()
-            .record(now_bucket, bytes);
-    }
-}
-
-#[derive(Default)]
-struct BucketedBandwidth {
-    buckets: VecDeque<(u64, u64)>,
-    total_bytes: u64,
-}
-
-impl BucketedBandwidth {
-    fn prune(&mut self, cutoff: u64) {
-        while self
-            .buckets
-            .front()
-            .is_some_and(|(bucket, _)| *bucket < cutoff)
-        {
-            if let Some((_, bytes)) = self.buckets.pop_front() {
-                self.total_bytes = self.total_bytes.saturating_sub(bytes);
-            }
-        }
-    }
-
-    fn record(&mut self, now_bucket: u64, bytes: u64) {
-        if let Some((bucket, bucket_bytes)) = self.buckets.back_mut()
-            && *bucket == now_bucket
-        {
-            *bucket_bytes = bucket_bytes.saturating_add(bytes);
-            self.total_bytes = self.total_bytes.saturating_add(bytes);
-            return;
-        }
-        self.buckets.push_back((now_bucket, bytes));
-        self.total_bytes = self.total_bytes.saturating_add(bytes);
+        self.limiter.record_at(org_uuid, bytes, now);
     }
 }
 
@@ -249,7 +151,7 @@ mod tests {
     #[test]
     fn basic_tracking() {
         let limiter = BandwidthRateLimiter {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: 1000,
             free_limit: 10_000,
             plus_limit: 100_000,
@@ -276,7 +178,7 @@ mod tests {
     #[test]
     fn tier_limits() {
         let limiter = BandwidthRateLimiter {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: 100,
             free_limit: 1000,
             plus_limit: 10_000,
@@ -308,7 +210,7 @@ mod tests {
     #[test]
     fn window_cleanup() {
         let limiter = BandwidthRateLimiter {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: 100,
             free_limit: 1000,
             plus_limit: 10_000,
@@ -318,20 +220,8 @@ mod tests {
         let org_uuid = org_uuid();
         let org = org();
 
-        let old_bucket = epoch_bucket(
-            (now - Duration::from_secs(25 * 60 * 60))
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            DAY.as_secs(),
-        );
-        limiter.event_map.insert(
-            org_uuid,
-            BucketedBandwidth {
-                buckets: VecDeque::from([(old_bucket, 500)]),
-                total_bytes: 500,
-            },
-        );
+        let old = now - Duration::from_secs(25 * 60 * 60);
+        limiter.record_at(org_uuid, 500, old);
 
         limiter
             .check_at(org_uuid, Priority::Unclaimed, &org, now)
@@ -358,6 +248,7 @@ mod tests {
         let org_uuid = org_uuid();
 
         limiter.record_at(org_uuid, 0, now);
-        assert!(!limiter.event_map.contains_key(&org_uuid));
+        let snapshot = limiter.snapshot();
+        assert!(snapshot.events.is_empty() || !snapshot.events.contains_key(&org_uuid));
     }
 }

@@ -24,7 +24,6 @@ use crate::{
 mod bandwidth;
 mod project;
 mod public;
-mod rate_limiter;
 mod remote_ip;
 mod runner;
 pub(super) mod snapshot;
@@ -33,19 +32,13 @@ mod user;
 use bandwidth::BandwidthRateLimiter;
 use project::ProjectRateLimiter;
 use public::PublicRateLimiter;
-use rate_limiter::{RateLimiter, RateLimits};
 use runner::RunnerRateLimiter;
 use snapshot::RateLimitingSnapshot;
 use user::UserRateLimiter;
 
 use super::DbConnection;
 
-pub(super) const DAY: Duration = Duration::from_secs(60 * 60 * 24);
-
-#[expect(clippy::integer_division)]
-pub(super) fn epoch_bucket(epoch_secs: u64, bucket_secs: u64) -> u64 {
-    epoch_secs / bucket_secs
-}
+const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
@@ -446,14 +439,3 @@ pub enum RateLimitingPersistError {
     #[error("Failed to deserialize rate limiting snapshot: {0}")]
     Deserialize(serde_json::Error),
 }
-
-macro_rules! extract_rate_limits {
-    ($opt:expr, $default_minute:expr, $default_hour:expr, $default_day:expr) => {{
-        let minute = $opt.and_then(|r| r.minute).unwrap_or($default_minute);
-        let hour = $opt.and_then(|r| r.hour).unwrap_or($default_hour);
-        let day = $opt.and_then(|r| r.day).unwrap_or($default_day);
-        RateLimits { minute, hour, day }
-    }};
-}
-
-pub(crate) use extract_rate_limits;
