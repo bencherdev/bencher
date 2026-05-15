@@ -122,7 +122,7 @@ async fn get_ls_inner(
     pagination_params: ProjTestbedsPagination,
     query_params: ProjTestbedsQuery,
 ) -> Result<(JsonTestbeds, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]
@@ -322,7 +322,7 @@ async fn get_one_inner(
     query_params: ProjTestbedQuery,
     api_actor: &ApiActor,
 ) -> Result<JsonTestbed, HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]

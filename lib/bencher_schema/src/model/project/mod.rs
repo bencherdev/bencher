@@ -447,7 +447,7 @@ impl QueryProject {
         }
     }
 
-    pub fn is_allowed_actor(
+    pub fn is_allowed_actor_pub(
         conn: &mut DbConnection,
         rbac: &Rbac,
         #[cfg(feature = "plus")] rate_limiting: &crate::context::RateLimiting,

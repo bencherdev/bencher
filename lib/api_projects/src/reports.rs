@@ -131,7 +131,7 @@ async fn get_ls_inner(
     query_params: JsonReportQuery,
     api_actor: &ApiActor,
 ) -> Result<(JsonReports, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]
@@ -402,7 +402,7 @@ async fn get_one_inner(
     path_params: ProjReportParams,
     api_actor: &ApiActor,
 ) -> Result<JsonReport, HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]

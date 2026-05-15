@@ -119,7 +119,7 @@ async fn get_ls_inner(
     pagination_params: ProjBenchmarksPagination,
     query_params: ProjBenchmarksQuery,
 ) -> Result<(JsonBenchmarks, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]
@@ -301,7 +301,7 @@ async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonBenchmark, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        let query_project = QueryProject::is_allowed_actor(
+        let query_project = QueryProject::is_allowed_actor_pub(
             conn,
             &context.rbac,
             #[cfg(feature = "plus")]

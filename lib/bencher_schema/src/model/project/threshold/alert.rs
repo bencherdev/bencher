@@ -1,7 +1,7 @@
 use bencher_json::{
     AlertUuid, DateTime, ReportUuid,
     project::{
-        alert::{AlertStatus, JsonAlert, JsonPerfAlert, JsonUpdateAlert, UpdateAlertStatus},
+        alert::{AlertStatus, JsonAlert, JsonPerfAlert, UpdateAlertStatus},
         boundary::BoundaryLimit,
         report::Iteration,
     },
@@ -249,16 +249,6 @@ impl InsertAlert {
 pub struct UpdateAlert {
     pub status: Option<AlertStatus>,
     pub modified: DateTime,
-}
-
-impl From<JsonUpdateAlert> for UpdateAlert {
-    fn from(update: JsonUpdateAlert) -> Self {
-        let JsonUpdateAlert { status } = update;
-        Self {
-            status: status.map(Into::into),
-            modified: DateTime::now(),
-        }
-    }
 }
 
 impl UpdateAlert {

@@ -119,7 +119,7 @@ async fn get_inner(
     json_perf_query: JsonPerfQuery,
     api_actor: &ApiActor,
 ) -> Result<JsonPerf, HttpError> {
-    let project = QueryProject::is_allowed_actor(
+    let project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]

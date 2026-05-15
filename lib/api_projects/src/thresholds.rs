@@ -124,7 +124,7 @@ async fn get_ls_inner(
     query_params: JsonThresholdQuery,
     api_actor: &ApiActor,
 ) -> Result<(JsonThresholds, TotalCount), HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]
@@ -401,7 +401,7 @@ async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonThreshold, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        let query_project = QueryProject::is_allowed_actor(
+        let query_project = QueryProject::is_allowed_actor_pub(
             conn,
             &context.rbac,
             #[cfg(feature = "plus")]

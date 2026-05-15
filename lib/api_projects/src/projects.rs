@@ -261,7 +261,7 @@ async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonProject, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        QueryProject::is_allowed_actor(
+        QueryProject::is_allowed_actor_pub(
             conn,
             &context.rbac,
             #[cfg(feature = "plus")]

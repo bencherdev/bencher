@@ -615,3 +615,272 @@ async fn project_key_revoked() {
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
+
+// PATCH /v0/projects/{project}/branches/{branch} - project key cannot rename
+#[tokio::test]
+async fn project_key_cannot_rename_branch() {
+    let (server, project_slug, token, key) = setup().await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "rename-branch"}))
+        .send()
+        .await
+        .expect("Failed to create branch");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let branch: JsonBranch = resp.json().await.expect("Failed to parse branch");
+
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{}/branches/{}",
+            project_slug, branch.slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({"name": "new-name"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+// PATCH /v0/projects/{project}/branches/{branch} - project key CAN archive
+#[tokio::test]
+async fn project_key_can_archive_branch() {
+    let (server, project_slug, token, key) = setup().await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "archive-branch"}))
+        .send()
+        .await
+        .expect("Failed to create branch");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let branch: JsonBranch = resp.json().await.expect("Failed to parse branch");
+
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{}/branches/{}",
+            project_slug, branch.slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({"archived": true}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+// PATCH /v0/projects/{project}/benchmarks/{benchmark} - project key cannot rename
+#[tokio::test]
+async fn project_key_cannot_rename_benchmark() {
+    let (server, project_slug, token, key) = setup().await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/benchmarks", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "rename-benchmark"}))
+        .send()
+        .await
+        .expect("Failed to create benchmark");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let benchmark: JsonBenchmark = resp.json().await.expect("Failed to parse benchmark");
+
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{}/benchmarks/{}",
+            project_slug, benchmark.slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({"name": "new-name"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+// PATCH /v0/projects/{project}/testbeds/{testbed} - project key cannot rename
+#[tokio::test]
+async fn project_key_cannot_rename_testbed() {
+    let (server, project_slug, token, key) = setup().await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "rename-testbed"}))
+        .send()
+        .await
+        .expect("Failed to create testbed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let testbed: JsonTestbed = resp.json().await.expect("Failed to parse testbed");
+
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{}/testbeds/{}",
+            project_slug, testbed.slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({"name": "new-name"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+// PATCH /v0/projects/{project}/measures/{measure} - project key cannot rename
+#[tokio::test]
+async fn project_key_cannot_rename_measure() {
+    let (server, project_slug, token, key) = setup().await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/measures", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "rename-measure", "units": "ns/iter"}))
+        .send()
+        .await
+        .expect("Failed to create measure");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let measure: JsonMeasure = resp.json().await.expect("Failed to parse measure");
+
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{}/measures/{}",
+            project_slug, measure.slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({"name": "new-name"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+// PUT /v0/projects/{project}/thresholds/{threshold} - project key CAN update model
+#[tokio::test]
+async fn project_key_can_update_threshold() {
+    let (server, project_slug, token, key) = setup().await;
+
+    // Create branch, testbed, measure, and threshold with user token
+    server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "thresh-branch"}))
+        .send()
+        .await
+        .expect("Failed to create branch");
+
+    server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/testbeds", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "thresh-testbed"}))
+        .send()
+        .await
+        .expect("Failed to create testbed");
+
+    server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/measures", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({"name": "thresh-measure", "units": "ns/iter"}))
+        .send()
+        .await
+        .expect("Failed to create measure");
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/thresholds", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({
+            "branch": "thresh-branch",
+            "testbed": "thresh-testbed",
+            "measure": "thresh-measure",
+            "test": "percentage",
+            "upper_boundary": 0.25
+        }))
+        .send()
+        .await
+        .expect("Failed to create threshold");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let threshold: JsonThreshold = resp.json().await.expect("Failed to parse threshold");
+
+    // PUT with project key to update model
+    let resp = server
+        .client
+        .put(server.api_url(&format!(
+            "/v0/projects/{}/thresholds/{}",
+            project_slug, threshold.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({
+            "test": "percentage",
+            "upper_boundary": 0.50
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+}

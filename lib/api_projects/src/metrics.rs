@@ -88,7 +88,7 @@ async fn get_one_inner(
     path_params: ProjMetricParams,
     api_actor: &ApiActor,
 ) -> Result<JsonOneMetric, HttpError> {
-    let query_project = QueryProject::is_allowed_actor(
+    let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
         #[cfg(feature = "plus")]
