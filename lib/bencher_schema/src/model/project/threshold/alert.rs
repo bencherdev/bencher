@@ -65,7 +65,11 @@ impl QueryAlert {
             .map_err(resource_not_found_err!(Alert, (project_id, uuid)))
     }
 
-    pub fn silence_all(conn: &mut DbConnection, head_id: HeadId) -> diesel::QueryResult<usize> {
+    pub fn silence_all(
+        conn: &mut DbConnection,
+        head_id: HeadId,
+        now: DateTime,
+    ) -> diesel::QueryResult<usize> {
         let alerts =
             schema::alert::table
                 .inner_join(schema::boundary::table.inner_join(
@@ -81,7 +85,7 @@ impl QueryAlert {
             return Ok(0);
         }
 
-        let silenced_alert = UpdateAlert::silence();
+        let silenced_alert = UpdateAlert::silence(now);
         diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alerts)))
             .set(&silenced_alert)
             .execute(conn)
@@ -259,17 +263,20 @@ impl UpdateAlert {
         }
     }
 
-    pub fn silence() -> Self {
+    pub fn silence(now: DateTime) -> Self {
         Self {
             status: Some(AlertStatus::Silenced),
-            modified: DateTime::now(),
+            modified: now,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::project::{alert::AlertStatus, boundary::BoundaryLimit};
+    use bencher_json::{
+        DateTime,
+        project::{alert::AlertStatus, boundary::BoundaryLimit},
+    };
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     #[cfg(feature = "plus")]
@@ -507,7 +514,7 @@ mod tests {
         assert_eq!(alert_ids.len(), 3);
 
         // Bulk silence using eq_any
-        let silenced_alert = UpdateAlert::silence();
+        let silenced_alert = UpdateAlert::silence(DateTime::TEST);
         diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alert_ids)))
             .set(&silenced_alert)
             .execute(&mut conn)
@@ -630,7 +637,7 @@ mod tests {
                 .load::<AlertId>(&mut conn)
                 .expect("Failed to query alerts");
 
-        let silenced_alert = UpdateAlert::silence();
+        let silenced_alert = UpdateAlert::silence(DateTime::TEST);
         diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&head1_alert_ids)))
             .set(&silenced_alert)
             .execute(&mut conn)
@@ -677,7 +684,7 @@ mod tests {
 
         // Replicate the silence_all early-return logic:
         // When alert_ids is empty, the update should affect 0 rows.
-        let silenced_alert = UpdateAlert::silence();
+        let silenced_alert = UpdateAlert::silence(DateTime::TEST);
         let updated =
             diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alert_ids)))
                 .set(&silenced_alert)

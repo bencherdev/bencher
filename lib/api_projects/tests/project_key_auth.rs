@@ -11,7 +11,7 @@
 use bencher_api_tests::TestServer;
 use bencher_json::{
     JsonBenchmark, JsonBranch, JsonBranches, JsonMeasure, JsonProject, JsonProjectKeyCreated,
-    JsonProjects, JsonTestbed, JsonThreshold, ProjectKey,
+    JsonProjects, JsonReport, JsonTestbed, JsonThreshold, ProjectKey,
 };
 use http::StatusCode;
 
@@ -503,6 +503,33 @@ async fn project_key_can_create_threshold() {
     let _threshold: JsonThreshold = resp.json().await.expect("Failed to parse response");
 }
 
+// POST /v0/projects/{project}/reports - project key CAN create report
+#[tokio::test]
+async fn project_key_can_create_report() {
+    let (server, project_slug, _token, key) = setup().await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/reports", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": ["{\"bench_name\": {\"latency\": {\"value\": 100.0}}}"]
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let _report: JsonReport = resp.json().await.expect("Failed to parse response");
+}
+
 // Negative: project key cannot create in wrong project
 #[tokio::test]
 async fn project_key_cannot_create_in_wrong_project() {
@@ -878,6 +905,107 @@ async fn project_key_can_update_threshold() {
             "test": "percentage",
             "upper_boundary": 0.50
         }))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+// PATCH /v0/projects/{project}/alerts/{alert} - project key CAN dismiss alert
+#[tokio::test]
+async fn project_key_can_dismiss_alert() {
+    let (server, project_slug, _token, key) = setup().await;
+
+    // Submit a run with a tight threshold to generate an alert.
+    // First, submit a baseline run to establish metrics.
+    server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/reports", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "thresholds": {
+                "models": {
+                    "latency": {
+                        "test": "percentage",
+                        "min_sample_size": 2,
+                        "upper_boundary": 0.01
+                    }
+                }
+            },
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": ["{\"bench\": {\"latency\": {\"value\": 100.0}}}"]
+        }))
+        .send()
+        .await
+        .expect("Failed to submit baseline");
+
+    // Submit a second run with a much higher value to trigger an alert
+    server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/reports", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:02:00Z",
+            "end_time": "2024-01-01T00:03:00Z",
+            "results": ["{\"bench\": {\"latency\": {\"value\": 100.0}}}"]
+        }))
+        .send()
+        .await
+        .expect("Failed to submit second run");
+
+    // Submit a third run with a spike to trigger an alert (need min_sample_size of 2)
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/reports", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:04:00Z",
+            "end_time": "2024-01-01T00:05:00Z",
+            "results": ["{\"bench\": {\"latency\": {\"value\": 999999.0}}}"]
+        }))
+        .send()
+        .await
+        .expect("Failed to submit spike run");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse report");
+
+    // Check that an alert was generated
+    assert!(
+        !report.alerts.is_empty(),
+        "Expected at least one alert from the spike run"
+    );
+
+    let alert_uuid = report.alerts[0].uuid;
+
+    // Dismiss the alert with the project key
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{}/alerts/{}",
+            project_slug, alert_uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({"status": "dismissed"}))
         .send()
         .await
         .expect("Request failed");

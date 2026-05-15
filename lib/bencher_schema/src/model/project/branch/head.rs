@@ -295,7 +295,7 @@ impl InsertHead {
                     .set(&update_head)
                     .execute(conn)?;
 
-                QueryAlert::silence_all(conn, old_head_id)?
+                QueryAlert::silence_all(conn, old_head_id, context.clock.now())?
             } else {
                 0
             };
@@ -1308,7 +1308,7 @@ mod tests {
                 .load::<AlertId>(conn)?;
 
             if !alerts.is_empty() {
-                let silenced_alert = UpdateAlert::silence();
+                let silenced_alert = UpdateAlert::silence(DateTime::TEST);
                 diesel::update(schema::alert::table.filter(schema::alert::id.eq_any(&alerts)))
                     .set(&silenced_alert)
                     .execute(conn)?;
