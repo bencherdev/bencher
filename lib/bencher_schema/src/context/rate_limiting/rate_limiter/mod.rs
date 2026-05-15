@@ -78,6 +78,12 @@ where
         self.day.restore(day);
     }
 
+    pub fn prune(&self) {
+        self.minute.prune();
+        self.hour.prune();
+        self.day.prune();
+    }
+
     pub fn check(&self, key: K) -> Result<(), dropshot::HttpError> {
         self.minute.check(key)?;
         self.hour.check(key)?;

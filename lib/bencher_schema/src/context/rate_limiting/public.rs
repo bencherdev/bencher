@@ -155,6 +155,12 @@ impl PublicRateLimiter {
         Self::new(requests, attempts, runs)
     }
 
+    pub fn prune(&self) {
+        self.requests.prune();
+        self.attempts.prune();
+        self.runs.prune();
+    }
+
     pub fn snapshot(&self) -> PublicRateLimiterSnapshot {
         PublicRateLimiterSnapshot {
             requests: self.requests.snapshot(),

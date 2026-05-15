@@ -111,6 +111,11 @@ impl ProjectRateLimiter {
         Self::new(requests, runs)
     }
 
+    pub fn prune(&self) {
+        self.requests.prune();
+        self.runs.prune();
+    }
+
     pub fn snapshot(&self) -> ProjectRateLimiterSnapshot {
         ProjectRateLimiterSnapshot {
             requests: self.requests.snapshot(),

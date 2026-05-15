@@ -289,6 +289,15 @@ impl UserRateLimiter {
         )
     }
 
+    pub fn prune(&self) {
+        self.requests.prune();
+        self.attempts.prune();
+        self.credentials.prune();
+        self.organizations.prune();
+        self.invites.prune();
+        self.runs.prune();
+    }
+
     pub fn snapshot(&self) -> UserRateLimiterSnapshot {
         UserRateLimiterSnapshot {
             requests: self.requests.snapshot(),

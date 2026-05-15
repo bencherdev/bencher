@@ -42,6 +42,13 @@ use super::DbConnection;
 
 pub(super) const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
+const SECONDS_PER_MINUTE: u64 = 60;
+
+#[expect(clippy::integer_division)]
+pub(super) fn epoch_minute(epoch_secs: u64) -> u64 {
+    epoch_secs / SECONDS_PER_MINUTE
+}
+
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
 
@@ -230,6 +237,14 @@ impl RateLimiting {
             runner: RunnerRateLimiter::max(),
             bandwidth: BandwidthRateLimiter::max(),
         }
+    }
+
+    pub fn prune(&self) {
+        self.public.prune();
+        self.user.prune();
+        self.project.prune();
+        self.runner.prune();
+        self.bandwidth.prune();
     }
 
     pub fn window(&self) -> (DateTime, DateTime) {

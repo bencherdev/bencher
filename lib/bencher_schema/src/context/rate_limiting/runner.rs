@@ -67,6 +67,10 @@ impl RunnerRateLimiter {
         Self::new(requests)
     }
 
+    pub fn prune(&self) {
+        self.requests.prune();
+    }
+
     pub fn snapshot(&self) -> RunnerRateLimiterSnapshot {
         RunnerRateLimiterSnapshot {
             requests: self.requests.snapshot(),
