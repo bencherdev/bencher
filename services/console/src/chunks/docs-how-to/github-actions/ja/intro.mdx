@@ -4,14 +4,13 @@
 - [プルリクエスト][pull requests]
 - [フォークからのプルリクエスト][fork pull requests]
 
-続行する前に、[APIトークンを作成][create an api token]したうえで、**リポジトリ**のシークレットとして`BENCHER_API_KEY`という名前で設定してください。`Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`に移動します。シークレット名を`BENCHER_API_KEY`として、シークレットの値にAPIトークンを設定します。
+続行する前に、プロジェクトAPIキーを作成したうえで、**リポジトリ**のシークレットとして`BENCHER_API_KEY`という名前で設定してください。`Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`に移動します。シークレット名を`BENCHER_API_KEY`として、シークレットの値にプロジェクトAPIキーを設定します。
 
 GitHub Actionsでは、[フォークされたリポジトリからワークフローがトリガーされた場合、シークレットはランナーに渡されません][github actions secrets]。したがって、以下のいずれかのワークフローをプルリクエストでリポジトリに追加する際には、_同じ_リポジトリのブランチを使用する必要があります。フォークからのプルリクエストでBencherを追加しようとすると、`BENCHER_API_KEY`シークレットは利用できません。`${{ secrets.BENCHER_API_KEY }}`は空の文字列になります。
 
 [github actions secrets]: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
-[create an api token]: /ja/docs/how-to/claim/#create-an-api-token
 
 [base branch]: #base-branch
 [pull requests]: #pull-requests

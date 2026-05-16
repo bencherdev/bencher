@@ -4,10 +4,10 @@ Depending on your use case, you can set up [Continuous Benchmarking][continuous 
 - [Pull Requests][pull requests]
 - [Pull Requests from Forks][fork pull requests]
 
-Make sure you have [created an API token][create an api token]
+Make sure you have created a project API key
 and set it as a **Repository** secret named `BENCHER_API_KEY` before continuing on!
 Navigate to `Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`.
-Name the secret `BENCHER_API_KEY` and set the secret value to your API token.
+Name the secret `BENCHER_API_KEY` and set the secret value to your project API key.
 
 In GitHub Actions,
 [secrets are not passed to the runner when a workflow is triggered from a forked repository][github actions secrets].
@@ -20,7 +20,6 @@ then the `BENCHER_API_KEY` secret will not be available.
 [github actions secrets]: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [continuous benchmarking]: /ru/docs/explanation/continuous-benchmarking/
-[create an api token]: /ru/docs/how-to/claim/#create-an-api-token
 
 [base branch]: #base-branch
 [pull requests]: #pull-requests

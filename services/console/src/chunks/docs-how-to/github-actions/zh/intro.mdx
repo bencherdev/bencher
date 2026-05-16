@@ -4,14 +4,13 @@
 - [拉取请求][pull requests]
 - [来自分支的拉取请求][fork pull requests]
 
-确保您已[创建 API 令牌][create an api token]并将其设置为名为 `BENCHER_API_KEY` 的**仓库**密钥后再继续！导航到 `Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`。将密钥命名为 `BENCHER_API_KEY` 并将密钥值设置为您的 API 令牌。
+确保您已创建项目 API 密钥并将其设置为名为 `BENCHER_API_KEY` 的**仓库**密钥后再继续！导航到 `Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`。将密钥命名为 `BENCHER_API_KEY` 并将密钥值设置为您的项目 API 密钥。
 
 在 GitHub Actions 中，[当工作流从分支仓库触发时，密钥不会传递给运行器][github actions secrets]。因此，当您通过拉取请求将以下任何工作流添加到您的仓库时，需要使用_相同_仓库中的分支。如果尝试从一个分支的拉取请求中添加 Bencher，那么 `BENCHER_API_KEY` 密钥将不可用。`${{ secrets.BENCHER_API_KEY }}` 将为空字符串。
 
 [github actions secrets]: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
-[create an api token]: /zh/docs/how-to/claim/#create-an-api-token
 
 [base branch]: #base-branch
 [pull requests]: #pull-requests

@@ -8,12 +8,11 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 [빠른 시작][quickstart] 및 [자체 호스팅 Docker][docker self-hosted] 튜토리얼에서 이어서, `claimed` 프로젝트에 상대적 [지속적 벤치마킹][continuous benchmarking]을 추가하겠습니다.
 
 > 🐰 계속하기 전에
-> [API 토큰을 생성하고 이를 `BENCHER_API_KEY` 환경 변수로 설정][create an api token]하십시오!
+> 프로젝트 API 키를 생성하고 이를 `BENCHER_API_KEY` 환경 변수로 설정하십시오!
 
 [quickstart]: /ko/docs/tutorial/quickstart/
 [docker self-hosted]: /ko/docs/tutorial/self-hosted/
 [continuous benchmarking]: /ko/docs/explanation/continuous-benchmarking/
-[create an api token]: /ko/docs/how-to/claim/#create-an-api-token
 
 상대적 지속적 벤치마킹은 코드의 두 버전을 나란히 비교하여 실행합니다. 이는 실행 간 사용할 수 있는 리소스가 매우 불규칙할 수 있는 시끄러운 CI/CD 환경에서 유용할 수 있습니다. 이 예제에서는 `main` 브랜치에서 실행한 결과와 적절히 명명된 `feature-branch`라는 기능 브랜치에서 실행한 결과를 비교할 것입니다. 모든 CI 환경이 약간씩 다르기 때문에, 다음 예제는 실용적이라기보다는 설명을 목적으로 합니다. 더 구체적인 예제를 보려면 [GitHub Actions에서의 지속적 벤치마킹][github actions]과 [GitLab CI/CD에서의 지속적 벤치마킹][gitlab ci/cd]을 참조하세요.
 

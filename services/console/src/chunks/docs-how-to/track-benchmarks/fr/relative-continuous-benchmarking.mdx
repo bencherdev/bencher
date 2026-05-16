@@ -7,12 +7,11 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 
 En reprenant là où nous nous étions arrêtés dans les tutoriels [Démarrage Rapide][quickstart] et [Docker Auto-Hébergé][docker self-hosted], ajoutons le [Benchmarking Continu][continuous benchmarking] Relatif à notre projet `Sauvegarder Walter White`.
 
-> 🐰 Assurez-vous d'avoir [créé un jeton API et de l'avoir défini comme variable d'environnement `BENCHER_API_KEY`][create an api token] avant de continuer !
+> 🐰 Assurez-vous d'avoir créé une clé API de projet et de l'avoir définie comme variable d'environnement `BENCHER_API_KEY` avant de continuer !
 
 [quickstart]: /fr/docs/tutorial/quickstart/
 [docker self-hosted]: /fr/docs/tutorial/self-hosted/
 [continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/
-[create an api token]: /fr/docs/how-to/claim/#create-an-api-token
 
 Le Benchmarking Continu Relatif réalise une comparaison côte à côte de deux versions de votre code. Cela peut être utile dans des environnements CI/CD bruyants, où les ressources disponibles peuvent varier considérablement entre les exécutions. Dans cet exemple, nous comparerons les résultats d'exécution sur la branche `main` aux résultats d'exécution sur une branche fonctionnelle, justement nommée `feature-branch`. Comme chaque environnement CI est un peu différent, l'exemple suivant est davantage illustratif que pratique. Pour des exemples plus spécifiques, voir [Benchmarking Continu dans GitHub Actions][github actions] et [Benchmarking Continu dans GitLab CI/CD][gitlab ci/cd].
 

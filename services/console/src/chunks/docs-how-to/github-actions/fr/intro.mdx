@@ -4,10 +4,10 @@ Depending on your use case, you can set up [Continuous Benchmarking][continuous 
 - [Pull Requests][pull requests]
 - [Pull Requests from Forks][fork pull requests]
 
-Assurez-vous d'avoir [créé un jeton API][create an api token]
-et de l'avoir défini comme un secret de **Référentiel** nommé `BENCHER_API_KEY` avant de continuer !
+Assurez-vous d'avoir créé une clé API de projet
+et de l'avoir définie comme un secret de **Référentiel** nommé `BENCHER_API_KEY` avant de continuer !
 Allez à `Votre Répo -> Paramètres -> Secrets et variables -> Actions -> Nouveau secret de référentiel`.
-Nommez le secret `BENCHER_API_KEY` et définissez la valeur secrète sur votre jeton API.
+Nommez le secret `BENCHER_API_KEY` et définissez la valeur secrète sur votre clé API de projet.
 
 Dans GitHub Actions,
 [les secrets ne sont pas transmis au runner lorsqu'un workflow est déclenché depuis un dépôt forké][github actions secrets].
@@ -20,7 +20,6 @@ alors le secret `BENCHER_API_KEY` ne sera pas disponible.
 [github actions secrets]: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/
-[create an api token]: /fr/docs/how-to/claim/#create-an-api-token
 
 [base branch]: #base-branch
 [pull requests]: #pull-requests

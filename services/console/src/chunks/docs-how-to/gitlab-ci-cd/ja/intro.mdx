@@ -3,14 +3,12 @@ Depending on your use case, you can set up [Continuous Benchmarking][continuous 
 - [Target Branch](#target-branch)
 - [Merge Requests](#merge-requests)
 
-確実に、[APIトークンを作成し][created an api token]
-、続行する前にマスクされた変数 `BENCHER_API_KEY` として設定してください！
+確実に、プロジェクトAPIキーを作成し、続行する前にマスクされた変数 `BENCHER_API_KEY` として設定してください！
 `Your Repo -> Settings -> CI/CD -> Variables -> Expand -> Add variable` に移動します。
-変数キーは `BENCHER_API_KEY` であり、変数値はあなたのAPIトークンであるべきです。
+変数キーは `BENCHER_API_KEY` であり、変数値はあなたのプロジェクトAPIキーであるべきです。
 `Protect variable` と `Mask variable` のボックスの両方をチェックしてください。
 
 [continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
-[created an api token]: /ja/docs/how-to/claim/#create-an-api-token
 
 [target branch]: #target-branch
 [merge requests]: #merge-requests

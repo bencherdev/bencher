@@ -4,9 +4,9 @@
 - [풀 리퀘스트][pull requests]
 - [포크로부터의 풀 리퀘스트][fork pull requests]
 
-진행하기 전에 [API 토큰을 생성][create an api token]하고, 이를 `BENCHER_API_KEY`이라는 **저장소** 비밀로 설정했는지 확인하세요!
+진행하기 전에 프로젝트 API 키를 생성하고, 이를 `BENCHER_API_KEY`이라는 **저장소** 비밀로 설정했는지 확인하세요!
 `Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`로 이동합니다.
-비밀 이름을 `BENCHER_API_KEY`으로 지정하고 비밀값을 API 토큰으로 설정하세요.
+비밀 이름을 `BENCHER_API_KEY`으로 지정하고 비밀값을 프로젝트 API 키로 설정하세요.
 
 GitHub Actions에서,
 [비밀은 포크된 리포지토리에서 워크플로우가 트리거될 때 실행자에게 전달되지 않습니다][github actions secrets].
@@ -18,7 +18,6 @@ GitHub Actions에서,
 [github actions secrets]: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [continuous benchmarking]: /ko/docs/explanation/continuous-benchmarking/
-[create an api token]: /ko/docs/how-to/claim/#create-an-api-token
 
 [base branch]: #base-branch
 [pull requests]: #pull-requests
