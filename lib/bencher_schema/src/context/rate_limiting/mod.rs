@@ -24,7 +24,6 @@ use crate::{
 mod bandwidth;
 mod project;
 mod public;
-mod rate_limiter;
 mod remote_ip;
 mod runner;
 pub(super) mod snapshot;
@@ -33,14 +32,11 @@ mod user;
 use bandwidth::BandwidthRateLimiter;
 use project::ProjectRateLimiter;
 use public::PublicRateLimiter;
-use rate_limiter::{RateLimiter, RateLimits};
 use runner::RunnerRateLimiter;
 use snapshot::RateLimitingSnapshot;
 use user::UserRateLimiter;
 
 use super::DbConnection;
-
-pub(super) const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
@@ -139,7 +135,7 @@ pub enum RateLimitingError {
 impl Default for RateLimiting {
     fn default() -> Self {
         Self {
-            window: DAY,
+            window: bencher_rate_limiter::DAY,
             unclaimed_limit: DEFAULT_UNCLAIMED_LIMIT,
             claimed_limit: DEFAULT_CLAIMED_LIMIT,
             public: PublicRateLimiter::default(),
@@ -164,7 +160,9 @@ impl From<JsonRateLimiting> for RateLimiting {
             oci_bandwidth,
         } = json;
         Self {
-            window: window.map(u64::from).map_or(DAY, Duration::from_secs),
+            window: window
+                .map(u64::from)
+                .map_or(bencher_rate_limiter::DAY, Duration::from_secs),
             unclaimed_limit: unclaimed_limit.unwrap_or(DEFAULT_UNCLAIMED_LIMIT),
             claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
             public: public.map_or_else(PublicRateLimiter::default, Into::into),
@@ -221,7 +219,7 @@ impl RateLimiting {
 
     pub fn max() -> Self {
         Self {
-            window: DAY,
+            window: bencher_rate_limiter::DAY,
             unclaimed_limit: u32::MAX,
             claimed_limit: u32::MAX,
             public: PublicRateLimiter::max(),
@@ -230,6 +228,14 @@ impl RateLimiting {
             runner: RunnerRateLimiter::max(),
             bandwidth: BandwidthRateLimiter::max(),
         }
+    }
+
+    pub fn prune(&self) {
+        self.public.prune();
+        self.user.prune();
+        self.project.prune();
+        self.runner.prune();
+        self.bandwidth.prune();
     }
 
     pub fn window(&self) -> (DateTime, DateTime) {
@@ -434,13 +440,11 @@ pub enum RateLimitingPersistError {
     Deserialize(serde_json::Error),
 }
 
-macro_rules! extract_rate_limits {
-    ($opt:expr, $default_minute:expr, $default_hour:expr, $default_day:expr) => {{
-        let minute = $opt.and_then(|r| r.minute).unwrap_or($default_minute);
-        let hour = $opt.and_then(|r| r.hour).unwrap_or($default_hour);
-        let day = $opt.and_then(|r| r.day).unwrap_or($default_day);
-        RateLimits { minute, hour, day }
-    }};
+#[cfg(feature = "otel")]
+fn interval_kind(interval: bencher_rate_limiter::Interval) -> bencher_otel::IntervalKind {
+    match interval {
+        bencher_rate_limiter::Interval::Minute => bencher_otel::IntervalKind::Minute,
+        bencher_rate_limiter::Interval::Hour => bencher_otel::IntervalKind::Hour,
+        bencher_rate_limiter::Interval::Day => bencher_otel::IntervalKind::Day,
+    }
 }
-
-pub(crate) use extract_rate_limits;

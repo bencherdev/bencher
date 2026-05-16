@@ -1,11 +1,7 @@
 use bencher_json::{RunnerUuid, system::config::JsonRunnerRateLimiter};
+use bencher_rate_limiter::{RateLimiter, RateLimits};
 
-use crate::context::{
-    RateLimitingError,
-    rate_limiting::{
-        RateLimiter, RateLimits, extract_rate_limits, snapshot::RunnerRateLimiterSnapshot,
-    },
-};
+use crate::context::{RateLimitingError, rate_limiting::snapshot::RunnerRateLimiterSnapshot};
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 4;
 const DEFAULT_REQUESTS_PER_HOUR_LIMIT: usize = 1 << 8;
@@ -31,12 +27,17 @@ impl From<JsonRunnerRateLimiter> for RunnerRateLimiter {
     fn from(json: JsonRunnerRateLimiter) -> Self {
         let JsonRunnerRateLimiter { requests } = json;
 
-        let requests = extract_rate_limits!(
-            requests,
-            DEFAULT_REQUESTS_PER_MINUTE_LIMIT,
-            DEFAULT_REQUESTS_PER_HOUR_LIMIT,
-            DEFAULT_REQUESTS_PER_DAY_LIMIT
-        );
+        let requests = RateLimits {
+            minute: requests
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_REQUESTS_PER_MINUTE_LIMIT),
+            hour: requests
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_REQUESTS_PER_HOUR_LIMIT),
+            day: requests
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_REQUESTS_PER_DAY_LIMIT),
+        };
 
         Self::new(requests)
     }
@@ -44,17 +45,9 @@ impl From<JsonRunnerRateLimiter> for RunnerRateLimiter {
 
 impl RunnerRateLimiter {
     pub fn new(requests: RateLimits) -> Self {
-        let RateLimits { minute, hour, day } = requests;
-        let requests = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &bencher_otel::ApiCounter::RunnerRequestMax,
-            RateLimitingError::RunnerRequests,
-        );
-
-        Self { requests }
+        Self {
+            requests: RateLimiter::new(requests),
+        }
     }
 
     pub fn max() -> Self {
@@ -65,6 +58,10 @@ impl RunnerRateLimiter {
         };
 
         Self::new(requests)
+    }
+
+    pub fn prune(&self) {
+        self.requests.prune();
     }
 
     pub fn snapshot(&self) -> RunnerRateLimiterSnapshot {
@@ -79,6 +76,16 @@ impl RunnerRateLimiter {
     }
 
     pub fn check_request(&self, runner_uuid: RunnerUuid) -> Result<(), dropshot::HttpError> {
-        self.requests.check(runner_uuid)
+        if let Some(interval) = self.requests.check(runner_uuid) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerRequestMax(
+                super::interval_kind(interval),
+            ));
+            Err(crate::error::too_many_requests(
+                RateLimitingError::RunnerRequests,
+            ))
+        } else {
+            Ok(())
+        }
     }
 }

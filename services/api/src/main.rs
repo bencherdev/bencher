@@ -145,6 +145,7 @@ async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {
         let ctx = server.app_private();
         let rate_limiting = ctx.rate_limiting.clone();
         let database_path = ctx.database.path.clone();
+        rate_limiting.prune();
         move || rate_limiting.save(&database_path, log)
     };
     if let Err(e) = server.close().await {

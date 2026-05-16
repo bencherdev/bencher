@@ -1,0 +1,17 @@
+[package]
+name = "bencher_rate_limiter"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[dependencies]
+dashmap.workspace = true
+serde = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -1,11 +1,7 @@
 use bencher_json::{ProjectUuid, system::config::JsonProjectRateLimiter};
+use bencher_rate_limiter::{RateLimiter, RateLimits};
 
-use crate::context::{
-    RateLimitingError,
-    rate_limiting::{
-        RateLimiter, RateLimits, extract_rate_limits, snapshot::ProjectRateLimiterSnapshot,
-    },
-};
+use crate::context::{RateLimitingError, rate_limiting::snapshot::ProjectRateLimiterSnapshot};
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 11;
 const DEFAULT_REQUESTS_PER_HOUR_LIMIT: usize = 1 << 13;
@@ -42,19 +38,29 @@ impl From<JsonProjectRateLimiter> for ProjectRateLimiter {
     fn from(json: JsonProjectRateLimiter) -> Self {
         let JsonProjectRateLimiter { requests, runs } = json;
 
-        let requests = extract_rate_limits!(
-            requests,
-            DEFAULT_REQUESTS_PER_MINUTE_LIMIT,
-            DEFAULT_REQUESTS_PER_HOUR_LIMIT,
-            DEFAULT_REQUESTS_PER_DAY_LIMIT
-        );
+        let requests = RateLimits {
+            minute: requests
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_REQUESTS_PER_MINUTE_LIMIT),
+            hour: requests
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_REQUESTS_PER_HOUR_LIMIT),
+            day: requests
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_REQUESTS_PER_DAY_LIMIT),
+        };
 
-        let runs = extract_rate_limits!(
-            runs,
-            DEFAULT_RUNS_PER_MINUTE_LIMIT,
-            DEFAULT_RUNS_PER_HOUR_LIMIT,
-            DEFAULT_RUNS_PER_DAY_LIMIT
-        );
+        let runs = RateLimits {
+            minute: runs
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_RUNS_PER_MINUTE_LIMIT),
+            hour: runs
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_RUNS_PER_HOUR_LIMIT),
+            day: runs
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_RUNS_PER_DAY_LIMIT),
+        };
 
         Self::new(requests, runs)
     }
@@ -62,53 +68,25 @@ impl From<JsonProjectRateLimiter> for ProjectRateLimiter {
 
 impl ProjectRateLimiter {
     pub fn new(requests: RateLimits, runs: RateLimits) -> Self {
-        let RateLimits { minute, hour, day } = requests;
-        let requests = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &|interval| {
-                bencher_otel::ApiCounter::RequestMax(
-                    interval,
-                    bencher_otel::AuthorizationKind::Project,
-                )
-            },
-            RateLimitingError::ProjectRequests,
-        );
-
-        let RateLimits { minute, hour, day } = runs;
-        let runs = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &|interval| {
-                bencher_otel::ApiCounter::RequestMax(
-                    interval,
-                    bencher_otel::AuthorizationKind::Project,
-                )
-            },
-            RateLimitingError::ProjectRuns,
-        );
-
-        Self { requests, runs }
+        Self {
+            requests: RateLimiter::new(requests),
+            runs: RateLimiter::new(runs),
+        }
     }
 
     pub fn max() -> Self {
-        let requests = RateLimits {
+        let max = RateLimits {
             minute: usize::MAX,
             hour: usize::MAX,
             day: usize::MAX,
         };
 
-        let runs = RateLimits {
-            minute: usize::MAX,
-            hour: usize::MAX,
-            day: usize::MAX,
-        };
+        Self::new(max, max)
+    }
 
-        Self::new(requests, runs)
+    pub fn prune(&self) {
+        self.requests.prune();
+        self.runs.prune();
     }
 
     pub fn snapshot(&self) -> ProjectRateLimiterSnapshot {
@@ -125,10 +103,32 @@ impl ProjectRateLimiter {
     }
 
     pub fn check_request(&self, project_uuid: ProjectUuid) -> Result<(), dropshot::HttpError> {
-        self.requests.check(project_uuid)
+        if let Some(interval) = self.requests.check(project_uuid) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
+                super::interval_kind(interval),
+                bencher_otel::AuthorizationKind::Project,
+            ));
+            Err(crate::error::too_many_requests(
+                RateLimitingError::ProjectRequests,
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn check_run(&self, project_uuid: ProjectUuid) -> Result<(), dropshot::HttpError> {
-        self.runs.check(project_uuid)
+        if let Some(interval) = self.runs.check(project_uuid) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
+                super::interval_kind(interval),
+                bencher_otel::AuthorizationKind::Project,
+            ));
+            Err(crate::error::too_many_requests(
+                RateLimitingError::ProjectRuns,
+            ))
+        } else {
+            Ok(())
+        }
     }
 }

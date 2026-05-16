@@ -1,11 +1,7 @@
 use bencher_json::{UserUuid, system::config::JsonUserRateLimiter};
+use bencher_rate_limiter::{RateLimiter, RateLimits};
 
-use crate::context::{
-    RateLimitingError,
-    rate_limiting::{
-        RateLimiter, RateLimits, extract_rate_limits, snapshot::UserRateLimiterSnapshot,
-    },
-};
+use crate::context::{RateLimitingError, rate_limiting::snapshot::UserRateLimiterSnapshot};
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 11;
 const DEFAULT_REQUESTS_PER_HOUR_LIMIT: usize = 1 << 13;
@@ -100,47 +96,77 @@ impl From<JsonUserRateLimiter> for UserRateLimiter {
             runs,
         } = json;
 
-        let requests = extract_rate_limits!(
-            requests,
-            DEFAULT_REQUESTS_PER_MINUTE_LIMIT,
-            DEFAULT_REQUESTS_PER_HOUR_LIMIT,
-            DEFAULT_REQUESTS_PER_DAY_LIMIT
-        );
+        let requests = RateLimits {
+            minute: requests
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_REQUESTS_PER_MINUTE_LIMIT),
+            hour: requests
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_REQUESTS_PER_HOUR_LIMIT),
+            day: requests
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_REQUESTS_PER_DAY_LIMIT),
+        };
 
-        let attempts = extract_rate_limits!(
-            attempts,
-            DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT,
-            DEFAULT_ATTEMPTS_PER_HOUR_LIMIT,
-            DEFAULT_ATTEMPTS_PER_DAY_LIMIT
-        );
+        let attempts = RateLimits {
+            minute: attempts
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT),
+            hour: attempts
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_ATTEMPTS_PER_HOUR_LIMIT),
+            day: attempts
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_ATTEMPTS_PER_DAY_LIMIT),
+        };
 
-        let credentials = extract_rate_limits!(
-            credentials,
-            DEFAULT_CREDENTIALS_PER_MINUTE_LIMIT,
-            DEFAULT_CREDENTIALS_PER_HOUR_LIMIT,
-            DEFAULT_CREDENTIALS_PER_DAY_LIMIT
-        );
+        let credentials = RateLimits {
+            minute: credentials
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_CREDENTIALS_PER_MINUTE_LIMIT),
+            hour: credentials
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_CREDENTIALS_PER_HOUR_LIMIT),
+            day: credentials
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_CREDENTIALS_PER_DAY_LIMIT),
+        };
 
-        let organizations = extract_rate_limits!(
-            organizations,
-            DEFAULT_ORGANIZATIONS_PER_MINUTE_LIMIT,
-            DEFAULT_ORGANIZATIONS_PER_HOUR_LIMIT,
-            DEFAULT_ORGANIZATIONS_PER_DAY_LIMIT
-        );
+        let organizations = RateLimits {
+            minute: organizations
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_ORGANIZATIONS_PER_MINUTE_LIMIT),
+            hour: organizations
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_ORGANIZATIONS_PER_HOUR_LIMIT),
+            day: organizations
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_ORGANIZATIONS_PER_DAY_LIMIT),
+        };
 
-        let invites = extract_rate_limits!(
-            invites,
-            DEFAULT_INVITES_PER_MINUTE_LIMIT,
-            DEFAULT_INVITES_PER_HOUR_LIMIT,
-            DEFAULT_INVITES_PER_DAY_LIMIT
-        );
+        let invites = RateLimits {
+            minute: invites
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_INVITES_PER_MINUTE_LIMIT),
+            hour: invites
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_INVITES_PER_HOUR_LIMIT),
+            day: invites
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_INVITES_PER_DAY_LIMIT),
+        };
 
-        let runs = extract_rate_limits!(
-            runs,
-            DEFAULT_RUNS_PER_MINUTE_LIMIT,
-            DEFAULT_RUNS_PER_HOUR_LIMIT,
-            DEFAULT_RUNS_PER_DAY_LIMIT
-        );
+        let runs = RateLimits {
+            minute: runs
+                .and_then(|r| r.minute)
+                .unwrap_or(DEFAULT_RUNS_PER_MINUTE_LIMIT),
+            hour: runs
+                .and_then(|r| r.hour)
+                .unwrap_or(DEFAULT_RUNS_PER_HOUR_LIMIT),
+            day: runs
+                .and_then(|r| r.day)
+                .unwrap_or(DEFAULT_RUNS_PER_DAY_LIMIT),
+        };
 
         Self::new(
             requests,
@@ -162,131 +188,33 @@ impl UserRateLimiter {
         invites: RateLimits,
         runs: RateLimits,
     ) -> Self {
-        let RateLimits { minute, hour, day } = requests;
-        let requests = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &|interval| {
-                bencher_otel::ApiCounter::RequestMax(
-                    interval,
-                    bencher_otel::AuthorizationKind::User,
-                )
-            },
-            RateLimitingError::UserRequests,
-        );
-
-        let RateLimits { minute, hour, day } = attempts;
-        let attempts = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &|interval| {
-                bencher_otel::ApiCounter::UserAttemptMax(
-                    interval,
-                    bencher_otel::AuthorizationKind::User,
-                )
-            },
-            RateLimitingError::UserAttempts,
-        );
-
-        let RateLimits { minute, hour, day } = credentials;
-        let credentials = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &bencher_otel::ApiCounter::UserCredentialMax,
-            RateLimitingError::UserCredentials,
-        );
-
-        let RateLimits { minute, hour, day } = organizations;
-        let organizations = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &bencher_otel::ApiCounter::UserOrganizationMax,
-            RateLimitingError::UserOrganizations,
-        );
-
-        let RateLimits { minute, hour, day } = invites;
-        let invites = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &bencher_otel::ApiCounter::UserInviteMax,
-            RateLimitingError::UserInvites,
-        );
-
-        let RateLimits { minute, hour, day } = runs;
-        let runs = RateLimiter::new(
-            minute,
-            hour,
-            day,
-            #[cfg(feature = "otel")]
-            &bencher_otel::ApiCounter::RunClaimedMax,
-            RateLimitingError::UserRuns,
-        );
-
         Self {
-            requests,
-            attempts,
-            credentials,
-            organizations,
-            invites,
-            runs,
+            requests: RateLimiter::new(requests),
+            attempts: RateLimiter::new(attempts),
+            credentials: RateLimiter::new(credentials),
+            organizations: RateLimiter::new(organizations),
+            invites: RateLimiter::new(invites),
+            runs: RateLimiter::new(runs),
         }
     }
 
     pub fn max() -> Self {
-        let requests = RateLimits {
+        let max = RateLimits {
             minute: usize::MAX,
             hour: usize::MAX,
             day: usize::MAX,
         };
 
-        let attempts = RateLimits {
-            minute: usize::MAX,
-            hour: usize::MAX,
-            day: usize::MAX,
-        };
+        Self::new(max, max, max, max, max, max)
+    }
 
-        let credentials = RateLimits {
-            minute: usize::MAX,
-            hour: usize::MAX,
-            day: usize::MAX,
-        };
-
-        let organizations = RateLimits {
-            minute: usize::MAX,
-            hour: usize::MAX,
-            day: usize::MAX,
-        };
-
-        let invites = RateLimits {
-            minute: usize::MAX,
-            hour: usize::MAX,
-            day: usize::MAX,
-        };
-
-        let runs = RateLimits {
-            minute: usize::MAX,
-            hour: usize::MAX,
-            day: usize::MAX,
-        };
-
-        Self::new(
-            requests,
-            attempts,
-            credentials,
-            organizations,
-            invites,
-            runs,
-        )
+    pub fn prune(&self) {
+        self.requests.prune();
+        self.attempts.prune();
+        self.credentials.prune();
+        self.organizations.prune();
+        self.invites.prune();
+        self.runs.prune();
     }
 
     pub fn snapshot(&self) -> UserRateLimiterSnapshot {
@@ -318,26 +246,86 @@ impl UserRateLimiter {
     }
 
     pub fn check_request(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        self.requests.check(user_uuid)
+        if let Some(interval) = self.requests.check(user_uuid) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
+                super::interval_kind(interval),
+                bencher_otel::AuthorizationKind::User,
+            ));
+            Err(crate::error::too_many_requests(
+                RateLimitingError::UserRequests,
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn check_attempt(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        self.attempts.check(user_uuid)
+        if let Some(interval) = self.attempts.check(user_uuid) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAttemptMax(
+                super::interval_kind(interval),
+                bencher_otel::AuthorizationKind::User,
+            ));
+            Err(crate::error::too_many_requests(
+                RateLimitingError::UserAttempts,
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn check_credential(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        self.credentials.check(user_uuid)
+        if let Some(interval) = self.credentials.check(user_uuid) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserCredentialMax(
+                super::interval_kind(interval),
+            ));
+            Err(crate::error::too_many_requests(
+                RateLimitingError::UserCredentials,
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn check_organization(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        self.organizations.check(user_uuid)
+        if let Some(interval) = self.organizations.check(user_uuid) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserOrganizationMax(
+                super::interval_kind(interval),
+            ));
+            Err(crate::error::too_many_requests(
+                RateLimitingError::UserOrganizations,
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn check_invite(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        self.invites.check(user_uuid)
+        if let Some(interval) = self.invites.check(user_uuid) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserInviteMax(
+                super::interval_kind(interval),
+            ));
+            Err(crate::error::too_many_requests(
+                RateLimitingError::UserInvites,
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn check_run(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        self.runs.check(user_uuid)
+        if let Some(interval) = self.runs.check(user_uuid) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunClaimedMax(
+                super::interval_kind(interval),
+            ));
+            Err(crate::error::too_many_requests(RateLimitingError::UserRuns))
+        } else {
+            Ok(())
+        }
     }
 }

@@ -1,31 +1,22 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    time::{Duration, SystemTime},
-};
+use std::time::SystemTime;
 
 use bencher_json::{OrganizationUuid, Priority, system::config::JsonOciBandwidth};
-use dashmap::DashMap;
+use bencher_rate_limiter::snapshot::BandwidthSnapshot;
+use bencher_rate_limiter::{BandwidthLimiter, DAY};
 use dropshot::HttpError;
 
 use crate::{
     context::RateLimitingError, error::too_many_requests, model::organization::QueryOrganization,
 };
 
-use super::DAY;
-use super::snapshot::BandwidthRateLimiterSnapshot;
-
-/// 1 GiB in bytes
 const DEFAULT_UNCLAIMED_BANDWIDTH: u64 = 1 << 30;
-/// 10 GiB in bytes
 const DEFAULT_FREE_BANDWIDTH: u64 = 10 << 30;
-/// 100 GiB in bytes
 const DEFAULT_PLUS_BANDWIDTH: u64 = 100 << 30;
 
-/// Bytes per GiB
 const BYTES_PER_GIB: u64 = 1 << 30;
 
 pub(super) struct BandwidthRateLimiter {
-    event_map: DashMap<OrganizationUuid, VecDeque<(SystemTime, u64)>>,
+    limiter: BandwidthLimiter<OrganizationUuid>,
     unclaimed_limit: u64,
     free_limit: u64,
     plus_limit: u64,
@@ -34,7 +25,7 @@ pub(super) struct BandwidthRateLimiter {
 impl Default for BandwidthRateLimiter {
     fn default() -> Self {
         Self {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: DEFAULT_UNCLAIMED_BANDWIDTH,
             free_limit: DEFAULT_FREE_BANDWIDTH,
             plus_limit: DEFAULT_PLUS_BANDWIDTH,
@@ -50,7 +41,7 @@ impl From<JsonOciBandwidth> for BandwidthRateLimiter {
             plus,
         } = json;
         Self {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: unclaimed.unwrap_or(DEFAULT_UNCLAIMED_BANDWIDTH),
             free_limit: free.unwrap_or(DEFAULT_FREE_BANDWIDTH),
             plus_limit: plus.unwrap_or(DEFAULT_PLUS_BANDWIDTH),
@@ -61,52 +52,23 @@ impl From<JsonOciBandwidth> for BandwidthRateLimiter {
 impl BandwidthRateLimiter {
     pub fn max() -> Self {
         Self {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: u64::MAX,
             free_limit: u64::MAX,
             plus_limit: u64::MAX,
         }
     }
 
-    pub fn snapshot(&self) -> BandwidthRateLimiterSnapshot {
-        let now = SystemTime::now();
-        let cutoff = now - DAY;
-        let mut events = HashMap::new();
-        for entry in &self.event_map {
-            let data: Vec<(u64, u64)> = entry
-                .value()
-                .iter()
-                .filter(|(t, _)| *t >= cutoff)
-                .filter_map(|(t, bytes)| {
-                    t.duration_since(SystemTime::UNIX_EPOCH)
-                        .ok()
-                        .map(|d| (d.as_secs(), *bytes))
-                })
-                .collect();
-            if !data.is_empty() {
-                events.insert(*entry.key(), data);
-            }
-        }
-        BandwidthRateLimiterSnapshot { events }
+    pub fn snapshot(&self) -> BandwidthSnapshot<OrganizationUuid> {
+        self.limiter.snapshot()
     }
 
-    pub fn restore(&self, snapshot: BandwidthRateLimiterSnapshot) {
-        let now = SystemTime::now();
-        let cutoff = now - DAY;
-        for (org_uuid, data) in snapshot.events {
-            let times: VecDeque<(SystemTime, u64)> = data
-                .into_iter()
-                .filter_map(|(secs, bytes)| {
-                    SystemTime::UNIX_EPOCH
-                        .checked_add(Duration::from_secs(secs))
-                        .map(|t| (t, bytes))
-                })
-                .filter(|(t, _)| *t >= cutoff)
-                .collect();
-            if !times.is_empty() {
-                self.event_map.insert(org_uuid, times);
-            }
-        }
+    pub fn restore(&self, snapshot: BandwidthSnapshot<OrganizationUuid>) {
+        self.limiter.restore(snapshot);
+    }
+
+    pub fn prune(&self) {
+        self.limiter.prune();
     }
 
     fn limit_for_priority(&self, priority: Priority) -> u64 {
@@ -134,45 +96,24 @@ impl BandwidthRateLimiter {
         now: SystemTime,
     ) -> Result<(), HttpError> {
         let limit = self.limit_for_priority(priority);
-        let cutoff = now - DAY;
 
-        // Clean up old entries across all orgs
-        self.event_map.retain(|_, events| {
-            while events.front().is_some_and(|(time, _)| *time < cutoff) {
-                events.pop_front();
-            }
-            !events.is_empty()
-        });
-
-        // Sum bytes in the current 24h window (saturating to avoid overflow)
-        let total_bytes: u64 = self.event_map.get(&org_uuid).map_or(0, |events| {
-            events
-                .iter()
-                .fold(0u64, |acc, (_, bytes)| acc.saturating_add(*bytes))
-        });
-
-        if total_bytes >= limit {
+        if self.limiter.check_at(&org_uuid, limit, now) {
+            Ok(())
+        } else {
             Err(too_many_requests(RateLimitingError::OciBandwidth {
                 organization: organization.clone(),
                 limit_gib: limit.saturating_div(BYTES_PER_GIB),
             }))
-        } else {
-            Ok(())
         }
     }
 
     pub fn record(&self, org_uuid: OrganizationUuid, bytes: u64) {
-        self.record_at(org_uuid, bytes, SystemTime::now());
+        self.limiter.record(org_uuid, bytes);
     }
 
+    #[cfg(test)]
     fn record_at(&self, org_uuid: OrganizationUuid, bytes: u64, now: SystemTime) {
-        if bytes == 0 {
-            return;
-        }
-        self.event_map
-            .entry(org_uuid)
-            .or_default()
-            .push_back((now, bytes));
+        self.limiter.record_at(org_uuid, bytes, now);
     }
 }
 
@@ -183,7 +124,7 @@ mod tests {
     use super::*;
 
     fn test_now() -> SystemTime {
-        SystemTime::UNIX_EPOCH + Duration::from_secs(100_000)
+        SystemTime::UNIX_EPOCH + Duration::from_secs(86_400 * 3)
     }
 
     fn org_uuid() -> OrganizationUuid {
@@ -208,7 +149,7 @@ mod tests {
     #[test]
     fn basic_tracking() {
         let limiter = BandwidthRateLimiter {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: 1000,
             free_limit: 10_000,
             plus_limit: 100_000,
@@ -218,18 +159,15 @@ mod tests {
         let org_uuid = org_uuid();
         let org = org();
 
-        // Should be under limit
         limiter
             .check_at(org_uuid, Priority::Unclaimed, &org, now)
             .unwrap();
 
-        // Record some bytes
         limiter.record_at(org_uuid, 500, now);
         limiter
             .check_at(org_uuid, Priority::Unclaimed, &org, now)
             .unwrap();
 
-        // Record more to exceed limit
         limiter.record_at(org_uuid, 600, now);
         let result = limiter.check_at(org_uuid, Priority::Unclaimed, &org, now);
         assert!(result.is_err());
@@ -238,7 +176,7 @@ mod tests {
     #[test]
     fn tier_limits() {
         let limiter = BandwidthRateLimiter {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: 100,
             free_limit: 1000,
             plus_limit: 10_000,
@@ -248,7 +186,6 @@ mod tests {
         let org_uuid = org_uuid();
         let org = org();
 
-        // Record 500 bytes - over unclaimed, under free and plus
         limiter.record_at(org_uuid, 500, now);
 
         assert!(
@@ -271,7 +208,7 @@ mod tests {
     #[test]
     fn window_cleanup() {
         let limiter = BandwidthRateLimiter {
-            event_map: DashMap::new(),
+            limiter: BandwidthLimiter::new(DAY),
             unclaimed_limit: 100,
             free_limit: 1000,
             plus_limit: 10_000,
@@ -281,15 +218,9 @@ mod tests {
         let org_uuid = org_uuid();
         let org = org();
 
-        // Insert an old entry (more than 24h ago)
-        let old_time = now - Duration::from_secs(25 * 60 * 60);
-        limiter
-            .event_map
-            .entry(org_uuid)
-            .or_default()
-            .push_back((old_time, 500));
+        let old = now - Duration::from_secs(25 * 60 * 60);
+        limiter.record_at(org_uuid, 500, old);
 
-        // Should be under limit because old entries get cleaned up
         limiter
             .check_at(org_uuid, Priority::Unclaimed, &org, now)
             .unwrap();
@@ -302,7 +233,6 @@ mod tests {
         let org_uuid = org_uuid();
         let org = org();
 
-        // Even huge amounts should be under limit
         limiter.record_at(org_uuid, u64::MAX.saturating_div(2), now);
         limiter
             .check_at(org_uuid, Priority::Unclaimed, &org, now)
@@ -316,6 +246,7 @@ mod tests {
         let org_uuid = org_uuid();
 
         limiter.record_at(org_uuid, 0, now);
-        assert!(!limiter.event_map.contains_key(&org_uuid));
+        let snapshot = limiter.snapshot();
+        assert!(snapshot.events.is_empty() || !snapshot.events.contains_key(&org_uuid));
     }
 }
