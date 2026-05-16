@@ -1,0 +1,9 @@
+### `--key <KEY>`
+
+<br />
+
+Optional: Either the `--key` option or the `BENCHER_API_KEY` environment variable
+may be set to a valid project API key.
+If both are specified, the `--key` option takes precedence over the `BENCHER_API_KEY` environment variable.
+Project API keys are scoped to a single project and can only be used for `bencher run` and other non-destructive commands.
+Conflicts with [the `--token` option](#--token-token).
