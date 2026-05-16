@@ -28,9 +28,9 @@ Si el estado es `closed`, este trabajo archivará la rama MR utilizando el coman
 8. Establece la opción `--project` al slug del Proyecto.
    Consulta [la documentación de `--project`][project option] para más detalles.
    (ej: `--project project-abc4567-wxyz123456789`)
-9. Establece la opción `--token` como la variable de entorno enmascarada `BENCHER_API_TOKEN`.
-   Consulta [la documentación de `--token`][token option] para más detalles.
-   (ej: `--token "$BENCHER_API_TOKEN"`)
+9. Establece la opción `--key` como la variable de entorno enmascarada `BENCHER_API_KEY`.
+   Consulta [la documentación de `--key`][key option] para más detalles.
+   (ej: `--key "$BENCHER_API_KEY"`)
 10. Establece la opción `--branch` al nombre de la rama MR
    utilizando [una variable predefinida de GitLab CI/CD][gitlab ci cd redefined variables].
    (ej: `--branch "$CI_COMMIT_REF_NAME"`)
@@ -42,4 +42,4 @@ Si el estado es `closed`, este trabajo archivará la rama MR utilizando el coman
 [install bencher cli]: /es/docs/how-to/install-cli/#install-cli-with-script
 [bencher run]: /es/docs/explanation/bencher-run/
 [project option]: /es/docs/explanation/bencher-run/#--project-project
-[token option]: /es/docs/explanation/bencher-run/#--token-token
+[key option]: /es/docs/explanation/bencher-run/#--key-key

@@ -25,9 +25,9 @@ import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
 8. Установите опцию `--project` на идентификатор проекта.
     Подробнее см. в [документации по `--project`][project option].
     (например, `--project project-abc4567-wxyz123456789`)
-9. Установите опцию `--token` на секрет репозитория **`BENCHER_API_TOKEN`**.
-    Подробнее см. в [документации по `--token`][token option].
-    (например, `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+9. Установите опцию `--key` на секрет репозитория **`BENCHER_API_KEY`**.
+    Подробнее см. в [документации по `--key`][key option].
+    (например, `--key '${{ secrets.BENCHER_API_KEY }}'`)
 10. Установите опцию `--branch` на имя ветки PR, используя [переменную среды по умолчанию `GITHUB_HEAD_REF` для GitHub Actions][github default environment variables].
     (например, `--branch "$GITHUB_HEAD_REF"`)
 
@@ -38,4 +38,4 @@ import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
 [github default environment variables]: https://docs.github.com/ru/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /ru/docs/explanation/bencher-run/#--project-project
-[token option]: /ru/docs/explanation/bencher-run/#--token-token
+[key option]: /ru/docs/explanation/bencher-run/#--key-key

@@ -43,9 +43,9 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 13. Establece la opción `--project` al slug del Proyecto.
     Consulta [los documentos de `--project`][project option] para más detalles.
     (ej: `--project project-abc4567-wxyz123456789`)
-14. Establece la opción `--token` al secreto del **Repositorio** `BENCHER_API_TOKEN`.
-    Consulta [los documentos de `--token`][token option] para más detalles.
-    (ej: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+14. Establece la opción `--key` al secreto del **Repositorio** `BENCHER_API_KEY`.
+    Consulta [los documentos de `--key`][key option] para más detalles.
+    (ej: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 15. Establece la opción `--branch` al nombre de la rama PR del fork
     usando [una variable de entorno intermedia][github intermediate environment variable].
     Consulta [los documentos de `--branch`][branch option] para una visión completa.
@@ -105,7 +105,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 
 [bencher run]: /es/docs/explanation/bencher-run/
 [project option]: /es/docs/explanation/bencher-run/#--project-project
-[token option]: /es/docs/explanation/bencher-run/#--token-token
+[key option]: /es/docs/explanation/bencher-run/#--key-key
 [branch option]: /es/docs/explanation/branches/#--branch-branch
 [hash option]: /es/docs/explanation/branches/#--hash-hash
 [start point]: /es/docs/explanation/branches/#--start-point-branch

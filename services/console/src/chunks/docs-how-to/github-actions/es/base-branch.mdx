@@ -25,8 +25,8 @@ Una piedra angular de [Benchmarking Continuo Estadístico][statistical continuou
    (ej: `bencher run`)
 9. Establece la opción `--project` al slug del Proyecto. Consulta [la documentación de `--project`][project option] para más detalles.
    (ej: `--project project-abc4567-wxyz123456789`)
-10. Establece la opción `--token` al secreto de **Repositorio** `BENCHER_API_TOKEN`. Consulta [la documentación de `--token`][token option] para más detalles.
-   (ej: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. Establece la opción `--key` al secreto de **Repositorio** `BENCHER_API_KEY`. Consulta [la documentación de `--key`][key option] para más detalles.
+   (ej: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 11. Establece la opción `--branch` al nombre de la Rama base. Consulta [la documentación de `--branch`][branch option] para una visión completa.
    (ej: `--branch main`)
 12. Establece la opción `--testbed` al nombre del Testbed. Esto debería probablemente coincidir con la máquina seleccionada en `runs-on`. Consulta [la documentación de `--testbed`][testbed option] para más detalles.
@@ -64,7 +64,7 @@ Una piedra angular de [Benchmarking Continuo Estadístico][statistical continuou
 [statistical continuous benchmarking]: /es/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
 [bencher run]: /es/docs/explanation/bencher-run/
 [project option]: /es/docs/explanation/bencher-run/#--project-project
-[token option]: /es/docs/explanation/bencher-run/#--token-token
+[key option]: /es/docs/explanation/bencher-run/#--key-key
 [branch option]: /es/docs/explanation/branches/#--branch-branch
 [testbed option]: /es/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /es/docs/explanation/thresholds/#--threshold-measure-measure

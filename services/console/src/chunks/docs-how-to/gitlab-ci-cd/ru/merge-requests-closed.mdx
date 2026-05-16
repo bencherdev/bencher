@@ -28,9 +28,9 @@ import MergeRequestsClosedCode from "../merge-requests-closed-code.mdx";
 8. Установите опцию `--project` для идентификатора проекта.
    Смотрите [документацию по `--project`][project option] для получения более подробной информации.
    (например: `--project project-abc4567-wxyz123456789`)
-9. Установите опцию `--token` для скрытой переменной окружения `BENCHER_API_TOKEN`.
-   Смотрите [документацию по `--token`][token option] для получения более подробной информации.
-   (например: `--token "$BENCHER_API_TOKEN"`)
+9. Установите опцию `--key` для скрытой переменной окружения `BENCHER_API_KEY`.
+   Смотрите [документацию по `--key`][key option] для получения более подробной информации.
+   (например: `--key "$BENCHER_API_KEY"`)
 10. Установите опцию `--branch` на имя ветки MR
    с использованием [предопределенной переменной в GitLab CI/CD][gitlab ci cd redefined variables].
    (например: `--branch "$CI_COMMIT_REF_NAME"`)
@@ -42,4 +42,4 @@ import MergeRequestsClosedCode from "../merge-requests-closed-code.mdx";
 [install bencher cli]: /ru/docs/how-to/install-cli/#install-cli-with-script
 [bencher run]: /ru/docs/explanation/bencher-run/
 [project option]: /ru/docs/explanation/bencher-run/#--project-project
-[token option]: /ru/docs/explanation/bencher-run/#--token-token
+[key option]: /ru/docs/explanation/bencher-run/#--key-key

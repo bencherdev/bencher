@@ -6,7 +6,7 @@ import PullRequestsForkClosed from "./pull-requests-fork-closed.mdx";
 
 Wenn Sie planen, Pull-Requests aus Forks zu akzeptieren, wie es in öffentlichen Open-Source-Projekten oft der Fall ist,
 müssen Sie die Dinge ein wenig anders handhaben.
-Aus Sicherheitsgründen sind Geheimnisse wie Ihr `BENCHER_API_TOKEN` und der `GITHUB_TOKEN` in GitHub Actions für Fork-PRs nicht verfügbar.
+Aus Sicherheitsgründen sind Geheimnisse wie Ihr `BENCHER_API_KEY` und der `GITHUB_TOKEN` in GitHub Actions für Fork-PRs nicht verfügbar.
 Das bedeutet, dass, wenn ein externer Mitwirkender einen PR aus einem Fork öffnet, das obige Beispiel **nicht** funktioniert.
 Siehe dieses [GitHub Security Lab Artikel][github actions pwn requests]
 und [diesen Blog-Beitrag][nathandavison.com blog]
@@ -18,10 +18,10 @@ und [diesen Blog-Beitrag][nathandavison.com blog]
 Dies ist der sichere und empfohlene Weg, um [Kontinuierliches Benchmarking][continuous benchmarking] zu Fork-Pull-Requests hinzuzufügen.
 Es erfordert zwei separate Workflows.
 Der erste Workflow läuft und speichert die Benchmark-Ergebnisse im `pull_request`-Kontext.
-Keine Geheimnisse wie Ihr `BENCHER_API_TOKEN` und der `GITHUB_TOKEN` sind dort verfügbar.
+Keine Geheimnisse wie Ihr `BENCHER_API_KEY` und der `GITHUB_TOKEN` sind dort verfügbar.
 Dann lädt ein zweiter Workflow die zwischengespeicherten Benchmark-Ergebnisse im `workflow_run`-Kontext herunter und lädt sie zu Bencher hoch.
 Dies funktioniert, weil `workflow_run` im Kontext des Standard-Branches des Repositorys läuft,
-wo Geheimnisse wie Ihr `BENCHER_API_TOKEN` und der `GITHUB_TOKEN` verfügbar sind.
+wo Geheimnisse wie Ihr `BENCHER_API_KEY` und der `GITHUB_TOKEN` verfügbar sind.
 Die Pull-Request-Nummer, der Head-Branch und der Base-Branch, die im anfänglichen `pull_request`-Workflow verwendet werden,
 müssen ebenfalls explizit in den `workflow_run`-Workflow übergeben werden, da sie dort nicht verfügbar sind.
 Diese Workflows werden nur ausgeführt, wenn sie im _Standard_-Branch existieren.

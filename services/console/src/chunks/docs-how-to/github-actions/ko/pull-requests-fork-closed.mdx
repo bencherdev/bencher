@@ -28,9 +28,9 @@ import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
 8. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
    자세한 사항은 [ `--project` 문서][project option]를 참조하십시오.
    (예: `--project project-abc4567-wxyz123456789`)
-9. `--token` 옵션을 `BENCHER_API_TOKEN` **저장소** 시크릿으로 설정합니다.
-   자세한 사항은 [ `--token` 문서][token option]를 참조하십시오.
-   (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+9. `--key` 옵션을 `BENCHER_API_KEY` **저장소** 시크릿으로 설정합니다.
+   자세한 사항은 [ `--key` 문서][key option]를 참조하십시오.
+   (예: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 10. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름을 `--branch` 옵션으로 설정합니다.
     (예: `--branch "$GITHUB_HEAD_REF"`)
 
@@ -41,4 +41,4 @@ import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
 [github default environment variables]: https://docs.github.com/ko/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
 
 [project option]: /ko/docs/explanation/bencher-run/#--project-project
-[token option]: /ko/docs/explanation/bencher-run/#--token-token
+[key option]: /ko/docs/explanation/bencher-run/#--key-key

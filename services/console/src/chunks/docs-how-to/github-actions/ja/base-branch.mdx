@@ -30,9 +30,9 @@ import BaseBranchCode from "../base-branch-code.mdx";
 9. `--project`オプションをプロジェクトスラッグに設定します。
    詳細については、[`--project` ドキュメント][project option]を参照してください。
    （例: `--project project-abc4567-wxyz123456789`）
-10. `--token`オプションを`BENCHER_API_TOKEN` **リポジトリ**シークレットに設定します。
-   詳細については、[`--token` ドキュメント][token option]を参照してください。
-   （例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`）
+10. `--key`オプションを`BENCHER_API_KEY` **リポジトリ**シークレットに設定します。
+   詳細については、[`--key` ドキュメント][key option]を参照してください。
+   （例: `--key '${{ secrets.BENCHER_API_KEY }}'`）
 11. `--branch`オプションをベースブランチ名に設定します。
     詳細については、[`--branch` ドキュメント][branch option]を参照してください。
     （例: `--branch main`）
@@ -79,7 +79,7 @@ import BaseBranchCode from "../base-branch-code.mdx";
 [statistical continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
 [bencher run]: /ja/docs/explanation/bencher-run/
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
-[token option]: /ja/docs/explanation/bencher-run/#--token-token
+[key option]: /ja/docs/explanation/bencher-run/#--key-key
 [branch option]: /ja/docs/explanation/branches/#--branch-branch
 [testbed option]: /ja/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /ja/docs/explanation/thresholds/#--threshold-measure-measure

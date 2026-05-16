@@ -54,9 +54,9 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 10. Установите опцию `--project` на идентификатор проекта.
     См. [документацию `--project`][project option] для подробностей.
     (пример: `--project project-abc4567-wxyz123456789`)
-11. Установите опцию `--token` на **секрет** репозитория `BENCHER_API_TOKEN`.
-    См. [документацию `--token`][token option] для подробностей.
-    (пример: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+11. Установите опцию `--key` на **секрет** репозитория `BENCHER_API_KEY`.
+    См. [документацию `--key`][key option] для подробностей.
+    (пример: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 12. Установите опцию `--branch` на имя ветки PR
     используя [переменную окружения `GITHUB_HEAD_REF` по умолчанию GitHub Actions][github default environment variables].
     См. [документацию `--branch`][branch option] для полного обзора.
@@ -109,7 +109,7 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 
 [bencher run]: /ru/docs/explanation/bencher-run/
 [project option]: /ru/docs/explanation/bencher-run/#--project-project
-[token option]: /ru/docs/explanation/bencher-run/#--token-token
+[key option]: /ru/docs/explanation/bencher-run/#--key-key
 [branch option]: /ru/docs/explanation/branches/#--branch-branch
 [start point]: /ru/docs/explanation/branches/#--start-point-branch
 [start point hash]: /ru/docs/explanation/branches/#--start-point-hash-hash

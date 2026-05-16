@@ -34,9 +34,9 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 13. 将 `--project` 选项设置为项目标识符。
     有关更多细节，请参见[`--project` 文档][project option]。
     （例如：`--project project-abc4567-wxyz123456789`）
-14. 将 `--token` 选项设置为 `BENCHER_API_TOKEN` **仓库**密钥。
-    有关更多细节，请参见[`--token` 文档][token option]。
-    （例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`）
+14. 将 `--key` 选项设置为 `BENCHER_API_KEY` **仓库**密钥。
+    有关更多细节，请参见[`--key` 文档][key option]。
+    （例如：`--key '${{ secrets.BENCHER_API_KEY }}'`）
 15. 使用[中间环境变量][github intermediate environment variable]，将 `--branch` 选项设置为 fork PR 分支名称。
     有关完整概述，请参见[`--branch` 文档][branch option]。
     （例如：`--branch "$PR_HEAD"`）
@@ -90,7 +90,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 
 [bencher run]: /zh/docs/explanation/bencher-run/
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
-[token option]: /zh/docs/explanation/bencher-run/#--token-token
+[key option]: /zh/docs/explanation/bencher-run/#--key-key
 [branch option]: /zh/docs/explanation/branches/#--branch-branch
 [hash option]: /zh/docs/explanation/branches/#--hash-hash
 [start point]: /zh/docs/explanation/branches/#--start-point-branch

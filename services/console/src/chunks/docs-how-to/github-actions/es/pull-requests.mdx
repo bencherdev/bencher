@@ -54,9 +54,9 @@ entonces simplemente puedes crear otro flujo de trabajo para ejecutar `on` event
 10. Establece la opción `--project` al slug del Proyecto.
     Consulta [los documentos de `--project`][project option] para más detalles.
     (ej: `--project project-abc4567-wxyz123456789`)
-11. Establece la opción `--token` al secreto **Repository** `BENCHER_API_TOKEN`.
-    Consulta [los documentos de `--token`][token option] para más detalles.
-    (ej: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+11. Establece la opción `--key` al secreto **Repository** `BENCHER_API_KEY`.
+    Consulta [los documentos de `--key`][key option] para más detalles.
+    (ej: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 12. Establece la opción `--branch` al nombre de la rama PR
     usando [la variable de entorno predeterminada `GITHUB_HEAD_REF` de GitHub Actions][github default environment variables].
     Consulta [los documentos de `--branch`][branch option] para una visión completa.
@@ -109,7 +109,7 @@ entonces simplemente puedes crear otro flujo de trabajo para ejecutar `on` event
 
 [bencher run]: /es/docs/explanation/bencher-run/
 [project option]: /es/docs/explanation/bencher-run/#--project-project
-[token option]: /es/docs/explanation/bencher-run/#--token-token
+[key option]: /es/docs/explanation/bencher-run/#--key-key
 [branch option]: /es/docs/explanation/branches/#--branch-branch
 [start point]: /es/docs/explanation/branches/#--start-point-branch
 [start point hash]: /es/docs/explanation/branches/#--start-point-hash-hash

@@ -6,7 +6,7 @@ import PullRequestsForkClosed from "./pull-requests-fork-closed.mdx";
 
 Si planeas aceptar pull requests desde forks, como suele ser el caso en proyectos de código abierto público,
 entonces tendrás que manejar las cosas de manera un poco diferente.
-Por razones de seguridad, secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` no están disponibles en GitHub Actions para PRs desde forks.
+Por razones de seguridad, secretos como tu `BENCHER_API_KEY` y el `GITHUB_TOKEN` no están disponibles en GitHub Actions para PRs desde forks.
 Es decir, si un contribuyente externo abre un PR desde un fork, el ejemplo anterior **no** funcionará.
 Consulta este [artículo del GitHub Security Lab][github actions pwn requests]
 y [esta entrada de blog][nathandavison.com blog]
@@ -18,10 +18,10 @@ sobre cómo prevenir solicitudes de pwn para obtener una visión completa.
 Esta es la forma segura y recomendada de añadir [Continuous Benchmarking][continuous benchmarking] a los pull requests desde forks.
 Requiere dos flujos de trabajo separados.
 El primer flujo de trabajo ejecuta y almacena en caché los resultados del benchmark en el contexto de `pull_request`.
-No hay secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` disponibles allí.
+No hay secretos como tu `BENCHER_API_KEY` y el `GITHUB_TOKEN` disponibles allí.
 Entonces, un segundo flujo de trabajo descarga los resultados del benchmark almacenados en caché en el contexto de `workflow_run` y los sube a Bencher.
 Esto funciona porque `workflow_run` se ejecuta en el contexto de la rama por defecto del repositorio,
-donde los secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` están disponibles.
+donde los secretos como tu `BENCHER_API_KEY` y el `GITHUB_TOKEN` están disponibles.
 El número de pull request, la rama principal y la rama base utilizada en el flujo de trabajo inicial `pull_request`
 también deben pasarse explícitamente al flujo de trabajo `workflow_run` ya que no están disponibles allí.
 Estos flujos de trabajo solo se ejecutarán si existen en la rama _predeterminada_.

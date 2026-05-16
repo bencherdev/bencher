@@ -34,9 +34,9 @@ This historical baseline can then be used to detect performance regressions in P
 9. Set the `--project` option to the Project slug.
    See [the `--project` docs][project option] for more details.
    (ex: `--project project-abc4567-wxyz123456789`)
-10. Set the `--token` option to the `BENCHER_API_TOKEN` **Repository** secret.
-   See [the `--token` docs][token option] for more details.
-   (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. Set the `--key` option to the `BENCHER_API_KEY` **Repository** secret.
+   See [the `--key` docs][key option] for more details.
+   (ex: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 11. Set the `--branch` option to the base Branch name.
    See [the `--branch` docs][branch option] for a full overview.
    (ex: `--branch main`)
@@ -84,7 +84,7 @@ This historical baseline can then be used to detect performance regressions in P
 [statistical continuous benchmarking]: /docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
 [bencher run]: /docs/explanation/bencher-run/
 [project option]: /docs/explanation/bencher-run/#--project-project
-[token option]: /docs/explanation/bencher-run/#--token-token
+[key option]: /docs/explanation/bencher-run/#--key-key
 [branch option]: /docs/explanation/branches/#--branch-branch
 [testbed option]: /docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /docs/explanation/thresholds/#--threshold-measure-measure

@@ -14,7 +14,7 @@ archive_mr_branch:
       if [ "$MR_STATE" = "closed" ]; then
         bencher archive \
         --project project-abc4567-wxyz123456789 \
-        --token "$BENCHER_API_TOKEN" \
+        --key "$BENCHER_API_KEY" \
         --branch "$CI_COMMIT_REF_NAME"
       else
         echo 'Merge request is not `closed`. Skipping archival.'

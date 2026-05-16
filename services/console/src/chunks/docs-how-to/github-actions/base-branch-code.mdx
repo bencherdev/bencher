@@ -16,7 +16,7 @@ jobs:
         run: |
           bencher run \
           --project project-abc4567-wxyz123456789 \
-          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --key '${{ secrets.BENCHER_API_KEY }}' \
           --branch main \
           --testbed ubuntu-latest \
           --threshold-measure latency \
