@@ -1,15 +1,13 @@
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 use bencher_json::{OrganizationUuid, Priority, system::config::JsonOciBandwidth};
-use bencher_rate_limiter::BandwidthLimiter;
 use bencher_rate_limiter::snapshot::BandwidthSnapshot;
+use bencher_rate_limiter::{BandwidthLimiter, DAY};
 use dropshot::HttpError;
 
 use crate::{
     context::RateLimitingError, error::too_many_requests, model::organization::QueryOrganization,
 };
-
-const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
 const DEFAULT_UNCLAIMED_BANDWIDTH: u64 = 1 << 30;
 const DEFAULT_FREE_BANDWIDTH: u64 = 10 << 30;

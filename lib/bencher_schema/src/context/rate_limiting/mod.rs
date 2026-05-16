@@ -38,8 +38,6 @@ use user::UserRateLimiter;
 
 use super::DbConnection;
 
-const DAY: Duration = Duration::from_secs(60 * 60 * 24);
-
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
 
@@ -137,7 +135,7 @@ pub enum RateLimitingError {
 impl Default for RateLimiting {
     fn default() -> Self {
         Self {
-            window: DAY,
+            window: bencher_rate_limiter::DAY,
             unclaimed_limit: DEFAULT_UNCLAIMED_LIMIT,
             claimed_limit: DEFAULT_CLAIMED_LIMIT,
             public: PublicRateLimiter::default(),
@@ -162,7 +160,9 @@ impl From<JsonRateLimiting> for RateLimiting {
             oci_bandwidth,
         } = json;
         Self {
-            window: window.map(u64::from).map_or(DAY, Duration::from_secs),
+            window: window
+                .map(u64::from)
+                .map_or(bencher_rate_limiter::DAY, Duration::from_secs),
             unclaimed_limit: unclaimed_limit.unwrap_or(DEFAULT_UNCLAIMED_LIMIT),
             claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
             public: public.map_or_else(PublicRateLimiter::default, Into::into),
@@ -219,7 +219,7 @@ impl RateLimiting {
 
     pub fn max() -> Self {
         Self {
-            window: DAY,
+            window: bencher_rate_limiter::DAY,
             unclaimed_limit: u32::MAX,
             claimed_limit: u32::MAX,
             public: PublicRateLimiter::max(),

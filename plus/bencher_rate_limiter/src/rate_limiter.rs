@@ -9,9 +9,9 @@ use dashmap::DashMap;
 use crate::epoch_bucket;
 use crate::snapshot::{EpochBucket, RateLimiterSnapshot, WindowSnapshot};
 
-const MINUTE: Duration = Duration::from_secs(60);
-const HOUR: Duration = Duration::from_secs(60 * 60);
-const DAY: Duration = Duration::from_secs(60 * 60 * 24);
+pub const MINUTE: Duration = Duration::from_secs(60);
+pub const HOUR: Duration = Duration::from_secs(60 * 60);
+pub const DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
 const DEFAULT_CAPACITY: usize = 1;
 
@@ -215,12 +215,12 @@ impl BucketedEvents {
         if let Some((bucket, count)) = self.buckets.back_mut()
             && *bucket == now_bucket
         {
-            *count += 1;
-            self.total += 1;
+            *count = count.saturating_add(1);
+            self.total = self.total.saturating_add(1);
             return;
         }
         self.buckets.push_back((now_bucket, 1));
-        self.total += 1;
+        self.total = self.total.saturating_add(1);
     }
 
     fn evict_oldest(&mut self) {

@@ -159,8 +159,7 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
-
-    const DAY: Duration = Duration::from_secs(86_400);
+    use crate::DAY;
 
     fn test_now() -> SystemTime {
         SystemTime::UNIX_EPOCH + Duration::from_secs(86_400 * 3)

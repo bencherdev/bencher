@@ -3,7 +3,7 @@ mod rate_limiter;
 pub mod snapshot;
 
 pub use bandwidth::BandwidthLimiter;
-pub use rate_limiter::{Interval, RateLimiter, RateLimits};
+pub use rate_limiter::{DAY, HOUR, Interval, MINUTE, RateLimiter, RateLimits};
 
 #[expect(clippy::integer_division)]
 pub fn epoch_bucket(epoch_secs: u64, bucket_secs: u64) -> u64 {
