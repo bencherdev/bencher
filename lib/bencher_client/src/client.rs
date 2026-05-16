@@ -10,8 +10,9 @@ use crate::codegen;
 use crate::{SSL_CERT_FILE, SSL_CLIENT_CERT};
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
-const DEFAULT_ATTEMPTS: usize = 10;
+const DEFAULT_ATTEMPTS: usize = 35;
 const DEFAULT_RETRY_AFTER: u64 = 1;
+const DEFAULT_MAX_RETRY_AFTER: u64 = 30;
 
 #[expect(clippy::struct_excessive_bools)]
 /// A client for the Bencher API
@@ -25,6 +26,7 @@ pub struct BencherClient {
     pub timeout: Duration,
     pub attempts: usize,
     pub retry_after: u64,
+    pub max_retry_after: u64,
     pub strict: bool,
     pub log: bool,
 }
@@ -86,6 +88,7 @@ impl BencherClient {
             timeout: Some(self.timeout),
             attempts: Some(self.attempts),
             retry_after: Some(self.retry_after),
+            max_retry_after: Some(self.max_retry_after),
             strict: Some(self.strict),
             log: Some(self.log),
         }
@@ -175,7 +178,7 @@ impl BencherClient {
                             eprintln!("Will retry after {retry_after} second(s).");
                         }
                         sleep(Duration::from_secs(retry_after)).await;
-                        retry_after *= 2;
+                        retry_after = (retry_after * 2).min(self.max_retry_after);
                     }
                 },
                 Err(codegen::Error::InvalidRequest(e)) => {
@@ -353,6 +356,7 @@ pub struct BencherClientBuilder {
     timeout: Option<Duration>,
     attempts: Option<usize>,
     retry_after: Option<u64>,
+    max_retry_after: Option<u64>,
     strict: Option<bool>,
     log: Option<bool>,
 }
@@ -421,6 +425,13 @@ impl BencherClientBuilder {
     }
 
     #[must_use]
+    /// Set the maximum seconds to wait between attempts (caps exponential backoff)
+    pub fn max_retry_after(mut self, max_retry_after: u64) -> Self {
+        self.max_retry_after = Some(max_retry_after);
+        self
+    }
+
+    #[must_use]
     /// Do not retry parsing the response JSON if it fails to deserialize the original client type
     pub fn strict(mut self, strict: bool) -> Self {
         self.strict = Some(strict);
@@ -438,8 +449,9 @@ impl BencherClientBuilder {
     ///
     /// Default values:
     /// - `host`: `https://api.bencher.dev`
-    /// - `attempts`: `10`
+    /// - `attempts`: `35`
     /// - `retry_after`: `1`
+    /// - `max_retry_after`: `30`
     pub fn build(self) -> BencherClient {
         let Self {
             host,
@@ -450,6 +462,7 @@ impl BencherClientBuilder {
             timeout,
             attempts,
             retry_after,
+            max_retry_after,
             strict,
             log,
         } = self;
@@ -462,6 +475,7 @@ impl BencherClientBuilder {
             timeout: timeout.unwrap_or(DEFAULT_TIMEOUT),
             attempts: attempts.unwrap_or(DEFAULT_ATTEMPTS),
             retry_after: retry_after.unwrap_or(DEFAULT_RETRY_AFTER),
+            max_retry_after: max_retry_after.unwrap_or(DEFAULT_MAX_RETRY_AFTER),
             strict: strict.unwrap_or_default(),
             log: log.unwrap_or_default(),
         }

@@ -164,12 +164,16 @@ pub struct CliBackend {
     pub timeout: u64,
 
     /// Request attempt(s)
-    #[clap(long, value_name = "COUNT", default_value = "10")]
+    #[clap(long, value_name = "COUNT", default_value = "35")]
     pub attempts: usize,
 
     /// Initial seconds to wait between attempts (exponential backoff)
     #[clap(long, value_name = "SECONDS", default_value = "1")]
     pub retry_after: u64,
+
+    /// Max seconds to wait between attempts (caps exponential backoff)
+    #[clap(long, value_name = "SECONDS", default_value = "30")]
+    pub max_retry_after: u64,
 
     /// Strictly parse JSON responses
     #[clap(long)]

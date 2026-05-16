@@ -100,25 +100,7 @@ impl TryFrom<(CliBackend, BackendKind)> for Backend {
     type Error = BackendError;
 
     fn try_from((backend, kind): (CliBackend, BackendKind)) -> Result<Self, Self::Error> {
-        let CliBackend {
-            host,
-            token,
-            insecure_host,
-            native_tls,
-            timeout,
-            attempts,
-            retry_after,
-            strict,
-        } = backend;
-        let builder = build_client(
-            host,
-            insecure_host,
-            native_tls,
-            timeout,
-            attempts,
-            retry_after,
-            strict,
-        )?;
+        let (builder, token) = build_client(backend)?;
         let builder = map_credential(builder, token, kind)?;
         Ok(Self {
             client: builder.build(),
@@ -133,25 +115,7 @@ impl TryFrom<(CliProjectBackend, BackendKind)> for Backend {
         (project_backend, kind): (CliProjectBackend, BackendKind),
     ) -> Result<Self, Self::Error> {
         let CliProjectBackend { backend, key } = project_backend;
-        let CliBackend {
-            host,
-            token,
-            insecure_host,
-            native_tls,
-            timeout,
-            attempts,
-            retry_after,
-            strict,
-        } = backend;
-        let builder = build_client(
-            host,
-            insecure_host,
-            native_tls,
-            timeout,
-            attempts,
-            retry_after,
-            strict,
-        )?;
+        let (builder, token) = build_client(backend)?;
         let builder = map_project_credential(builder, token, key, kind)?;
         Ok(Self {
             client: builder.build(),
@@ -160,24 +124,37 @@ impl TryFrom<(CliProjectBackend, BackendKind)> for Backend {
 }
 
 fn build_client(
-    host: bencher_json::Url,
-    insecure_host: bool,
-    native_tls: bool,
-    timeout: u64,
-    attempts: usize,
-    retry_after: u64,
-    strict: bool,
-) -> Result<bencher_client::BencherClientBuilder, BackendError> {
+    backend: CliBackend,
+) -> Result<
+    (
+        bencher_client::BencherClientBuilder,
+        Option<bencher_json::Jwt>,
+    ),
+    BackendError,
+> {
+    let CliBackend {
+        host,
+        token,
+        insecure_host,
+        native_tls,
+        timeout,
+        attempts,
+        retry_after,
+        max_retry_after,
+        strict,
+    } = backend;
     let host = host.try_into().map_err(BackendError::ParseHost)?;
-    Ok(bencher_client::BencherClient::builder()
+    let builder = bencher_client::BencherClient::builder()
         .host(host)
         .insecure_host(insecure_host)
         .native_tls(native_tls)
         .timeout(Duration::from_secs(timeout))
         .attempts(attempts)
         .retry_after(retry_after)
+        .max_retry_after(max_retry_after)
         .strict(strict)
-        .log(true))
+        .log(true);
+    Ok((builder, token))
 }
 
 fn map_credential(
