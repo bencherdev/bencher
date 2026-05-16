@@ -103,32 +103,32 @@ impl ProjectRateLimiter {
     }
 
     pub fn check_request(&self, project_uuid: ProjectUuid) -> Result<(), dropshot::HttpError> {
-        if self.requests.check(project_uuid) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.requests.check(project_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
                 bencher_otel::AuthorizationKind::Project,
             ));
             Err(crate::error::too_many_requests(
                 RateLimitingError::ProjectRequests,
             ))
+        } else {
+            Ok(())
         }
     }
 
     pub fn check_run(&self, project_uuid: ProjectUuid) -> Result<(), dropshot::HttpError> {
-        if self.runs.check(project_uuid) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.runs.check(project_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
                 bencher_otel::AuthorizationKind::Project,
             ));
             Err(crate::error::too_many_requests(
                 RateLimitingError::ProjectRuns,
             ))
+        } else {
+            Ok(())
         }
     }
 }

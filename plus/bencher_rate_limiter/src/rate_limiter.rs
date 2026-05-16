@@ -28,6 +28,13 @@ pub struct RateLimits {
     pub day: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Interval {
+    Minute,
+    Hour,
+    Day,
+}
+
 impl<K> RateLimiter<K>
 where
     K: PartialEq + Eq + Hash + Clone + Copy,
@@ -41,8 +48,19 @@ where
         }
     }
 
-    pub fn check(&self, key: K) -> bool {
-        self.minute.check(key) && self.hour.check(key) && self.day.check(key)
+    pub fn check(&self, key: K) -> Option<Interval> {
+        let minute = self.minute.check(key);
+        let hour = self.hour.check(key);
+        let day = self.day.check(key);
+        if !minute {
+            Some(Interval::Minute)
+        } else if !hour {
+            Some(Interval::Hour)
+        } else if !day {
+            Some(Interval::Day)
+        } else {
+            None
+        }
     }
 
     pub fn prune(&self) {
@@ -188,7 +206,7 @@ impl BucketedEvents {
             .is_some_and(|(bucket, _)| *bucket < cutoff)
         {
             if let Some((_, count)) = self.buckets.pop_front() {
-                self.total -= count as usize;
+                self.total = self.total.saturating_sub(count as usize);
             }
         }
     }
@@ -212,7 +230,7 @@ impl BucketedEvents {
             } else {
                 self.buckets.pop_front();
             }
-            self.total -= 1;
+            self.total = self.total.saturating_sub(1);
         }
     }
 }
@@ -235,8 +253,8 @@ mod tests {
             hour: 100,
             day: 1000,
         });
-        assert!(limiter.check(1u32));
-        assert!(limiter.check(1u32));
+        assert!(limiter.check(1u32).is_none());
+        assert!(limiter.check(1u32).is_none());
     }
 
     #[test]
@@ -246,9 +264,9 @@ mod tests {
             hour: 100,
             day: 1000,
         });
-        assert!(limiter.check(1u32));
-        assert!(limiter.check(1u32));
-        assert!(!limiter.check(1u32));
+        assert!(limiter.check(1u32).is_none());
+        assert!(limiter.check(1u32).is_none());
+        assert_eq!(limiter.check(1u32), Some(Interval::Minute));
     }
 
     #[test]
@@ -258,10 +276,10 @@ mod tests {
             hour: 100,
             day: 1000,
         });
-        assert!(limiter.check(1u32));
-        assert!(limiter.check(1u32));
-        assert!(!limiter.check(1u32));
-        assert!(!limiter.check(1u32));
+        assert!(limiter.check(1u32).is_none());
+        assert!(limiter.check(1u32).is_none());
+        assert!(limiter.check(1u32).is_some());
+        assert!(limiter.check(1u32).is_some());
     }
 
     #[test]
@@ -271,21 +289,36 @@ mod tests {
             hour: 100,
             day: 1000,
         });
-        assert!(limiter.check(1u32));
-        assert!(limiter.check(2u32));
-        assert!(!limiter.check(1u32));
-        assert!(!limiter.check(2u32));
+        assert!(limiter.check(1u32).is_none());
+        assert!(limiter.check(2u32).is_none());
+        assert!(limiter.check(1u32).is_some());
+        assert!(limiter.check(2u32).is_some());
     }
 
     #[test]
-    fn minute_limit_short_circuits() {
+    fn minute_limited_returns_minute_interval() {
         let limiter = RateLimiter::new(RateLimits {
             minute: 1,
             hour: 1000,
             day: 10000,
         });
-        assert!(limiter.check(1u32));
-        assert!(!limiter.check(1u32));
+        assert!(limiter.check(1u32).is_none());
+        assert_eq!(limiter.check(1u32), Some(Interval::Minute));
+    }
+
+    #[test]
+    fn all_windows_record_even_when_limited() {
+        let limiter = RateLimiter::new(RateLimits {
+            minute: 1,
+            hour: 1000,
+            day: 10000,
+        });
+        assert!(limiter.check(1u32).is_none());
+        assert_eq!(limiter.check(1u32), Some(Interval::Minute));
+
+        let snapshot = limiter.snapshot();
+        assert!(snapshot.hour.events.contains_key(&1u32));
+        assert!(snapshot.day.events.contains_key(&1u32));
     }
 
     #[test]

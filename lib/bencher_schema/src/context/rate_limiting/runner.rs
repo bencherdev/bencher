@@ -76,16 +76,16 @@ impl RunnerRateLimiter {
     }
 
     pub fn check_request(&self, runner_uuid: RunnerUuid) -> Result<(), dropshot::HttpError> {
-        if self.requests.check(runner_uuid) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.requests.check(runner_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerRequestMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
             ));
             Err(crate::error::too_many_requests(
                 RateLimitingError::RunnerRequests,
             ))
+        } else {
+            Ok(())
         }
     }
 }

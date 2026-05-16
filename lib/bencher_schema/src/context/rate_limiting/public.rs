@@ -140,46 +140,46 @@ impl PublicRateLimiter {
     }
 
     pub fn check_request(&self, ip: IpAddr) -> Result<(), dropshot::HttpError> {
-        if self.requests.check(ip) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.requests.check(ip) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
                 bencher_otel::AuthorizationKind::Public,
             ));
             Err(crate::error::too_many_requests(
                 RateLimitingError::IpAddressRequests,
             ))
+        } else {
+            Ok(())
         }
     }
 
     pub fn check_attempt(&self, ip: IpAddr) -> Result<(), dropshot::HttpError> {
-        if self.attempts.check(ip) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.attempts.check(ip) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAttemptMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
                 bencher_otel::AuthorizationKind::Public,
             ));
             Err(crate::error::too_many_requests(
                 RateLimitingError::IpAddressRequests,
             ))
+        } else {
+            Ok(())
         }
     }
 
     pub fn check_run(&self, ip: IpAddr) -> Result<(), dropshot::HttpError> {
-        if self.runs.check(ip) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.runs.check(ip) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimedMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
             ));
             Err(crate::error::too_many_requests(
                 RateLimitingError::UnclaimedRun,
             ))
+        } else {
+            Ok(())
         }
     }
 }

@@ -3,10 +3,11 @@ mod rate_limiter;
 pub mod snapshot;
 
 pub use bandwidth::BandwidthLimiter;
-pub use rate_limiter::{RateLimiter, RateLimits};
+pub use rate_limiter::{Interval, RateLimiter, RateLimits};
 
 #[expect(clippy::integer_division)]
 pub fn epoch_bucket(epoch_secs: u64, bucket_secs: u64) -> u64 {
+    debug_assert!(bucket_secs > 0, "bucket_secs must be non-zero");
     epoch_secs / bucket_secs
 }
 

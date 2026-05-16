@@ -246,86 +246,86 @@ impl UserRateLimiter {
     }
 
     pub fn check_request(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        if self.requests.check(user_uuid) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.requests.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
                 bencher_otel::AuthorizationKind::User,
             ));
             Err(crate::error::too_many_requests(
                 RateLimitingError::UserRequests,
             ))
+        } else {
+            Ok(())
         }
     }
 
     pub fn check_attempt(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        if self.attempts.check(user_uuid) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.attempts.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAttemptMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
                 bencher_otel::AuthorizationKind::User,
             ));
             Err(crate::error::too_many_requests(
                 RateLimitingError::UserAttempts,
             ))
+        } else {
+            Ok(())
         }
     }
 
     pub fn check_credential(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        if self.credentials.check(user_uuid) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.credentials.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserCredentialMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
             ));
             Err(crate::error::too_many_requests(
                 RateLimitingError::UserCredentials,
             ))
+        } else {
+            Ok(())
         }
     }
 
     pub fn check_organization(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        if self.organizations.check(user_uuid) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.organizations.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserOrganizationMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
             ));
             Err(crate::error::too_many_requests(
                 RateLimitingError::UserOrganizations,
             ))
+        } else {
+            Ok(())
         }
     }
 
     pub fn check_invite(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        if self.invites.check(user_uuid) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.invites.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserInviteMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
             ));
             Err(crate::error::too_many_requests(
                 RateLimitingError::UserInvites,
             ))
+        } else {
+            Ok(())
         }
     }
 
     pub fn check_run(&self, user_uuid: UserUuid) -> Result<(), dropshot::HttpError> {
-        if self.runs.check(user_uuid) {
-            Ok(())
-        } else {
+        if let Some(interval) = self.runs.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunClaimedMax(
-                bencher_otel::IntervalKind::Minute,
+                super::interval_kind(interval),
             ));
             Err(crate::error::too_many_requests(RateLimitingError::UserRuns))
+        } else {
+            Ok(())
         }
     }
 }

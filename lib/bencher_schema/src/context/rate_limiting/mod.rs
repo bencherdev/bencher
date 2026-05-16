@@ -439,3 +439,12 @@ pub enum RateLimitingPersistError {
     #[error("Failed to deserialize rate limiting snapshot: {0}")]
     Deserialize(serde_json::Error),
 }
+
+#[cfg(feature = "otel")]
+fn interval_kind(interval: bencher_rate_limiter::Interval) -> bencher_otel::IntervalKind {
+    match interval {
+        bencher_rate_limiter::Interval::Minute => bencher_otel::IntervalKind::Minute,
+        bencher_rate_limiter::Interval::Hour => bencher_otel::IntervalKind::Hour,
+        bencher_rate_limiter::Interval::Day => bencher_otel::IntervalKind::Day,
+    }
+}
