@@ -171,7 +171,9 @@ impl BencherClient {
                 },
                 Err(codegen::Error::CommunicationError(e)) => e.to_string(),
                 Err(codegen::Error::ErrorResponse(e)) if e.status().is_server_error() => {
-                    e.status().to_string()
+                    let status = e.status();
+                    let http_error = e.into_inner();
+                    format!("{status}: {}", http_error.message)
                 },
                 Err(codegen::Error::InvalidRequest(e)) => {
                     return Err(ClientError::InvalidRequest(e));
