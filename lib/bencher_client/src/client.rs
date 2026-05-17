@@ -178,7 +178,7 @@ impl BencherClient {
                             eprintln!("Will retry after {retry_after} second(s).");
                         }
                         sleep(Duration::from_secs(retry_after)).await;
-                        retry_after = (retry_after * 2).min(self.max_retry_after);
+                        retry_after = retry_after.saturating_mul(2).min(self.max_retry_after);
                     }
                 },
                 Err(codegen::Error::InvalidRequest(e)) => {
