@@ -1,0 +1,28 @@
+import GameLibTree from "../../criterion/game-lib-tree.mdx";
+import FizzBuzzRefactorLibCode from "../../criterion/fizz-buzz-refactor-lib-code.mdx";
+import FizzBuzzRefactorMainCode from "../../criterion/fizz-buzz-refactor-main-code.mdx";
+
+## Рефакторинг FizzBuzz
+
+Чтобы протестировать наше приложение FizzBuzz, мы отделяем нашу логику от функции `main` нашей программы.
+В отличие от других фреймворков бенчмаркинга, Gungraun **может** выполнять бенчмарк бинарного файла бенчмарка
+и функции `main`, но это чисто макро-бенчмаркинг. Мы хотим выполнять и макро, и микро.
+Для этого нам нужно внести несколько изменений.
+
+В директории `src` создайте новый файл с именем `lib.rs`:
+
+<GameLibTree />
+
+Добавьте следующий код в `lib.rs`:
+
+<FizzBuzzRefactorLibCode />
+
+- `play_game`: Принимает беззнаковое целое число `n`, вызывает `fizz_buzz` с этим числом, и если `print` равно `true`, выводит результат.
+- `fizz_buzz`: Принимает беззнаковое целое число `n` и выполняет фактическую логику `Fizz`, `Buzz`, `FizzBuzz` или числа, возвращая результат в виде строки.
+
+Затем обновлённый `main.rs` выглядит так:
+
+<FizzBuzzRefactorMainCode />
+
+- `game::play_game`: Импортируйте `play_game` из крейта `game`, который мы только что создали с помощью `lib.rs`.
+- `main`: Главная точка входа в нашу программу, которая перебирает числа от `1` до `100` включительно и вызывает `play_game` для каждого числа, с `print` установленным в `true`.

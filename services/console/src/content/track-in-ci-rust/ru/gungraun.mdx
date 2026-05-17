@@ -1,0 +1,34 @@
+---
+title: "Gungraun"
+description: "Пошаговое руководство по отслеживанию бенчмарков Rust Gungraun в CI"
+heading: "Как отслеживать бенчмарки Rust Gungraun в CI"
+published: "2026-05-17T00:00:00Z"
+modified: "2026-05-17T00:00:00Z"
+sortOrder: 4
+---
+
+import Intro from "../../../chunks/track-in-ci/ru/intro.mdx";
+import BencherIntro from "../../../chunks/general/ru/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/ru/steps.mdx";
+import RustGungraun from "../../../chunks/docs-explanation/adapters/ru/rust-gungraun.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  text="научились выполнять бенчмаркинг кода Rust с помощью Gungraun"
+  url="/ru/learn/benchmarking/rust/gungraun/"
+  name="Gungraun"
+/>
+
+## Что такое Bencher?
+
+<BencherIntro />
+
+<Steps
+  adapter="rust_gungraun"
+  url="/ru/docs/explanation/adapters/#-rust-gungraun"
+/>
+
+<RustGungraun />
+
+<CallToAction lang={Language.ru} />

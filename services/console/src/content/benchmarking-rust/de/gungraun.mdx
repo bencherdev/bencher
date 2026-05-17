@@ -1,0 +1,185 @@
+---
+title: "Gungraun"
+description: "Eine Schritt-für-Schritt-Anleitung, wie man Rust-Code mit Gungraun benchmarkt"
+heading: "Wie man Rust-Code mit Gungraun benchmarkt"
+published: "2026-05-17T00:00:00Z"
+modified: "2026-05-17T00:00:00Z"
+sortOrder: 4
+---
+
+import BenchPlayGameFibonacciOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-fibonacci-output.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-fix-output.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-output.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-output.mdx";
+import BencherFooter from "../../../chunks/learn/de/bencher-footer.mdx";
+import Benchmarking from "../../../chunks/benchmarking/de/benchmarking.mdx";
+import BenchmarkingRust from "../../../chunks/benchmarking-rust/de/benchmarking-rust.mdx";
+import CatchInCi from "../../../chunks/benchmarking/de/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/benchmarking-rust/gungraun/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/de/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/benchmarking-rust/catch-in-ci-plot-rust-bench.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/benchmarking-rust/de/fizz-buzz-fibonacci-fix-rust.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/benchmarking-rust/de/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/benchmarking-rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/benchmarking-rust/de/fizz-buzz-fibonacci-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/benchmarking-rust/gungraun/de/fizz-buzz-refactor.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/benchmarking-rust/gungraun/fizz-buzz-refactor-benches-code.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/de/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/benchmarking-rust/de/fizz-buzz-rust.mdx";
+import GameBenchesTree from "../../../chunks/benchmarking-rust/criterion/game-benches-tree.mdx";
+import GameCargoToml from "../../../chunks/benchmarking-rust/gungraun/game-cargo-toml.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/de/micro-vs-macro.mdx";
+import OnFire from "../../../chunks/benchmarking/de/on-fire.mdx";
+import PlayGameRustCode from "../../../chunks/benchmarking-rust/criterion/play-game-rust-code.mdx";
+import StepByStepRust from "../../../chunks/benchmarking-rust/de/step-by-step-rust.mdx";
+import TheEnd from "../../../chunks/benchmarking/de/the-end.mdx";
+
+<Benchmarking />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+Alle vier werden [von Bencher unterstützt](/de/docs/explanation/adapters/). Warum also Gungraun (den umbenannten Nachfolger von Iai-Callgrind) wählen?
+Gungraun verwendet *Anweisungszähler* anstelle von *Wanduhrzeit*.
+Das macht es ideal für [kontinuierliches Benchmarking](/de/docs/explanation/continuous-benchmarking/), also Benchmarking in CI.
+Ich würde vorschlagen, Gungraun für kontinuierliches Benchmarking zu verwenden, besonders wenn Sie Shared Runner verwenden.
+Gungraun wird aktiv gepflegt und hat umfassende [Online-Dokumentation](https://gungraun.github.io/gungraun/latest/html/intro.html),
+was es zu einer zuverlässigen Wahl für langfristige Projekte macht.
+Es ist wichtig zu verstehen, dass Gungraun nur einen *Proxy* für das misst, was Sie wirklich interessiert.
+Verdoppelt sich die Latenz Ihrer Anwendung, wenn man von 1.000 Anweisungen auf 2.000 Anweisungen geht?
+Vielleicht ja, vielleicht nein.
+Aus diesem Grund kann es nützlich sein, auch wanduhrzeitbasierte Benchmarks parallel zu anweisungszählerbasierenden Benchmarks auszuführen.
+
+## Valgrind installieren
+
+Gungraun verwendet ein Tool namens [Valgrind](https://valgrind.org/) um Anweisungszähler zu sammeln.
+Valgrind unterstützt Linux, Solaris, FreeBSD und macOS.
+Die macOS-Unterstützung ist jedoch auf x86_64-Prozessoren beschränkt, da [arm64 (M1, M2, etc.) Prozessoren noch nicht unterstützt werden](https://github.com/LouisBrunner/valgrind-macos/issues/56).
+
+Auf Debian ausführen: `sudo apt-get install valgrind`
+
+Auf macOS (nur x86_64/Intel-Chip): `brew install valgrind`
+
+<FizzBuzzRefactor />
+
+## Benchmarking von FizzBuzz
+
+Um unseren Code zu benchmarken, müssen wir ein `benches`-Verzeichnis erstellen und
+eine Datei für unsere Benchmarks hinzufügen, `play_game.rs`.
+Beachten Sie, dass wir von der [empfohlenen Methode](https://gungraun.github.io/gungraun/latest/html/best_practices.html)
+zur Strukturierung von Benchmarks der Einfachheit halber abweichen.
+Für Ihr Projekt sollten Sie den Empfehlungen folgen:
+
+<GameBenchesTree />
+
+Fügen Sie in `play_game.rs` den folgenden Code hinzu:
+
+<FizzBuzzRefactorBenchesCode />
+
+- Importieren Sie das `gungraun::prelude`-Modul, das die notwendigen Makros bereitstellt.
+- Verwenden Sie `std::hint::black_box`, um zu verhindern, dass der Compiler unseren Benchmark wegoptimiert.
+- Importieren Sie die Funktion `play_game` aus unserem `game`-Crate.
+- Erstellen Sie eine Library-Benchmark-Funktion namens `bench_play_game` mit dem Attribut `#[library_benchmark]`.
+- Iterieren Sie von `1` bis `100` und rufen Sie `play_game` mit `print` auf `false` gesetzt auf.
+- Erstellen Sie eine Library-Benchmark-Gruppe namens `bench_play_game_group`, die unseren `bench_play_game`-Benchmark enthält.
+- Verwenden Sie das `main!`-Makro, um die Benchmark-Gruppe auszuführen.
+
+Jetzt müssen wir das `game`-Crate konfigurieren, um unsere Benchmarks auszuführen.
+
+Fügen Sie das Folgende am _Ende_ Ihrer `Cargo.toml`-Datei hinzu:
+
+<GameCargoToml />
+
+- `gungraun`: Fügen Sie `gungraun` als Entwicklungsabhängigkeit hinzu, da wir es nur für Performance-Tests verwenden.
+- `bench`: Registrieren Sie `play_game` als Benchmark und setzen Sie `harness` auf `false`, da wir Gungraun als unser Benchmarking-Harness verwenden werden.
+- `debug = true`: Aktivieren Sie Debug-Informationen in Benchmark-Builds, was für Gungraun *erforderlich* ist, um detaillierte Ausgaben zu liefern.
+
+Jetzt sind wir bereit, unseren Code zu benchmarken, führen Sie `cargo bench` aus:
+
+<BenchPlayGameOutput />
+
+> 🐰 Lasst uns loslegen! Wir haben unsere ersten Benchmark-Metriken!
+
+Endlich können wir unsere müden Entwicklerköpfe zur Ruhe legen...
+Nur ein Scherz, unsere Nutzer wollen eine neue Funktion!
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## Benchmarking von FizzBuzzFibonacci
+
+Jetzt können wir unseren Benchmark erneut ausführen:
+
+<BenchPlayGameFibonacciOutput />
+
+Oh, toll! Gungraun zeigt uns den Unterschied zwischen den geschätzten Zyklen unserer FizzBuzz- und FizzBuzzFibonacci-Spiele.
+Ihre Zahlen werden etwas anders sein als meine.
+Jedoch liegt der Unterschied zwischen den beiden Spielen wahrscheinlich im Bereich von `10-15x`.
+Das scheint mir gut! Besonders für das Hinzufügen einer so schick klingenden Funktion wie _Fibonacci_ zu unserem Spiel.
+Den Kindern wird es gefallen!
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+Hier zeigen Gungrauns parametrisierte Benchmarks ihre Stärke! Anstatt separate Benchmark-Funktionen für jede Eingabe zu schreiben, können wir das Attribut `#[benches::...]` verwenden:
+
+<BenchPlayGameOnFireCode />
+
+- Fügen Sie das Attribut `#[benches::play(100, 1_000_000)]` hinzu, um eine Benchmark-Variante mit Eingabe `100` und eine weitere mit Eingabe `1_000_000` zu erstellen.
+- Die Benchmark-Funktion nimmt einen Parameter `n: u32` an, der jeden Wert empfängt.
+- Fügen Sie die Funktion `bench_play_game` zur `library_benchmark_group!` hinzu.
+
+Schön! Eine Benchmark-Funktion, mehrere Testfälle!
+
+Als ich es laufen ließ, bekam ich das:
+
+<BenchPlayGameOnFireOutputStart />
+
+Benchmark in 1,45 Sekunden abgeschlossen. Das war schnell! Anstatt Benchmarks wie bei Wanduhrzeit-Benchmarks mehrfach auszuführen,
+läuft jeder Gungraun-Benchmark nur einmal. Aber warten Sie, warum gibt es Änderungen im ersten Benchmark `bench_play_game_100`,
+obwohl wir an diesem Benchmark nichts geändert haben?
+Richtig, aber wir haben etwas anderes in der Benchmark-Datei geändert, und da Gungraun und Valgrind
+empfindliche Instrumente sind, werden selbst sehr kleine Änderungen registriert.
+Solche kleinen Änderungen, besonders in den Cache-Metriken, sind jedoch vernachlässigbar. Mit der Zeit werden Sie
+ein Gefühl für kritische Änderungen in den Metriken entwickeln. Schauen wir uns unsere Ausgabe genauer an.
+
+<BenchPlayGameOnFireOutput />
+
+Was! `7.448 geschätzte Zyklen` x `1.000` sollte `7.448.000 geschätzte Zyklen` ergeben, nicht `183.930.692 geschätzte Zyklen` 🤯
+Obwohl ich meinen Fibonacci-Sequenz-Code funktional richtig implementiert habe, muss ich irgendwo einen Performance-Bug haben.
+
+<FizzBuzzFibonacciFixRust />
+
+Jetzt lassen Sie uns diese Benchmarks erneut ausführen und sehen, wie wir abgeschnitten haben:
+
+<BenchPlayGameFixOutput />
+
+Oh, wow! Unser `100`-Benchmark geht um 11% zurück und unser `1_000_000`-Benchmark ist um mehr als 200.000x gesunken! `183.930.692 geschätzte Zyklen` auf `742 geschätzte Zyklen`!
+Das ist eine Reduktion von `99,9996%`!
+
+> 🐰 Hey, wenigstens haben wir diesen Performance-Bug gefangen, bevor er es in die Produktion geschafft hat... oh, richtig. Vergiss es...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="Wie man Rust mit Gungraun benchmarkt" />
+
+<BencherFooter />

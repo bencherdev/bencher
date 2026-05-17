@@ -1,0 +1,186 @@
+---
+title: "Gungraun"
+description: "Пошаговое руководство по бенчмаркингу кода Rust с помощью Gungraun"
+heading: "Как выполнять бенчмаркинг кода Rust с помощью Gungraun"
+published: "2026-05-17T00:00:00Z"
+modified: "2026-05-17T00:00:00Z"
+sortOrder: 4
+---
+
+import BenchPlayGameFibonacciOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-fibonacci-output.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-fix-output.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-output.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-output.mdx";
+import BencherFooter from "../../../chunks/learn/ru/bencher-footer.mdx";
+import Benchmarking from "../../../chunks/benchmarking/ru/benchmarking.mdx";
+import BenchmarkingRust from "../../../chunks/benchmarking-rust/ru/benchmarking-rust.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ru/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/benchmarking-rust/gungraun/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ru/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/benchmarking-rust/catch-in-ci-plot-rust-bench.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/benchmarking-rust/ru/fizz-buzz-fibonacci-fix-rust.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/benchmarking-rust/ru/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/benchmarking-rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/benchmarking-rust/ru/fizz-buzz-fibonacci-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/benchmarking-rust/gungraun/ru/fizz-buzz-refactor.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/benchmarking-rust/gungraun/fizz-buzz-refactor-benches-code.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ru/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/benchmarking-rust/ru/fizz-buzz-rust.mdx";
+import GameBenchesTree from "../../../chunks/benchmarking-rust/criterion/game-benches-tree.mdx";
+import GameCargoToml from "../../../chunks/benchmarking-rust/gungraun/game-cargo-toml.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ru/micro-vs-macro.mdx";
+import OnFire from "../../../chunks/benchmarking/ru/on-fire.mdx";
+import PlayGameRustCode from "../../../chunks/benchmarking-rust/criterion/play-game-rust-code.mdx";
+import StepByStepRust from "../../../chunks/benchmarking-rust/ru/step-by-step-rust.mdx";
+import TheEnd from "../../../chunks/benchmarking/ru/the-end.mdx";
+
+<Benchmarking />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+Все четыре [поддерживаются Bencher](/ru/docs/explanation/adapters/). Так почему стоит выбрать Gungraun (переименованный преемник Iai-Callgrind)?
+Gungraun использует *счётчики инструкций* вместо *реального времени*.
+Это делает его идеальным для [непрерывного бенчмаркинга](/ru/docs/explanation/continuous-benchmarking/), то есть бенчмаркинга в CI.
+Я бы рекомендовал использовать Gungraun для непрерывного бенчмаркинга, особенно если вы используете общие раннеры.
+Gungraun активно поддерживается и имеет исчерпывающую [онлайн-документацию](https://gungraun.github.io/gungraun/latest/html/intro.html),
+что делает его надёжным выбором для долгосрочных проектов.
+Важно понимать, что Gungraun измеряет лишь *прокси* того, что вас действительно интересует.
+Удваивается ли задержка вашего приложения при переходе от 1 000 инструкций к 2 000 инструкций?
+Может быть да, а может быть нет.
+По этой причине может быть полезно также запускать бенчмарки на основе реального времени параллельно с бенчмарками на основе счётчиков инструкций.
+
+## Установка Valgrind
+
+Gungraun использует инструмент [Valgrind](https://valgrind.org/) для сбора счётчиков инструкций.
+Valgrind поддерживает Linux, Solaris, FreeBSD и macOS.
+Однако поддержка macOS ограничена процессорами x86_64, так как [процессоры arm64 (M1, M2 и т.д.) пока не поддерживаются](https://github.com/LouisBrunner/valgrind-macos/issues/56).
+
+На Debian выполните: `sudo apt-get install valgrind`
+
+На macOS (только чип x86_64/Intel): `brew install valgrind`
+
+<FizzBuzzRefactor />
+
+## Бенчмаркинг FizzBuzz
+
+Чтобы выполнить бенчмарк нашего кода, нам нужно создать директорию `benches` и
+добавить файл для наших бенчмарков, `play_game.rs`.
+Обратите внимание, что мы отклоняемся от [рекомендуемого способа](https://gungraun.github.io/gungraun/latest/html/best_practices.html)
+структурирования бенчмарков ради простоты.
+Для вашего проекта следуйте рекомендациям:
+
+<GameBenchesTree />
+
+Внутри `play_game.rs` добавьте следующий код:
+
+<FizzBuzzRefactorBenchesCode />
+
+- Импортируйте модуль `gungraun::prelude`, который предоставляет необходимые макросы.
+- Используйте `std::hint::black_box`, чтобы предотвратить оптимизацию компилятором нашего бенчмарка.
+- Импортируйте функцию `play_game` из нашего крейта `game`.
+- Создайте функцию библиотечного бенчмарка с именем `bench_play_game`, используя атрибут `#[library_benchmark]`.
+- Выполните цикл от `1` до `100` и вызовите `play_game` с `print` установленным в `false`.
+- Создайте группу библиотечных бенчмарков с именем `bench_play_game_group`, содержащую наш бенчмарк `bench_play_game`.
+- Используйте макрос `main!` для запуска группы бенчмарков.
+
+Теперь нам нужно настроить крейт `game` для запуска наших бенчмарков.
+
+Добавьте следующее в _конец_ вашего файла `Cargo.toml`:
+
+<GameCargoToml />
+
+- `gungraun`: Добавьте `gungraun` как зависимость для разработки, так как мы используем его только для тестирования производительности.
+- `bench`: Зарегистрируйте `play_game` как бенчмарк и установите `harness` в `false`, так как мы будем использовать Gungraun в качестве нашего фреймворка бенчмаркинга.
+- `debug = true`: Включите отладочную информацию в сборках бенчмарков, что *необходимо* для предоставления Gungraun подробного вывода.
+
+Теперь мы готовы выполнить бенчмарк нашего кода, запустите `cargo bench`:
+
+<BenchPlayGameOutput />
+
+> 🐰 Салат репа свёкла! У нас есть наши первые метрики бенчмарка!
+
+Наконец, мы можем дать отдых нашим усталым головам разработчиков...
+Шутка, наши пользователи хотят новую функцию!
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## Бенчмаркинг FizzBuzzFibonacci
+
+Теперь мы можем повторно запустить наш бенчмарк:
+
+<BenchPlayGameFibonacciOutput />
+
+О, здорово! Gungraun показывает нам разницу между оценочными циклами наших игр FizzBuzz и FizzBuzzFibonacci.
+Ваши числа будут немного отличаться от моих.
+Однако разница между двумя играми, вероятно, находится в диапазоне `10-15x`.
+Мне кажется, это хорошо! Особенно для добавления такой изысканной функции как _Fibonacci_ в нашу игру.
+Детям понравится!
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+Вот где параметризованные бенчмарки Gungraun блистают! Вместо написания отдельных функций бенчмарков для каждого входного значения, мы можем использовать атрибут `#[benches::...]`:
+
+<BenchPlayGameOnFireCode />
+
+- Добавьте атрибут `#[benches::play(100, 1_000_000)]` для создания варианта бенчмарка со входом `100` и другого со входом `1_000_000`.
+- Функция бенчмарка принимает параметр `n: u32`, который получает каждое значение.
+- Добавьте функцию `bench_play_game` в `library_benchmark_group!`
+
+Отлично! Одна функция бенчмарка, несколько тестовых случаев!
+
+Когда я запустил его, я получил:
+
+<BenchPlayGameOnFireOutputStart />
+
+Бенчмарк завершился за 1,45 секунды. Это было быстро! Вместо многократного запуска бенчмарков,
+как это делают бенчмарки реального времени,
+каждый бенчмарк Gungraun запускается только один раз. Но подождите, почему в первом бенчмарке `bench_play_game_100` есть изменения,
+хотя мы ничего не меняли в этом бенчмарке?
+Верно, но мы изменили кое-что другое в файле бенчмарка, и поскольку Gungraun и Valgrind
+являются чувствительными инструментами, даже очень небольшие изменения регистрируются.
+Однако такие небольшие изменения, особенно в метриках кэша, пренебрежимо малы. Со временем вы
+разовьёте чутьё на критические изменения в метриках. Давайте рассмотрим наш вывод подробнее.
+
+<BenchPlayGameOnFireOutput />
+
+Что! `7 448 оценочных циклов` x `1 000` должно быть `7 448 000 оценочных циклов`, а не `183 930 692 оценочных цикла` 🤯
+Хотя мой код последовательности Фибоначчи функционально верен, где-то у меня должна быть ошибка производительности.
+
+<FizzBuzzFibonacciFixRust />
+
+Теперь давайте повторно запустим эти бенчмарки и посмотрим, как мы справились:
+
+<BenchPlayGameFixOutput />
+
+О, вау! Наш бенчмарк `100` снижается на 11%, а наш бенчмарк `1_000_000` снизился более чем в 200 000 раз! С `183 930 692 оценочных циклов` до `742 оценочных циклов`!
+Это снижение на `99,9996%`!
+
+> 🐰 Эй, по крайней мере мы поймали эту ошибку производительности до того, как она попала в продакшен... ох, точно. Неважно...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="Как выполнять бенчмаркинг Rust с помощью Gungraun" />
+
+<BencherFooter />

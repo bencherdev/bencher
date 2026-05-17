@@ -1,0 +1,34 @@
+---
+title: "Gungraun"
+description: "如何在 CI 中跟踪 Rust Gungraun 基准测试的分步指南"
+heading: "如何在 CI 中跟踪 Rust Gungraun 基准测试"
+published: "2026-05-17T00:00:00Z"
+modified: "2026-05-17T00:00:00Z"
+sortOrder: 4
+---
+
+import Intro from "../../../chunks/track-in-ci/zh/intro.mdx";
+import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/zh/steps.mdx";
+import RustGungraun from "../../../chunks/docs-explanation/adapters/zh/rust-gungraun.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  text="学习了如何使用 Gungraun 对 Rust 代码进行基准测试"
+  url="/zh/learn/benchmarking/rust/gungraun/"
+  name="Gungraun"
+/>
+
+## 什么是 Bencher？
+
+<BencherIntro />
+
+<Steps
+  adapter="rust_gungraun"
+  url="/zh/docs/explanation/adapters/#-rust-gungraun"
+/>
+
+<RustGungraun />
+
+<CallToAction lang={Language.zh} />

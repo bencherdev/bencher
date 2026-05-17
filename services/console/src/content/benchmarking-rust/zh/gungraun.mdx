@@ -1,0 +1,184 @@
+---
+title: "Gungraun"
+description: "如何使用 Gungraun 对 Rust 代码进行基准测试的分步指南"
+heading: "如何使用 Gungraun 对 Rust 代码进行基准测试"
+published: "2026-05-17T00:00:00Z"
+modified: "2026-05-17T00:00:00Z"
+sortOrder: 4
+---
+
+import BenchPlayGameFibonacciOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-fibonacci-output.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-fix-output.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-output.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-output.mdx";
+import BencherFooter from "../../../chunks/learn/zh/bencher-footer.mdx";
+import Benchmarking from "../../../chunks/benchmarking/zh/benchmarking.mdx";
+import BenchmarkingRust from "../../../chunks/benchmarking-rust/zh/benchmarking-rust.mdx";
+import CatchInCi from "../../../chunks/benchmarking/zh/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/benchmarking-rust/gungraun/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/zh/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/benchmarking-rust/catch-in-ci-plot-rust-bench.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/benchmarking-rust/zh/fizz-buzz-fibonacci-fix-rust.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/benchmarking-rust/zh/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/benchmarking-rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/benchmarking-rust/zh/fizz-buzz-fibonacci-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/benchmarking-rust/gungraun/zh/fizz-buzz-refactor.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/benchmarking-rust/gungraun/fizz-buzz-refactor-benches-code.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/zh/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/benchmarking-rust/zh/fizz-buzz-rust.mdx";
+import GameBenchesTree from "../../../chunks/benchmarking-rust/criterion/game-benches-tree.mdx";
+import GameCargoToml from "../../../chunks/benchmarking-rust/gungraun/game-cargo-toml.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/zh/micro-vs-macro.mdx";
+import OnFire from "../../../chunks/benchmarking/zh/on-fire.mdx";
+import PlayGameRustCode from "../../../chunks/benchmarking-rust/criterion/play-game-rust-code.mdx";
+import StepByStepRust from "../../../chunks/benchmarking-rust/zh/step-by-step-rust.mdx";
+import TheEnd from "../../../chunks/benchmarking/zh/the-end.mdx";
+
+<Benchmarking />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+四种都[受到 Bencher 支持](/zh/docs/explanation/adapters/)。那么为什么选择 Gungraun（Iai-Callgrind 的重命名继承者）？
+Gungraun 使用*指令计数*而不是*挂钟时间*。
+这使得它非常适合[持续基准测试](/zh/docs/explanation/continuous-benchmarking/)，即在 CI 中进行基准测试。
+我建议使用 Gungraun 进行持续基准测试，特别是如果您使用共享运行器。
+Gungraun 得到积极维护，并拥有全面的[在线文档](https://gungraun.github.io/gungraun/latest/html/intro.html)，
+使其成为长期项目的可靠选择。
+重要的是要理解，Gungraun 只测量您真正关心的事物的*代理*。
+从 1,000 条指令增加到 2,000 条指令会使您的应用程序延迟翻倍吗？
+也许会，也许不会。
+因此，在运行基于指令计数的基准测试的同时，并行运行基于挂钟时间的基准测试也可能很有用。
+
+## 安装 Valgrind
+
+Gungraun 使用名为 [Valgrind](https://valgrind.org/) 的工具来收集指令计数。
+Valgrind 支持 Linux、Solaris、FreeBSD 和 macOS。
+但是，macOS 支持仅限于 x86_64 处理器，因为 [arm64（M1、M2 等）处理器尚未支持](https://github.com/LouisBrunner/valgrind-macos/issues/56)。
+
+在 Debian 上运行：`sudo apt-get install valgrind`
+
+在 macOS 上（仅 x86_64/Intel 芯片）：`brew install valgrind`
+
+<FizzBuzzRefactor />
+
+## 对 FizzBuzz 进行基准测试
+
+为了对我们的代码进行基准测试，我们需要创建一个 `benches` 目录并
+添加一个包含基准测试的文件 `play_game.rs`。
+请注意，为了简单起见，我们偏离了[推荐的方式](https://gungraun.github.io/gungraun/latest/html/best_practices.html)来构建基准测试。
+对于您的项目，您应该遵循建议：
+
+<GameBenchesTree />
+
+在 `play_game.rs` 中添加以下代码：
+
+<FizzBuzzRefactorBenchesCode />
+
+- 导入 `gungraun::prelude` 模块，它带来了必要的宏。
+- 使用 `std::hint::black_box` 防止编译器优化掉我们的基准测试。
+- 从我们的 `game` crate 导入 `play_game` 函数。
+- 使用 `#[library_benchmark]` 属性创建一个名为 `bench_play_game` 的库基准测试函数。
+- 从 `1` 循环到 `100`，并在 `print` 设为 `false` 的情况下调用 `play_game`。
+- 创建一个名为 `bench_play_game_group` 的库基准测试组，包含我们的 `bench_play_game` 基准测试。
+- 使用 `main!` 宏来运行基准测试组。
+
+现在，我们需要配置 `game` crate 来运行我们的基准测试。
+
+将以下内容添加到 `Cargo.toml` 文件的_底部_：
+
+<GameCargoToml />
+
+- `gungraun`：将 `gungraun` 添加为开发依赖，因为我们仅将其用于性能测试。
+- `bench`：将 `play_game` 注册为基准测试，并将 `harness` 设置为 `false`，因为我们将使用 Gungraun 作为基准测试工具。
+- `debug = true`：在基准测试构建中启用调试信息，这是 Gungraun 提供详细输出所*必需*的。
+
+现在我们准备好对代码进行基准测试了，运行 `cargo bench`：
+
+<BenchPlayGameOutput />
+
+> 🐰 生菜萝卜甜菜！我们得到了第一个基准测试指标！
+
+终于，我们可以让疲惫的开发者头脑休息一下了...
+开玩笑的，我们的用户想要新功能！
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## 对 FizzBuzzFibonacci 进行基准测试
+
+现在我们可以重新运行基准测试：
+
+<BenchPlayGameFibonacciOutput />
+
+哦，太棒了！Gungraun 告诉我们 FizzBuzz 和 FizzBuzzFibonacci 游戏的估计周期差异。
+您的数字会与我的略有不同。
+然而，两个游戏之间的差异可能在 `10-15x` 范围内。
+我觉得不错！特别是为我们的游戏添加了像 _Fibonacci_ 这样高大上的功能。
+孩子们会喜欢的！
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+这就是 Gungraun 参数化基准测试大放异彩的地方！我们不需要为每个输入编写单独的基准测试函数，而是可以使用 `#[benches::...]` 属性：
+
+<BenchPlayGameOnFireCode />
+
+- 添加 `#[benches::play(100, 1_000_000)]` 属性，创建输入为 `100` 的基准测试变体和输入为 `1_000_000` 的另一个变体。
+- 基准测试函数接受一个 `n: u32` 参数，接收每个值。
+- 将 `bench_play_game` 函数添加到 `library_benchmark_group!`
+
+很好！一个基准测试函数，多个测试用例！
+
+当我运行它时，得到了这个结果：
+
+<BenchPlayGameOnFireOutputStart />
+
+基准测试在 1.45 秒内完成。真快！与挂钟基准测试多次运行不同，
+每个 Gungraun 基准测试只运行一次。但是等等，为什么第一个基准测试 `bench_play_game_100` 有变化，
+虽然我们没有改变这个基准测试中的任何东西？
+没错，但我们在基准测试文件中改变了其他东西，由于 Gungraun 和 Valgrind
+是灵敏的仪器，即使非常小的变化也会被记录。
+然而，这种小变化，特别是缓存指标中的变化，是可以忽略不计的。随着时间的推移，您将
+对指标中的关键变化产生直觉。让我们仔细看看输出。
+
+<BenchPlayGameOnFireOutput />
+
+什么！`7,448 估计周期` x `1,000` 应该是 `7,448,000 估计周期`，而不是 `183,930,692 估计周期` 🤯
+尽管我的斐波那契数列代码在功能上是正确的，但我一定在某处有一个性能 bug。
+
+<FizzBuzzFibonacciFixRust />
+
+现在让我们重新运行这些基准测试，看看结果如何：
+
+<BenchPlayGameFixOutput />
+
+哦，哇！我们的 `100` 基准测试下降了 11%，而我们的 `1_000_000` 基准测试下降了超过 200,000 倍！从 `183,930,692 估计周期` 降到 `742 估计周期`！
+减少了 `99.9996%`！
+
+> 🐰 嘿，至少我们在性能 bug 进入生产环境之前捕获了它...哦，对了。算了...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="如何使用 Gungraun 对 Rust 进行基准测试" />
+
+<BencherFooter />
