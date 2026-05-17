@@ -146,7 +146,7 @@ jobs:
         id: cache-name
         run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
       - name: Build & Push API Docker Image (amd64)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./services/api/Dockerfile
