@@ -14,6 +14,7 @@ interface Props {
 
 const { apiUrl, params, title, redirect } = Astro.props;
 const project_redirect = redirect ?? `/perf/${params.project}`;
+const project_slug = params.project;
 ---
 
 <ConsoleLayout apiUrl={apiUrl} params={params} title={title} redirect={project_redirect}>
@@ -23,15 +24,17 @@ const project_redirect = redirect ?? `/perf/${params.project}`;
   <slot />
 </ConsoleLayout>
 
-<script is:inline define:vars={{ BENCHER_ACTIVE_ALERTS_KEY }}>
+<script is:inline define:vars={{ BENCHER_ACTIVE_ALERTS_KEY, project_slug }}>
 (function() {
-  var stored = localStorage.getItem(BENCHER_ACTIVE_ALERTS_KEY);
-  if (stored) {
-    var data = JSON.parse(stored);
-    var badge = document.getElementById("active-alerts-badge");
-    if (badge && data.count != null) {
-      badge.textContent = data.count.toLocaleString();
+  try {
+    var stored = localStorage.getItem(BENCHER_ACTIVE_ALERTS_KEY);
+    if (stored) {
+      var data = JSON.parse(stored);
+      var badge = document.getElementById("active-alerts-badge");
+      if (badge && data.count != null && data.project === project_slug) {
+        badge.textContent = data.count.toLocaleString();
+      }
     }
-  }
+  } catch (_) {}
 })();
 </script>

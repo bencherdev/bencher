@@ -1,11 +1,11 @@
 import type { Params } from "astro";
-import { createMemo, createResource } from "solid-js";
+import { createEffect, createMemo, createResource } from "solid-js";
 import {
 	activeAlertCount,
 	fetchActiveAlertCount,
 } from "../../../util/active_alerts";
 import { authUser } from "../../../util/auth";
-import { type InitValid, init_valid, validJwt } from "../../../util/valid";
+import { init_valid, validJwt } from "../../../util/valid";
 import ProjectMenuInner from "./ProjectMenuInner";
 
 interface Props {
@@ -19,33 +19,15 @@ const ProjectMenu = (props: Props) => {
 	const project = createMemo(() => params().project);
 	const user = authUser();
 
-	const fetcher = createMemo(() => {
-		return {
-			bencher_valid: bencher_valid(),
-			project_slug: params()?.project,
-			token: user?.token,
-		};
-	});
-	const getAlerts = async (fetcher: {
-		bencher_valid: InitValid;
-		project_slug: undefined | string;
-		token: undefined | string;
-	}) => {
-		if (
-			!fetcher.bencher_valid ||
-			!fetcher.project_slug ||
-			!fetcher.token ||
-			!validJwt(fetcher.token)
-		) {
+	createEffect(() => {
+		const valid = bencher_valid();
+		const slug = params()?.project;
+		const token = user?.token;
+		if (!valid || !slug || !token || !validJwt(token)) {
 			return;
 		}
-		return await fetchActiveAlertCount(
-			props.apiUrl,
-			fetcher.project_slug,
-			fetcher.token,
-		);
-	};
-	createResource(fetcher, getAlerts);
+		fetchActiveAlertCount(props.apiUrl, slug, token);
+	});
 
 	const active_alerts = createMemo(() => {
 		const slug = params()?.project;

@@ -13,11 +13,15 @@ const getStored = (): ActiveAlerts | null => {
 	if (typeof localStorage === "undefined") {
 		return null;
 	}
-	const stored = localStorage.getItem(BENCHER_ACTIVE_ALERTS_KEY);
-	if (!stored) {
+	try {
+		const stored = localStorage.getItem(BENCHER_ACTIVE_ALERTS_KEY);
+		if (!stored) {
+			return null;
+		}
+		return JSON.parse(stored);
+	} catch {
 		return null;
 	}
-	return JSON.parse(stored);
 };
 
 const setStored = (value: ActiveAlerts) => {

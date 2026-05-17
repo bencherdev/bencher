@@ -6,6 +6,7 @@ import {
 	Match,
 	Show,
 	Switch,
+	createEffect,
 	createMemo,
 	createResource,
 	createSignal,
@@ -278,18 +279,13 @@ const DismissAllButton = (props: {
 }) => {
 	const [dismissing, setDismissing] = createSignal(false);
 
-	const fetcher = createMemo(() => {
-		return {
-			project: props.params.project,
-			token: authUser()?.token,
-		};
-	});
-
-	createResource(fetcher, async (fetcher) => {
-		if (!fetcher.token || !fetcher.project) {
+	createEffect(() => {
+		const project = props.params.project;
+		const token = authUser()?.token;
+		if (!token || !project) {
 			return;
 		}
-		await fetchActiveAlertCount(props.apiUrl, fetcher.project, fetcher.token);
+		fetchActiveAlertCount(props.apiUrl, project, token);
 	});
 
 	const anyActive = createMemo(() => {
@@ -363,11 +359,7 @@ const DismissAllButton = (props: {
 			}
 			if (count > 0) {
 				invalidateActiveAlertCount(project);
-				if (props.archived() === "true") {
-					props.handleRefresh();
-				} else {
-					props.handleRefresh();
-				}
+				props.handleRefresh();
 			}
 		} finally {
 			setDismissing(false);
