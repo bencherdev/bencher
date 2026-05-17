@@ -156,7 +156,7 @@ impl BencherClient {
 
         let attempts = self.attempts;
         let max_attempts = attempts.saturating_sub(1);
-        let mut retry_after = self.retry_after;
+        let mut retry_after = self.retry_after.min(self.max_retry_after);
 
         for attempt in 0..attempts {
             match sender(client.clone()).await {

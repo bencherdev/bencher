@@ -172,7 +172,7 @@ pub struct CliBackend {
     pub retry_after: u64,
 
     /// Max seconds to wait between attempts (caps exponential backoff)
-    #[clap(long, value_name = "SECONDS", default_value = "30")]
+    #[clap(long, value_name = "SECONDS", default_value = "30", value_parser = clap::value_parser!(u64).range(1..))]
     pub max_retry_after: u64,
 
     /// Strictly parse JSON responses
