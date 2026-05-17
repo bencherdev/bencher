@@ -1,0 +1,28 @@
+import GameLibTree from "../../criterion/game-lib-tree.mdx";
+import FizzBuzzRefactorLibCode from "../../criterion/fizz-buzz-refactor-lib-code.mdx";
+import FizzBuzzRefactorMainCode from "../../criterion/fizz-buzz-refactor-main-code.mdx";
+
+## FizzBuzz umstrukturieren
+
+Um unsere FizzBuzz-Anwendung zu testen, entkoppeln wir unsere Logik von der `main`-Funktion unseres Programms.
+Im Gegensatz zu anderen Benchmark-Harnesses **kann** Gungraun die Benchmark-Binary
+und die `main`-Funktion benchmarken, aber das ist rein Makro-Benchmarking. Wir wollen beides, Makro und Mikro.
+Dafür müssen wir einige Änderungen vornehmen.
+
+Erstellen Sie unter `src` eine neue Datei namens `lib.rs`:
+
+<GameLibTree />
+
+Fügen Sie den folgenden Code zu `lib.rs` hinzu:
+
+<FizzBuzzRefactorLibCode />
+
+- `play_game`: Nimmt eine vorzeichenlose Ganzzahl `n` an, ruft `fizz_buzz` mit dieser Zahl auf, und wenn `print` `true` ist, wird das Ergebnis ausgegeben.
+- `fizz_buzz`: Nimmt eine vorzeichenlose Ganzzahl `n` an und führt die eigentliche `Fizz`, `Buzz`, `FizzBuzz` oder Zahlenlogik aus und gibt das Ergebnis als String zurück.
+
+Dann sieht die aktualisierte `main.rs` so aus:
+
+<FizzBuzzRefactorMainCode />
+
+- `game::play_game`: Importieren Sie `play_game` aus dem `game` Crate, das wir gerade mit `lib.rs` erstellt haben.
+- `main`: Der Haupteinstiegspunkt in unser Programm, der die Zahlen von `1` bis `100` inklusive durchläuft und für jede Zahl `play_game` aufruft, mit `print` auf `true` gesetzt.

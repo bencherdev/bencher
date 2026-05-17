@@ -1,0 +1,186 @@
+---
+title: "Gungraun"
+description: "Gungraun으로 Rust 코드를 벤치마크하는 방법에 대한 단계별 가이드"
+heading: "Gungraun으로 Rust 코드를 벤치마크하는 방법"
+published: "2026-05-17T00:00:00Z"
+modified: "2026-05-17T00:00:00Z"
+sortOrder: 4
+---
+
+import BenchPlayGameFibonacciOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-fibonacci-output.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-fix-output.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-output.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-output.mdx";
+import BencherFooter from "../../../chunks/learn/ko/bencher-footer.mdx";
+import Benchmarking from "../../../chunks/benchmarking/ko/benchmarking.mdx";
+import BenchmarkingRust from "../../../chunks/benchmarking-rust/ko/benchmarking-rust.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ko/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/benchmarking-rust/gungraun/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ko/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/benchmarking-rust/catch-in-ci-plot-rust-bench.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/benchmarking-rust/ko/fizz-buzz-fibonacci-fix-rust.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/benchmarking-rust/ko/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/benchmarking-rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/benchmarking-rust/ko/fizz-buzz-fibonacci-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/benchmarking-rust/gungraun/ko/fizz-buzz-refactor.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/benchmarking-rust/gungraun/fizz-buzz-refactor-benches-code.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ko/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/benchmarking-rust/ko/fizz-buzz-rust.mdx";
+import GameBenchesTree from "../../../chunks/benchmarking-rust/criterion/game-benches-tree.mdx";
+import GameCargoToml from "../../../chunks/benchmarking-rust/gungraun/game-cargo-toml.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ko/micro-vs-macro.mdx";
+import OnFire from "../../../chunks/benchmarking/ko/on-fire.mdx";
+import PlayGameRustCode from "../../../chunks/benchmarking-rust/criterion/play-game-rust-code.mdx";
+import StepByStepRust from "../../../chunks/benchmarking-rust/ko/step-by-step-rust.mdx";
+import TheEnd from "../../../chunks/benchmarking/ko/the-end.mdx";
+
+<Benchmarking />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+네 가지 모두 [Bencher에서 지원됩니다](/ko/docs/explanation/adapters/). 그렇다면 왜 Gungraun(Iai-Callgrind의 이름이 변경된 후속작)을 선택할까요?
+Gungraun은 *벽시계 시간* 대신 *명령어 카운트*를 사용합니다.
+이것은 [지속적 벤치마킹](/ko/docs/explanation/continuous-benchmarking/), 즉 CI에서의 벤치마킹에 이상적입니다.
+특히 공유 러너를 사용하는 경우 지속적 벤치마킹에 Gungraun 사용을 권장합니다.
+Gungraun은 활발하게 유지보수되며 포괄적인 [온라인 문서](https://gungraun.github.io/gungraun/latest/html/intro.html)가 있어
+장기 프로젝트에 신뢰할 수 있는 선택입니다.
+Gungraun은 당신이 정말로 관심 있는 것의 *프록시*만 측정한다는 것을 이해하는 것이 중요합니다.
+1,000 명령어에서 2,000 명령어로 증가하면 애플리케이션의 지연 시간이 두 배가 됩니까?
+아마도 그럴 수도 있고 아닐 수도 있습니다.
+이러한 이유로, 명령어 카운트 기반 벤치마크와 병렬로 벽시계 시간 기반 벤치마크도 실행하는 것이 유용할 수 있습니다.
+
+## Valgrind 설치
+
+Gungraun은 명령어 카운트를 수집하기 위해 [Valgrind](https://valgrind.org/)라는 도구를 사용합니다.
+Valgrind는 Linux, Solaris, FreeBSD 및 macOS를 지원합니다.
+그러나 macOS 지원은 x86_64 프로세서로 제한되며, [arm64 (M1, M2 등) 프로세서는 아직 지원되지 않습니다](https://github.com/LouisBrunner/valgrind-macos/issues/56).
+
+Debian에서 실행: `sudo apt-get install valgrind`
+
+macOS에서 (x86_64/Intel 칩만): `brew install valgrind`
+
+<FizzBuzzRefactor />
+
+## FizzBuzz 벤치마킹
+
+코드를 벤치마크하려면 `benches` 디렉토리를 만들고
+벤치마크를 포함할 파일 `play_game.rs`를 추가해야 합니다.
+간단함을 위해 벤치마크를 구조화하는 [권장 방법](https://gungraun.github.io/gungraun/latest/html/best_practices.html)에서
+벗어나고 있다는 점에 유의하세요.
+프로젝트에서는 권장 사항을 따르세요:
+
+<GameBenchesTree />
+
+`play_game.rs` 안에 다음 코드를 추가합니다:
+
+<FizzBuzzRefactorBenchesCode />
+
+- 필요한 매크로를 가져오는 `gungraun::prelude` 모듈을 임포트합니다.
+- `std::hint::black_box`를 사용하여 컴파일러가 벤치마크를 최적화하는 것을 방지합니다.
+- `game` 크레이트에서 `play_game` 함수를 임포트합니다.
+- `#[library_benchmark]` 속성을 사용하여 `bench_play_game`이라는 라이브러리 벤치마크 함수를 만듭니다.
+- `1`부터 `100`까지 루프하며 `print`를 `false`로 설정하여 `play_game`을 호출합니다.
+- `bench_play_game` 벤치마크를 포함하는 `bench_play_game_group`이라는 라이브러리 벤치마크 그룹을 만듭니다.
+- `main!` 매크로를 사용하여 벤치마크 그룹을 실행합니다.
+
+이제 벤치마크를 실행하도록 `game` 크레이트를 구성해야 합니다.
+
+`Cargo.toml` 파일의 _하단_에 다음을 추가합니다:
+
+<GameCargoToml />
+
+- `gungraun`: 성능 테스트에만 사용하므로 `gungraun`을 개발 의존성으로 추가합니다.
+- `bench`: `play_game`을 벤치마크로 등록하고, Gungraun을 벤치마킹 하네스로 사용할 것이므로 `harness`를 `false`로 설정합니다.
+- `debug = true`: 벤치마크 빌드에서 디버그 정보를 활성화합니다. 이것은 Gungraun이 상세한 출력을 제공하기 위해 *필수*입니다.
+
+이제 코드를 벤치마크할 준비가 되었습니다. `cargo bench`를 실행합니다:
+
+<BenchPlayGameOutput />
+
+> 🐰 상추가 순무를 비트로! 첫 번째 벤치마크 메트릭을 얻었습니다!
+
+드디어 피곤한 개발자의 머리를 쉴 수 있습니다...
+농담입니다, 사용자들이 새로운 기능을 원합니다!
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## FizzBuzzFibonacci 벤치마킹
+
+이제 벤치마크를 다시 실행할 수 있습니다:
+
+<BenchPlayGameFibonacciOutput />
+
+오, 멋지네요! Gungraun이 FizzBuzz 게임과 FizzBuzzFibonacci 게임의 추정 사이클 차이를 알려줍니다.
+여러분의 숫자는 제 것과 약간 다를 것입니다.
+그러나 두 게임 간의 차이는 아마 `10-15x` 범위일 것입니다.
+좋아 보입니다! 특히 _Fibonacci_처럼 멋진 기능을 게임에 추가한 것치고는요.
+아이들이 좋아할 것입니다!
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+여기서 Gungraun의 매개변수화된 벤치마크가 빛을 발합니다! 각 입력에 대해 별도의 벤치마크 함수를 작성하는 대신, `#[benches::...]` 속성을 사용할 수 있습니다:
+
+<BenchPlayGameOnFireCode />
+
+- `#[benches::play(100, 1_000_000)]` 속성을 추가하여 입력 `100`과 `1_000_000`의 벤치마크 변형을 만듭니다.
+- 벤치마크 함수는 각 값을 받는 `n: u32` 매개변수를 취합니다.
+- `bench_play_game` 함수를 `library_benchmark_group!`에 추가합니다.
+
+좋습니다! 하나의 벤치마크 함수, 여러 테스트 케이스!
+
+실행했을 때, 다음을 얻었습니다:
+
+<BenchPlayGameOnFireOutputStart />
+
+벤치마크가 1.45초 만에 완료되었습니다. 빨랐네요! 벽시계 벤치마크처럼 벤치마크를
+여러 번 실행하는 대신,
+각 Gungraun 벤치마크는 한 번만 실행됩니다. 하지만 잠깐, 첫 번째 벤치마크 `bench_play_game_100`에
+변화가 있는 이유는 무엇일까요, 이 벤치마크에서는 아무것도 변경하지 않았는데?
+맞습니다, 하지만 벤치마크 파일에서 다른 것을 변경했고 Gungraun과 Valgrind는
+민감한 도구이기 때문에 아주 작은 변경도 감지됩니다.
+그러나 특히 캐시 메트릭에서의 이러한 작은 변화는 무시할 수 있습니다. 시간이 지남에 따라
+메트릭의 중요한 변화에 대한 감각을 키울 수 있습니다. 출력을 자세히 살펴봅시다.
+
+<BenchPlayGameOnFireOutput />
+
+뭐라고! `7,448 추정 사이클` x `1,000`은 `7,448,000 추정 사이클`이어야 하는데 `183,930,692 추정 사이클`이라니 🤯
+피보나치 수열 코드를 기능적으로 올바르게 작성했음에도, 어딘가에 성능 버그가 있는 것 같습니다.
+
+<FizzBuzzFibonacciFixRust />
+
+이제 벤치마크를 다시 실행하고 결과를 봅시다:
+
+<BenchPlayGameFixOutput />
+
+오, 와우! `100` 벤치마크가 11% 감소하고 `1_000_000` 벤치마크는 200,000배 이상 감소했습니다! `183,930,692 추정 사이클`에서 `742 추정 사이클`로!
+`99.9996%` 감소입니다!
+
+> 🐰 이봐요, 최소한 프로덕션에 도달하기 전에 이 성능 버그를 잡았습니다... 아, 맞다. 신경 쓰지 마세요...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="Gungraun으로 Rust를 벤치마크하는 방법" />
+
+<BencherFooter />

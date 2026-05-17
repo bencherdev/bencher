@@ -1,0 +1,28 @@
+import GameLibTree from "../../criterion/game-lib-tree.mdx";
+import FizzBuzzRefactorLibCode from "../../criterion/fizz-buzz-refactor-lib-code.mdx";
+import FizzBuzzRefactorMainCode from "../../criterion/fizz-buzz-refactor-main-code.mdx";
+
+## 重构 FizzBuzz
+
+为了测试我们的 FizzBuzz 应用程序，我们将逻辑从程序的 `main` 函数中解耦。
+与其他基准测试工具不同，Gungraun **可以**对基准测试二进制文件
+和 `main` 函数进行基准测试，但这纯粹是宏基准测试。我们想同时进行宏基准测试和微基准测试。
+为此，我们需要做一些更改。
+
+在 `src` 下，创建一个名为 `lib.rs` 的新文件：
+
+<GameLibTree />
+
+将以下代码添加到 `lib.rs`：
+
+<FizzBuzzRefactorLibCode />
+
+- `play_game`：接受一个无符号整数 `n`，用该数字调用 `fizz_buzz`，如果 `print` 为 `true` 则打印结果。
+- `fizz_buzz`：接受一个无符号整数 `n`，执行实际的 `Fizz`、`Buzz`、`FizzBuzz` 或数字逻辑，并将结果作为字符串返回。
+
+然后更新后的 `main.rs` 如下所示：
+
+<FizzBuzzRefactorMainCode />
+
+- `game::play_game`：从我们刚刚用 `lib.rs` 创建的 `game` crate 中导入 `play_game`。
+- `main`：程序的主入口点，遍历从 `1` 到 `100`（含）的数字，并为每个数字调用 `play_game`，`print` 设置为 `true`。

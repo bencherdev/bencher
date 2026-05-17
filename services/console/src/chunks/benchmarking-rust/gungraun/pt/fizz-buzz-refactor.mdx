@@ -1,0 +1,28 @@
+import GameLibTree from "../../criterion/game-lib-tree.mdx";
+import FizzBuzzRefactorLibCode from "../../criterion/fizz-buzz-refactor-lib-code.mdx";
+import FizzBuzzRefactorMainCode from "../../criterion/fizz-buzz-refactor-main-code.mdx";
+
+## Refatorar FizzBuzz
+
+Para testar nossa aplicação FizzBuzz, desacoplamos nossa lógica da função `main` do nosso programa.
+Ao contrário de outros arneses de benchmark, o Gungraun **pode** fazer benchmark do binário de benchmark
+e da função `main`, mas isso é puramente macro-benchmarking. Queremos fazer ambos, macro e micro.
+Para fazer isso, precisamos fazer algumas alterações.
+
+Sob `src`, crie um novo arquivo chamado `lib.rs`:
+
+<GameLibTree />
+
+Adicione o seguinte código ao `lib.rs`:
+
+<FizzBuzzRefactorLibCode />
+
+- `play_game`: Recebe um inteiro sem sinal `n`, chama `fizz_buzz` com esse número, e se `print` for `true` imprime o resultado.
+- `fizz_buzz`: Recebe um inteiro sem sinal `n` e executa a lógica real de `Fizz`, `Buzz`, `FizzBuzz` ou número, retornando o resultado como uma string.
+
+Então o `main.rs` atualizado fica assim:
+
+<FizzBuzzRefactorMainCode />
+
+- `game::play_game`: Importa `play_game` do crate `game` que acabamos de criar com `lib.rs`.
+- `main`: O ponto de entrada principal do nosso programa que itera pelos números de `1` a `100` inclusive e chama `play_game` para cada número, com `print` definido como `true`.

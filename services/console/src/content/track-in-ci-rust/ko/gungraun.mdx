@@ -1,0 +1,34 @@
+---
+title: "Gungraun"
+description: "CI에서 Rust Gungraun 벤치마크를 추적하는 방법에 대한 단계별 가이드"
+heading: "CI에서 Rust Gungraun 벤치마크를 추적하는 방법"
+published: "2026-05-17T00:00:00Z"
+modified: "2026-05-17T00:00:00Z"
+sortOrder: 4
+---
+
+import Intro from "../../../chunks/track-in-ci/ko/intro.mdx";
+import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
+import Steps from "../../../chunks/track-in-ci/ko/steps.mdx";
+import RustGungraun from "../../../chunks/docs-explanation/adapters/ko/rust-gungraun.mdx";
+import CallToAction from "../../../components/landing/CallToAction.astro";
+import { Language } from "../../../i18n/ui";
+
+<Intro
+  text="Gungraun으로 Rust 코드를 벤치마크하는 방법을 배웠습니다"
+  url="/ko/learn/benchmarking/rust/gungraun/"
+  name="Gungraun"
+/>
+
+## 벤처(Bencher)란 무엇인가요?
+
+<BencherIntro />
+
+<Steps
+  adapter="rust_gungraun"
+  url="/ko/docs/explanation/adapters/#-rust-gungraun"
+/>
+
+<RustGungraun />
+
+<CallToAction lang={Language.ko} />

@@ -1,0 +1,28 @@
+import GameLibTree from "../../criterion/game-lib-tree.mdx";
+import FizzBuzzRefactorLibCode from "../../criterion/fizz-buzz-refactor-lib-code.mdx";
+import FizzBuzzRefactorMainCode from "../../criterion/fizz-buzz-refactor-main-code.mdx";
+
+## FizzBuzzのリファクタリング
+
+FizzBuzzアプリケーションをテストするために、ロジックをプログラムの`main`関数から分離します。
+他のベンチマークハーネスとは異なり、Gungraunはベンチマークバイナリ
+や`main`関数をベンチマークすることが**できます**が、これは純粋にマクロベンチマーキングです。マクロとミクロの両方を行いたいので、
+いくつかの変更を加える必要があります。
+
+`src`の下に、`lib.rs`という名前の新しいファイルを作成します：
+
+<GameLibTree />
+
+`lib.rs`に以下のコードを追加します：
+
+<FizzBuzzRefactorLibCode />
+
+- `play_game`：符号なし整数`n`を受け取り、その数値で`fizz_buzz`を呼び出し、`print`が`true`の場合は結果を出力します。
+- `fizz_buzz`：符号なし整数`n`を受け取り、実際の`Fizz`、`Buzz`、`FizzBuzz`、または数値のロジックを実行し、結果を文字列として返します。
+
+次に、更新された`main.rs`は以下のようになります：
+
+<FizzBuzzRefactorMainCode />
+
+- `game::play_game`：`lib.rs`で作成した`game`クレートから`play_game`をインポートします。
+- `main`：プログラムのメインエントリーポイントで、`1`から`100`まで（含む）の数字を反復し、各数字に対して`print`を`true`に設定して`play_game`を呼び出します。

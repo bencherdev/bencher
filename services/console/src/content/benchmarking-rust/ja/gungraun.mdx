@@ -1,0 +1,186 @@
+---
+title: "Gungraun"
+description: "GungraunでRustコードをベンチマークする方法のステップバイステップガイド"
+heading: "GungraunでRustコードをベンチマークする方法"
+published: "2026-05-17T00:00:00Z"
+modified: "2026-05-17T00:00:00Z"
+sortOrder: 4
+---
+
+import BenchPlayGameFibonacciOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-fibonacci-output.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-fix-output.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-output.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOutput from "../../../chunks/benchmarking-rust/gungraun/bench-play-game-output.mdx";
+import BencherFooter from "../../../chunks/learn/ja/bencher-footer.mdx";
+import Benchmarking from "../../../chunks/benchmarking/ja/benchmarking.mdx";
+import BenchmarkingRust from "../../../chunks/benchmarking-rust/ja/benchmarking-rust.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ja/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/benchmarking-rust/gungraun/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ja/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/benchmarking-rust/catch-in-ci-plot-rust-bench.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/benchmarking-rust/ja/fizz-buzz-fibonacci-fix-rust.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/benchmarking-rust/ja/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/benchmarking-rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/benchmarking-rust/ja/fizz-buzz-fibonacci-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/benchmarking-rust/gungraun/ja/fizz-buzz-refactor.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/benchmarking-rust/gungraun/fizz-buzz-refactor-benches-code.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ja/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/benchmarking-rust/ja/fizz-buzz-rust.mdx";
+import GameBenchesTree from "../../../chunks/benchmarking-rust/criterion/game-benches-tree.mdx";
+import GameCargoToml from "../../../chunks/benchmarking-rust/gungraun/game-cargo-toml.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ja/micro-vs-macro.mdx";
+import OnFire from "../../../chunks/benchmarking/ja/on-fire.mdx";
+import PlayGameRustCode from "../../../chunks/benchmarking-rust/criterion/play-game-rust-code.mdx";
+import StepByStepRust from "../../../chunks/benchmarking-rust/ja/step-by-step-rust.mdx";
+import TheEnd from "../../../chunks/benchmarking/ja/the-end.mdx";
+
+<Benchmarking />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+4つすべてが[Bencherでサポートされています](/ja/docs/explanation/adapters/)。では、なぜGungraun（Iai-Callgrindの改名された後継）を選ぶのでしょうか？
+Gungraunは*実時間*の代わりに*命令カウント*を使用します。
+これにより、[継続的ベンチマーキング](/ja/docs/explanation/continuous-benchmarking/)、つまりCIでのベンチマーキングに最適です。
+特に共有ランナーを使用している場合、継続的ベンチマーキングにはGungraunの使用をお勧めします。
+Gungraunは積極的にメンテナンスされており、包括的な[オンラインドキュメント](https://gungraun.github.io/gungraun/latest/html/intro.html)があり、
+長期プロジェクトにとって信頼できる選択肢です。
+Gungraunは、あなたが本当に気にかけていることの*プロキシ*のみを測定することを理解することが重要です。
+1,000命令から2,000命令に増えると、アプリケーションのレイテンシは2倍になりますか？
+そうかもしれないし、そうでないかもしれません。
+このため、命令カウントベースのベンチマークと並行して、実時間ベースのベンチマークも実行することが有用な場合があります。
+
+## Valgrindのインストール
+
+Gungraunは命令カウントを収集するために[Valgrind](https://valgrind.org/)というツールを使用します。
+ValgrindはLinux、Solaris、FreeBSD、macOSをサポートしています。
+ただし、macOSのサポートはx86_64プロセッサに限定されており、[arm64（M1、M2など）プロセッサはまだサポートされていません](https://github.com/LouisBrunner/valgrind-macos/issues/56)。
+
+Debianでは実行：`sudo apt-get install valgrind`
+
+macOS（x86_64/Intelチップのみ）では：`brew install valgrind`
+
+<FizzBuzzRefactor />
+
+## FizzBuzzのベンチマーキング
+
+コードをベンチマークするには、`benches`ディレクトリを作成し、
+ベンチマークを含むファイル`play_game.rs`を追加する必要があります。
+簡潔さのために[推奨される方法](https://gungraun.github.io/gungraun/latest/html/best_practices.html)
+からは逸脱していることに注意してください。
+あなたのプロジェクトでは、推奨事項に従ってください：
+
+<GameBenchesTree />
+
+`play_game.rs`内に以下のコードを追加します：
+
+<FizzBuzzRefactorBenchesCode />
+
+- `gungraun::prelude`モジュールをインポートし、必要なマクロを取り込みます。
+- `std::hint::black_box`を使用して、コンパイラがベンチマークを最適化するのを防ぎます。
+- `game`クレートから`play_game`関数をインポートします。
+- `#[library_benchmark]`属性を使用して、`bench_play_game`というライブラリベンチマーク関数を作成します。
+- `1`から`100`までループし、`print`を`false`に設定して`play_game`を呼び出します。
+- `bench_play_game`ベンチマークを含む`bench_play_game_group`というライブラリベンチマークグループを作成します。
+- `main!`マクロを使用してベンチマークグループを実行します。
+
+次に、ベンチマークを実行するために`game`クレートを設定する必要があります。
+
+`Cargo.toml`ファイルの_末尾_に以下を追加します：
+
+<GameCargoToml />
+
+- `gungraun`：パフォーマンステストにのみ使用するため、`gungraun`を開発依存関係として追加します。
+- `bench`：`play_game`をベンチマークとして登録し、Gungraunをベンチマーキングハーネスとして使用するため`harness`を`false`に設定します。
+- `debug = true`：ベンチマークビルドでデバッグ情報を有効にします。これはGungraunが詳細な出力を提供するために*必須*です。
+
+これでコードをベンチマークする準備ができました。`cargo bench`を実行します：
+
+<BenchPlayGameOutput />
+
+> 🐰 レタスがカブをビートに！最初のベンチマークメトリクスが得られました！
+
+やっと疲れた開発者の頭を休められます...
+冗談です、ユーザーは新機能を望んでいます！
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## FizzBuzzFibonacciのベンチマーキング
+
+これでベンチマークを再実行できます：
+
+<BenchPlayGameFibonacciOutput />
+
+おお、すごい！GungraunがFizzBuzzゲームとFizzBuzzFibonacciゲームの推定サイクルの差を教えてくれます。
+あなたの数値は私のものと少し異なるでしょう。
+しかし、2つのゲームの差はおそらく`10-15x`の範囲です。
+それは良さそうです！特に_Fibonacci_のような豪華な機能をゲームに追加したことを考えると。
+子供たちは喜ぶでしょう！
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+ここがGungraunのパラメータ化されたベンチマークの真価を発揮するところです！各入力に対して別々のベンチマーク関数を書く代わりに、`#[benches::...]`属性を使用できます：
+
+<BenchPlayGameOnFireCode />
+
+- `#[benches::play(100, 1_000_000)]`属性を追加して、入力`100`のベンチマークバリアントと入力`1_000_000`の別のバリアントを生成します。
+- ベンチマーク関数は各値を受け取る`n: u32`パラメータを取ります。
+- `bench_play_game`関数を`library_benchmark_group!`に追加します。
+
+素晴らしい！1つのベンチマーク関数で、複数のテストケース！
+
+実行したところ、以下の結果を得ました：
+
+<BenchPlayGameOnFireOutputStart />
+
+ベンチマークは1.45秒で完了しました。速いですね！実時間ベンチマークのようにベンチマークを
+何度も実行する代わりに、
+各Gungraunベンチマークは1回だけ実行されます。しかし待ってください、最初のベンチマーク`bench_play_game_100`に変化があるのはなぜでしょうか、
+このベンチマークには何も変更していないのに？
+その通りですが、ベンチマークファイルで別の何かを変更しており、GungraunとValgrindは
+敏感な計測器であるため、非常に小さな変更でも検出されます。
+しかし、特にキャッシュメトリクスにおけるこのような小さな変更は無視できます。時間が経つにつれて、
+メトリクスの重大な変更に対する感覚が身につくでしょう。出力を詳しく見てみましょう。
+
+<BenchPlayGameOnFireOutput />
+
+なんと！`7,448推定サイクル` x `1,000`は`7,448,000推定サイクル`であるべきなのに、`183,930,692推定サイクル`です 🤯
+フィボナッチ数列のコードは機能的に正しいのに、どこかにパフォーマンスバグがあるに違いありません。
+
+<FizzBuzzFibonacciFixRust />
+
+では、ベンチマークを再実行して結果を見てみましょう：
+
+<BenchPlayGameFixOutput />
+
+おお、すごい！`100`のベンチマークは11%下がり、`1_000_000`のベンチマークは200,000倍以上下がりました！`183,930,692推定サイクル`から`742推定サイクル`へ！
+これは`99.9996%`の削減です！
+
+> 🐰 ねえ、少なくとも本番環境に到達する前にこのパフォーマンスバグを見つけました...ああ、そうでした。気にしないで...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="GungraunでRustをベンチマークする方法" />
+
+<BencherFooter />
