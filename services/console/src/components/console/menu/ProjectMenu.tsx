@@ -1,9 +1,11 @@
-import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import { createMemo, createResource } from "solid-js";
+import { createEffect, createMemo, createResource } from "solid-js";
+import {
+	activeAlertCount,
+	fetchActiveAlertCount,
+} from "../../../util/active_alerts";
 import { authUser } from "../../../util/auth";
-import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
-import { type InitValid, init_valid, validJwt } from "../../../util/valid";
+import { init_valid, validJwt } from "../../../util/valid";
 import ProjectMenuInner from "./ProjectMenuInner";
 
 interface Props {
@@ -17,38 +19,23 @@ const ProjectMenu = (props: Props) => {
 	const project = createMemo(() => params().project);
 	const user = authUser();
 
-	const fetcher = createMemo(() => {
-		return {
-			bencher_valid: bencher_valid(),
-			project_slug: params()?.project,
-			token: user?.token,
-		};
-	});
-	const getAlerts = async (fetcher: {
-		bencher_valid: InitValid;
-		project_slug: string;
-		token: string;
-	}) => {
-		if (
-			!fetcher.bencher_valid ||
-			!fetcher.project_slug ||
-			!validJwt(fetcher.token)
-		) {
+	createEffect(() => {
+		const valid = bencher_valid();
+		const slug = params()?.project;
+		const token = user?.token;
+		if (!valid || !slug || !token || !validJwt(token)) {
 			return;
 		}
-		const pathname = `/v0/projects/${fetcher.project_slug}/alerts?per_page=0&status=active`;
-		return await httpGet(props.apiUrl, pathname, authUser()?.token)
-			.then((resp) => resp?.headers?.[X_TOTAL_COUNT])
-			.catch((error) => {
-				console.error(error);
-				Sentry.captureException(error);
-				return;
-			});
-	};
-	const [active_alerts] = createResource<undefined | number>(
-		fetcher,
-		getAlerts,
-	);
+		fetchActiveAlertCount(props.apiUrl, slug, token);
+	});
+
+	const active_alerts = createMemo(() => {
+		const slug = params()?.project;
+		if (!slug) {
+			return undefined;
+		}
+		return activeAlertCount(slug);
+	});
 
 	return <ProjectMenuInner project={project} active_alerts={active_alerts} />;
 };

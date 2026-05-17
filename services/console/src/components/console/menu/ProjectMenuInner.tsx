@@ -1,4 +1,4 @@
-import { Show, type Accessor, type Resource } from "solid-js";
+import type { Accessor } from "solid-js";
 
 enum Section {
 	PLOTS = "plots",
@@ -16,7 +16,7 @@ enum Section {
 
 const ProjectMenuInner = (props: {
 	project: Accessor<undefined | string>;
-	active_alerts: Resource<undefined | number>;
+	active_alerts: Accessor<undefined | number>;
 }) => {
 	const path = (section?: Section) =>
 		section
@@ -72,13 +72,13 @@ const ProjectMenuInner = (props: {
 						<nav class="level is-mobile">
 							<div class="level-left">
 								<div class="level-item">Alerts</div>
-								<span class="tag is-primary is-small is-rounded">
-									<Show
-										when={props.active_alerts() !== undefined}
-										fallback={<>&nbsp;&nbsp;</>}
-									>
-										{props.active_alerts()}
-									</Show>
+								<span
+									id="active-alerts-badge"
+									class="tag is-primary is-small is-rounded"
+								>
+									{props.active_alerts() !== undefined
+										? props.active_alerts()?.toLocaleString()
+										: ""}
 								</span>
 							</div>
 						</nav>
