@@ -1,4 +1,4 @@
-import { Show, type Accessor, type Resource } from "solid-js";
+import { type Accessor, Show } from "solid-js";
 
 enum Section {
 	PLOTS = "plots",
@@ -16,7 +16,7 @@ enum Section {
 
 const ProjectMenuInner = (props: {
 	project: Accessor<undefined | string>;
-	active_alerts: Resource<undefined | number>;
+	active_alerts: Accessor<undefined | number>;
 }) => {
 	const path = (section?: Section) =>
 		section

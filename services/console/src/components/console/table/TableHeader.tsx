@@ -8,9 +8,15 @@ import {
 	Switch,
 	createMemo,
 	createResource,
+	createSignal,
 } from "solid-js";
 import { Button } from "../../../config/types";
 import { AlertStatus, type JsonAlert } from "../../../types/bencher";
+import {
+	activeAlertCount,
+	fetchActiveAlertCount,
+	invalidateActiveAlertCount,
+} from "../../../util/active_alerts";
 import { authUser } from "../../../util/auth";
 import { X_TOTAL_COUNT, httpGet, httpPatch } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
@@ -270,125 +276,116 @@ const DismissAllButton = (props: {
 	archived: Accessor<undefined | string>;
 	handleRefresh: () => void;
 }) => {
-	const alertsQuery = async (
-		apiUrl: string,
-		params: Params,
-		per_page: number,
-		page: number,
-		archived: boolean,
-		token: string,
-	) => {
-		const searchParams = new URLSearchParams();
-		searchParams.set(PER_PAGE_PARAM, per_page.toString());
-		searchParams.set(PAGE_PARAM, page.toString());
-		searchParams.set(ARCHIVED_PARAM, archived.toString());
-		const path = `/v0/projects/${params.project}/alerts?${searchParams.toString()}`;
-		return await httpGet(apiUrl, path, token)
-			.then((resp) => {
-				return [resp?.headers?.[X_TOTAL_COUNT], resp?.data];
-			})
-			.catch((error) => {
-				console.error(error);
-				Sentry.captureException(error);
-				return [];
-			});
-	};
+	const [dismissing, setDismissing] = createSignal(false);
+
 	const fetcher = createMemo(() => {
 		return {
-			apiUrl: props.apiUrl,
-			params: props.params,
-			archived: props.archived(),
+			project: props.params.project,
 			token: authUser()?.token,
 		};
 	});
-	const getAlerts = async (fetcher: {
-		apiUrl: string;
-		params: Params;
-		archived: undefined | boolean;
-		token: string;
-	}) => {
-		const all_alerts: JsonAlert[] = [];
-		if (!fetcher?.token) {
-			return all_alerts;
-		}
-		const PER_PAGE = 255;
-		let page = 1;
-		while (true) {
-			const [total, alerts] = await alertsQuery(
-				fetcher.apiUrl,
-				fetcher.params,
-				PER_PAGE,
-				page,
-				fetcher.archived ?? false,
-				fetcher.token,
-			);
-			if (!total || !alerts) {
-				break;
-			}
-			all_alerts.push(...alerts);
-			if (alerts.length < PER_PAGE || all_alerts.length === total) {
-				break;
-			}
-			page++;
-		}
-		// console.log(all_alerts);
-		return all_alerts;
-	};
-	const [alerts] = createResource<JsonAlert[]>(fetcher, getAlerts);
 
-	const anyActive = createMemo(() =>
-		alerts()?.some((alert) => alert.status === AlertStatus.Active),
-	);
-
-	const dismissAll = () => {
-		const fetch = fetcher();
-		if (!fetch.token) {
+	createResource(fetcher, async (fetcher) => {
+		if (!fetcher.token || !fetcher.project) {
 			return;
 		}
-		const activeAlerts = alerts()?.filter(
-			(alert) => alert.status === AlertStatus.Active,
-		);
-		let count = 0;
-		for (const alert of activeAlerts) {
-			httpPatch(
-				fetch.apiUrl,
-				`/v0/projects/${fetch.params.project}/alerts/${alert.uuid}`,
-				fetch.token,
-				{ status: AlertStatus.Dismissed },
-			)
-				.then((_resp) => {
-					count++;
-					if (count === activeAlerts.length) {
-						if (props.archived() === "true") {
-							props.handleRefresh();
-						} else {
-							// TODO move to global state
-							// Reload the entire page to update the alert count in the side bar
-							window.location.reload();
-						}
-					}
-				})
-				.catch((error) => {
+		await fetchActiveAlertCount(props.apiUrl, fetcher.project, fetcher.token);
+	});
+
+	const anyActive = createMemo(() => {
+		const project = props.params.project;
+		if (!project) {
+			return false;
+		}
+		return (activeAlertCount(project) ?? 0) > 0;
+	});
+
+	const dismissAll = async () => {
+		const token = authUser()?.token;
+		const project = props.params.project;
+		if (!token || !project) {
+			return;
+		}
+		setDismissing(true);
+		try {
+			const all_alerts: JsonAlert[] = [];
+			const PER_PAGE = 255;
+			let page = 1;
+			while (true) {
+				const searchParams = new URLSearchParams();
+				searchParams.set(PER_PAGE_PARAM, PER_PAGE.toString());
+				searchParams.set(PAGE_PARAM, page.toString());
+				searchParams.set(ARCHIVED_PARAM, props.archived() ?? "false");
+				const path = `/v0/projects/${project}/alerts?${searchParams.toString()}`;
+				const resp = await httpGet(props.apiUrl, path, token).catch((error) => {
 					console.error(error);
 					Sentry.captureException(error);
+					return null;
+				});
+				if (!resp) {
+					break;
+				}
+				const total = resp.headers?.[X_TOTAL_COUNT];
+				const alerts = resp.data;
+				if (!total || !alerts) {
+					break;
+				}
+				all_alerts.push(...alerts);
+				if (alerts.length < PER_PAGE || all_alerts.length === total) {
+					break;
+				}
+				page++;
+			}
+			const activeAlerts = all_alerts.filter(
+				(alert) => alert.status === AlertStatus.Active,
+			);
+			let count = 0;
+			for (const alert of activeAlerts) {
+				try {
+					await httpPatch(
+						props.apiUrl,
+						`/v0/projects/${project}/alerts/${alert.uuid}`,
+						token,
+						{ status: AlertStatus.Dismissed },
+					);
+					count++;
+				} catch (error) {
+					console.error(error);
+					Sentry.captureException(error);
+					const message =
+						(error as { response?: { data?: { message?: string } } })?.response
+							?.data?.message ?? "Unknown error";
 					pageNotify(
 						NotifyKind.ERROR,
-						`Lettuce romaine calm! Failed to dismiss alerts: ${error?.response?.data?.message}`,
+						`Lettuce romaine calm! Failed to dismiss alerts: ${message}`,
 					);
-				});
+				}
+			}
+			if (count > 0) {
+				invalidateActiveAlertCount(project);
+				if (props.archived() === "true") {
+					props.handleRefresh();
+				} else {
+					props.handleRefresh();
+				}
+			}
+		} finally {
+			setDismissing(false);
 		}
 	};
 
 	return (
 		<button
-			class="button"
+			class={`button${dismissing() ? " is-loading" : ""}`}
 			type="button"
 			title={
-				anyActive()
-					? "Dismiss all active alerts"
-					: "No active alerts to dismiss"
+				dismissing()
+					? "Dismissing all alerts..."
+					: anyActive()
+						? "Dismiss all active alerts"
+						: "No active alerts to dismiss"
 			}
-			disabled={!anyActive()}
+			disabled={!anyActive() || dismissing()}
 			onMouseDown={(e) => {
 				e.preventDefault();
 				dismissAll();
