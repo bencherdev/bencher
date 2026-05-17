@@ -2,7 +2,7 @@ import * as Sentry from "@sentry/astro";
 import { createRoot, createSignal } from "solid-js";
 import { X_TOTAL_COUNT, httpGet } from "./http";
 
-const BENCHER_ACTIVE_ALERTS_KEY = "BENCHER_ACTIVE_ALERTS";
+export const BENCHER_ACTIVE_ALERTS_KEY = "BENCHER_ACTIVE_ALERTS";
 
 interface ActiveAlerts {
 	project: string;

@@ -3,6 +3,7 @@ import ConsoleLayout from "./ConsoleLayout.astro";
 import ProjectMenu from "../../components/console/menu/ProjectMenu";
 import type { Params } from "astro";
 import ProjectFallbackMenu from "../../components/console/menu/ProjectFallbackMenu";
+import { BENCHER_ACTIVE_ALERTS_KEY } from "../../util/active_alerts";
 
 interface Props {
 	apiUrl: string;
@@ -21,3 +22,16 @@ const project_redirect = redirect ?? `/perf/${params.project}`;
   </ProjectMenu>
   <slot />
 </ConsoleLayout>
+
+<script is:inline define:vars={{ BENCHER_ACTIVE_ALERTS_KEY }}>
+(function() {
+  var stored = localStorage.getItem(BENCHER_ACTIVE_ALERTS_KEY);
+  if (stored) {
+    var data = JSON.parse(stored);
+    var badge = document.getElementById("active-alerts-badge");
+    if (badge && data.count != null) {
+      badge.textContent = data.count.toLocaleString();
+    }
+  }
+})();
+</script>
