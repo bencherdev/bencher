@@ -148,7 +148,7 @@ fn build_client(
         .host(host)
         .insecure_host(insecure_host)
         .native_tls(native_tls)
-        .timeout(Duration::from_secs(timeout))
+        .timeout(Duration::from_secs(timeout.into()))
         .attempts(attempts.into())
         .retry_after(retry_after.into())
         .max_retry_after(max_retry_after.into())

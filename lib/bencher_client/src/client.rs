@@ -158,8 +158,9 @@ impl BencherClient {
         let max_attempts = attempts.saturating_sub(1);
         let mut retry_after = self.retry_after.min(self.max_retry_after);
 
+        #[expect(clippy::print_stderr)]
         for attempt in 0..attempts {
-            match sender(client.clone()).await {
+            let err = match sender(client.clone()).await {
                 Ok(response_value) => {
                     let response = response_value.into_inner();
                     let json_response = Json::try_from(response)
@@ -168,18 +169,9 @@ impl BencherClient {
                     self.log_json(&json_response)?;
                     return Ok(json_response);
                 },
-                #[expect(clippy::print_stderr)]
-                Err(codegen::Error::CommunicationError(e)) => {
-                    if self.log {
-                        eprintln!("\nSend attempt #{}/{attempts}: {e}", attempt + 1);
-                    }
-                    if attempt != max_attempts {
-                        if self.log {
-                            eprintln!("Will retry after {retry_after} second(s).");
-                        }
-                        sleep(Duration::from_secs(retry_after)).await;
-                        retry_after = retry_after.saturating_mul(2).min(self.max_retry_after);
-                    }
+                Err(codegen::Error::CommunicationError(e)) => e.to_string(),
+                Err(codegen::Error::ErrorResponse(e)) if e.status().is_server_error() => {
+                    e.status().to_string()
                 },
                 Err(codegen::Error::InvalidRequest(e)) => {
                     return Err(ClientError::InvalidRequest(e));
@@ -235,6 +227,17 @@ impl BencherClient {
                 Err(codegen::Error::Custom(e)) => {
                     return Err(ClientError::Custom(e));
                 },
+            };
+
+            if self.log {
+                eprintln!("\nSend attempt #{}/{attempts}: {err}", attempt + 1);
+            }
+            if attempt != max_attempts {
+                if self.log {
+                    eprintln!("Will retry after {retry_after} second(s).");
+                }
+                sleep(Duration::from_secs(retry_after)).await;
+                retry_after = retry_after.saturating_mul(2).min(self.max_retry_after);
             }
         }
 

@@ -160,8 +160,8 @@ pub struct CliBackend {
     pub native_tls: bool,
 
     /// Request timeout
-    #[clap(long, value_name = "SECONDS", default_value = "15")]
-    pub timeout: u64,
+    #[clap(long, value_name = "SECONDS", default_value = "15", value_parser = clap::value_parser!(u16).range(1..=900))]
+    pub timeout: u16,
 
     /// Request attempt(s)
     #[clap(long, value_name = "COUNT", default_value = "35", value_parser = clap::value_parser!(u16).range(1..))]
