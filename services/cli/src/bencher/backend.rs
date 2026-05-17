@@ -149,9 +149,9 @@ fn build_client(
         .insecure_host(insecure_host)
         .native_tls(native_tls)
         .timeout(Duration::from_secs(timeout))
-        .attempts(attempts)
-        .retry_after(retry_after)
-        .max_retry_after(max_retry_after)
+        .attempts(attempts.into())
+        .retry_after(retry_after.into())
+        .max_retry_after(max_retry_after.into())
         .strict(strict)
         .log(true);
     Ok((builder, token))
