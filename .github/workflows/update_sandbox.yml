@@ -16,6 +16,9 @@ jobs:
         with:
           ref: devel
       - uses: dtolnay/rust-toolchain@stable
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: "2.34.1"
       - name: Update sandbox dependencies
         id: update
         env:
