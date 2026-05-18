@@ -1,7 +1,12 @@
 use bencher_json::{UserUuid, system::config::JsonUserRateLimiter};
 use bencher_rate_limiter::{RateLimiter, RateLimits};
 
-use crate::context::{RateLimitingError, rate_limiting::snapshot::UserRateLimiterSnapshot};
+#[cfg(feature = "otel")]
+use super::interval_kind;
+use crate::{
+    context::{RateLimitingError, rate_limiting::snapshot::UserRateLimiterSnapshot},
+    error::too_many_requests,
+};
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 11;
 const DEFAULT_REQUESTS_PER_HOUR_LIMIT: usize = 1 << 13;
@@ -249,12 +254,10 @@ impl UserRateLimiter {
         if let Some(interval) = self.requests.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
                 bencher_otel::AuthorizationKind::User,
             ));
-            Err(crate::error::too_many_requests(
-                RateLimitingError::UserRequests,
-            ))
+            Err(too_many_requests(RateLimitingError::UserRequests(interval)))
         } else {
             Ok(())
         }
@@ -264,12 +267,10 @@ impl UserRateLimiter {
         if let Some(interval) = self.attempts.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAttemptMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
                 bencher_otel::AuthorizationKind::User,
             ));
-            Err(crate::error::too_many_requests(
-                RateLimitingError::UserAttempts,
-            ))
+            Err(too_many_requests(RateLimitingError::UserAttempts(interval)))
         } else {
             Ok(())
         }
@@ -279,11 +280,11 @@ impl UserRateLimiter {
         if let Some(interval) = self.credentials.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserCredentialMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
             ));
-            Err(crate::error::too_many_requests(
-                RateLimitingError::UserCredentials,
-            ))
+            Err(too_many_requests(RateLimitingError::UserCredentials(
+                interval,
+            )))
         } else {
             Ok(())
         }
@@ -293,11 +294,11 @@ impl UserRateLimiter {
         if let Some(interval) = self.organizations.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserOrganizationMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
             ));
-            Err(crate::error::too_many_requests(
-                RateLimitingError::UserOrganizations,
-            ))
+            Err(too_many_requests(RateLimitingError::UserOrganizations(
+                interval,
+            )))
         } else {
             Ok(())
         }
@@ -307,11 +308,9 @@ impl UserRateLimiter {
         if let Some(interval) = self.invites.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserInviteMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
             ));
-            Err(crate::error::too_many_requests(
-                RateLimitingError::UserInvites,
-            ))
+            Err(too_many_requests(RateLimitingError::UserInvites(interval)))
         } else {
             Ok(())
         }
@@ -321,9 +320,9 @@ impl UserRateLimiter {
         if let Some(interval) = self.runs.check(user_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunClaimedMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
             ));
-            Err(crate::error::too_many_requests(RateLimitingError::UserRuns))
+            Err(too_many_requests(RateLimitingError::UserRuns(interval)))
         } else {
             Ok(())
         }

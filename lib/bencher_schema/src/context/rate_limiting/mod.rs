@@ -103,33 +103,33 @@ pub enum RateLimitingError {
         limit_gib: u64,
     },
 
-    #[error("Too many requests for project. Please, try again later.")]
-    ProjectRequests,
-    #[error("Too many runs for project. Please, try again later.")]
-    ProjectRuns,
+    #[error("Too many requests for project per {0}. Please, try again later.")]
+    ProjectRequests(bencher_rate_limiter::Interval),
+    #[error("Too many runs for project per {0}. Please, try again later.")]
+    ProjectRuns(bencher_rate_limiter::Interval),
 
-    #[error("Too many requests for runner. Please, try again later.")]
-    RunnerRequests,
+    #[error("Too many requests for runner per {0}. Please, try again later.")]
+    RunnerRequests(bencher_rate_limiter::Interval),
 
-    #[error("Too many requests for IP address. Please, try again later.")]
-    IpAddressRequests,
+    #[error("Too many requests for IP address per {0}. Please, try again later.")]
+    IpAddressRequests(bencher_rate_limiter::Interval),
     #[error(
-        "Too many runs from unclaimed IP address. Please, claim the project or try again later."
+        "Too many runs from unclaimed IP address per {0}. Please, claim the project or try again later."
     )]
-    UnclaimedRun,
+    UnclaimedRun(bencher_rate_limiter::Interval),
 
-    #[error("Too many requests for user. Please, try again later.")]
-    UserRequests,
-    #[error("Too many runs for user. Please, try again later.")]
-    UserRuns,
-    #[error("Too many authentication attempts for user. Please, try again later.")]
-    UserAttempts,
-    #[error("Too many credential generations for user. Please, try again later.")]
-    UserCredentials,
-    #[error("Too many organization creations for user. Please, try again later.")]
-    UserOrganizations,
-    #[error("Too many invitation emails for user. Please, try again later.")]
-    UserInvites,
+    #[error("Too many requests for user per {0}. Please, try again later.")]
+    UserRequests(bencher_rate_limiter::Interval),
+    #[error("Too many runs for user per {0}. Please, try again later.")]
+    UserRuns(bencher_rate_limiter::Interval),
+    #[error("Too many authentication attempts for user per {0}. Please, try again later.")]
+    UserAttempts(bencher_rate_limiter::Interval),
+    #[error("Too many credential generations for user per {0}. Please, try again later.")]
+    UserCredentials(bencher_rate_limiter::Interval),
+    #[error("Too many organization creations for user per {0}. Please, try again later.")]
+    UserOrganizations(bencher_rate_limiter::Interval),
+    #[error("Too many invitation emails for user per {0}. Please, try again later.")]
+    UserInvites(bencher_rate_limiter::Interval),
 }
 
 impl Default for RateLimiting {

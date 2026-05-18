@@ -1,7 +1,12 @@
 use bencher_json::{RunnerUuid, system::config::JsonRunnerRateLimiter};
 use bencher_rate_limiter::{RateLimiter, RateLimits};
 
-use crate::context::{RateLimitingError, rate_limiting::snapshot::RunnerRateLimiterSnapshot};
+#[cfg(feature = "otel")]
+use super::interval_kind;
+use crate::{
+    context::{RateLimitingError, rate_limiting::snapshot::RunnerRateLimiterSnapshot},
+    error::too_many_requests,
+};
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 4;
 const DEFAULT_REQUESTS_PER_HOUR_LIMIT: usize = 1 << 8;
@@ -79,11 +84,11 @@ impl RunnerRateLimiter {
         if let Some(interval) = self.requests.check(runner_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerRequestMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
             ));
-            Err(crate::error::too_many_requests(
-                RateLimitingError::RunnerRequests,
-            ))
+            Err(too_many_requests(RateLimitingError::RunnerRequests(
+                interval,
+            )))
         } else {
             Ok(())
         }

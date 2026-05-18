@@ -1,7 +1,12 @@
 use bencher_json::{ProjectUuid, system::config::JsonProjectRateLimiter};
 use bencher_rate_limiter::{RateLimiter, RateLimits};
 
-use crate::context::{RateLimitingError, rate_limiting::snapshot::ProjectRateLimiterSnapshot};
+#[cfg(feature = "otel")]
+use super::interval_kind;
+use crate::{
+    context::{RateLimitingError, rate_limiting::snapshot::ProjectRateLimiterSnapshot},
+    error::too_many_requests,
+};
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 11;
 const DEFAULT_REQUESTS_PER_HOUR_LIMIT: usize = 1 << 13;
@@ -106,12 +111,12 @@ impl ProjectRateLimiter {
         if let Some(interval) = self.requests.check(project_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
                 bencher_otel::AuthorizationKind::Project,
             ));
-            Err(crate::error::too_many_requests(
-                RateLimitingError::ProjectRequests,
-            ))
+            Err(too_many_requests(RateLimitingError::ProjectRequests(
+                interval,
+            )))
         } else {
             Ok(())
         }
@@ -121,12 +126,10 @@ impl ProjectRateLimiter {
         if let Some(interval) = self.runs.check(project_uuid) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
                 bencher_otel::AuthorizationKind::Project,
             ));
-            Err(crate::error::too_many_requests(
-                RateLimitingError::ProjectRuns,
-            ))
+            Err(too_many_requests(RateLimitingError::ProjectRuns(interval)))
         } else {
             Ok(())
         }
