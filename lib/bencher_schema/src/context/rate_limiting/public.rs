@@ -3,7 +3,12 @@ use std::net::IpAddr;
 use bencher_json::system::config::JsonPublicRateLimiter;
 use bencher_rate_limiter::{RateLimiter, RateLimits};
 
-use crate::context::{RateLimitingError, rate_limiting::snapshot::PublicRateLimiterSnapshot};
+#[cfg(feature = "otel")]
+use super::interval_kind;
+use crate::{
+    context::{RateLimitingError, rate_limiting::snapshot::PublicRateLimiterSnapshot},
+    error::too_many_requests,
+};
 
 const DEFAULT_REQUESTS_PER_MINUTE_LIMIT: usize = 1 << 10;
 const DEFAULT_REQUESTS_PER_HOUR_LIMIT: usize = 1 << 12;
@@ -143,12 +148,12 @@ impl PublicRateLimiter {
         if let Some(interval) = self.requests.check(ip) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RequestMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
                 bencher_otel::AuthorizationKind::Public,
             ));
-            Err(crate::error::too_many_requests(
-                RateLimitingError::IpAddressRequests,
-            ))
+            Err(too_many_requests(RateLimitingError::IpAddressRequests(
+                interval,
+            )))
         } else {
             Ok(())
         }
@@ -158,12 +163,12 @@ impl PublicRateLimiter {
         if let Some(interval) = self.attempts.check(ip) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAttemptMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
                 bencher_otel::AuthorizationKind::Public,
             ));
-            Err(crate::error::too_many_requests(
-                RateLimitingError::IpAddressRequests,
-            ))
+            Err(too_many_requests(RateLimitingError::IpAddressAttempts(
+                interval,
+            )))
         } else {
             Ok(())
         }
@@ -173,11 +178,9 @@ impl PublicRateLimiter {
         if let Some(interval) = self.runs.check(ip) {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunUnclaimedMax(
-                super::interval_kind(interval),
+                interval_kind(interval),
             ));
-            Err(crate::error::too_many_requests(
-                RateLimitingError::UnclaimedRun,
-            ))
+            Err(too_many_requests(RateLimitingError::UnclaimedRun(interval)))
         } else {
             Ok(())
         }

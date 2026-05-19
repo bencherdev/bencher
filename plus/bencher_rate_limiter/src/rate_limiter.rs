@@ -35,6 +35,16 @@ pub enum Interval {
     Day,
 }
 
+impl std::fmt::Display for Interval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Minute => write!(f, "minute"),
+            Self::Hour => write!(f, "hour"),
+            Self::Day => write!(f, "day"),
+        }
+    }
+}
+
 impl<K> RateLimiter<K>
 where
     K: PartialEq + Eq + Hash + Clone + Copy,
