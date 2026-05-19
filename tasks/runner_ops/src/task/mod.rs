@@ -8,6 +8,7 @@ mod provision;
 pub mod ssh;
 mod start;
 pub mod stop;
+mod version;
 
 use bencher_json::{RunnerResourceId, Secret};
 use camino::Utf8PathBuf;
@@ -21,6 +22,7 @@ use provision::Provision;
 use ssh::Ssh;
 use start::Start;
 use stop::Stop;
+use version::Version;
 
 const DEFAULT_USER: &str = "root";
 #[expect(clippy::expect_used, reason = "known-valid constant URL")]
@@ -36,6 +38,7 @@ pub struct Task {
 enum Sub {
     Provision(Provision),
     Deploy(Deploy),
+    Version(Version),
     Start(Start),
     Stop(Stop),
     Logs(Logs),
@@ -58,6 +61,7 @@ impl TryFrom<TaskSub> for Sub {
         Ok(match sub {
             TaskSub::Provision(provision) => Self::Provision(provision.try_into()?),
             TaskSub::Deploy(deploy) => Self::Deploy(deploy.try_into()?),
+            TaskSub::Version(version) => Self::Version(version.try_into()?),
             TaskSub::Start(start) => Self::Start(start.try_into()?),
             TaskSub::Stop(stop) => Self::Stop(stop.try_into()?),
             TaskSub::Logs(logs) => Self::Logs(logs.try_into()?),
@@ -80,6 +84,7 @@ impl Sub {
         match self {
             Self::Provision(provision) => provision.exec(),
             Self::Deploy(deploy) => deploy.exec(),
+            Self::Version(version) => version.exec(),
             Self::Start(start) => start.exec(),
             Self::Stop(stop) => stop.exec(),
             Self::Logs(logs) => logs.exec(),
