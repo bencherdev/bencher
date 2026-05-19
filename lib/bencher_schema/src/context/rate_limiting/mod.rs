@@ -113,6 +113,8 @@ pub enum RateLimitingError {
 
     #[error("Too many requests for IP address per {0}. Please, try again later.")]
     IpAddressRequests(bencher_rate_limiter::Interval),
+    #[error("Too many authentication attempts for IP address per {0}. Please, try again later.")]
+    IpAddressAttempts(bencher_rate_limiter::Interval),
     #[error(
         "Too many runs from unclaimed IP address per {0}. Please, claim the project or try again later."
     )]

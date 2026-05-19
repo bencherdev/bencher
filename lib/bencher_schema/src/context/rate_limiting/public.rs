@@ -166,7 +166,7 @@ impl PublicRateLimiter {
                 interval_kind(interval),
                 bencher_otel::AuthorizationKind::Public,
             ));
-            Err(too_many_requests(RateLimitingError::IpAddressRequests(
+            Err(too_many_requests(RateLimitingError::IpAddressAttempts(
                 interval,
             )))
         } else {
