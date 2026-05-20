@@ -16,7 +16,7 @@ PART / ext4 all
 IMAGE /root/.oldroot/nfs/images/Ubuntu-2404-noble-amd64-base.tar.gz";
 
 const REBOOT_POLL_INTERVAL: Duration = Duration::from_secs(10);
-const REBOOT_TIMEOUT: Duration = Duration::from_secs(300);
+const REBOOT_TIMEOUT: Duration = Duration::from_mins(5);
 
 pub fn install_os(ssh: &Ssh) -> anyhow::Result<()> {
     // Detect if we're in rescue mode

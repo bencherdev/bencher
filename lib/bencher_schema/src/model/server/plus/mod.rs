@@ -113,7 +113,7 @@ impl QueryServer {
                     cmp::Ordering::Greater => Duration::days(1) - (now - offset),
                 }
                 .to_std()
-                .unwrap_or(std::time::Duration::from_secs(24 * 60 * 60));
+                .unwrap_or(std::time::Duration::from_hours(24));
                 tokio::time::sleep(sleep_time).await;
 
                 let Ok(mut conn) = DbConnection::establish(db_path.to_string_lossy().as_ref())

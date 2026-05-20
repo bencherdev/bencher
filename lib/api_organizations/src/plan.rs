@@ -177,7 +177,7 @@ async fn post_inner(
             .map_err(|e| {
                 issue_error(
                     "Failed to get checkout session",
-                    &format!("Failed to get checkout session {checkout}.",),
+                    &format!("Failed to get checkout session {checkout}."),
                     e,
                 )
             })?
@@ -185,7 +185,7 @@ async fn post_inner(
         checkout.as_ref().parse().map_err(|e| {
             issue_error(
                 "Failed to parse subscription ID",
-                &format!("Failed to parse subscription ID {checkout}.",),
+                &format!("Failed to parse subscription ID {checkout}."),
                 e,
             )
         })?

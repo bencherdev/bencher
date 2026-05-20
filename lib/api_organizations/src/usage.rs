@@ -25,7 +25,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 // 30 days
-const DEFAULT_USAGE_HISTORY: Duration = Duration::from_secs(30 * 24 * 60 * 60);
+const DEFAULT_USAGE_HISTORY: Duration = Duration::from_hours(720);
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgUsageParams {

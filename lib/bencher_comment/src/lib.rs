@@ -23,7 +23,7 @@ use ordered_float::OrderedFloat;
 use url::Url;
 
 // 30 days
-const DEFAULT_REPORT_HISTORY: Duration = Duration::from_secs(30 * 24 * 60 * 60);
+const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(720);
 
 const EMPTY_CELL: &str = "<td></td>";
 
@@ -632,7 +632,7 @@ impl ReportComment {
                     },
                 )
             },
-            ToString::to_string,
+            str::to_owned,
         );
         format!(
             r#"<div id="bencher.dev/projects/{project}/id/{id}"></div>"#,

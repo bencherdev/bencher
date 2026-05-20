@@ -230,6 +230,8 @@ impl ChildHandle {
                 clippy::cast_possible_wrap,
                 clippy::cast_possible_truncation
             )]
+            // SAFETY: `SYS_pidfd_open` is a valid syscall on Linux 5.3+.
+            // If unsupported, it returns -1 and we fall back to raw PID.
             let pidfd = unsafe { libc::syscall(libc::SYS_pidfd_open, pid as i32, 0) } as i32;
             Self { pid, pidfd }
         }

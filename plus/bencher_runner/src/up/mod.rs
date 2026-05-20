@@ -378,8 +378,14 @@ fn install_signal_handlers() {
     // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
     #[expect(unsafe_code, clippy::fn_to_numeric_cast_any)]
     unsafe {
-        libc::signal(libc::SIGINT, signal_handler as libc::sighandler_t);
-        libc::signal(libc::SIGTERM, signal_handler as libc::sighandler_t);
+        libc::signal(
+            libc::SIGINT,
+            signal_handler as *const () as libc::sighandler_t,
+        );
+        libc::signal(
+            libc::SIGTERM,
+            signal_handler as *const () as libc::sighandler_t,
+        );
     }
 }
 

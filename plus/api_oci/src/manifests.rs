@@ -372,8 +372,7 @@ async fn verify_referenced_blobs(
         .collect::<Result<_, _>>()?;
 
     let concurrency = std::thread::available_parallelism()
-        .map(std::num::NonZeroUsize::get)
-        .unwrap_or(1)
+        .map_or(1, std::num::NonZeroUsize::get)
         .clamp(1, MAX_CONCURRENCY);
 
     stream::iter(parsed_digests.into_iter().map(Ok))

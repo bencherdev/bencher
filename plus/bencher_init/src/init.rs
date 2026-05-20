@@ -379,11 +379,19 @@ fn setup_signal_handlers() -> Result<(), InitError> {
     // required by `libc::signal`. We register handlers before spawning any threads.
     unsafe {
         // SIGTERM - graceful shutdown request
-        if libc::signal(libc::SIGTERM, handle_signal as libc::sighandler_t) == libc::SIG_ERR {
+        if libc::signal(
+            libc::SIGTERM,
+            handle_signal as *const () as libc::sighandler_t,
+        ) == libc::SIG_ERR
+        {
             return Err(InitError::Signal("failed to set SIGTERM handler".into()));
         }
         // SIGINT - also graceful shutdown
-        if libc::signal(libc::SIGINT, handle_signal as libc::sighandler_t) == libc::SIG_ERR {
+        if libc::signal(
+            libc::SIGINT,
+            handle_signal as *const () as libc::sighandler_t,
+        ) == libc::SIG_ERR
+        {
             return Err(InitError::Signal("failed to set SIGINT handler".into()));
         }
         // Use default SIGCHLD handler - we reap children explicitly via waitpid.

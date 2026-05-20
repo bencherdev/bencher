@@ -162,7 +162,7 @@ mod tests {
     use crate::DAY;
 
     fn test_now() -> SystemTime {
-        SystemTime::UNIX_EPOCH + Duration::from_secs(86_400 * 3)
+        SystemTime::UNIX_EPOCH + Duration::from_hours(72)
     }
 
     #[test]
@@ -198,7 +198,7 @@ mod tests {
     fn window_cleanup() {
         let limiter = BandwidthLimiter::new(DAY);
         let now = test_now();
-        let old = now - Duration::from_secs(25 * 60 * 60);
+        let old = now - Duration::from_hours(25);
         limiter.record_at(1u32, 500, old);
         assert!(limiter.check_at(&1, 100, now));
     }
@@ -235,7 +235,7 @@ mod tests {
     fn restore_filters_expired() {
         let limiter = BandwidthLimiter::<u32>::new(DAY);
         let old_bucket = epoch_bucket(
-            (test_now() - Duration::from_secs(25 * 60 * 60))
+            (test_now() - Duration::from_hours(25))
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn prune_removes_stale_keys() {
         let limiter = BandwidthLimiter::new(DAY);
-        let old = test_now() - Duration::from_secs(25 * 60 * 60);
+        let old = test_now() - Duration::from_hours(25);
         limiter.record_at(1u32, 500, old);
         assert!(limiter.event_map.contains_key(&1));
 

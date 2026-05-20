@@ -61,7 +61,7 @@ impl fmt::Display for CardCvc {
         if cfg!(debug_assertions) {
             write!(f, "{}", self.0)
         } else {
-            write!(f, "{SANITIZED_SECRET}",)
+            write!(f, "{SANITIZED_SECRET}")
         }
     }
 }
