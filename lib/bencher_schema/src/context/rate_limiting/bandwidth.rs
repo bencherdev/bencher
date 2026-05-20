@@ -100,6 +100,8 @@ impl BandwidthRateLimiter {
         if self.limiter.check_at(&org_uuid, limit, now) {
             Ok(())
         } else {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciBandwidthMax(priority));
             Err(too_many_requests(RateLimitingError::OciBandwidth {
                 organization: organization.clone(),
                 limit_gib: limit.saturating_div(BYTES_PER_GIB),
