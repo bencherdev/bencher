@@ -108,4 +108,3 @@ describe("deleteOptions", () => {
 		expect(opts.headers.Authorization).toBe("Bearer tok");
 	});
 });
-
