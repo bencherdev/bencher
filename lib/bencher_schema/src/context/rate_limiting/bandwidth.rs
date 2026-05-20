@@ -124,7 +124,7 @@ mod tests {
     use super::*;
 
     fn test_now() -> SystemTime {
-        SystemTime::UNIX_EPOCH + Duration::from_secs(86_400 * 3)
+        SystemTime::UNIX_EPOCH + Duration::from_hours(72)
     }
 
     fn org_uuid() -> OrganizationUuid {
@@ -218,7 +218,7 @@ mod tests {
         let org_uuid = org_uuid();
         let org = org();
 
-        let old = now - Duration::from_secs(25 * 60 * 60);
+        let old = now - Duration::from_hours(25);
         limiter.record_at(org_uuid, 500, old);
 
         limiter

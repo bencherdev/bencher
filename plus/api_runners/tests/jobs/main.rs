@@ -2382,7 +2382,7 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
     let heartbeat_tasks = HeartbeatTasks::new();
     let log = slog::Logger::root(slog::Discard, slog::o!());
     let timeout = std::time::Duration::from_secs(5);
-    let grace_period = std::time::Duration::from_secs(60);
+    let grace_period = std::time::Duration::from_mins(1);
 
     // Pause time before spawning so the sleep timer is registered in virtual time
     tokio::time::pause();
@@ -2532,7 +2532,7 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     let heartbeat_tasks = HeartbeatTasks::new();
     let log = slog::Logger::root(slog::Discard, slog::o!());
     let timeout = std::time::Duration::from_secs(5);
-    let grace_period = std::time::Duration::from_secs(60);
+    let grace_period = std::time::Duration::from_mins(1);
 
     // Pause time before spawning so the sleep timer is registered in virtual time
     tokio::time::pause();

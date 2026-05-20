@@ -51,7 +51,7 @@ mod tests {
     /// Spawn a task that sleeps forever and register it in the tracker.
     fn spawn_sleeper(tasks: &HeartbeatTasks, id: JobId) -> AbortHandle {
         let handle = tokio::spawn(async {
-            tokio::time::sleep(std::time::Duration::from_secs(3600)).await;
+            tokio::time::sleep(std::time::Duration::from_hours(1)).await;
         });
         let abort = handle.abort_handle();
         tasks.insert(id, abort.clone());

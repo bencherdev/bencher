@@ -191,7 +191,7 @@ pub fn run_firecracker(
     let timeout = if config.timeout_secs > 0 {
         Duration::from_secs(config.timeout_secs)
     } else {
-        Duration::from_secs(300) // Default 5 min
+        Duration::from_mins(5)
     };
 
     let grace_period = Duration::from_secs(u64::from(u32::from(config.grace_period)));

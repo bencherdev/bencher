@@ -509,7 +509,7 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     // Poll `bencher job view` until the job reaches a terminal state
     let job_uuid_str = job_uuid.to_string();
     let start = std::time::Instant::now();
-    let timeout = std::time::Duration::from_secs(240);
+    let timeout = std::time::Duration::from_mins(4);
 
     loop {
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -826,7 +826,7 @@ fn ensure_insecure_registry(registry: &str) -> anyhow::Result<()> {
     // Wait for Docker to become ready.
     println!("Waiting for Docker to be ready...");
     let start = std::time::Instant::now();
-    let timeout = std::time::Duration::from_secs(60);
+    let timeout = std::time::Duration::from_mins(1);
     loop {
         if docker_available() {
             println!("Docker is ready.");

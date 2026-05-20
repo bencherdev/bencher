@@ -2187,8 +2187,7 @@ fn docker_available() -> bool {
     Command::new("docker")
         .arg("version")
         .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+        .is_ok_and(|o| o.status.success())
 }
 
 /// Check if mkfs.ext4 is available.
@@ -2196,8 +2195,7 @@ fn mkfs_available() -> bool {
     Command::new("mkfs.ext4")
         .arg("-V")
         .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+        .is_ok_and(|o| o.status.success())
 }
 
 /// Build a test OCI image from Dockerfile content.

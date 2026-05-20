@@ -313,7 +313,7 @@ impl QueryProject {
         name_with_suffix.parse().map_err(|e| {
             issue_error(
                 "Failed to create new project name",
-                &format!("Failed to create new project name ({name_with_suffix})",),
+                &format!("Failed to create new project name ({name_with_suffix})"),
                 e,
             )
         })
@@ -535,7 +535,7 @@ impl QueryProject {
             .map_err(|e| {
                 issue_error(
                     "Failed to create new perf URL.",
-                    &format!("Failed to create new perf URL for {console_url} at {path}",),
+                    &format!("Failed to create new perf URL for {console_url} at {path}"),
                     e,
                 )
             })

@@ -24,7 +24,7 @@ impl Spec {
     pub fn exec(&self) -> anyhow::Result<()> {
         let _log = bencher_logger::bootstrap_logger();
 
-        println!("🐰 Bencher OpenAPI Spec v{API_VERSION}",);
+        println!("🐰 Bencher OpenAPI Spec v{API_VERSION}");
 
         println!("Generating OpenAPI Spec JSON file at: {SPEC_PATH}");
         let mut api_description = ApiDescription::new();

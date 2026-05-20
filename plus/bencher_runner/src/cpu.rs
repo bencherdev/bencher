@@ -95,9 +95,7 @@ impl CpuLayout {
 
     #[cfg(not(target_os = "linux"))]
     fn available_cores() -> usize {
-        std::thread::available_parallelism()
-            .map(std::num::NonZero::get)
-            .unwrap_or(1)
+        std::thread::available_parallelism().map_or(1, std::num::NonZero::get)
     }
 
     /// Format benchmark cores as a cpuset string (e.g., "2-7" or "2,3,4,5").

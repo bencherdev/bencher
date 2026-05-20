@@ -645,8 +645,7 @@ impl OciS3Storage {
         };
 
         let concurrency = std::thread::available_parallelism()
-            .map(std::num::NonZeroUsize::get)
-            .unwrap_or(1)
+            .map_or(1, std::num::NonZeroUsize::get)
             .clamp(1, MAX_CONCURRENCY);
 
         let chunk_size = chunk_size

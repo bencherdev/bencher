@@ -9,9 +9,9 @@ use dashmap::DashMap;
 use crate::epoch_bucket;
 use crate::snapshot::{EpochBucket, RateLimiterSnapshot, WindowSnapshot};
 
-pub const MINUTE: Duration = Duration::from_secs(60);
-pub const HOUR: Duration = Duration::from_secs(60 * 60);
-pub const DAY: Duration = Duration::from_secs(60 * 60 * 24);
+pub const MINUTE: Duration = Duration::from_mins(1);
+pub const HOUR: Duration = Duration::from_hours(1);
+pub const DAY: Duration = Duration::from_hours(24);
 
 const DEFAULT_CAPACITY: usize = 1;
 
@@ -253,7 +253,7 @@ mod tests {
     use super::*;
 
     fn test_now() -> SystemTime {
-        SystemTime::UNIX_EPOCH + Duration::from_secs(86_400 * 10)
+        SystemTime::UNIX_EPOCH + Duration::from_hours(240)
     }
 
     #[test]
@@ -390,7 +390,7 @@ mod tests {
 
     #[test]
     fn prune_removes_stale_keys() {
-        let window: Window<u32> = Window::new(Duration::from_secs(60), 100);
+        let window: Window<u32> = Window::new(Duration::from_mins(1), 100);
         let old_bucket = epoch_bucket(
             test_now()
                 .duration_since(SystemTime::UNIX_EPOCH)

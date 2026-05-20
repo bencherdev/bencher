@@ -40,14 +40,13 @@ fn main() -> std::process::ExitCode {
     //
     // Loop: poll LSR until THRE is set, then write one byte to the data register.
     // This requires iopl(3) or ioperm to be called first on Linux.
-    //
-    // SAFETY: Called as PID 1 (root) to enable I/O port access for serial output.
-    // Accessing COM1 serial port registers is safe with iopl(3) privilege.
     #[cfg(target_arch = "x86_64")]
     #[expect(
         clippy::inline_asm_x86_intel_syntax,
         reason = "Intel syntax is clearer for x86 I/O port access"
     )]
+    // SAFETY: Called as PID 1 (root) to enable I/O port access for serial output.
+    // Accessing COM1 serial port registers is safe with iopl(3) privilege.
     unsafe {
         // Try to get I/O port access (may fail without root, but we're init)
         let _ = libc::iopl(3);

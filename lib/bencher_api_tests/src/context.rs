@@ -136,7 +136,7 @@ impl TestServer {
             )
             .expect("Failed to create OCI storage"),
             heartbeat_timeout: std::time::Duration::from_secs(5),
-            job_timeout_grace_period: std::time::Duration::from_secs(60),
+            job_timeout_grace_period: std::time::Duration::from_mins(1),
             heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
         };
 
