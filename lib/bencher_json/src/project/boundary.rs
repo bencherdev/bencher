@@ -61,7 +61,7 @@ mod boundary_limit {
         bool: diesel::deserialize::FromSql<diesel::sql_types::Bool, DB>,
     {
         fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-            #[expect(clippy::match_bool)]
+            #[expect(clippy::match_bool, reason = "maps bool to named variants")]
             match bool::from_sql(bytes)? {
                 LOWER_BOOL => Ok(Self::Lower),
                 UPPER_BOOL => Ok(Self::Upper),

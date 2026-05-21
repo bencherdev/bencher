@@ -12,7 +12,10 @@ pub struct Examples {
 }
 
 #[derive(Debug, Clone, Copy)]
-#[expect(clippy::enum_variant_names)]
+#[expect(
+    clippy::enum_variant_names,
+    reason = "Rust prefix groups language-specific examples"
+)]
 pub enum Example {
     RustBench,
     RustCriterion,
@@ -51,6 +54,7 @@ impl From<TaskExample> for Example {
 }
 
 impl Examples {
+    #[expect(clippy::panic_in_result_fn, reason = "test harness")]
     pub fn exec(&self) -> anyhow::Result<()> {
         println!("Running examples: {}", self.url);
 
@@ -91,6 +95,7 @@ impl Example {
         ]
     }
 
+    #[expect(clippy::panic_in_result_fn, reason = "test harness")]
     pub fn require(self) -> anyhow::Result<()> {
         match self {
             Self::RustBench => {
@@ -162,6 +167,7 @@ impl Example {
     }
 }
 
+#[expect(clippy::panic_in_result_fn, reason = "test harness")]
 fn run_example(api_url: &Url, token: &Jwt, example: Example) -> anyhow::Result<()> {
     println!("Running example: {example:?}");
 

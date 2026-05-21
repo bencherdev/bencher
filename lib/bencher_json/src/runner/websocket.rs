@@ -110,7 +110,6 @@ pub enum CloseReason {
 
 #[cfg(test)]
 #[expect(
-    clippy::indexing_slicing,
     clippy::wildcard_enum_match_arm,
     reason = "Test assertions on JSON values"
 )]

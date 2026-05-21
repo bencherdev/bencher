@@ -76,7 +76,7 @@ impl Up {
         Self { config }
     }
 
-    #[expect(clippy::print_stdout)]
+    #[expect(clippy::print_stdout, reason = "runner CLI startup output")]
     #[cfg_attr(
         not(target_os = "linux"),
         expect(unused_mut, reason = "mut needed on Linux for CPU layout detection")
@@ -134,7 +134,7 @@ impl Up {
 
 /// Effect-driven protocol loop. The state machine decides what to do; this
 /// function executes effects and feeds I/O results back.
-#[expect(clippy::print_stdout)]
+#[expect(clippy::print_stdout, reason = "runner CLI status output")]
 fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpError> {
     let runner_metadata = if config.no_auto_update {
         None
@@ -189,7 +189,11 @@ enum EffectResult {
     Exit,
 }
 
-#[expect(clippy::print_stdout, clippy::print_stderr)]
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "runner CLI status and error output"
+)]
 fn execute_effect(
     effect: Effect,
     config: &UpConfig,
@@ -276,7 +280,7 @@ fn try_send(
     ws_guard.send_message(msg)
 }
 
-#[expect(clippy::print_stderr)]
+#[expect(clippy::print_stderr, reason = "runner CLI connection error output")]
 fn receive_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
     let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
@@ -294,7 +298,7 @@ fn receive_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Inpu
     }
 }
 
-#[expect(clippy::print_stderr)]
+#[expect(clippy::print_stderr, reason = "runner CLI connection error output")]
 fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
     let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
@@ -316,7 +320,11 @@ fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) ->
     }
 }
 
-#[expect(clippy::print_stdout, clippy::print_stderr)]
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "runner CLI job outcome output"
+)]
 fn report_outcome(outcome: &state_machine::JobOutcome) {
     let state_machine::JobOutcome { job, kind, acked } = outcome;
     match kind {
@@ -340,7 +348,11 @@ fn report_outcome(outcome: &state_machine::JobOutcome) {
     println!("Polling for jobs...");
 }
 
-#[expect(clippy::print_stdout, clippy::print_stderr)]
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "runner CLI log output"
+)]
 fn log_message(level: LogLevel, msg: &str) {
     match level {
         LogLevel::Info => println!("{msg}"),
@@ -362,7 +374,7 @@ fn install_signal_handlers() {
 
     // SAFETY: `signal_handler` only performs `AtomicBool::store` with
     // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
-    #[expect(unsafe_code)]
+    #[expect(unsafe_code, reason = "sigaction requires unsafe FFI")]
     unsafe {
         let _ = sigaction(Signal::SIGINT, &action);
         let _ = sigaction(Signal::SIGTERM, &action);
@@ -374,14 +386,26 @@ fn install_signal_handlers() {
 /// Uses `libc::signal()` directly since `nix` is not available on macOS.
 #[cfg(not(target_os = "linux"))]
 fn install_signal_handlers() {
+    #[expect(
+        unsafe_code,
+        clippy::fn_to_numeric_cast_any,
+        reason = "libc::signal requires unsafe FFI and handler cast"
+    )]
     // SAFETY: `signal_handler` only performs `AtomicBool::store` with
     // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
-    #[expect(unsafe_code, clippy::fn_to_numeric_cast_any)]
     unsafe {
         libc::signal(
             libc::SIGINT,
             signal_handler as *const () as libc::sighandler_t,
         );
+    }
+    #[expect(
+        unsafe_code,
+        clippy::fn_to_numeric_cast_any,
+        reason = "libc::signal requires unsafe FFI and handler cast"
+    )]
+    // SAFETY: Same as above — registering an async-signal-safe handler for SIGTERM.
+    unsafe {
         libc::signal(
             libc::SIGTERM,
             signal_handler as *const () as libc::sighandler_t,
@@ -418,7 +442,10 @@ impl Drop for CleanupGuard {
     }
 }
 
-#[expect(clippy::print_stdout)]
+#[expect(
+    clippy::print_stdout,
+    reason = "runner CLI self-update progress output"
+)]
 fn self_update(
     version: &str,
     url: &Url,

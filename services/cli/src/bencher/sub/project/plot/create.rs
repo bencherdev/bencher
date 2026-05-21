@@ -11,7 +11,10 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-#[expect(clippy::struct_excessive_bools)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each bool is an independent user flag"
+)]
 pub struct Create {
     pub project: ProjectResourceId,
     pub index: Option<Index>,

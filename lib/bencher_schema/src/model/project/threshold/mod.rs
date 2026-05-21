@@ -2060,6 +2060,6 @@ mod tests {
             ))
             .execute(&mut conn);
 
-        assert!(result.is_err());
+        result.unwrap_err();
     }
 }

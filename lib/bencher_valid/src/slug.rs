@@ -66,7 +66,10 @@ pub fn is_valid_slug(slug: &str) -> bool {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(feature = "wasm"), expect(dead_code))]
+#[cfg_attr(
+    not(feature = "wasm"),
+    expect(dead_code, reason = "exported only for wasm")
+)]
 pub fn new_slug(slug: &str) -> Option<String> {
     Slug::new(slug).map(Into::into)
 }
@@ -121,7 +124,10 @@ impl Slug {
 
         while timestamp > 0 {
             let remainder = timestamp % BASE;
-            #[expect(clippy::cast_possible_truncation)]
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "remainder of base-36 division fits in u32"
+            )]
             if let Some(c) = std::char::from_digit(remainder as u32, BASE as u32) {
                 base36.push(c);
             }
@@ -212,7 +218,6 @@ mod tests {
         let json = serde_json::to_string(&slug).unwrap();
         assert_eq!(json, "\"a-valid-slug\"");
 
-        let err = serde_json::from_str::<Slug>("\"NOT A VALID SLUG\"");
-        assert!(err.is_err());
+        serde_json::from_str::<Slug>("\"NOT A VALID SLUG\"").unwrap_err();
     }
 }

@@ -55,7 +55,10 @@ pub enum CliPlotsSort {
 }
 
 #[derive(Parser, Debug)]
-#[expect(clippy::struct_excessive_bools)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each bool is an independent user flag"
+)]
 pub struct CliPlotCreate {
     /// Project slug or UUID
     pub project: ProjectResourceId,

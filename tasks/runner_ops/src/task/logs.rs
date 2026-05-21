@@ -39,7 +39,7 @@ impl Logs {
         let Self { ssh, lines, follow } = self;
         let mut cmd = String::from("journalctl -u bencher-runner --no-pager");
         if let Some(n) = lines {
-            let _ = write!(cmd, " -n {n}");
+            _ = write!(cmd, " -n {n}");
         }
         if follow {
             cmd.push_str(" -f");

@@ -43,7 +43,10 @@ impl SubCmd for View {
         let _json = self
             .backend
             .send(|client| async move {
-                #[cfg_attr(not(feature = "plus"), expect(unused_mut))]
+                #[cfg_attr(
+                    not(feature = "plus"),
+                    expect(unused_mut, reason = "mutated only with plus feature")
+                )]
                 let mut client = client
                     .proj_testbed_get()
                     .project(self.project.clone())

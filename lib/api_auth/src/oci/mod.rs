@@ -285,7 +285,7 @@ pub fn unauthorized_with_www_authenticate(
         // Sanitize scope to prevent header injection via embedded quotes
         let sanitized_scope = scope.replace('"', "");
         // Using write! to avoid extra allocation per clippy::format_push_string
-        let _ = write!(www_auth, ",scope=\"{sanitized_scope}\"");
+        _ = write!(www_auth, ",scope=\"{sanitized_scope}\"");
     }
 
     let mut error = HttpError::for_client_error(
@@ -294,8 +294,8 @@ pub fn unauthorized_with_www_authenticate(
         oci_error_body(OCI_ERROR_UNAUTHORIZED, "Authentication required"),
     );
 
-    // Add WWW-Authenticate header - ignore error if it fails
-    let _ = error.add_header(http::header::WWW_AUTHENTICATE, &www_auth);
+    // Best-effort: header may fail if value is not valid ASCII
+    _ = error.add_header(http::header::WWW_AUTHENTICATE, &www_auth);
 
     error
 }
@@ -482,20 +482,17 @@ mod tests {
 
     #[test]
     fn parse_scope_invalid_format() {
-        let result = parse_scope("invalid");
-        assert!(result.is_err());
+        parse_scope("invalid").unwrap_err();
     }
 
     #[test]
     fn parse_scope_invalid_resource_type() {
-        let result = parse_scope("image:myrepo:pull");
-        assert!(result.is_err());
+        parse_scope("image:myrepo:pull").unwrap_err();
     }
 
     #[test]
     fn parse_scope_invalid_action() {
-        let result = parse_scope("repository:myrepo:delete");
-        assert!(result.is_err());
+        parse_scope("repository:myrepo:delete").unwrap_err();
     }
 
     #[test]

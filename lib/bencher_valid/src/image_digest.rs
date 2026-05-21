@@ -172,8 +172,7 @@ mod tests {
 
     #[test]
     fn parse_invalid_digest() {
-        let result: Result<super::ImageDigest, _> = "invalid".parse();
-        assert!(result.is_err());
+        "invalid".parse::<super::ImageDigest>().unwrap_err();
     }
 
     #[test]

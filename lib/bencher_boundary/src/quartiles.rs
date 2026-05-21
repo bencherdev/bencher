@@ -60,7 +60,8 @@ impl Quartiles {
         clippy::cast_possible_truncation,
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,
-        clippy::indexing_slicing
+        clippy::indexing_slicing,
+        reason = "percentile math requires casts; index is bounds-checked by logic"
     )]
     // https://doc.rust-lang.org/1.75.0/src/test/stats.rs.html#260
     fn percentile_of_sorted(sorted_data: &[f64], percentile: f64) -> Option<f64> {
@@ -88,7 +89,11 @@ impl Quartiles {
     // https://github.com/rust-lang/rustc-perf/blob/4f313add609f43e928e98132358e8426ed3969ae/site/src/comparison.rs#L1219
     fn percent_changes(data: &[f64]) -> Vec<f64> {
         const WINDOW_SIZE: usize = 2;
-        #[expect(clippy::indexing_slicing, clippy::missing_asserts_for_indexing)]
+        #[expect(
+            clippy::indexing_slicing,
+            clippy::missing_asserts_for_indexing,
+            reason = "windows guarantees WINDOW_SIZE elements; assert is inside map"
+        )]
         let mut changes = data
             .windows(WINDOW_SIZE)
             .map(|window| {
@@ -110,7 +115,11 @@ impl Quartiles {
 }
 
 #[cfg(test)]
-#[expect(clippy::float_cmp, clippy::unreadable_literal)]
+#[expect(
+    clippy::float_cmp,
+    clippy::unreadable_literal,
+    reason = "exact float equality and literal values are intended in tests"
+)]
 mod tests {
     use std::sync::LazyLock;
 

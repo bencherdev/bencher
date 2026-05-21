@@ -152,7 +152,10 @@ impl QueryAlert {
         )
     }
 
-    #[expect(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "alert JSON requires full report context"
+    )]
     pub fn into_json_for_report(
         self,
         conn: &mut DbConnection,
@@ -305,7 +308,10 @@ mod tests {
 
     /// Helper to create the full entity chain needed for an alert.
     /// Returns the alert id and the report id.
-    #[expect(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "test helper builds full entity chain"
+    )]
     fn create_alert_chain(
         conn: &mut diesel::SqliteConnection,
         base_project_id: ProjectId,
@@ -380,7 +386,7 @@ mod tests {
     }
 
     #[test]
-    #[expect(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "test requires extensive setup")]
     fn silence_all_updates_all_alerts_for_head() {
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
@@ -527,7 +533,7 @@ mod tests {
     }
 
     #[test]
-    #[expect(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "test requires extensive setup")]
     fn silence_all_ignores_other_heads() {
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);

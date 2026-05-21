@@ -73,7 +73,10 @@ impl RunnerTest {
         }
     }
 
-    #[expect(clippy::too_many_lines)]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "integration test exercises full daemon workflow"
+    )]
     fn exec_with_daemon(&self) -> anyhow::Result<()> {
         if !docker_available() {
             println!("Skipping runner test: Docker not available");
@@ -300,6 +303,7 @@ pub fn docker_available() -> bool {
 
 /// Run the runner smoke test: pull a prebuilt image, push it to the API's OCI
 /// registry via Docker, then submit a job with `bencher run --image`.
+#[expect(clippy::panic_in_result_fn, reason = "test harness")]
 pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> anyhow::Result<()> {
     let host = url.as_ref();
 
@@ -400,6 +404,7 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> an
 ///
 /// Similar to `run_runner_test` but submits to the `no-sandbox-spec` spec
 /// which does not use Firecracker sandboxing.
+#[expect(clippy::panic_in_result_fn, reason = "test harness")]
 fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     let host = url.as_ref();
 
@@ -565,6 +570,7 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 ///
 /// Creates a project key, logs into Docker with the project slug as username
 /// and the key as password, pushes the image, and submits a job via `bencher run --key`.
+#[expect(clippy::panic_in_result_fn, reason = "test harness")]
 fn run_project_key_runner_test(url: &Url, admin_token: &Jwt, spec: &str) -> anyhow::Result<()> {
     let host = url.as_ref();
 
@@ -669,6 +675,7 @@ fn run_project_key_runner_test(url: &Url, admin_token: &Jwt, spec: &str) -> anyh
 
 /// Run the image-only runner smoke test: the image's ENTRYPOINT already
 /// includes the benchmark command (`bencher mock`), so no `--exec` is needed.
+#[expect(clippy::panic_in_result_fn, reason = "test harness")]
 fn run_image_only_runner_test(
     url: &Url,
     username: &str,

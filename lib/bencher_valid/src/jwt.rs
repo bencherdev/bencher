@@ -25,7 +25,7 @@ const TEST_ADMIN_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1
 const TEST_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
 
 #[cfg(debug_assertions)]
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "constant test token is known valid")]
 static TEST_ADMIN_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
     TEST_ADMIN_BENCHER_API_TOKEN_STR
         .parse()
@@ -33,7 +33,7 @@ static TEST_ADMIN_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
 });
 
 #[cfg(debug_assertions)]
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "constant test token is known valid")]
 static TEST_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
     TEST_BENCHER_API_TOKEN_STR
         .parse()
@@ -193,7 +193,6 @@ mod tests {
         let json = serde_json::to_string(&jwt).unwrap();
         assert_eq!(json, json_str);
 
-        let err = serde_json::from_str::<Jwt>("\"not-a-jwt\"");
-        assert!(err.is_err());
+        serde_json::from_str::<Jwt>("\"not-a-jwt\"").unwrap_err();
     }
 }

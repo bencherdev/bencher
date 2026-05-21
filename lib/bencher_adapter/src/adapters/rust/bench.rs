@@ -238,7 +238,10 @@ pub(crate) mod test_rust_bench {
     }
 
     #[test]
-    #[expect(clippy::unreadable_literal)]
+    #[expect(
+        clippy::unreadable_literal,
+        reason = "literals match raw benchmark output values"
+    )]
     fn issue_390() {
         let results = convert_rust_bench("issue_390");
         assert_eq!(results.inner.len(), 4);

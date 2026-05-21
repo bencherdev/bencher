@@ -171,7 +171,9 @@ mod tests {
             BenchmarkName::MAX_LEN + 1
         );
 
-        assert!(benchmark_name.try_push('.', &other_benchmark_name).is_err());
+        benchmark_name
+            .try_push('.', &other_benchmark_name)
+            .unwrap_err();
         assert_eq!(benchmark_name_len, benchmark_name.0.len());
         assert_eq!(other_benchmark_name_len, other_benchmark_name.0.len());
     }
@@ -266,7 +268,6 @@ mod tests {
         let json = serde_json::to_string(&name).unwrap();
         assert_eq!(json, "\"my benchmark\"");
 
-        let err = serde_json::from_str::<BenchmarkName>("\"\"");
-        assert!(err.is_err());
+        serde_json::from_str::<BenchmarkName>("\"\"").unwrap_err();
     }
 }

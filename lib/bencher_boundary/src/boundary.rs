@@ -90,7 +90,10 @@ impl MetricsBoundary {
                 log,
                 datum,
                 data,
-                #[expect(clippy::cast_precision_loss)]
+                #[expect(
+                    clippy::cast_precision_loss,
+                    reason = "sample size as f64 is fine for stats"
+                )]
                 NormalTestKind::T {
                     sample_size: data.len() as f64,
                 },

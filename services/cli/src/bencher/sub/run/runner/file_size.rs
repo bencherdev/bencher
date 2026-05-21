@@ -56,7 +56,10 @@ impl FileSize {
                 .unwrap_or(file_path.as_str())
                 .parse()
                 .map_err(RunError::OutputFileName)?;
-            #[expect(clippy::cast_precision_loss)]
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "file size u64 to f64 is acceptable precision"
+            )]
             let value = (std::fs::metadata(file_path)
                 .map(|m| m.len())
                 .map_err(RunError::OutputFileSize)? as f64)

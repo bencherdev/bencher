@@ -26,9 +26,8 @@
 #![cfg(test)]
 #![cfg(feature = "plus")]
 // Test files link main crate dependencies even when not directly used
-#![expect(unused_crate_dependencies)]
-// Tests use print statements for user-facing output
-#![expect(clippy::print_stdout, clippy::print_stderr)]
+#![expect(unused_crate_dependencies, reason = "test binary has different deps")]
+#![expect(clippy::print_stdout, clippy::print_stderr, reason = "test output")]
 
 use std::net::TcpStream;
 

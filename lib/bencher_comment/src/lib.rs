@@ -664,7 +664,10 @@ impl ReportComment {
         })
     }
 
-    #[cfg_attr(not(feature = "plus"), expect(clippy::unused_self))]
+    #[cfg_attr(
+        not(feature = "plus"),
+        expect(clippy::unused_self, reason = "self used only with plus feature")
+    )]
     fn is_bencher_cloud(&self) -> bool {
         #[cfg(feature = "plus")]
         {

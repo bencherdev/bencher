@@ -110,7 +110,6 @@ mod tests {
         let json = serde_json::to_string(&url).unwrap();
         assert_eq!(json, "\"https://example.com\"");
 
-        let err = serde_json::from_str::<Url>("\"not a url\"");
-        assert!(err.is_err());
+        serde_json::from_str::<Url>("\"not a url\"").unwrap_err();
     }
 }

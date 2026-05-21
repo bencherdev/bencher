@@ -4,7 +4,8 @@
     clippy::print_stdout,
     clippy::unwrap_used,
     clippy::unwrap_in_result,
-    clippy::use_debug
+    clippy::use_debug,
+    reason = "test harness binary"
 )]
 
 mod parser;

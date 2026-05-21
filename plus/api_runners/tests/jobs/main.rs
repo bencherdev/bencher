@@ -1,4 +1,8 @@
-#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    reason = "integration test file"
+)]
 //! Integration tests for runner agent job endpoints.
 //!
 //! Note: These tests require a job to exist in the database.
@@ -2018,7 +2022,10 @@ async fn mixed_tier_free_blocked_enterprise_claimable() {
 
 // Claiming an organization upgrades pending Unclaimed jobs to Free priority.
 #[tokio::test]
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "integration test with sequential setup steps"
+)]
 async fn claim_upgrades_pending_job_priority() {
     use bencher_json::{DateTime, JobStatus, OrganizationSlug, OrganizationUuid, ProjectUuid};
     use bencher_schema::schema;

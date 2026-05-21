@@ -3,9 +3,9 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
-    clippy::indexing_slicing,
     clippy::expect_used,
-    clippy::too_many_lines
+    clippy::too_many_lines,
+    reason = "integration test file"
 )]
 //! Integration tests for OCI manifest endpoints.
 

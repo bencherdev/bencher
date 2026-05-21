@@ -34,7 +34,7 @@ const SERVER_ID: ServerId = ServerId(1);
 
 const LICENSE_GRACE_PERIOD: usize = 7;
 
-#[expect(clippy::panic)]
+#[expect(clippy::panic, reason = "valid constant URL with known path")]
 static BENCHER_STATS_API_URL: LazyLock<Url> = LazyLock::new(|| {
     BENCHER_API_URL
         .clone()

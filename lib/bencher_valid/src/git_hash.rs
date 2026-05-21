@@ -101,7 +101,6 @@ mod tests {
         let json = serde_json::to_string(&hash).unwrap();
         assert_eq!(json, "\"1234567890abcdefaaaaaaaaaaaaaaaaaaaaaaaa\"");
 
-        let err = serde_json::from_str::<GitHash>("\"abcd\"");
-        assert!(err.is_err());
+        serde_json::from_str::<GitHash>("\"abcd\"").unwrap_err();
     }
 }

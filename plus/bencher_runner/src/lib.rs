@@ -12,7 +12,10 @@
 // Suppress unused crate warnings on non-Linux or without plus
 #![cfg_attr(
     any(not(target_os = "linux"), not(feature = "plus")),
-    allow(unused_crate_dependencies)
+    allow(
+        unused_crate_dependencies,
+        reason = "conditional compilation excludes dependents"
+    )
 )]
 
 #[cfg(feature = "plus")]

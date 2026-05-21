@@ -627,7 +627,6 @@ fn build_terminal_message(
 }
 
 #[cfg(test)]
-#[expect(clippy::indexing_slicing)]
 mod tests {
     use bencher_valid::{Architecture, OperatingSystem};
 

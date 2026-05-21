@@ -17,7 +17,10 @@ impl Ln {
 }
 
 #[cfg(test)]
-#[expect(clippy::unreadable_literal)]
+#[expect(
+    clippy::unreadable_literal,
+    reason = "float literals are test expected values"
+)]
 mod tests {
     use pretty_assertions::assert_eq;
 

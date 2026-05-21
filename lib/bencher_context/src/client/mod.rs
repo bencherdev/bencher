@@ -26,7 +26,10 @@ impl RunContext {
     }
 }
 
-#[expect(clippy::implicit_hasher)]
+#[expect(
+    clippy::implicit_hasher,
+    reason = "concrete HashMap type matches internal storage"
+)]
 impl From<RunContext> for HashMap<String, String> {
     fn from(context: RunContext) -> Self {
         context.0

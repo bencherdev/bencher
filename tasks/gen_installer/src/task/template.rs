@@ -73,7 +73,10 @@ impl TryFrom<TaskTemplate> for Template {
 }
 
 impl Template {
-    #[expect(clippy::use_debug)]
+    #[expect(
+        clippy::use_debug,
+        reason = "debug-prints template context for diagnostics"
+    )]
     pub fn exec(&self) -> anyhow::Result<()> {
         for &template_kind in &self.templates {
             let template = self.env.get_template(template_kind.template_file())?;
@@ -184,7 +187,10 @@ pub struct TemplateArtifact {
 
 type TargetTriple = String;
 
-#[expect(dead_code)]
+#[expect(
+    dead_code,
+    reason = "variants used only in serialization via Serialize impl"
+)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ZipStyle {
     /// `.zip`
@@ -195,7 +201,7 @@ pub enum ZipStyle {
     TempDir,
 }
 
-#[expect(dead_code)]
+#[expect(dead_code, reason = "variants used only in serialization via ZipStyle")]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum CompressionImpl {
     /// `.gz`

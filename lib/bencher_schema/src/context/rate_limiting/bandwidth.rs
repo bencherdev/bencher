@@ -169,8 +169,9 @@ mod tests {
             .unwrap();
 
         limiter.record_at(org_uuid, 600, now);
-        let result = limiter.check_at(org_uuid, Priority::Unclaimed, &org, now);
-        assert!(result.is_err());
+        limiter
+            .check_at(org_uuid, Priority::Unclaimed, &org, now)
+            .unwrap_err();
     }
 
     #[test]
@@ -188,21 +189,15 @@ mod tests {
 
         limiter.record_at(org_uuid, 500, now);
 
-        assert!(
-            limiter
-                .check_at(org_uuid, Priority::Unclaimed, &org, now)
-                .is_err()
-        );
-        assert!(
-            limiter
-                .check_at(org_uuid, Priority::Free, &org, now)
-                .is_ok()
-        );
-        assert!(
-            limiter
-                .check_at(org_uuid, Priority::Plus, &org, now)
-                .is_ok()
-        );
+        limiter
+            .check_at(org_uuid, Priority::Unclaimed, &org, now)
+            .unwrap_err();
+        limiter
+            .check_at(org_uuid, Priority::Free, &org, now)
+            .unwrap();
+        limiter
+            .check_at(org_uuid, Priority::Plus, &org, now)
+            .unwrap();
     }
 
     #[test]

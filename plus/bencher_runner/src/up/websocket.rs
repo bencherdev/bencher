@@ -231,7 +231,6 @@ fn set_read_timeout(
 }
 
 #[cfg(test)]
-#[expect(clippy::indexing_slicing, reason = "Test assertions on JSON values")]
 mod tests {
     use std::collections::BTreeMap;
 
@@ -374,20 +373,17 @@ mod tests {
 
     #[test]
     fn unknown_event_fails() {
-        let result = serde_json::from_str::<ServerMessage>(r#"{"event":"unknown"}"#);
-        assert!(result.is_err());
+        serde_json::from_str::<ServerMessage>(r#"{"event":"unknown"}"#).unwrap_err();
     }
 
     #[test]
     fn missing_event_field_fails() {
-        let result = serde_json::from_str::<ServerMessage>(r#"{"type":"ack"}"#);
-        assert!(result.is_err());
+        serde_json::from_str::<ServerMessage>(r#"{"type":"ack"}"#).unwrap_err();
     }
 
     #[test]
     fn empty_json_fails() {
-        let result = serde_json::from_str::<ServerMessage>("{}");
-        assert!(result.is_err());
+        serde_json::from_str::<ServerMessage>("{}").unwrap_err();
     }
 
     // --- Host header construction ---

@@ -89,7 +89,7 @@ fn is_valid_runner_key(key: &str) -> bool {
 }
 
 #[cfg(test)]
-#[expect(clippy::string_slice)]
+#[expect(clippy::string_slice, reason = "test strings have known ASCII content")]
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
@@ -128,8 +128,7 @@ mod tests {
         let serialized = serde_json::to_string(&key).unwrap();
         assert_eq!(serialized, json);
 
-        let err = serde_json::from_str::<RunnerKey>("\"invalid\"");
-        assert!(err.is_err());
+        serde_json::from_str::<RunnerKey>("\"invalid\"").unwrap_err();
     }
 
     #[cfg(feature = "server")]

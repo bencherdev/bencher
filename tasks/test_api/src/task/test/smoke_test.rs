@@ -159,6 +159,7 @@ fn api_run() -> anyhow::Result<Child> {
     Ok(child)
 }
 
+#[expect(clippy::panic_in_result_fn, reason = "test harness")]
 fn bencher_up() -> anyhow::Result<()> {
     // Use the `latest`` image tag so this test doesn't fail when releasing a new version.
     let status = Command::new("cargo")
@@ -175,6 +176,7 @@ fn bencher_up() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[expect(clippy::panic_in_result_fn, reason = "test harness")]
 fn bencher_down() -> anyhow::Result<()> {
     let status = Command::new("cargo")
         .args(["run", "--", "down", "api"])

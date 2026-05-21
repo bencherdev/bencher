@@ -15,7 +15,10 @@ crate::typed_uuid::typed_uuid!(PlotUuid);
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[expect(clippy::struct_excessive_bools)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "plot display flags are independent toggles"
+)]
 pub struct JsonNewPlot {
     /// The index of the plot.
     /// Maximum index is 64.
@@ -59,7 +62,10 @@ crate::from_vec!(JsonPlots[JsonPlot]);
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[expect(clippy::struct_excessive_bools)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "plot display flags are independent toggles"
+)]
 pub struct JsonPlot {
     pub uuid: PlotUuid,
     pub project: ProjectUuid,

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ValidError, error::REGEX_ERROR};
 
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "regex is a constant and known valid")]
 static LAST_FOUR_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new("^[[:digit:]]{4}$").expect(REGEX_ERROR));
 
@@ -104,7 +104,6 @@ mod tests {
         let json = serde_json::to_string(&last_four).unwrap();
         assert_eq!(json, "\"1234\"");
 
-        let err = serde_json::from_str::<LastFour>("\"XXXX\"");
-        assert!(err.is_err());
+        serde_json::from_str::<LastFour>("\"XXXX\"").unwrap_err();
     }
 }

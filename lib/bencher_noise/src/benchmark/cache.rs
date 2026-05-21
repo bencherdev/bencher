@@ -12,11 +12,14 @@ const CACHE_LINE_SIZE: usize = 64;
 pub fn run_cache_benchmark(duration: Duration, l3_size: Option<usize>) -> BenchmarkResult {
     let cache_size = l3_size.unwrap_or(DEFAULT_L3_SIZE);
     // Use 75% of L3 cache, rounded to cache line boundary
-    #[expect(clippy::integer_division)]
+    #[expect(
+        clippy::integer_division,
+        reason = "75% of cache size, truncation is fine"
+    )]
     let array_bytes = cache_size * 3 / 4;
-    #[expect(clippy::integer_division)]
+    #[expect(clippy::integer_division, reason = "aligning to cache line boundary")]
     let array_size = array_bytes / CACHE_LINE_SIZE * CACHE_LINE_SIZE;
-    #[expect(clippy::integer_division)]
+    #[expect(clippy::integer_division, reason = "converting bytes to element count")]
     let num_elements = array_size / size_of::<u64>();
 
     // Allocate and initialize the array

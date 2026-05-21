@@ -325,7 +325,10 @@ const DOCKER_LAYER_GZIP: &str = "application/vnd.docker.image.rootfs.diff.tar.gz
 const DOCKER_LAYER_TAR: &str = "application/vnd.docker.image.rootfs.diff.tar";
 
 /// Detect the media type of a layer.
-#[expect(clippy::wildcard_enum_match_arm)]
+#[expect(
+    clippy::wildcard_enum_match_arm,
+    reason = "unknown media types are rejected as unsupported"
+)]
 pub fn detect_layer_media_type(media_type: &MediaType) -> Result<LayerCompression, OciError> {
     match media_type {
         MediaType::ImageLayerGzip | MediaType::ImageLayerNonDistributableGzip => {
@@ -342,7 +345,6 @@ pub fn detect_layer_media_type(media_type: &MediaType) -> Result<LayerCompressio
 }
 
 #[cfg(test)]
-#[expect(clippy::indexing_slicing, reason = "test code")]
 mod tests {
     use super::*;
     use camino::Utf8Path;
@@ -364,43 +366,43 @@ mod tests {
     #[test]
     fn digest_rejects_traversal_in_algorithm() {
         let dir = Utf8Path::new("/oci");
-        assert!(digest_to_blob_path(dir, "../etc:passwd").is_err());
+        digest_to_blob_path(dir, "../etc:passwd").unwrap_err();
     }
 
     #[test]
     fn digest_rejects_traversal_in_hex() {
         let dir = Utf8Path::new("/oci");
-        assert!(digest_to_blob_path(dir, "sha256:../../etc/passwd").is_err());
+        digest_to_blob_path(dir, "sha256:../../etc/passwd").unwrap_err();
     }
 
     #[test]
     fn digest_rejects_slash_in_algorithm() {
         let dir = Utf8Path::new("/oci");
-        assert!(digest_to_blob_path(dir, "sha256/../../blobs:abc").is_err());
+        digest_to_blob_path(dir, "sha256/../../blobs:abc").unwrap_err();
     }
 
     #[test]
     fn digest_rejects_no_colon() {
         let dir = Utf8Path::new("/oci");
-        assert!(digest_to_blob_path(dir, "sha256abcdef").is_err());
+        digest_to_blob_path(dir, "sha256abcdef").unwrap_err();
     }
 
     #[test]
     fn digest_rejects_empty_algorithm() {
         let dir = Utf8Path::new("/oci");
-        assert!(digest_to_blob_path(dir, ":abcdef").is_err());
+        digest_to_blob_path(dir, ":abcdef").unwrap_err();
     }
 
     #[test]
     fn digest_rejects_empty_hex() {
         let dir = Utf8Path::new("/oci");
-        assert!(digest_to_blob_path(dir, "sha256:").is_err());
+        digest_to_blob_path(dir, "sha256:").unwrap_err();
     }
 
     #[test]
     fn digest_rejects_non_hex_chars() {
         let dir = Utf8Path::new("/oci");
-        assert!(digest_to_blob_path(dir, "sha256:xyz123").is_err());
+        digest_to_blob_path(dir, "sha256:xyz123").unwrap_err();
     }
 
     #[test]
@@ -573,6 +575,6 @@ mod tests {
     #[test]
     fn detect_layer_unknown_rejected() {
         let media_type = MediaType::Other("application/vnd.unknown.layer".to_owned());
-        assert!(detect_layer_media_type(&media_type).is_err());
+        detect_layer_media_type(&media_type).unwrap_err();
     }
 }

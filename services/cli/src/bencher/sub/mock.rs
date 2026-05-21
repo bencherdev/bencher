@@ -24,7 +24,7 @@ pub struct Mock {
     pub seed: Option<u64>,
 }
 
-#[expect(clippy::absolute_paths)]
+#[expect(clippy::absolute_paths, reason = "error variants wrap external types")]
 #[derive(thiserror::Error, Debug)]
 pub enum MockError {
     #[error("Failed to generate uniform distribution: {0}")]
@@ -83,7 +83,10 @@ impl Mock {
         }
     }
 
-    #[expect(clippy::cast_precision_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "count index to f64 is fine for mock data"
+    )]
     fn generate_results(&self) -> Result<AdapterResults, MockError> {
         let count = self.count.unwrap_or(DEFAULT_COUNT);
         let pow = self.pow.unwrap_or(1);

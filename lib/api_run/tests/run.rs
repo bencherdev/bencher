@@ -3,8 +3,8 @@
     unused_crate_dependencies,
     clippy::decimal_literal_representation,
     clippy::expect_used,
-    clippy::indexing_slicing,
-    clippy::tests_outside_test_module
+    clippy::tests_outside_test_module,
+    reason = "integration test file"
 )]
 
 use bencher_api_tests::TestServer;

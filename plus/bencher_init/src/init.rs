@@ -1,6 +1,6 @@
 //! Linux init implementation.
 
-#![expect(unsafe_code)]
+#![expect(unsafe_code, reason = "Linux init requires direct syscalls")]
 
 use std::ffi::CString;
 use std::fs::{self, File};

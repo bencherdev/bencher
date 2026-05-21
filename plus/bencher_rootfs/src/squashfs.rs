@@ -56,7 +56,10 @@ pub fn create_squashfs(source_dir: &Utf8Path, output_path: &Utf8Path) -> Result<
 }
 
 /// Recursively add a directory and its contents to the filesystem writer.
-#[expect(clippy::filetype_is_file)]
+#[expect(
+    clippy::filetype_is_file,
+    reason = "distinguishing files from symlinks and dirs"
+)]
 fn add_directory_recursive(
     writer: &mut FilesystemWriter,
     source_dir: &Utf8Path,

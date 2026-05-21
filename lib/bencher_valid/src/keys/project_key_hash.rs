@@ -48,23 +48,19 @@ mod tests {
 
     #[test]
     fn valid() {
-        assert!(VALID_HEX.parse::<ProjectKeyHash>().is_ok());
-        assert!(
-            "a".repeat(super::super::SHA256_HEX_LEN)
-                .parse::<ProjectKeyHash>()
-                .is_ok()
-        );
+        VALID_HEX.parse::<ProjectKeyHash>().unwrap();
+        "a".repeat(super::super::SHA256_HEX_LEN)
+            .parse::<ProjectKeyHash>()
+            .unwrap();
     }
 
     #[test]
     fn invalid() {
-        assert!("".parse::<ProjectKeyHash>().is_err());
-        assert!("abc123".parse::<ProjectKeyHash>().is_err());
-        assert!(
-            "g".repeat(super::super::SHA256_HEX_LEN)
-                .parse::<ProjectKeyHash>()
-                .is_err()
-        );
+        "".parse::<ProjectKeyHash>().unwrap_err();
+        "abc123".parse::<ProjectKeyHash>().unwrap_err();
+        "g".repeat(super::super::SHA256_HEX_LEN)
+            .parse::<ProjectKeyHash>()
+            .unwrap_err();
     }
 
     #[test]

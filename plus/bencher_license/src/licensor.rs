@@ -232,16 +232,12 @@ mod tests {
         let entitlements = 1_000.try_into().unwrap();
 
         for plan_level in [PlanLevel::Free, PlanLevel::Team, PlanLevel::Enterprise] {
-            assert!(
-                licensor
-                    .new_monthly_license(organization, plan_level, entitlements)
-                    .is_err()
-            );
-            assert!(
-                licensor
-                    .new_annual_license(organization, plan_level, entitlements)
-                    .is_err()
-            );
+            licensor
+                .new_monthly_license(organization, plan_level, entitlements)
+                .unwrap_err();
+            licensor
+                .new_annual_license(organization, plan_level, entitlements)
+                .unwrap_err();
         }
     }
 

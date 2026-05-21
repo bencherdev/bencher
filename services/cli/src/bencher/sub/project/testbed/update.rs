@@ -12,7 +12,13 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "plus", expect(clippy::option_option))]
+#[cfg_attr(
+    feature = "plus",
+    expect(
+        clippy::option_option,
+        reason = "None = not specified, Some(None) = explicitly unset"
+    )
+)]
 pub struct Update {
     pub project: ProjectResourceId,
     pub testbed: TestbedResourceId,

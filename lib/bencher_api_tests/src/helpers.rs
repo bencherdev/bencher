@@ -11,13 +11,13 @@ use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use crate::TestServer;
 
 /// Fixed base timestamp for deterministic tests (Unix epoch + 1 billion seconds).
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper creating fixed timestamp")]
 pub fn base_timestamp() -> DateTime {
     DateTime::try_from(1_000_000_000i64).expect("valid timestamp")
 }
 
 /// Get `project_id` from project slug.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper querying project ID")]
 pub fn get_project_id(server: &TestServer, project_slug: &str) -> i32 {
     let mut conn = server.db_conn();
     schema::project::table
@@ -30,7 +30,10 @@ pub fn get_project_id(server: &TestServer, project_slug: &str) -> i32 {
 
 /// Create minimal test infrastructure (testbed, version, branch, head, report).
 /// Returns the report ID. Uses a deterministic timestamp.
-#[expect(clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "test helper inserting test infrastructure"
+)]
 pub fn create_test_report(server: &TestServer, project_id: i32) -> i32 {
     let mut conn = server.db_conn();
     let now = base_timestamp();
@@ -125,7 +128,7 @@ pub fn create_test_report(server: &TestServer, project_id: i32) -> i32 {
 }
 
 /// Set job status directly in the database.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper updating job status")]
 pub fn set_job_status(server: &TestServer, job_uuid: JobUuid, status: JobStatus) {
     let mut conn = server.db_conn();
     diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))

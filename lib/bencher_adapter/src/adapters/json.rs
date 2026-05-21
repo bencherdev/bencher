@@ -70,7 +70,6 @@ pub(crate) mod test_json {
     }
 
     #[test]
-    #[expect(clippy::indexing_slicing)]
     fn adapter_json_bmf_mixed() {
         let results = convert_json("bmf_mixed");
         assert_eq!(results.inner.len(), 3);

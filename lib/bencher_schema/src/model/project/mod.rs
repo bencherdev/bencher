@@ -52,7 +52,7 @@ pub mod threshold;
 
 crate::macros::typed_id::typed_id!(ProjectId);
 
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "valid constant regex")]
 static UNIQUE_SUFFIX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\((\d+)\)$").expect("Failed to create regex for unique project suffix")
 });

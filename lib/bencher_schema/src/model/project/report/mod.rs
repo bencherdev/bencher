@@ -457,7 +457,7 @@ impl QueryReport {
     ///
     /// Shared between `create()` (local runs) and `handle_completed()` (job-based runs).
     /// Includes plan usage tracking and validation.
-    #[expect(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "cfg features add extra params")]
     pub async fn process_results(
         &self,
         log: &Logger,

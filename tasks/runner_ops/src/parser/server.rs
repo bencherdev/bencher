@@ -7,7 +7,10 @@ use serde::Deserialize;
 type Servers = BTreeMap<RunnerResourceId, Server>;
 
 #[derive(Debug, Deserialize)]
-#[expect(clippy::struct_field_names)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "server field mirrors config key name"
+)]
 pub struct Server {
     pub server: String,
     pub ssh: Option<Utf8PathBuf>,

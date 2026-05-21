@@ -134,7 +134,8 @@ pub(super) fn get_stats(
 #[expect(
     clippy::cast_precision_loss,
     clippy::indexing_slicing,
-    clippy::integer_division
+    clippy::integer_division,
+    reason = "median math on small sorted arrays"
 )]
 fn median(array: &mut [i64]) -> f64 {
     if array.is_empty() {

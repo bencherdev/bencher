@@ -26,19 +26,19 @@ pub fn format_report(
         let vtype = platform
             .virtualization_type
             .map_or("Unknown", VirtualizationType::label);
-        let _ = write!(report, "  Platform:          VM ({vtype})");
+        _ = write!(report, "  Platform:          VM ({vtype})");
     } else {
         report.push_str("  Platform:          Native");
     }
     report.push('\n');
-    let _ = write!(report, "  Duration:          {duration_secs}s");
+    _ = write!(report, "  Duration:          {duration_secs}s");
     report.push('\n');
 
     // Cache sizes
     let l1d = format_cache_size(platform.cache_sizes.l1d);
     let l2 = format_cache_size(platform.cache_sizes.l2);
     let l3 = format_cache_size(platform.cache_sizes.l3);
-    let _ = write!(
+    _ = write!(
         report,
         "  CPU Caches:        L1d: {l1d} | L2: {l2} | L3: {l3}"
     );
@@ -55,19 +55,19 @@ pub fn format_report(
         let steal_level = cpu_steal_level(steal);
         let bar = noise_bar(steal, 50.0);
         let label = steal_level.label();
-        let _ = write!(report, "  CPU Steal:         {steal:.1}%  {bar}  {label}");
+        _ = write!(report, "  CPU Steal:         {steal:.1}%  {bar}  {label}");
         report.push('\n');
     }
 
     // Context switches
     if let Some(rate) = platform.context_switch_rate {
-        let _ = write!(report, "  Context Switches:  {rate:.0}/s");
+        _ = write!(report, "  Context Switches:  {rate:.0}/s");
         report.push('\n');
     }
 
     report.push('\n');
     let label = level.label();
-    let _ = write!(report, "  Noise Score:       {noise_score:.0} dB  {label}");
+    _ = write!(report, "  Noise Score:       {noise_score:.0} dB  {label}");
     report.push('\n');
     report.push_str("========================================\n");
 
@@ -81,14 +81,14 @@ pub fn format_report(
             report.push_str("  Your environment is quiet. Benchmark results should be reliable.\n");
         },
         NoiseLevel::Moderate => {
-            let _ = write!(
+            _ = write!(
                 report,
                 "  Your environment has moderate noise.\n  Benchmarks may vary +/-{max_cov:.1}% between runs."
             );
             report.push('\n');
         },
         NoiseLevel::Noisy | NoiseLevel::VeryNoisy => {
-            let _ = write!(
+            _ = write!(
                 report,
                 "  Your environment has significant benchmark noise.\n  Benchmarks here may vary +/-{max_cov:.1}% between runs."
             );
@@ -108,7 +108,7 @@ fn format_benchmark_line(report: &mut String, label: &str, result: &BenchmarkRes
     let level_label = level.label();
     let cov = result.cov_percent;
     let iters = result.iterations;
-    let _ = write!(
+    _ = write!(
         report,
         "  {label:<19}{cov:.1}% CoV  {bar}  {level_label}  ({iters} samples, mean {mean_us:.0}us, stddev {stddev_us:.0}us, p99 {p99_us:.0}us)"
     );
@@ -118,7 +118,8 @@ fn format_benchmark_line(report: &mut String, label: &str, result: &BenchmarkRes
 #[expect(
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    reason = "bar width arithmetic from small display constants"
 )]
 fn noise_bar(value: f64, max: f64) -> String {
     let width: usize = 20;
@@ -128,7 +129,7 @@ fn noise_bar(value: f64, max: f64) -> String {
     format!("{}{}", "#".repeat(filled), "-".repeat(empty))
 }
 
-#[expect(clippy::integer_division)]
+#[expect(clippy::integer_division, reason = "converting bytes to KB/MB units")]
 fn format_cache_size(size: Option<usize>) -> String {
     match size {
         Some(s) if s >= 1024 * 1024 => format!("{}MB", s / (1024 * 1024)),

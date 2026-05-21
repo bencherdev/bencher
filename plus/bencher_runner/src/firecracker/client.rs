@@ -1,5 +1,9 @@
 //! Minimal HTTP/1.1 client for Firecracker's REST API over Unix socket.
-#![expect(clippy::print_stderr, clippy::indexing_slicing)]
+#![expect(
+    clippy::print_stderr,
+    clippy::indexing_slicing,
+    reason = "low-level HTTP client for Firecracker socket API"
+)]
 
 use std::io::{Read as _, Write as _};
 use std::os::unix::net::UnixStream;
@@ -340,8 +344,7 @@ mod tests {
 
     #[test]
     fn parse_http_empty_response_errors() {
-        let result = parse_http_response(b"");
-        assert!(result.is_err());
+        parse_http_response(b"").unwrap_err();
     }
 
     #[test]

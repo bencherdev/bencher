@@ -246,7 +246,6 @@ impl BucketedEvents {
 }
 
 #[cfg(test)]
-#[expect(clippy::indexing_slicing)]
 mod tests {
     use std::time::Duration;
 

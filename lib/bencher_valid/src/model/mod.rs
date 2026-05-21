@@ -230,33 +230,27 @@ mod tests {
 
     #[test]
     fn percentage_accepts_sample_size_of_one() {
-        assert!(
-            validate_test_sample_size(
-                ModelTest::Percentage,
-                Some(SampleSize::MIN),
-                Some(SampleSize::MIN),
-            )
-            .is_ok(),
-        );
-        assert!(validate_model(percentage_model(None, Some(SampleSize::MIN))).is_ok());
-        assert!(
-            validate_model(percentage_model(
-                Some(SampleSize::MIN),
-                Some(SampleSize::MIN)
-            ))
-            .is_ok(),
-        );
+        validate_test_sample_size(
+            ModelTest::Percentage,
+            Some(SampleSize::MIN),
+            Some(SampleSize::MIN),
+        )
+        .unwrap();
+        validate_model(percentage_model(None, Some(SampleSize::MIN))).unwrap();
+        validate_model(percentage_model(
+            Some(SampleSize::MIN),
+            Some(SampleSize::MIN),
+        ))
+        .unwrap();
     }
 
     #[test]
     fn percentage_accepts_sample_size_of_two() {
-        assert!(
-            validate_model(percentage_model(
-                Some(SampleSize::TWO),
-                Some(SampleSize::TWO)
-            ))
-            .is_ok(),
-        );
+        validate_model(percentage_model(
+            Some(SampleSize::TWO),
+            Some(SampleSize::TWO),
+        ))
+        .unwrap();
     }
 
     #[test]
@@ -293,7 +287,7 @@ mod tests {
 
     #[test]
     fn t_test_accepts_sample_size_of_two() {
-        assert!(validate_model(t_test_model(Some(SampleSize::TWO), Some(SampleSize::TWO))).is_ok(),);
+        validate_model(t_test_model(Some(SampleSize::TWO), Some(SampleSize::TWO))).unwrap();
     }
 
     #[test]

@@ -32,7 +32,10 @@ const FULL_NAME: &str = "full_name";
 //     - https://docs.github.com/en/graphql/reference/input-objects#addcommentinput
 const MAX_LENGTH: usize = 1 << 16;
 
-#[expect(clippy::struct_excessive_bools)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each bool is an independent CI flag"
+)]
 #[derive(Debug)]
 pub struct GitHubActions {
     pub token: String,

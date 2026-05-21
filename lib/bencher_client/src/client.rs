@@ -14,7 +14,10 @@ const DEFAULT_ATTEMPTS: usize = 35;
 const DEFAULT_RETRY_AFTER: u64 = 1;
 const DEFAULT_MAX_RETRY_AFTER: u64 = 30;
 
-#[expect(clippy::struct_excessive_bools)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "client config flags are independent options"
+)]
 /// A client for the Bencher API
 #[derive(Debug, Clone)]
 pub struct BencherClient {
@@ -158,7 +161,10 @@ impl BencherClient {
         let max_attempts = attempts.saturating_sub(1);
         let mut retry_after = self.retry_after.min(self.max_retry_after);
 
-        #[expect(clippy::print_stderr)]
+        #[expect(
+            clippy::print_stderr,
+            reason = "CLI retry loop reports errors to stderr"
+        )]
         for attempt in 0..attempts {
             let err = match sender(client.clone()).await {
                 Ok(response_value) => {
@@ -320,7 +326,10 @@ impl BencherClient {
     }
 
     fn log_str(&self, err: &str) {
-        #[expect(clippy::print_stdout)]
+        #[expect(
+            clippy::print_stdout,
+            reason = "CLI logging outputs directly to stdout"
+        )]
         if self.log {
             println!("{err}");
         }
@@ -339,7 +348,7 @@ pub struct ErrorResponse {
 impl std::fmt::Display for ErrorResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Status: {}", self.status)?;
-        #[expect(clippy::use_debug)]
+        #[expect(clippy::use_debug, reason = "HeaderMap has no Display impl")]
         writeln!(f, "Headers: {:?}", self.headers)?;
         writeln!(f, "Request ID: {}", self.request_id)?;
         if let Some(error_code) = &self.error_code {

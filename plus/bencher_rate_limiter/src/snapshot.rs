@@ -22,7 +22,6 @@ pub struct BandwidthSnapshot<K: Eq + Hash> {
 }
 
 #[cfg(test)]
-#[expect(clippy::indexing_slicing, clippy::get_unwrap)]
 mod tests {
     use super::*;
 
@@ -33,7 +32,7 @@ mod tests {
         let snapshot = WindowSnapshot { events };
         let json = serde_json::to_string(&snapshot).unwrap();
         let restored: WindowSnapshot<u32> = serde_json::from_str(&json).unwrap();
-        assert_eq!(restored.events.get(&42).unwrap(), &[(100, 5), (101, 3)]);
+        assert_eq!(restored.events[&42], [(100, 5), (101, 3)]);
     }
 
     #[test]
@@ -52,7 +51,7 @@ mod tests {
         let json = serde_json::to_string(&snapshot).unwrap();
         let restored: RateLimiterSnapshot<u32> = serde_json::from_str(&json).unwrap();
         assert!(restored.minute.events.is_empty());
-        assert_eq!(restored.day.events.get(&1).unwrap(), &[(50, 10)]);
+        assert_eq!(restored.day.events[&1], [(50, 10)]);
     }
 
     #[test]
@@ -62,9 +61,8 @@ mod tests {
         };
         let json = serde_json::to_string(&snapshot).unwrap();
         let restored: BandwidthSnapshot<u32> = serde_json::from_str(&json).unwrap();
-        let entries = restored.events.get(&1).unwrap();
-        assert_eq!(entries.len(), 2);
-        assert_eq!(entries[0], (100, 1024));
-        assert_eq!(entries[1], (101, 2048));
+        assert_eq!(restored.events[&1].len(), 2);
+        assert_eq!(restored.events[&1][0], (100, 1024));
+        assert_eq!(restored.events[&1][1], (101, 2048));
     }
 }

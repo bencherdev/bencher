@@ -25,7 +25,10 @@ impl fmt::Display for Fingerprint {
     not(target_os = "windows")
 ))]
 impl Fingerprint {
-    #[expect(clippy::unnecessary_wraps)]
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "signature must match other platform impls"
+    )]
     pub fn current() -> Option<Self> {
         None
     }
@@ -42,7 +45,7 @@ fn encode_uuid(uuid: Uuid) -> String {
 
     let mut result = String::new();
     while num > 0 {
-        #[expect(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation, reason = "remainder is always < 36")]
         let remainder = (num % base) as usize;
         if let Some(c) = chars.get(remainder) {
             result.push(*c);
@@ -60,7 +63,7 @@ fn encode_uuid(uuid: Uuid) -> String {
 // https://stackoverflow.com/a/27952689
 // https://www.boost.org/doc/libs/1_43_0/doc/html/hash/reference.html#boost.hash_combine
 // https://softwareengineering.stackexchange.com/a/402543
-#[expect(clippy::unreadable_literal)]
+#[expect(clippy::unreadable_literal, reason = "well-known hash constant in hex")]
 const GOLDEN_RATIO: u64 = 0x9e3779b97f4a7c15;
 fn hash_combined(lhs: u64, rhs: u64) -> u64 {
     lhs ^ (rhs

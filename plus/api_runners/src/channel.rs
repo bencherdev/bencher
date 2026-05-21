@@ -1018,7 +1018,10 @@ pub struct RunnerChannelParams {
     path = "/v0/runners/{runner}/channel",
     tags = ["runners"]
 }]
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "WebSocket handler with auth, rate limiting, and message loop"
+)]
 pub async fn runner_channel(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<RunnerChannelParams>,

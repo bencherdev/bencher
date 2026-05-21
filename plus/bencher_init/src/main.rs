@@ -12,9 +12,18 @@
 //! This binary is Linux-only and designed to run as the init process
 //! inside a minimal VM guest.
 
-#![expect(clippy::print_stderr)]
-#![cfg_attr(target_os = "linux", expect(unsafe_code))]
-#![cfg_attr(not(target_os = "linux"), allow(unused_crate_dependencies))]
+#![expect(clippy::print_stderr, reason = "init process logs to stderr")]
+#![cfg_attr(
+    target_os = "linux",
+    expect(unsafe_code, reason = "Linux syscalls for init process")
+)]
+#![cfg_attr(
+    not(target_os = "linux"),
+    allow(
+        unused_crate_dependencies,
+        reason = "conditional compilation excludes dependents"
+    )
+)]
 
 #[cfg(target_os = "linux")]
 mod init;

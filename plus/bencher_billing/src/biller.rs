@@ -819,7 +819,7 @@ mod tests {
         }
     }
 
-    #[expect(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "test helper")]
     async fn metered_subscription(
         biller: &Biller,
         organization: OrganizationUuid,
@@ -1115,8 +1115,7 @@ mod tests {
     #[test]
     fn get_subscription_item_no_items() {
         let sub_id: stripe_billing::SubscriptionId = "sub_test".parse().unwrap();
-        let result = Biller::get_subscription_item(&sub_id, vec![]);
-        assert!(result.is_err());
+        Biller::get_subscription_item(&sub_id, vec![]).unwrap_err();
     }
 
     #[test]
@@ -1126,8 +1125,7 @@ mod tests {
             make_subscription_item("price_a"),
             make_subscription_item("price_b"),
         ];
-        let result = Biller::get_subscription_item(&sub_id, items);
-        assert!(result.is_err());
+        Biller::get_subscription_item(&sub_id, items).unwrap_err();
     }
 
     // Note: To run this test locally run:

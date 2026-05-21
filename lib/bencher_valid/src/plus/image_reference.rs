@@ -260,7 +260,7 @@ mod tests {
 
     #[test]
     fn empty_string_fails() {
-        assert!(ImageReference::parse("").is_err());
+        ImageReference::parse("").unwrap_err();
     }
 
     #[test]
@@ -337,14 +337,14 @@ mod tests {
     fn validate_registry_default_ok() {
         // Images from docker.io are always accepted
         let ref_ = ImageReference::parse("alpine:3.18").unwrap();
-        assert!(ref_.validate_registry("registry.bencher.dev").is_ok());
+        ref_.validate_registry("registry.bencher.dev").unwrap();
     }
 
     #[test]
     fn validate_registry_expected_ok() {
         // Images from the expected registry are accepted
         let ref_ = ImageReference::parse("registry.bencher.dev/owner/repo:v1").unwrap();
-        assert!(ref_.validate_registry("registry.bencher.dev").is_ok());
+        ref_.validate_registry("registry.bencher.dev").unwrap();
     }
 
     #[test]
@@ -367,6 +367,6 @@ mod tests {
     fn validate_registry_user_image_ok() {
         // user/image format defaults to docker.io, which is allowed
         let ref_ = ImageReference::parse("myuser/myimage:v1").unwrap();
-        assert!(ref_.validate_registry("registry.bencher.dev").is_ok());
+        ref_.validate_registry("registry.bencher.dev").unwrap();
     }
 }

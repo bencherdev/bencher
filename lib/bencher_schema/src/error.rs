@@ -343,7 +343,7 @@ fn cors_headers(mut http_error: HttpError) -> HttpError {
 }
 
 const GITHUB_ISSUE_URL_STR: &str = "https://github.com/bencherdev/bencher/issues/new";
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "valid constant URL")]
 pub static GITHUB_ISSUE_URL: LazyLock<url::Url> =
     LazyLock::new(|| GITHUB_ISSUE_URL_STR.parse().expect(GITHUB_ISSUE_URL_STR));
 

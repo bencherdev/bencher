@@ -140,7 +140,10 @@ impl Sum for JsonNewMetric {
 impl std::ops::Div<usize> for JsonNewMetric {
     type Output = Self;
 
-    #[expect(clippy::cast_precision_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "usize divisor to f64 is acceptable"
+    )]
     fn div(self, rhs: usize) -> Self::Output {
         Self {
             value: self.value / rhs as f64,

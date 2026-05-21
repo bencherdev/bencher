@@ -4,7 +4,8 @@
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
     clippy::too_many_lines,
-    clippy::decimal_literal_representation
+    clippy::decimal_literal_representation,
+    reason = "integration test file"
 )]
 //! Integration tests for OCI upload session endpoints.
 

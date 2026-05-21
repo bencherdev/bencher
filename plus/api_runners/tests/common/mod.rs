@@ -1,6 +1,10 @@
 // Each test file (`jobs.rs`, `channel.rs`, etc.) includes this module separately,
 // so not all helpers are used by every test binary.
-#![allow(dead_code, unused_imports)]
+#![allow(
+    dead_code,
+    unused_imports,
+    reason = "shared helpers; not all used by every test binary"
+)]
 //! Shared test helpers for `api_runners` integration tests.
 //!
 //! Common helpers (`get_project_id`, `create_test_report`, `set_job_status`,
@@ -31,7 +35,7 @@ pub fn runner_metadata() -> JsonRunnerMetadata {
 }
 
 /// Create a runner via the REST API.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub async fn create_runner(server: &TestServer, admin_token: &str, name: &str) -> JsonRunnerKey {
     let body = serde_json::json!({ "name": name });
     let resp = server
@@ -70,7 +74,7 @@ pub fn insert_test_spec(server: &TestServer) -> (SpecUuid, i32) {
 }
 
 /// Insert a test spec with specific values. Returns (`SpecUuid`, `spec_id`).
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub fn insert_test_spec_full(
     server: &TestServer,
     os: &str,
@@ -113,7 +117,7 @@ pub fn insert_test_spec_full(
 }
 
 /// Associate a spec with a runner.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub fn associate_runner_spec(server: &TestServer, runner_id: i32, spec_id: i32) {
     let mut conn = server.db_conn();
     diesel::insert_into(schema::runner_spec::table)
@@ -162,7 +166,7 @@ pub fn insert_test_job_with_project(
 }
 
 /// Insert a test job with a custom timeout (in seconds). Returns the job UUID.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub fn insert_test_job_with_timeout(
     server: &TestServer,
     report_id: i32,
@@ -210,7 +214,7 @@ pub fn insert_test_job_with_timeout(
 }
 
 /// Insert a test job with full control over scheduling parameters.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub fn insert_test_job_full(
     server: &TestServer,
     report_id: i32,
@@ -259,7 +263,7 @@ pub fn insert_test_job_full(
 }
 
 /// Insert a test job with optional fields populated. Returns the job UUID.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub fn insert_test_job_with_optional_fields(
     server: &TestServer,
     report_id: i32,
@@ -314,7 +318,7 @@ pub fn insert_test_job_with_optional_fields(
 }
 
 /// Insert a test job with invalid config JSON (missing required fields). Returns the job UUID.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub fn insert_test_job_with_invalid_config(
     server: &TestServer,
     report_id: i32,
@@ -358,7 +362,7 @@ pub fn insert_test_job_with_invalid_config(
 }
 
 /// Get project ID from report ID.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub fn get_project_id_from_report(server: &TestServer, report_id: i32) -> i32 {
     let mut conn = server.db_conn();
     schema::report::table
@@ -374,7 +378,7 @@ pub fn get_organization_id(server: &TestServer, project_id: i32) -> i32 {
 }
 
 /// Get organization ID from project ID (by primary key).
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub fn get_organization_id_from_project_id(server: &TestServer, project_id: i32) -> i32 {
     let mut conn = server.db_conn();
     schema::project::table
@@ -385,7 +389,7 @@ pub fn get_organization_id_from_project_id(server: &TestServer, project_id: i32)
 }
 
 /// Set the `runner_id` directly in the database (for testing preconditions).
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub fn set_job_runner_id(server: &TestServer, job_uuid: JobUuid, runner_id: i32) {
     let mut conn = server.db_conn();
     diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
@@ -395,7 +399,11 @@ pub fn set_job_runner_id(server: &TestServer, job_uuid: JobUuid, runner_id: i32)
 }
 
 /// Insert a test job with a specific created timestamp (for FIFO tiebreaker tests).
-#[expect(clippy::too_many_arguments, clippy::expect_used)]
+#[expect(
+    clippy::too_many_arguments,
+    clippy::expect_used,
+    reason = "test helper"
+)]
 pub fn insert_test_job_with_timestamp(
     server: &TestServer,
     report_id: i32,
@@ -443,7 +451,7 @@ pub fn insert_test_job_with_timestamp(
 }
 
 /// Get the priority of a job directly from the database.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub fn get_job_priority(server: &TestServer, job_uuid: JobUuid) -> Priority {
     let mut conn = server.db_conn();
     schema::job::table
@@ -454,7 +462,7 @@ pub fn get_job_priority(server: &TestServer, job_uuid: JobUuid) -> Priority {
 }
 
 /// Get `runner_id` (as i32) from runner UUID.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub fn get_runner_id(server: &TestServer, runner_uuid: RunnerUuid) -> i32 {
     let mut conn = server.db_conn();
     schema::runner::table
@@ -478,7 +486,7 @@ pub fn ws_url(server: &TestServer, path: &str) -> String {
 }
 
 /// Connect to the runner channel WebSocket with authentication.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub async fn connect_channel_ws(
     server: &TestServer,
     runner_uuid: RunnerUuid,
@@ -500,7 +508,7 @@ pub async fn connect_channel_ws(
 
 /// Try to connect to the runner channel WebSocket; returns the result rather
 /// than panicking so callers can assert on connection failure.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub async fn try_connect_channel_ws(
     server: &TestServer,
     runner_uuid: RunnerUuid,
@@ -519,7 +527,7 @@ pub async fn try_connect_channel_ws(
 }
 
 /// Send a `RunnerMessage` over the WebSocket.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 pub async fn send_runner_msg(ws: &mut WsStream, msg: &RunnerMessage) {
     let text = serde_json::to_string(msg).expect("Failed to serialize");
     ws.send(Message::Text(text.into()))
@@ -528,7 +536,12 @@ pub async fn send_runner_msg(ws: &mut WsStream, msg: &RunnerMessage) {
 }
 
 /// Receive and parse a `ServerMessage` from the WebSocket.
-#[expect(clippy::expect_used, clippy::panic, clippy::wildcard_enum_match_arm)]
+#[expect(
+    clippy::expect_used,
+    clippy::panic,
+    clippy::wildcard_enum_match_arm,
+    reason = "test helper"
+)]
 pub async fn recv_server_msg(ws: &mut WsStream) -> ServerMessage {
     let msg = ws.next().await.expect("Stream ended").expect("WS error");
     match msg {
@@ -539,7 +552,7 @@ pub async fn recv_server_msg(ws: &mut WsStream) -> ServerMessage {
 
 /// Connect to the channel WS, send Ready, and return the stream and the
 /// optional claimed job.
-#[expect(clippy::expect_used, clippy::panic)]
+#[expect(clippy::expect_used, clippy::panic, reason = "test helper")]
 pub async fn claim_via_channel(
     server: &TestServer,
     runner_uuid: RunnerUuid,
@@ -566,7 +579,7 @@ pub async fn claim_via_channel(
 }
 
 /// Assert the WebSocket stream is closed (no more messages or Close frame).
-#[expect(clippy::panic)]
+#[expect(clippy::panic, reason = "test helper")]
 pub async fn assert_ws_closed(ws: &mut WsStream) {
     let result = tokio::time::timeout(std::time::Duration::from_secs(1), ws.next()).await;
     match result {

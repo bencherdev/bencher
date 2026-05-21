@@ -255,7 +255,7 @@ mod tests {
 
         let log = slog::Logger::root(slog::Discard, slog::o!());
         let limiter = RateLimiting::default();
-        assert!(limiter.load(&db_path, &log).is_err());
+        limiter.load(&db_path, &log).unwrap_err();
         assert!(snapshot_path.exists());
     }
 

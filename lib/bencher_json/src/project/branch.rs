@@ -11,19 +11,19 @@ use crate::{JsonHead, ProjectUuid};
 pub const START_POINT_MAX_VERSIONS: u32 = 255;
 
 pub const BRANCH_MAIN_STR: &str = "main";
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "infallible parse of known value")]
 pub static DEFAULT_BRANCH: LazyLock<BranchNameId> = LazyLock::new(|| {
     BRANCH_MAIN_STR
         .parse()
         .expect("Failed to parse branch name.")
 });
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "infallible parse of known value")]
 static BRANCH_MAIN: LazyLock<BranchName> = LazyLock::new(|| {
     BRANCH_MAIN_STR
         .parse()
         .expect("Failed to parse branch name.")
 });
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "infallible parse of known value")]
 static BRANCH_MAIN_SLUG: LazyLock<Option<BranchSlug>> = LazyLock::new(|| {
     Some(
         BRANCH_MAIN_STR

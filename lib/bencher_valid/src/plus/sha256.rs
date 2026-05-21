@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn from_str_invalid() {
-        assert!("invalid".parse::<Sha256>().is_err());
+        "invalid".parse::<Sha256>().unwrap_err();
     }
 
     #[cfg(feature = "server")]

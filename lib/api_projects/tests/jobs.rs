@@ -3,7 +3,7 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::similar_names,
-    clippy::indexing_slicing
+    reason = "integration test file"
 )]
 //! Integration tests for project job endpoints.
 //!
@@ -311,7 +311,7 @@ async fn private_project_jobs_denied_unauthenticated() {
 
 /// Helper: insert a test job into the database with a specific created timestamp.
 /// Returns the job UUID.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 fn insert_test_job(
     server: &TestServer,
     report_id: i32,
@@ -716,7 +716,7 @@ async fn non_member_private_project_jobs() {
 ///
 /// The test server uses local filesystem OCI storage at `{db_parent}/oci/`.
 /// Job output is stored at `{oci_dir}/{project_uuid}/output/v0/jobs/{job_uuid}`.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 fn write_job_output(
     server: &TestServer,
     project_uuid: bencher_json::ProjectUuid,

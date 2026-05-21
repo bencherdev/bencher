@@ -350,13 +350,13 @@ mod tests {
 
     #[test]
     fn tag_parsing() {
-        assert!("latest".parse::<Tag>().is_ok());
-        assert!("v1.0.0".parse::<Tag>().is_ok());
-        assert!("1.0".parse::<Tag>().is_ok());
-        assert!("_underscore".parse::<Tag>().is_ok());
+        "latest".parse::<Tag>().unwrap();
+        "v1.0.0".parse::<Tag>().unwrap();
+        "1.0".parse::<Tag>().unwrap();
+        "_underscore".parse::<Tag>().unwrap();
 
-        assert!("".parse::<Tag>().is_err());
-        assert!("-dash-first".parse::<Tag>().is_err());
+        "".parse::<Tag>().unwrap_err();
+        "-dash-first".parse::<Tag>().unwrap_err();
     }
 
     #[test]
@@ -385,16 +385,14 @@ mod tests {
 
     #[test]
     fn digest_sha256_invalid() {
-        assert!(Digest::sha256("").is_err());
-        assert!(Digest::sha256("not-hex!").is_err());
-        assert!(Digest::sha256("ZZZZ").is_err());
+        Digest::sha256("").unwrap_err();
+        Digest::sha256("not-hex!").unwrap_err();
+        Digest::sha256("ZZZZ").unwrap_err();
         // Too short
-        assert!(Digest::sha256("abc123").is_err());
+        Digest::sha256("abc123").unwrap_err();
         // Too long (65 chars)
-        assert!(
-            Digest::sha256("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8550")
-                .is_err()
-        );
+        Digest::sha256("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8550")
+            .unwrap_err();
     }
 
     #[test]
@@ -408,18 +406,16 @@ mod tests {
     #[test]
     fn digest_sha512_invalid_length() {
         // Too short
-        assert!("sha512:abc123".parse::<Digest>().is_err());
+        "sha512:abc123".parse::<Digest>().unwrap_err();
         // sha256-length hash with sha512 algorithm
-        assert!(
-            "sha512:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                .parse::<Digest>()
-                .is_err()
-        );
+        "sha512:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            .parse::<Digest>()
+            .unwrap_err();
     }
 
     #[test]
     fn digest_from_str_rejects_short_sha256() {
-        assert!("sha256:abc".parse::<Digest>().is_err());
+        "sha256:abc".parse::<Digest>().unwrap_err();
     }
 
     #[test]
@@ -462,43 +458,38 @@ mod tests {
     #[test]
     fn tag_deserialize_rejects_invalid() {
         // Path traversal should be rejected
-        let result: Result<Tag, _> = serde_json::from_str(r#""../../etc/passwd""#);
-        assert!(result.is_err());
+        serde_json::from_str::<Tag>(r#""../../etc/passwd""#).unwrap_err();
     }
 
     #[test]
     fn tag_deserialize_accepts_valid() {
-        let result: Result<Tag, _> = serde_json::from_str(r#""latest""#);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap().as_str(), "latest");
+        let tag: Tag = serde_json::from_str(r#""latest""#).unwrap();
+        assert_eq!(tag.as_str(), "latest");
     }
 
     #[test]
     fn digest_deserialize_rejects_invalid() {
-        let result: Result<Digest, _> = serde_json::from_str(r#""not-a-digest""#);
-        assert!(result.is_err());
+        serde_json::from_str::<Digest>(r#""not-a-digest""#).unwrap_err();
     }
 
     #[test]
     fn digest_deserialize_accepts_valid() {
-        let result: Result<Digest, _> = serde_json::from_str(
+        serde_json::from_str::<Digest>(
             r#""sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855""#,
-        );
-        assert!(result.is_ok());
+        )
+        .unwrap();
     }
 
     #[test]
     fn upload_id_deserialize_rejects_invalid() {
-        let result: Result<UploadId, _> = serde_json::from_str(r#""not-a-uuid""#);
-        assert!(result.is_err());
+        serde_json::from_str::<UploadId>(r#""not-a-uuid""#).unwrap_err();
     }
 
     #[test]
     fn upload_id_deserialize_accepts_valid() {
         let id = UploadId::new();
         let json = serde_json::to_string(&id).unwrap();
-        let result: Result<UploadId, _> = serde_json::from_str(&json);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), id);
+        let result: UploadId = serde_json::from_str(&json).unwrap();
+        assert_eq!(result, id);
     }
 }

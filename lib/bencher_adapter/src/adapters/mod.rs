@@ -14,7 +14,12 @@ pub mod rust;
 pub mod shell;
 mod util;
 
-#[expect(dead_code, clippy::print_stdout, clippy::unnecessary_wraps)]
+#[expect(
+    dead_code,
+    clippy::print_stdout,
+    clippy::unnecessary_wraps,
+    reason = "debug helper for parser development"
+)]
 fn print_ln(input: &str) -> IResult<&str, ()> {
     println!("--- START ---");
     println!("{input}");

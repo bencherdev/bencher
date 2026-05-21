@@ -260,7 +260,10 @@ impl AdapterResults {
         Some(results_map.into())
     }
 
-    #[expect(clippy::too_many_lines)]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "exhaustive match over all GungraunMeasure variants"
+    )]
     pub fn new_gungraun(
         benchmark_metrics: Vec<(BenchmarkName, Vec<GungraunMeasure>)>,
     ) -> Option<Self> {

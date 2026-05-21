@@ -175,7 +175,10 @@ struct Times {
     end_time: Option<DateTime>,
 }
 
-#[expect(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "perf query requires all filter dimensions"
+)]
 async fn perf_results(
     log: &slog::Logger,
     context: &ApiContext,
@@ -267,7 +270,11 @@ async fn perf_results(
     Ok(results)
 }
 
-#[expect(clippy::too_many_arguments, clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_arguments,
+    clippy::too_many_lines,
+    reason = "perf query requires all filter dimensions"
+)]
 async fn perf_query(
     context: &ApiContext,
     api_actor: &ApiActor,

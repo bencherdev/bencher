@@ -1,5 +1,5 @@
 //! Firecracker process management.
-#![expect(clippy::print_stderr)]
+#![expect(clippy::print_stderr, reason = "process management prints diagnostics")]
 
 use std::process::{Child, Command};
 use std::time::Duration;

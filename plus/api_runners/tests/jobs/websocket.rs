@@ -21,7 +21,7 @@ use tokio_tungstenite::tungstenite::{
 /// Full setup: create user, org, project, runner, job, then connect channel,
 /// send Ready, and receive Job.
 /// Returns `(ws, runner_uuid, runner_key, job_uuid)`.
-#[expect(clippy::expect_used, clippy::panic)]
+#[expect(clippy::expect_used, clippy::panic, reason = "test helper")]
 async fn setup_claimed_job(
     server: &TestServer,
     suffix: &str,
@@ -69,7 +69,7 @@ async fn setup_claimed_job(
 }
 
 /// Read the job status directly from the database.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 fn get_job_status(server: &TestServer, job_uuid: JobUuid) -> JobStatus {
     let mut conn = server.db_conn();
     schema::job::table
@@ -2017,7 +2017,10 @@ async fn channel_heartbeat_timeout_skipped_before_running() {
 /// Complete one job, then immediately send Ready and complete another job
 /// on the SAME persistent channel connection.
 #[tokio::test]
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "integration test with sequential setup steps"
+)]
 async fn channel_multi_job_cycle() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "ws-multijob@example.com").await;

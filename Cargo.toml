@@ -198,8 +198,6 @@ dead_code = "warn"
 explicit_outlives_requirements = "warn"
 invalid_reference_casting = "warn"
 let_underscore_drop = "warn"
-let_underscore_future = "warn"
-let_underscore_must_use = "warn"
 macro_use_extern_crate = "warn"
 meta_variable_misuse = "warn"
 non_ascii_idents = "warn"
@@ -268,6 +266,8 @@ iter_not_returning_iterator = "warn"       # Checks for fn iter() that doesn't r
 iter_without_into_iter = "warn"            # Looks for iter and iter_mut methods without an associated IntoIterator for (&|&mut) Type implementation.
 large_futures = "warn"                     # Checks for large futures that should be boxed to avoid excessive stack usage.
 large_include_file = "warn"                # Checks for the inclusion of large files via include_bytes!() and include_str!()
+let_underscore_future = "warn"             # Checks for let _ = <future> which silently drops the future.
+let_underscore_must_use = "warn"           # Checks for let _ = <must_use> which silently discards a must-use value.
 little_endian_bytes = "warn"               # Checks for the usage of the to_le_bytes method and/or the function from_le_bytes.
 lossy_float_literal = "warn"               # Checks for whole number float literals that cannot be represented as the underlying type without loss.
 map_err_ignore = "warn"                    # Checks for instances of map_err(|_| Some::Enum)

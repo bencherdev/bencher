@@ -1,5 +1,9 @@
 pub trait Median {
-    #[expect(clippy::indexing_slicing, clippy::integer_division)]
+    #[expect(
+        clippy::indexing_slicing,
+        clippy::integer_division,
+        reason = "bounds checked by length and parity"
+    )]
     fn median(mut array: Vec<Self>) -> Option<Self>
     where
         Self:

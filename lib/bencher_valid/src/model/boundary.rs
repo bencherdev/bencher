@@ -66,7 +66,10 @@ impl Visitor<'_> for BoundaryVisitor {
     where
         E: de::Error,
     {
-        #[expect(clippy::cast_precision_loss)]
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "boundary values are small, no precision loss"
+        )]
         (v as f64).try_into().map_err(E::custom)
     }
 
@@ -96,7 +99,10 @@ impl Boundary {
     pub const THREE_NINES: Self = Self(OrderedFloat(0.999));
     pub const FOUR_NINES: Self = Self(OrderedFloat(0.9999));
     pub const FIVE_NINES: Self = Self(OrderedFloat(0.99999));
-    #[expect(clippy::unreadable_literal)]
+    #[expect(
+        clippy::unreadable_literal,
+        reason = "sixteen 9s are clearer without underscores"
+    )]
     pub const SIXTEEN_NINES: Self = Self(OrderedFloat(0.9999999999999999));
     pub const MAX_STATISTICAL: Self = Self::SIXTEEN_NINES;
 
@@ -304,11 +310,8 @@ mod tests {
         let boundary: Boundary = serde_json::from_str("1.0").unwrap();
         assert_eq!(Boundary(1.0.into()), boundary);
 
-        let boundary = serde_json::from_str::<Boundary>(&f64::INFINITY.to_string());
-        assert!(boundary.is_err());
-        let boundary = serde_json::from_str::<Boundary>(&f64::NEG_INFINITY.to_string());
-        assert!(boundary.is_err());
-        let boundary = serde_json::from_str::<Boundary>(&f64::NAN.to_string());
-        assert!(boundary.is_err());
+        serde_json::from_str::<Boundary>(&f64::INFINITY.to_string()).unwrap_err();
+        serde_json::from_str::<Boundary>(&f64::NEG_INFINITY.to_string()).unwrap_err();
+        serde_json::from_str::<Boundary>(&f64::NAN.to_string()).unwrap_err();
     }
 }

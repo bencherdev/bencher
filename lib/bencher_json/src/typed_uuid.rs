@@ -1,6 +1,9 @@
 // This exists solely to export a `Uuid` type to Typescript that then aliases to `string`.
 #[typeshare::typeshare]
-#[expect(dead_code)]
+#[expect(
+    dead_code,
+    reason = "exists only to export Uuid type to TypeScript via typeshare"
+)]
 pub struct Uuid(pub uuid::Uuid);
 
 macro_rules! typed_uuid {

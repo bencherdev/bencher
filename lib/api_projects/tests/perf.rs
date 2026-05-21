@@ -5,7 +5,7 @@
     clippy::tests_outside_test_module,
     clippy::similar_names,
     clippy::too_many_lines,
-    clippy::indexing_slicing
+    reason = "integration test file"
 )]
 //! Integration tests for the `/v0/projects/{project}/perf` endpoint.
 

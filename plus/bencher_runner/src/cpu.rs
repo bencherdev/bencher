@@ -77,7 +77,11 @@ impl CpuLayout {
 
     /// Get the number of available CPU cores.
     #[cfg(target_os = "linux")]
-    #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "sysconf returns c_long; core count always fits in usize"
+    )]
     fn available_cores() -> usize {
         // Try reading from /sys/devices/system/cpu/online first
         if let Ok(online) = fs::read_to_string("/sys/devices/system/cpu/online")
@@ -185,9 +189,9 @@ fn format_cpuset(cpus: &[usize]) -> String {
 
         if start == end {
             // write! to String is infallible
-            let _ = write!(result, "{start}");
+            _ = write!(result, "{start}");
         } else {
-            let _ = write!(result, "{start}-{end}");
+            _ = write!(result, "{start}-{end}");
         }
 
         i += 1;
@@ -235,7 +239,7 @@ pub fn pin_thread(thread_id: libc::pthread_t, cpus: &[usize]) -> io::Result<()> 
     }
 
     // SAFETY: Same as pin_current_thread, plus we're passing a valid pthread_t.
-    #[expect(unsafe_code)]
+    #[expect(unsafe_code, reason = "pthread_setaffinity_np requires unsafe FFI")]
     unsafe {
         let mut set: libc::cpu_set_t = std::mem::zeroed();
         libc::CPU_ZERO(&mut set);

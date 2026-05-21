@@ -19,7 +19,10 @@ use crate::firecracker::error::FirecrackerError;
 /// Poll timeout for vsock listeners (50ms).
 ///
 /// Using `LazyLock` because `PollTimeout::try_from` is not const.
-#[expect(clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "50ms is a valid PollTimeout; infallible in practice"
+)]
 static POLL_TIMEOUT: std::sync::LazyLock<PollTimeout> =
     std::sync::LazyLock::new(|| PollTimeout::try_from(50).expect("50ms fits in PollTimeout"));
 
@@ -118,7 +121,10 @@ impl VsockListener {
     ///
     /// If `cancel_flag` is provided and set to `true`, collection stops early
     /// and returns a cancellation error.
-    #[expect(clippy::too_many_lines)]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "multi-port poll loop is clearer as one function"
+    )]
     pub fn collect_results(
         &self,
         timeout: Duration,
@@ -280,7 +286,7 @@ impl Drop for VsockListener {
 /// Try to accept a connection on a non-blocking listener and read all data.
 ///
 /// Reading stops once `max_data_size` bytes have been accumulated.
-#[expect(clippy::indexing_slicing)]
+#[expect(clippy::indexing_slicing, reason = "buf slice bounded by bytes read")]
 fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<Vec<u8>> {
     let (mut stream, _) = listener.accept().ok()?;
 
@@ -311,7 +317,11 @@ fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<
 }
 
 #[cfg(test)]
-#[expect(clippy::little_endian_bytes, clippy::cast_possible_truncation)]
+#[expect(
+    clippy::little_endian_bytes,
+    clippy::cast_possible_truncation,
+    reason = "test protocol uses little-endian wire format"
+)]
 mod tests {
     use super::*;
 
@@ -454,7 +464,6 @@ mod tests {
             TEST_GRACE_PERIOD,
         );
 
-        assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(
             err.to_string().contains("timed out"),
@@ -608,7 +617,6 @@ mod tests {
             Duration::from_secs(1),
         );
 
-        assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(
             matches!(err, FirecrackerError::Cancelled),

@@ -222,7 +222,10 @@ impl MetricsLimits {
 }
 
 #[cfg(test)]
-#[expect(clippy::unreadable_literal)]
+#[expect(
+    clippy::unreadable_literal,
+    reason = "float literals are test expected values"
+)]
 mod tests {
     use std::sync::LazyLock;
 

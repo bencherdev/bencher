@@ -21,7 +21,10 @@ pub enum CliAuth {
     Accept(CliAuthAccept),
 }
 
-#[expect(clippy::doc_markdown)]
+#[expect(
+    clippy::doc_markdown,
+    reason = "doc comments contain acronyms like JWT"
+)]
 #[derive(Parser, Debug)]
 pub struct CliAuthSignup {
     /// User email

@@ -35,7 +35,10 @@ pub struct TaskExamples {
 /// Template kind
 #[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
-#[expect(clippy::enum_variant_names)]
+#[expect(
+    clippy::enum_variant_names,
+    reason = "Rust prefix groups language-specific examples"
+)]
 pub enum TaskExample {
     /// Rust libtest bench
     RustBench,
@@ -58,7 +61,10 @@ pub struct TaskSmokeTest {
 /// Template kind
 #[derive(ValueEnum, Debug, Clone, Copy, Default)]
 #[clap(rename_all = "snake_case")]
-#[expect(clippy::doc_markdown)]
+#[expect(
+    clippy::doc_markdown,
+    reason = "doc comments contain URLs used as variant descriptions"
+)]
 pub enum TaskTestEnvironment {
     #[default]
     /// https://localhost:61016

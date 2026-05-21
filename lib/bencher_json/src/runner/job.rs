@@ -395,7 +395,6 @@ pub struct JsonJobConfig {
 }
 
 #[cfg(test)]
-#[expect(clippy::indexing_slicing)]
 mod tests {
     use super::*;
 
@@ -566,7 +565,6 @@ mod tests {
     fn deserialize_entrypoint_too_long() {
         let json = job_config_json(MAX_ENTRYPOINT_LEN + 1, 0, 0, 0);
         let result = serde_json::from_str::<JsonJobConfig>(&json);
-        assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("entrypoint length"), "{err}");
     }
@@ -575,7 +573,6 @@ mod tests {
     fn deserialize_cmd_too_long() {
         let json = job_config_json(0, MAX_CMD_LEN + 1, 0, 0);
         let result = serde_json::from_str::<JsonJobConfig>(&json);
-        assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("cmd length"), "{err}");
     }
@@ -584,7 +581,6 @@ mod tests {
     fn deserialize_file_paths_too_long() {
         let json = job_config_json(0, 0, MAX_FILE_PATHS_LEN + 1, 0);
         let result = serde_json::from_str::<JsonJobConfig>(&json);
-        assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("file_paths length"), "{err}");
     }
@@ -593,7 +589,6 @@ mod tests {
     fn deserialize_env_too_long() {
         let json = job_config_json(0, 0, 0, MAX_ENV_LEN + 1);
         let result = serde_json::from_str::<JsonJobConfig>(&json);
-        assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("env length"), "{err}");
     }
@@ -696,7 +691,6 @@ mod tests {
     fn new_run_job_entrypoint_too_long() {
         let json = new_run_job_json(MAX_ENTRYPOINT_LEN + 1, 0, 0, 0);
         let result = serde_json::from_str::<JsonNewRunJob>(&json);
-        assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("entrypoint length"), "{err}");
     }
@@ -705,7 +699,6 @@ mod tests {
     fn new_run_job_cmd_too_long() {
         let json = new_run_job_json(0, MAX_CMD_LEN + 1, 0, 0);
         let result = serde_json::from_str::<JsonNewRunJob>(&json);
-        assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("cmd length"), "{err}");
     }
@@ -714,7 +707,6 @@ mod tests {
     fn new_run_job_file_paths_too_long() {
         let json = new_run_job_json(0, 0, MAX_FILE_PATHS_LEN + 1, 0);
         let result = serde_json::from_str::<JsonNewRunJob>(&json);
-        assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("file_paths length"), "{err}");
     }
@@ -723,7 +715,6 @@ mod tests {
     fn new_run_job_env_too_long() {
         let json = new_run_job_json(0, 0, 0, MAX_ENV_LEN + 1);
         let result = serde_json::from_str::<JsonNewRunJob>(&json);
-        assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("env length"), "{err}");
     }

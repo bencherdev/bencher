@@ -9,7 +9,7 @@ use crate::ProjectUuid;
 
 pub mod built_in;
 
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "infallible parse of known value")]
 pub static DEFAULT_UNIT: LazyLock<ResourceName> = LazyLock::new(|| {
     "Measure (units)"
         .parse()

@@ -1036,7 +1036,6 @@ async fn dir_is_stale(entry: &fs::DirEntry, now: i64, timeout_secs: i64) -> bool
 }
 
 #[cfg(test)]
-#[expect(clippy::indexing_slicing)]
 mod tests {
     use super::*;
     use bytes::Bytes;
@@ -1135,8 +1134,8 @@ mod tests {
         storage.delete_manifest(&repo, &digest).await.unwrap();
 
         // Both tags should be gone
-        assert!(storage.resolve_tag(&repo, &tag1).await.is_err());
-        assert!(storage.resolve_tag(&repo, &tag2).await.is_err());
+        storage.resolve_tag(&repo, &tag1).await.unwrap_err();
+        storage.resolve_tag(&repo, &tag2).await.unwrap_err();
     }
 
     #[tokio::test]

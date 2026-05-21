@@ -26,7 +26,7 @@ pub enum Dimension {
 
 impl From<CliArchiveDimension> for Dimension {
     fn from(dimension: CliArchiveDimension) -> Self {
-        #[expect(clippy::panic)]
+        #[expect(clippy::panic, reason = "clap group ensures one dimension is set")]
         if let Some(branch) = dimension.branch {
             Self::Branch(branch)
         } else if let Some(testbed) = dimension.testbed {
