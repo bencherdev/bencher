@@ -93,7 +93,7 @@ jobs:
         os: [ubuntu-22.04, macos-14, windows-2022]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Unix CLI Install Script
         if: matrix.os != 'windows-2022'
         run: cat services/cli/templates/output/install-cli.sh | sh
@@ -114,7 +114,7 @@ jobs:
     # This is expected to fail when tagging a new release
     continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Unix CLI Install Script Version
         if: matrix.os != 'windows-2022'
         run: export BENCHER_VERSION=${{ inputs.bencher-version }}; cat services/cli/templates/output/install-cli.sh | sh
@@ -183,7 +183,7 @@ jobs:
             target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set CLI version
         shell: bash
         run: |
@@ -191,7 +191,7 @@ jobs:
           echo "CLI_VERSION=${VERSION//\//-}" >> $GITHUB_ENV
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
-      - uses: mlugg/setup-zig@v2
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         if: startsWith(matrix.build, 'linux')
         with:
           version: ${{ inputs.zig-version }}
@@ -221,7 +221,7 @@ jobs:
         run: shasum -a 256 ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }} > ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.sha256
       - name: Upload Unix CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
           path: |
@@ -234,7 +234,7 @@ jobs:
         run: sha256sum ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe > ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe.sha256
       - name: Upload Windows CLI Artifact
         if: startsWith(matrix.build, 'windows')
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
           path: |
@@ -260,17 +260,17 @@ jobs:
     env:
       CLI_DEB_DIR: deb
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set CLI version
         shell: bash
         run: |
           VERSION="${{ github.head_ref || github.ref_name }}"
           echo "CLI_VERSION=${VERSION//\//-}" >> $GITHUB_ENV
       - name: Download CLI Artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
-      - uses: rui314/setup-mold@v1
+      - uses: rui314/setup-mold@9c9c13bf4c3f1adef0cc596abc155580bcb04444 # v1
         with:
           mold-version: ${{ inputs.mold-version }}
       - name: Build .deb package
@@ -287,7 +287,7 @@ jobs:
       - name: Generate .deb SHA256 checksum
         run: shasum -a 256 ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb > ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb.sha256
       - name: Upload .deb Artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb
           path: |
