@@ -128,6 +128,7 @@ pub enum ApiCounter {
     OciManifestPush,
     OciManifestPull,
     OciTagsList,
+    OciBandwidthMax(Priority),
 
     RunnerRequestMax(IntervalKind),
 
@@ -192,6 +193,7 @@ impl ApiCounter {
 
             Self::OciBlobPush | Self::OciBlobPull => "{blob}",
             Self::OciManifestPush | Self::OciManifestPull => "{manifest}",
+            Self::OciBandwidthMax(_) => "{bandwidth}",
 
             Self::RunnerCreate | Self::RunnerUpdate => "{runner}",
             Self::RunnerJobClaim | Self::RunnerJobUpdate(_) => "{job}",
@@ -258,6 +260,7 @@ impl ApiCounter {
             Self::OciManifestPush => "oci.manifest.push",
             Self::OciManifestPull => "oci.manifest.pull",
             Self::OciTagsList => "oci.tags.list",
+            Self::OciBandwidthMax(_) => "oci.bandwidth.max",
 
             Self::RunnerRequestMax(_) => "runner.request.max",
 
@@ -345,6 +348,7 @@ impl ApiCounter {
             Self::OciManifestPush => "Counts the number of OCI manifest pushes",
             Self::OciManifestPull => "Counts the number of OCI manifest pulls",
             Self::OciTagsList => "Counts the number of OCI tags list requests",
+            Self::OciBandwidthMax(_) => "Counts the number of OCI bandwidth limit hits",
 
             Self::RunnerRequestMax(_) => "Counts the number of runner request maximums reached",
 
@@ -412,7 +416,9 @@ impl ApiCounter {
             | Self::RunnerHeartbeatTimeout
             | Self::RunnerJobTimeout
             | Self::RunnerDisconnect => Vec::new(),
-            Self::Run(priority) | Self::MetricsCreate(priority) => {
+            Self::Run(priority)
+            | Self::MetricsCreate(priority)
+            | Self::OciBandwidthMax(priority) => {
                 vec![priority_attribute(priority)]
             },
             Self::UserSignup(auth_method)
