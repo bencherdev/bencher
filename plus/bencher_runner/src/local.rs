@@ -263,13 +263,13 @@ impl ChildHandle {
                 }
                 return;
             }
-            // SAFETY: Fall back to kill-by-PID. We send SIGKILL to a known
-            // child PID; if already exited, returns ESRCH (harmless).
             #[expect(
                 unsafe_code,
                 clippy::cast_possible_wrap,
                 reason = "libc::kill requires unsafe FFI; PID fits in i32"
             )]
+            // SAFETY: Fall back to kill-by-PID. We send SIGKILL to a known
+            // child PID; if already exited, returns ESRCH (harmless).
             unsafe {
                 libc::kill(self.pid as i32, libc::SIGKILL);
             }

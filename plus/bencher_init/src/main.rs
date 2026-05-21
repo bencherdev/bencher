@@ -54,6 +54,10 @@ fn main() -> std::process::ExitCode {
         clippy::inline_asm_x86_intel_syntax,
         reason = "Intel syntax is clearer for x86 I/O port access"
     )]
+    #[expect(
+        clippy::multiple_unsafe_ops_per_block,
+        reason = "iopl grant + serial port polling and writing is a single I/O transaction"
+    )]
     // SAFETY: Called as PID 1 (root) to enable I/O port access for serial output.
     // Accessing COM1 serial port registers is safe with iopl(3) privilege.
     unsafe {

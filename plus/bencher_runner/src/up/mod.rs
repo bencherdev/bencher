@@ -372,12 +372,16 @@ fn install_signal_handlers() {
     let handler = SigHandler::Handler(signal_handler);
     let action = SigAction::new(handler, SaFlags::empty(), SigSet::empty());
 
+    #[expect(
+        unsafe_code,
+        clippy::multiple_unsafe_ops_per_block,
+        reason = "sigaction requires unsafe FFI"
+    )]
     // SAFETY: `signal_handler` only performs `AtomicBool::store` with
     // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
-    #[expect(unsafe_code, reason = "sigaction requires unsafe FFI")]
     unsafe {
-        let _ = sigaction(Signal::SIGINT, &action);
-        let _ = sigaction(Signal::SIGTERM, &action);
+        _ = sigaction(Signal::SIGINT, &action);
+        _ = sigaction(Signal::SIGTERM, &action);
     }
 }
 

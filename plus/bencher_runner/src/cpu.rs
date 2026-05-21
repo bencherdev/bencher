@@ -238,8 +238,12 @@ pub fn pin_thread(thread_id: libc::pthread_t, cpus: &[usize]) -> io::Result<()> 
         return Ok(());
     }
 
+    #[expect(
+        unsafe_code,
+        clippy::multiple_unsafe_ops_per_block,
+        reason = "pthread_setaffinity_np requires unsafe FFI"
+    )]
     // SAFETY: Same as pin_current_thread, plus we're passing a valid pthread_t.
-    #[expect(unsafe_code, reason = "pthread_setaffinity_np requires unsafe FFI")]
     unsafe {
         let mut set: libc::cpu_set_t = std::mem::zeroed();
         libc::CPU_ZERO(&mut set);

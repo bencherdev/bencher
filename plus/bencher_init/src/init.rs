@@ -112,6 +112,10 @@ fn serial_write(data: &[u8]) {
 
     for &byte in data {
         // Wait for transmit holding register to be empty
+        #[expect(
+            clippy::multiple_unsafe_ops_per_block,
+            reason = "polling LSR then writing data register is a single serial-port transaction"
+        )]
         // SAFETY: We have iopl(3) access. Reading COM1 LSR and writing COM1 data
         // register are standard x86 serial port operations.
         unsafe {
@@ -375,6 +379,10 @@ fn mount(
     reason = "required for libc signal handler registration"
 )]
 fn setup_signal_handlers() -> Result<(), InitError> {
+    #[expect(
+        clippy::multiple_unsafe_ops_per_block,
+        reason = "signal handler registration is a single logical setup step"
+    )]
     // SAFETY: `handle_signal` has the correct `extern "C" fn(c_int)` signature
     // required by `libc::signal`. We register handlers before spawning any threads.
     unsafe {
@@ -441,12 +449,20 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
         -1 => Err(InitError::Fork(io::Error::last_os_error().to_string())),
         0 => {
             // Child process
+            #[expect(
+                clippy::multiple_unsafe_ops_per_block,
+                reason = "closing both read ends of the pipe pair is a single cleanup step"
+            )]
             // SAFETY: Closing read ends of pipes in child process.
             unsafe {
                 libc::close(stdout_read);
                 libc::close(stderr_read);
             }
 
+            #[expect(
+                clippy::multiple_unsafe_ops_per_block,
+                reason = "dup2+close pairs for stdout/stderr redirection must happen atomically before exec"
+            )]
             // SAFETY: Redirecting child stdout/stderr to pipe write ends.
             unsafe {
                 libc::dup2(stdout_write, libc::STDOUT_FILENO);
@@ -522,6 +538,10 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
         },
         child_pid => {
             // Parent process
+            #[expect(
+                clippy::multiple_unsafe_ops_per_block,
+                reason = "closing both write ends of the pipe pair is a single cleanup step"
+            )]
             // SAFETY: Closing write ends of pipes in parent process after fork.
             unsafe {
                 libc::close(stdout_write);
@@ -596,6 +616,10 @@ fn wait_for_child(
 ) -> BenchmarkResult {
     use std::os::unix::io::FromRawFd as _;
 
+    #[expect(
+        clippy::multiple_unsafe_ops_per_block,
+        reason = "setting nonblocking on both pipe fds is a single setup step"
+    )]
     // SAFETY: Setting O_NONBLOCK on valid pipe file descriptors.
     unsafe {
         set_nonblocking(stdout_fd, "stdout");
@@ -929,9 +953,13 @@ fn poweroff() {
     // Write to I/O port 0x604 to signal shutdown to the VMM.
     // This is the standard exit port used by Firecracker and QEMU.
     //
+    #[cfg(target_arch = "x86_64")]
+    #[expect(
+        clippy::multiple_unsafe_ops_per_block,
+        reason = "iopl grant and port write are a single privileged I/O operation"
+    )]
     // SAFETY: iopl(3) enables I/O port access. Writing to port 0x604 signals
     // the VMM (Firecracker/QEMU) to shut down the guest.
-    #[cfg(target_arch = "x86_64")]
     unsafe {
         // Get I/O port access (requires iopl >= 1)
         let _ = libc::iopl(3);
