@@ -17,7 +17,7 @@ runs:
   using: "composite"
   steps:
     - name: Setup Rust cache
-      uses: actions/cache@v5
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: |
           ~/.cargo/bin/
@@ -31,11 +31,11 @@ runs:
           ${{ runner.os }}-${{ runner.arch }}-cargo-
 
     - name: Setup mold linker
-      uses: rui314/setup-mold@v1
+      uses: rui314/setup-mold@9c9c13bf4c3f1adef0cc596abc155580bcb04444 # v1
       with:
         mold-version: ${{ inputs.mold-version }}
 
     - name: Install cargo-nextest
-      uses: taiki-e/install-action@v2
+      uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
       with:
         tool: cargo-nextest
