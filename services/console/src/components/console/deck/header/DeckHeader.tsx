@@ -45,8 +45,10 @@ const DeckHeader = (props: Props) => {
 			return;
 		}
 		switch (props.config?.display) {
-			case Display.DATE_TIME:
-				return fmtDateTime(data?.[props.config?.key] ?? "");
+			case Display.DATE_TIME: {
+				const value = data?.[props.config?.key];
+				return value ? fmtDateTime(value) : undefined;
+			}
 			default:
 				return fmtValues(data, props.config?.key, props.config?.keys, " | ");
 		}
