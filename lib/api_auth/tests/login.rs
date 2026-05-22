@@ -2,7 +2,8 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::unwrap_used,
-    clippy::expect_used
+    clippy::expect_used,
+    reason = "integration test file"
 )]
 //! Integration tests for auth login endpoint.
 

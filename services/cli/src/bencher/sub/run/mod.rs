@@ -41,7 +41,10 @@ use crate::bencher::SubCmd;
 use super::project::report::Thresholds;
 
 #[derive(Debug)]
-#[expect(clippy::struct_excessive_bools)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each bool is an independent user flag"
+)]
 pub struct Run {
     project: Option<ProjectResourceId>,
     branch: Branch,
@@ -61,7 +64,10 @@ pub struct Run {
     log: bool,
     ci: Option<Ci>,
     runner: Option<Runner>,
-    #[expect(clippy::struct_field_names)]
+    #[expect(
+        clippy::struct_field_names,
+        reason = "dry_run is the canonical name for this flag"
+    )]
     dry_run: bool,
     #[cfg(feature = "plus")]
     job: Option<Job>,
@@ -69,7 +75,10 @@ pub struct Run {
 }
 
 #[cfg(feature = "plus")]
-#[expect(clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "constant 5 is always a valid PollTimeout"
+)]
 static DEFAULT_POLL_INTERVAL: std::sync::LazyLock<bencher_json::PollTimeout> =
     std::sync::LazyLock::new(|| {
         bencher_json::PollTimeout::try_from(5).expect("5 is a valid PollTimeout")

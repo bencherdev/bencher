@@ -14,7 +14,10 @@ pub struct Task {
     sub: Sub,
 }
 
-#[expect(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "enum is short-lived, boxing not worth it"
+)]
 #[derive(Debug)]
 pub enum Sub {
     Live(Live),

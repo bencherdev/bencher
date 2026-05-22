@@ -477,7 +477,10 @@ fn connection_pool(
         .map_err(|e| ConfigTxError::DatabaseConnectionPool(database_path.to_owned(), e))
 }
 
-#[expect(clippy::needless_pass_by_value)]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "consumes JsonServer by destructuring"
+)]
 fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
     let JsonServer {
         bind_address,

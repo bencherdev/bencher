@@ -22,7 +22,10 @@ impl Units {
         Self { scale, units }
     }
 
-    #[expect(clippy::cast_precision_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "scale factors are powers of 10, exact in f64"
+    )]
     pub fn scale_factor(&self) -> OrderedFloat<f64> {
         OrderedFloat::from(self.scale.factor() as f64)
     }
@@ -53,7 +56,10 @@ enum Scale {
 }
 
 impl Scale {
-    #[expect(clippy::cast_precision_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "scale thresholds are powers of 10, exact in f64"
+    )]
     fn new(min: f64, units: &str) -> Self {
         match units {
             NANOSECONDS => match min {
@@ -308,19 +314,28 @@ impl ScaleOneE {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(feature = "wasm"), expect(dead_code))]
+#[cfg_attr(
+    not(feature = "wasm"),
+    expect(dead_code, reason = "exported only for wasm")
+)]
 pub fn scale_factor(min: f64, units: &str) -> u64 {
     Scale::new(min, units).factor()
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(feature = "wasm"), expect(dead_code))]
+#[cfg_attr(
+    not(feature = "wasm"),
+    expect(dead_code, reason = "exported only for wasm")
+)]
 pub fn scale_units(min: f64, units: &str) -> String {
     Scale::new(min, units).units(units)
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(feature = "wasm"), expect(dead_code))]
+#[cfg_attr(
+    not(feature = "wasm"),
+    expect(dead_code, reason = "exported only for wasm")
+)]
 pub fn scale_units_symbol(min: f64, units: &str) -> String {
     Scale::new(min, units).units_symbol(units)
 }

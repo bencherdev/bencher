@@ -2,7 +2,7 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::decimal_literal_representation,
-    clippy::indexing_slicing
+    reason = "integration test file"
 )]
 //! Integration tests for spec CRUD endpoints.
 

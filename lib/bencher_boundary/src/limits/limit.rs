@@ -87,7 +87,10 @@ impl From<Boundary> for MetricsLimit {
 }
 
 #[cfg(test)]
-#[expect(clippy::float_cmp)]
+#[expect(
+    clippy::float_cmp,
+    reason = "exact float equality is intended in tests"
+)]
 mod tests {
     use pretty_assertions::assert_eq;
 

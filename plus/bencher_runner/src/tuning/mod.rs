@@ -6,7 +6,10 @@
 //! informational message — this handles ARM and other platforms
 //! where certain controls do not exist.
 
-#![cfg_attr(target_os = "linux", expect(clippy::print_stdout))]
+#![cfg_attr(
+    target_os = "linux",
+    expect(clippy::print_stdout, reason = "tuning prints applied settings")
+)]
 
 mod perf_event_paranoid;
 mod swappiness;
@@ -317,7 +320,6 @@ pub fn apply(_config: &TuningConfig) -> TuningGuard {
 }
 
 #[cfg(test)]
-#[cfg_attr(target_os = "linux", expect(clippy::indexing_slicing))]
 mod tests {
     use super::*;
 

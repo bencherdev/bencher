@@ -17,7 +17,10 @@ pub fn mean(data: &[f64]) -> Option<f64> {
     if data.is_empty() {
         None
     } else {
-        #[expect(clippy::cast_precision_loss)]
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "data length as f64 is fine for mean"
+        )]
         let mean = data.iter().sum::<f64>() / data.len() as f64;
         mean.is_finite().then_some(mean)
     }
@@ -36,7 +39,10 @@ fn variance(location: f64, data: &[f64]) -> Option<f64> {
     if data.len() < 2 {
         None
     } else {
-        #[expect(clippy::cast_precision_loss)]
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "data length as f64 is fine for variance"
+        )]
         Some(
             data.iter()
                 .map(|&value| (value - location).powi(2))
@@ -48,7 +54,11 @@ fn variance(location: f64, data: &[f64]) -> Option<f64> {
 }
 
 #[cfg(test)]
-#[expect(clippy::float_cmp, clippy::unreadable_literal)]
+#[expect(
+    clippy::float_cmp,
+    clippy::unreadable_literal,
+    reason = "exact float equality and literal values are intended in tests"
+)]
 mod tests {
     use std::sync::LazyLock;
 
@@ -307,7 +317,10 @@ mod tests {
     }
 
     #[test]
-    #[expect(clippy::approx_constant)]
+    #[expect(
+        clippy::approx_constant,
+        reason = "computed std dev value, not a math constant"
+    )]
     fn std_dev_two() {
         let std_dev = MEAN_ZERO.std_deviation(DATA_TWO).unwrap();
         assert_eq!(std_dev, 2.23606797749979);

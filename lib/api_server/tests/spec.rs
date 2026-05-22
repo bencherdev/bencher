@@ -1,4 +1,8 @@
-#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    reason = "integration test file"
+)]
 //! Integration tests for server `OpenAPI` spec endpoint.
 
 use bencher_api_tests::TestServer;

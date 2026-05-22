@@ -1,4 +1,4 @@
-#![expect(unused_crate_dependencies)]
+#![expect(unused_crate_dependencies, reason = "test binary has different deps")]
 #![cfg(target_arch = "wasm32")]
 //! Test suite for the Web and headless browsers.
 

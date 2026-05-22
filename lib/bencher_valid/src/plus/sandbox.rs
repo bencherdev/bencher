@@ -63,7 +63,10 @@ impl From<Sandbox> for String {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(any(feature = "wasm", test)), expect(dead_code))]
+#[cfg_attr(
+    not(any(feature = "wasm", test)),
+    expect(dead_code, reason = "exported only for wasm and tests")
+)]
 pub fn is_valid_sandbox(sandbox: &str) -> bool {
     matches!(sandbox, FIRECRACKER)
 }
@@ -97,7 +100,6 @@ mod tests {
         let json = serde_json::to_string(&sandbox).unwrap();
         assert_eq!(json, "\"firecracker\"");
 
-        let err = serde_json::from_str::<Sandbox>("\"invalid\"");
-        assert!(err.is_err());
+        serde_json::from_str::<Sandbox>("\"invalid\"").unwrap_err();
     }
 }

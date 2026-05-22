@@ -69,7 +69,11 @@ pub fn unpack(image_dir: &Utf8Path, target_dir: &Utf8Path) -> Result<(), OciErro
 }
 
 /// Simple logging helper (prints to stderr in debug builds).
-#[expect(clippy::print_stderr, clippy::needless_pass_by_value)]
+#[expect(
+    clippy::print_stderr,
+    clippy::needless_pass_by_value,
+    reason = "debug-only stderr logging, takes ownership to drop in release"
+)]
 fn tracing_log(msg: String) {
     #[cfg(debug_assertions)]
     eprintln!("[bencher_oci] {msg}");
@@ -140,12 +144,11 @@ mod tests {
         std::fs::write(&file_path, b"data").unwrap();
         let path = Utf8Path::from_path(&file_path).unwrap();
 
-        let result = verify_digest(
+        let err = verify_digest(
             path,
             "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        );
-        assert!(result.is_err());
-        let err = result.unwrap_err();
+        )
+        .unwrap_err();
         assert!(
             matches!(err, OciError::DigestMismatch { .. }),
             "expected DigestMismatch, got {err:?}"
@@ -175,7 +178,6 @@ mod tests {
         let path = Utf8Path::from_path(&file_path).unwrap();
 
         // md5 is not a valid ImageDigest, so it fails at parse
-        let result = verify_digest(path, "md5:d41d8cd98f00b204e9800998ecf8427e");
-        assert!(result.is_err());
+        verify_digest(path, "md5:d41d8cd98f00b204e9800998ecf8427e").unwrap_err();
     }
 }

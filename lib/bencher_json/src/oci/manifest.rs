@@ -487,7 +487,7 @@ mod tests {
 
     #[test]
     fn parse_invalid_json_fails() {
-        assert!(Manifest::from_bytes(b"not json").is_err());
+        Manifest::from_bytes(b"not json").unwrap_err();
     }
 
     #[test]
@@ -497,7 +497,7 @@ mod tests {
             "mediaType": "application/vnd.unknown.type"
         });
         let bytes = serde_json::to_vec(&json).unwrap();
-        assert!(Manifest::from_bytes(&bytes).is_err());
+        Manifest::from_bytes(&bytes).unwrap_err();
     }
 
     #[test]
@@ -508,7 +508,7 @@ mod tests {
             "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE
         });
         let bytes = serde_json::to_vec(&json).unwrap();
-        assert!(Manifest::from_bytes(&bytes).is_err());
+        Manifest::from_bytes(&bytes).unwrap_err();
     }
 
     #[test]
@@ -524,7 +524,7 @@ mod tests {
             "layers": []
         });
         let bytes = serde_json::to_vec(&json).unwrap();
-        assert!(Manifest::from_bytes(&bytes).is_err());
+        Manifest::from_bytes(&bytes).unwrap_err();
     }
 
     #[test]
@@ -546,7 +546,7 @@ mod tests {
             ]
         });
         let bytes = serde_json::to_vec(&json).unwrap();
-        assert!(Manifest::from_bytes(&bytes).is_err());
+        Manifest::from_bytes(&bytes).unwrap_err();
     }
 
     #[test]
@@ -562,7 +562,7 @@ mod tests {
             "layers": []
         });
         let bytes = serde_json::to_vec(&json).unwrap();
-        assert!(Manifest::from_bytes(&bytes).is_ok());
+        Manifest::from_bytes(&bytes).unwrap();
     }
 
     #[test]
@@ -578,7 +578,7 @@ mod tests {
             "layers": []
         });
         let bytes = serde_json::to_vec(&json).unwrap();
-        assert!(Manifest::from_bytes(&bytes).is_err());
+        Manifest::from_bytes(&bytes).unwrap_err();
     }
 
     #[test]
@@ -594,7 +594,7 @@ mod tests {
             "layers": []
         });
         let bytes = serde_json::to_vec(&json).unwrap();
-        assert!(Manifest::from_bytes(&bytes).is_err());
+        Manifest::from_bytes(&bytes).unwrap_err();
     }
 
     #[test]
@@ -610,7 +610,7 @@ mod tests {
             "layers": []
         });
         let bytes = serde_json::to_vec(&json).unwrap();
-        assert!(Manifest::from_bytes(&bytes).is_err());
+        Manifest::from_bytes(&bytes).unwrap_err();
     }
 
     #[test]

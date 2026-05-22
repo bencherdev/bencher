@@ -1,5 +1,9 @@
 #![cfg(feature = "plus")]
-#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    reason = "integration test file"
+)]
 //! Integration tests for project metric endpoints.
 //!
 //! Metrics are created as part of the report flow, so most tests insert
@@ -19,7 +23,7 @@ use http::StatusCode;
 
 /// Create a metric for a given report. Inserts benchmark, measure,
 /// `report_benchmark`, and metric rows. Returns the metric UUID.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 fn create_test_metric(server: &TestServer, project_id: i32, report_id: i32) -> MetricUuid {
     let mut conn = server.db_conn();
     let now = base_timestamp();
@@ -100,7 +104,7 @@ fn create_test_metric(server: &TestServer, project_id: i32, report_id: i32) -> M
 }
 
 /// Attach a job with a spec to a report. Returns the spec name for assertion.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 fn attach_job_with_spec(
     server: &TestServer,
     report_id: i32,
@@ -184,7 +188,7 @@ fn attach_job_with_spec(
 }
 
 /// Insert `head_version` row to link head -> version for the metric query join chain.
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "test helper")]
 fn link_head_version(server: &TestServer, report_id: i32) {
     let mut conn = server.db_conn();
     let (head_id, version_id): (i32, i32) = schema::report::table

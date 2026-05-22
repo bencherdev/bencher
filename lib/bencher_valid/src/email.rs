@@ -131,7 +131,6 @@ mod tests {
         let json = serde_json::to_string(&email).unwrap();
         assert_eq!(json, "\"abc@example.com\"");
 
-        let err = serde_json::from_str::<Email>("\"not-an-email\"");
-        assert!(err.is_err());
+        serde_json::from_str::<Email>("\"not-an-email\"").unwrap_err();
     }
 }

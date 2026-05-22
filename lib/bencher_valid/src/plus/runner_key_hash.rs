@@ -48,23 +48,19 @@ mod tests {
 
     #[test]
     fn valid() {
-        assert!(VALID_HEX.parse::<RunnerKeyHash>().is_ok());
-        assert!(
-            "a".repeat(crate::keys::SHA256_HEX_LEN)
-                .parse::<RunnerKeyHash>()
-                .is_ok()
-        );
+        VALID_HEX.parse::<RunnerKeyHash>().unwrap();
+        "a".repeat(crate::keys::SHA256_HEX_LEN)
+            .parse::<RunnerKeyHash>()
+            .unwrap();
     }
 
     #[test]
     fn invalid() {
-        assert!("".parse::<RunnerKeyHash>().is_err());
-        assert!("abc123".parse::<RunnerKeyHash>().is_err());
-        assert!(
-            "g".repeat(crate::keys::SHA256_HEX_LEN)
-                .parse::<RunnerKeyHash>()
-                .is_err()
-        );
+        "".parse::<RunnerKeyHash>().unwrap_err();
+        "abc123".parse::<RunnerKeyHash>().unwrap_err();
+        "g".repeat(crate::keys::SHA256_HEX_LEN)
+            .parse::<RunnerKeyHash>()
+            .unwrap_err();
     }
 
     #[test]

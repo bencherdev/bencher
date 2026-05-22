@@ -15,7 +15,13 @@ use super::project::report::{
 };
 
 #[derive(Parser, Debug)]
-#[cfg_attr(feature = "plus", expect(clippy::struct_excessive_bools))]
+#[cfg_attr(
+    feature = "plus",
+    expect(
+        clippy::struct_excessive_bools,
+        reason = "each bool is an independent user flag"
+    )
+)]
 pub struct CliRun {
     #[clap(flatten)]
     pub project: CliRunProject,
@@ -219,7 +225,10 @@ pub enum CliRunFormat {
     Html,
 }
 
-#[expect(clippy::struct_excessive_bools)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each bool is an independent CI flag"
+)]
 #[derive(Args, Debug)]
 #[clap(group(
     ArgGroup::new("ci_cd")

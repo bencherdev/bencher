@@ -6,7 +6,7 @@ pub trait BuiltInMeasure {
     const SLUG_STR: &'static str;
     const UNITS_STR: &'static str;
 
-    #[expect(clippy::expect_used)]
+    #[expect(clippy::expect_used, reason = "infallible parse of known value")]
     fn name_id() -> MeasureNameId {
         Self::SLUG_STR
             .parse()
@@ -20,7 +20,7 @@ pub trait BuiltInMeasure {
             .then(Self::new_json)
     }
 
-    #[expect(clippy::expect_used)]
+    #[expect(clippy::expect_used, reason = "infallible parse of known values")]
     fn new_json() -> JsonNewMeasure {
         JsonNewMeasure {
             name: Self::DISPLAY_STR

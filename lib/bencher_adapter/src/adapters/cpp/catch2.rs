@@ -132,7 +132,10 @@ fn parse_catch2_benchmark_time(input: &str) -> IResult<&str, (Option<String>, Or
     .parse(input)
 }
 
-#[expect(dead_code)]
+#[expect(
+    dead_code,
+    reason = "struct used as parser output; fields consumed implicitly"
+)]
 struct Prelude {
     samples: u64,
     iterations: u64,

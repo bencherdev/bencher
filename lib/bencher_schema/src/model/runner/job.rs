@@ -329,7 +329,10 @@ pub struct PendingInsertJob {
 }
 
 impl PendingInsertJob {
-    #[expect(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "job creation has many dimensions"
+    )]
     pub async fn from_run(
         context: &ApiContext,
         query_project: &QueryProject,

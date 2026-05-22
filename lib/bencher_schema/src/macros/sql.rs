@@ -1,6 +1,9 @@
 // The `define_sql_function!` macro generates structs with `pub(in crate)` fields
 // for function parameters, which triggers the `field_scoped_visibility_modifiers` lint.
-#![expect(clippy::field_scoped_visibility_modifiers)]
+#![expect(
+    clippy::field_scoped_visibility_modifiers,
+    reason = "define_sql_function! generates pub(in crate) fields"
+)]
 
 diesel::define_sql_function! {
     /// `SQLite` `last_insert_rowid()` — returns the rowid of the most recent INSERT on the same

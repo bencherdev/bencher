@@ -14,19 +14,19 @@ use crate::ProjectUuid;
 use crate::{JsonSpec, SpecResourceId};
 
 pub const TESTBED_LOCALHOST_STR: &str = "localhost";
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "infallible parse of known value")]
 pub static DEFAULT_TESTBED: LazyLock<TestbedNameId> = LazyLock::new(|| {
     TESTBED_LOCALHOST_STR
         .parse()
         .expect("Failed to parse testbed name.")
 });
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "infallible parse of known value")]
 static TESTBED_LOCALHOST: LazyLock<ResourceName> = LazyLock::new(|| {
     TESTBED_LOCALHOST_STR
         .parse()
         .expect("Failed to parse testbed name.")
 });
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "infallible parse of known value")]
 static TESTBED_LOCALHOST_SLUG: LazyLock<Option<TestbedSlug>> = LazyLock::new(|| {
     Some(
         TESTBED_LOCALHOST_STR

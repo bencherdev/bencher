@@ -56,7 +56,11 @@ impl Products {
 }
 
 pub struct Product {
-    #[expect(dead_code, clippy::struct_field_names)]
+    #[expect(
+        dead_code,
+        clippy::struct_field_names,
+        reason = "retained for future Stripe API use"
+    )]
     pub product: StripeProduct,
     pub metered: HashMap<String, StripePrice>,
     pub licensed: HashMap<String, StripePrice>,

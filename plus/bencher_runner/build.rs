@@ -29,7 +29,9 @@
     clippy::panic,
     clippy::print_stderr,
     clippy::unreachable,
-    clippy::unwrap_used
+    clippy::unwrap_in_result,
+    clippy::unwrap_used,
+    reason = "build script, not production code"
 )]
 
 use std::env;
@@ -425,7 +427,7 @@ fn generate_binary_module(name: &str, bin_path: &Path, is_release: bool, out_dir
             r#"// Generated {name} module - release build with embedded binary.
 
 /// The embedded {name} binary.
-#[expect(clippy::large_include_file)]
+#[expect(clippy::large_include_file, reason = "binary must be embedded in release builds")]
 static {name_upper}_BYTES: &[u8] = include_bytes!("{bin_path_str}");
 
 /// Get the {name} binary bytes.
@@ -455,7 +457,7 @@ static {name_upper}_BYTES: OnceLock<Vec<u8>> = OnceLock::new();
 /// Get the {name} binary bytes.
 ///
 /// In debug builds, the binary is loaded from disk on first access.
-#[expect(clippy::panic)]
+#[expect(clippy::panic, reason = "debug build: panic on missing binary is intentional")]
 pub fn {name}_bytes() -> &'static [u8] {{
     {name_upper}_BYTES.get_or_init(|| {{
         std::fs::read({name_upper}_PATH)
@@ -497,7 +499,7 @@ fn generate_stub_module(name: &str, out_dir: &Path) {
 /// Get the {name} binary bytes.
 ///
 /// This is a stub — the {name} binary was not available at build time.
-#[expect(clippy::panic)]
+#[expect(clippy::panic, reason = "stub must panic when binary is unavailable")]
 pub fn {name}_bytes() -> &'static [u8] {{
     panic!("{name} binary not available - build it first or set the corresponding env var")
 }}

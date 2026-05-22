@@ -1,4 +1,7 @@
-#![cfg_attr(feature = "plus", expect(clippy::expect_used, clippy::print_stdout))]
+#![cfg_attr(
+    feature = "plus",
+    expect(clippy::expect_used, clippy::print_stdout, reason = "test task binary")
+)]
 #![cfg_attr(not(feature = "plus"), allow(unused_crate_dependencies))]
 
 #[cfg(feature = "plus")]

@@ -228,7 +228,8 @@ impl ChildHandle {
             #[expect(
                 unsafe_code,
                 clippy::cast_possible_wrap,
-                clippy::cast_possible_truncation
+                clippy::cast_possible_truncation,
+                reason = "pidfd_open syscall requires unsafe FFI; PID fits in i32"
             )]
             // SAFETY: `SYS_pidfd_open` is a valid syscall on Linux 5.3+.
             // If unsupported, it returns -1 and we fall back to raw PID.
@@ -250,7 +251,7 @@ impl ChildHandle {
                 // SAFETY: pidfd_send_signal sends a signal via the stable fd.
                 // If the process has already exited the fd is still valid but
                 // the call returns ESRCH, which we ignore.
-                #[expect(unsafe_code)]
+                #[expect(unsafe_code, reason = "pidfd_send_signal requires unsafe FFI")]
                 unsafe {
                     libc::syscall(
                         libc::SYS_pidfd_send_signal,
@@ -262,18 +263,26 @@ impl ChildHandle {
                 }
                 return;
             }
+            #[expect(
+                unsafe_code,
+                clippy::cast_possible_wrap,
+                reason = "libc::kill requires unsafe FFI; PID fits in i32"
+            )]
             // SAFETY: Fall back to kill-by-PID. We send SIGKILL to a known
             // child PID; if already exited, returns ESRCH (harmless).
-            #[expect(unsafe_code, clippy::cast_possible_wrap)]
             unsafe {
                 libc::kill(self.pid as i32, libc::SIGKILL);
             }
         }
         #[cfg(all(unix, not(target_os = "linux")))]
         {
+            #[expect(
+                unsafe_code,
+                clippy::cast_possible_wrap,
+                reason = "libc::kill requires unsafe FFI; PID fits in i32"
+            )]
             // SAFETY: We send SIGKILL to a known child PID. If the process has
             // already exited the call is harmless (returns ESRCH).
-            #[expect(unsafe_code, clippy::cast_possible_wrap)]
             unsafe {
                 libc::kill(self.pid as i32, libc::SIGKILL);
             }
@@ -295,7 +304,7 @@ impl Drop for ChildHandle {
     fn drop(&mut self) {
         if self.pidfd >= 0 {
             // SAFETY: Closing our owned file descriptor.
-            #[expect(unsafe_code)]
+            #[expect(unsafe_code, reason = "closing owned pidfd requires unsafe FFI")]
             unsafe {
                 libc::close(self.pidfd);
             }

@@ -1,15 +1,18 @@
-#![expect(unused_crate_dependencies)]
+#![expect(
+    unused_crate_dependencies,
+    reason = "dependencies used by lib but not binary"
+)]
 
 use std::{io::ErrorKind, process::ExitCode};
 
 use bencher_cli::{CliError, RunError};
 use tokio_rustls::rustls::crypto::ring;
 
-#[expect(clippy::print_stderr)]
+#[expect(clippy::print_stderr, reason = "CLI binary reports errors to stderr")]
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
     let crypto_provider = ring::default_provider();
-    #[expect(clippy::use_debug)]
+    #[expect(clippy::use_debug, reason = "debug format for crypto provider error")]
     if let Err(err) = crypto_provider.install_default() {
         eprintln!("Failed to install default AWS credentials provider: {err:?}");
         return ExitCode::FAILURE;

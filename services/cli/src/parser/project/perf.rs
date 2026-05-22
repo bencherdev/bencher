@@ -8,7 +8,10 @@ use clap::{Parser, ValueEnum};
 use crate::parser::{CliProjectBackend, ElidedOption};
 
 #[derive(Parser, Debug)]
-#[expect(clippy::option_option)]
+#[expect(
+    clippy::option_option,
+    reason = "None = not specified, Some(None) = explicitly unset"
+)]
 pub struct CliPerf {
     /// Project slug or UUID
     pub project: ProjectResourceId,

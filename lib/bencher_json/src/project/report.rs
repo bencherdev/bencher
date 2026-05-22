@@ -554,9 +554,9 @@ mod tests {
 
     #[test]
     fn from_str_invalid() {
-        assert!("".parse::<Iteration>().is_err());
-        assert!("abc".parse::<Iteration>().is_err());
-        assert!("-1".parse::<Iteration>().is_err());
+        "".parse::<Iteration>().unwrap_err();
+        "abc".parse::<Iteration>().unwrap_err();
+        "-1".parse::<Iteration>().unwrap_err();
     }
 
     #[test]

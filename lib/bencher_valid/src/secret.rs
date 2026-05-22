@@ -89,7 +89,6 @@ mod tests {
         let json = serde_json::to_string(&secret).unwrap();
         assert_eq!(json, "\"my-secret-key\"");
 
-        let err = serde_json::from_str::<Secret>("\"\"");
-        assert!(err.is_err());
+        serde_json::from_str::<Secret>("\"\"").unwrap_err();
     }
 }

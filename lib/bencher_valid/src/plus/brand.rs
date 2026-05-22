@@ -82,7 +82,10 @@ impl From<CardBrand> for String {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(any(feature = "wasm", test)), expect(dead_code))]
+#[cfg_attr(
+    not(any(feature = "wasm", test)),
+    expect(dead_code, reason = "exported only for wasm and tests")
+)]
 pub fn is_valid_card_brand(card_brand: &str) -> bool {
     matches!(
         card_brand,
@@ -123,7 +126,6 @@ mod tests {
         let json = serde_json::to_string(&brand).unwrap();
         assert_eq!(json, "\"amex\"");
 
-        let err = serde_json::from_str::<CardBrand>("\"invalid\"");
-        assert!(err.is_err());
+        serde_json::from_str::<CardBrand>("\"invalid\"").unwrap_err();
     }
 }

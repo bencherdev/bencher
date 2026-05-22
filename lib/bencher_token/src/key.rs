@@ -361,7 +361,7 @@ mod tests {
     fn jwt_auth_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let token = make_expired_token(&secret_key, Audience::Auth, None, None);
-        assert!(secret_key.validate_auth(&token).is_err());
+        secret_key.validate_auth(&token).unwrap_err();
     }
 
     #[test]
@@ -382,7 +382,7 @@ mod tests {
     fn jwt_client_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let token = make_expired_token(&secret_key, Audience::Client, None, None);
-        assert!(secret_key.validate_client(&token).is_err());
+        secret_key.validate_client(&token).unwrap_err();
     }
 
     #[test]
@@ -403,7 +403,7 @@ mod tests {
     fn jwt_api_key_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let token = make_expired_token(&secret_key, Audience::ApiKey, None, None);
-        assert!(secret_key.validate_api_key(&token).is_err());
+        secret_key.validate_api_key(&token).unwrap_err();
     }
 
     #[test]
@@ -436,7 +436,7 @@ mod tests {
             role: OrganizationRole::Leader,
         };
         let token = make_expired_token(&secret_key, Audience::Invite, Some(org), None);
-        assert!(secret_key.validate_invite(&token).is_err());
+        secret_key.validate_invite(&token).unwrap_err();
     }
 
     // --- OCI Public tokens ---
@@ -478,7 +478,7 @@ mod tests {
         )
         .unwrap();
 
-        assert!(secret_key.validate_oci_public(&token).is_err());
+        secret_key.validate_oci_public(&token).unwrap_err();
     }
 
     // --- OCI Auth tokens ---
@@ -512,7 +512,7 @@ mod tests {
             actions: vec![OciAction::Pull],
         };
         let token = make_expired_token(&secret_key, Audience::OciAuth, None, Some(oci));
-        assert!(secret_key.validate_oci_auth(&token).is_err());
+        secret_key.validate_oci_auth(&token).unwrap_err();
     }
 
     #[test]
@@ -579,7 +579,7 @@ mod tests {
         )
         .unwrap();
 
-        assert!(secret_key.validate_oci_project(&token).is_err());
+        secret_key.validate_oci_project(&token).unwrap_err();
     }
 
     // --- OCI Runner tokens ---
@@ -631,7 +631,7 @@ mod tests {
         )
         .unwrap();
 
-        assert!(secret_key.validate_oci_runner(&token).is_err());
+        secret_key.validate_oci_runner(&token).unwrap_err();
     }
 
     // --- Cross-type rejection: each OCI token type rejected by the other ---
@@ -640,7 +640,7 @@ mod tests {
     fn jwt_auth_token_rejected_as_oci_auth() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
-        assert!(secret_key.validate_oci_auth(&token).is_err());
+        secret_key.validate_oci_auth(&token).unwrap_err();
     }
 
     #[test]
@@ -649,14 +649,14 @@ mod tests {
         let token = secret_key
             .new_oci_auth(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
             .unwrap();
-        assert!(secret_key.validate_auth(&token).is_err());
+        secret_key.validate_auth(&token).unwrap_err();
     }
 
     #[test]
     fn jwt_oci_public_rejected_as_oci_auth() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let token = secret_key.new_oci_public(TTL, None, vec![]).unwrap();
-        assert!(secret_key.validate_oci_auth(&token).is_err());
+        secret_key.validate_oci_auth(&token).unwrap_err();
     }
 
     #[test]
@@ -665,7 +665,7 @@ mod tests {
         let token = secret_key
             .new_oci_auth(EMAIL.clone(), TTL, None, vec![])
             .unwrap();
-        assert!(secret_key.validate_oci_public(&token).is_err());
+        secret_key.validate_oci_public(&token).unwrap_err();
     }
 
     #[cfg(feature = "plus")]
@@ -673,7 +673,7 @@ mod tests {
     fn jwt_oci_public_rejected_as_oci_runner() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let token = secret_key.new_oci_public(TTL, None, vec![]).unwrap();
-        assert!(secret_key.validate_oci_runner(&token).is_err());
+        secret_key.validate_oci_runner(&token).unwrap_err();
     }
 
     #[cfg(feature = "plus")]
@@ -684,7 +684,7 @@ mod tests {
         let token = secret_key
             .new_oci_runner(runner_uuid, TTL, None, vec![OciAction::Pull])
             .unwrap();
-        assert!(secret_key.validate_oci_public(&token).is_err());
+        secret_key.validate_oci_public(&token).unwrap_err();
     }
 
     #[cfg(feature = "plus")]
@@ -694,7 +694,7 @@ mod tests {
         let token = secret_key
             .new_oci_auth(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
             .unwrap();
-        assert!(secret_key.validate_oci_runner(&token).is_err());
+        secret_key.validate_oci_runner(&token).unwrap_err();
     }
 
     #[cfg(feature = "plus")]
@@ -705,7 +705,7 @@ mod tests {
         let token = secret_key
             .new_oci_runner(runner_uuid, TTL, None, vec![OciAction::Pull])
             .unwrap();
-        assert!(secret_key.validate_oci_auth(&token).is_err());
+        secret_key.validate_oci_auth(&token).unwrap_err();
     }
 
     // --- Cross-type rejection: OCI Project tokens ---
@@ -715,7 +715,7 @@ mod tests {
     fn jwt_oci_public_rejected_as_oci_project() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let token = secret_key.new_oci_public(TTL, None, vec![]).unwrap();
-        assert!(secret_key.validate_oci_project(&token).is_err());
+        secret_key.validate_oci_project(&token).unwrap_err();
     }
 
     #[cfg(feature = "plus")]
@@ -726,7 +726,7 @@ mod tests {
         let token = secret_key
             .new_oci_project(project_uuid, TTL, None, vec![OciAction::Push])
             .unwrap();
-        assert!(secret_key.validate_oci_public(&token).is_err());
+        secret_key.validate_oci_public(&token).unwrap_err();
     }
 
     #[cfg(feature = "plus")]
@@ -736,7 +736,7 @@ mod tests {
         let token = secret_key
             .new_oci_auth(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
             .unwrap();
-        assert!(secret_key.validate_oci_project(&token).is_err());
+        secret_key.validate_oci_project(&token).unwrap_err();
     }
 
     #[cfg(feature = "plus")]
@@ -747,7 +747,7 @@ mod tests {
         let token = secret_key
             .new_oci_project(project_uuid, TTL, None, vec![OciAction::Push])
             .unwrap();
-        assert!(secret_key.validate_oci_auth(&token).is_err());
+        secret_key.validate_oci_auth(&token).unwrap_err();
     }
 
     #[cfg(feature = "plus")]
@@ -758,7 +758,7 @@ mod tests {
         let token = secret_key
             .new_oci_runner(runner_uuid, TTL, None, vec![OciAction::Pull])
             .unwrap();
-        assert!(secret_key.validate_oci_project(&token).is_err());
+        secret_key.validate_oci_project(&token).unwrap_err();
     }
 
     #[cfg(feature = "plus")]
@@ -769,6 +769,6 @@ mod tests {
         let token = secret_key
             .new_oci_project(project_uuid, TTL, None, vec![OciAction::Push])
             .unwrap();
-        assert!(secret_key.validate_oci_runner(&token).is_err());
+        secret_key.validate_oci_runner(&token).unwrap_err();
     }
 }

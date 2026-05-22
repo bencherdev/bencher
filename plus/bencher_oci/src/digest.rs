@@ -93,7 +93,8 @@ mod tests {
 
     #[test]
     fn digest_hasher_unsupported() {
-        let result = DigestHasher::from_algorithm("md5");
-        assert!(result.is_err());
+        let Err(_) = DigestHasher::from_algorithm("md5") else {
+            panic!("expected Err for unsupported algorithm");
+        };
     }
 }

@@ -263,7 +263,11 @@ fn get_top_projects(
     }
 }
 
-#[expect(clippy::cast_precision_loss, clippy::cast_sign_loss)]
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    reason = "metric counts and percentages are small enough"
+)]
 fn top_projects(project_metrics: Vec<(QueryProject, i64)>, total: i64) -> JsonTopProjects {
     project_metrics
         .into_iter()

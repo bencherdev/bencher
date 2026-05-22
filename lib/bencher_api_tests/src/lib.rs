@@ -1,4 +1,7 @@
-#![expect(clippy::multiple_inherent_impl)]
+#![expect(
+    clippy::multiple_inherent_impl,
+    reason = "test helpers extend types across modules"
+)]
 //! Test utilities for Bencher API tests.
 //!
 //! This crate provides helpers for testing Bencher API endpoints:

@@ -3,9 +3,11 @@
 absolute-paths-allowed-crates = ["diesel"]
 absolute-paths-max-segments = 3
 
+allow-dbg-in-tests = true
 allow-unwrap-in-tests = true
 allow-unwrap-types = []
 allow-expect-in-tests = true
+allow-indexing-slicing-in-tests = true
 allow-panic-in-tests = true
 
 cognitive-complexity-threshold = 25

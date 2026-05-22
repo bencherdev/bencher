@@ -349,19 +349,19 @@ mod tests {
     #[test]
     fn safe_join_rejects_dotdot() {
         let dir = Utf8Path::new("/rootfs");
-        assert!(safe_join(dir, std::path::Path::new("../../etc/passwd")).is_err());
+        safe_join(dir, std::path::Path::new("../../etc/passwd")).unwrap_err();
     }
 
     #[test]
     fn safe_join_rejects_nested_dotdot() {
         let dir = Utf8Path::new("/rootfs");
-        assert!(safe_join(dir, std::path::Path::new("foo/../../bar")).is_err());
+        safe_join(dir, std::path::Path::new("foo/../../bar")).unwrap_err();
     }
 
     #[test]
     fn safe_join_rejects_absolute_with_dotdot() {
         let dir = Utf8Path::new("/rootfs");
-        assert!(safe_join(dir, std::path::Path::new("/foo/../../../etc/shadow")).is_err());
+        safe_join(dir, std::path::Path::new("/foo/../../../etc/shadow")).unwrap_err();
     }
 
     #[test]
@@ -625,9 +625,7 @@ mod tests {
 
         // Extract layer 2 — should fail with PathTraversal
         let reader2 = File::open(&tar2_path).unwrap();
-        let result = extract_tar(reader2, target);
-        assert!(result.is_err());
-        let err = result.unwrap_err();
+        let err = extract_tar(reader2, target).unwrap_err();
         assert!(
             matches!(err, OciError::PathTraversal(_)),
             "expected PathTraversal error, got: {err}"

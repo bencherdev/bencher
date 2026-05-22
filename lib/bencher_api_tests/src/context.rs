@@ -20,7 +20,10 @@ use tokio::sync::Mutex;
 const ISSUER: &str = "http://localhost:3000";
 
 /// A test server for running API integration tests.
-#[expect(clippy::partial_pub_fields)]
+#[expect(
+    clippy::partial_pub_fields,
+    reason = "intentional mix of pub and private fields with accessors"
+)]
 pub struct TestServer {
     /// The Dropshot HTTP server (private - use `close()` to shut down)
     server: HttpServer<ApiContext>,
@@ -59,7 +62,11 @@ impl TestServer {
     }
 
     #[cfg(feature = "plus")]
-    #[expect(clippy::expect_used, clippy::unused_async)]
+    #[expect(
+        clippy::expect_used,
+        clippy::unused_async,
+        reason = "test server setup with fallible init; async for API parity"
+    )]
     async fn build(
         upload_timeout: Option<u64>,
         max_body_size: Option<u64>,
@@ -144,7 +151,12 @@ impl TestServer {
     }
 
     #[cfg(not(feature = "plus"))]
-    #[expect(clippy::expect_used, clippy::unused_async, clippy::too_many_lines)]
+    #[expect(
+        clippy::expect_used,
+        clippy::unused_async,
+        clippy::too_many_lines,
+        reason = "test server setup with fallible init; async for API parity"
+    )]
     async fn build(
         upload_timeout: Option<u64>,
         max_body_size: Option<u64>,
@@ -204,7 +216,7 @@ impl TestServer {
         Self::start_server(context, &log, token_key, db_path, db_file)
     }
 
-    #[expect(clippy::expect_used)]
+    #[expect(clippy::expect_used, reason = "test server startup with fallible init")]
     fn start_server(
         context: ApiContext,
         log: &slog::Logger,
@@ -264,7 +276,7 @@ impl TestServer {
 
     /// Get a database connection for test setup.
     /// Use this to insert test data directly into the database.
-    #[expect(clippy::expect_used)]
+    #[expect(clippy::expect_used, reason = "test helper establishing DB connection")]
     pub fn db_conn(&self) -> DbConnection {
         DbConnection::establish(&self.db_path).expect("Failed to establish database connection")
     }

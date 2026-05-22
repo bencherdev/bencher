@@ -1,4 +1,4 @@
-#![expect(clippy::absolute_paths)]
+#![expect(clippy::absolute_paths, reason = "error variants wrap external types")]
 
 #[derive(thiserror::Error, Debug)]
 pub enum CliError {

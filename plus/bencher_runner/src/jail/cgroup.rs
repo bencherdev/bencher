@@ -1,6 +1,6 @@
 //! Cgroup v2 management for resource limits.
 
-#![expect(clippy::print_stderr)]
+#![expect(clippy::print_stderr, reason = "cgroup setup prints diagnostics")]
 
 use std::fs;
 
@@ -279,7 +279,7 @@ impl Drop for CgroupManager {
 }
 
 /// Check if cgroup v2 is available.
-#[expect(dead_code)]
+#[expect(dead_code, reason = "utility for future cgroup v2 feature detection")]
 #[must_use]
 pub fn is_cgroup_v2_available() -> bool {
     Utf8Path::new(CGROUP_ROOT)

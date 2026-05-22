@@ -87,7 +87,10 @@ impl PlanStatus {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(any(feature = "wasm", test)), expect(dead_code))]
+#[cfg_attr(
+    not(any(feature = "wasm", test)),
+    expect(dead_code, reason = "exported only for wasm and tests")
+)]
 pub fn is_valid_plan_status(plan_status: &str) -> bool {
     matches!(
         plan_status,
@@ -128,7 +131,6 @@ mod tests {
         let json = serde_json::to_string(&status).unwrap();
         assert_eq!(json, "\"incomplete_expired\"");
 
-        let err = serde_json::from_str::<PlanStatus>("\"invalid\"");
-        assert!(err.is_err());
+        serde_json::from_str::<PlanStatus>("\"invalid\"").unwrap_err();
     }
 }

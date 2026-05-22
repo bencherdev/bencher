@@ -96,6 +96,6 @@ mod tests {
 
     #[test]
     fn invalid_ip() {
-        assert!("not-an-ip".parse::<SourceIp>().is_err());
+        "not-an-ip".parse::<SourceIp>().unwrap_err();
     }
 }

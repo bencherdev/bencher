@@ -114,7 +114,10 @@ impl DateTime {
 
     /// Compute wall-clock duration in fractional seconds from `self` to `now`.
     /// Uses millisecond precision and clamps to zero.
-    #[expect(clippy::cast_precision_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "millisecond precision is sufficient for elapsed time"
+    )]
     pub fn elapsed_secs(self, now: Self) -> f64 {
         ((now.timestamp_millis() - self.timestamp_millis()) as f64 / 1000.0).max(0.0)
     }

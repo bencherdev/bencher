@@ -404,7 +404,13 @@ impl InsertTestbed {
     #[cfg(feature = "plus")]
     crate::macros::rate_limit::fn_rate_limit!(testbed, Testbed);
 
-    #[cfg_attr(not(feature = "plus"), expect(clippy::unnecessary_wraps))]
+    #[cfg_attr(
+        not(feature = "plus"),
+        expect(
+            clippy::unnecessary_wraps,
+            reason = "returns Result for plus feature parity"
+        )
+    )]
     fn from_json(
         conn: &mut DbConnection,
         project_id: ProjectId,

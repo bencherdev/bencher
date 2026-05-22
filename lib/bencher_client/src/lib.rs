@@ -3,7 +3,8 @@ mod codegen {
         unused_qualifications,
         clippy::all,
         clippy::pedantic,
-        clippy::restriction
+        clippy::restriction,
+        reason = "auto-generated code from OpenAPI spec"
     )]
     include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 }

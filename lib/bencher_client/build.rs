@@ -1,4 +1,4 @@
-#![expect(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason = "build script, not production code")]
 
 #[cfg(unix)]
 use std::os::unix;

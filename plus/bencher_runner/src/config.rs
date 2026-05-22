@@ -439,7 +439,6 @@ impl Config {
 }
 
 #[cfg(test)]
-#[expect(clippy::indexing_slicing)]
 mod tests {
     use super::*;
 
@@ -557,6 +556,6 @@ mod tests {
 
     #[test]
     fn config_with_empty_token_errors() {
-        assert!(Config::new("img").with_token("").is_err());
+        Config::new("img").with_token("").unwrap_err();
     }
 }

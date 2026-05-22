@@ -263,7 +263,11 @@ fn get_top_job_projects(
     }
 }
 
-#[expect(clippy::cast_precision_loss, clippy::cast_sign_loss)]
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    reason = "duration and percentage values are small enough"
+)]
 fn top_job_projects(project_durations: Vec<(QueryProject, i64)>, total: i64) -> JsonTopJobProjects {
     project_durations
         .into_iter()

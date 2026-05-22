@@ -14,7 +14,11 @@ impl TryFrom<TaskTs> for Ts {
 }
 
 impl Ts {
-    #[expect(clippy::unused_self)]
+    #[expect(
+        clippy::unused_self,
+        clippy::panic_in_result_fn,
+        reason = "consistent exec(&self) interface across tasks"
+    )]
     pub fn exec(&self) -> anyhow::Result<()> {
         let status = Command::new("npm")
             .args(["run", "typeshare"])

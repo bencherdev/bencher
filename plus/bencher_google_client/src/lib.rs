@@ -8,13 +8,19 @@ use oauth2::{
 use serde::Deserialize;
 use url::Url;
 
-#[expect(clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "constant URL literal, infallible at runtime"
+)]
 static AUTH_URL: LazyLock<AuthUrl> = LazyLock::new(|| {
     AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_owned())
         .expect("Invalid authorization endpoint URL")
 });
 
-#[expect(clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "constant URL literal, infallible at runtime"
+)]
 static TOKEN_URL: LazyLock<TokenUrl> = LazyLock::new(|| {
     TokenUrl::new("https://oauth2.googleapis.com/token".to_owned())
         .expect("Invalid token endpoint URL")

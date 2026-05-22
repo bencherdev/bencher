@@ -31,7 +31,10 @@ impl Visitor<'_> for RecaptchaScoreVisitor {
         formatter.write_str("a valid recaptcha score between 0.0 and 1.0")
     }
 
-    #[expect(clippy::cast_possible_truncation)]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "score is 0.0..=1.0, fits in f32"
+    )]
     fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
     where
         E: de::Error,

@@ -78,7 +78,8 @@ impl ResourceLimits {
     #[expect(
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
-        clippy::cast_precision_loss
+        clippy::cast_precision_loss,
+        reason = "CPU fraction to microsecond quota conversion"
     )]
     pub fn with_cpu_limit(mut self, cpus: f64) -> Self {
         let quota = (cpus * self.cpu_period_us as f64) as u64;

@@ -1,4 +1,7 @@
-#![cfg_attr(feature = "plus", expect(clippy::print_stdout))]
+#![cfg_attr(
+    feature = "plus",
+    expect(clippy::print_stdout, reason = "CLI task output")
+)]
 #![cfg_attr(not(feature = "plus"), allow(unused_crate_dependencies))]
 
 #[cfg(feature = "plus")]

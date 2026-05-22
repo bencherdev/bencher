@@ -4,7 +4,7 @@
 //!   bencher-runner run --image <IMAGE> [OPTIONS]
 //!   bencher-runner vmm --jail-root <PATH> --kernel <PATH> --rootfs <PATH> [OPTIONS]
 
-#![expect(clippy::print_stderr)]
+#![expect(clippy::print_stderr, reason = "runner CLI error output")]
 
 mod error;
 mod parser;

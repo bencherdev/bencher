@@ -55,7 +55,11 @@ mod tests {
     static OSO: LazyLock<Oso> = LazyLock::new(|| init_rbac().expect(OSO_ERROR));
 
     #[test]
-    #[expect(clippy::cognitive_complexity, clippy::too_many_lines)]
+    #[expect(
+        clippy::cognitive_complexity,
+        clippy::too_many_lines,
+        reason = "exhaustive RBAC permission matrix test"
+    )]
     fn rbac() {
         let oso = &*OSO;
 

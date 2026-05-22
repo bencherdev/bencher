@@ -362,7 +362,7 @@ fn infinity(input: &str) -> IResult<&str, f64> {
         ),
         |(signs, _, _)| {
             // The indexing is safe due to the usage of `many1` above
-            #[expect(clippy::indexing_slicing)]
+            #[expect(clippy::indexing_slicing, reason = "many1 guarantees non-empty vec")]
             let sign = signs[0];
             if sign == '+' {
                 f64::INFINITY

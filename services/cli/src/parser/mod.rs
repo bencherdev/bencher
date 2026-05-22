@@ -254,7 +254,7 @@ impl From<CliArchived> for Option<bool> {
             (false, false) => None,
             (false, true) => Some(false),
             (true, false) => Some(true),
-            #[expect(clippy::unreachable)]
+            #[expect(clippy::unreachable, reason = "clap ArgGroup prevents both flags")]
             (true, true) => unreachable!("Cannot set both `archive` and `unarchive`"),
         }
     }

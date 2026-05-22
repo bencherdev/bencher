@@ -66,7 +66,10 @@ fn parse_iai_lines(
     ] = lines;
 
     let name = benchmark_name_line.parse().ok()?;
-    #[expect(trivial_casts)]
+    #[expect(
+        trivial_casts,
+        reason = "explicit fn pointer cast needed for array type inference"
+    )]
     let metrics = [
         (
             Instructions::NAME_STR,
@@ -104,7 +107,10 @@ fn parse_iai_lines(
     Some((name, metrics))
 }
 
-#[expect(clippy::cast_precision_loss)]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "u64 counter cast to f64 for metric value"
+)]
 fn parse_iai_metric<'a>(input: &'a str, measure: &'static str) -> IResult<&'a str, JsonNewMetric> {
     map(
         (

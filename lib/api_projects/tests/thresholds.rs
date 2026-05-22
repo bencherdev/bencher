@@ -5,7 +5,8 @@
     clippy::similar_names,
     clippy::tests_outside_test_module,
     clippy::too_many_lines,
-    clippy::uninlined_format_args
+    clippy::uninlined_format_args,
+    reason = "integration test file"
 )]
 //! Integration tests for project threshold endpoints.
 

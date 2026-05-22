@@ -1192,7 +1192,7 @@ mod tests {
 
     /// Test that silencing alerts for old head works within a transaction.
     #[test]
-    #[expect(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "test requires extensive setup")]
     fn for_branch_silences_old_head_alerts() {
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);

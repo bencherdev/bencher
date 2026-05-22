@@ -8,7 +8,10 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-#[expect(clippy::option_option)]
+#[expect(
+    clippy::option_option,
+    reason = "None = not specified, Some(None) = explicitly unset"
+)]
 pub struct Update {
     pub project: ProjectResourceId,
     pub plot: PlotUuid,

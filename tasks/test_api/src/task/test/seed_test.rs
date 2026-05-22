@@ -80,7 +80,12 @@ impl SeedTest {
         if self.no_git { NO_GIT_NAME } else { REPO_NAME }
     }
 
-    #[expect(clippy::cognitive_complexity, clippy::too_many_lines)]
+    #[expect(
+        clippy::cognitive_complexity,
+        clippy::panic_in_result_fn,
+        clippy::too_many_lines,
+        reason = "seed test exercises full API workflow"
+    )]
     pub fn exec(&self) -> anyhow::Result<()> {
         let host = self.url.as_ref();
         let admin_token = self.admin_token.as_ref();
@@ -1480,7 +1485,7 @@ impl SeedTest {
             TOKEN_ARG,
             token,
             PROJECT_SLUG,
-            #[expect(clippy::indexing_slicing)]
+            #[expect(clippy::indexing_slicing, reason = "test asserts alerts exist above")]
             alerts.0[0].uuid.to_string().as_str(),
         ])
         .current_dir(CLI_DIR);
@@ -1929,7 +1934,10 @@ impl SeedTest {
             1,
             "should have exactly one active key: {keys:?}"
         );
-        #[expect(clippy::indexing_slicing)]
+        #[expect(
+            clippy::indexing_slicing,
+            reason = "test asserts exactly one key above"
+        )]
         {
             assert_eq!(keys.0[0].uuid, project_key_created.uuid);
             assert!(
@@ -2144,7 +2152,11 @@ impl SeedTest {
     }
 
     #[cfg(feature = "plus")]
-    #[expect(clippy::too_many_lines)]
+    #[expect(
+        clippy::panic_in_result_fn,
+        clippy::too_many_lines,
+        reason = "integration test exercises full spec workflow"
+    )]
     fn runner_spec_exec(&self) -> anyhow::Result<()> {
         let host = self.url.as_ref();
         let admin_token = self.admin_token.as_ref();
@@ -2501,7 +2513,11 @@ impl SeedTest {
     }
 
     #[cfg(feature = "plus")]
-    #[expect(clippy::too_many_lines)]
+    #[expect(
+        clippy::panic_in_result_fn,
+        clippy::too_many_lines,
+        reason = "integration test exercises full cloud workflow"
+    )]
     fn bencher_cloud_exec(&self) -> anyhow::Result<()> {
         let host = self.url.as_ref();
         let admin_token = self.admin_token.as_ref();
@@ -2665,7 +2681,11 @@ impl SeedTest {
     }
 
     #[cfg(feature = "plus")]
-    #[expect(clippy::too_many_lines)]
+    #[expect(
+        clippy::panic_in_result_fn,
+        clippy::too_many_lines,
+        reason = "integration test exercises full self-hosted workflow"
+    )]
     fn bencher_self_hosted_exec(&self) -> anyhow::Result<()> {
         let host = self.url.as_ref();
         let admin_token = self.admin_token.as_ref();

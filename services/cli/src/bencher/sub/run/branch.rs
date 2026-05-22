@@ -2,7 +2,10 @@ use bencher_json::{BranchNameId, GitHash};
 
 use crate::{bencher::sub::project::branch::start_point::StartPoint, parser::run::CliRunBranch};
 
-#[expect(clippy::struct_field_names)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "branch field matches the struct name"
+)]
 #[derive(Debug, Clone)]
 pub struct Branch {
     branch: Option<BranchNameId>,

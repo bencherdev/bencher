@@ -17,7 +17,7 @@ impl BenchmarkResult {
     /// The first 10% of samples are discarded as warmup.
     pub fn from_samples(mut samples: Vec<f64>) -> Self {
         // Discard first 10% as warmup
-        #[expect(clippy::integer_division)]
+        #[expect(clippy::integer_division, reason = "discarding first 10% as warmup")]
         let warmup_count = samples.len() / 10;
         samples.drain(..warmup_count);
 
@@ -55,7 +55,10 @@ fn mean(samples: &[f64]) -> f64 {
     if samples.is_empty() {
         return 0.0;
     }
-    #[expect(clippy::cast_precision_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "sample count fits within f64 precision"
+    )]
     let len = samples.len() as f64;
     samples.iter().sum::<f64>() / len
 }
@@ -64,7 +67,10 @@ fn stddev(samples: &[f64], mean: f64) -> f64 {
     if samples.len() < 2 {
         return 0.0;
     }
-    #[expect(clippy::cast_precision_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "sample count fits within f64 precision"
+    )]
     let len_minus_one = (samples.len() - 1) as f64;
     let variance = samples.iter().map(|s| (s - mean).powi(2)).sum::<f64>() / len_minus_one;
     variance.sqrt()
@@ -73,7 +79,8 @@ fn stddev(samples: &[f64], mean: f64) -> f64 {
 #[expect(
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    reason = "index arithmetic from sample count and percentage"
 )]
 fn percentile(samples: &mut [f64], pct: f64) -> f64 {
     if samples.is_empty() {
@@ -82,7 +89,10 @@ fn percentile(samples: &mut [f64], pct: f64) -> f64 {
     samples.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let idx = ((pct / 100.0) * (samples.len() - 1) as f64).round() as usize;
     let idx = idx.min(samples.len() - 1);
-    #[expect(clippy::indexing_slicing)]
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "idx is clamped to valid range above"
+    )]
     samples[idx]
 }
 

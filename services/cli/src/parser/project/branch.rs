@@ -75,7 +75,11 @@ pub struct CliBranchCreate {
     pub backend: CliProjectBackend,
 }
 
-#[expect(clippy::doc_markdown, clippy::struct_field_names)]
+#[expect(
+    clippy::doc_markdown,
+    clippy::struct_field_names,
+    reason = "doc contains git-branch URL; start_point_ prefix matches CLI flags"
+)]
 #[derive(Args, Debug)]
 pub struct CliStartPointCreate {
     /// Branch name, slug, or UUID to use as the new branch start point
@@ -143,7 +147,10 @@ pub struct CliBranchUpdate {
     pub backend: CliProjectBackend,
 }
 
-#[expect(clippy::struct_field_names)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "start_point_ prefix matches CLI flag names"
+)]
 #[derive(Args, Debug)]
 pub struct CliStartPointUpdate {
     /// Use the specified branch name, slug, or UUID as the start point for `branch`.

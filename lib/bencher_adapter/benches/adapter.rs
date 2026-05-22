@@ -1,4 +1,4 @@
-#![expect(unused_crate_dependencies)]
+#![expect(unused_crate_dependencies, reason = "bench binary has different deps")]
 
 use criterion::{Criterion, criterion_group, criterion_main};
 
@@ -50,7 +50,7 @@ fn adapter_json(c: &mut Criterion) {
     });
 }
 
-#[expect(clippy::non_ascii_literal)]
+#[expect(clippy::non_ascii_literal, reason = "μs unit symbol in bench output")]
 const RUST_RESULT: &str = "
 running 5 tests
 test tests::ignored ... ignored

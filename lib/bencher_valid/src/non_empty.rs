@@ -95,7 +95,6 @@ mod tests {
         let json = serde_json::to_string(&non_empty).unwrap();
         assert_eq!(json, "\"hello\"");
 
-        let err = serde_json::from_str::<NonEmpty>("\"\"");
-        assert!(err.is_err());
+        serde_json::from_str::<NonEmpty>("\"\"").unwrap_err();
     }
 }

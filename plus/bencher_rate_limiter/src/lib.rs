@@ -5,7 +5,10 @@ pub mod snapshot;
 pub use bandwidth::BandwidthLimiter;
 pub use rate_limiter::{DAY, HOUR, Interval, MINUTE, RateLimiter, RateLimits};
 
-#[expect(clippy::integer_division)]
+#[expect(
+    clippy::integer_division,
+    reason = "intentional truncation to compute bucket index"
+)]
 pub fn epoch_bucket(epoch_secs: u64, bucket_secs: u64) -> u64 {
     debug_assert!(bucket_secs > 0, "bucket_secs must be non-zero");
     epoch_secs / bucket_secs

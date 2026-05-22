@@ -16,7 +16,10 @@ pub(crate) const KEY_CHARSET: &[u8] =
     b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 #[cfg(feature = "server")]
-#[expect(clippy::indexing_slicing)]
+#[expect(
+    clippy::indexing_slicing,
+    reason = "index is bounded by KEY_CHARSET.len()"
+)]
 pub(crate) fn generate_random_body() -> String {
     use rand::RngExt as _;
     let mut rng = rand::rng();

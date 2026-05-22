@@ -1,7 +1,7 @@
 #![expect(
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
-    clippy::indexing_slicing
+    reason = "integration test file"
 )]
 //! Integration tests for runner CRUD endpoints.
 

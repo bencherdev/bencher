@@ -4,7 +4,12 @@
 //! Instead of a custom VMM, we use Firecracker as an external process controlled
 //! via its REST API over a Unix domain socket.
 
-#![expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
+#![expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    clippy::use_debug,
+    reason = "Firecracker VM management prints progress and diagnostics"
+)]
 
 mod client;
 pub mod config;
@@ -88,7 +93,10 @@ pub struct FirecrackerJobConfig {
 /// 7. Cleans up (including cgroup)
 ///
 /// Returns the benchmark output including exit code and stdout.
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "VM lifecycle steps are sequential and clearer inline"
+)]
 pub fn run_firecracker(
     config: &FirecrackerJobConfig,
     cancel_flag: Option<&Arc<AtomicBool>>,
@@ -277,7 +285,7 @@ fn parse_exit_code(s: &str) -> i32 {
 }
 
 #[cfg(test)]
-#[expect(clippy::get_unwrap)]
+#[expect(clippy::get_unwrap, reason = "test assertions")]
 mod tests {
     use super::*;
 
@@ -332,7 +340,7 @@ mod tests {
 
     #[test]
     fn log_level_from_str_invalid() {
-        assert!("invalid".parse::<SandboxLogLevel>().is_err());
+        "invalid".parse::<SandboxLogLevel>().unwrap_err();
     }
 
     #[test]

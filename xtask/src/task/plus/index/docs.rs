@@ -139,19 +139,19 @@ mod tests {
     #[test]
     fn validate_accepts_en_path() {
         let url = Url::parse("https://bencher.dev/learn/benchmarking/rust/criterion/").unwrap();
-        assert!(validate_en_path(&url).is_ok());
+        validate_en_path(&url).unwrap();
     }
 
     #[test]
     fn validate_accepts_root() {
         let root = Url::parse("https://bencher.dev/").unwrap();
-        assert!(validate_en_path(&root).is_ok());
+        validate_en_path(&root).unwrap();
     }
 
     #[test]
     fn validate_allows_lookalike_path() {
         // `deutsch` starts with `de` but is not an exact segment match.
         let url = Url::parse("https://bencher.dev/deutsch/learn/").unwrap();
-        assert!(validate_en_path(&url).is_ok());
+        validate_en_path(&url).unwrap();
     }
 }

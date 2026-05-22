@@ -78,7 +78,10 @@ impl From<PlanLevel> for String {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(any(feature = "wasm", test)), expect(dead_code))]
+#[cfg_attr(
+    not(any(feature = "wasm", test)),
+    expect(dead_code, reason = "exported only for wasm and tests")
+)]
 pub fn is_valid_plan_level(plan_level: &str) -> bool {
     matches!(
         plan_level,
@@ -116,7 +119,6 @@ mod tests {
         let json = serde_json::to_string(&level).unwrap();
         assert_eq!(json, "\"team\"");
 
-        let err = serde_json::from_str::<PlanLevel>("\"invalid\"");
-        assert!(err.is_err());
+        serde_json::from_str::<PlanLevel>("\"invalid\"").unwrap_err();
     }
 }

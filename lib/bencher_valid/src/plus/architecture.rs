@@ -83,7 +83,10 @@ impl From<Architecture> for String {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[cfg_attr(not(any(feature = "wasm", test)), expect(dead_code))]
+#[cfg_attr(
+    not(any(feature = "wasm", test)),
+    expect(dead_code, reason = "exported only for wasm and tests")
+)]
 pub fn is_valid_architecture(architecture: &str) -> bool {
     matches!(architecture, X86_64 | AARCH64)
 }
@@ -123,7 +126,6 @@ mod tests {
         let json = serde_json::to_string(&arch).unwrap();
         assert_eq!(json, "\"aarch64\"");
 
-        let err = serde_json::from_str::<Architecture>("\"invalid\"");
-        assert!(err.is_err());
+        serde_json::from_str::<Architecture>("\"invalid\"").unwrap_err();
     }
 }

@@ -4,8 +4,8 @@
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
     clippy::similar_names,
-    clippy::indexing_slicing,
-    clippy::integer_division
+    clippy::integer_division,
+    reason = "integration test file"
 )]
 //! Integration tests for OCI blob endpoints.
 

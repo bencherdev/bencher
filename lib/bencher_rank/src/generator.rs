@@ -9,7 +9,11 @@ pub struct RankGenerator {
 impl RankGenerator {
     pub fn new(len: usize) -> Self {
         // This will provide equal spacing between ranks, including at the beginning and end.
-        #[expect(clippy::cast_possible_wrap, clippy::integer_division)]
+        #[expect(
+            clippy::cast_possible_wrap,
+            clippy::integer_division,
+            reason = "equal spacing arithmetic within i64 range"
+        )]
         let offset = i64::MAX / (len + 1) as i64;
         Self {
             offset,
@@ -22,7 +26,10 @@ impl RankGenerator {
 impl Iterator for RankGenerator {
     type Item = Rank;
 
-    #[expect(clippy::cast_possible_wrap)]
+    #[expect(
+        clippy::cast_possible_wrap,
+        reason = "count is small relative to i64 range"
+    )]
     fn next(&mut self) -> Option<Self::Item> {
         if self.count >= self.len {
             return None;
@@ -42,7 +49,10 @@ mod tests {
     use super::RankGenerator;
 
     #[test]
-    #[expect(clippy::decimal_literal_representation)]
+    #[expect(
+        clippy::decimal_literal_representation,
+        reason = "expected rank values are large i64 constants"
+    )]
     fn rank_generator() {
         let mut generator = RankGenerator::new(5);
         assert_eq!(generator.next(), Some(Rank(1_537_228_672_809_129_301)));

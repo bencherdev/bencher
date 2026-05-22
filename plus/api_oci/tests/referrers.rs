@@ -3,7 +3,7 @@
     unused_crate_dependencies,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
-    clippy::indexing_slicing
+    reason = "integration test file"
 )]
 //! Integration tests for OCI referrers endpoint.
 
@@ -211,7 +211,10 @@ async fn referrers_list_with_results() {
 
 // GET /v2/{name}/referrers/{digest}?artifactType= - Filter by artifact type
 #[tokio::test]
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "integration test with sequential setup steps"
+)]
 async fn referrers_filter_by_artifact_type() {
     let server = TestServer::new().await;
     let user = server
@@ -454,7 +457,10 @@ async fn referrers_nonexistent_subject() {
 
 // DELETE /v2/{name}/manifests/{digest} - Verify referrer link cleanup
 #[tokio::test]
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "integration test with sequential setup steps"
+)]
 async fn referrers_cleanup_on_manifest_delete() {
     let server = TestServer::new().await;
     let user = server

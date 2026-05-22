@@ -119,11 +119,11 @@ mod tests {
 
     #[test]
     fn from_str_zero() {
-        assert!("0".parse::<PollTimeout>().is_err());
+        "0".parse::<PollTimeout>().unwrap_err();
     }
 
     #[test]
     fn from_str_not_a_number() {
-        assert!("abc".parse::<PollTimeout>().is_err());
+        "abc".parse::<PollTimeout>().unwrap_err();
     }
 }

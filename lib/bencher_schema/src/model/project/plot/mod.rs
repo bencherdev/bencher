@@ -39,7 +39,10 @@ crate::macros::typed_id::typed_id!(PlotId);
 )]
 #[diesel(table_name = plot_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
-#[expect(clippy::struct_excessive_bools)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "plot boundary flags match DB schema"
+)]
 pub struct QueryPlot {
     pub id: PlotId,
     pub uuid: PlotUuid,
@@ -240,7 +243,10 @@ impl Ranked for QueryPlot {
 
 #[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = plot_table)]
-#[expect(clippy::struct_excessive_bools)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "plot boundary flags match DB schema"
+)]
 pub struct InsertPlot {
     pub uuid: PlotUuid,
     pub project_id: ProjectId,

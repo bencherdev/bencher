@@ -1,4 +1,8 @@
-#![expect(unused_crate_dependencies, clippy::tests_outside_test_module)]
+#![expect(
+    unused_crate_dependencies,
+    clippy::tests_outside_test_module,
+    reason = "integration test file"
+)]
 //! Integration tests for runner-spec association endpoints and spec-based claim matching.
 
 mod common;

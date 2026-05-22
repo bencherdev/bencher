@@ -75,7 +75,10 @@ impl From<Decimal> for Time {
 }
 
 impl Time {
-    #[expect(clippy::cast_precision_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "u64 time value cast to f64 for conversion"
+    )]
     fn as_f64(&self) -> f64 {
         match self {
             Self::UInt64(int) => *int as f64,
@@ -133,7 +136,10 @@ impl FromStr for Units {
     type Err = AdapterError;
 
     fn from_str(units_str: &str) -> Result<Self, Self::Err> {
-        #[expect(clippy::map_err_ignore)]
+        #[expect(
+            clippy::map_err_ignore,
+            reason = "nom error replaced with domain-specific error"
+        )]
         let (remainder, units) =
             parse_units(units_str).map_err(|_| Self::Err::BenchmarkUnits(units_str.into()))?;
         if remainder.is_empty() {

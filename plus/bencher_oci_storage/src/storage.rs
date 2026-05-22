@@ -606,7 +606,10 @@ fn is_s3_not_found<E>(err: &aws_sdk_s3::error::SdkError<E>) -> bool {
 
 impl OciS3Storage {
     /// Creates a new S3 storage instance
-    #[expect(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "S3 config requires many parameters"
+    )]
     fn new(
         log: Logger,
         access_key_id: String,

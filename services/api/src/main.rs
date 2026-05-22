@@ -1,4 +1,7 @@
-#![expect(unused_crate_dependencies)]
+#![expect(
+    unused_crate_dependencies,
+    reason = "dependencies used by lib but not binary"
+)]
 
 #[cfg(feature = "sentry")]
 use std::path::PathBuf;

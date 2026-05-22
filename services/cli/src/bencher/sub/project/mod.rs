@@ -8,7 +8,10 @@ pub mod measure;
 pub mod metric;
 pub mod perf;
 pub mod plot;
-#[expect(clippy::module_inception)]
+#[expect(
+    clippy::module_inception,
+    reason = "module re-exports the primary type"
+)]
 pub mod project;
 pub mod report;
 pub mod testbed;

@@ -34,7 +34,12 @@ fn check_sandbox_allowed(
     }
 }
 
-#[expect(clippy::print_stdout, clippy::print_stderr, clippy::use_debug)]
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    clippy::use_debug,
+    reason = "runner CLI output for job execution status"
+)]
 pub fn execute_job(
     config: &UpConfig,
     job: &JsonClaimedJob,
@@ -205,7 +210,7 @@ fn output_to_iteration(
     }
 }
 
-#[expect(clippy::print_stderr)]
+#[expect(clippy::print_stderr, reason = "runner CLI warning output")]
 fn build_metric_output(
     build_time: Option<Duration>,
     file_size: bool,
@@ -251,7 +256,7 @@ fn build_metric_output(
             let file_name = path.file_name().unwrap_or(path.as_str());
             match file_name.parse() {
                 Ok(name) => {
-                    #[expect(clippy::cast_precision_loss)]
+                    #[expect(clippy::cast_precision_loss, reason = "file size as f64 metric value")]
                     let size = bytes.len() as f64;
                     metric_results.push((
                         name,
@@ -373,7 +378,7 @@ fn build_config_from_job(
     Ok(runner_config)
 }
 
-#[expect(clippy::print_stderr)]
+#[expect(clippy::print_stderr, reason = "runner CLI warning output")]
 fn spawn_heartbeat_thread(
     config: &UpConfig,
     ws: &Arc<Mutex<JobChannel>>,
@@ -396,7 +401,11 @@ fn spawn_heartbeat_thread(
     })
 }
 
-#[expect(clippy::print_stderr, clippy::use_debug)]
+#[expect(
+    clippy::print_stderr,
+    clippy::use_debug,
+    reason = "runner CLI error output for heartbeat failures"
+)]
 fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_flag: &AtomicBool) {
     loop {
         std::thread::sleep(Duration::from_secs(1));
@@ -436,7 +445,6 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
 }
 
 #[cfg(test)]
-#[expect(clippy::indexing_slicing, clippy::get_unwrap)]
 mod tests {
     use super::*;
     use camino::Utf8PathBuf;
@@ -466,7 +474,11 @@ mod tests {
         )
     }
 
-    #[expect(clippy::too_many_arguments, clippy::needless_pass_by_value)]
+    #[expect(
+        clippy::too_many_arguments,
+        clippy::needless_pass_by_value,
+        reason = "test helper with many config fields"
+    )]
     fn test_job_with_options(
         cpu: u32,
         memory_bytes: u64,
@@ -688,8 +700,8 @@ mod tests {
         );
         let result = build_config_from_job(&up_config, &job).unwrap();
         let result_env = result.env.unwrap();
-        assert_eq!(result_env.get("RUST_LOG").unwrap(), "debug");
-        assert_eq!(result_env.get("CI").unwrap(), "true");
+        assert_eq!(&result_env["RUST_LOG"], "debug");
+        assert_eq!(&result_env["CI"], "true");
     }
 
     #[test]
@@ -797,18 +809,18 @@ mod tests {
 
     #[test]
     fn sandbox_firecracker_always_allowed() {
-        assert!(check_sandbox_allowed(Some(bencher_json::Sandbox::Firecracker), false).is_ok());
-        assert!(check_sandbox_allowed(Some(bencher_json::Sandbox::Firecracker), true).is_ok());
+        check_sandbox_allowed(Some(bencher_json::Sandbox::Firecracker), false).unwrap();
+        check_sandbox_allowed(Some(bencher_json::Sandbox::Firecracker), true).unwrap();
     }
 
     #[test]
     fn sandbox_none_rejected_without_flag() {
-        assert!(check_sandbox_allowed(None, false).is_err());
+        check_sandbox_allowed(None, false).unwrap_err();
     }
 
     #[test]
     fn sandbox_none_allowed_with_flag() {
-        assert!(check_sandbox_allowed(None, true).is_ok());
+        check_sandbox_allowed(None, true).unwrap();
     }
 
     // --- build_config_from_job: build_time / file_size ---
@@ -925,9 +937,7 @@ mod tests {
         let files = result.output.unwrap();
         assert_eq!(files.len(), 1);
         assert_eq!(
-            files
-                .get(Utf8PathBuf::from("/tmp/out.json").as_path())
-                .unwrap(),
+            &files[Utf8PathBuf::from("/tmp/out.json").as_path()],
             "{\"data\":1}"
         );
     }
@@ -946,7 +956,10 @@ mod tests {
         let benchmark = parsed.get("benchmark").unwrap();
         let build_time = benchmark.get("build-time").unwrap();
         let value = build_time.get("value").unwrap().as_f64().unwrap();
-        #[expect(clippy::approx_constant)]
+        #[expect(
+            clippy::approx_constant,
+            reason = "testing a specific rounded value, not pi"
+        )]
         let expected = 3.14;
         assert!((value - expected).abs() < 0.01);
     }

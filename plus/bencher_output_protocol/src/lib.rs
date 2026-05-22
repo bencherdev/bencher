@@ -186,7 +186,6 @@ fn read_u64(data: &[u8], cursor: &mut usize, field: &'static str) -> Result<u64,
 
 #[cfg(test)]
 #[expect(
-    clippy::indexing_slicing,
     clippy::little_endian_bytes,
     clippy::cast_possible_truncation,
     reason = "test code"

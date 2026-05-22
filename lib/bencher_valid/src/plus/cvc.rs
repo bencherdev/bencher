@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ValidError, error::REGEX_ERROR, secret::SANITIZED_SECRET};
 
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "regex is a constant and known valid")]
 static CVC_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new("^[[:digit:]]{3,4}$").expect(REGEX_ERROR));
 
@@ -99,7 +99,6 @@ mod tests {
         let json = serde_json::to_string(&cvc).unwrap();
         assert_eq!(json, "\"123\"");
 
-        let err = serde_json::from_str::<CardCvc>("\"bad\"");
-        assert!(err.is_err());
+        serde_json::from_str::<CardCvc>("\"bad\"").unwrap_err();
     }
 }

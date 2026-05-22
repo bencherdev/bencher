@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ValidError, error::REGEX_ERROR, secret::SANITIZED_SECRET};
 
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "regex is a constant and known valid")]
 static NUMBER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new("^[[:digit:]]{12,19}$").expect(REGEX_ERROR));
 
@@ -191,7 +191,6 @@ mod tests {
         let json = serde_json::to_string(&number).unwrap();
         assert_eq!(json, "\"4917300800000000\"");
 
-        let err = serde_json::from_str::<CardNumber>("\"bad\"");
-        assert!(err.is_err());
+        serde_json::from_str::<CardNumber>("\"bad\"").unwrap_err();
     }
 }

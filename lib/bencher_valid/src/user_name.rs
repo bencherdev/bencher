@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{REGEX_ERROR, Slug, ValidError, is_valid_len};
 
-#[expect(clippy::expect_used)]
+#[expect(clippy::expect_used, reason = "regex is a constant and known valid")]
 static NAME_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9A-Za-z ,\.\-']{1,64}$").expect(REGEX_ERROR));
 
@@ -131,7 +131,6 @@ mod tests {
         let json = serde_json::to_string(&name).unwrap();
         assert_eq!(json, "\"Muriel Bagge\"");
 
-        let err = serde_json::from_str::<UserName>("\"Muriel!\"");
-        assert!(err.is_err());
+        serde_json::from_str::<UserName>("\"Muriel!\"").unwrap_err();
     }
 }

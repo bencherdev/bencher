@@ -6,7 +6,10 @@ use bencher_valid::{NonEmpty, RecaptchaAction, RecaptchaScore, Secret, Url};
 use chrono::{DateTime, Utc};
 use slog::Logger;
 
-#[expect(clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "constant URL literal, infallible at runtime"
+)]
 static VERIFY_URL: LazyLock<Url> = LazyLock::new(|| {
     "https://www.google.com/recaptcha/api/siteverify"
         .parse()

@@ -12,9 +12,18 @@
 //! This binary is Linux-only and designed to run as the init process
 //! inside a minimal VM guest.
 
-#![expect(clippy::print_stderr)]
-#![cfg_attr(target_os = "linux", expect(unsafe_code))]
-#![cfg_attr(not(target_os = "linux"), allow(unused_crate_dependencies))]
+#![expect(clippy::print_stderr, reason = "init process logs to stderr")]
+#![cfg_attr(
+    target_os = "linux",
+    expect(unsafe_code, reason = "Linux syscalls for init process")
+)]
+#![cfg_attr(
+    not(target_os = "linux"),
+    allow(
+        unused_crate_dependencies,
+        reason = "conditional compilation excludes dependents"
+    )
+)]
 
 #[cfg(target_os = "linux")]
 mod init;
@@ -44,6 +53,10 @@ fn main() -> std::process::ExitCode {
     #[expect(
         clippy::inline_asm_x86_intel_syntax,
         reason = "Intel syntax is clearer for x86 I/O port access"
+    )]
+    #[expect(
+        clippy::multiple_unsafe_ops_per_block,
+        reason = "iopl grant + serial port polling and writing is a single I/O transaction"
     )]
     // SAFETY: Called as PID 1 (root) to enable I/O port access for serial output.
     // Accessing COM1 serial port registers is safe with iopl(3) privilege.

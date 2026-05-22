@@ -15,7 +15,13 @@ pub struct Update {
     pub name: Option<ResourceName>,
     pub slug: Option<OrganizationSlug>,
     #[cfg(feature = "plus")]
-    #[cfg_attr(feature = "plus", expect(clippy::option_option))]
+    #[cfg_attr(
+        feature = "plus",
+        expect(
+            clippy::option_option,
+            reason = "None = not specified, Some(None) = explicitly unset"
+        )
+    )]
     pub license: Option<Option<bencher_json::Jwt>>,
     pub backend: AuthBackend,
 }

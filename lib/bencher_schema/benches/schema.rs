@@ -1,5 +1,5 @@
-#![expect(unused_crate_dependencies)]
-#![expect(clippy::expect_used)]
+#![expect(unused_crate_dependencies, reason = "bench binary has different deps")]
+#![expect(clippy::expect_used, reason = "benchmark setup")]
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use diesel::{

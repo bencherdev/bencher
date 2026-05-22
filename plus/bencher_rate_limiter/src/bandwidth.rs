@@ -154,7 +154,6 @@ impl BucketedBandwidth {
 }
 
 #[cfg(test)]
-#[expect(clippy::indexing_slicing, clippy::get_unwrap)]
 mod tests {
     use std::time::Duration;
 
@@ -218,7 +217,7 @@ mod tests {
         limiter.record(1, 2048);
 
         let snapshot = limiter.snapshot();
-        let entries = snapshot.events.get(&1).unwrap();
+        let entries = &snapshot.events[&1];
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].1, 3072);
 
@@ -226,7 +225,7 @@ mod tests {
         limiter2.restore(snapshot);
 
         let snapshot2 = limiter2.snapshot();
-        let entries2 = snapshot2.events.get(&1).unwrap();
+        let entries2 = &snapshot2.events[&1];
         assert_eq!(entries2.len(), 1);
         assert_eq!(entries2[0].1, 3072);
     }
@@ -267,7 +266,7 @@ mod tests {
         limiter.record(1, 200);
 
         let snapshot = limiter.snapshot();
-        let entries = snapshot.events.get(&1).unwrap();
+        let entries = &snapshot.events[&1];
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].1, 300);
     }
