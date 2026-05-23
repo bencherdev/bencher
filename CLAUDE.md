@@ -19,6 +19,7 @@ Bencher is a continuous benchmarking platform that detects and prevents performa
 Version control uses Jujutsu (`jj`) with Git.
 
 - Do **NOT** add `Co-Authored-By` lines to commit messages
+- Do **NOT** add `🤖 Generated with [Claude Code](https://claude.com/claude-code)` to PR descriptions
 
 ## Development Methodology
 
