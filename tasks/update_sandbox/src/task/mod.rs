@@ -1,3 +1,4 @@
+use anyhow::Context as _;
 use camino::Utf8PathBuf;
 use clap::Parser as _;
 
@@ -69,7 +70,7 @@ impl Task {
             .rsplit('/')
             .next()
             .and_then(|f| f.strip_prefix("vmlinux-"))
-            .unwrap_or("unknown");
+            .context("failed to parse kernel version from current URL")?;
         let kern_changed = current_kernel_version != kern.version;
 
         if !fc_changed && !kern_changed {
