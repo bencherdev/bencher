@@ -3,7 +3,8 @@
 <br />
 
 Opcional: Se puede establecer el parámetro `--project` o la variable de entorno `BENCHER_PROJECT` con el slug o UUID de un Proyecto.
-Si el valor especificado es un slug y el Proyecto no existe aún, se creará por usted.
+Una [clave de API de proyecto](#--key-key) no puede usarse para crear un nuevo Proyecto ni para reclamar un Proyecto existente, por lo que requiere que `--project`/`BENCHER_PROJECT` se establezca en un Proyecto existente.
+Si el valor especificado es un slug y el Proyecto no existe aún, se creará por usted cuando se use [la opción `--token`](#--token-token) o no se proporcionen credenciales.
 Sin embargo, si el valor especificado es un UUID, el Proyecto debe existir previamente.
 Si se especifican ambos, la opción `--project` tiene prioridad sobre la variable de entorno `BENCHER_PROJECT`.
 Si no se especifica ninguno, se generará un slug para el Proyecto basado en:
@@ -15,7 +16,7 @@ Si no se especifica ninguno, se generará un slug para el Proyecto basado en:
 Por ejemplo, un slug de Proyecto generado podría ser: `project-abc4567-wxyz123456789`
 
 Cuando se crea un nuevo Proyecto para usted, ya sea que el slug sea especificado o generado, el Proyecto debe pertenecer a una Organización.
-Si el usuario está autenticado, el Proyecto se añade a la Organización personal de ese usuario.
+Si el usuario está autenticado con [la opción `--token`](#--token-token), el Proyecto se añade a la Organización personal de ese usuario.
 Si el usuario no está autenticado, el Proyecto se creará bajo una nueva Organización `unclaimed`.
 Esta Organización podrá ser `claimed` desde la página pública de rendimiento (Perf Page) del Proyecto o usando el slug del Proyecto mientras se esté autenticado en una invocación posterior de `bencher run`.
 

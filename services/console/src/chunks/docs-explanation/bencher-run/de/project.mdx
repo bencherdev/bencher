@@ -3,7 +3,8 @@
 <br />
 
 Optional: Entweder die Option `--project` oder die Umgebungsvariable `BENCHER_PROJECT` kann auf den Slug oder die UUID für ein Project gesetzt werden.
-Wenn der angegebene Wert ein Slug ist und das Project noch nicht existiert, wird es für Sie erstellt.
+Ein [Projekt-API-Schlüssel](#--key-key) kann nicht verwendet werden, um ein neues Project zu erstellen oder ein bestehendes Project zu beanspruchen, daher muss `--project`/`BENCHER_PROJECT` auf ein bestehendes Project gesetzt sein.
+Wenn der angegebene Wert ein Slug ist und das Project noch nicht existiert, wird es für Sie erstellt, sofern [die Option `--token`](#--token-token) verwendet wird oder keine Anmeldedaten angegeben sind.
 Wenn der angegebene Wert jedoch eine UUID ist, muss das Project bereits existieren.
 Wenn beide angegeben sind, hat die Option `--project` Vorrang vor der Umgebungsvariable `BENCHER_PROJECT`.
 Wenn keiner angegeben ist, wird ein Projekt-Slug für Sie generiert, basierend auf:
@@ -15,7 +16,7 @@ Wenn keiner angegeben ist, wird ein Projekt-Slug für Sie generiert, basierend a
 Zum Beispiel könnte ein erzeugter Projekt-Slug so aussehen: `project-abc4567-wxyz123456789`
 
 Wenn ein neues Project für Sie erstellt wird, egal ob der Slug angegeben oder generiert wurde, muss das Project zu einer Organization gehören.
-Wenn der Benutzer authentifiziert ist, wird das Project unter der persönlichen Organization dieses Benutzers hinzugefügt.
+Wenn der Benutzer mit [der Option `--token`](#--token-token) authentifiziert ist, wird das Project unter der persönlichen Organization dieses Benutzers hinzugefügt.
 Wenn der Benutzer nicht authentifiziert ist, wird das Project unter einer neuen `unclaimed` Organization erstellt.
 Diese Organization kann dann per `claimed` von der öffentlichen Perf Page des Projects beansprucht werden oder indem man den Project-Slug bei Authentifizierung in einem späteren Aufruf von `bencher run` verwendet.
 
