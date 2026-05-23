@@ -641,6 +641,66 @@ async fn project_key_cannot_create_in_wrong_project() {
     );
 }
 
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn project_key_cannot_create_in_wrong_private_project_returns_404() {
+    use bencher_json::project::Visibility;
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Key User", "keycrosscreatepriv@example.com")
+        .await;
+    let org = server.create_org(&user, "Cross Create Priv Org").await;
+    let project_a = server.create_project(&user, &org, "Priv Create A").await;
+    let project_b = server.create_project(&user, &org, "Priv Create B").await;
+
+    {
+        let mut conn = server.db_conn();
+        diesel::update(schema::project::table.filter(schema::project::uuid.eq(project_b.uuid)))
+            .set(schema::project::visibility.eq(Visibility::Private))
+            .execute(&mut conn)
+            .expect("Failed to update project visibility");
+    }
+
+    let slug_a: &str = project_a.slug.as_ref();
+    let slug_b: &str = project_b.slug.as_ref();
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/keys", slug_a)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({"name": "cross-priv-key"}))
+        .send()
+        .await
+        .expect("Failed to create key");
+    let key_created: JsonProjectKeyCreated = resp.json().await.expect("Failed to parse key");
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", slug_b)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key_created.key.as_ref()),
+        )
+        .json(&serde_json::json!({"name": "cross-priv-branch"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    let body = resp.text().await.expect("Failed to read response body");
+    assert!(
+        body.contains("may be private"),
+        "Expected info-hiding wording in body, got: {}",
+        body
+    );
+}
+
 // Negative: revoked project key is rejected
 #[tokio::test]
 async fn project_key_revoked() {
