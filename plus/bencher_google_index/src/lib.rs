@@ -63,11 +63,15 @@ struct Claims {
 #[derive(Deserialize)]
 struct TokenResponse {
     access_token: Option<String>,
-    #[expect(dead_code)]
+    #[expect(dead_code, reason = "deserialized from token endpoint response")]
     expires_in: Option<u64>,
 }
 
 impl GoogleIndex {
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "consistent API with client_email and token_uri"
+    )]
     pub fn new(
         private_key: String,
         client_email: String,
@@ -86,12 +90,11 @@ impl GoogleIndex {
     async fn get_token(&self) -> Result<String, GoogleIndexError> {
         {
             let cached = self.cached_token.read().await;
-            if let Some(token) = cached.as_ref() {
-                if token.expiry
+            if let Some(token) = cached.as_ref()
+                && token.expiry
                     > std::time::Instant::now() + Duration::from_secs(TOKEN_REFRESH_BUFFER_SECS)
-                {
-                    return Ok(token.access_token.clone());
-                }
+            {
+                return Ok(token.access_token.clone());
             }
         }
 

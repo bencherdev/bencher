@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 jsonwebtoken.workspace = true
-reqwest = { workspace = true, features = ["form", "rustls-no-provider"] }
+reqwest = { workspace = true, features = ["form", "json", "rustls-no-provider"] }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

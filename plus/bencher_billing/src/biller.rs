@@ -775,7 +775,7 @@ mod tests {
     use pretty_assertions::assert_eq;
     use stripe_shared::{CustomerId, PaymentMethodId};
 
-    use rustls::crypto::ring::default_provider;
+    use rustls::crypto::aws_lc_rs::default_provider;
 
     use crate::Biller;
 

@@ -39,6 +39,7 @@ use std::fs;
 use std::io::Read as _;
 use std::path::{Path, PathBuf};
 
+use rustls::crypto::aws_lc_rs;
 use sha2::{Digest as _, Sha256};
 
 /// Default Firecracker version to download.
@@ -69,6 +70,11 @@ const KERNEL_SHA256_AARCH64: &str =
     "0b04dc58dc201555830838b90e6edc5de469f9d7f5ca88de1fb73c5828df06c4";
 
 fn main() {
+    let crypto_provider = aws_lc_rs::default_provider();
+    crypto_provider
+        .install_default()
+        .expect("Failed to install default TLS crypto provider");
+
     // Only bundle on Linux where we actually use the binaries
     if env::var("CARGO_CFG_TARGET_OS").unwrap_or_default() != "linux" {
         generate_stub_modules();
