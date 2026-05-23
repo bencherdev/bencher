@@ -64,14 +64,27 @@ impl Task {
         };
 
         let fc_changed = current.firecracker_version != new.firecracker_version;
-        let kern_changed = current.kernel_url_x86_64 != new.kernel_url_x86_64;
+        let current_kernel_version = current
+            .kernel_url_x86_64
+            .rsplit('/')
+            .next()
+            .and_then(|f| f.strip_prefix("vmlinux-"))
+            .unwrap_or("unknown");
+        let kern_changed = current_kernel_version != kern.version;
 
         if !fc_changed && !kern_changed {
             println!("Already up to date");
             return Ok(());
         }
 
-        let summary = format_summary(&current, &new, &kern.version, fc_changed, kern_changed);
+        let summary = format_summary(
+            &current,
+            &new,
+            current_kernel_version,
+            &kern.version,
+            fc_changed,
+            kern_changed,
+        );
 
         if self.dry_run {
             println!("[dry run] {summary}");
@@ -88,6 +101,7 @@ impl Task {
 fn format_summary(
     current: &BuildRsValues,
     new: &BuildRsValues,
+    current_kernel_version: &str,
     new_kernel_version: &str,
     fc_changed: bool,
     kern_changed: bool,
@@ -102,13 +116,9 @@ fn format_summary(
     }
 
     if kern_changed {
-        let current_kernel = current
-            .kernel_url_x86_64
-            .rsplit('/')
-            .next()
-            .and_then(|f| f.strip_prefix("vmlinux-"))
-            .unwrap_or("unknown");
-        parts.push(format!("kernel {current_kernel} -> {new_kernel_version}"));
+        parts.push(format!(
+            "kernel {current_kernel_version} -> {new_kernel_version}"
+        ));
     }
 
     format!("Update {}", parts.join(", "))
