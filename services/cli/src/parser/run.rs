@@ -24,7 +24,6 @@ use super::project::report::{
 )]
 #[clap(group(
     ArgGroup::new("bencher_run_key")
-        .multiple(false)
         .args(&["key"])
         .requires("project"),
 ))]
