@@ -280,13 +280,6 @@ impl BencherClient {
             client_builder = client_builder.danger_accept_invalid_certs(true);
         }
 
-        client_builder = client_builder.tls_built_in_root_certs(false);
-        client_builder = if self.native_tls || self.cert_file_exists() {
-            client_builder.tls_built_in_native_certs(true)
-        } else {
-            client_builder.tls_built_in_webpki_certs(true)
-        };
-
         // Configure mTLS.
         if let Some(ssl_client_cert) = env::var_os(SSL_CLIENT_CERT) {
             match crate::tls::read_identity(&ssl_client_cert) {

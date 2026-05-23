@@ -31,8 +31,8 @@ impl DigestHasher {
     /// Finalize and return the digest string (e.g. `"sha256:abcd..."`).
     pub fn finalize(self) -> String {
         match self {
-            Self::Sha256(h) => format!("sha256:{:x}", h.finalize()),
-            Self::Sha512(h) => format!("sha512:{:x}", h.finalize()),
+            Self::Sha256(h) => format!("sha256:{}", hex::encode(h.finalize())),
+            Self::Sha512(h) => format!("sha512:{}", hex::encode(h.finalize())),
         }
     }
 

@@ -247,7 +247,7 @@ impl Biller {
         );
 
         let mut checkout_session = CreateCheckoutSession::new()
-            .ui_mode(CheckoutSessionUiMode::Hosted)
+            .ui_mode(CheckoutSessionUiMode::HostedPage)
             .customer(customer.to_string())
             .payment_method_types(vec![CreateCheckoutSessionPaymentMethodTypes::Card])
             .currency(Currency::USD)

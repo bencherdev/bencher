@@ -21,9 +21,9 @@ fn main() -> std::process::ExitCode {
 
 #[cfg(feature = "plus")]
 fn exec() -> Result<(), error::RunnerCliError> {
-    use rustls::crypto::ring;
+    use rustls::crypto::aws_lc_rs;
 
-    let crypto_provider = ring::default_provider();
+    let crypto_provider = aws_lc_rs::default_provider();
     if let Err(err) = crypto_provider.install_default() {
         return Err(error::RunnerCliError::CryptoProvider(format!("{err:?}")));
     }

@@ -50,7 +50,7 @@ deny = [
     { crate = "git2", use-instead = "gix" },
     { crate = "openssl", use-instead = "rustls" },
     { crate = "openssl-sys", use-instead = "rustls" },
-    { crate = "aws-lc-rs", use-instead = "ring" },
+    { crate = "ring", use-instead = "aws-lc-rs" },
     "libssh2-sys",
     "serde_yml",
 ]
@@ -90,4 +90,4 @@ unknown-git = "deny"
 
 [sources.allow-org]
 # 0 or more github.com organizations to allow git sources for
-github = []
+github = ["oxidecomputer"]

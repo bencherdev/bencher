@@ -22,7 +22,7 @@ plus = [
 bencher_config = { workspace = true, optional = true }
 bencher_json = { workspace = true, optional = true }
 opentelemetry = { workspace = true, optional = true }
-opentelemetry-otlp = { workspace = true, optional = true }
+opentelemetry-otlp = { workspace = true, optional = true, features = ["grpc-tonic", "http-json"] }
 opentelemetry_sdk = { workspace = true, optional = true }
 slog = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }

@@ -111,17 +111,17 @@ struct ClientBuilder {
 }
 
 impl ClientBuilder {
-    // Connect to an SMTP relay server and authenticate using the provided credentials.
-    fn build(&self) -> SmtpClientBuilder<String> {
-        let mut builder = SmtpClientBuilder::new(self.hostname.clone(), self.port);
+    fn build(&self) -> Result<SmtpClientBuilder<String>, mail_send::Error> {
+        let mut builder = SmtpClientBuilder::new(self.hostname.clone(), self.port)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
 
         if self.insecure_host {
             builder = builder.allow_invalid_certs();
         }
 
-        builder
+        Ok(builder
             .implicit_tls(!self.starttls)
-            .credentials((self.username.clone(), String::from(self.secret.clone())))
+            .credentials((self.username.clone(), String::from(self.secret.clone()))))
     }
 }
 
@@ -161,18 +161,17 @@ impl Client {
         log: &Logger,
         message_builder: MessageBuilder<'_>,
     ) -> Result<(), mail_send::Error> {
-        // If there isn't a client or if the client is no longer connected, create a new one.
         let client = if let Some(client) = self.handle.as_mut() {
             if client.noop().await.is_ok() {
                 client
             } else {
                 slog::debug!(log, "Refreshing client");
-                let new_client = self.builder.build().connect().await?;
+                let new_client = self.builder.build()?.connect().await?;
                 self.handle.insert(new_client)
             }
         } else {
             slog::debug!(log, "Creating new client");
-            let new_client = self.builder.build().connect().await?;
+            let new_client = self.builder.build()?.connect().await?;
             self.handle.insert(new_client)
         };
 

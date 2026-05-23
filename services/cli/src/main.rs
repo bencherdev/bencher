@@ -6,15 +6,15 @@
 use std::{io::ErrorKind, process::ExitCode};
 
 use bencher_cli::{CliError, RunError};
-use tokio_rustls::rustls::crypto::ring;
+use tokio_rustls::rustls::crypto::aws_lc_rs;
 
 #[expect(clippy::print_stderr, reason = "CLI binary reports errors to stderr")]
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
-    let crypto_provider = ring::default_provider();
+    let crypto_provider = aws_lc_rs::default_provider();
     #[expect(clippy::use_debug, reason = "debug format for crypto provider error")]
     if let Err(err) = crypto_provider.install_default() {
-        eprintln!("Failed to install default AWS credentials provider: {err:?}");
+        eprintln!("Failed to install default TLS crypto provider: {err:?}");
         return ExitCode::FAILURE;
     }
 

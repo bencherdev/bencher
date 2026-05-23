@@ -7,7 +7,7 @@ license-file.workspace = true
 publish = false
 
 [dependencies]
-reqwest = { workspace = true, features = ["rustls-tls"] }
+reqwest = { workspace = true, features = ["rustls-no-provider"] }
 thiserror.workspace = true
 url = { workspace = true, features = ["serde"] }
 

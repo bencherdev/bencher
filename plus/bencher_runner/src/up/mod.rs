@@ -509,7 +509,7 @@ fn self_update(
         drop(file);
 
         let digest = hasher.finalize();
-        let actual_hex = format!("{digest:x}");
+        let actual_hex = hex::encode(digest);
         let actual: bencher_valid::Sha256 =
             actual_hex.parse().map_err(SelfUpdateError::ChecksumParse)?;
         if actual != *checksum {

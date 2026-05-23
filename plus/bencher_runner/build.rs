@@ -331,7 +331,7 @@ fn download_file(url: &str, dest: &Path, expected_sha256: Option<&str>) -> Resul
 
     if let Some(expected) = expected_sha256 {
         let hash = Sha256::digest(&bytes);
-        let actual = format!("{hash:x}");
+        let actual = hex::encode(hash);
         if actual != expected {
             return Err(format!(
                 "SHA256 mismatch: expected {expected}, got {actual}"
@@ -374,7 +374,7 @@ fn download_and_extract_tgz(
     // Verify SHA256 if expected hash is provided
     if let Some(expected) = expected_sha256 {
         let hash = Sha256::digest(&archive_bytes);
-        let actual = format!("{hash:x}");
+        let actual = hex::encode(hash);
         if actual != expected {
             return Err(format!(
                 "SHA256 mismatch for archive: expected {expected}, got {actual}"

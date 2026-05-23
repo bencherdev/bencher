@@ -19,6 +19,7 @@ plus = [
     "bencher_valid/server",
     "bencher_valid/plus",
     "dep:camino",
+    "dep:hex",
     "dep:rand",
     "dep:serde",
     "dep:serde_json",
@@ -41,6 +42,7 @@ bencher_oci = { workspace = true, optional = true }
 bencher_rootfs = { workspace = true, optional = true }
 bencher_valid = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
+hex = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
@@ -62,6 +64,7 @@ nix = { workspace = true, features = ["feature", "poll", "sched", "signal"] }
 
 [build-dependencies]
 flate2 = { workspace = true }
+hex.workspace = true
 sha2 = { workspace = true }
 tar = { workspace = true }
 ureq = { workspace = true }

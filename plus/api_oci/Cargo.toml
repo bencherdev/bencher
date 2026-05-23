@@ -64,7 +64,7 @@ bencher_oci_storage = { workspace = true, features = ["plus", "test-clock"] }
 bencher_token.workspace = true
 chrono.workspace = true
 http.workspace = true
-reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+reqwest = { workspace = true, features = ["json", "rustls-no-provider"] }
 serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 

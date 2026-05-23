@@ -13,7 +13,7 @@ server = ["bencher_json/server"]
 plus = ["bencher_json/plus"]
 # Reqwest TLS
 native-tls = ["reqwest/native-tls"]
-rustls-tls = ["reqwest/rustls-tls", "reqwest/rustls-tls-native-roots"]
+rustls-tls = ["reqwest/rustls-no-provider"]
 
 [dependencies]
 bencher_json.workspace = true

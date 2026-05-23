@@ -29,7 +29,7 @@ bencher_google_index = { workspace = true, optional = true }
 anyhow.workspace = true
 clap.workspace = true
 dotenvy.workspace = true
-reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }
+reqwest = { workspace = true, optional = true, features = ["rustls-no-provider"] }
 serde_json = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["macros", "rt"] }
 url.workspace = true

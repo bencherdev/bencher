@@ -132,7 +132,7 @@ fn download_and_hash(url: &str) -> anyhow::Result<String> {
     }
 
     let hash = hasher.finalize();
-    Ok(format!("{hash:x}"))
+    Ok(hex::encode(hash))
 }
 
 fn extract_xml_values(xml: &str, tag: &str) -> Vec<String> {
