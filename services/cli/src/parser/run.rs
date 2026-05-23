@@ -22,6 +22,11 @@ use super::project::report::{
         reason = "each bool is an independent user flag"
     )
 )]
+#[clap(group(
+    ArgGroup::new("bencher_run_key")
+        .args(&["key"])
+        .requires("project"),
+))]
 pub struct CliRun {
     #[clap(flatten)]
     pub project: CliRunProject,
