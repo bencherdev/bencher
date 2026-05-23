@@ -213,6 +213,28 @@ where
     ))
 }
 
+/// Build an auth-failure error for a project whose visibility is known.
+///
+/// When `is_public` is true the project obviously exists and revealing that
+/// the request was denied costs nothing, so return a clear 403 "access denied"
+/// message. When `is_public` is false the standard info-hiding 404 message is
+/// returned — callers should not distinguish "private project" from "no such
+/// project" to anonymous or unrelated principals.
+pub fn project_auth_error<V, E>(is_public: bool, value: V, error: E) -> HttpError
+where
+    V: fmt::Debug,
+    E: fmt::Display,
+{
+    if is_public {
+        forbidden_error(format!(
+            "{resource} ({value:?}) access denied: {error}. This {resource} is public but you do not have the required permission.",
+            resource = BencherResource::Project,
+        ))
+    } else {
+        resource_not_found_error(BencherResource::Project, value, error)
+    }
+}
+
 pub fn with_token_hint(mut err: HttpError) -> HttpError {
     if err.status_code == ClientErrorStatusCode::NOT_FOUND {
         err.external_message = format!("{}\n{BEARER_TOKEN_FORMAT}", err.external_message);
@@ -452,5 +474,32 @@ mod tests {
         let error =
             resource_conflict_error(BencherResource::Project, "test-project", "UNIQUE failed");
         assert!(is_conflict(&error));
+    }
+
+    #[test]
+    fn project_auth_error_public_returns_forbidden() {
+        let error = project_auth_error(true, "my-project", "view");
+        assert_eq!(error.status_code, ClientErrorStatusCode::FORBIDDEN);
+        assert!(
+            error.external_message.contains("access denied"),
+            "expected access denied message, got: {}",
+            error.external_message
+        );
+        assert!(
+            error.external_message.contains("public"),
+            "expected public hint, got: {}",
+            error.external_message
+        );
+    }
+
+    #[test]
+    fn project_auth_error_private_returns_not_found_with_info_hiding() {
+        let error = project_auth_error(false, "my-project", "view");
+        assert_eq!(error.status_code, ClientErrorStatusCode::NOT_FOUND);
+        assert!(
+            error.external_message.contains("may be private"),
+            "expected info-hiding wording, got: {}",
+            error.external_message
+        );
     }
 }

@@ -19,8 +19,8 @@ use crate::{
     ApiContext, auth_conn,
     context::{DbConnection, Rbac},
     error::{
-        BencherResource, assert_parentage, forbidden_error, issue_error, resource_conflict_err,
-        resource_not_found_err, resource_not_found_error, unauthorized_error,
+        BencherResource, assert_parentage, forbidden_error, issue_error, project_auth_error,
+        resource_conflict_err, resource_not_found_err, unauthorized_error,
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
@@ -405,45 +405,39 @@ impl QueryProject {
         auth_user: &AuthUser,
         permission: Permission,
     ) -> Result<Self, HttpError> {
-        let query_project = Self::is_allowed_inner(conn, rbac, project, auth_user, permission)
-            .map_err(|_e| {
-                resource_not_found_error(BencherResource::Project, project, permission)
-            })?;
+        let query_project = Self::from_resource_id(conn, project)?;
+        Self::is_allowed_inner(&query_project, rbac, auth_user, permission)
+            .map_err(|_e| project_auth_error(query_project.is_public(), project, permission))?;
         #[cfg(feature = "plus")]
         rate_limiting.project_request(query_project.uuid)?;
         Ok(query_project)
     }
 
     fn is_allowed_inner(
-        conn: &mut DbConnection,
+        query_project: &Self,
         rbac: &Rbac,
-        project: &ProjectResourceId,
         auth_user: &AuthUser,
         permission: Permission,
-    ) -> Result<Self, HttpError> {
-        let query_project = Self::from_resource_id(conn, project)?;
-        query_project.try_allowed(rbac, auth_user, permission)?;
-        Ok(query_project)
+    ) -> Result<(), HttpError> {
+        query_project.try_allowed(rbac, auth_user, permission)
     }
 
     fn is_allowed_public(
-        conn: &mut DbConnection,
+        query_project: &Self,
         rbac: &Rbac,
-        project: &ProjectResourceId,
         public_user: &PublicUser,
-    ) -> Result<Self, HttpError> {
-        let query_project = Self::from_resource_id(conn, project)?;
+    ) -> Result<(), HttpError> {
         // Check to see if the project is public
         // If so, anyone can access it
         if query_project.is_public() {
-            Ok(query_project)
+            Ok(())
         } else if let PublicUser::Auth(auth_user) = public_user {
             // If there is an `AuthUser` then validate access
             // Verify that the user is allowed
-            query_project.try_allowed(rbac, auth_user, Permission::View)?;
-            Ok(query_project)
+            query_project.try_allowed(rbac, auth_user, Permission::View)
         } else {
-            Err(unauthorized_error(project))
+            // Private project + anonymous: outer caller wraps to info-hiding 404
+            Err(unauthorized_error(BencherResource::Project))
         }
     }
 
@@ -454,10 +448,10 @@ impl QueryProject {
         project: &ProjectResourceId,
         api_actor: &ApiActor,
     ) -> Result<Self, HttpError> {
-        let query_project =
-            Self::is_allowed_actor_inner(conn, rbac, project, api_actor).map_err(|_e| {
-                resource_not_found_error(BencherResource::Project, project, Permission::View)
-            })?;
+        let query_project = Self::from_resource_id(conn, project)?;
+        Self::is_allowed_actor_inner(&query_project, rbac, api_actor).map_err(|_e| {
+            project_auth_error(query_project.is_public(), project, Permission::View)
+        })?;
         #[cfg(feature = "plus")]
         if api_actor.is_auth() {
             rate_limiting.project_request(query_project.uuid)?;
@@ -466,19 +460,16 @@ impl QueryProject {
     }
 
     fn is_allowed_actor_inner(
-        conn: &mut DbConnection,
+        query_project: &Self,
         rbac: &Rbac,
-        project: &ProjectResourceId,
         api_actor: &ApiActor,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<(), HttpError> {
         match api_actor {
             ApiActor::Public(public_user) => {
-                Self::is_allowed_public(conn, rbac, project, public_user)
+                Self::is_allowed_public(query_project, rbac, public_user)
             },
             ApiActor::ProjectKey(project_key_actor) => {
-                let query_project = Self::from_resource_id(conn, project)?;
-                project_key_actor.verify_project(query_project.id)?;
-                Ok(query_project)
+                project_key_actor.verify_project(query_project.id)
             },
         }
     }
@@ -506,7 +497,17 @@ impl QueryProject {
             ),
             ApiActor::ProjectKey(project_key_actor) => {
                 let query_project = Self::from_resource_id(conn, project)?;
-                project_key_actor.verify_project(query_project.id)?;
+                project_key_actor
+                    .verify_project(query_project.id)
+                    .map_err(|e| {
+                        if query_project.is_public() {
+                            project_auth_error(true, project, permission)
+                        } else {
+                            // Private project: preserve the existing 401 so the
+                            // project key error path is unchanged.
+                            e
+                        }
+                    })?;
                 #[cfg(feature = "plus")]
                 rate_limiting.project_request(query_project.uuid)?;
                 Ok(query_project)
