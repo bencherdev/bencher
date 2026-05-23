@@ -282,9 +282,6 @@ async fn project_key_list_plots() {
     assert_eq!(resp.status(), StatusCode::OK);
 }
 
-// Negative: project key for one project gets a clear 403 when targeting a
-// different *public* project — there's no need to hide the project's existence
-// because the public UI already exposes it.
 #[tokio::test]
 async fn project_key_for_other_project_on_public_target_returns_403() {
     let server = TestServer::new().await;
@@ -332,9 +329,6 @@ async fn project_key_for_other_project_on_public_target_returns_403() {
     );
 }
 
-// Counterpart to the public-target test above: when project B is *private*,
-// we must keep info-hiding (return 404 with the standard wording) so the
-// project's existence is not leaked to a holder of a key for project A.
 #[cfg(feature = "plus")]
 #[tokio::test]
 async fn project_key_for_other_project_on_private_target_returns_404() {
@@ -348,7 +342,6 @@ async fn project_key_for_other_project_on_private_target_returns_404() {
     let project_a = server.create_project(&user, &org, "Priv Project A").await;
     let project_b = server.create_project(&user, &org, "Priv Project B").await;
 
-    // Make project B private — info hiding must apply on auth failure.
     {
         let mut conn = server.db_conn();
         diesel::update(schema::project::table.filter(schema::project::uuid.eq(project_b.uuid)))
@@ -599,9 +592,6 @@ async fn project_key_can_create_report() {
     let _report: JsonReport = resp.json().await.expect("Failed to parse response");
 }
 
-// Negative: project key cannot create in a different *public* project.
-// Returns 403 with a clear "access denied" message since project B's
-// existence is already public information.
 #[tokio::test]
 async fn project_key_cannot_create_in_wrong_project() {
     let server = TestServer::new().await;

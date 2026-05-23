@@ -545,8 +545,6 @@ async fn projects_hard_delete_nonexistent() {
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
-// Authenticated user without an Edit role gets a clear 403 instead of the
-// misleading "may be private" 404 when modifying a *public* project.
 #[tokio::test]
 async fn non_member_patch_public_project_returns_403() {
     let server = TestServer::new().await;
@@ -584,8 +582,6 @@ async fn non_member_patch_public_project_returns_403() {
     );
 }
 
-// Counterpart: when the project is *private*, the outsider must still see the
-// info-hiding 404 — the project's existence must not be leaked.
 #[cfg(feature = "plus")]
 #[tokio::test]
 async fn non_member_patch_private_project_returns_404() {
@@ -605,7 +601,6 @@ async fn non_member_patch_private_project_returns_404() {
         .create_project(&owner, &org, "Patch Priv Project")
         .await;
 
-    // Make the project private to exercise info-hiding.
     {
         let mut conn = server.db_conn();
         diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))

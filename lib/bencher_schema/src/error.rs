@@ -213,13 +213,8 @@ where
     ))
 }
 
-/// Build an auth-failure error for a project whose visibility is known.
-///
-/// When `is_public` is true the project obviously exists and revealing that
-/// the request was denied costs nothing, so return a clear 403 "access denied"
-/// message. When `is_public` is false the standard info-hiding 404 message is
-/// returned — callers should not distinguish "private project" from "no such
-/// project" to anonymous or unrelated principals.
+/// Private projects must return the info-hiding 404 — callers should not be
+/// able to distinguish "private" from "nonexistent" without authorization.
 pub fn project_auth_error<V, E>(is_public: bool, value: V, error: E) -> HttpError
 where
     V: fmt::Debug,

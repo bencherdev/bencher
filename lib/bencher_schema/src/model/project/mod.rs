@@ -437,7 +437,7 @@ impl QueryProject {
             query_project.try_allowed(rbac, auth_user, Permission::View)
         } else {
             // Private project + anonymous: outer caller wraps to info-hiding 404
-            Err(unauthorized_error(BencherResource::Project))
+            Err(unauthorized_error(query_project.uuid))
         }
     }
 
@@ -503,8 +503,6 @@ impl QueryProject {
                         if query_project.is_public() {
                             project_auth_error(true, project, permission)
                         } else {
-                            // Private project: preserve the existing 401 so the
-                            // project key error path is unchanged.
                             e
                         }
                     })?;
