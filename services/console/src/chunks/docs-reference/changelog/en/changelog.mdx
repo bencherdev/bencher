@@ -1,3 +1,6 @@
+## Pending `v0.6.7`
+- Fix Google Analytics not tracking pageviews on static pages (homepage, `/learn/*`, `/docs/*`) by removing the Partytown wrapper around `gtag.js` so the GA snippet runs on the main thread
+
 ## `v0.6.6`
 - Show context-aware auth hints in API 404 errors: routes that accept project API keys now mention both API tokens and project keys, while token-only routes mention only API tokens
 - **BREAKING CHANGE** Rename `usage` to `metrics` in the organization usage API response and add `runner_minutes` field for bare metal runner minutes usage
