@@ -464,31 +464,37 @@ impl QueryProject {
         api_actor: &ApiActor,
         permission: Permission,
     ) -> Result<Self, HttpError> {
+        let query_project = Self::from_resource_id(conn, project)?;
         match api_actor {
             ApiActor::Public(PublicUser::Public(_)) => {
-                Err(unauthorized_error("Authentication required"))
+                // Public project: tell the client authentication is required.
+                // Private project: hide existence behind the same 404 used for
+                // nonexistent projects, so an unauthenticated caller cannot
+                // distinguish "private project exists" from "no such project".
+                return Err(if query_project.is_public() {
+                    unauthorized_error("Authentication required")
+                } else {
+                    project_auth_error(false, project, permission)
+                });
             },
-            ApiActor::Public(PublicUser::Auth(auth_user)) => Self::is_allowed(
-                conn,
-                rbac,
-                #[cfg(feature = "plus")]
-                rate_limiting,
-                project,
-                auth_user,
-                permission,
-            ),
+            ApiActor::Public(PublicUser::Auth(auth_user)) => {
+                query_project
+                    .try_allowed(rbac, auth_user, permission)
+                    .map_err(|_e| {
+                        project_auth_error(query_project.is_public(), project, permission)
+                    })?;
+            },
             ApiActor::ProjectKey(project_key_actor) => {
-                let query_project = Self::from_resource_id(conn, project)?;
                 project_key_actor
                     .verify_project(query_project.id)
                     .map_err(|_e| {
                         project_auth_error(query_project.is_public(), project, permission)
                     })?;
-                #[cfg(feature = "plus")]
-                rate_limiting.project_request(query_project.uuid)?;
-                Ok(query_project)
             },
         }
+        #[cfg(feature = "plus")]
+        rate_limiting.project_request(query_project.uuid)?;
+        Ok(query_project)
     }
 
     pub fn try_allowed(
