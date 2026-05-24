@@ -19,7 +19,7 @@ use crate::{
     ApiContext, auth_conn,
     context::{DbConnection, Rbac},
     error::{
-        BencherResource, assert_parentage, forbidden_error, issue_error, project_auth_error,
+        BencherResource, ProjectAuthState, assert_parentage, forbidden_error, issue_error,
         resource_conflict_err, resource_not_found_err, unauthorized_error,
     },
     macros::{
@@ -387,6 +387,17 @@ impl QueryProject {
         self.visibility.is_public()
     }
 
+    /// Access-denial state for a given actor against this project.
+    pub fn auth_state(&self, api_actor: &ApiActor) -> ProjectAuthState {
+        ProjectAuthState::new(self.is_public(), api_actor.is_auth())
+    }
+
+    /// Access-denial state for paths that already require authentication
+    /// (no `ApiActor` in scope, the principal is always an authenticated user).
+    pub fn auth_state_authenticated(&self) -> ProjectAuthState {
+        ProjectAuthState::new(self.is_public(), true)
+    }
+
     #[cfg(not(feature = "plus"))]
     pub fn is_visibility_public(visibility: Visibility) -> Result<(), HttpError> {
         visibility
@@ -408,7 +419,11 @@ impl QueryProject {
         let query_project = Self::from_resource_id(conn, project)?;
         query_project
             .try_allowed(rbac, auth_user, permission)
-            .map_err(|_e| project_auth_error(query_project.is_public(), project, permission))?;
+            .map_err(|_e| {
+                query_project
+                    .auth_state_authenticated()
+                    .auth_error(project, permission)
+            })?;
         #[cfg(feature = "plus")]
         rate_limiting.project_request(query_project.uuid)?;
         Ok(query_project)
@@ -440,7 +455,9 @@ impl QueryProject {
         query_project
             .is_allowed_actor_inner(rbac, api_actor)
             .map_err(|_e| {
-                project_auth_error(query_project.is_public(), project, Permission::View)
+                query_project
+                    .auth_state(api_actor)
+                    .auth_error(project, Permission::View)
             })?;
         #[cfg(feature = "plus")]
         if api_actor.is_auth() {
@@ -465,31 +482,24 @@ impl QueryProject {
         permission: Permission,
     ) -> Result<Self, HttpError> {
         let query_project = Self::from_resource_id(conn, project)?;
+        let auth_error = || {
+            query_project
+                .auth_state(api_actor)
+                .auth_error(project, permission)
+        };
         match api_actor {
-            ApiActor::Public(PublicUser::Public(_)) => {
-                // Public project: tell the client authentication is required.
-                // Private project: hide existence behind the same 404 used for
-                // nonexistent projects, so an unauthenticated caller cannot
-                // distinguish "private project exists" from "no such project".
-                return Err(if query_project.is_public() {
-                    unauthorized_error("Authentication required")
-                } else {
-                    project_auth_error(false, project, permission)
-                });
-            },
+            // Anonymous on public → 401; anonymous on private → 404 info-hide
+            // (same as nonexistent, so callers cannot distinguish).
+            ApiActor::Public(PublicUser::Public(_)) => return Err(auth_error()),
             ApiActor::Public(PublicUser::Auth(auth_user)) => {
                 query_project
                     .try_allowed(rbac, auth_user, permission)
-                    .map_err(|_e| {
-                        project_auth_error(query_project.is_public(), project, permission)
-                    })?;
+                    .map_err(|_e| auth_error())?;
             },
             ApiActor::ProjectKey(project_key_actor) => {
                 project_key_actor
                     .verify_project(query_project.id)
-                    .map_err(|_e| {
-                        project_auth_error(query_project.is_public(), project, permission)
-                    })?;
+                    .map_err(|_e| auth_error())?;
             },
         }
         #[cfg(feature = "plus")]
