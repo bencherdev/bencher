@@ -61,7 +61,7 @@ jobs:
         with:
           mold-version: ${{ inputs.mold-version }}
       - name: Install cargo-nextest
-        uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
+        uses: taiki-e/install-action@f48d2f8ba2b452934c948b7be1a768079c3632ff # v2.79.6
         with:
           tool: cargo-nextest
       - name: cargo nextest run
