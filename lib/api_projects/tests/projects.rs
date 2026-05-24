@@ -545,6 +545,93 @@ async fn projects_hard_delete_nonexistent() {
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
+#[tokio::test]
+async fn non_member_patch_public_project_returns_403() {
+    let server = TestServer::new().await;
+    let owner = server
+        .signup("Owner", "projpatchpubowner@example.com")
+        .await;
+    let outsider = server
+        .signup("Outsider", "projpatchpubother@example.com")
+        .await;
+    let org = server.create_org(&owner, "Patch Pub Org").await;
+    let project = server
+        .create_project(&owner, &org, "Patch Pub Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({ "name": "Hijacked" });
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&outsider.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    let resp_body = resp.text().await.expect("Failed to read response body");
+    assert!(
+        resp_body.contains("access denied"),
+        "Expected 'access denied' in body, got: {}",
+        resp_body
+    );
+}
+
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn non_member_patch_private_project_returns_404() {
+    use bencher_json::project::Visibility;
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let owner = server
+        .signup("Owner", "projpatchprivowner@example.com")
+        .await;
+    let outsider = server
+        .signup("Outsider", "projpatchprivother@example.com")
+        .await;
+    let org = server.create_org(&owner, "Patch Priv Org").await;
+    let project = server
+        .create_project(&owner, &org, "Patch Priv Project")
+        .await;
+
+    {
+        let mut conn = server.db_conn();
+        diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+            .set(schema::project::visibility.eq(Visibility::Private))
+            .execute(&mut conn)
+            .expect("Failed to update project visibility");
+    }
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({ "name": "Hijacked" });
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&outsider.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    let resp_body = resp.text().await.expect("Failed to read response body");
+    assert!(
+        resp_body.contains("may be private"),
+        "Expected info-hiding wording in body, got: {}",
+        resp_body
+    );
+}
+
 // Soft-delete project, verify child resource endpoints return 404
 #[tokio::test]
 async fn projects_soft_delete_endpoints_inaccessible() {

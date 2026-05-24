@@ -570,3 +570,166 @@ async fn testbeds_patch_spec_null() {
     let testbed: JsonTestbed = resp.json().await.expect("Failed to parse testbed");
     assert!(testbed.spec.is_none());
 }
+
+// POST testbeds with no auth on a public project: honest 401 (auth required).
+// Exercises `is_allowed_actor_auth` anonymous + public-project path.
+#[tokio::test]
+async fn anonymous_create_testbed_on_public_project_returns_401() {
+    let server = TestServer::new().await;
+    let owner = server.signup("Owner", "tbanonpubowner@example.com").await;
+    let org = server.create_org(&owner, "Testbed Anon Pub Org").await;
+    let project = server
+        .create_project(&owner, &org, "Testbed Anon Pub Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({ "name": "linux-server", "slug": "linux-server" });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/testbeds")))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    let resp_body = resp.text().await.expect("Failed to read response body");
+    assert!(
+        resp_body.contains("Authentication required"),
+        "Expected 'Authentication required' in body, got: {}",
+        resp_body
+    );
+}
+
+// POST testbeds with no auth on a private project: info-hiding 404
+// (must not distinguish "private exists" from "nonexistent").
+// Exercises `is_allowed_actor_auth` anonymous + private-project path.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn anonymous_create_testbed_on_private_project_returns_404() {
+    use bencher_json::project::Visibility;
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let owner = server.signup("Owner", "tbanonprivowner@example.com").await;
+    let org = server.create_org(&owner, "Testbed Anon Priv Org").await;
+    let project = server
+        .create_project(&owner, &org, "Testbed Anon Priv Project")
+        .await;
+
+    {
+        let mut conn = server.db_conn();
+        diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+            .set(schema::project::visibility.eq(Visibility::Private))
+            .execute(&mut conn)
+            .expect("Failed to update project visibility");
+    }
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({ "name": "linux-server", "slug": "linux-server" });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/testbeds")))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    let resp_body = resp.text().await.expect("Failed to read response body");
+    assert!(
+        resp_body.contains("may be private"),
+        "Expected info-hiding wording in body, got: {}",
+        resp_body
+    );
+}
+
+// POST testbeds as an authenticated non-member on a public project: 403 "access denied".
+// Exercises `is_allowed_actor_auth` Public(Auth) arm + RBAC failure on a public project.
+#[tokio::test]
+async fn non_member_create_testbed_on_public_project_returns_403() {
+    let server = TestServer::new().await;
+    let owner = server.signup("Owner", "tbnonmempubowner@example.com").await;
+    let outsider = server
+        .signup("Outsider", "tbnonmempubother@example.com")
+        .await;
+    let org = server.create_org(&owner, "Testbed NonMem Pub Org").await;
+    let project = server
+        .create_project(&owner, &org, "Testbed NonMem Pub Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({ "name": "linux-server", "slug": "linux-server" });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/testbeds")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&outsider.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    let resp_body = resp.text().await.expect("Failed to read response body");
+    assert!(
+        resp_body.contains("access denied"),
+        "Expected 'access denied' in body, got: {}",
+        resp_body
+    );
+}
+
+// POST testbeds as an authenticated non-member on a private project: info-hiding 404.
+// Exercises `is_allowed_actor_auth` Public(Auth) arm + RBAC failure on a private project.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn non_member_create_testbed_on_private_project_returns_404() {
+    use bencher_json::project::Visibility;
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let owner = server
+        .signup("Owner", "tbnonmemprivowner@example.com")
+        .await;
+    let outsider = server
+        .signup("Outsider", "tbnonmemprivother@example.com")
+        .await;
+    let org = server.create_org(&owner, "Testbed NonMem Priv Org").await;
+    let project = server
+        .create_project(&owner, &org, "Testbed NonMem Priv Project")
+        .await;
+
+    {
+        let mut conn = server.db_conn();
+        diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+            .set(schema::project::visibility.eq(Visibility::Private))
+            .execute(&mut conn)
+            .expect("Failed to update project visibility");
+    }
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({ "name": "linux-server", "slug": "linux-server" });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/testbeds")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&outsider.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    let resp_body = resp.text().await.expect("Failed to read response body");
+    assert!(
+        resp_body.contains("may be private"),
+        "Expected info-hiding wording in body, got: {}",
+        resp_body
+    );
+}

@@ -213,6 +213,54 @@ where
     ))
 }
 
+/// Visibility × authentication state for project access denials.
+/// Encodes the four combinations so callers cannot accidentally produce the
+/// wrong HTTP status for a visibility/actor pair.
+pub enum ProjectAuthState {
+    /// Anonymous request on a public project requiring authentication → 401.
+    PublicAnonymous,
+    /// Authenticated principal on a public project lacking permission → 403.
+    PublicAuthenticated,
+    /// Anonymous request on a private project → 404 (info-hide, same as nonexistent).
+    PrivateAnonymous,
+    /// Authenticated non-member on a private project → 404 (info-hide).
+    PrivateAuthenticated,
+}
+
+impl ProjectAuthState {
+    pub fn new(is_public: bool, is_authenticated: bool) -> Self {
+        match (is_public, is_authenticated) {
+            (true, false) => Self::PublicAnonymous,
+            (true, true) => Self::PublicAuthenticated,
+            (false, false) => Self::PrivateAnonymous,
+            (false, true) => Self::PrivateAuthenticated,
+        }
+    }
+
+    /// Build the HTTP error for this access denial.
+    /// Private projects must return the info-hiding 404 — callers should not
+    /// be able to distinguish "private" from "nonexistent" without authorization.
+    pub fn auth_error<V, E>(self, value: V, error: E) -> HttpError
+    where
+        V: fmt::Debug,
+        E: fmt::Display,
+    {
+        match self {
+            Self::PublicAnonymous => unauthorized_error(format!(
+                "Authentication required to {error} {resource} ({value:?})",
+                resource = BencherResource::Project,
+            )),
+            Self::PublicAuthenticated => forbidden_error(format!(
+                "{resource} ({value:?}) access denied: {error}. This {resource} is public but you do not have the required permission.",
+                resource = BencherResource::Project,
+            )),
+            Self::PrivateAnonymous | Self::PrivateAuthenticated => {
+                resource_not_found_error(BencherResource::Project, value, error)
+            },
+        }
+    }
+}
+
 pub fn with_token_hint(mut err: HttpError) -> HttpError {
     if err.status_code == ClientErrorStatusCode::NOT_FOUND {
         err.external_message = format!("{}\n{BEARER_TOKEN_FORMAT}", err.external_message);
@@ -452,5 +500,54 @@ mod tests {
         let error =
             resource_conflict_error(BencherResource::Project, "test-project", "UNIQUE failed");
         assert!(is_conflict(&error));
+    }
+
+    #[test]
+    fn project_auth_state_public_authenticated_returns_forbidden() {
+        let error = ProjectAuthState::new(true, true).auth_error("my-project", "view");
+        assert_eq!(error.status_code, ClientErrorStatusCode::FORBIDDEN);
+        assert!(
+            error.external_message.contains("access denied"),
+            "expected access denied message, got: {}",
+            error.external_message
+        );
+        assert!(
+            error.external_message.contains("public"),
+            "expected public hint, got: {}",
+            error.external_message
+        );
+    }
+
+    #[test]
+    fn project_auth_state_public_anonymous_returns_unauthorized() {
+        let error = ProjectAuthState::new(true, false).auth_error("my-project", "view");
+        assert_eq!(error.status_code, ClientErrorStatusCode::UNAUTHORIZED);
+        assert!(
+            error.external_message.contains("Authentication required"),
+            "expected Authentication required wording, got: {}",
+            error.external_message
+        );
+    }
+
+    #[test]
+    fn project_auth_state_private_authenticated_returns_not_found_with_info_hiding() {
+        let error = ProjectAuthState::new(false, true).auth_error("my-project", "view");
+        assert_eq!(error.status_code, ClientErrorStatusCode::NOT_FOUND);
+        assert!(
+            error.external_message.contains("may be private"),
+            "expected info-hiding wording, got: {}",
+            error.external_message
+        );
+    }
+
+    #[test]
+    fn project_auth_state_private_anonymous_returns_not_found_with_info_hiding() {
+        let error = ProjectAuthState::new(false, false).auth_error("my-project", "view");
+        assert_eq!(error.status_code, ClientErrorStatusCode::NOT_FOUND);
+        assert!(
+            error.external_message.contains("may be private"),
+            "expected info-hiding wording, got: {}",
+            error.external_message
+        );
     }
 }
