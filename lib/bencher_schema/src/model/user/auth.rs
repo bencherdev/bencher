@@ -357,9 +357,17 @@ impl BearerToken {
     /// the prefix detection rules.
     pub fn from_raw(raw: &str) -> Result<Self, HttpError> {
         if raw.starts_with(USER_KEY_PREFIX) {
-            raw.parse::<UserKey>()
-                .map(Self::UserKey)
-                .map_err(|e| bad_request_error(format!("Malformed user API key: {e}")))
+            raw.parse::<UserKey>().map(Self::UserKey).map_err(|e| {
+                // Mirror `ProjectKeyAuthFailureReason::Invalid` (emitted in
+                // `actor.rs::authenticate_project_key`) so crafted
+                // `bencher_user_*` probes are observable as a dedicated metric
+                // and not just `bad_request_error` log lines.
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
+                    bencher_otel::UserKeyAuthFailureReason::Invalid,
+                ));
+                bad_request_error(format!("Malformed user API key: {e}"))
+            })
         } else {
             raw.parse::<Jwt>()
                 .map(Self::Jwt)
