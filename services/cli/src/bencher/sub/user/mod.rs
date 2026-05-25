@@ -1,3 +1,4 @@
+pub mod key;
 pub mod token;
 #[expect(
     clippy::module_inception,

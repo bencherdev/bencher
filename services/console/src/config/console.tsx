@@ -12,6 +12,7 @@ import reportsConfig from "./project/reports";
 import testbedsConfig from "./project/testbeds";
 import thresholdsConfig from "./project/thresholds";
 import { BencherResource } from "./types";
+import userKeysConfig from "./user/keys";
 import tokensConfig from "./user/tokens";
 import usersConfig from "./user/users";
 
@@ -34,6 +35,7 @@ const consoleConfig = {
 	// User
 	[BencherResource.USERS]: usersConfig,
 	[BencherResource.TOKENS]: tokensConfig,
+	[BencherResource.USER_KEYS]: userKeysConfig,
 };
 
 export default consoleConfig;

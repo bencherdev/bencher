@@ -8,12 +8,17 @@ use bencher_parser::check_env;
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
-use crate::parser::CliProjectBackend;
+use crate::parser::CliBackend;
 
 use super::project::report::{
     CliReportAdapter, CliReportAverage, CliReportFold, CliReportThresholds,
 };
 
+// `--key` requires `--project` only for project-scoped keys (`bencher_run_*`).
+// User-scoped keys (`bencher_user_*`) authenticate as the owning user and can
+// auto-create a project on the fly just like a JWT. Because clap groups can't
+// inspect the parsed value, this constraint is enforced at runtime in the
+// `bencher run` handler instead of as a `clap` ArgGroup.
 #[derive(Parser, Debug)]
 #[cfg_attr(
     feature = "plus",
@@ -22,11 +27,6 @@ use super::project::report::{
         reason = "each bool is an independent user flag"
     )
 )]
-#[clap(group(
-    ArgGroup::new("bencher_run_key")
-        .args(&["key"])
-        .requires("project"),
-))]
 pub struct CliRun {
     #[clap(flatten)]
     pub project: CliRunProject,
@@ -95,7 +95,7 @@ pub struct CliRun {
     pub job: CliRunJob,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Args, Debug)]

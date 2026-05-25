@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
 
+pub mod key;
 pub mod token;
 
 #[derive(Subcommand, Debug)]
@@ -16,6 +17,9 @@ pub enum CliUser {
     // Update a user
     #[clap(alias = "edit")]
     Update(CliUserUpdate),
+    /// Manage user API keys
+    #[clap(subcommand)]
+    Key(key::CliUserKey),
 }
 
 #[derive(Parser, Debug)]

@@ -3,10 +3,7 @@ use std::{fmt, ops::Deref, time::Duration};
 use bencher_json::{BENCHER_API_URL, BENCHER_URL, JsonApiVersion, JsonConsole};
 use serde::{Serialize, de::DeserializeOwned};
 
-use crate::{
-    CLI_VERSION, cli_eprintln_quietable,
-    parser::{CliBackend, CliProjectBackend},
-};
+use crate::{CLI_VERSION, cli_eprintln_quietable, parser::CliBackend};
 
 #[derive(Debug, Clone)]
 pub struct PubBackend {
@@ -35,10 +32,6 @@ pub enum BackendError {
     ParseHost(bencher_json::ValidError),
     #[error("Failed to parse API token: {0}")]
     ParseToken(bencher_json::ValidError),
-    #[error(
-        "Failed to find Bencher API token, and this API endpoint requires authorization. Set `--token`/`BENCHER_API_TOKEN`."
-    )]
-    NoToken,
     #[error(
         "Failed to find Bencher API credential, and this API endpoint requires authorization. Set `--token`/`BENCHER_API_TOKEN` or `--key`/`BENCHER_API_KEY`."
     )]
@@ -76,116 +69,49 @@ impl TryFrom<CliBackend> for AuthBackend {
     }
 }
 
-impl TryFrom<CliProjectBackend> for PubBackend {
-    type Error = BackendError;
-
-    fn try_from(project_backend: CliProjectBackend) -> Result<Self, Self::Error> {
-        (project_backend, BackendKind::Pub)
-            .try_into()
-            .map(|inner| Self { inner })
-    }
-}
-
-impl TryFrom<CliProjectBackend> for AuthBackend {
-    type Error = BackendError;
-
-    fn try_from(project_backend: CliProjectBackend) -> Result<Self, Self::Error> {
-        (project_backend, BackendKind::Auth)
-            .try_into()
-            .map(|inner| Self { inner })
-    }
-}
-
 impl TryFrom<(CliBackend, BackendKind)> for Backend {
     type Error = BackendError;
 
     fn try_from((backend, kind): (CliBackend, BackendKind)) -> Result<Self, Self::Error> {
-        let (builder, token) = build_client(backend)?;
-        let builder = map_credential(builder, token, kind)?;
+        let CliBackend {
+            host,
+            token,
+            key,
+            insecure_host,
+            native_tls,
+            timeout,
+            attempts,
+            retry_after,
+            max_retry_after,
+            strict,
+        } = backend;
+        let host = host.try_into().map_err(BackendError::ParseHost)?;
+        let mut builder = bencher_client::BencherClient::builder()
+            .host(host)
+            .insecure_host(insecure_host)
+            .native_tls(native_tls)
+            .timeout(Duration::from_secs(timeout.into()))
+            .attempts(attempts.into())
+            .retry_after(retry_after.into())
+            .max_retry_after(max_retry_after.into())
+            .strict(strict)
+            .log(true);
+
+        // `--key` takes precedence: if a key is supplied, send it as the bearer.
+        // Otherwise fall back to the JWT `--token`. The CLI's `bencher_credential`
+        // ArgGroup already enforces that the two are mutually exclusive, so at
+        // most one is set in practice.
+        if let Some(key) = key {
+            builder = builder.key(key);
+        } else if let Some(token) = token {
+            builder = builder.token(token);
+        } else if matches!(kind, BackendKind::Auth) {
+            return Err(BackendError::NoCredential);
+        }
+
         Ok(Self {
             client: builder.build(),
         })
-    }
-}
-
-impl TryFrom<(CliProjectBackend, BackendKind)> for Backend {
-    type Error = BackendError;
-
-    fn try_from(
-        (project_backend, kind): (CliProjectBackend, BackendKind),
-    ) -> Result<Self, Self::Error> {
-        let CliProjectBackend { backend, key } = project_backend;
-        let (builder, token) = build_client(backend)?;
-        let builder = map_project_credential(builder, token, key, kind)?;
-        Ok(Self {
-            client: builder.build(),
-        })
-    }
-}
-
-fn build_client(
-    backend: CliBackend,
-) -> Result<
-    (
-        bencher_client::BencherClientBuilder,
-        Option<bencher_json::Jwt>,
-    ),
-    BackendError,
-> {
-    let CliBackend {
-        host,
-        token,
-        insecure_host,
-        native_tls,
-        timeout,
-        attempts,
-        retry_after,
-        max_retry_after,
-        strict,
-    } = backend;
-    let host = host.try_into().map_err(BackendError::ParseHost)?;
-    let builder = bencher_client::BencherClient::builder()
-        .host(host)
-        .insecure_host(insecure_host)
-        .native_tls(native_tls)
-        .timeout(Duration::from_secs(timeout.into()))
-        .attempts(attempts.into())
-        .retry_after(retry_after.into())
-        .max_retry_after(max_retry_after.into())
-        .strict(strict)
-        .log(true);
-    Ok((builder, token))
-}
-
-fn map_credential(
-    builder: bencher_client::BencherClientBuilder,
-    token: Option<bencher_json::Jwt>,
-    kind: BackendKind,
-) -> Result<bencher_client::BencherClientBuilder, BackendError> {
-    if let Some(token) = token {
-        Ok(builder.token(token))
-    } else if matches!(kind, BackendKind::Pub) {
-        Ok(builder)
-    } else {
-        Err(BackendError::NoToken)
-    }
-}
-
-fn map_project_credential(
-    builder: bencher_client::BencherClientBuilder,
-    token: Option<bencher_json::Jwt>,
-    key: Option<bencher_json::ProjectKey>,
-    kind: BackendKind,
-) -> Result<bencher_client::BencherClientBuilder, BackendError> {
-    if let Some(key) = key {
-        return Ok(builder.key(key));
-    }
-    if let Some(token) = token {
-        Ok(builder.token(token))
-    } else if matches!(kind, BackendKind::Pub) {
-        Ok(builder)
-    } else {
-        Err(BackendError::NoCredential)
     }
 }
 

@@ -1,0 +1,26 @@
+---
+export const prerender = false;
+
+import { BENCHER_API_URL } from "astro:env/server";
+import { IS_BENCHER_CLOUD } from "astro:env/client";
+
+import UserLayout from "../../../../../layouts/console/UserLayout.astro";
+import DeckPanel from "../../../../../components/console/deck/DeckPanel";
+import { BencherResource } from "../../../../../config/types";
+import FallbackDeckPanel from "../../../../../components/console/deck/FallbackDeckPanel.astro";
+
+const params = Astro.params;
+const title = "View API Key";
+---
+
+<UserLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <DeckPanel
+    client:only="solid-js"
+    apiUrl={BENCHER_API_URL}
+    isBencherCloud={IS_BENCHER_CLOUD}
+    params={params}
+    resource={BencherResource.USER_KEYS}
+  >
+    <FallbackDeckPanel slot="fallback" cards={6} />
+  </DeckPanel>
+</UserLayout>

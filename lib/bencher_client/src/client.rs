@@ -1,6 +1,6 @@
 use std::env;
 
-use bencher_json::{BENCHER_API_URL, Jwt, ProjectKey};
+use bencher_json::{BENCHER_API_URL, BencherKey, Jwt};
 use reqwest::ClientBuilder;
 use serde::{Serialize, de::DeserializeOwned};
 use tokio::time::{Duration, sleep};
@@ -23,7 +23,7 @@ const DEFAULT_MAX_RETRY_AFTER: u64 = 30;
 pub struct BencherClient {
     pub host: url::Url,
     pub token: Option<Jwt>,
-    pub key: Option<ProjectKey>,
+    pub key: Option<BencherKey>,
     pub insecure_host: bool,
     pub native_tls: bool,
     pub timeout: Duration,
@@ -342,7 +342,7 @@ impl std::fmt::Display for ErrorResponse {
 pub struct BencherClientBuilder {
     host: Option<url::Url>,
     token: Option<Jwt>,
-    key: Option<ProjectKey>,
+    key: Option<BencherKey>,
     insecure_host: Option<bool>,
     native_tls: Option<bool>,
     timeout: Option<Duration>,
@@ -375,8 +375,9 @@ impl BencherClientBuilder {
     }
 
     #[must_use]
-    /// Set a project key credential
-    pub fn key(mut self, key: ProjectKey) -> Self {
+    /// Set a Bencher API key credential. Accepts either a project-scoped key
+    /// (`bencher_run_*`) or a user-scoped key (`bencher_user_*`).
+    pub fn key(mut self, key: BencherKey) -> Self {
         self.key = Some(key);
         self
     }

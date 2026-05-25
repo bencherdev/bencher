@@ -5,7 +5,7 @@ use bencher_json::{
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use super::{branch::CliStartPointUpdate, threshold::CliModelTest};
-use crate::parser::{CliPagination, CliProjectBackend, ElidedOption};
+use crate::parser::{CliBackend, CliPagination, ElidedOption};
 
 #[derive(Subcommand, Debug)]
 pub enum CliReport {
@@ -52,7 +52,7 @@ pub struct CliReportList {
     pub archived: bool,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -110,7 +110,7 @@ pub struct CliReportCreate {
     pub fold: Option<CliReportFold>,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Args, Debug)]
@@ -234,7 +234,7 @@ pub struct CliReportView {
     pub report: ReportUuid,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -246,5 +246,5 @@ pub struct CliReportDelete {
     pub report: ReportUuid,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }

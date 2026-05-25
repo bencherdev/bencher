@@ -1,0 +1,24 @@
+---
+export const prerender = false;
+
+import { BENCHER_API_URL } from "astro:env/server";
+
+import UserLayout from "../../../../../layouts/console/UserLayout.astro";
+import TablePanel from "../../../../../components/console/table/TablePanel";
+import { BencherResource } from "../../../../../config/types";
+import FallbackTablePanel from "../../../../../components/console/table/FallbackTablePanel.astro";
+
+const params = Astro.params;
+const title = "API Keys";
+---
+
+<UserLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <TablePanel
+    client:only="solid-js"
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    resource={BencherResource.USER_KEYS}
+  >
+    <FallbackTablePanel slot="fallback" />
+  </TablePanel>
+</UserLayout>

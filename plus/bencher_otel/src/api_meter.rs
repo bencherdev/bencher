@@ -104,6 +104,10 @@ pub enum ApiCounter {
     UserTokenRevoke,
     UserTokenRevokedUse,
 
+    UserKeyCreate,
+    UserKeyRevoke,
+    UserKeyAuthFailed(UserKeyAuthFailureReason),
+
     ProjectKeyAuthFailed(ProjectKeyAuthFailureReason),
 
     RequestMax(IntervalKind, AuthorizationKind),
@@ -184,8 +188,8 @@ impl ApiCounter {
 
             Self::UserAttemptMax(_, _) | Self::UserTokenRevokedUse => "{attempt}",
             Self::UserCredentialMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
-            Self::RunnerKeyRotate => "{key}",
-            Self::ProjectKeyAuthFailed(_) => "{auth_failure}",
+            Self::UserKeyCreate | Self::UserKeyRevoke | Self::RunnerKeyRotate => "{key}",
+            Self::ProjectKeyAuthFailed(_) | Self::UserKeyAuthFailed(_) => "{auth_failure}",
 
             Self::Create(_) | Self::CreateMax(_) => "{resource}",
 
@@ -238,6 +242,10 @@ impl ApiCounter {
             Self::UserTokenCreate => "user.token.create",
             Self::UserTokenRevoke => "user.token.revoke",
             Self::UserTokenRevokedUse => "user.token.revoked.use",
+
+            Self::UserKeyCreate => "user.key.create",
+            Self::UserKeyRevoke => "user.key.revoke",
+            Self::UserKeyAuthFailed(_) => "user.key.auth.failed",
 
             Self::RequestMax(_, _) => "request.max",
 
@@ -323,6 +331,10 @@ impl ApiCounter {
                 "Counts the number of authentication attempts with a revoked API token"
             },
 
+            Self::UserKeyCreate => "Counts the number of user API key creations",
+            Self::UserKeyRevoke => "Counts the number of user API key revocations",
+            Self::UserKeyAuthFailed(_) => "Counts the number of user key authentication failures",
+
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
 
             Self::RunClaimedMax(_) => "Counts the number of claimed run maximums reached",
@@ -399,6 +411,8 @@ impl ApiCounter {
             | Self::UserTokenCreate
             | Self::UserTokenRevoke
             | Self::UserTokenRevokedUse
+            | Self::UserKeyCreate
+            | Self::UserKeyRevoke
             | Self::MetricsBilled
             | Self::MetricsBilledFailed
             | Self::EmailSend
@@ -442,6 +456,7 @@ impl ApiCounter {
                 vec![interval_kind.into()]
             },
             Self::ProjectKeyAuthFailed(reason) => vec![reason.into()],
+            Self::UserKeyAuthFailed(reason) => vec![reason.into()],
             Self::RunnerJobUpdate(status_kind) => vec![status_kind.into()],
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(server_uuid)
@@ -629,6 +644,37 @@ impl From<ProjectKeyAuthFailureReason> for opentelemetry::KeyValue {
 }
 
 impl ProjectKeyAuthFailureReason {
+    const KEY: &str = "reason";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum UserKeyAuthFailureReason {
+    Invalid,
+    NotFound,
+    Revoked,
+    Expired,
+    Locked,
+}
+
+impl fmt::Display for UserKeyAuthFailureReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Invalid => write!(f, "invalid"),
+            Self::NotFound => write!(f, "not_found"),
+            Self::Revoked => write!(f, "revoked"),
+            Self::Expired => write!(f, "expired"),
+            Self::Locked => write!(f, "locked"),
+        }
+    }
+}
+
+impl From<UserKeyAuthFailureReason> for opentelemetry::KeyValue {
+    fn from(reason: UserKeyAuthFailureReason) -> Self {
+        opentelemetry::KeyValue::new(UserKeyAuthFailureReason::KEY, reason.to_string())
+    }
+}
+
+impl UserKeyAuthFailureReason {
     const KEY: &str = "reason";
 }
 

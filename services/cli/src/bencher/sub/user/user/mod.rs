@@ -1,4 +1,8 @@
-use crate::{CliError, bencher::sub::SubCmd, parser::user::CliUser};
+use crate::{
+    CliError,
+    bencher::sub::{SubCmd, user::key::Key},
+    parser::user::CliUser,
+};
 
 mod list;
 mod update;
@@ -9,6 +13,7 @@ pub enum User {
     List(list::List),
     View(view::View),
     Update(update::Update),
+    Key(Key),
 }
 
 impl TryFrom<CliUser> for User {
@@ -19,6 +24,7 @@ impl TryFrom<CliUser> for User {
             CliUser::List(list) => Self::List(list.try_into()?),
             CliUser::View(view) => Self::View(view.try_into()?),
             CliUser::Update(update) => Self::Update(update.try_into()?),
+            CliUser::Key(key) => Self::Key(key.try_into()?),
         })
     }
 }
@@ -29,6 +35,7 @@ impl SubCmd for User {
             Self::List(list) => list.exec().await,
             Self::View(view) => view.exec().await,
             Self::Update(update) => update.exec().await,
+            Self::Key(key) => key.exec().await,
         }
     }
 }

@@ -115,10 +115,9 @@ impl ApiActor {
 
         let pub_bearer_token = match raw_bearer {
             Some(raw) => {
-                let jwt = raw
-                    .parse::<bencher_json::Jwt>()
+                let bearer_token = super::auth::BearerToken::from_raw(raw)
                     .map_err(|_err| unauthorized_error("Invalid authorization token"))?;
-                PubBearerToken::from(Some(jwt.into()))
+                PubBearerToken::from(Some(bearer_token))
             },
             None => PubBearerToken::from(None),
         };

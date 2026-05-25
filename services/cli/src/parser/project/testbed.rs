@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 #[cfg(feature = "plus")]
 use crate::parser::ElidedOption;
-use crate::parser::{CliArchived, CliPagination, CliProjectBackend};
+use crate::parser::{CliArchived, CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliTestbed {
@@ -47,7 +47,7 @@ pub struct CliTestbedList {
     pub archived: bool,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -76,7 +76,7 @@ pub struct CliTestbedCreate {
     pub spec: Option<SpecResourceId>,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -93,7 +93,7 @@ pub struct CliTestbedView {
     pub spec: Option<SpecUuid>,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -122,7 +122,7 @@ pub struct CliTestbedUpdate {
     pub archived: CliArchived,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -134,5 +134,5 @@ pub struct CliTestbedDelete {
     pub testbed: TestbedResourceId,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }

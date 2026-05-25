@@ -1,7 +1,7 @@
 use bencher_json::{OrganizationResourceId, ProjectResourceId, ProjectSlug, ResourceName, Url};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::parser::CliProjectBackend;
+use crate::parser::CliBackend;
 
 use super::{CliPagination, ElidedOption};
 
@@ -59,7 +59,7 @@ pub struct CliProjectList {
     pub pagination: CliPagination<CliProjectsSort>,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone, Copy)]
@@ -91,7 +91,7 @@ pub struct CliProjectCreate {
     pub visibility: CliProjectVisibility,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -108,7 +108,7 @@ pub struct CliProjectView {
     pub project: ProjectResourceId,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -135,7 +135,7 @@ pub struct CliProjectUpdate {
     pub visibility: Option<CliProjectVisibility>,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -148,7 +148,7 @@ pub struct CliProjectDelete {
     pub hard: bool,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -161,7 +161,7 @@ pub struct CliProjectAllowed {
     pub perm: CliProjectPermission,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 /// Project permission
