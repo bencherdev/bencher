@@ -18,7 +18,7 @@ pub use claims::{
 #[cfg(feature = "plus")]
 pub use claims::{ProjectOciClaims, RunnerOciClaims};
 pub use error::TokenError;
-pub use key::TokenKey;
+pub use key::{KeyMatch, TokenKey};
 
 #[cfg(debug_assertions)]
 #[expect(clippy::expect_used, reason = "debug-only hardcoded key must be valid")]

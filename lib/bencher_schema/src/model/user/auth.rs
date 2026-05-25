@@ -3,13 +3,13 @@ use std::ops::Deref;
 use async_trait::async_trait;
 #[cfg(feature = "plus")]
 use bencher_json::system::payment::JsonCustomer;
-use bencher_json::{Jwt, Sanitize};
+use bencher_json::{DateTime, Jwt, Sanitize};
 use bencher_rbac::{
     Organization, Project, Server, User as RbacUser,
     server::Permission,
     user::{OrganizationRoles, ProjectRoles},
 };
-use bencher_token::Audience;
+use bencher_token::{Audience, KeyMatch};
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{
     ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
@@ -45,9 +45,9 @@ impl AuthUser {
         context: &ApiContext,
         bearer_token: BearerToken,
     ) -> Result<Self, HttpError> {
-        let claims = context
+        let (claims, key_match) = context
             .token_key
-            .validate_client(&bearer_token)
+            .validate_client_with_match(&bearer_token)
             .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
         let email = claims.email();
 
@@ -61,17 +61,37 @@ impl AuthUser {
         // externally-signed test fixture) is accepted — we only block tokens we know
         // have been revoked. Short-lived client (browser session) JWTs are never
         // persisted and skip this lookup.
-        if claims.audience() == Audience::ApiKey.as_str()
-            && let Some(row) = QueryToken::get_by_user_jwt(conn, query_user.id, &bearer_token)
+        if claims.audience() == Audience::ApiKey.as_str() {
+            let row = QueryToken::get_by_user_jwt(conn, query_user.id, &bearer_token)
                 .optional()
-                .map_err(|e| unauthorized_error(format!("Failed to look up API token: {e}")))?
-            && row.revoked.is_some()
-        {
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenRevokedUse);
-            return Err(unauthorized_error(
-                "This API token has been revoked and is no longer valid",
-            ));
+                .map_err(|e| unauthorized_error(format!("Failed to look up API token: {e}")))?;
+            if let Some(row) = row.as_ref()
+                && row.revoked.is_some()
+            {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenRevokedUse);
+                return Err(unauthorized_error(
+                    "This API token has been revoked and is no longer valid",
+                ));
+            }
+            // When the token validated against a previous (rotated-out) signing key,
+            // also require the persisted DB `creation` to fall inside that key's
+            // active window. This blocks a holder of a leaked previous key from
+            // forging a JWT with a backdated `iat`: the JWT signature may be valid
+            // and the (forged) `iat` may sit inside the window, but the real row's
+            // immutable `creation` will betray the forgery.
+            if let KeyMatch::Previous { creation, retired } = key_match
+                && let Some(row) = row
+                && !creation_in_window(row.creation, creation, retired)
+            {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(
+                    bencher_otel::ApiCounter::UserTokenPreviousKeyMismatch,
+                );
+                return Err(unauthorized_error(
+                    "This API token was not issued under the matched signing key",
+                ));
+            }
         }
 
         #[cfg(feature = "plus")]
@@ -337,5 +357,62 @@ impl From<OrgProjectId> for Project {
 impl ToPolar for &AuthUser {
     fn to_polar(self) -> PolarValue {
         self.rbac.clone().to_polar()
+    }
+}
+
+/// True iff `row_creation` falls inside the inclusive `[creation, retired]`
+/// window of a previous (rotated-out) signing key. Used by [`AuthUser::from_token`]
+/// to reject forged JWTs that claim a `iat` inside the window but whose
+/// persisted DB row betrays the forgery.
+fn creation_in_window(row_creation: DateTime, creation: DateTime, retired: DateTime) -> bool {
+    let row = row_creation.timestamp();
+    row >= creation.timestamp() && row <= retired.timestamp()
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::DateTime;
+    use chrono::Duration;
+
+    use super::creation_in_window;
+
+    fn window_start() -> DateTime {
+        DateTime::TEST - Duration::seconds(3600)
+    }
+    fn window_end() -> DateTime {
+        DateTime::TEST + Duration::seconds(3600)
+    }
+
+    #[test]
+    fn row_creation_inside_window_accepted() {
+        let row = DateTime::TEST;
+        assert!(creation_in_window(row, window_start(), window_end()));
+    }
+
+    #[test]
+    fn row_creation_at_window_start_accepted() {
+        let row = window_start();
+        assert!(creation_in_window(row, window_start(), window_end()));
+    }
+
+    #[test]
+    fn row_creation_at_window_end_accepted() {
+        let row = window_end();
+        assert!(creation_in_window(row, window_start(), window_end()));
+    }
+
+    #[test]
+    fn row_creation_before_window_rejected() {
+        let row = window_start() - Duration::seconds(1);
+        assert!(!creation_in_window(row, window_start(), window_end()));
+    }
+
+    #[test]
+    fn row_creation_after_window_rejected() {
+        // Forged-JWT-with-leaked-previous-key case: the JWT's `iat` may sit
+        // inside the window (attacker forged it), but the real DB row was
+        // created after the key was retired — the forgery must be rejected.
+        let row = window_end() + Duration::seconds(1);
+        assert!(!creation_in_window(row, window_start(), window_end()));
     }
 }

@@ -103,6 +103,11 @@ pub enum ApiCounter {
     UserTokenCreate,
     UserTokenRevoke,
     UserTokenRevokedUse,
+    /// An API token's JWT validated against a previous (rotated-out) signing
+    /// key, but the DB row's `creation` falls outside that key's
+    /// `[creation, retired]` window — i.e. a likely forgery using a leaked
+    /// previous key.
+    UserTokenPreviousKeyMismatch,
 
     ProjectKeyAuthFailed(ProjectKeyAuthFailureReason),
 
@@ -182,7 +187,9 @@ impl ApiCounter {
             Self::UserSsoJoin(_) => "{join}",
             Self::UserCheckout => "{checkout}",
 
-            Self::UserAttemptMax(_, _) | Self::UserTokenRevokedUse => "{attempt}",
+            Self::UserAttemptMax(_, _)
+            | Self::UserTokenRevokedUse
+            | Self::UserTokenPreviousKeyMismatch => "{attempt}",
             Self::UserCredentialMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
             Self::RunnerKeyRotate => "{key}",
             Self::ProjectKeyAuthFailed(_) => "{auth_failure}",
@@ -238,6 +245,7 @@ impl ApiCounter {
             Self::UserTokenCreate => "user.token.create",
             Self::UserTokenRevoke => "user.token.revoke",
             Self::UserTokenRevokedUse => "user.token.revoked.use",
+            Self::UserTokenPreviousKeyMismatch => "user.token.previous_key.mismatch",
 
             Self::RequestMax(_, _) => "request.max",
 
@@ -322,6 +330,9 @@ impl ApiCounter {
             Self::UserTokenRevokedUse => {
                 "Counts the number of authentication attempts with a revoked API token"
             },
+            Self::UserTokenPreviousKeyMismatch => {
+                "Counts the number of API token JWTs whose signature validated against a previous (rotated-out) key but whose DB row creation fell outside that key's active window"
+            },
 
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
 
@@ -399,6 +410,7 @@ impl ApiCounter {
             | Self::UserTokenCreate
             | Self::UserTokenRevoke
             | Self::UserTokenRevokedUse
+            | Self::UserTokenPreviousKeyMismatch
             | Self::MetricsBilled
             | Self::MetricsBilledFailed
             | Self::EmailSend

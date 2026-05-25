@@ -259,9 +259,18 @@ async fn into_context(
     };
 
     info!(log, "Loading secret key");
-    let token_key = TokenKey::new(
+    let previous_secret_keys = security.previous_secret_keys.as_deref().unwrap_or(&[]);
+    if !previous_secret_keys.is_empty() {
+        info!(
+            log,
+            "Loaded {} previous secret key(s) for rotation",
+            previous_secret_keys.len()
+        );
+    }
+    let token_key = TokenKey::new_with_previous(
         security.issuer.unwrap_or_else(|| console_url.to_string()),
         &security.secret_key,
+        previous_secret_keys,
     );
 
     #[cfg(feature = "plus")]

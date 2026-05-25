@@ -18,5 +18,8 @@ serde.workspace = true
 thiserror.workspace = true
 uuid = { workspace = true, features = ["v4"] }
 
+[dev-dependencies]
+bencher_json = { workspace = true, features = ["test-clock"] }
+
 [lints]
 workspace = true

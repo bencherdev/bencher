@@ -13,6 +13,12 @@ use serde::{Deserialize, Serialize};
 
 use super::{TokenError, audience::Audience};
 
+/// Implemented by every JWT claims struct so the key-rotation decode path
+/// can compare a token's `iat` against a previous key's active window.
+pub(crate) trait HasIat {
+    fn iat(&self) -> i64;
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
     pub aud: String,                 // Audience
@@ -98,6 +104,32 @@ impl Claims {
         let date_time = DateTime::try_from(self.exp);
         debug_assert!(date_time.is_ok(), "Expiration time is invalid");
         date_time.unwrap_or_default()
+    }
+}
+
+impl HasIat for Claims {
+    fn iat(&self) -> i64 {
+        self.iat
+    }
+}
+
+impl HasIat for PublicOciTokenClaims {
+    fn iat(&self) -> i64 {
+        self.iat
+    }
+}
+
+#[cfg(feature = "plus")]
+impl HasIat for RunnerOciTokenClaims {
+    fn iat(&self) -> i64 {
+        self.iat
+    }
+}
+
+#[cfg(feature = "plus")]
+impl HasIat for ProjectOciTokenClaims {
+    fn iat(&self) -> i64 {
+        self.iat
     }
 }
 

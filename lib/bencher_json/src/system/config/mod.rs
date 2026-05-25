@@ -36,7 +36,7 @@ pub use plus::{
     runners::{DEFAULT_HEARTBEAT_TIMEOUT_SECS, DEFAULT_JOB_TIMEOUT_GRACE_PERIOD_SECS},
     stats::JsonStats,
 };
-pub use security::JsonSecurity;
+pub use security::{JsonPreviousSecretKey, JsonSecurity};
 pub use server::{JsonServer, JsonTls};
 pub use smtp::JsonSmtp;
 
