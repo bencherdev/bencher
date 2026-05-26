@@ -138,6 +138,29 @@ impl ImageReference {
         self.is_digest
     }
 
+    /// The image's repository with the Docker Hub `library/` namespace stripped.
+    ///
+    /// For images parsed without a registry prefix, Docker's parsing rules expand
+    /// `myimage` into `docker.io/library/myimage`. For Bencher's bare-metal flow
+    /// the unqualified form is conventionally the project name, so this helper
+    /// returns the bare path for unqualified docker.io images and the raw
+    /// repository otherwise.
+    ///
+    /// Returns `None` when the repository still contains a `/` after this
+    /// normalization (e.g. `user/repo`, or `org/team/project` on a custom
+    /// registry), since those cannot map to a single Bencher project.
+    #[must_use]
+    pub fn bare_repository(&self) -> Option<&str> {
+        let repo = if self.registry == DEFAULT_OCI_REGISTRY {
+            self.repository
+                .strip_prefix("library/")
+                .unwrap_or(&self.repository)
+        } else {
+            &self.repository
+        };
+        if repo.contains('/') { None } else { Some(repo) }
+    }
+
     /// Validate that this image's registry is either the default (`docker.io`)
     /// or the expected Bencher registry.
     pub fn validate_registry(&self, expected_registry: &str) -> Result<(), ImageRegistryError> {
@@ -368,5 +391,50 @@ mod tests {
         // user/image format defaults to docker.io, which is allowed
         let ref_ = ImageReference::parse("myuser/myimage:v1").unwrap();
         ref_.validate_registry("registry.bencher.dev").unwrap();
+    }
+
+    #[test]
+    fn bare_repository_unqualified() {
+        // `myproject:v1` -> docker.io/library/myproject -> "myproject"
+        let ref_ = ImageReference::parse("myproject:v1").unwrap();
+        assert_eq!(ref_.bare_repository(), Some("myproject"));
+    }
+
+    #[test]
+    fn bare_repository_unqualified_no_tag() {
+        let ref_ = ImageReference::parse("myproject").unwrap();
+        assert_eq!(ref_.bare_repository(), Some("myproject"));
+    }
+
+    #[test]
+    fn bare_repository_bencher_registry() {
+        let ref_ = ImageReference::parse("registry.bencher.dev/my-project:v1").unwrap();
+        assert_eq!(ref_.bare_repository(), Some("my-project"));
+    }
+
+    #[test]
+    fn bare_repository_custom_registry_single_segment() {
+        let ref_ = ImageReference::parse("localhost:5000/myimage:v1").unwrap();
+        assert_eq!(ref_.bare_repository(), Some("myimage"));
+    }
+
+    #[test]
+    fn bare_repository_user_image_unmappable() {
+        // `user/image` is docker.io/user/image — `user/image` still has `/`, so it
+        // cannot be a single project name.
+        let ref_ = ImageReference::parse("myuser/myimage:v1").unwrap();
+        assert_eq!(ref_.bare_repository(), None);
+    }
+
+    #[test]
+    fn bare_repository_nested_path_unmappable() {
+        let ref_ = ImageReference::parse("ghcr.io/owner/repo:v1").unwrap();
+        assert_eq!(ref_.bare_repository(), None);
+    }
+
+    #[test]
+    fn bare_repository_digest_form() {
+        let ref_ = ImageReference::parse("registry.bencher.dev/my-project@sha256:abc").unwrap();
+        assert_eq!(ref_.bare_repository(), Some("my-project"));
     }
 }

@@ -95,7 +95,9 @@ pub struct CliRun {
 
 #[derive(Args, Debug)]
 pub struct CliRunProject {
-    /// Project slug or UUID
+    /// Project slug or UUID.
+    /// Optional in bare-metal mode when `--image` includes the project
+    /// (e.g. `registry.bencher.dev/<project>:<tag>` or `<project>:<tag>`).
     #[clap(long, env = "BENCHER_PROJECT")]
     pub project: Option<ProjectResourceId>,
     /// Allow on-the-fly project creation in CI environments.

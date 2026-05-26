@@ -711,8 +711,10 @@ fn run_image_only_runner_test(
     println!("Pushing mock image to {registry}...");
     docker_push(&local_ref)?;
 
-    println!("Submitting job via bencher run --image (no --exec)...");
+    println!("Submitting job via bencher run --image (no --exec, no --project)...");
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    // Intentionally omit `--project`: the project is derived from the image's
+    // repository, exercising the bare-metal-only-needs-image path.
     let image_ref = format!("{PROJECT_SLUG}:{MOCK_IMAGE_TAG}");
     let args = [
         "run",
@@ -720,8 +722,6 @@ fn run_image_only_runner_test(
         host,
         TOKEN_ARG,
         token.as_ref(),
-        "--project",
-        PROJECT_SLUG,
         "--branch",
         "master",
         "--testbed",

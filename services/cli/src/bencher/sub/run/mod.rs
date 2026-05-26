@@ -169,8 +169,16 @@ impl TryFrom<CliRun> for Run {
         };
         #[cfg(not(feature = "plus"))]
         let runner = Some(cmd.try_into()?);
+        #[cfg(feature = "plus")]
+        let image_project = job.as_ref().and_then(|j| {
+            j.image
+                .bare_repository()
+                .and_then(|repo| repo.parse::<ProjectResourceId>().ok())
+        });
+        #[cfg(not(feature = "plus"))]
+        let image_project = None;
         Ok(Self {
-            project: map_project(project)?,
+            project: map_project(project, image_project)?,
             branch: branch.try_into().map_err(RunError::Branch)?,
             testbed,
             #[cfg(feature = "plus")]
