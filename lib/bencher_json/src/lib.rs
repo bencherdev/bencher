@@ -4,9 +4,8 @@ pub use bencher_context::RunContext;
 pub use bencher_valid::{
     BencherKey, BenchmarkName, Boundary, BranchName, CdfBoundary, DateTime, DateTimeMillis, Email,
     GitHash, Index, IntoResourceId, IqrBoundary, Jwt, Model, ModelTest, NameId, NonEmpty,
-    PROJECT_KEY_PREFIX, PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId, ResourceName,
-    SampleSize, Sanitize, Search, Secret, Slug, USER_KEY_PREFIX, Units, Url, UserKey, UserKeyHash,
-    UserName, ValidError, Window,
+    PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId, ResourceName, SampleSize, Sanitize,
+    Search, Secret, Slug, Units, Url, UserKey, UserKeyHash, UserName, ValidError, Window,
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{

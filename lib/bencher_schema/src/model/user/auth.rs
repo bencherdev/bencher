@@ -3,7 +3,7 @@ use std::ops::Deref;
 use async_trait::async_trait;
 #[cfg(feature = "plus")]
 use bencher_json::system::payment::JsonCustomer;
-use bencher_json::{Jwt, Sanitize, USER_KEY_PREFIX, UserKey, UserKeyHash};
+use bencher_json::{Jwt, Sanitize, UserKey, UserKeyHash};
 use bencher_rbac::{
     Organization, Project, Server, User as RbacUser,
     server::Permission,
@@ -356,7 +356,7 @@ impl BearerToken {
     /// Centralized so the `SharedExtractor` impl and `ApiActor`'s dispatch agree on
     /// the prefix detection rules.
     pub fn from_raw(raw: &str) -> Result<Self, HttpError> {
-        if raw.starts_with(USER_KEY_PREFIX) {
+        if raw.starts_with(UserKey::PREFIX) {
             raw.parse::<UserKey>().map(Self::UserKey).map_err(|e| {
                 // Mirror `ProjectKeyAuthFailureReason::Invalid` (emitted in
                 // `actor.rs::authenticate_project_key`) so crafted

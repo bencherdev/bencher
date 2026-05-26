@@ -17,7 +17,7 @@
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post};
 use bencher_json::oci::{OCI_ERROR_DENIED, OCI_ERROR_UNAUTHORIZED, oci_error_body};
-use bencher_json::{Email, Jwt, PROJECT_KEY_PREFIX, ProjectKey, ProjectKeyHash, ProjectResourceId};
+use bencher_json::{Email, Jwt, ProjectKey, ProjectKeyHash, ProjectResourceId};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::ApiContext,
@@ -280,7 +280,7 @@ async fn dispatch_oci_token(
     credentials: Option<(String, String)>,
 ) -> Result<Jwt, HttpError> {
     match credentials {
-        Some((username, password)) if password.starts_with(PROJECT_KEY_PREFIX) => {
+        Some((username, password)) if password.starts_with(ProjectKey::PREFIX) => {
             if let (Ok(project), Ok(project_key)) = (
                 username.parse::<ProjectResourceId>(),
                 password.parse::<ProjectKey>(),
