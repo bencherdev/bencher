@@ -480,3 +480,84 @@ async fn view_and_rename_user_key() {
     let name: &str = patched.name.as_ref();
     assert_eq!(name, "renamed-key");
 }
+
+// --- Expiration --------------------------------------------------------------
+
+/// Mint a key with a short TTL, jump the injected clock past it, and confirm
+/// the same key is rejected. Exercises the `expiration <= now` branch in
+/// `user_from_user_key` (`auth.rs`) that the other negative tests don't reach.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn expired_user_key_rejected() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicI64, Ordering},
+    };
+
+    let base_time = bencher_json::DateTime::TEST.timestamp();
+    let mock_time = Arc::new(AtomicI64::new(base_time));
+    let time_ref = mock_time.clone();
+    let clock = bencher_json::Clock::Custom(Arc::new(move || {
+        bencher_json::DateTime::try_from(time_ref.load(Ordering::Relaxed))
+            .expect("Invalid mocked timestamp")
+    }));
+
+    let server = TestServer::new_with_clock(3600, 1024 * 1024, clock).await;
+    let user = server
+        .signup("Expiry User", "user-expiry@example.com")
+        .await;
+    let user_slug_ref: &str = user.slug.as_ref();
+    let user_slug: String = user_slug_ref.to_owned();
+
+    // Mint a key with a 60-second TTL.
+    let create_resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({"name": "expiring-key", "ttl": 60}))
+        .send()
+        .await
+        .expect("Failed to mint expiring key");
+    assert_eq!(create_resp.status(), StatusCode::CREATED);
+    let created: JsonUserKeyCreated = create_resp.json().await.expect("parse new key");
+    let key = created.key;
+
+    // Sanity: pre-expiry, the key authenticates.
+    let pre_resp = server
+        .client
+        .get(server.api_url("/v0/organizations"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .send()
+        .await
+        .expect("pre-expiry request failed");
+    assert_eq!(
+        pre_resp.status(),
+        StatusCode::OK,
+        "key should work before expiration"
+    );
+
+    // Advance the clock past the TTL. `<= expiration` becomes true.
+    mock_time.store(base_time + 120, Ordering::Relaxed);
+
+    let post_resp = server
+        .client
+        .get(server.api_url("/v0/organizations"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .send()
+        .await
+        .expect("post-expiry request failed");
+    assert_eq!(
+        post_resp.status(),
+        StatusCode::UNAUTHORIZED,
+        "expired key should be rejected"
+    );
+}
