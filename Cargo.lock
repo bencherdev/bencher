@@ -1596,6 +1596,7 @@ dependencies = [
  "diesel_migrations",
  "dropshot",
  "http 1.4.0",
+ "jsonwebtoken",
  "mail-send",
  "oso",
  "pretty_assertions",

@@ -25,3 +25,19 @@ pub enum TokenError {
     #[error("Invalid project OCI token: {error}")]
     OciProject { error: jsonwebtoken::errors::Error },
 }
+
+impl TokenError {
+    /// True iff this error was produced by an HMAC signature mismatch during
+    /// decode. The auth path uses this to decide whether to retry validation
+    /// against previous (rotated-out) signing keys; any other error kind
+    /// (audience mismatch, malformed shape, expiration, etc.) must short-circuit
+    /// because it is independent of which key was used.
+    #[must_use]
+    pub fn is_invalid_signature(&self) -> bool {
+        matches!(
+            self,
+            Self::Decode { error }
+                if matches!(error.kind(), jsonwebtoken::errors::ErrorKind::InvalidSignature)
+        )
+    }
+}

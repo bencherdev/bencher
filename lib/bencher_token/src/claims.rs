@@ -19,6 +19,13 @@ pub(crate) trait HasIat {
     fn iat(&self) -> i64;
 }
 
+/// Implemented by every JWT claims struct so the shared expiration check
+/// can read `exp` generically (decode is typed per-audience, but every
+/// audience carries `exp`).
+pub(crate) trait HasExp {
+    fn exp(&self) -> i64;
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
     pub aud: String,                 // Audience
@@ -113,9 +120,21 @@ impl HasIat for Claims {
     }
 }
 
+impl HasExp for Claims {
+    fn exp(&self) -> i64 {
+        self.exp
+    }
+}
+
 impl HasIat for PublicOciTokenClaims {
     fn iat(&self) -> i64 {
         self.iat
+    }
+}
+
+impl HasExp for PublicOciTokenClaims {
+    fn exp(&self) -> i64 {
+        self.exp
     }
 }
 
@@ -127,9 +146,23 @@ impl HasIat for RunnerOciTokenClaims {
 }
 
 #[cfg(feature = "plus")]
+impl HasExp for RunnerOciTokenClaims {
+    fn exp(&self) -> i64 {
+        self.exp
+    }
+}
+
+#[cfg(feature = "plus")]
 impl HasIat for ProjectOciTokenClaims {
     fn iat(&self) -> i64 {
         self.iat
+    }
+}
+
+#[cfg(feature = "plus")]
+impl HasExp for ProjectOciTokenClaims {
+    fn exp(&self) -> i64 {
+        self.exp
     }
 }
 

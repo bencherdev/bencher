@@ -25,7 +25,7 @@ use crate::RunnerOciClaims;
 use crate::claims::ProjectOciTokenClaims;
 #[cfg(feature = "plus")]
 use crate::claims::RunnerOciTokenClaims;
-use crate::claims::{HasIat, PublicOciTokenClaims};
+use crate::claims::{HasExp, HasIat, PublicOciTokenClaims};
 use crate::{
     Audience, AuthOciClaims, Claims, InviteClaims, OAuthClaims, OciAction, OciScopeClaims,
     OrgClaims, PublicOciClaims, StateClaims, TokenError,
@@ -119,6 +119,11 @@ impl TokenKey {
     ///
     /// A previous key only matches if both the signature is valid AND the
     /// token's `iat` lies inside that key's `[creation, retired]` window.
+    ///
+    /// **Constraint:** retired keys are consulted only for audiences that are
+    /// anchored to a server-side row (`Audience::ApiKey`). Stateless audiences
+    /// must use [`Self::decode_current`] so a leaked previous key cannot mint
+    /// forever-valid tokens with no DB anchor to cross-check against.
     fn decode_with_rotation<C>(
         &self,
         token: &Jwt,
@@ -289,146 +294,135 @@ impl TokenKey {
         .map_err(TokenError::Parse)
     }
 
+    /// Validate `token` against the **current** signing key only — no
+    /// fall-through to previous keys. Used by every stateless audience
+    /// (anything without a server-side row); see the constraint documented
+    /// on [`Self::decode_with_rotation`].
     fn validate(
         &self,
         token: &Jwt,
         audience: &[Audience],
-    ) -> Result<(TokenData<Claims>, KeyMatch), TokenError> {
-        let mut validation = Validation::new(ALGORITHM);
-        validation.set_audience(audience);
-        validation.set_issuer(&[self.issuer.as_str()]);
-        validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
+    ) -> Result<TokenData<Claims>, TokenError> {
+        let validation = self.build_validation(audience, &["aud", "exp", "iss", "sub"]);
+        let token_data = decode::<Claims>(token.as_ref(), &self.decoding, &validation)
+            .map_err(|error| TokenError::Decode { error })?;
+        check_not_expired(token_data)
+    }
 
+    /// Validate `token` against the current key, falling back to any
+    /// previous keys whose `[creation, retired]` window contains the
+    /// token's `iat`. Only callable for `Audience::ApiKey` via
+    /// [`Self::validate_api_key_with_match`] — see the constraint on
+    /// [`Self::decode_with_rotation`].
+    fn validate_with_rotation(
+        &self,
+        token: &Jwt,
+        audience: &[Audience],
+    ) -> Result<(TokenData<Claims>, KeyMatch), TokenError> {
+        let validation = self.build_validation(audience, &["aud", "exp", "iss", "sub"]);
         let (token_data, key_match) = self
             .decode_with_rotation::<Claims>(token, &validation)
             .map_err(|error| TokenError::Decode { error })?;
-        let exp = token_data.claims.exp;
-        let now = Utc::now().timestamp();
-        if exp < now {
-            Err(TokenError::Expired {
-                exp,
-                now,
-                error: JsonWebTokenErrorKind::ExpiredSignature.into(),
-            })
-        } else {
-            Ok((token_data, key_match))
-        }
+        check_not_expired(token_data).map(|data| (data, key_match))
+    }
+
+    fn build_validation(&self, audience: &[Audience], required: &[&str]) -> Validation {
+        let mut validation = Validation::new(ALGORITHM);
+        validation.set_audience(audience);
+        validation.set_issuer(&[self.issuer.as_str()]);
+        validation.set_required_spec_claims(required);
+        validation
     }
 
     pub fn validate_auth(&self, token: &Jwt) -> Result<Claims, TokenError> {
-        Ok(self.validate(token, &[Audience::Auth])?.0.claims)
+        Ok(self.validate(token, &[Audience::Auth])?.claims)
     }
 
     pub fn validate_client(&self, token: &Jwt) -> Result<Claims, TokenError> {
         Ok(self
             .validate(token, &[Audience::Client, Audience::ApiKey])?
-            .0
             .claims)
     }
 
-    /// Like [`Self::validate_client`] but also surfaces which key validated
-    /// the token so callers (i.e. the API-token auth path) can enforce
-    /// additional constraints when a previous key matched.
-    pub fn validate_client_with_match(
+    pub fn validate_api_key(&self, token: &Jwt) -> Result<Claims, TokenError> {
+        Ok(self.validate(token, &[Audience::ApiKey])?.claims)
+    }
+
+    /// Validate an `Audience::ApiKey` token, accepting either the current
+    /// signing key or any previous key whose `[creation, retired]` window
+    /// contains the token's `iat`. Returns [`KeyMatch`] so the auth path
+    /// can apply the DB-row `creation` anchor when a previous key matched.
+    ///
+    /// **The only validator that consults previous keys.** Every other
+    /// validator is current-key only, because no other audience has a
+    /// server-side row to anchor against — see the core constraint
+    /// documented on [`Self::decode_with_rotation`].
+    pub fn validate_api_key_with_match(
         &self,
         token: &Jwt,
     ) -> Result<(Claims, KeyMatch), TokenError> {
-        let (data, key_match) = self.validate(token, &[Audience::Client, Audience::ApiKey])?;
+        let (data, key_match) = self.validate_with_rotation(token, &[Audience::ApiKey])?;
         Ok((data.claims, key_match))
     }
 
-    pub fn validate_api_key(&self, token: &Jwt) -> Result<Claims, TokenError> {
-        Ok(self.validate(token, &[Audience::ApiKey])?.0.claims)
-    }
-
     pub fn validate_invite(&self, token: &Jwt) -> Result<InviteClaims, TokenError> {
-        self.validate(token, &[Audience::Invite])?
-            .0
-            .claims
-            .try_into()
+        self.validate(token, &[Audience::Invite])?.claims.try_into()
     }
 
     pub fn validate_oauth(&self, token: &Jwt) -> Result<OAuthClaims, TokenError> {
-        self.validate(token, &[Audience::OAuth])?
-            .0
-            .claims
-            .try_into()
+        self.validate(token, &[Audience::OAuth])?.claims.try_into()
     }
 
     pub fn validate_oci_public(&self, token: &Jwt) -> Result<PublicOciClaims, TokenError> {
-        let mut validation = Validation::new(ALGORITHM);
-        validation.set_audience(&[Audience::OciPublic]);
-        validation.set_issuer(&[self.issuer.as_str()]);
-        // No "sub" required — anonymous tokens have no identity
-        validation.set_required_spec_claims(&["aud", "exp", "iss"]);
-
-        let (token_data, _key_match) = self
-            .decode_with_rotation::<PublicOciTokenClaims>(token, &validation)
-            .map_err(|error| TokenError::Decode { error })?;
-        let exp = token_data.claims.exp;
-        let now = Utc::now().timestamp();
-        if exp < now {
-            Err(TokenError::Expired {
-                exp,
-                now,
-                error: JsonWebTokenErrorKind::ExpiredSignature.into(),
-            })
-        } else {
-            token_data.claims.try_into()
-        }
+        // No "sub" required — anonymous tokens have no identity.
+        let validation = self.build_validation(&[Audience::OciPublic], &["aud", "exp", "iss"]);
+        let token_data =
+            decode::<PublicOciTokenClaims>(token.as_ref(), &self.decoding, &validation)
+                .map_err(|error| TokenError::Decode { error })?;
+        check_not_expired(token_data)?.claims.try_into()
     }
 
     pub fn validate_oci_auth(&self, token: &Jwt) -> Result<AuthOciClaims, TokenError> {
         self.validate(token, &[Audience::OciAuth])?
-            .0
             .claims
             .try_into()
     }
 
     #[cfg(feature = "plus")]
     pub fn validate_oci_project(&self, token: &Jwt) -> Result<ProjectOciClaims, TokenError> {
-        let mut validation = Validation::new(ALGORITHM);
-        validation.set_audience(&[Audience::OciProject]);
-        validation.set_issuer(&[self.issuer.as_str()]);
-        validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
-
-        let (token_data, _key_match) = self
-            .decode_with_rotation::<ProjectOciTokenClaims>(token, &validation)
-            .map_err(|error| TokenError::Decode { error })?;
-        let exp = token_data.claims.exp;
-        let now = Utc::now().timestamp();
-        if exp < now {
-            Err(TokenError::Expired {
-                exp,
-                now,
-                error: JsonWebTokenErrorKind::ExpiredSignature.into(),
-            })
-        } else {
-            token_data.claims.try_into()
-        }
+        let validation =
+            self.build_validation(&[Audience::OciProject], &["aud", "exp", "iss", "sub"]);
+        let token_data =
+            decode::<ProjectOciTokenClaims>(token.as_ref(), &self.decoding, &validation)
+                .map_err(|error| TokenError::Decode { error })?;
+        check_not_expired(token_data)?.claims.try_into()
     }
 
     #[cfg(feature = "plus")]
     pub fn validate_oci_runner(&self, token: &Jwt) -> Result<RunnerOciClaims, TokenError> {
-        let mut validation = Validation::new(ALGORITHM);
-        validation.set_audience(&[Audience::OciRunner]);
-        validation.set_issuer(&[self.issuer.as_str()]);
-        validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
+        let validation =
+            self.build_validation(&[Audience::OciRunner], &["aud", "exp", "iss", "sub"]);
+        let token_data =
+            decode::<RunnerOciTokenClaims>(token.as_ref(), &self.decoding, &validation)
+                .map_err(|error| TokenError::Decode { error })?;
+        check_not_expired(token_data)?.claims.try_into()
+    }
+}
 
-        let (token_data, _key_match) = self
-            .decode_with_rotation::<RunnerOciTokenClaims>(token, &validation)
-            .map_err(|error| TokenError::Decode { error })?;
-        let exp = token_data.claims.exp;
-        let now = Utc::now().timestamp();
-        if exp < now {
-            Err(TokenError::Expired {
-                exp,
-                now,
-                error: JsonWebTokenErrorKind::ExpiredSignature.into(),
-            })
-        } else {
-            token_data.claims.try_into()
-        }
+/// Reject a decoded token whose `exp` is in the past. The exp check is
+/// independent of which signing key validated the token, so it lives in a
+/// free function shared by every validator.
+fn check_not_expired<C: HasExp>(token_data: TokenData<C>) -> Result<TokenData<C>, TokenError> {
+    let exp = token_data.claims.exp();
+    let now = Utc::now().timestamp();
+    if exp < now {
+        Err(TokenError::Expired {
+            exp,
+            now,
+            error: JsonWebTokenErrorKind::ExpiredSignature.into(),
+        })
+    } else {
+        Ok(token_data)
     }
 }
 
@@ -438,7 +432,9 @@ mod tests {
 
     use bencher_json::{Email, Jwt, OrganizationUuid, organization::member::OrganizationRole};
 
-    use crate::{Audience, Claims, DEFAULT_SECRET_KEY, OciAction, OciScopeClaims, OrgClaims};
+    use crate::{
+        Audience, Claims, DEFAULT_SECRET_KEY, OciAction, OciScopeClaims, OrgClaims, StateClaims,
+    };
 
     use super::TokenKey;
 
@@ -951,101 +947,284 @@ mod tests {
         chrono::Utc::now().timestamp() + 86_400
     }
 
+    fn rotated_key() -> TokenKey {
+        TokenKey::new_with_previous(
+            BENCHER_DOT_DEV_ISSUER.to_owned(),
+            &new_secret(),
+            &[previous_entry(old_secret())],
+        )
+    }
+
+    fn mint_org_claims() -> OrgClaims {
+        OrgClaims {
+            uuid: OrganizationUuid::new(),
+            role: OrganizationRole::Leader,
+        }
+    }
+
+    fn mint_with_iat_full(
+        secret: &Secret,
+        audience: Audience,
+        iat: i64,
+        exp: i64,
+        org: Option<OrgClaims>,
+        state: Option<StateClaims>,
+        oci: Option<OciScopeClaims>,
+    ) -> Jwt {
+        let claims = Claims {
+            aud: audience.to_string(),
+            exp,
+            iat,
+            iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
+            sub: EMAIL.clone(),
+            org,
+            state,
+            oci,
+        };
+        let encoding = jsonwebtoken::EncodingKey::from_secret(secret.as_ref().as_bytes());
+        Jwt::from_str(&jsonwebtoken::encode(&super::HEADER, &claims, &encoding).unwrap()).unwrap()
+    }
+
+    // --- Constraint tests: retired keys NEVER validate stateless audiences ---
+
     #[test]
-    fn rotation_token_signed_with_previous_key_in_window_validates() {
+    fn rotation_stateless_audience_auth_rejected_by_previous_key() {
         let iat = DateTime::TEST.timestamp();
-        let exp = far_future_exp();
-        let token = mint_with_iat(&old_secret(), Audience::Auth, iat, exp);
+        let token = mint_with_iat(&old_secret(), Audience::Auth, iat, far_future_exp());
+        rotated_key().validate_auth(&token).unwrap_err();
+    }
 
-        let key = TokenKey::new_with_previous(
-            BENCHER_DOT_DEV_ISSUER.to_owned(),
-            &new_secret(),
-            &[previous_entry(old_secret())],
+    #[test]
+    fn rotation_stateless_audience_client_rejected_by_previous_key() {
+        let iat = DateTime::TEST.timestamp();
+        let token = mint_with_iat(&old_secret(), Audience::Client, iat, far_future_exp());
+        rotated_key().validate_client(&token).unwrap_err();
+    }
+
+    #[test]
+    fn rotation_stateless_audience_invite_rejected_by_previous_key() {
+        let iat = DateTime::TEST.timestamp();
+        let token = mint_with_iat_full(
+            &old_secret(),
+            Audience::Invite,
+            iat,
+            far_future_exp(),
+            Some(mint_org_claims()),
+            None,
+            None,
         );
+        rotated_key().validate_invite(&token).unwrap_err();
+    }
 
-        let claims = key.validate_auth(&token).unwrap();
+    #[test]
+    fn rotation_stateless_audience_oauth_rejected_by_previous_key() {
+        let iat = DateTime::TEST.timestamp();
+        let state = StateClaims {
+            invite: None,
+            claim: None,
+            #[cfg(feature = "plus")]
+            plan: None,
+        };
+        let token = mint_with_iat_full(
+            &old_secret(),
+            Audience::OAuth,
+            iat,
+            far_future_exp(),
+            None,
+            Some(state),
+            None,
+        );
+        rotated_key().validate_oauth(&token).unwrap_err();
+    }
+
+    #[test]
+    fn rotation_stateless_audience_oci_auth_rejected_by_previous_key() {
+        let iat = DateTime::TEST.timestamp();
+        let oci = OciScopeClaims {
+            repository: Some("rotated-org/rotated-project".to_owned()),
+            actions: vec![OciAction::Pull],
+        };
+        let token = mint_with_iat_full(
+            &old_secret(),
+            Audience::OciAuth,
+            iat,
+            far_future_exp(),
+            None,
+            None,
+            Some(oci),
+        );
+        rotated_key().validate_oci_auth(&token).unwrap_err();
+    }
+
+    #[test]
+    fn rotation_stateless_audience_oci_public_rejected_by_previous_key() {
+        // Public OCI tokens use a different claims shape (no `sub`).
+        let iat = DateTime::TEST.timestamp();
+        let claims = crate::claims::PublicOciTokenClaims {
+            aud: Audience::OciPublic.to_string(),
+            exp: far_future_exp(),
+            iat,
+            iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
+            oci: Some(OciScopeClaims {
+                repository: Some("rotated-org/rotated-project".to_owned()),
+                actions: vec![OciAction::Pull],
+            }),
+        };
+        let encoding = jsonwebtoken::EncodingKey::from_secret(old_secret().as_ref().as_bytes());
+        let token =
+            Jwt::from_str(&jsonwebtoken::encode(&super::HEADER, &claims, &encoding).unwrap())
+                .unwrap();
+        rotated_key().validate_oci_public(&token).unwrap_err();
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn rotation_stateless_audience_oci_project_rejected_by_previous_key() {
+        let iat = DateTime::TEST.timestamp();
+        let claims = crate::claims::ProjectOciTokenClaims {
+            aud: Audience::OciProject.to_string(),
+            exp: far_future_exp(),
+            iat,
+            iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
+            sub: bencher_json::ProjectUuid::new(),
+            oci: Some(OciScopeClaims {
+                repository: None,
+                actions: vec![OciAction::Push],
+            }),
+        };
+        let encoding = jsonwebtoken::EncodingKey::from_secret(old_secret().as_ref().as_bytes());
+        let token =
+            Jwt::from_str(&jsonwebtoken::encode(&super::HEADER, &claims, &encoding).unwrap())
+                .unwrap();
+        rotated_key().validate_oci_project(&token).unwrap_err();
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn rotation_stateless_audience_oci_runner_rejected_by_previous_key() {
+        let iat = DateTime::TEST.timestamp();
+        let claims = crate::claims::RunnerOciTokenClaims {
+            aud: Audience::OciRunner.to_string(),
+            exp: far_future_exp(),
+            iat,
+            iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
+            sub: bencher_json::RunnerUuid::new(),
+            oci: Some(OciScopeClaims {
+                repository: None,
+                actions: vec![OciAction::Pull],
+            }),
+        };
+        let encoding = jsonwebtoken::EncodingKey::from_secret(old_secret().as_ref().as_bytes());
+        let token =
+            Jwt::from_str(&jsonwebtoken::encode(&super::HEADER, &claims, &encoding).unwrap())
+                .unwrap();
+        rotated_key().validate_oci_runner(&token).unwrap_err();
+    }
+
+    // --- Constraint tests: API-token rotation policy ---
+
+    #[test]
+    fn rotation_api_key_validates_via_previous_key_in_window() {
+        let iat = DateTime::TEST.timestamp();
+        let token = mint_with_iat(&old_secret(), Audience::ApiKey, iat, far_future_exp());
+
+        let (claims, key_match) = rotated_key().validate_api_key_with_match(&token).unwrap();
         assert_eq!(claims.iat, iat);
+        assert!(matches!(key_match, KeyMatch::Previous { .. }));
     }
 
     #[test]
-    fn rotation_token_signed_with_previous_key_before_window_rejected() {
+    fn rotation_validate_api_key_rejects_client_audience_via_previous_key() {
+        // A Client-audience JWT signed with a retired key must NOT validate
+        // via the rotation path — the audience filter on
+        // `validate_api_key_with_match` locks out non-API-token audiences.
+        let iat = DateTime::TEST.timestamp();
+        let token = mint_with_iat(&old_secret(), Audience::Client, iat, far_future_exp());
+        rotated_key()
+            .validate_api_key_with_match(&token)
+            .unwrap_err();
+    }
+
+    #[test]
+    fn rotation_validate_client_uses_current_key_only() {
+        // `validate_client` accepts both Client and ApiKey audiences but does
+        // NOT consult previous keys. An ApiKey token signed with the retired
+        // key must fail here — auth.rs will retry on `validate_api_key_with_match`.
+        let iat = DateTime::TEST.timestamp();
+        let token = mint_with_iat(&old_secret(), Audience::ApiKey, iat, far_future_exp());
+        rotated_key().validate_client(&token).unwrap_err();
+    }
+
+    // --- Window-boundary tests on the one path that allows fall-through ---
+
+    #[test]
+    fn rotation_api_key_before_window_rejected() {
         let iat = window_start().timestamp() - 1;
-        let exp = far_future_exp();
-        let token = mint_with_iat(&old_secret(), Audience::Auth, iat, exp);
-
-        let key = TokenKey::new_with_previous(
-            BENCHER_DOT_DEV_ISSUER.to_owned(),
-            &new_secret(),
-            &[previous_entry(old_secret())],
-        );
-
-        key.validate_auth(&token).unwrap_err();
+        let token = mint_with_iat(&old_secret(), Audience::ApiKey, iat, far_future_exp());
+        rotated_key()
+            .validate_api_key_with_match(&token)
+            .unwrap_err();
     }
 
     #[test]
-    fn rotation_token_signed_with_previous_key_after_window_rejected() {
+    fn rotation_api_key_after_window_rejected() {
         let iat = window_end().timestamp() + 1;
-        let exp = far_future_exp();
-        let token = mint_with_iat(&old_secret(), Audience::Auth, iat, exp);
-
-        let key = TokenKey::new_with_previous(
-            BENCHER_DOT_DEV_ISSUER.to_owned(),
-            &new_secret(),
-            &[previous_entry(old_secret())],
-        );
-
-        key.validate_auth(&token).unwrap_err();
+        let token = mint_with_iat(&old_secret(), Audience::ApiKey, iat, far_future_exp());
+        rotated_key()
+            .validate_api_key_with_match(&token)
+            .unwrap_err();
     }
+
+    #[test]
+    fn rotation_api_key_at_window_boundaries_accepted() {
+        // The window `[creation, retired]` is inclusive on both ends.
+        let exp = far_future_exp();
+
+        let start_iat = window_start().timestamp();
+        let start_token = mint_with_iat(&old_secret(), Audience::ApiKey, start_iat, exp);
+        rotated_key()
+            .validate_api_key_with_match(&start_token)
+            .unwrap();
+
+        let end_iat = window_end().timestamp();
+        let end_token = mint_with_iat(&old_secret(), Audience::ApiKey, end_iat, exp);
+        rotated_key()
+            .validate_api_key_with_match(&end_token)
+            .unwrap();
+    }
+
+    // --- Sanity / regression tests ---
 
     #[test]
     fn rotation_token_signed_with_unknown_key_fails() {
         let iat = DateTime::TEST.timestamp();
-        let exp = far_future_exp();
-        let token = mint_with_iat(&unknown_secret(), Audience::Auth, iat, exp);
-
-        let key = TokenKey::new_with_previous(
-            BENCHER_DOT_DEV_ISSUER.to_owned(),
-            &new_secret(),
-            &[previous_entry(old_secret())],
-        );
-
-        key.validate_auth(&token).unwrap_err();
+        let token = mint_with_iat(&unknown_secret(), Audience::ApiKey, iat, far_future_exp());
+        rotated_key()
+            .validate_api_key_with_match(&token)
+            .unwrap_err();
     }
 
     #[test]
-    fn rotation_expired_token_still_rejected_even_if_signed_with_previous_key() {
-        // iat inside the window, but already expired
+    fn rotation_expired_api_key_still_rejected_even_if_signed_with_previous_key() {
         let iat = DateTime::TEST.timestamp();
         let exp = chrono::Utc::now().timestamp() - 1;
-        let token = mint_with_iat(&old_secret(), Audience::Auth, iat, exp);
-
-        let key = TokenKey::new_with_previous(
-            BENCHER_DOT_DEV_ISSUER.to_owned(),
-            &new_secret(),
-            &[previous_entry(old_secret())],
-        );
-
-        // An expired token must be rejected even when its signature is valid
-        // against a previous key inside the window.
-        key.validate_auth(&token).unwrap_err();
+        let token = mint_with_iat(&old_secret(), Audience::ApiKey, iat, exp);
+        rotated_key()
+            .validate_api_key_with_match(&token)
+            .unwrap_err();
     }
 
     #[test]
     fn rotation_audience_mismatch_short_circuits() {
-        // Mint an OciAuth token with the CURRENT (new) secret; validating as
-        // Auth should surface an InvalidAudience error from the current key,
-        // NOT fall through to the previous-key path.
+        // Mint an OciAuth token with the CURRENT secret; calling
+        // `validate_api_key_with_match` must surface InvalidAudience from
+        // the current key and NOT fall through to previous keys (which would
+        // produce a less informative InvalidSignature).
         let iat = DateTime::TEST.timestamp();
-        let exp = far_future_exp();
-        let token = mint_with_iat(&new_secret(), Audience::OciAuth, iat, exp);
-
-        let key = TokenKey::new_with_previous(
-            BENCHER_DOT_DEV_ISSUER.to_owned(),
-            &new_secret(),
-            &[previous_entry(old_secret())],
-        );
-
-        let err = key.validate_auth(&token).unwrap_err();
+        let token = mint_with_iat(&new_secret(), Audience::OciAuth, iat, far_future_exp());
+        let err = rotated_key()
+            .validate_api_key_with_match(&token)
+            .unwrap_err();
         let crate::TokenError::Decode { error } = &err else {
             panic!("expected Decode/InvalidAudience, got {err:?}");
         };
@@ -1061,62 +1240,19 @@ mod tests {
 
     #[test]
     fn rotation_new_tokens_sign_with_current_key_only() {
-        let key = TokenKey::new_with_previous(
-            BENCHER_DOT_DEV_ISSUER.to_owned(),
-            &new_secret(),
-            &[previous_entry(old_secret())],
-        );
-        let token = key.new_auth(EMAIL.clone(), TTL).unwrap();
-
+        let key = rotated_key();
+        let token = key.new_api_key(EMAIL.clone(), TTL).unwrap();
         // A fresh TokenKey holding only the OLD secret must NOT validate it.
         let old_only = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &old_secret());
-        old_only.validate_auth(&token).unwrap_err();
+        old_only.validate_api_key(&token).unwrap_err();
     }
 
     #[test]
-    fn rotation_oci_public_signed_with_previous_key_in_window_validates() {
-        // OCI Public has a different claims shape; this exercises the typed
-        // PublicOciTokenClaims path through `decode_with_rotation`.
+    fn rotation_validate_api_key_with_match_returns_previous_window() {
         let iat = DateTime::TEST.timestamp();
-        let exp = far_future_exp();
-        let claims = crate::claims::PublicOciTokenClaims {
-            aud: Audience::OciPublic.to_string(),
-            exp,
-            iat,
-            iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
-            oci: Some(OciScopeClaims {
-                repository: Some("rotated-org/rotated-project".to_owned()),
-                actions: vec![OciAction::Pull],
-            }),
-        };
-        let encoding = jsonwebtoken::EncodingKey::from_secret(old_secret().as_ref().as_bytes());
-        let token =
-            Jwt::from_str(&jsonwebtoken::encode(&super::HEADER, &claims, &encoding).unwrap())
-                .unwrap();
+        let token = mint_with_iat(&old_secret(), Audience::ApiKey, iat, far_future_exp());
 
-        let key = TokenKey::new_with_previous(
-            BENCHER_DOT_DEV_ISSUER.to_owned(),
-            &new_secret(),
-            &[previous_entry(old_secret())],
-        );
-
-        let validated = key.validate_oci_public(&token).unwrap();
-        assert_eq!(validated.oci.actions, vec![OciAction::Pull]);
-    }
-
-    #[test]
-    fn rotation_validate_client_with_match_returns_previous_window() {
-        let iat = DateTime::TEST.timestamp();
-        let exp = far_future_exp();
-        let token = mint_with_iat(&old_secret(), Audience::ApiKey, iat, exp);
-
-        let key = TokenKey::new_with_previous(
-            BENCHER_DOT_DEV_ISSUER.to_owned(),
-            &new_secret(),
-            &[previous_entry(old_secret())],
-        );
-
-        let (claims, key_match) = key.validate_client_with_match(&token).unwrap();
+        let (claims, key_match) = rotated_key().validate_api_key_with_match(&token).unwrap();
         assert_eq!(claims.iat, iat);
         match key_match {
             KeyMatch::Previous { creation, retired } => {
@@ -1128,10 +1264,10 @@ mod tests {
     }
 
     #[test]
-    fn rotation_validate_client_with_match_returns_current_when_no_previous_keys() {
+    fn rotation_validate_api_key_with_match_returns_current_when_no_previous_keys() {
         let key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &new_secret());
-        let token = key.new_client(EMAIL.clone(), TTL).unwrap();
-        let (_claims, key_match) = key.validate_client_with_match(&token).unwrap();
+        let token = key.new_api_key(EMAIL.clone(), TTL).unwrap();
+        let (_claims, key_match) = key.validate_api_key_with_match(&token).unwrap();
         assert!(matches!(key_match, KeyMatch::Current));
     }
 }

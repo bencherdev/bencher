@@ -79,6 +79,7 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 [dev-dependencies]
 bencher_json = { workspace = true, features = ["server", "schema", "db", "test-clock"] }
 criterion.workspace = true
+jsonwebtoken = { workspace = true, features = ["rust_crypto"] }
 pretty_assertions.workspace = true
 tempfile.workspace = true
 

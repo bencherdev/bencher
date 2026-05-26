@@ -9,7 +9,7 @@ use bencher_rbac::{
     server::Permission,
     user::{OrganizationRoles, ProjectRoles},
 };
-use bencher_token::{Audience, KeyMatch};
+use bencher_token::{Audience, Claims, KeyMatch, TokenError, TokenKey};
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{
     ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
@@ -45,9 +45,7 @@ impl AuthUser {
         context: &ApiContext,
         bearer_token: BearerToken,
     ) -> Result<Self, HttpError> {
-        let (claims, key_match) = context
-            .token_key
-            .validate_client_with_match(&bearer_token)
+        let (claims, key_match) = validate_bearer_with_rotation(&context.token_key, &bearer_token)
             .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
         let email = claims.email();
 
@@ -360,6 +358,31 @@ impl ToPolar for &AuthUser {
     }
 }
 
+/// Validate a bearer JWT against `token_key`, applying the no-DB-no-rotation
+/// rule documented on `TokenKey::decode_with_rotation`.
+///
+/// 1. The current signing key validates either `Audience::Client` (a browser
+///    session JWT, no DB row) or `Audience::ApiKey` (a DB-anchored API token).
+/// 2. If step 1 fails with `InvalidSignature`, retry with
+///    [`TokenKey::validate_api_key_with_match`] — which consults retired keys
+///    but accepts only `Audience::ApiKey`. A `Client` JWT signed by a retired
+///    key cannot resurrect itself here because the rotation validator rejects
+///    its audience.
+///
+/// On success the caller learns which key validated the token via [`KeyMatch`]
+/// so the API-token path can apply the DB-row `creation` anchor when a
+/// previous key matched.
+fn validate_bearer_with_rotation(
+    token_key: &TokenKey,
+    jwt: &Jwt,
+) -> Result<(Claims, KeyMatch), TokenError> {
+    match token_key.validate_client(jwt) {
+        Ok(claims) => Ok((claims, KeyMatch::Current)),
+        Err(e) if e.is_invalid_signature() => token_key.validate_api_key_with_match(jwt),
+        Err(e) => Err(e),
+    }
+}
+
 /// True iff `row_creation` falls inside the inclusive `[creation, retired]`
 /// window of a previous (rotated-out) signing key. Used by [`AuthUser::from_token`]
 /// to reject forged JWTs that claim a `iat` inside the window but whose
@@ -371,10 +394,19 @@ fn creation_in_window(row_creation: DateTime, creation: DateTime, retired: DateT
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::DateTime;
+    use std::str::FromStr as _;
+    use std::sync::LazyLock;
+
+    use bencher_json::{DateTime, Email, Jwt, Secret, system::config::JsonPreviousSecretKey};
+    use bencher_token::{Audience, Claims, KeyMatch, TokenKey};
     use chrono::Duration;
 
-    use super::creation_in_window;
+    use super::{creation_in_window, validate_bearer_with_rotation};
+
+    const ISSUER: &str = "bencher.dev";
+    const TTL: u32 = u32::MAX;
+
+    static EMAIL: LazyLock<Email> = LazyLock::new(|| "info@bencher.dev".parse().unwrap());
 
     fn window_start() -> DateTime {
         DateTime::TEST - Duration::seconds(3600)
@@ -414,5 +446,121 @@ mod tests {
         // created after the key was retired — the forgery must be rejected.
         let row = window_end() + Duration::seconds(1);
         assert!(!creation_in_window(row, window_start(), window_end()));
+    }
+
+    // --- Orchestration tests for `validate_bearer_with_rotation` ---
+    //
+    // These cover the two-step retry used by `AuthUser::from_token`: try the
+    // current key for either `Client` or `ApiKey` audience first, then fall
+    // back to the rotation path with `ApiKey` audience only.
+
+    fn old_secret() -> Secret {
+        "auth-rotation-old-secret".parse().unwrap()
+    }
+    fn new_secret() -> Secret {
+        "auth-rotation-new-secret".parse().unwrap()
+    }
+
+    fn previous_entry(secret: Secret) -> JsonPreviousSecretKey {
+        JsonPreviousSecretKey {
+            secret_key: secret,
+            creation: window_start(),
+            retired: window_end(),
+        }
+    }
+
+    fn rotated_key() -> TokenKey {
+        TokenKey::new_with_previous(
+            ISSUER.to_owned(),
+            &new_secret(),
+            &[previous_entry(old_secret())],
+        )
+    }
+
+    fn mint_with_iat(secret: &Secret, audience: Audience, iat: i64, exp: i64) -> Jwt {
+        // Hand-rolled JWT minting so we can dictate `iat`; the production
+        // `TokenKey::new_*` helpers use `Utc::now()`.
+        let claims = Claims {
+            aud: audience.to_string(),
+            exp,
+            iat,
+            iss: ISSUER.to_owned(),
+            sub: EMAIL.clone(),
+            org: None,
+            state: None,
+            oci: None,
+        };
+        let encoding = jsonwebtoken::EncodingKey::from_secret(secret.as_ref().as_bytes());
+        let header = jsonwebtoken::Header::default();
+        Jwt::from_str(&jsonwebtoken::encode(&header, &claims, &encoding).unwrap()).unwrap()
+    }
+
+    fn far_future_exp() -> i64 {
+        chrono::Utc::now().timestamp() + 86_400
+    }
+
+    #[test]
+    fn bearer_current_key_client_audience_returns_current() {
+        let key = rotated_key();
+        let jwt = key.new_client(EMAIL.clone(), TTL).unwrap();
+        let (claims, key_match) = validate_bearer_with_rotation(&key, &jwt).unwrap();
+        assert_eq!(claims.audience(), Audience::Client.as_str());
+        assert!(matches!(key_match, KeyMatch::Current));
+    }
+
+    #[test]
+    fn bearer_current_key_api_key_audience_returns_current() {
+        let key = rotated_key();
+        let jwt = key.new_api_key(EMAIL.clone(), TTL).unwrap();
+        let (claims, key_match) = validate_bearer_with_rotation(&key, &jwt).unwrap();
+        assert_eq!(claims.audience(), Audience::ApiKey.as_str());
+        assert!(matches!(key_match, KeyMatch::Current));
+    }
+
+    #[test]
+    fn bearer_previous_key_api_key_audience_returns_previous() {
+        // An API token signed with the retired key, `iat` inside the window:
+        // step 1 (`validate_client`, current key only) fails with invalid
+        // signature → step 2 (`validate_api_key_with_match`) succeeds and
+        // returns `KeyMatch::Previous`.
+        let iat = DateTime::TEST.timestamp();
+        let jwt = mint_with_iat(&old_secret(), Audience::ApiKey, iat, far_future_exp());
+        let (claims, key_match) = validate_bearer_with_rotation(&rotated_key(), &jwt).unwrap();
+        assert_eq!(claims.audience(), Audience::ApiKey.as_str());
+        match key_match {
+            KeyMatch::Previous { creation, retired } => {
+                assert_eq!(creation.timestamp(), window_start().timestamp());
+                assert_eq!(retired.timestamp(), window_end().timestamp());
+            },
+            KeyMatch::Current => panic!("expected KeyMatch::Previous, got Current"),
+        }
+    }
+
+    #[test]
+    fn bearer_previous_key_client_audience_rejected() {
+        // The constraint at work: a `Client`-audience JWT signed with the
+        // retired key MUST NOT validate. Step 1 fails (invalid signature),
+        // step 2 fails (the rotation path accepts only `ApiKey` audience).
+        let iat = DateTime::TEST.timestamp();
+        let jwt = mint_with_iat(&old_secret(), Audience::Client, iat, far_future_exp());
+        validate_bearer_with_rotation(&rotated_key(), &jwt).unwrap_err();
+    }
+
+    #[test]
+    fn bearer_unknown_key_rejected() {
+        let iat = DateTime::TEST.timestamp();
+        let unknown: Secret = "auth-rotation-unknown-secret".parse().unwrap();
+        let jwt = mint_with_iat(&unknown, Audience::ApiKey, iat, far_future_exp());
+        validate_bearer_with_rotation(&rotated_key(), &jwt).unwrap_err();
+    }
+
+    #[test]
+    fn bearer_previous_key_api_key_after_window_rejected() {
+        // Post-retirement forgery: signature is valid against the retired
+        // key, but `iat` sits outside `[creation, retired]`. The rotation
+        // path's iat window check rejects.
+        let iat = window_end().timestamp() + 1;
+        let jwt = mint_with_iat(&old_secret(), Audience::ApiKey, iat, far_future_exp());
+        validate_bearer_with_rotation(&rotated_key(), &jwt).unwrap_err();
     }
 }
