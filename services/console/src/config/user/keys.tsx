@@ -119,8 +119,7 @@ const userKeysConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
-			url: (params: Params) =>
-				`/v0/users/${params?.user}/keys/${params?.key}`,
+			url: (params: Params) => `/v0/users/${params?.user}/keys/${params?.key}`,
 			top_buttons: [
 				{
 					kind: ActionButton.REVOKED,
