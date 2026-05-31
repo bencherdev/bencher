@@ -232,7 +232,7 @@ jobs:
         run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }} ${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}
       - name: Rename Windows CLI bin
         if: startsWith(matrix.build, 'windows')
-        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}.exe
+        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${env:CLI_VERSION}-${{ matrix.build }}.exe
       - name: Generate Unix SHA256 checksum
         if: (!startsWith(matrix.build, 'windows'))
         run: shasum -a 256 ${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }} > ${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}.sha256
