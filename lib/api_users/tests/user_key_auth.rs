@@ -561,3 +561,68 @@ async fn expired_user_key_rejected() {
         "expired key should be rejected"
     );
 }
+
+// --- Locked user -------------------------------------------------------------
+
+/// A key minted while the user was active must stop working once an admin locks
+/// the user. Exercises the `query_user.locked` branch in `user_from_user_key`
+/// (`auth.rs`) that the other negative tests don't reach.
+#[tokio::test]
+async fn locked_user_key_rejected() {
+    let server = TestServer::new().await;
+    // First signup becomes admin; only an admin can flip another user's `locked`.
+    let admin = server.signup("Root", "root-lock@example.com").await;
+    let user = server.signup("Lock User", "user-lock@example.com").await;
+    let user_slug: &str = user.slug.as_ref();
+
+    // Mint a key while the user is still active.
+    let key = mint_key(&server, user_slug, &user.token, "lockable-key").await;
+
+    // Sanity: pre-lock, the key authenticates.
+    let pre_resp = server
+        .client
+        .get(server.api_url("/v0/organizations"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .send()
+        .await
+        .expect("pre-lock request failed");
+    assert_eq!(
+        pre_resp.status(),
+        StatusCode::OK,
+        "key should work before the user is locked"
+    );
+
+    // Admin locks the user.
+    let lock_resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/users/{}", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&serde_json::json!({"locked": true}))
+        .send()
+        .await
+        .expect("lock request failed");
+    assert_eq!(lock_resp.status(), StatusCode::OK);
+
+    // The previously-valid key is now rejected via the `locked` branch.
+    let post_resp = server
+        .client
+        .get(server.api_url("/v0/organizations"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .send()
+        .await
+        .expect("post-lock request failed");
+    assert_eq!(
+        post_resp.status(),
+        StatusCode::UNAUTHORIZED,
+        "locked user's key should be rejected"
+    );
+}

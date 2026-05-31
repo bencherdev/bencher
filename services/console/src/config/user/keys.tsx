@@ -151,16 +151,6 @@ const userKeysConfig = {
 				},
 				{
 					kind: Card.FIELD,
-					label: (
-						<>
-							API Key (<code>BENCHER_API_KEY</code>)
-						</>
-					),
-					key: "key",
-					display: Display.RAW,
-				},
-				{
-					kind: Card.FIELD,
 					label: "API Key Creation",
 					key: "creation",
 					display: Display.RAW,
