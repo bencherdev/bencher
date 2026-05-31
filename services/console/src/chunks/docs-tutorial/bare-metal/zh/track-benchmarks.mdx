@@ -8,7 +8,7 @@ import BencherRunOutput from "../bencher-run-output.mdx";
 来运行基准测试并收集结果。
 将 `YOUR_PROJECT_SLUG` 替换为前面步骤中的项目 slug 并运行：
 
-<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest noise --format json" />
+<TerminalCommand code="bencher run --image YOUR_PROJECT_SLUG:latest noise --format json" />
 
 我们使用 [`bencher noise` 子命令][bencher noise] 作为我们的基准测试命令来生成一些样本数据。
 它测量您的基准测试环境的噪声程度。

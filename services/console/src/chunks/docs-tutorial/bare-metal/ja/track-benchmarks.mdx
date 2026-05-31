@@ -8,7 +8,7 @@ import BencherRunOutput from "../bencher-run-output.mdx";
 ベンチマークを実行し結果を収集します。
 `YOUR_PROJECT_SLUG`を前のステップで取得したプロジェクトスラッグに置き換えて、以下を実行します:
 
-<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest noise --format json" />
+<TerminalCommand code="bencher run --image YOUR_PROJECT_SLUG:latest noise --format json" />
 
 サンプルデータを生成するためのベンチマークコマンドとして[`bencher noise`サブコマンド][bencher noise]を使用しています。
 これはベンチマーク環境のノイズがどの程度であるかを測定します。

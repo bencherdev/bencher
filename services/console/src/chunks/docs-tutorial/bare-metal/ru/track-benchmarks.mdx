@@ -8,7 +8,7 @@ import BencherRunOutput from "../bencher-run-output.mdx";
 чтобы запустить бенчмарки и собрать результаты.
 Замените `YOUR_PROJECT_SLUG` на slug проекта из предыдущих шагов и выполните:
 
-<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest noise --format json" />
+<TerminalCommand code="bencher run --image YOUR_PROJECT_SLUG:latest noise --format json" />
 
 Мы используем [подкоманду `bencher noise`][bencher noise] в качестве команды бенчмарка для генерации примеров данных.
 Она измеряет, насколько шумным является ваше окружение бенчмарка.

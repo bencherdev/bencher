@@ -58,7 +58,7 @@ Detailed bare metal workflow:
 1. Writing a Dockerfile for benchmarks (what to include, entrypoint expectations)
 2. Building the OCI image
 3. Pushing to the registry
-4. Submitting: `bencher run --image <ref> --spec <spec> --project <project> --branch <branch> --testbed <testbed> --adapter <adapter>`
+4. Submitting: `bencher run --image <ref> --spec <spec> --branch <branch> --testbed <testbed> --adapter <adapter>`
 5. Key flags: `--spec`, `--entrypoint`, `--env`, `--job-timeout`
 6. How results flow back (job status, adapter parsing)
 7. Example Dockerfiles for common benchmark harnesses (Rust criterion, Go bench, Python pytest-benchmark)

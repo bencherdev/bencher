@@ -8,7 +8,7 @@ To do so, you will use [the `bencher run` CLI subcommand][bencher run]
 to run your benchmarks and collect the results.
 Replace `YOUR_PROJECT_SLUG` with the project slug from the previous steps and run:
 
-<TerminalCommand code="bencher run --project YOUR_PROJECT_SLUG --image YOUR_PROJECT_SLUG:latest noise --format json" />
+<TerminalCommand code="bencher run --image YOUR_PROJECT_SLUG:latest noise --format json" />
 
 We are using [the `bencher noise` subcommand][bencher noise] as our benchmark command to generate some sample data.
 It measures how noisy your benchmark environment is.

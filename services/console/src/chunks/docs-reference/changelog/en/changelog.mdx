@@ -1,3 +1,6 @@
+## Pending `v0.6.7`
+- Derive the project from `--image` for bare metal `bencher run` invocations; `--project` is now optional when `--image` includes the project (e.g. `registry.bencher.dev/<project>:<tag>` or `<project>:<tag>`)
+
 ## `v0.6.6`
 - Show context-aware auth hints in API 404 errors: routes that accept project API keys now mention both API tokens and project keys, while token-only routes mention only API tokens
 - **BREAKING CHANGE** Rename `usage` to `metrics` in the organization usage API response and add `runner_minutes` field for bare metal runner minutes usage
