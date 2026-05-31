@@ -190,7 +190,7 @@ jobs:
         run: cargo gen-notes
 
       - name: GitHub Release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2 # zizmor: ignore[superfluous-actions] handles multi-file uploads, prerelease detection, and notes body; preferred over a hand-rolled `gh release` script
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2.6.2 # zizmor: ignore[superfluous-actions] handles multi-file uploads, prerelease detection, and notes body; preferred over a hand-rolled `gh release` script
         with:
           tag_name: ${{ env.VERSION }}
           prerelease: ${{ contains(env.VERSION, '-rc') }}
