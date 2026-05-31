@@ -38,6 +38,8 @@ jobs:
     continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: rui314/setup-mold@9c9c13bf4c3f1adef0cc596abc155580bcb04444 # v1
         if: matrix.os == 'ubuntu-22.04'
         with:
@@ -65,11 +67,15 @@ jobs:
       BUILD_WINDOWS_ARM_64: windows-arm-64
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Set version
+        env:
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
         run: |
-          VERSION="${{ github.head_ref || github.ref_name }}"
-          echo "VERSION=${VERSION//\//-}" >> $GITHUB_ENV
+          VERSION="$HEAD_REF"
+          echo "VERSION=${VERSION//\//-}" >> "$GITHUB_ENV"
 
       # Download all artifacts from the CI workflow
       - name: Download CLI Linux x86_64 Artifact
@@ -143,7 +149,7 @@ jobs:
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}
           export DOCKER_HUB_IMAGE=${{ env.DOCKER_HUB_ORGANIZATION }}/${{ env.API_DOCKER_IMAGE }}
-          export TAG=${{ env.VERSION }}
+          export TAG=${VERSION}
           docker buildx imagetools create \
             --tag ${GITHUB_IMAGE}:latest \
             --tag ${GITHUB_IMAGE}:${TAG} \
@@ -155,7 +161,7 @@ jobs:
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}
           export DOCKER_HUB_IMAGE=${{ env.DOCKER_HUB_ORGANIZATION }}/${{ env.CONSOLE_DOCKER_IMAGE }}
-          export TAG=${{ env.VERSION }}
+          export TAG=${VERSION}
           docker buildx imagetools create \
             --tag ${GITHUB_IMAGE}:latest \
             --tag ${GITHUB_IMAGE}:${TAG} \
@@ -167,7 +173,7 @@ jobs:
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}
           export DOCKER_HUB_IMAGE=${{ env.DOCKER_HUB_ORGANIZATION }}/${{ env.CLI_DOCKER_IMAGE }}
-          export TAG=${{ env.VERSION }}
+          export TAG=${VERSION}
           docker buildx imagetools create \
             --tag ${GITHUB_IMAGE}:latest \
             --tag ${GITHUB_IMAGE}:${TAG} \
@@ -184,7 +190,7 @@ jobs:
         run: cargo gen-notes
 
       - name: GitHub Release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2 # zizmor: ignore[superfluous-actions] handles multi-file uploads, prerelease detection, and notes body; preferred over a hand-rolled `gh release` script
         with:
           tag_name: ${{ env.VERSION }}
           prerelease: ${{ contains(env.VERSION, '-rc') }}

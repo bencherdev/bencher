@@ -35,6 +35,8 @@ jobs:
         with:
           large-packages: false
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: all-features
@@ -57,6 +59,8 @@ jobs:
         with:
           large-packages: false
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: rui314/setup-mold@9c9c13bf4c3f1adef0cc596abc155580bcb04444 # v1
         with:
           mold-version: ${{ inputs.mold-version }}
@@ -83,6 +87,8 @@ jobs:
         with:
           large-packages: false
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-rust
         if: ${{ !inputs.is-fork }}
         with:
@@ -123,10 +129,14 @@ jobs:
         with:
           large-packages: false
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Build Docker image
+        env:
+          INPUTS_MOLD_VERSION: ${{ inputs.mold-version }}
         run: |
           docker build \
-            --build-arg MOLD_VERSION=${{ inputs.mold-version }} \
+            --build-arg "MOLD_VERSION=$INPUTS_MOLD_VERSION" \
             -t bench:ci \
             -f docker/bench.Dockerfile \
             .
@@ -153,6 +163,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-rust
         if: matrix.os == 'ubuntu-22.04'
         with:
@@ -173,6 +185,9 @@ jobs:
 
   track_benchmarks:
     name: Track Benchmarks
+    permissions:
+      contents: read
+      checks: write
     if: ${{ github.ref == 'refs/heads/devel' }}
     needs: [bench_image, bencher_noise]
     uses: ./.github/workflows/track_benchmarks.yml
@@ -186,6 +201,8 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-rust
         if: ${{ !inputs.is-fork }}
         with:
@@ -213,6 +230,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: rui314/setup-mold@9c9c13bf4c3f1adef0cc596abc155580bcb04444 # v1
         with:
           mold-version: ${{ inputs.mold-version }}
@@ -226,6 +245,8 @@ jobs:
       WASM_PACK_VERSION: "0.12.1"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Install `wasm-pack`
         run: cargo install wasm-pack --version ${{ env.WASM_PACK_VERSION }} --locked --force
       - name: Build WASM
@@ -244,6 +265,8 @@ jobs:
         with:
           large-packages: false
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: rui314/setup-mold@9c9c13bf4c3f1adef0cc596abc155580bcb04444 # v1
         with:
           mold-version: ${{ inputs.mold-version }}

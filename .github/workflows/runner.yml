@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
@@ -62,10 +64,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Set Runner version
+        env:
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
         run: |
-          VERSION="${{ github.head_ref || github.ref_name }}"
-          echo "RUNNER_VERSION=${VERSION//\//-}" >> $GITHUB_ENV
+          VERSION="$HEAD_REF"
+          echo "RUNNER_VERSION=${VERSION//\//-}" >> "$GITHUB_ENV"
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
@@ -77,15 +83,17 @@ jobs:
         with:
           version: ${{ inputs.zig-version }}
       - name: Install cargo-zigbuild
-        run: cargo install --version ${{ inputs.zig-build-version }} --locked --force cargo-zigbuild
+        env:
+          INPUTS_ZIG_BUILD_VERSION: ${{ inputs.zig-build-version }}
+        run: cargo install --version "$INPUTS_ZIG_BUILD_VERSION" --locked --force cargo-zigbuild
       - name: Build bencher-init (static musl)
         run: cargo zigbuild --release --target ${{ matrix.init-target }} -p bencher_init
       - name: Build bencher-runner (release)
         run: cargo zigbuild --release --target ${{ matrix.target }} -p bencher_runner_cli --features plus
       - name: Rename Runner binary
-        run: mv ./target/${{ matrix.target }}/release/${{ env.RUNNER_BIN_NAME }} ${{ env.RUNNER_BIN_NAME }}-${{ env.RUNNER_VERSION }}-${{ matrix.build }}
+        run: mv ./target/${{ matrix.target }}/release/${{ env.RUNNER_BIN_NAME }} ${{ env.RUNNER_BIN_NAME }}-${RUNNER_VERSION}-${{ matrix.build }}
       - name: Generate SHA256 checksum
-        run: sha256sum ${{ env.RUNNER_BIN_NAME }}-${{ env.RUNNER_VERSION }}-${{ matrix.build }} > ${{ env.RUNNER_BIN_NAME }}-${{ env.RUNNER_VERSION }}-${{ matrix.build }}.sha256
+        run: sha256sum ${{ env.RUNNER_BIN_NAME }}-${RUNNER_VERSION}-${{ matrix.build }} > ${{ env.RUNNER_BIN_NAME }}-${RUNNER_VERSION}-${{ matrix.build }}.sha256
       - name: Upload Runner Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

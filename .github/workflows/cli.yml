@@ -45,7 +45,7 @@ jobs:
         os: [ubuntu-22.04, macos-14, windows-2022]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: bencherdev/bencher@main
+      - uses: bencherdev/bencher@main # zizmor: ignore[unpinned-uses] first-party action; intentionally tracks @main to exercise the latest released CLI
       - name: Run Bencher CLI
         run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
 
@@ -60,7 +60,7 @@ jobs:
     # This is expected to fail when tagging a new release
     continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') }}
     steps:
-      - uses: bencherdev/bencher@devel
+      - uses: bencherdev/bencher@devel # zizmor: ignore[unpinned-uses] first-party action; intentionally tracks @devel to exercise the unreleased CLI
       - name: Run Bencher CLI
         run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
 
@@ -94,6 +94,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Unix CLI Install Script
         if: matrix.os != 'windows-2022'
         run: cat services/cli/templates/output/install-cli.sh | sh
@@ -115,12 +117,18 @@ jobs:
     continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Unix CLI Install Script Version
         if: matrix.os != 'windows-2022'
-        run: export BENCHER_VERSION=${{ inputs.bencher-version }}; cat services/cli/templates/output/install-cli.sh | sh
+        env:
+          BENCHER_VERSION: ${{ inputs.bencher-version }}
+        run: cat services/cli/templates/output/install-cli.sh | sh
       - name: Windows CLI Install Script Version
         if: matrix.os == 'windows-2022'
-        run: $env:BENCHER_VERSION="${{ inputs.bencher-version }}"; powershell -c "gc -Raw services/cli/templates/output/install-cli.ps1 | iex"
+        env:
+          BENCHER_VERSION: ${{ inputs.bencher-version }}
+        run: powershell -c "gc -Raw services/cli/templates/output/install-cli.ps1 | iex"
       - name: Run Bencher CLI
         run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
 
@@ -184,11 +192,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Set CLI version
         shell: bash
+        env:
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
         run: |
-          VERSION="${{ github.head_ref || github.ref_name }}"
-          echo "CLI_VERSION=${VERSION//\//-}" >> $GITHUB_ENV
+          VERSION="$HEAD_REF"
+          echo "CLI_VERSION=${VERSION//\//-}" >> "$GITHUB_ENV"
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
@@ -197,11 +209,16 @@ jobs:
           version: ${{ inputs.zig-version }}
       - name: Install zigbuild
         if: startsWith(matrix.build, 'linux')
-        run: cargo install --version ${{ inputs.zig-build-version }} --locked --force cargo-zigbuild
+        env:
+          INPUTS_ZIG_BUILD_VERSION: ${{ inputs.zig-build-version }}
+        run: cargo install --version "$INPUTS_ZIG_BUILD_VERSION" --locked --force cargo-zigbuild
       - name: cargo zigbuild Linux CLI
         if: startsWith(matrix.build, 'linux')
         working-directory: ./services/cli
-        run: cargo zigbuild --profile release-small --target ${{ matrix.target }}.${{ inputs.glibc-version }}
+        env:
+          MATRIX_TARGET: ${{ matrix.target }}
+          INPUTS_GLIBC_VERSION: ${{ inputs.glibc-version }}
+        run: cargo zigbuild --profile release-small --target "$MATRIX_TARGET.$INPUTS_GLIBC_VERSION"
       - name: cargo build macOS CLI
         if: startsWith(matrix.build, 'macos')
         working-directory: ./services/cli
@@ -212,13 +229,13 @@ jobs:
         run: cargo build --profile release-small --target ${{ matrix.target }}
       - name: Rename Unix CLI bin
         if: (!startsWith(matrix.build, 'windows'))
-        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }} ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
+        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }} ${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}
       - name: Rename Windows CLI bin
         if: startsWith(matrix.build, 'windows')
-        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe
+        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}.exe
       - name: Generate Unix SHA256 checksum
         if: (!startsWith(matrix.build, 'windows'))
-        run: shasum -a 256 ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }} > ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.sha256
+        run: shasum -a 256 ${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }} > ${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}.sha256
       - name: Upload Unix CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -231,7 +248,7 @@ jobs:
       - name: Generate Windows SHA256 checksum
         if: startsWith(matrix.build, 'windows')
         shell: bash
-        run: sha256sum ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe > ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.exe.sha256
+        run: sha256sum ${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}.exe > ${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}.exe.sha256
       - name: Upload Windows CLI Artifact
         if: startsWith(matrix.build, 'windows')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -261,11 +278,15 @@ jobs:
       CLI_DEB_DIR: deb
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Set CLI version
         shell: bash
+        env:
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
         run: |
-          VERSION="${{ github.head_ref || github.ref_name }}"
-          echo "CLI_VERSION=${VERSION//\//-}" >> $GITHUB_ENV
+          VERSION="$HEAD_REF"
+          echo "CLI_VERSION=${VERSION//\//-}" >> "$GITHUB_ENV"
       - name: Download CLI Artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -274,10 +295,10 @@ jobs:
         with:
           mold-version: ${{ inputs.mold-version }}
       - name: Build .deb package
-        run: cargo gen-pkg deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}
+        run: cargo gen-pkg deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}
       - name: Test install .deb package
         if: matrix.build == 'linux-x86-64'
-        run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb
+        run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}.deb
       - name: Sanity test .deb package installation
         if: matrix.build == 'linux-x86-64'
         run: |
@@ -285,7 +306,7 @@ jobs:
           bencher mock
           man bencher
       - name: Generate .deb SHA256 checksum
-        run: shasum -a 256 ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb > ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ env.CLI_VERSION }}-${{ matrix.build }}.deb.sha256
+        run: shasum -a 256 ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}.deb > ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${CLI_VERSION}-${{ matrix.build }}.deb.sha256
       - name: Upload .deb Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
