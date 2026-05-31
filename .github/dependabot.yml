@@ -9,6 +9,8 @@ updates:
     target-branch: devel
     labels:
       - dependencies
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: npm
     directory: /
@@ -18,6 +20,8 @@ updates:
     target-branch: devel
     labels:
       - dependencies
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: github-actions
     directory: /
@@ -27,3 +31,5 @@ updates:
     target-branch: devel
     labels:
       - dependencies
+    cooldown:
+      default-days: 7

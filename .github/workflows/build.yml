@@ -41,6 +41,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Install Dependencies
         working-directory: ./services/action
         run: npm install --include=dev
@@ -58,12 +60,16 @@ jobs:
       WASM_PACK_BUILD: "wasm-pack build --target web --no-default-features --features wasm,plus"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: wasm
           mold-version: ${{ inputs.mold-version }}
       - name: Install `wasm-pack`
-        run: cargo install wasm-pack --version ${{ inputs.wasm-pack-version }} --locked --force
+        env:
+          INPUTS_WASM_PACK_VERSION: ${{ inputs.wasm-pack-version }}
+        run: cargo install wasm-pack --version "$INPUTS_WASM_PACK_VERSION" --locked --force
       - name: WASM pack `bencher_valid`
         working-directory: ./lib/bencher_valid
         run: |
@@ -86,6 +92,8 @@ jobs:
     needs: build_wasm
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: wasm
@@ -101,6 +109,8 @@ jobs:
     needs: build_wasm
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Download `bencher_valid` Artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -119,6 +129,8 @@ jobs:
     if: ${{ !startsWith(github.ref, 'refs/tags/') && !inputs.deploy-only }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Download `bencher_valid` Artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -134,6 +146,8 @@ jobs:
     if: ${{ inputs.build-docker }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Log in to the Container registry

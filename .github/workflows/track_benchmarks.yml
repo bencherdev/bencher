@@ -37,13 +37,13 @@ jobs:
           docker tag bench:ci registry.bencher.dev/bencher:${{ github.sha }}
           echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
           docker push registry.bencher.dev/bencher:${{ github.sha }}
-      - uses: bencherdev/bencher@main
+      - uses: bencherdev/bencher@main # zizmor: ignore[unpinned-uses] first-party action; intentionally tracks @main to exercise the latest released CLI
       - name: Track Noise (ubuntu)
         run: |
           bencher run \
           --project bencher \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
-          --branch ${{ github.ref_name }} \
+          --branch ${GITHUB_REF_NAME} \
           --hash '${{ github.sha }}' \
           --testbed ubuntu-22.04 \
           --threshold-measure noise-score \
@@ -60,7 +60,7 @@ jobs:
           bencher run \
           --project bencher \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
-          --branch ${{ github.ref_name }} \
+          --branch ${GITHUB_REF_NAME} \
           --hash '${{ github.sha }}' \
           --testbed macos-14 \
           --threshold-measure noise-score \
@@ -77,7 +77,7 @@ jobs:
           bencher run \
           --project bencher \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
-          --branch ${{ github.ref_name }} \
+          --branch ${GITHUB_REF_NAME} \
           --hash '${{ github.sha }}' \
           --testbed windows-2022 \
           --threshold-measure noise-score \
@@ -95,7 +95,7 @@ jobs:
           --project bencher \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --image "bencher:${{ github.sha }}" \
-          --branch ${{ github.ref_name }} \
+          --branch ${GITHUB_REF_NAME} \
           --hash '${{ github.sha }}' \
           --testbed intel-v1 \
           --spec intel-v1 \

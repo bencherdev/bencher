@@ -17,6 +17,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   # Determine what changed
   changes:
@@ -32,6 +35,8 @@ jobs:
       nix: ${{ steps.filter.outputs.nix }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: filter
         with:
@@ -93,6 +98,7 @@ jobs:
     with:
       mold-version: "2.34.1"
       typeshare-version: "1.13.2"
+      zizmor-version: "v1.25.2"
 
   cli:
     name: CLI
@@ -125,6 +131,9 @@ jobs:
 
   test:
     name: Test
+    permissions:
+      contents: read
+      checks: write
     needs: changes
     if: ${{ github.ref != 'refs/heads/cloud' && (needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/')) }}
     uses: ./.github/workflows/test.yml
@@ -139,6 +148,9 @@ jobs:
 
   build:
     name: Build
+    permissions:
+      contents: read
+      packages: write
     needs: changes
     uses: ./.github/workflows/build.yml
     with:
@@ -151,6 +163,9 @@ jobs:
 
   docker:
     name: Docker
+    permissions:
+      contents: read
+      packages: write
     if: ${{ github.ref != 'refs/heads/cloud' && (github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'docker'))) }}
     uses: ./.github/workflows/docker.yml
     with:
@@ -168,6 +183,9 @@ jobs:
 
   deploy:
     name: Deploy
+    permissions:
+      contents: write
+      packages: read
     needs: [lint, cli, test, build]
     if: ${{ !failure() && !cancelled() && (github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))) }}
     uses: ./.github/workflows/deploy.yml
@@ -187,6 +205,9 @@ jobs:
 
   release:
     name: Release
+    permissions:
+      contents: write
+      packages: write
     if: ${{ !failure() && !cancelled() && github.ref != 'refs/heads/cloud' && (needs.changes.outputs.rust == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/')) }}
     needs: [changes, lint, cli, runner, test, build, docker, nix]
     uses: ./.github/workflows/release.yml
@@ -241,10 +262,15 @@ jobs:
 
   build_dev_container:
     name: Build dev container
+    permissions:
+      contents: read
+      packages: write
     if: ${{ github.ref == 'refs/heads/devel' }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
       - name: Setup Docker buildx

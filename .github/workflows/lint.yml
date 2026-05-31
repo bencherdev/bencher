@@ -9,6 +9,9 @@ on:
       typeshare-version:
         type: string
         required: true
+      zizmor-version:
+        type: string
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -19,6 +22,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Add fmt
         run: rustup component add rustfmt
       - name: Run fmt
@@ -29,6 +34,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: all-features
@@ -43,6 +50,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: rui314/setup-mold@9c9c13bf4c3f1adef0cc596abc155580bcb04444 # v1
         with:
           mold-version: ${{ inputs.mold-version }}
@@ -51,7 +60,9 @@ jobs:
       - name: Check OpenAPI Spec for changes
         run: git diff --exit-code
       - name: Install Typeshare CLI
-        run: cargo install typeshare-cli --version ${{ inputs.typeshare-version }} --locked
+        env:
+          INPUTS_TYPESHARE_VERSION: ${{ inputs.typeshare-version }}
+        run: cargo install typeshare-cli --version "$INPUTS_TYPESHARE_VERSION" --locked
       - name: Generate Typescript Types
         run: cargo gen-ts
       - name: Check Typescript Types for changes
@@ -75,17 +86,56 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: EmbarkStudios/cargo-deny-action@6c8f9facfa5047ec02d8485b6bf52b587b7777d1 # v2.0.18
         with:
           log-level: warn
           command: check
           arguments: --locked
 
+  zizmor:
+    name: Zizmor
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Run zizmor (offline)
+        uses: zizmorcore/zizmor-action@5f14fd08f7cf1cb1609c1e344975f152c7ee938d # v0.5.6
+        with:
+          version: ${{ inputs.zizmor-version }}
+          online-audits: false
+          advanced-security: false
+          annotations: true
+
+  zizmor_online:
+    name: Zizmor Online
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Run zizmor (online)
+        uses: zizmorcore/zizmor-action@5f14fd08f7cf1cb1609c1e344975f152c7ee938d # v0.5.6
+        with:
+          version: ${{ inputs.zizmor-version }}
+          online-audits: true
+          advanced-security: false
+          annotations: true
+
   biome_format:
     name: Biome Format
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Biome format Action
         working-directory: ./services/action
         run: |
@@ -102,6 +152,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Biome check Action
         working-directory: ./services/action
         run: |

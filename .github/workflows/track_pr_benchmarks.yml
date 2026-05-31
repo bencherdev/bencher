@@ -1,7 +1,7 @@
 name: Track PR Benchmarks
 
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] fork-PR benchmarks must run after CI; this workflow never checks out untrusted PR code and treats all PR inputs as untrusted
     workflows: [CI]
     types: [completed]
 
@@ -30,11 +30,13 @@ jobs:
           run_id: ${{ github.event.workflow_run.id }}
       - name: Load and push image
         if: steps.download_bench.outcome == 'success'
+        env:
+          GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           docker load -i bench_image.tar
-          docker tag bench:ci registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
+          docker tag bench:ci registry.bencher.dev/bencher:${GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA}
           echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
-          docker push registry.bencher.dev/bencher:${{ github.event.workflow_run.head_sha }}
+          docker push registry.bencher.dev/bencher:${GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA}
       - name: Read PR Event Data
         if: steps.download_bench.outcome == 'success'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
@@ -47,17 +49,18 @@ jobs:
             core.exportVariable('PR_BASE', prEvent.pull_request.base.ref);
             core.exportVariable('PR_BASE_SHA', prEvent.pull_request.base.sha);
             core.exportVariable('PR_NUMBER', prEvent.number);
-      - uses: bencherdev/bencher@main
+      - uses: bencherdev/bencher@main # zizmor: ignore[unpinned-uses] first-party action; intentionally tracks @main to exercise the latest released CLI
         if: steps.download_bench.outcome == 'success'
       - name: Track Benchmarks with Bencher
         if: steps.download_bench.outcome == 'success'
         env:
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+          GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           bencher run \
           --project bencher \
           --token "$BENCHER_API_TOKEN" \
-          --image "bencher:${{ github.event.workflow_run.head_sha }}" \
+          --image "bencher:${GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA}" \
           --branch "$PR_HEAD" \
           --hash "$PR_HEAD_SHA" \
           --start-point "$PR_BASE" \
