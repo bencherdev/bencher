@@ -203,6 +203,31 @@ where
     ))
 }
 
+/// A transient, retryable server condition (e.g. `SQLITE_BUSY`, "database is locked"): the request
+/// was well-formed but the server could not service it right now. Returns `503 Service Unavailable`
+/// with a `Retry-After` hint. The CLI (`bencher_client`) and Console retry 5xx with their own
+/// backoff and do not read `Retry-After`; the header is included for HTTP correctness and other
+/// clients. The detailed cause goes to `internal_message` (and Sentry at the call site), not to the
+/// user-facing `external_message`.
+pub fn service_unavailable_error<E>(error: E) -> HttpError
+where
+    E: fmt::Display,
+{
+    let mut http_error = HttpError {
+        status_code: ErrorStatusCode::SERVICE_UNAVAILABLE,
+        error_code: None,
+        external_message: "Service temporarily unavailable, please retry.".to_owned(),
+        internal_message: error.to_string(),
+        headers: None,
+    };
+    if let Err(err) = http_error.add_header("retry-after", "1") {
+        debug_assert!(false, "{err}");
+        #[cfg(feature = "sentry")]
+        sentry::capture_error(&err);
+    }
+    cors_headers(http_error)
+}
+
 pub fn resource_not_found_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError
 where
     V: fmt::Debug,
@@ -289,11 +314,18 @@ where
         error,
     };
     if database_is_locked {
+        // `SQLITE_BUSY` ("database is locked") is NOT a real conflict: the write never reached a
+        // conflicting state, the writer just could not acquire the lock within `busy_timeout`.
+        // This should never happen (see disaster-recovery WAL tuning), so KEEP the Sentry tripwire
+        // for visibility — but return a retryable `503` so clients retry instead of the request
+        // failing with a non-retryable `409`.
         debug_assert!(false, "{err}");
         #[cfg(feature = "sentry")]
         sentry::capture_error(&err);
+        service_unavailable_error(err)
+    } else {
+        conflict_error(err)
     }
-    conflict_error(err)
 }
 
 #[derive(Debug, Error)]
@@ -481,6 +513,15 @@ mod tests {
     fn is_conflict_true_for_conflict_error() {
         let error = conflict_error("duplicate resource");
         assert!(is_conflict(&error));
+    }
+
+    // A transient `SQLITE_BUSY` ("database is locked") is reclassified to a retryable 503,
+    // not a 409 conflict, so clients retry instead of dropping the request.
+    #[test]
+    fn service_unavailable_error_is_retryable_503() {
+        let error = service_unavailable_error("database is locked");
+        assert!(error.status_code == ErrorStatusCode::SERVICE_UNAVAILABLE);
+        assert!(!is_conflict(&error));
     }
 
     #[test]
