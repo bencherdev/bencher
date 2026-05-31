@@ -83,6 +83,20 @@ jobs:
   cargo_deny:
     name: Cargo Deny
     runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: EmbarkStudios/cargo-deny-action@6c8f9facfa5047ec02d8485b6bf52b587b7777d1 # v2.0.18
+        with:
+          log-level: warn
+          command: check
+          arguments: --locked
+          command-arguments: bans licenses sources
+
+  cargo_deny_advisories:
+    name: Cargo Deny Advisories
+    runs-on: ubuntu-22.04
     continue-on-error: true
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -93,6 +107,7 @@ jobs:
           log-level: warn
           command: check
           arguments: --locked
+          command-arguments: advisories
 
   zizmor:
     name: Zizmor
