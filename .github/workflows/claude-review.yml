@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CLAUDE_MODEL: claude-opus-4-6
+  CLAUDE_MODEL: claude-opus-4-8
   CLAUDE_MAX_TURNS: 64
 
 jobs:
@@ -29,8 +29,10 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Fetch base branch
+        env:
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
-          git fetch origin ${{ github.event.pull_request.base.ref }}:${{ github.event.pull_request.base.ref }}
+          git fetch origin "$PR_BASE_REF:$PR_BASE_REF"
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -44,8 +46,9 @@ jobs:
         id: review
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
-          claude -p "Review the changes in this pull request. Use git diff ${{ github.event.pull_request.base.ref }}...HEAD to see the changes. Focus on:
+          claude -p "Review the changes in this pull request. Use git diff $PR_BASE_REF...HEAD to see the changes. Focus on:
           - Code quality and best practices
           - Potential bugs or issues
           - Security concerns
@@ -65,6 +68,11 @@ jobs:
 
       - name: Post review as PR comment
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -84,10 +92,10 @@ jobs:
             const body = `${COMMENT_MARKER}
             ## 🤖 Claude Code Review
 
-            **PR**: #${{ github.event.pull_request.number }}
-            **Base**: \`${{ github.event.pull_request.base.ref }}\`
-            **Head**: \`${{ github.event.pull_request.head.ref }}\`
-            **Commit**: \`${{ github.event.pull_request.head.sha }}\`
+            **PR**: #${process.env.PR_NUMBER}
+            **Base**: \`${process.env.PR_BASE_REF}\`
+            **Head**: \`${process.env.PR_HEAD_REF}\`
+            **Commit**: \`${process.env.PR_HEAD_SHA}\`
 
             ---
 
@@ -95,7 +103,7 @@ jobs:
 
             ---
 
-            <sub>Model: ${{ env.CLAUDE_MODEL }}</sub>`;
+            <sub>Model: ${process.env.CLAUDE_MODEL}</sub>`;
 
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
