@@ -13,6 +13,7 @@ please alert the developer working with you and indicate that this is the case b
 ## Design
 
 See [services/runner/DESIGN.md](services/runner/DESIGN.md) for design documentation.
+See [services/runner/TELEMETRY_DESIGN.md](services/runner/TELEMETRY_DESIGN.md) for the UDP host-telemetry sideband design.
 
 ## Operations
 

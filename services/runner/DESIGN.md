@@ -69,7 +69,7 @@ Represents a registered bare metal machine capable of executing benchmark jobs.
 | uuid             | `RunnerUuid`        | Runner's unique identifier                           |
 | name             | `ResourceName`      | Human-readable name                                  |
 | slug             | `RunnerSlug`        | URL-friendly slug (unique, auto-generated from name) |
-| key_hash         | `KeyHash`           | SHA-256 hash of runner key (64-char hex, key itself never stored) |
+| key_hash         | `RunnerKeyHash`     | SHA-256 hash of runner key (64-char hex, key itself never stored) |
 | last_heartbeat   | `Option<DateTime>`  | Last heartbeat received from this runner             |
 | created          | `DateTime`          | Creation timestamp                                   |
 | modified         | `DateTime`          | Last modification timestamp                          |
@@ -701,11 +701,11 @@ Where `ARCH_SLUG` maps `x86_64` → `linux-x86-64` and `aarch64` → `linux-arm-
 
 ### Key Format
 
-Runner keys use 64 random hex characters with a `bencher_runner_` prefix (79 chars total). The key is shown exactly once at creation and cannot be retrieved later. Only the SHA-256 hash is stored in the database, so a database breach does not expose usable keys.
+Runner keys use 30 random alphanumeric characters (charset `0-9A-Za-z`, about 178 bits of entropy, modeled on GitHub's token formats) with a `bencher_runner_` prefix (45 chars total). The key is shown exactly once at creation and cannot be retrieved later. Only its SHA-256 hash (64 hex chars, stored as `RunnerKeyHash`) is kept in the database, so a database breach does not expose usable keys.
 
 ### Key Validation
 
-1. Verify the `bencher_runner_` prefix and total length (79 chars)
+1. Verify the `bencher_runner_` prefix, total length (45 chars), and that the 30-char body is alphanumeric
 2. Hash the provided key with SHA-256
 3. Look up the runner by hash AND path parameter (UUID or slug), excluding archived runners
 4. Single combined query prevents key enumeration attacks
