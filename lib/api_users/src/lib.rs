@@ -8,8 +8,8 @@ use serde_json as _;
 #[cfg(test)]
 use tokio as _;
 
-mod keys;
 mod tokens;
+mod keys;
 mod users;
 
 pub struct Api;
@@ -29,17 +29,6 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(users::user_get)?;
         api_description.register(users::user_patch)?;
 
-        // Tokens
-        if http_options {
-            api_description.register(tokens::user_tokens_options)?;
-            api_description.register(tokens::user_token_options)?;
-        }
-        api_description.register(tokens::user_tokens_get)?;
-        api_description.register(tokens::user_token_post)?;
-        api_description.register(tokens::user_token_get)?;
-        api_description.register(tokens::user_token_patch)?;
-        api_description.register(tokens::user_token_delete)?;
-
         // Keys
         if http_options {
             api_description.register(keys::user_keys_options)?;
@@ -50,6 +39,17 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(keys::user_key_get)?;
         api_description.register(keys::user_key_patch)?;
         api_description.register(keys::user_key_delete)?;
+
+        // Tokens
+        if http_options {
+            api_description.register(tokens::user_tokens_options)?;
+            api_description.register(tokens::user_token_options)?;
+        }
+        api_description.register(tokens::user_tokens_get)?;
+        api_description.register(tokens::user_token_post)?;
+        api_description.register(tokens::user_token_get)?;
+        api_description.register(tokens::user_token_patch)?;
+        api_description.register(tokens::user_token_delete)?;
 
         Ok(())
     }
