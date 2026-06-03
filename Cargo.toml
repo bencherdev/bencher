@@ -188,9 +188,7 @@ wasm-bindgen-test = "0.3"
 windows = "0.62"
 zstd = "0.13"
 # oxide
-# TODO update to 0.18.0 when released
-# https://github.com/oxidecomputer/dropshot/pull/1590
-dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "033b8e0786c97b7db7c46ae96d5447ca57b0e7f3", default-features = false }
+dropshot = { version = "0.17.1", default-features = false }
 progenitor = { version = "0.14", default-features = false }
 progenitor-client = { version = "0.14", default-features = false }
 

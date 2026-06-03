@@ -90,4 +90,4 @@ unknown-git = "deny"
 
 [sources.allow-org]
 # 0 or more github.com organizations to allow git sources for
-github = ["oxidecomputer"]
+github = []
