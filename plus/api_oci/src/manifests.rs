@@ -272,7 +272,11 @@ pub async fn oci_manifest_put(
         }
     }
 
-    // Verify referenced blobs exist (for image manifests and Docker manifests)
+    slog::debug!(
+        &rqctx.log,
+        "Verifying manifest references";
+        "manifest_type" => parsed_manifest.media_type()
+    );
     verify_referenced_blobs(storage, &project_uuid, &parsed_manifest).await?;
 
     // Extract subject digest from manifest if present (for OCI-Subject header)
@@ -342,30 +346,47 @@ async fn verify_referenced_blobs(
     repository: &ProjectUuid,
     manifest: &Manifest,
 ) -> Result<(), HttpError> {
-    let digests: Vec<&str> = match manifest {
+    enum RefKind<'a> {
+        Blob(&'a str),
+        Manifest(&'a str),
+    }
+
+    let refs: Vec<RefKind<'_>> = match manifest {
         Manifest::OciImageManifest(m) => {
-            let mut d = vec![m.config.digest.as_str()];
-            d.extend(m.layers.iter().map(|l| l.digest.as_str()));
-            d
+            let mut r = vec![RefKind::Blob(m.config.digest.as_str())];
+            r.extend(m.layers.iter().map(|l| RefKind::Blob(l.digest.as_str())));
+            r
         },
         Manifest::DockerManifestV2(m) => {
-            let mut d = vec![m.config.digest.as_str()];
-            d.extend(m.layers.iter().map(|l| l.digest.as_str()));
-            d
+            let mut r = vec![RefKind::Blob(m.config.digest.as_str())];
+            r.extend(m.layers.iter().map(|l| RefKind::Blob(l.digest.as_str())));
+            r
         },
-        // Image indices/manifest lists reference manifests, not blobs
-        Manifest::OciImageIndex(_) | Manifest::DockerManifestList(_) => return Ok(()),
+        Manifest::OciImageIndex(index) => index
+            .manifests
+            .iter()
+            .map(|m| RefKind::Manifest(m.digest.as_str()))
+            .collect(),
+        Manifest::DockerManifestList(list) => list
+            .manifests
+            .iter()
+            .map(|m| RefKind::Manifest(m.digest.as_str()))
+            .collect(),
     };
 
-    // Parse all digests first, then check existence in parallel
-    let parsed_digests: Vec<(Digest, String)> = digests
+    let parsed_refs: Vec<(Digest, String, bool)> = refs
         .iter()
-        .map(|d| {
-            d.parse::<Digest>()
-                .map(|parsed| (parsed, (*d).to_owned()))
+        .map(|r| {
+            let (digest_str, is_manifest) = match r {
+                RefKind::Blob(d) => (*d, false),
+                RefKind::Manifest(d) => (*d, true),
+            };
+            digest_str
+                .parse::<Digest>()
+                .map(|parsed| (parsed, digest_str.to_owned(), is_manifest))
                 .map_err(|_e| {
                     crate::error::into_http_error(OciError::DigestInvalid {
-                        digest: (*d).to_owned(),
+                        digest: digest_str.to_owned(),
                     })
                 })
         })
@@ -375,19 +396,29 @@ async fn verify_referenced_blobs(
         .map_or(1, std::num::NonZeroUsize::get)
         .clamp(1, MAX_CONCURRENCY);
 
-    stream::iter(parsed_digests.into_iter().map(Ok))
-        .try_for_each_concurrent(concurrency, |(digest, digest_str)| async move {
-            let exists = storage
-                .blob_exists(repository, &digest)
-                .await
-                .map_err(storage_error)?;
-            if !exists {
-                return Err(crate::error::into_http_error(
-                    OciError::ManifestBlobUnknown { digest: digest_str },
-                ));
-            }
-            Ok(())
-        })
+    stream::iter(parsed_refs.into_iter().map(Ok))
+        .try_for_each_concurrent(
+            concurrency,
+            |(digest, digest_str, is_manifest)| async move {
+                let exists = if is_manifest {
+                    storage
+                        .manifest_exists(repository, &digest)
+                        .await
+                        .map_err(storage_error)?
+                } else {
+                    storage
+                        .blob_exists(repository, &digest)
+                        .await
+                        .map_err(storage_error)?
+                };
+                if !exists {
+                    return Err(crate::error::into_http_error(
+                        OciError::ManifestBlobUnknown { digest: digest_str },
+                    ));
+                }
+                Ok(())
+            },
+        )
         .await?;
 
     Ok(())

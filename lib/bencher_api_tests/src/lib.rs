@@ -43,4 +43,6 @@ pub mod oci;
 mod seed;
 
 pub use context::TestServer;
+#[cfg(feature = "plus")]
+pub use seed::TestProjectKey;
 pub use seed::{TestOrg, TestProject, TestUser};

@@ -3,6 +3,8 @@ use bencher_json::{
     JsonSignup, OrganizationSlug, OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName,
     UserName, UserSlug, UserUuid, system::auth::JsonAuthUser,
 };
+#[cfg(feature = "plus")]
+use bencher_json::{JsonProjectKeyCreated, ProjectKey};
 
 use crate::TestServer;
 
@@ -27,6 +29,11 @@ pub struct TestProject {
     pub uuid: ProjectUuid,
     pub name: ResourceName,
     pub slug: ProjectSlug,
+}
+
+#[cfg(feature = "plus")]
+pub struct TestProjectKey {
+    pub key: ProjectKey,
 }
 
 impl TestServer {
@@ -187,6 +194,42 @@ impl TestServer {
             uuid: project.uuid,
             name: project.name,
             slug: project.slug,
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    #[expect(clippy::expect_used, reason = "test helper for project key creation")]
+    pub async fn create_project_key(
+        &self,
+        user: &TestUser,
+        project: &TestProject,
+        name: &str,
+    ) -> TestProjectKey {
+        let project_slug: &str = project.slug.as_ref();
+
+        let resp = self
+            .client
+            .post(self.api_url(&format!("/v0/projects/{project_slug}/keys")))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&serde_json::json!({"name": name}))
+            .send()
+            .await
+            .expect("Failed to create project key");
+
+        assert!(
+            resp.status().is_success(),
+            "Create project key failed: {}",
+            resp.text().await.unwrap_or_default()
+        );
+
+        let key_created: JsonProjectKeyCreated =
+            resp.json().await.expect("Failed to parse project key");
+
+        TestProjectKey {
+            key: key_created.key,
         }
     }
 

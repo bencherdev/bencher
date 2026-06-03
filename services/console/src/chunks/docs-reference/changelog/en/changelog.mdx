@@ -1,5 +1,6 @@
 ## Pending
 - `bencher run` now rejects `--key`/`BENCHER_API_KEY` unless `--project`/`BENCHER_PROJECT` is also set, since project-scoped API keys cannot create new Projects
+- Fix the OCI registry token endpoint for the Docker 29+ containerd image store, which sends multiple `scope` query parameters and an `OAuth2` POST token exchange (Thank you [@travishathaway](https://github.com/travishathaway))
 
 ## `v0.6.6`
 - Show context-aware auth hints in API 404 errors: routes that accept project API keys now mention both API tokens and project keys, while token-only routes mention only API tokens

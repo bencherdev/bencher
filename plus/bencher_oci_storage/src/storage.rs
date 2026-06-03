@@ -525,6 +525,18 @@ impl OciStorage {
         }
     }
 
+    /// Checks if a manifest exists
+    pub async fn manifest_exists(
+        &self,
+        repository: &ProjectUuid,
+        digest: &Digest,
+    ) -> Result<bool, OciStorageError> {
+        match self {
+            Self::S3(s3) => s3.manifest_exists(repository, digest).await,
+            Self::Local(local) => local.manifest_exists(repository, digest).await,
+        }
+    }
+
     /// Resolves a tag to a digest
     pub async fn resolve_tag(
         &self,
@@ -1626,6 +1638,32 @@ impl OciS3Storage {
             .into_bytes();
 
         Ok(data)
+    }
+
+    /// Checks if a manifest exists
+    pub async fn manifest_exists(
+        &self,
+        repository: &ProjectUuid,
+        digest: &Digest,
+    ) -> Result<bool, OciStorageError> {
+        let key = self.manifest_key_by_digest(repository, digest);
+        match self
+            .client
+            .head_object()
+            .bucket(&self.config.bucket_arn)
+            .key(&key)
+            .send()
+            .await
+        {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                if is_s3_not_found(&e) {
+                    Ok(false)
+                } else {
+                    Err(OciStorageError::S3(e.to_string()))
+                }
+            },
+        }
     }
 
     /// Resolves a tag to a digest

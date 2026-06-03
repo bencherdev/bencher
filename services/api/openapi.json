@@ -694,29 +694,50 @@
           "auth",
           "oci"
         ],
-        "summary": "OCI token endpoint",
-        "description": "Authenticates via Basic auth and returns a short-lived JWT for OCI operations. Supports two credential types: - `email:api-key-jwt`: user authentication - `project-slug-or-uuid:bencher_run_xxxxx`: project key authentication\n\nIf no Basic auth credentials are provided, issues a public (anonymous) OCI token.",
+        "summary": "OCI token endpoint (GET)",
+        "description": "Authenticates via Basic auth and returns a short-lived JWT for OCI operations. Supports two credential types: - `email:api-key-jwt`: user authentication - `project-slug-or-uuid:bencher_run_xxxxx`: project key authentication\n\nIf no Basic auth credentials are provided, issues a public (anonymous) OCI token.\n\nAccepts multiple `scope` query parameters (Docker 29+ / containerd sends these).",
         "operationId": "auth_oci_token_get",
         "parameters": [
           {
             "in": "query",
-            "name": "scope",
-            "description": "Scope in format \"repository:name:action,action\" e.g., \"repository:org/project:pull,push\"",
-            "schema": {
-              "nullable": true,
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
             "name": "service",
-            "description": "Service identifier (e.g., \"registry.bencher.dev\") Not currently used but accepted for OCI spec compliance",
+            "description": "Service identifier (e.g., \"registry.bencher.dev\")",
             "schema": {
               "nullable": true,
               "type": "string"
             }
           }
         ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth",
+          "oci"
+        ],
+        "summary": "OCI token endpoint (POST) — `OAuth2` token exchange",
+        "description": "Accepts `application/x-www-form-urlencoded` body with `grant_type=password`. Docker 29+ (containerd image store) uses this flow before falling back to GET.",
+        "operationId": "auth_oci_token_post",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "default": {
             "description": "",

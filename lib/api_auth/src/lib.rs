@@ -74,6 +74,7 @@ impl bencher_endpoint::Registrar for Api {
                 api_description.register(oci::auth_oci_token_options)?;
             }
             api_description.register(oci::auth_oci_token_get)?;
+            api_description.register(oci::auth_oci_token_post)?;
         }
 
         Ok(())
