@@ -12,6 +12,7 @@ plus = [
     "dep:bencher_bing_index",
     "dep:bencher_google_index",
     "dep:reqwest",
+    "dep:rustls",
     "dep:serde_json",
     "bencher_client/plus",
     "bencher_client/rustls-tls",
@@ -30,6 +31,7 @@ anyhow.workspace = true
 clap.workspace = true
 dotenvy.workspace = true
 reqwest = { workspace = true, optional = true, features = ["rustls-no-provider"] }
+rustls = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["macros", "rt"] }
 url.workspace = true

@@ -1319,6 +1319,7 @@ version = "0.6.6"
 dependencies = [
  "jsonwebtoken",
  "reqwest",
+ "rustls",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -8188,6 +8189,7 @@ dependencies = [
  "camino",
  "clap",
  "reqwest",
+ "rustls",
  "serde",
  "serde_json",
  "tokio",
@@ -9616,6 +9618,7 @@ dependencies = [
  "clap",
  "dotenvy",
  "reqwest",
+ "rustls",
  "serde_json",
  "tokio",
  "url",

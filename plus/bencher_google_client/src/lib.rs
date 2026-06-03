@@ -92,13 +92,12 @@ impl GoogleClient {
 
     pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GoogleClientError> {
         let code = AuthorizationCode::new(code.into());
-        let http_client = ReqwestClient::from(
-            reqwest::ClientBuilder::new()
-                // Following redirects opens the client up to SSRF vulnerabilities.
-                .redirect(reqwest::redirect::Policy::none())
-                .build()
-                .map_err(GoogleClientError::Reqwest)?,
-        );
+        let reqwest_client = reqwest::ClientBuilder::new()
+            // Following redirects opens the client up to SSRF vulnerabilities.
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .map_err(GoogleClientError::Reqwest)?;
+        let http_client = ReqwestClient::from(reqwest_client.clone());
         let token = self
             .oauth2_client
             .exchange_code(code)
@@ -108,10 +107,7 @@ impl GoogleClient {
         let access_token = token.access_token().secret();
 
         // Call OpenID Connect UserInfo endpoint
-        let user_info_resp = reqwest::ClientBuilder::new()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .map_err(GoogleClientError::Reqwest)?
+        let user_info_resp = reqwest_client
             .get("https://openidconnect.googleapis.com/v1/userinfo")
             .bearer_auth(access_token)
             .send()

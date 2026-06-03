@@ -134,7 +134,7 @@ impl GitHubClient {
 struct GitHubUserEmail {
     email: String,
     primary: bool,
+    verified: bool,
     #[expect(dead_code, reason = "deserialized from GitHub API response")]
     visibility: Option<String>,
-    verified: bool,
 }

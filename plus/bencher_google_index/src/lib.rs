@@ -14,6 +14,7 @@ pub struct GoogleIndex {
     encoding_key: EncodingKey,
     client_email: String,
     token_uri: String,
+    client: reqwest::Client,
     cached_token: RwLock<Option<CachedToken>>,
 }
 
@@ -63,7 +64,6 @@ struct Claims {
 #[derive(Deserialize)]
 struct TokenResponse {
     access_token: Option<String>,
-    #[expect(dead_code, reason = "deserialized from token endpoint response")]
     expires_in: Option<u64>,
 }
 
@@ -83,6 +83,7 @@ impl GoogleIndex {
             encoding_key,
             client_email,
             token_uri,
+            client: reqwest::Client::new(),
             cached_token: RwLock::new(None),
         })
     }
@@ -115,8 +116,8 @@ impl GoogleIndex {
         let jwt = jsonwebtoken::encode(&header, &claims, &self.encoding_key)
             .map_err(GoogleIndexError::EncodeJwt)?;
 
-        let client = reqwest::Client::new();
-        let response = client
+        let response = self
+            .client
             .post(&self.token_uri)
             .form(&[
                 ("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"),
@@ -131,11 +132,12 @@ impl GoogleIndex {
             .await
             .map_err(GoogleIndexError::TokenResponse)?;
 
+        let expires_in = token_response.expires_in.unwrap_or(TOKEN_LIFETIME_SECS);
         let access_token = token_response
             .access_token
             .ok_or(GoogleIndexError::MissingAccessToken)?;
 
-        let expiry = std::time::Instant::now() + Duration::from_secs(TOKEN_LIFETIME_SECS);
+        let expiry = std::time::Instant::now() + Duration::from_secs(expires_in);
         let mut cached = self.cached_token.write().await;
         *cached = Some(CachedToken {
             access_token: access_token.clone(),
@@ -159,14 +161,14 @@ impl GoogleIndex {
         index_type: JsonIndexingType,
     ) -> Result<(), GoogleIndexError> {
         let access_token = self.get_token().await?;
-        let client = reqwest::Client::new();
         let json_indexing = JsonIndexing {
             url,
             r#type: index_type,
         };
         let json_indexing_str =
             serde_json::to_string(&json_indexing).map_err(GoogleIndexError::BadIndex)?;
-        let response = client
+        let response = self
+            .client
             .post(GOOGLE_INDEXING_API_URL)
             .bearer_auth(access_token)
             .body(json_indexing_str)
@@ -216,6 +218,9 @@ mod tests {
     #[tokio::test]
     #[ignore = "Google Index API"]
     async fn google() {
+        use rustls::crypto::aws_lc_rs;
+
+        aws_lc_rs::default_provider().install_default().unwrap();
         let service_key = std::fs::read_to_string("google.json").unwrap();
         let google = GoogleIndex::from_str(&service_key).unwrap();
         let test_url_str = "https://bencher.dev/perf/save-walter-white-3250590663";

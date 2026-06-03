@@ -16,6 +16,7 @@ tokio = { workspace = true, features = ["sync", "time"] }
 url = { workspace = true, features = ["serde"] }
 
 [dev-dependencies]
+rustls.workspace = true
 tokio = { workspace = true, features = ["macros"] }
 
 [lints]
