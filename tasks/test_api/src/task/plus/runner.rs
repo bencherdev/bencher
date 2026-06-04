@@ -69,6 +69,7 @@ impl RunnerTest {
                 "no-sandbox-spec"
             };
             run_runner_test(&self.url, &self.username, &self.token, spec)?;
+            run_image_project_runner_test(&self.url, &self.token, spec)?;
             run_user_key_runner_test(&self.url, &self.username, &self.token, spec)?;
             run_project_key_runner_test(&self.url, &self.admin_token, spec)
         }
@@ -243,8 +244,15 @@ impl RunnerTest {
             Ok(())
         };
 
+        // Run the image-derived project runner test
+        let image_project_result = if result.is_ok() {
+            run_image_project_runner_test(&self.url, &self.token, spec)
+        } else {
+            Ok(())
+        };
+
         // Run the no-sandbox runner test
-        let no_sandbox_result = if result.is_ok() {
+        let no_sandbox_result = if image_project_result.is_ok() {
             run_no_sandbox_runner_test(&self.url, &self.token)
         } else {
             Ok(())
@@ -290,6 +298,7 @@ impl RunnerTest {
 
         unclaimed_result?;
         result?;
+        image_project_result?;
         no_sandbox_result?;
         detach_result?;
         user_key_result?;
@@ -406,6 +415,68 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> an
     assert!(json.job.is_some(), "Expected job UUID in report: {json:?}");
 
     println!("Runner smoke test passed!");
+    Ok(())
+}
+
+/// Run the image-derived project runner smoke test variant.
+///
+/// Similar to `run_runner_test` but omits `--project`:
+/// the project is derived from the unqualified image repository.
+/// The project key variant covers the registry-qualified form.
+#[expect(clippy::panic_in_result_fn, reason = "test harness")]
+fn run_image_project_runner_test(url: &Url, token: &Jwt, spec: &str) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("Running image-derived project runner smoke test against: {host}");
+
+    // The image should already be pushed from the first test
+    println!("Submitting job via bencher run --image without --project...");
+    let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    let args = [
+        "run",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+        "--image",
+        &image_ref,
+        "--spec",
+        spec,
+        "--format",
+        "json",
+        "--quiet",
+        "--job-timeout",
+        "120",
+        "--job-poll-interval",
+        "1",
+        "--exec",
+        "mock",
+    ];
+    cmd.args(args).current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run without --project failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    println!("Verifying results...");
+    let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(
+        json.project.slug.to_string(),
+        PROJECT_SLUG,
+        "Project should be derived from the image repository"
+    );
+    #[cfg(feature = "plus")]
+    assert!(json.job.is_some(), "Expected job UUID in report: {json:?}");
+
+    println!("Image-derived project runner smoke test passed!");
     Ok(())
 }
 
@@ -686,8 +757,13 @@ fn run_user_key_runner_test(url: &Url, email: &str, token: &Jwt, spec: &str) -> 
 /// Run the runner smoke test with project key authentication.
 ///
 /// Creates a project key, logs into Docker with the project slug as username
-/// and the key as password, pushes the image, and submits a job via `bencher run --key`.
-#[expect(clippy::panic_in_result_fn, reason = "test harness")]
+/// and the key as password, pushes the image, and submits a job via `bencher run --key`,
+/// both with an explicit `--project` and with an image-derived project.
+#[expect(
+    clippy::panic_in_result_fn,
+    clippy::too_many_lines,
+    reason = "test harness"
+)]
 fn run_project_key_runner_test(url: &Url, admin_token: &Jwt, spec: &str) -> anyhow::Result<()> {
     let host = url.as_ref();
 
@@ -780,6 +856,62 @@ fn run_project_key_runner_test(url: &Url, admin_token: &Jwt, spec: &str) -> anyh
     println!("Step 5: Verifying results...");
     let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
     assert_eq!(json.project.slug.to_string(), PROJECT_SLUG);
+    #[cfg(feature = "plus")]
+    assert!(
+        json.job.is_some(),
+        "Expected job UUID in project key report: {json:?}"
+    );
+
+    // Step 6: Submit a job without `--project`:
+    // the project is derived from the registry-qualified image repository
+    // and verified against the project key. The image uses the same registry
+    // reference it was pushed to (with its port locally, e.g.
+    // `localhost:61016/...`; the bare host on the deployed registries, e.g.
+    // `dev.registry.bencher.dev/...`).
+    println!("Step 6: Submitting job via bencher run --key without --project...");
+    let image_ref = format!("{registry}/{PROJECT_SLUG}:{IMAGE_TAG}");
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "run",
+        HOST_ARG,
+        host,
+        KEY_ARG,
+        project_key.as_ref(),
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+        "--image",
+        &image_ref,
+        "--spec",
+        spec,
+        "--format",
+        "json",
+        "--quiet",
+        "--job-timeout",
+        "120",
+        "--job-poll-interval",
+        "1",
+        "--exec",
+        "mock",
+    ])
+    .current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run --key without --project failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Step 7: Verify the results
+    println!("Step 7: Verifying results...");
+    let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(
+        json.project.slug.to_string(),
+        PROJECT_SLUG,
+        "Project should be derived from the image repository"
+    );
     #[cfg(feature = "plus")]
     assert!(
         json.job.is_some(),

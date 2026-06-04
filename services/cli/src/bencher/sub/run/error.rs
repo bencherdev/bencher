@@ -13,7 +13,7 @@ pub enum RunError {
     CiOnTheFly,
 
     #[error(
-        "A project-scoped API key (`bencher_run_*`) requires `--project`/`BENCHER_PROJECT`. The key is scoped to a single existing project and cannot auto-create one. Use a user-scoped API key (`bencher_user_*`) or a user JWT token to create projects on the fly."
+        "A project-scoped API key (`bencher_run_*`) requires `--project`/`BENCHER_PROJECT` or an `--image` named after the project (`[{{registry}}/]{{project}}:{{tag}}`). The key is scoped to a single existing project and cannot auto-create one. Use a user-scoped API key (`bencher_user_*`) or a user JWT token to create projects on the fly."
     )]
     ProjectKeyRequiresProject,
 

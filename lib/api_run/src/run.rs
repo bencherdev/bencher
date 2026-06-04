@@ -1,5 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
-use bencher_json::{JsonNewRun, JsonReport, ProjectSlug, ResourceName, RunContext};
+use bencher_json::{
+    JsonNewRun, JsonReport, ProjectResourceId, ProjectSlug, ResourceName, RunContext,
+};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     auth_conn,
@@ -110,10 +112,18 @@ async fn post_inner(
         },
     }
 
+    let target_project = TargetProject::find(&json_run);
     let project_name_fn = || project_name(&json_run);
     let project_slug_fn = || project_slug(&json_run);
-    let query_project = if let Some(project) = json_run.project.as_ref() {
-        QueryProject::get_or_create(log, context, public_user, project, project_name_fn).await?
+    let query_project = if let Some(project) = &target_project {
+        QueryProject::get_or_create(
+            log,
+            context,
+            public_user,
+            project.resource_id(),
+            project_name_fn,
+        )
+        .await?
     } else {
         QueryProject::get_or_create_from_context(
             log,
@@ -173,10 +183,22 @@ async fn post_inner_project_key(
 ) -> Result<JsonReport, HttpError> {
     let query_project = QueryProject::get(auth_conn!(context), project_key_actor.project_id)?;
 
-    // Verify the run targets this project (if explicitly specified)
-    if let Some(project_rid) = json_run.project.as_ref() {
-        let target = QueryProject::from_resource_id(auth_conn!(context), project_rid)?;
-        project_key_actor.verify_project(target.id)?;
+    // Verify the run targets this project (if explicitly specified or derived from image)
+    match TargetProject::find(&json_run) {
+        Some(TargetProject::Explicit(project_rid)) => {
+            let target = QueryProject::from_resource_id(auth_conn!(context), &project_rid)?;
+            project_key_actor.verify_project(target.id)?;
+        },
+        #[cfg(feature = "plus")]
+        Some(TargetProject::Derived(project_rid)) => {
+            // A derived repository may not name a project at all, so only
+            // verify when it resolves. A bogus image instead fails digest
+            // resolution during report creation.
+            if let Ok(target) = QueryProject::from_resource_id(auth_conn!(context), &project_rid) {
+                project_key_actor.verify_project(target.id)?;
+            }
+        },
+        None => {},
     }
 
     slog::info!(log, "New run via project key"; "project" => ?query_project.uuid);
@@ -255,6 +277,48 @@ async fn create_run_report(
     };
 
     QueryReport::create(log, context, query_project, new_run_report, api_actor).await
+}
+
+/// The project that a run targets.
+enum TargetProject {
+    /// The `project` field was specified.
+    Explicit(ProjectResourceId),
+    /// The project was derived from the job image repository.
+    #[cfg(feature = "plus")]
+    Derived(ProjectResourceId),
+}
+
+impl TargetProject {
+    /// Find the target project for a run, if any.
+    ///
+    /// Bencher registry images are named `[{registry}/]{project}:{tag}`,
+    /// so a job image project repository that parses as a project
+    /// resource ID derives the target project.
+    /// Multi-segment repositories (e.g. `{user}/{image}`) are not
+    /// supported by the Bencher registry, so no project is derived for them.
+    fn find(json_run: &JsonNewRun) -> Option<Self> {
+        if let Some(project) = json_run.project.clone() {
+            return Some(Self::Explicit(project));
+        }
+        #[cfg(feature = "plus")]
+        if let Some(job) = &json_run.job
+            && let Some(project) = job
+                .image
+                .project_repository()
+                .and_then(|repository| repository.parse().ok())
+        {
+            return Some(Self::Derived(project));
+        }
+        None
+    }
+
+    fn resource_id(&self) -> &ProjectResourceId {
+        match self {
+            Self::Explicit(project) => project,
+            #[cfg(feature = "plus")]
+            Self::Derived(project) => project,
+        }
+    }
 }
 
 fn project_name(json_run: &JsonNewRun) -> Result<ResourceName, HttpError> {

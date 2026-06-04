@@ -350,7 +350,7 @@ impl PendingInsertJob {
         })?;
         new_run_job
             .image
-            .validate_registry(registry_host)
+            .validate_registry(registry_host, registry_url.port_or_known_default())
             .map_err(|e| bad_request_error(e.to_string()))?;
         let registry_url: bencher_json::Url = registry_url.clone().into();
         let digest = resolve_digest(

@@ -14,7 +14,8 @@ use super::project::report::{
     CliReportAdapter, CliReportAverage, CliReportFold, CliReportThresholds,
 };
 
-// `--key` requires `--project` only for project-scoped keys (`bencher_run_*`).
+// `--key` requires `--project` only for project-scoped keys (`bencher_run_*`)
+// without an `--image` named after the project to derive the project from.
 // User-scoped keys (`bencher_user_*`) authenticate as the owning user and can
 // auto-create a project on the fly just like a JWT. Because clap groups can't
 // inspect the parsed value, this constraint is enforced at runtime in the
