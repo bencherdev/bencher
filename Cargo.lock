@@ -2443,7 +2443,6 @@ checksum = "94c78ae84c4ea75d3734db18f768c7ce7ef5615fbd13987245db26c4a121771d"
 dependencies = [
  "cssparser",
  "html5ever",
- "lru",
  "memchr",
  "precomputed-hash",
  "rustc-hash",
