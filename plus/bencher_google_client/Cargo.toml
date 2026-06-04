@@ -9,12 +9,11 @@ publish = false
 [dependencies]
 bencher_valid.workspace = true
 oauth2.workspace = true
+oauth2-reqwest.workspace = true
+reqwest = { workspace = true, features = ["json", "rustls-no-provider"] }
 serde.workspace = true
 thiserror.workspace = true
 url.workspace = true
-# Required due to feature unification
-# https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
-reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 
 [lints]
 workspace = true

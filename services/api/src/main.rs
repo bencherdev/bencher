@@ -25,11 +25,11 @@ use tokio::process::Command;
 use tokio::sync;
 #[cfg(feature = "plus")]
 use tokio::task::JoinHandle;
-use tokio_rustls::rustls::crypto::{CryptoProvider, ring};
+use tokio_rustls::rustls::crypto::{CryptoProvider, aws_lc_rs};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
-    #[error("Failed to install default AWS credentials provider: {0:?}")]
+    #[error("Failed to install default TLS crypto provider: {0:?}")]
     Rustls(Arc<CryptoProvider>),
     #[error("{0}")]
     Config(bencher_config::ConfigError),
@@ -57,7 +57,7 @@ async fn main() -> Result<(), ApiError> {
     });
     info!(&log, "🐰 Bencher API Server v{BENCHER_API_VERSION}");
 
-    let crypto_provider = ring::default_provider();
+    let crypto_provider = aws_lc_rs::default_provider();
     crypto_provider
         .install_default()
         .map_err(ApiError::Rustls)

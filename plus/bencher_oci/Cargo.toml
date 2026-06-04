@@ -12,6 +12,7 @@ plus = [
     "dep:bencher_valid",
     "dep:camino",
     "dep:flate2",
+    "dep:hex",
     "dep:oci-spec",
     "dep:serde",
     "dep:serde_json",
@@ -32,6 +33,7 @@ bencher_json = { workspace = true, optional = true, features = ["plus", "server"
 bencher_valid = { workspace = true, optional = true, features = ["plus", "client"] }
 camino = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
+hex = { workspace = true, optional = true }
 oci-spec = { workspace = true, optional = true }
 ureq = { workspace = true, optional = true, features = ["json"] }
 serde = { workspace = true, optional = true }

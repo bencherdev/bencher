@@ -7,15 +7,16 @@ license-file.workspace = true
 publish = false
 
 [dependencies]
-http.workspace = true
-reqwest = { workspace = true, features = ["rustls-tls"] }
+jsonwebtoken.workspace = true
+reqwest = { workspace = true, features = ["form", "json", "rustls-no-provider"] }
 serde.workspace = true
 serde_json.workspace = true
-tame-oauth.workspace = true
 thiserror.workspace = true
+tokio = { workspace = true, features = ["sync", "time"] }
 url = { workspace = true, features = ["serde"] }
 
 [dev-dependencies]
+rustls.workspace = true
 tokio = { workspace = true, features = ["macros"] }
 
 [lints]

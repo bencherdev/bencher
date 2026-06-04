@@ -9,7 +9,9 @@ publish = false
 [dependencies]
 bencher_valid = { workspace = true, features = ["server"] }
 oauth2.workspace = true
+oauth2-reqwest.workspace = true
 octocrab.workspace = true
+reqwest = { workspace = true, features = ["rustls-no-provider"] }
 serde.workspace = true
 thiserror.workspace = true
 url.workspace = true

@@ -7,7 +7,7 @@ use tokio::time::{Duration, sleep};
 
 use crate::codegen;
 
-use crate::{SSL_CERT_FILE, SSL_CLIENT_CERT};
+use crate::SSL_CLIENT_CERT;
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
 const DEFAULT_ATTEMPTS: usize = 35;
@@ -280,13 +280,6 @@ impl BencherClient {
             client_builder = client_builder.danger_accept_invalid_certs(true);
         }
 
-        client_builder = client_builder.tls_built_in_root_certs(false);
-        client_builder = if self.native_tls || self.cert_file_exists() {
-            client_builder.tls_built_in_native_certs(true)
-        } else {
-            client_builder.tls_built_in_webpki_certs(true)
-        };
-
         // Configure mTLS.
         if let Some(ssl_client_cert) = env::var_os(SSL_CLIENT_CERT) {
             match crate::tls::read_identity(&ssl_client_cert) {
@@ -298,21 +291,6 @@ impl BencherClient {
         }
 
         client_builder
-    }
-
-    // https://github.com/astral-sh/uv/blob/591f38c25e577d29bb4fd0dde7cdb614f3129bfc/crates/uv-client/src/base_client.rs#L186
-    fn cert_file_exists(&self) -> bool {
-        use std::path::Path;
-        env::var_os(SSL_CERT_FILE).is_some_and(|path| {
-            let path_exists = Path::new(&path).exists();
-            if !path_exists {
-                self.log_str(&format!(
-                    "Ignoring invalid `SSL_CERT_FILE`. File does not exist: {}",
-                    path.display()
-                ));
-            }
-            path_exists
-        })
     }
 
     fn log_json<T>(&self, response: &T) -> Result<(), ClientError>

@@ -247,7 +247,7 @@ impl Biller {
         );
 
         let mut checkout_session = CreateCheckoutSession::new()
-            .ui_mode(CheckoutSessionUiMode::Hosted)
+            .ui_mode(CheckoutSessionUiMode::HostedPage)
             .customer(customer.to_string())
             .payment_method_types(vec![CreateCheckoutSessionPaymentMethodTypes::Card])
             .currency(Currency::USD)
@@ -775,7 +775,7 @@ mod tests {
     use pretty_assertions::assert_eq;
     use stripe_shared::{CustomerId, PaymentMethodId};
 
-    use rustls::crypto::ring::default_provider;
+    use rustls::crypto::aws_lc_rs::default_provider;
 
     use crate::Biller;
 

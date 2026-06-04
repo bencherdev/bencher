@@ -67,7 +67,7 @@ serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 serde_urlencoded.workspace = true
 oso.workspace = true
-reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }
+reqwest = { workspace = true, optional = true, features = ["query", "rustls-no-provider"] }
 sentry = { workspace = true, optional = true }
 slog.workspace = true
 thiserror.workspace = true

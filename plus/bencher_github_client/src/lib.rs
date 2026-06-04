@@ -3,8 +3,9 @@ use std::sync::LazyLock;
 use bencher_valid::{Email, Jwt, NonEmpty, Secret, UserName};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
-    TokenResponse as _, TokenUrl, basic::BasicClient, reqwest,
+    TokenResponse as _, TokenUrl, basic::BasicClient,
 };
+use oauth2_reqwest::ReqwestClient;
 use octocrab::Octocrab;
 use serde::Deserialize;
 use url::Url;
@@ -79,11 +80,13 @@ impl GitHubClient {
 
     pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GitHubClientError> {
         let code = AuthorizationCode::new(code.into());
-        let http_client = reqwest::ClientBuilder::new()
-            // Following redirects opens the client up to SSRF vulnerabilities.
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .map_err(GitHubClientError::Reqwest)?;
+        let http_client = ReqwestClient::from(
+            reqwest::ClientBuilder::new()
+                // Following redirects opens the client up to SSRF vulnerabilities.
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .map_err(GitHubClientError::Reqwest)?,
+        );
         let token = self
             .oauth2_client
             .exchange_code(code)
@@ -130,8 +133,8 @@ impl GitHubClient {
 #[derive(Debug, Deserialize)]
 struct GitHubUserEmail {
     email: String,
-    verified: bool,
     primary: bool,
+    verified: bool,
     #[expect(dead_code, reason = "deserialized from GitHub API response")]
     visibility: Option<String>,
 }

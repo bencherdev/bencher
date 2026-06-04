@@ -432,7 +432,7 @@ mod tests {
 
         // Create a minimal config blob
         let config_json = b"{}";
-        let config_digest = format!("{:x}", Sha256::digest(config_json));
+        let config_digest = hex::encode(Sha256::digest(config_json));
         std::fs::write(blobs_dir.join(&config_digest), config_json).unwrap();
 
         // Create manifest blobs for each descriptor and collect index entries
@@ -452,7 +452,7 @@ mod tests {
                 "layers": []
             });
             let manifest_bytes = serde_json::to_vec(&manifest).unwrap();
-            let manifest_digest = format!("{:x}", Sha256::digest(&manifest_bytes));
+            let manifest_digest = hex::encode(Sha256::digest(&manifest_bytes));
             std::fs::write(blobs_dir.join(&manifest_digest), &manifest_bytes).unwrap();
 
             let mut entry = serde_json::json!({

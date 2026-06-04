@@ -246,6 +246,7 @@ impl TestServer {
             default_request_body_max_bytes: DEFAULT_MAX_BODY_SIZE,
             default_handler_task_mode: dropshot::HandlerTaskMode::Detached,
             log_headers: Vec::new(),
+            compression: dropshot::CompressionConfig::default(),
         };
 
         // Start the server
