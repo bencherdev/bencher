@@ -97,7 +97,7 @@ clap = { version = "4.6", features = ["derive"] }
 clap_mangen = "0.2"
 console_error_panic_hook = "0.1"
 criterion = "0.8"
-css-inline = { version = "0.20", default-features = false, features = ["stylesheet-cache"] }
+css-inline = { version = "0.20", default-features = false }
 dashmap = "6.1"
 derive_more = { version = "2.1", features = ["display"] }
 diesel = { version = "2.3", default-features = false, features = ["r2d2", "with-deprecated"] }

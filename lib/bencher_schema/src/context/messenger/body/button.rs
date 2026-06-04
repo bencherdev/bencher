@@ -2,6 +2,17 @@ use slog::Logger;
 
 use super::FmtBody;
 
+static CSS_INLINER: std::sync::LazyLock<css_inline::CSSInliner<'static>> =
+    std::sync::LazyLock::new(|| {
+        css_inline::CSSInliner::new(
+            css_inline::InlineOptions::default()
+                .load_remote_stylesheets(false)
+                .extra_css(Some(std::borrow::Cow::Borrowed(include_str!(
+                    "bulma.min.css"
+                )))),
+        )
+    });
+
 #[derive(Debug)]
 pub struct ButtonBody {
     pub title: String,
@@ -64,7 +75,6 @@ impl FmtBody for ButtonBody {
     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\" />
     <meta name=\"theme-color\" content=\"#ffffff\" />
     <title>{title}</title>
-    <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css\">
     <script defer src=\"https://use.fontawesome.com/releases/v5.15.4/js/all.js\"></script>
   </head>
   <body>
@@ -124,7 +134,7 @@ impl FmtBody for ButtonBody {
         );
 
         slog::debug!(log, "Inlining CSS into HTML");
-        if let Ok(inlined_html) = std::panic::catch_unwind(|| match css_inline::inline(&html) {
+        if let Ok(inlined_html) = std::panic::catch_unwind(|| match CSS_INLINER.inline(&html) {
             Ok(html) => Some(html),
             Err(err) => {
                 slog::error!(log, "Failed to inline CSS: {err}");
