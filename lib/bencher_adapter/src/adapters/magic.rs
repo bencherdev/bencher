@@ -31,7 +31,7 @@ mod test_magic {
         dart::benchmark_harness::test_dart_benchmark_harness,
         go::bench::test_go_bench,
         java::jmh::test_java_jmh,
-        js::{benchmark::test_js_benchmark, time::test_js_time},
+        js::{benchmark::test_js_benchmark, time::test_js_time, vitest::test_js_vitest},
         json::test_json,
         python::{asv::test_python_asv, pytest::test_python_pytest},
         ruby::benchmark::test_ruby_benchmark,
@@ -102,6 +102,12 @@ mod test_magic {
     fn adapter_magic_js_time() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/js/time/four.txt");
         test_js_time::validate_adapter_js_time(&results);
+    }
+
+    #[test]
+    fn adapter_magic_js_vitest() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/js/vitest/four.json");
+        test_js_vitest::validate_adapter_js_vitest(&results);
     }
 
     #[test]

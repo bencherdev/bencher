@@ -1,0 +1,16 @@
+import NodeJsVitest from "../node-js-vitest.mdx";
+
+## 🕸 JavaScript Vitest
+
+The JavaScript Vitest Adapter (`js_vitest`) expects [Vitest `bench`](https://vitest.dev/api/#bench) output in JSON format (ie `--outputJson results.json`).
+This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path.
+Both the `latency` Measure (ie `nanoseconds (ns)`) and the `throughput` Measure (ie `operations / second (ops/sec)`) are gathered.
+For the `throughput` Measure, the `lower_value` and `upper_value` are the relative margin of error below and above the `value` respectively.
+
+<NodeJsVitest />
+
+There are two options for the `latency` Metric:
+- `mean` (default): The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
+- `median`: Only the median (ie `value`) is available. Neither `lower_value` nor `upper_value` are collected, as Vitest does not provide an interquartile range.
+
+This can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the `--average` option.

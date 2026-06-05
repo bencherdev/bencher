@@ -11848,6 +11848,7 @@
           "js",
           "js_benchmark",
           "js_time",
+          "js_vitest",
           "python",
           "python_asv",
           "python_pytest",

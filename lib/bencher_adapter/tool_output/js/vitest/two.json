@@ -1,0 +1,64 @@
+{
+  "files": [
+    {
+      "filepath": "/home/runner/project/math.bench.ts",
+      "groups": [
+        {
+          "fullName": "math.bench.ts > math",
+          "benchmarks": [
+            {
+              "id": "math_0_0",
+              "name": "add",
+              "rank": 1,
+              "sampleCount": 99,
+              "totalTime": 99.0,
+              "min": 0.8,
+              "max": 1.5,
+              "hz": 1000.0,
+              "period": 1.0,
+              "samples": [],
+              "mean": 1.0,
+              "variance": 0.0625,
+              "sd": 0.25,
+              "sem": 0.0251,
+              "df": 98,
+              "critical": 1.984,
+              "moe": 0.0498,
+              "rme": 25.0,
+              "p75": 1.05,
+              "p99": 1.4,
+              "p995": 1.45,
+              "p999": 1.5,
+              "median": 0.75
+            },
+            {
+              "id": "math_0_1",
+              "name": "subtract",
+              "rank": 2,
+              "sampleCount": 95,
+              "totalTime": 190.0,
+              "min": 1.6,
+              "max": 3.0,
+              "hz": 500.0,
+              "period": 2.0,
+              "samples": [],
+              "mean": 2.0,
+              "variance": 0.25,
+              "sd": 0.5,
+              "sem": 0.0513,
+              "df": 94,
+              "critical": 1.986,
+              "moe": 0.102,
+              "rme": 25.0,
+              "p75": 2.1,
+              "p99": 2.8,
+              "p995": 2.9,
+              "p999": 3.0,
+              "median": 1.5
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

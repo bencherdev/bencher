@@ -448,6 +448,8 @@ const AdapterCard = (props: Props) => {
 						return "-javascript-benchmark";
 					case Adapter.JsTime:
 						return "-javascript-time";
+					case Adapter.JsVitest:
+						return "-javascript-vitest";
 					case Adapter.PythonAsv:
 						return "-python-asv";
 					case Adapter.PythonPytest:
@@ -495,6 +497,8 @@ const AdapterCard = (props: Props) => {
 							return "JavaScript Benchmark.js";
 						case Adapter.JsTime:
 							return "JavaScript console.time/console.timeEnd";
+						case Adapter.JsVitest:
+							return "JavaScript Vitest";
 						case Adapter.PythonAsv:
 							return "Python airspeed velocity (asv)";
 						case Adapter.PythonPytest:
