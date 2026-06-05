@@ -1,5 +1,9 @@
 # CI Integration
 
+In CI, set `BENCHER_API_KEY` to a **project** API key (`bencher_run_*`) for least
+privilege. Create one with `bencher project key create <project> --name ci` (or in the
+Console) and store it as a CI secret.
+
 ## GitHub Actions (Native)
 
 Bencher has native GitHub Actions support for posting benchmark results
@@ -15,7 +19,7 @@ as PR comments.
       --branch main \
       --testbed github-actions \
       --threshold-measure latency \
-      --threshold-test t \
+      --threshold-test t_test \
       --threshold-upper-boundary 0.99 \
       --error-on-alert \
       "cargo bench"

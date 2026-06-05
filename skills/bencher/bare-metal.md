@@ -85,11 +85,20 @@ bencher run \
 |------|---------|
 | `--image <ref>` | OCI image reference (required for bare metal) |
 | `--spec <slug>` | Hardware spec (default: platform-assigned) |
+| `--spec-reset` | Reset testbed spec (use with `--testbed`, conflicts with `--image`) |
 | `--entrypoint <cmd>` | Override container entrypoint |
 | `--env KEY=VALUE` | Set environment variables (repeatable) |
 | `--job-timeout <secs>` | Maximum execution time |
 | `--job-poll-interval <secs>` | How often to check for completion |
 | `--detach` | Submit without waiting for results |
+
+## Build Time and File Size Tracking
+
+Build time and file size tracking work with bare metal runs:
+```bash
+bencher run --image my-bench:latest --build-time "cargo build --release"
+bencher run --image my-bench:latest --file-size /app/target/release/my-binary
+```
 
 ## Fire-and-Forget
 
@@ -113,3 +122,18 @@ bencher run \
 
 Bare metal jobs on Bencher Cloud run without network access by default.
 All dependencies must be baked into the image.
+
+## Self-Hosted Runners
+
+Beyond Bencher Cloud's managed hardware, you can operate your own bare metal runner
+with the self-hosted `runner` binary (distinct from the `bencher runner` management
+subcommands). It has two subcommands:
+
+- `runner up`: long-running agent that polls for and executes Jobs
+- `runner run`: pull an image and execute it once on the local host (for testing)
+
+For registration, specs, sandboxing, and the full workflow, see the public docs:
+
+- Bare Metal overview: https://bencher.dev/docs/explanation/bare-metal/
+- Self-Hosted Runners: https://bencher.dev/docs/explanation/self-hosted-runners/
+- `runner` CLI reference: https://bencher.dev/docs/reference/runner/
