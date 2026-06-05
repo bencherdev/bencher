@@ -180,6 +180,8 @@ pub enum CliReportAdapter {
     JsBenchmark,
     /// 🕸 JavaScript Time
     JsTime,
+    /// 🕸 JavaScript Vitest
+    JsVitest,
     /// 🐍 Python ASV
     PythonAsv,
     /// 🐍 Python Pytest

@@ -74,6 +74,11 @@ const BencherRunInner = (props) => {
 					{props.js_time_bash}
 				</Show>
 			</Match>
+			<Match when={adapter() === Adapter.JsVitest}>
+				<Show when={bash()} fallback={props.js_vitest_powershell}>
+					{props.js_vitest_bash}
+				</Show>
+			</Match>
 			<Match when={adapter() === Adapter.PythonAsv}>
 				<Show when={bash()} fallback={props.python_asv_powershell}>
 					{props.python_asv_bash}

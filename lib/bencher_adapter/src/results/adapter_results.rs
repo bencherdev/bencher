@@ -187,6 +187,36 @@ impl AdapterResults {
         )
     }
 
+    /// Create results where each benchmark may report multiple default measures
+    /// (e.g. both `Latency` and `Throughput`).
+    pub fn new_measures(
+        benchmark_metrics: Vec<(BenchmarkName, Vec<AdapterMeasure>)>,
+    ) -> Option<Self> {
+        if benchmark_metrics.is_empty() {
+            return None;
+        }
+
+        let mut results_map = HashMap::new();
+        for (benchmark_name, measures) in benchmark_metrics {
+            let metrics_value = results_map
+                .entry(BenchmarkNameId::new_name(benchmark_name))
+                .or_insert_with(AdapterMetrics::default);
+            for measure in measures {
+                let (resource_id, metric) = match measure {
+                    AdapterMeasure::Latency(json_metric) => {
+                        (built_in::default::Latency::name_id(), json_metric)
+                    },
+                    AdapterMeasure::Throughput(json_metric) => {
+                        (built_in::default::Throughput::name_id(), json_metric)
+                    },
+                };
+                metrics_value.inner.insert(resource_id, metric);
+            }
+        }
+
+        Some(results_map.into())
+    }
+
     pub fn new_iai(benchmark_metrics: Vec<(BenchmarkName, Vec<IaiMeasure>)>) -> Option<Self> {
         if benchmark_metrics.is_empty() {
             return None;

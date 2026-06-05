@@ -39,6 +39,7 @@ export const adapterIcon = (adapter: Adapter) => {
 			return C_SHARP_ICON;
 		case Adapter.JsBenchmark:
 		case Adapter.JsTime:
+		case Adapter.JsVitest:
 			return JS_ICON;
 		case Adapter.PythonAsv:
 		case Adapter.PythonPytest:
@@ -78,6 +79,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.JsBenchmark:
 		case Adapter.JsTime:
 			return `bencher run${host} "node benchmark.js"`;
+		case Adapter.JsVitest:
+			return `bencher run${host} --file results.json "vitest bench --run --outputJson results.json"`;
 		case Adapter.PythonAsv:
 			return `bencher run${host} "asv run"`;
 		case Adapter.PythonPytest:
@@ -160,6 +163,7 @@ const validAdapter = (adapter: undefined | null | string | Adapter) => {
 		case Adapter.CSharpDotNet:
 		case Adapter.JsBenchmark:
 		case Adapter.JsTime:
+		case Adapter.JsVitest:
 		case Adapter.PythonAsv:
 		case Adapter.PythonPytest:
 		case Adapter.RubyBenchmark:
