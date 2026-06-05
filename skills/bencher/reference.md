@@ -34,8 +34,12 @@
 |------|---------|
 | `--threshold-measure <measure>` | Measure for threshold |
 | `--threshold-test <model>` | Statistical test model |
+| `--threshold-min-sample-size <n>` | Minimum historical sample size |
+| `--threshold-max-sample-size <n>` | Maximum historical sample size |
+| `--threshold-window <secs>` | Time window in seconds |
 | `--threshold-upper-boundary <val>` | Upper boundary value |
 | `--threshold-lower-boundary <val>` | Lower boundary value |
+| `--thresholds-reset` | Reset all unspecified thresholds |
 | `--error-on-alert` / `--err` | Exit non-zero on alert |
 
 ### Command Execution
@@ -75,6 +79,7 @@
 |------|---------|
 | `--image <ref>` | OCI image reference |
 | `--spec <slug>` | Hardware spec |
+| `--spec-reset` | Reset testbed spec (requires `--testbed`, conflicts with `--image`) |
 | `--entrypoint <cmd>` | Container entrypoint override |
 | `--env KEY=VALUE` | Environment variable (repeatable) |
 | `--job-timeout <secs>` | Maximum execution time |
@@ -86,11 +91,15 @@
 | Flag | Env Var | Default | Purpose |
 |------|---------|---------|---------|
 | `--host <url>` | `BENCHER_HOST` | `https://api.bencher.dev` | API host |
-| `--token <jwt>` | `BENCHER_API_TOKEN` | | User API token |
-| `--key <key>` | `BENCHER_API_KEY` | | Project API key (preferred) |
-| `--timeout <secs>` | | 15 | Request timeout |
-| `--attempts <n>` | | 10 | Request attempts |
-| `--retry-after <secs>` | | 1 | Initial backoff time |
+| `--token <jwt>` | `BENCHER_API_TOKEN` | | User API token (JWT). Deprecated; use `--key` |
+| `--key <key>` | `BENCHER_API_KEY` | | Bencher API key: user (`bencher_user_*`) or project (`bencher_run_*`); project keys need `--project` or `--image` |
+| `--insecure-host` | | | Allow insecure HTTPS connections |
+| `--native-tls` | | | Use platform native TLS certificates |
+| `--timeout <secs>` | | 15 | Request timeout (1-900) |
+| `--attempts <n>` | | 35 | Request attempts |
+| `--retry-after <secs>` | | 1 | Initial backoff time (1-900) |
+| `--max-retry-after <secs>` | | 30 | Max backoff time (1-900) |
+| `--strict` | | | Strictly parse JSON responses |
 
 ## Adapters
 
@@ -112,7 +121,7 @@
 | `rust_bench` | Rust | libtest bench (nightly) |
 | `rust_criterion` | Rust | Criterion.rs |
 | `rust_iai` | Rust | Iai |
-| `rust_iai_callgrind` | Rust | Iai-Callgrind |
+| `rust_gungraun` | Rust | Gungraun (alias: `rust_iai_callgrind`) |
 | `shell_hyperfine` | Shell | Hyperfine |
 
 ## Threshold Models
@@ -121,8 +130,8 @@
 |-------|------|----------|------------|
 | Static | `static` | Fixed value | `lower_boundary`, `upper_boundary` |
 | Percentage | `percentage` | % change from mean | `upper_boundary` (e.g., 0.10 = 10%) |
-| z-score | `z` | Normal, large samples | `upper_boundary` (cumulative %) |
-| Student's t | `t` | Normal, small samples | `upper_boundary` (cumulative %) |
+| z-score | `z_score` (alias: `z`) | Normal, large samples | `upper_boundary` (cumulative %) |
+| Student's t | `t_test` (alias: `t`) | Normal, small samples | `upper_boundary` (cumulative %) |
 | Log Normal | `log_normal` | Right-skewed (latency) | `upper_boundary` (cumulative %) |
 | IQR | `iqr` | Outlier-robust | `upper_boundary` (IQR multiplier) |
 | Delta IQR | `delta_iqr` | Change-based IQR | `upper_boundary` (delta multiplier) |
@@ -131,14 +140,51 @@
 
 | Variable | Purpose |
 |----------|---------|
-| `BENCHER_API_KEY` | Project-scoped API key (preferred for agents/CI) |
-| `BENCHER_API_TOKEN` | User-scoped API token |
+| `BENCHER_API_KEY` | Bencher API key: user (`bencher_user_*`) or project (`bencher_run_*`) |
+| `BENCHER_API_TOKEN` | User API token (JWT). Deprecated; use `BENCHER_API_KEY` |
 | `BENCHER_HOST` | API host URL |
 | `BENCHER_PROJECT` | Default project |
 | `BENCHER_BRANCH` | Default branch |
 | `BENCHER_TESTBED` | Default testbed |
 | `BENCHER_ADAPTER` | Default adapter |
 | `BENCHER_CMD` | Default benchmark command |
+
+## Key & Token Management
+
+```bash
+# User API keys (bencher_user_*)
+bencher user key list <user>
+bencher user key create <user> --name <name> [--ttl <seconds>]
+bencher user key view <user> <uuid>
+bencher user key update <user> <uuid> --name <name>
+bencher user key revoke <user> <uuid>
+
+# Project API keys (bencher_run_*) - preferred for `bencher run` in CI
+bencher project key list <project>
+bencher project key create <project> --name <name> [--ttl <seconds>]
+bencher project key view <project> <uuid>
+bencher project key update <project> <uuid> --name <name>
+bencher project key revoke <project> <uuid>
+
+# User API tokens (deprecated: existing tokens only, none can be created)
+bencher token list <user>
+bencher token view <user> <uuid>
+bencher token update <user> <uuid> --name <name>
+bencher token revoke <user> <uuid>
+```
+
+The plaintext key is returned only once, at creation time. Aliases: `add` (create),
+`get` (view), `edit` (update), `rm` (revoke), `ls` (list).
+
+## Utility Commands
+
+```bash
+# Generate mock benchmark data (verify setup)
+bencher mock
+
+# Measure environment noise
+bencher noise
+```
 
 ## Common Resource Commands
 
@@ -158,6 +204,14 @@ bencher testbed list --project <project>
 bencher testbed view --project <project> <testbed>
 bencher testbed create --project <project> --name <name>
 
+# Benchmarks
+bencher benchmark list --project <project>
+bencher benchmark view --project <project> <benchmark>
+
+# Measures
+bencher measure list --project <project>
+bencher measure view --project <project> <measure>
+
 # Reports
 bencher report list --project <project>
 bencher report view --project <project> <report>
@@ -169,6 +223,25 @@ bencher alert view --project <project> <alert>
 # Thresholds
 bencher threshold list --project <project>
 bencher threshold view --project <project> <threshold>
+
+# Metrics
+bencher metric list --project <project>
+
+# Plots
+bencher plot list --project <project>
+bencher plot view --project <project> <plot>
+
+# Jobs (Bencher Plus)
+bencher job list --project <project>
+bencher job view --project <project> <job>
+
+# Runners (Bencher Plus)
+bencher runner list
+bencher runner view <runner>
+
+# Specs (Bencher Plus)
+bencher spec list
+bencher spec view <spec>
 
 # Archive/Unarchive (branches, testbeds, benchmarks, measures)
 bencher archive --project <project> --branch <branch>

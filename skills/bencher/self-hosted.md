@@ -8,17 +8,17 @@ Run your own Bencher instance using Docker Compose via the CLI.
 bencher up --detach
 ```
 
-This starts the API server (port 61016) and Console (port 3000) in the background.
+This starts the API server (port 6610) and Console (port 3000) in the background.
 
 Open `http://localhost:3000` to access the console and create your first account.
 
 ## Point the CLI at Your Instance
 
 ```bash
-export BENCHER_HOST=http://localhost:61016
+export BENCHER_HOST=http://localhost:6610
 ```
 
-Or pass `--host http://localhost:61016` on each command.
+Or pass `--host http://localhost:6610` on each command.
 
 All `bencher run` and resource commands respect `BENCHER_HOST`.
 
@@ -34,7 +34,7 @@ bencher up --detach
 bencher up api --detach
 
 # Pin to a specific version
-bencher up --tag v0.6.4
+bencher up --tag v0.6.8
 
 # Custom ports
 bencher up --api-port 8080 --console-port 8081
@@ -80,7 +80,7 @@ bencher up --api-volume /host/data:/data
 
 | Service | Default Port | Purpose |
 |---------|-------------|---------|
-| `api` | 61016 | REST API server |
+| `api` | 6610 | REST API server |
 | `console` | 3000 | Web UI |
 | `all` | Both | Default: starts everything |
 
@@ -91,11 +91,11 @@ After `bencher up`:
 1. Open `http://localhost:3000`
 2. Create your admin account through the console
 3. Create an organization and project
-4. Generate an API token (or project key) for CLI/CI use
+4. Generate a project API key (or user API key) for CLI/CI use
 
 Or via CLI:
 ```bash
-bencher auth signup --name "Admin" --email admin@example.com --host http://localhost:61016
+bencher auth signup --name "Admin" --email admin@example.com --host http://localhost:6610
 ```
 
 ## Full Documentation

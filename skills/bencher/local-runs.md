@@ -35,7 +35,7 @@ If auto-detection fails, specify the adapter explicitly with `--adapter`:
 | `rust_bench` | Rust | libtest bench (nightly) |
 | `rust_criterion` | Rust | Criterion.rs |
 | `rust_iai` | Rust | Iai |
-| `rust_iai_callgrind` | Rust | Iai-Callgrind |
+| `rust_gungraun` | Rust | Gungraun (alias: `rust_iai_callgrind`) |
 | `shell_hyperfine` | Shell | Hyperfine |
 
 Example:

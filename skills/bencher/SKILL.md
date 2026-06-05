@@ -4,8 +4,9 @@ description: >
   Guide for using Bencher continuous benchmarking. Use when the user wants to:
   benchmark code, track performance, detect regressions, set up CI performance
   checks, run bare metal benchmarks, configure thresholds, or use the bencher CLI.
-  Also use when you see BENCHER_API_KEY, BENCHER_API_TOKEN, bencher CLI usage, bencher.dev
-  URLs, or port 61016 (Bencher self-hosted default) in the project.
+  Also use when you see BENCHER_API_KEY, BENCHER_API_TOKEN, bencher_run_ or
+  bencher_user_ API keys, bencher CLI usage, bencher.dev URLs, or port 6610
+  (Bencher self-hosted default) in the project.
 argument-hint: [task]
 ---
 
@@ -18,7 +19,7 @@ and detects regressions before they reach production.
 
 Check if the CLI is installed:
 ```
-`bencher --version 2>/dev/null || echo "bencher CLI not installed — see https://bencher.dev/docs/how-to/install-cli/"`
+`bencher --version 2>/dev/null || echo "bencher CLI not installed. See https://bencher.dev/docs/how-to/install-cli/"`
 ```
 
 Choose your workflow:
@@ -39,22 +40,31 @@ bencher run "bencher mock"
 
 ## Authentication
 
-**Preferred (agents and CI):** Project-scoped API key
+Bencher authenticates with an **API key** via `--key` or `BENCHER_API_KEY`.
+The prefix selects one of two kinds.
+
+**Project key (`bencher_run_*`), preferred for CI:** scoped to a single existing
+project. Submits runs and reads that project's data; cannot create or claim a project,
+nor perform destructive operations (least privilege).
 ```bash
 export BENCHER_API_KEY=bencher_run_...
-# or pass --key bencher_run_...
+bencher run --project my-project "cargo bench"
 ```
+The project must be identified by `--project` or derived from a `--image` whose
+repository names the project. A project key cannot create a project on the fly.
 
-Project keys are scoped to a single project and can only submit benchmark runs
-and read project data. This is the recommended authentication method.
-
-**Alternative (users):** User-scoped API token
+**User key (`bencher_user_*`), good for local/interactive use:** authenticates as the
+owning user across everything a session can do (except minting other keys), and can
+create a project on the fly, so `--project` is optional.
 ```bash
-export BENCHER_API_TOKEN=eyJ...
-# or pass --token eyJ...
+export BENCHER_API_KEY=bencher_user_...
+bencher run --project my-project "cargo bench"
 ```
 
-User tokens grant full access to all projects and operations the user has permission for.
+**Deprecated, user API token (`--token` / `BENCHER_API_TOKEN`, a JWT):** existing
+tokens still work, but new ones can no longer be created. Use an API key instead.
+
+`--key` and `--token` are mutually exclusive; `--key` takes precedence.
 
 ## Common Options
 
@@ -69,7 +79,8 @@ Every `bencher run` accepts these project-scoping options:
 
 ## Reading Project Data
 
-With a project key, you can query existing data:
+A project key reads its own project; a user key spans all the user's projects.
+Query existing data:
 
 ```bash
 bencher project view <project>
