@@ -10,6 +10,7 @@ publish = false
 anyhow.workspace = true
 camino.workspace = true
 clap.workspace = true
+rustls.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 hex.workspace = true
