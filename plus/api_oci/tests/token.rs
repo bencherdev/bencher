@@ -7,7 +7,7 @@
 //! Integration tests for the OCI token endpoint (GET and POST /v0/auth/oci/token).
 
 use bencher_api_tests::TestServer;
-use bencher_json::PROJECT_KEY_PREFIX;
+use bencher_json::ProjectKey;
 use http::StatusCode;
 use serde_json::Value;
 
@@ -289,7 +289,7 @@ async fn oci_token_post_project_key() {
     let scope = format!("repository:{project_slug}:push");
 
     assert!(
-        project_key.key.as_ref().starts_with(PROJECT_KEY_PREFIX),
+        project_key.key.as_ref().starts_with(ProjectKey::PREFIX),
         "Project key should start with bencher_run_ prefix"
     );
 

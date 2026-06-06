@@ -75,11 +75,6 @@ impl QueryUserKey {
         .execute(conn)
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonUserKey, HttpError> {
-        let query_user = QueryUser::get(conn, self.user_id)?;
-        Ok(self.into_json_inner(query_user.uuid))
-    }
-
     pub fn into_json_for_user(self, query_user: &QueryUser) -> JsonUserKey {
         assert_parentage(
             BencherResource::User,

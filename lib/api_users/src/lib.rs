@@ -8,8 +8,8 @@ use serde_json as _;
 #[cfg(test)]
 use tokio as _;
 
-mod tokens;
 mod keys;
+mod tokens;
 mod users;
 
 pub struct Api;
