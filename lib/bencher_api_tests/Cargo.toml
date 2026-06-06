@@ -39,6 +39,7 @@ hex = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
 libsqlite3-sys.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-no-provider"] }
+rustls.workspace = true
 serde_json = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 slog.workspace = true

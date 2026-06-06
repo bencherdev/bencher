@@ -3,6 +3,7 @@
 //! OCI Token Endpoint
 //!
 //! - GET /v0/auth/oci/token - Exchange credentials for an OCI bearer token
+//! - POST /v0/auth/oci/token - `OAuth2` token exchange (Docker 29+ / containerd)
 //!
 //! This endpoint implements the Docker Registry Auth specification.
 //! Clients authenticate using Basic auth with their Bencher API token
@@ -14,7 +15,7 @@
 //! - "push" action requires Create permission on the project (for claimed orgs)
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
-use bencher_endpoint::{CorsResponse, Endpoint, Get};
+use bencher_endpoint::{CorsResponse, Endpoint, Get, Post};
 use bencher_json::oci::{OCI_ERROR_DENIED, OCI_ERROR_UNAUTHORIZED, oci_error_body};
 use bencher_json::{Email, Jwt, PROJECT_KEY_PREFIX, ProjectKey, ProjectKeyHash, ProjectResourceId};
 use bencher_rbac::project::Permission;
@@ -29,7 +30,9 @@ use bencher_schema::{
 };
 use bencher_token::OciAction;
 use chrono::Utc;
-use dropshot::{Body, ClientErrorStatusCode, HttpError, Query, RequestContext, endpoint};
+use dropshot::{
+    Body, ClientErrorStatusCode, HttpError, Query, RequestContext, UntypedBody, endpoint,
+};
 use http::Response;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -38,17 +41,18 @@ use serde::{Deserialize, Serialize};
 pub const OCI_TOKEN_TTL: u32 = 300;
 
 /// Query parameters for token endpoint
+///
+/// The `scope` parameter is parsed from the raw query string rather than
+/// through Dropshot's `Query<T>`, because Docker 29+ (containerd image store)
+/// sends multiple `scope` query params which `serde_urlencoded` rejects as
+/// duplicate fields on a scalar type.
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TokenQuery {
     /// Service identifier (e.g., "registry.bencher.dev")
-    /// Not currently used but accepted for OCI spec compliance
     pub service: Option<String>,
-    /// Scope in format "repository:name:action,action"
-    /// e.g., "repository:org/project:pull,push"
-    pub scope: Option<String>,
 }
 
-/// Token response following Docker Registry Auth spec
+/// Token response following Docker Registry Auth spec (GET)
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct TokenResponse {
     /// The short-lived OCI JWT
@@ -57,6 +61,34 @@ pub struct TokenResponse {
     pub expires_in: u32,
     /// When the token was issued (RFC3339)
     pub issued_at: String,
+}
+
+/// `OAuth2` token form body for POST requests (containerd / Docker 29+)
+#[derive(Debug, Deserialize)]
+struct OAuthTokenForm {
+    grant_type: String,
+    #[expect(dead_code, reason = "accepted for spec compliance")]
+    service: Option<String>,
+    scope: Option<String>,
+    #[expect(dead_code, reason = "accepted for spec compliance")]
+    client_id: Option<String>,
+    username: Option<String>,
+    password: Option<String>,
+    #[expect(dead_code, reason = "accepted for spec compliance")]
+    refresh_token: Option<String>,
+    #[expect(dead_code, reason = "accepted for spec compliance")]
+    access_type: Option<String>,
+}
+
+/// `OAuth2` token response for POST requests
+///
+/// Per the `OAuth2` token spec, the response field is `access_token` (not `token`).
+#[derive(Debug, Serialize)]
+struct OAuthTokenResponse {
+    access_token: String,
+    expires_in: u32,
+    scope: Option<String>,
+    issued_at: String,
 }
 
 /// CORS preflight for token endpoint
@@ -68,10 +100,10 @@ pub struct TokenResponse {
 pub async fn auth_oci_token_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into()]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
-/// OCI token endpoint
+/// OCI token endpoint (GET)
 ///
 /// Authenticates via Basic auth and returns a short-lived JWT for OCI operations.
 /// Supports two credential types:
@@ -79,6 +111,8 @@ pub async fn auth_oci_token_options(
 /// - `project-slug-or-uuid:bencher_run_xxxxx`: project key authentication
 ///
 /// If no Basic auth credentials are provided, issues a public (anonymous) OCI token.
+///
+/// Accepts multiple `scope` query parameters (Docker 29+ / containerd sends these).
 #[endpoint {
     method = GET,
     path = "/v0/auth/oci/token",
@@ -86,62 +120,23 @@ pub async fn auth_oci_token_options(
 }]
 pub async fn auth_oci_token_get(
     rqctx: RequestContext<ApiContext>,
-    query: Query<TokenQuery>,
+    _query: Query<TokenQuery>,
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
-    let query = query.into_inner();
 
-    // Parse scope to extract repository and actions
-    let (repository, actions) = if let Some(scope) = &query.scope {
-        parse_scope(scope)?
-    } else {
+    // Docker 29+ (containerd) sends multiple `scope` query params that Dropshot
+    // can't deserialize into a scalar. Parse all scopes from the raw query string.
+    let scopes = extract_scopes_from_query(rqctx.request.uri());
+    let (repository, actions) = if scopes.is_empty() {
         (None, vec![])
+    } else {
+        parse_scopes(&scopes)?
     };
 
-    let jwt = match extract_basic_credentials(&rqctx)? {
-        Some((username, password)) if password.starts_with(PROJECT_KEY_PREFIX) => {
-            if let (Ok(project), Ok(project_key)) = (
-                username.parse::<ProjectResourceId>(),
-                password.parse::<ProjectKey>(),
-            ) {
-                project_key_oci_token(
-                    &rqctx,
-                    context,
-                    &query,
-                    &project,
-                    &project_key,
-                    repository,
-                    actions,
-                )
-                .await?
-            } else {
-                return Err(unauthorized_with_www_authenticate(
-                    &rqctx,
-                    query.scope.as_deref(),
-                ));
-            }
-        },
-        Some((username, password)) => {
-            if let (Ok(email), Ok(api_token)) = (username.parse::<Email>(), password.parse::<Jwt>())
-            {
-                auth_oci_token(
-                    &rqctx, context, &query, &email, &api_token, repository, actions,
-                )
-                .await?
-            } else {
-                return Err(unauthorized_with_www_authenticate(
-                    &rqctx,
-                    query.scope.as_deref(),
-                ));
-            }
-        },
-        None => context
-            .token_key
-            .new_oci_public(OCI_TOKEN_TTL, repository, actions)
-            .map_err(|e| {
-                HttpError::for_internal_error(format!("Failed to create public OCI token: {e}"))
-            })?,
-    };
+    let scope_str = scopes.first().map(String::as_str);
+    let credentials = extract_basic_credentials(&rqctx)?;
+    let jwt =
+        dispatch_oci_token(&rqctx, context, scope_str, repository, actions, credentials).await?;
 
     let response = TokenResponse {
         token: jwt.to_string(),
@@ -160,18 +155,180 @@ pub async fn auth_oci_token_get(
         .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))
 }
 
+/// Build an `OAuth2` token-endpoint error body per RFC 6749 §5.2.
+///
+/// The token endpoint speaks `OAuth2`, so its errors use `{"error", "error_description"}`
+/// rather than the OCI registry's `oci_error_body` envelope.
+fn oauth_error_body(error: &str, description: &str) -> String {
+    serde_json::json!({
+        "error": error,
+        "error_description": description,
+    })
+    .to_string()
+}
+
+/// OCI token endpoint (POST) — `OAuth2` token exchange
+///
+/// Accepts `application/x-www-form-urlencoded` body with `grant_type=password`.
+/// Docker 29+ (containerd image store) uses this flow before falling back to GET.
+#[endpoint {
+    method = POST,
+    path = "/v0/auth/oci/token",
+    tags = ["auth", "oci"],
+}]
+pub async fn auth_oci_token_post(
+    rqctx: RequestContext<ApiContext>,
+    body: UntypedBody,
+) -> Result<Response<Body>, HttpError> {
+    let context = rqctx.context();
+
+    let form: OAuthTokenForm = serde_urlencoded::from_bytes(body.as_bytes()).map_err(|e| {
+        HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::BAD_REQUEST,
+            oauth_error_body("invalid_request", &format!("Invalid form body: {e}")),
+        )
+    })?;
+
+    if form.grant_type == "refresh_token" {
+        return Err(HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::BAD_REQUEST,
+            oauth_error_body(
+                "unsupported_grant_type",
+                "Bencher does not issue refresh tokens",
+            ),
+        ));
+    }
+
+    if form.grant_type != "password" {
+        return Err(HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::BAD_REQUEST,
+            oauth_error_body(
+                "unsupported_grant_type",
+                &format!("expected \"password\", got \"{}\"", form.grant_type),
+            ),
+        ));
+    }
+
+    let credentials = match (form.username, form.password) {
+        (Some(username), Some(password)) if !username.is_empty() => Some((username, password)),
+        _ => extract_basic_credentials(&rqctx)?,
+    };
+
+    let Some(credentials) = credentials else {
+        return Err(HttpError::for_client_error(
+            None,
+            ClientErrorStatusCode::BAD_REQUEST,
+            oauth_error_body(
+                "invalid_request",
+                "grant_type=password requires username and password",
+            ),
+        ));
+    };
+
+    // Containerd joins multiple scopes with spaces in the POST body:
+    // form.Set("scope", strings.Join(scopes, " "))
+    let (repository, actions) = if let Some(scope) = &form.scope {
+        let scopes: Vec<String> = scope
+            .split(' ')
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+            .collect();
+        parse_scopes(&scopes)?
+    } else {
+        (None, vec![])
+    };
+
+    let scope_str = form.scope.as_ref().and_then(|s| s.split(' ').next());
+    let jwt = dispatch_oci_token(
+        &rqctx,
+        context,
+        scope_str,
+        repository,
+        actions,
+        Some(credentials),
+    )
+    .await?;
+
+    let response = OAuthTokenResponse {
+        access_token: jwt.to_string(),
+        expires_in: OCI_TOKEN_TTL,
+        scope: form.scope,
+        issued_at: Utc::now().to_rfc3339(),
+    };
+
+    let body = serde_json::to_vec(&response)
+        .map_err(|e| HttpError::for_internal_error(format!("Failed to serialize response: {e}")))?;
+
+    Response::builder()
+        .status(http::StatusCode::OK)
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+        .body(Body::from(body))
+        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))
+}
+
+/// Dispatch to the appropriate token issuer based on credential type.
+async fn dispatch_oci_token(
+    rqctx: &RequestContext<ApiContext>,
+    context: &ApiContext,
+    scope: Option<&str>,
+    repository: Option<String>,
+    actions: Vec<OciAction>,
+    credentials: Option<(String, String)>,
+) -> Result<Jwt, HttpError> {
+    match credentials {
+        Some((username, password)) if password.starts_with(PROJECT_KEY_PREFIX) => {
+            if let (Ok(project), Ok(project_key)) = (
+                username.parse::<ProjectResourceId>(),
+                password.parse::<ProjectKey>(),
+            ) {
+                project_key_oci_token(
+                    rqctx,
+                    context,
+                    scope,
+                    &project,
+                    &project_key,
+                    repository,
+                    actions,
+                )
+                .await
+            } else {
+                Err(unauthorized_with_www_authenticate(rqctx, scope))
+            }
+        },
+        Some((username, password)) => {
+            if let (Ok(email), Ok(api_token)) = (username.parse::<Email>(), password.parse::<Jwt>())
+            {
+                auth_oci_token(
+                    rqctx, context, scope, &email, &api_token, repository, actions,
+                )
+                .await
+            } else {
+                Err(unauthorized_with_www_authenticate(rqctx, scope))
+            }
+        },
+        None => context
+            .token_key
+            .new_oci_public(OCI_TOKEN_TTL, repository, actions)
+            .map_err(|e| {
+                HttpError::for_internal_error(format!("Failed to create public OCI token: {e}"))
+            }),
+    }
+}
+
 /// Issue an authenticated OCI token after validating credentials and RBAC.
 async fn auth_oci_token(
     rqctx: &RequestContext<ApiContext>,
     context: &ApiContext,
-    query: &TokenQuery,
+    scope: Option<&str>,
     email: &Email,
     api_token: &Jwt,
     repository: Option<String>,
     actions: Vec<OciAction>,
 ) -> Result<Jwt, HttpError> {
-    let scope = query.scope.as_deref();
-
     // Validate the API token
     let claims = context
         .token_key
@@ -313,14 +470,12 @@ pub fn log_unauthorized_with_www_authenticate(
 async fn project_key_oci_token(
     rqctx: &RequestContext<ApiContext>,
     context: &ApiContext,
-    query: &TokenQuery,
+    scope: Option<&str>,
     project_rid: &ProjectResourceId,
     project_key: &ProjectKey,
     repository: Option<String>,
     actions: Vec<OciAction>,
 ) -> Result<Jwt, HttpError> {
-    let scope = query.scope.as_deref();
-
     // Pull-only requests are not allowed for project key auth.
     // Only bare metal runners should be pulling, and they use runner tokens.
     if actions.contains(&OciAction::Pull) && !actions.contains(&OciAction::Push) {
@@ -421,7 +576,43 @@ fn extract_basic_credentials(
     Ok(Some((username.to_owned(), password.to_owned())))
 }
 
-/// Parse OCI scope string into repository and actions
+/// Parse multiple OCI scope strings into a single repository + its actions.
+///
+/// Docker 29+ (containerd) sends multiple `scope` query params, e.g.:
+/// `scope=repository:proj:pull&scope=repository:proj:pull,push`
+///
+/// The issued token is single-repository, so we select one target repository
+/// and union the actions requested for it:
+/// - The target is the first scope that names a repository — the registry's
+///   challenge scope, i.e. the resource the client is actually accessing.
+/// - Actions are unioned **only** from scopes whose repository matches the
+///   target. Cached scopes that containerd may append for *other* repositories
+///   (or any repository-less scope) are dropped, so they can never widen the
+///   token's actions or retarget it.
+fn parse_scopes(scopes: &[String]) -> Result<(Option<String>, Vec<OciAction>), HttpError> {
+    // Parse every scope first so a malformed scope still errors, as before.
+    let parsed: Vec<(Option<String>, Vec<OciAction>)> = scopes
+        .iter()
+        .map(|s| parse_scope(s))
+        .collect::<Result<_, _>>()?;
+
+    let target = parsed.iter().find_map(|(repo, _)| repo.clone());
+
+    let mut actions = Vec::new();
+    for (repo, scope_actions) in parsed {
+        if repo.as_deref() == target.as_deref() {
+            for action in scope_actions {
+                if !actions.contains(&action) {
+                    actions.push(action);
+                }
+            }
+        }
+    }
+
+    Ok((target, actions))
+}
+
+/// Parse a single OCI scope string into repository and actions.
 ///
 /// Format: "repository:name:actions" where actions is comma-separated
 /// Example: "repository:org/project:pull,push"
@@ -462,6 +653,24 @@ fn parse_scope(scope: &str) -> Result<(Option<String>, Vec<OciAction>), HttpErro
     Ok((Some((*repository_name).to_owned()), actions))
 }
 
+/// Extract all `scope` query parameter values from a URI.
+///
+/// Docker 29+ (containerd) sends multiple `scope` query params, e.g.:
+/// `?scope=repository:proj:pull&scope=repository:proj:pull,push`
+///
+/// Dropshot's `Query<T>` requires scalar types, so we parse the raw query string.
+fn extract_scopes_from_query(uri: &http::Uri) -> Vec<String> {
+    let Some(query) = uri.query() else {
+        return Vec::new();
+    };
+    serde_urlencoded::from_str::<Vec<(String, String)>>(query)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|(key, _)| key == "scope")
+        .map(|(_, value)| value)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -497,11 +706,71 @@ mod tests {
 
     #[test]
     fn parse_scope_sanitizes_quotes() {
-        // Quotes in repository name are stripped by scope sanitization
-        // before reaching parse_scope, but parse_scope itself should
-        // handle the already-sanitized input correctly
         let (repo, actions) = parse_scope("repository:org/project:pull").unwrap();
         assert_eq!(repo, Some("org/project".to_owned()));
         assert_eq!(actions, vec![OciAction::Pull]);
+    }
+
+    #[test]
+    fn parse_scopes_merges_actions() {
+        let scopes = vec![
+            "repository:the-computer:pull".to_owned(),
+            "repository:the-computer:pull,push".to_owned(),
+        ];
+        let (repo, actions) = parse_scopes(&scopes).unwrap();
+        assert_eq!(repo, Some("the-computer".to_owned()));
+        assert_eq!(actions, vec![OciAction::Pull, OciAction::Push]);
+    }
+
+    #[test]
+    fn parse_scopes_single() {
+        let scopes = vec!["repository:myrepo:push".to_owned()];
+        let (repo, actions) = parse_scopes(&scopes).unwrap();
+        assert_eq!(repo, Some("myrepo".to_owned()));
+        assert_eq!(actions, vec![OciAction::Push]);
+    }
+
+    #[test]
+    fn parse_scopes_empty() {
+        let scopes: Vec<String> = vec![];
+        let (repo, actions) = parse_scopes(&scopes).unwrap();
+        assert_eq!(repo, None);
+        assert!(actions.is_empty());
+    }
+
+    #[test]
+    fn parse_scopes_ignores_other_repos() {
+        let scopes = vec![
+            "repository:repo-a:pull".to_owned(),
+            "repository:repo-b:push".to_owned(),
+        ];
+        let (repo, actions) = parse_scopes(&scopes).unwrap();
+        assert_eq!(repo, Some("repo-a".to_owned()));
+        assert_eq!(actions, vec![OciAction::Pull]);
+    }
+
+    // A foreign repository's actions must never leak into the target token,
+    // even when they overlap/exceed the target's own actions.
+    #[test]
+    fn parse_scopes_excludes_other_repo_actions() {
+        let scopes = vec![
+            "repository:repo-a:pull".to_owned(),
+            "repository:repo-b:pull,push".to_owned(),
+        ];
+        let (repo, actions) = parse_scopes(&scopes).unwrap();
+        assert_eq!(repo, Some("repo-a".to_owned()));
+        assert_eq!(actions, vec![OciAction::Pull]);
+    }
+
+    // Multiple scopes for the same (target) repository still union, in order.
+    #[test]
+    fn parse_scopes_unions_same_repo_in_order() {
+        let scopes = vec![
+            "repository:r:push".to_owned(),
+            "repository:r:pull".to_owned(),
+        ];
+        let (repo, actions) = parse_scopes(&scopes).unwrap();
+        assert_eq!(repo, Some("r".to_owned()));
+        assert_eq!(actions, vec![OciAction::Push, OciAction::Pull]);
     }
 }

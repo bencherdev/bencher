@@ -1,5 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
+use rustls::crypto::aws_lc_rs;
+
 use bencher_config::DEFAULT_MAX_BODY_SIZE;
 use bencher_endpoint::Registrar as _;
 use bencher_rbac::init_rbac;
@@ -255,6 +257,8 @@ impl TestServer {
             .start();
 
         let url = format!("http://{}", server.local_addr());
+
+        let _provider = aws_lc_rs::default_provider().install_default();
 
         let client = reqwest::Client::builder()
             .build()

@@ -1,6 +1,7 @@
 #![cfg(feature = "plus")]
 #![expect(
     unused_crate_dependencies,
+    clippy::missing_assert_message,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
     clippy::expect_used,
@@ -1382,30 +1383,24 @@ async fn manifest_get_docker_v2_by_tag() {
 // =============================================================================
 
 /// Create a Docker manifest list JSON for testing
-fn create_docker_manifest_list() -> String {
+fn create_docker_manifest_list(child_digests: &[&str]) -> String {
+    let manifests: Vec<_> = child_digests
+        .iter()
+        .enumerate()
+        .map(|(i, digest)| {
+            let arch = if i == 0 { "amd64" } else { "arm64" };
+            serde_json::json!({
+                "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+                "digest": digest,
+                "size": 528,
+                "platform": { "architecture": arch, "os": "linux" }
+            })
+        })
+        .collect();
     serde_json::json!({
         "schemaVersion": 2,
         "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
-        "manifests": [
-            {
-                "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
-                "digest": "sha256:e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
-                "size": 528,
-                "platform": {
-                    "architecture": "amd64",
-                    "os": "linux"
-                }
-            },
-            {
-                "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
-                "digest": "sha256:f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6",
-                "size": 528,
-                "platform": {
-                    "architecture": "arm64",
-                    "os": "linux"
-                }
-            }
-        ]
+        "manifests": manifests
     })
     .to_string()
 }
@@ -1426,7 +1421,9 @@ async fn manifest_put_docker_manifest_list() {
     let pull_token = server.oci_pull_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    let manifest = create_docker_manifest_list();
+    let d1 = push_child_manifest(&server, project_slug, &push_token, "child-amd64").await;
+    let d2 = push_child_manifest(&server, project_slug, &push_token, "child-arm64").await;
+    let manifest = create_docker_manifest_list(&[&d1, &d2]);
 
     // PUT with Docker manifest list Content-Type
     let put_resp = server
@@ -1483,7 +1480,9 @@ async fn manifest_get_docker_manifest_list() {
     let pull_token = server.oci_pull_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    let manifest = create_docker_manifest_list();
+    let d1 = push_child_manifest(&server, project_slug, &push_token, "child-amd64-get").await;
+    let d2 = push_child_manifest(&server, project_slug, &push_token, "child-arm64-get").await;
+    let manifest = create_docker_manifest_list(&[&d1, &d2]);
 
     server
         .client
@@ -1544,42 +1543,68 @@ async fn manifest_get_docker_manifest_list() {
 // =============================================================================
 
 /// Create an OCI image index JSON for testing
-fn create_oci_image_index() -> String {
+fn create_oci_image_index(child_digests: &[&str]) -> String {
+    let manifests: Vec<_> = child_digests
+        .iter()
+        .enumerate()
+        .map(|(i, digest)| {
+            if i == 1 {
+                serde_json::json!({
+                    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                    "digest": digest,
+                    "size": 1024,
+                    "platform": { "architecture": "arm64", "os": "linux", "variant": "v8" }
+                })
+            } else {
+                let arch = if i == 0 { "amd64" } else { "s390x" };
+                serde_json::json!({
+                    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                    "digest": digest,
+                    "size": 1024,
+                    "platform": { "architecture": arch, "os": "linux" }
+                })
+            }
+        })
+        .collect();
     serde_json::json!({
         "schemaVersion": 2,
         "mediaType": "application/vnd.oci.image.index.v1+json",
-        "manifests": [
-            {
-                "mediaType": "application/vnd.oci.image.manifest.v1+json",
-                "digest": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
-                "size": 1024,
-                "platform": {
-                    "architecture": "amd64",
-                    "os": "linux"
-                }
-            },
-            {
-                "mediaType": "application/vnd.oci.image.manifest.v1+json",
-                "digest": "sha256:b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
-                "size": 1024,
-                "platform": {
-                    "architecture": "arm64",
-                    "os": "linux",
-                    "variant": "v8"
-                }
-            },
-            {
-                "mediaType": "application/vnd.oci.image.manifest.v1+json",
-                "digest": "sha256:c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
-                "size": 1024,
-                "platform": {
-                    "architecture": "s390x",
-                    "os": "linux"
-                }
-            }
-        ]
+        "manifests": manifests
     })
     .to_string()
+}
+
+/// Push a minimal OCI manifest (with blobs) and return its content digest.
+async fn push_child_manifest(
+    server: &TestServer,
+    project_slug: &str,
+    push_token: &str,
+    tag: &str,
+) -> String {
+    let config_digest = server
+        .upload_blob(project_slug, push_token, b"child-config")
+        .await;
+    let layer_digest = server
+        .upload_blob(project_slug, push_token, b"child-layer")
+        .await;
+    let manifest = create_oci_manifest(&config_digest, &layer_digest);
+    let manifest_digest = compute_digest(manifest.as_bytes());
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{project_slug}/manifests/{tag}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(push_token),
+        )
+        .header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("PUT child manifest failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    manifest_digest
 }
 
 // PUT multi-platform OCI image index, verify 201
@@ -1595,7 +1620,10 @@ async fn manifest_put_oci_image_index() {
     let push_token = server.oci_push_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    let manifest = create_oci_image_index();
+    let d1 = push_child_manifest(&server, project_slug, &push_token, "child-amd64").await;
+    let d2 = push_child_manifest(&server, project_slug, &push_token, "child-arm64").await;
+    let d3 = push_child_manifest(&server, project_slug, &push_token, "child-s390x").await;
+    let manifest = create_oci_image_index(&[&d1, &d2, &d3]);
 
     let put_resp = server
         .client
@@ -1631,7 +1659,10 @@ async fn manifest_get_oci_image_index() {
     let pull_token = server.oci_pull_token(&user, &project);
     let project_slug: &str = project.slug.as_ref();
 
-    let manifest = create_oci_image_index();
+    let d1 = push_child_manifest(&server, project_slug, &push_token, "child-amd64-get").await;
+    let d2 = push_child_manifest(&server, project_slug, &push_token, "child-arm64-get").await;
+    let d3 = push_child_manifest(&server, project_slug, &push_token, "child-s390x-get").await;
+    let manifest = create_oci_image_index(&[&d1, &d2, &d3]);
 
     // Upload
     server
@@ -2285,4 +2316,75 @@ async fn manifest_put_within_server_default() {
         resp.status()
     );
     assert!(resp.headers().contains_key("docker-content-digest"));
+}
+
+// PUT OCI image index referencing non-existent child manifests → rejected
+#[tokio::test]
+async fn manifest_put_oci_image_index_missing_child() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("IdxMissing User", "idxmissing@example.com")
+        .await;
+    let org = server.create_org(&user, "IdxMissing Org").await;
+    let project = server
+        .create_project(&user, &org, "IdxMissing Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let fake_digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+    let manifest = create_oci_image_index(&[fake_digest]);
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{project_slug}/manifests/missing-child")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
+        .header("Content-Type", "application/vnd.oci.image.index.v1+json")
+        .body(manifest)
+        .send()
+        .await
+        .expect("PUT failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+// PUT Docker manifest list referencing non-existent child manifests → rejected
+#[tokio::test]
+async fn manifest_put_docker_manifest_list_missing_child() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("ListMissing User", "listmissing@example.com")
+        .await;
+    let org = server.create_org(&user, "ListMissing Org").await;
+    let project = server
+        .create_project(&user, &org, "ListMissing Project")
+        .await;
+
+    let push_token = server.oci_push_token(&user, &project);
+    let project_slug: &str = project.slug.as_ref();
+
+    let fake_digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+    let manifest = create_docker_manifest_list(&[fake_digest]);
+
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{project_slug}/manifests/missing-child")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&push_token),
+        )
+        .header(
+            "Content-Type",
+            "application/vnd.docker.distribution.manifest.list.v2+json",
+        )
+        .body(manifest)
+        .send()
+        .await
+        .expect("PUT failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }

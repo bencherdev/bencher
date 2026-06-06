@@ -751,6 +751,16 @@ impl OciLocalStorage {
         Ok(Bytes::from(data))
     }
 
+    /// Checks if a manifest exists
+    pub async fn manifest_exists(
+        &self,
+        repository: &ProjectUuid,
+        digest: &Digest,
+    ) -> Result<bool, OciStorageError> {
+        let path = self.manifest_path(repository, digest);
+        Ok(fs::try_exists(&path).await.unwrap_or(false))
+    }
+
     /// Resolves a tag to a digest
     pub async fn resolve_tag(
         &self,
@@ -1086,6 +1096,29 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(retrieved.as_ref(), content.as_bytes());
+    }
+
+    #[tokio::test]
+    async fn manifest_exists_reports_presence() {
+        let tmp = tempfile::tempdir().unwrap();
+        let storage = test_storage(&tmp);
+        let repo = test_repository();
+        let content = test_manifest_json(
+            "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        );
+        let manifest = bencher_json::oci::Manifest::from_bytes(content.as_bytes()).unwrap();
+
+        let digest = storage
+            .put_manifest(&repo, Bytes::from(content), None, &manifest)
+            .await
+            .unwrap();
+
+        // A stored manifest is reported as existing
+        assert!(storage.manifest_exists(&repo, &digest).await.unwrap());
+
+        // A never-written digest is reported as absent
+        let missing = Digest::from_sha256_bytes(b"no such manifest");
+        assert!(!storage.manifest_exists(&repo, &missing).await.unwrap());
     }
 
     #[tokio::test]

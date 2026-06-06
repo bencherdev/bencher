@@ -146,7 +146,7 @@ impl RegistryClient {
         let image_manifest = match &parsed {
             bencher_json::oci::Manifest::OciImageIndex(index) => {
                 let desc = select_platform_manifest(&index.manifests)?;
-                let (_, nested_bytes) = self.pull_blob(image_ref, &desc.digest)?;
+                let (_, nested_bytes) = self.pull_manifest_by_digest(image_ref, &desc.digest)?;
 
                 // Save nested manifest blob
                 let nested_path = blob_path_for_digest(&blobs_base, &desc.digest)?;
@@ -160,7 +160,7 @@ impl RegistryClient {
             },
             bencher_json::oci::Manifest::DockerManifestList(list) => {
                 let desc = select_platform_manifest(&list.manifests)?;
-                let (_, nested_bytes) = self.pull_blob(image_ref, &desc.digest)?;
+                let (_, nested_bytes) = self.pull_manifest_by_digest(image_ref, &desc.digest)?;
 
                 // Save nested manifest blob
                 let nested_path = blob_path_for_digest(&blobs_base, &desc.digest)?;
@@ -273,6 +273,38 @@ impl RegistryClient {
         if image_ref.is_digest() && computed_digest != image_ref.reference() {
             return Err(OciError::DigestMismatch {
                 expected: image_ref.reference().to_owned(),
+                actual: computed_digest,
+            });
+        }
+
+        Ok((computed_digest, bytes))
+    }
+
+    fn pull_manifest_by_digest(
+        &mut self,
+        image_ref: &ImageReference,
+        digest: &str,
+    ) -> Result<(String, Vec<u8>), OciError> {
+        let url = self.registry_url(
+            image_ref.registry(),
+            &format!("/v2/{}/manifests/{digest}", image_ref.repository()),
+        );
+
+        let accept = MANIFEST_MEDIA_TYPES.join(", ");
+        let mut response = self.authenticated_request(&url, &accept)?;
+
+        let bytes = response
+            .body_mut()
+            .read_to_vec()
+            .map_err(|e| OciError::Registry(format!("Failed to read manifest: {e}")))?;
+
+        let parsed: bencher_valid::ImageDigest = digest
+            .parse()
+            .map_err(|_err| OciError::InvalidReference(digest.to_owned()))?;
+        let computed_digest = DigestHasher::digest(parsed.algorithm(), &bytes)?;
+        if computed_digest != digest {
+            return Err(OciError::DigestMismatch {
+                expected: digest.to_owned(),
                 actual: computed_digest,
             });
         }

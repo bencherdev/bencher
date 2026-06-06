@@ -150,6 +150,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "slog",
  "tokio",
 ]
@@ -1122,6 +1123,7 @@ dependencies = [
  "http 1.4.1",
  "libsqlite3-sys",
  "reqwest",
+ "rustls",
  "serde_json",
  "sha2 0.11.0",
  "slog",

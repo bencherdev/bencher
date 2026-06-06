@@ -80,8 +80,12 @@ jobs:
           if-no-files-found: error
 
   api_smoke_test:
-    name: API Smoke Test
+    name: API Smoke Test (${{ matrix.image-store }})
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image-store: [overlay2, containerd]
     steps:
       - uses: BRAINSia/free-disk-space@7048ffbf50819342ac964ef3998a51c2564a8a75 # v2.1.3
         with:
@@ -111,10 +115,16 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Configure Docker for insecure local registry
+      - name: Configure Docker for insecure local registry (overlay2)
         # Port must match bencher_json::BENCHER_API_PORT
+        if: matrix.image-store == 'overlay2'
         run: |
           echo '{"insecure-registries": ["localhost:61016"]}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker
+      - name: Configure Docker for insecure local registry (containerd)
+        if: matrix.image-store == 'containerd'
+        run: |
+          echo '{"insecure-registries": ["localhost:61016"], "features": {"containerd-snapshotter": true}}' | sudo tee /etc/docker/daemon.json
           sudo systemctl restart docker
       - name: Run Smoke Test
         env:

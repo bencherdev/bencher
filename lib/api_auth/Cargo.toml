@@ -15,6 +15,7 @@ plus = [
     "dep:chrono",
     "dep:http",
     "dep:serde_json",
+    "dep:serde_urlencoded",
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_otel?/plus",
@@ -38,6 +39,7 @@ http = { workspace = true, optional = true }
 schemars.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, optional = true }
+serde_urlencoded = { workspace = true, optional = true }
 slog.workspace = true
 
 [dev-dependencies]

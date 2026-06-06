@@ -328,13 +328,17 @@ pub async fn validate_push_access(
     // Apply rate limiting based on authentication status
     apply_push_rate_limit(log, context, &public_user)?;
 
-    // Try to find existing project, or create if using a slug
-    let conn = public_conn!(context);
-    let push_access = match QueryProject::from_resource_id(conn, repository) {
-        Ok(project) => {
+    // Try to find existing project, or create if using a slug.
+    // Bind the lookup result so the pool connection is dropped before the async match arms.
+    // Temporaries in a match scrutinee live until the end of the match expression,
+    // which includes the `.await` — holding the connection across that would deadlock
+    // under containerd's ~19 concurrent layer pushes.
+    let existing_project = QueryProject::from_resource_id(public_conn!(context), repository).ok();
+    let push_access = match existing_project {
+        Some(project) => {
             handle_existing_project(log, rqctx, context, project, &public_user, claims).await
         },
-        Err(_) => handle_nonexistent_project(log, context, repository, &public_user, claims).await,
+        None => handle_nonexistent_project(log, context, repository, &public_user, claims).await,
     }?;
     context
         .rate_limiting
