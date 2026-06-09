@@ -19,7 +19,7 @@ use oso::{PolarValue, ToPolar};
 
 use crate::{
     context::{ApiContext, DbConnection, Rbac},
-    error::{BEARER_TOKEN_FORMAT, bad_request_error, unauthorized_error},
+    error::{BEARER_TOKEN_FORMAT, bad_request_error, issue_error, unauthorized_error},
     model::{
         organization::OrganizationId,
         project::ProjectId,
@@ -51,25 +51,31 @@ impl AuthUser {
         context: &ApiContext,
         bearer_token: BearerToken,
     ) -> Result<Self, HttpError> {
+        // Check out a single connection for the entire auth flow:
+        // credential resolution and RBAC hydration share one pool checkout.
+        let conn = public_conn!(context);
         let query_user = match bearer_token {
-            BearerToken::Jwt(jwt) => Self::user_from_jwt(context, &jwt).await?,
-            BearerToken::UserKey(key) => Self::user_from_user_key(context, &key).await?,
+            BearerToken::Jwt(jwt) => Self::user_from_jwt(context, conn, &jwt)?,
+            BearerToken::UserKey(key) => Self::user_from_user_key(context, conn, &key)?,
         };
 
         #[cfg(feature = "plus")]
         context.rate_limiting.user_request(query_user.uuid)?;
 
-        Self::load(public_conn!(context), query_user)
+        Self::load(conn, query_user)
     }
 
-    async fn user_from_jwt(context: &ApiContext, jwt: &Jwt) -> Result<QueryUser, HttpError> {
+    fn user_from_jwt(
+        context: &ApiContext,
+        conn: &mut DbConnection,
+        jwt: &Jwt,
+    ) -> Result<QueryUser, HttpError> {
         let claims = context
             .token_key
             .validate_client(jwt)
             .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
         let email = claims.email();
 
-        let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, email)?;
         query_user.check_is_locked()?;
 
@@ -101,15 +107,22 @@ impl AuthUser {
     /// failure mode can be reported distinctly via `UserKeyAuthFailureReason` without
     /// a second query. All adverse cases return the same opaque `INVALID_USER_KEY`
     /// message to avoid leaking which condition tripped.
-    async fn user_from_user_key(
+    fn user_from_user_key(
         context: &ApiContext,
+        conn: &mut DbConnection,
         key: &UserKey,
     ) -> Result<QueryUser, HttpError> {
         let key_hash = UserKeyHash::from(key);
-        let conn = public_conn!(context);
         let lookup = QueryUserKey::from_hash(conn, &key_hash)
             .optional()
-            .map_err(|e| unauthorized_error(format!("Failed to look up user key: {e}")))?;
+            .inspect_err(|err| {
+                issue_error(
+                    "Failed to lookup user key",
+                    &format!("Failed to lookup user key by hash: {key_hash}"),
+                    err,
+                );
+            })
+            .map_err(|_err| unauthorized_error(INVALID_USER_KEY))?;
 
         let Some((query_key, query_user)) = lookup else {
             #[cfg(feature = "otel")]
@@ -184,7 +197,7 @@ impl AuthUser {
             ))
             .load::<(OrganizationId, String)>(conn)
             .map_err(|e| {
-                crate::error::issue_error(
+                issue_error(
                     "User can't query organization roles",
                     &format!(
                         "My user ({email}) on Bencher failed to query organization roles.",
@@ -200,7 +213,7 @@ impl AuthUser {
             .filter_map(|(org_id, role)| match role.parse() {
                 Ok(role) => Some((org_id.to_string(), role)),
                 Err(e) => {
-                    let _err = crate::error::issue_error(
+                    let _err = issue_error(
                         "Failed to parse organization role",
                         &format!("My user ({email}) on Bencher has an invalid organization role ({role}).", email = query_user.email),
                         e,
@@ -229,7 +242,7 @@ impl AuthUser {
             ))
             .load::<(OrganizationId, ProjectId, String)>(conn)
             .map_err(|e| {
-                crate::error::issue_error(
+                issue_error(
                     "User can't query project roles",
                     &format!(
                         "My user ({email}) on Bencher failed to query project roles.",
@@ -251,7 +264,7 @@ impl AuthUser {
             .filter_map(|(_, id, role)| match role.parse() {
                 Ok(role) => Some((id.to_string(), role)),
                 Err(e) => {
-                    let _err = crate::error::issue_error(
+                    let _err = issue_error(
                         "Failed to parse project role",
                         &format!(
                             "My user ({email}) on Bencher has an invalid project role ({role}).",

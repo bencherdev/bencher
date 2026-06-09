@@ -1,19 +1,23 @@
 import type { Params } from "astro";
 import { Show, createSignal } from "solid-js";
-import { BencherResource } from "../../../config/types";
-import type { JsonProjectKeyCreated } from "../../../types/bencher";
+import type { BencherResource } from "../../../config/types";
+import type {
+	JsonProjectKeyCreated,
+	JsonUserKeyCreated,
+} from "../../../types/bencher";
 import KeyCreated from "./KeyCreated";
 import PosterPanel from "./PosterPanel";
+
+export type JsonKeyCreated = JsonProjectKeyCreated | JsonUserKeyCreated;
 
 interface Props {
 	apiUrl: string;
 	params: Params;
+	resource: BencherResource;
 }
 
 const KeyAddPanel = (props: Props) => {
-	const [created, setCreated] = createSignal<JsonProjectKeyCreated | null>(
-		null,
-	);
+	const [created, setCreated] = createSignal<JsonKeyCreated | null>(null);
 
 	return (
 		<Show
@@ -22,14 +26,18 @@ const KeyAddPanel = (props: Props) => {
 				<PosterPanel
 					apiUrl={props.apiUrl}
 					params={props.params}
-					resource={BencherResource.PROJECT_KEYS}
-					onSuccess={(data) =>
-						setCreated(data as unknown as JsonProjectKeyCreated)
-					}
+					resource={props.resource}
+					onSuccess={(data) => setCreated(data as unknown as JsonKeyCreated)}
 				/>
 			}
 		>
-			{(data) => <KeyCreated params={props.params} data={data()} />}
+			{(data) => (
+				<KeyCreated
+					params={props.params}
+					resource={props.resource}
+					data={data()}
+				/>
+			)}
 		</Show>
 	);
 };
