@@ -5,12 +5,12 @@
 //! OCI data will be stored under `data/registry/`.
 
 use std::io;
-use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::task::{Context, Poll};
 
 use bytes::Bytes;
+use camino::{Utf8Path, Utf8PathBuf};
 use http_body_util::StreamBody;
 use hyper::body::Frame;
 use sha2::{Digest as _, Sha256};
@@ -110,7 +110,7 @@ struct UploadState {
 /// OCI Storage implementation using local filesystem
 pub struct OciLocalStorage {
     /// Base directory for OCI storage (e.g., `data/registry`)
-    base_dir: PathBuf,
+    base_dir: Utf8PathBuf,
     /// Upload timeout in seconds for stale upload cleanup
     upload_timeout: u64,
     /// Maximum body size in bytes for uploads
@@ -132,14 +132,14 @@ impl OciLocalStorage {
     /// OCI data will be stored in a `registry` subdirectory next to it.
     pub fn new(
         log: Logger,
-        database_path: &Path,
+        database_path: &Utf8Path,
         upload_timeout: u64,
         max_body_size: u64,
         clock: crate::Clock,
     ) -> Self {
         let base_dir = database_path
             .parent()
-            .map_or_else(|| PathBuf::from(REGISTRY_DIR), |p| p.join(REGISTRY_DIR));
+            .map_or_else(|| Utf8PathBuf::from(REGISTRY_DIR), |p| p.join(REGISTRY_DIR));
 
         Self {
             base_dir,
@@ -159,32 +159,32 @@ impl OciLocalStorage {
     // ==================== Path Generation ====================
 
     /// Returns the directory for uploads
-    fn uploads_dir(&self) -> PathBuf {
+    fn uploads_dir(&self) -> Utf8PathBuf {
         self.base_dir.join("_uploads")
     }
 
     /// Returns the directory for a specific upload
-    fn upload_dir(&self, upload_id: &UploadId) -> PathBuf {
+    fn upload_dir(&self, upload_id: &UploadId) -> Utf8PathBuf {
         self.uploads_dir().join(upload_id.to_string())
     }
 
     /// Returns the path for upload state metadata
-    fn upload_state_path(&self, upload_id: &UploadId) -> PathBuf {
+    fn upload_state_path(&self, upload_id: &UploadId) -> Utf8PathBuf {
         self.upload_dir(upload_id).join("state.json")
     }
 
     /// Returns the path for upload data
-    fn upload_data_path(&self, upload_id: &UploadId) -> PathBuf {
+    fn upload_data_path(&self, upload_id: &UploadId) -> Utf8PathBuf {
         self.upload_dir(upload_id).join("data")
     }
 
     /// Returns the directory for a repository
-    fn repository_dir(&self, repository: &ProjectUuid) -> PathBuf {
+    fn repository_dir(&self, repository: &ProjectUuid) -> Utf8PathBuf {
         self.base_dir.join(repository.to_string())
     }
 
     /// Returns the path for a blob
-    fn blob_path(&self, repository: &ProjectUuid, digest: &Digest) -> PathBuf {
+    fn blob_path(&self, repository: &ProjectUuid, digest: &Digest) -> Utf8PathBuf {
         self.repository_dir(repository)
             .join("blobs")
             .join(digest.algorithm())
@@ -192,7 +192,7 @@ impl OciLocalStorage {
     }
 
     /// Returns the path for a manifest by digest
-    fn manifest_path(&self, repository: &ProjectUuid, digest: &Digest) -> PathBuf {
+    fn manifest_path(&self, repository: &ProjectUuid, digest: &Digest) -> Utf8PathBuf {
         self.repository_dir(repository)
             .join("manifests")
             .join(digest.algorithm())
@@ -200,14 +200,14 @@ impl OciLocalStorage {
     }
 
     /// Returns the path for a tag link
-    fn tag_path(&self, repository: &ProjectUuid, tag: &crate::types::Tag) -> PathBuf {
+    fn tag_path(&self, repository: &ProjectUuid, tag: &crate::types::Tag) -> Utf8PathBuf {
         self.repository_dir(repository)
             .join("tags")
             .join(tag.as_str())
     }
 
     /// Returns the directory for referrers to a given digest
-    fn referrers_dir(&self, repository: &ProjectUuid, subject_digest: &Digest) -> PathBuf {
+    fn referrers_dir(&self, repository: &ProjectUuid, subject_digest: &Digest) -> Utf8PathBuf {
         self.repository_dir(repository)
             .join("referrers")
             .join(subject_digest.algorithm())
@@ -220,7 +220,7 @@ impl OciLocalStorage {
         repository: &ProjectUuid,
         subject_digest: &Digest,
         referrer_digest: &Digest,
-    ) -> PathBuf {
+    ) -> Utf8PathBuf {
         self.referrers_dir(repository, subject_digest).join(format!(
             "{}-{}",
             referrer_digest.algorithm(),
@@ -231,7 +231,7 @@ impl OciLocalStorage {
     // ==================== Job Output ====================
 
     /// Returns the path for a job output blob.
-    fn job_output_path(&self, project: ProjectUuid, job: bencher_json::JobUuid) -> PathBuf {
+    fn job_output_path(&self, project: ProjectUuid, job: bencher_json::JobUuid) -> Utf8PathBuf {
         self.repository_dir(&project)
             .join("output")
             .join("v0")
@@ -965,7 +965,7 @@ impl OciLocalStorage {
 /// Individual upload cleanup failures are logged but don't stop processing.
 async fn cleanup_stale_uploads_local(
     log: &Logger,
-    uploads_dir: &Path,
+    uploads_dir: &Utf8Path,
     upload_timeout: u64,
     clock: crate::Clock,
 ) {
@@ -1052,7 +1052,9 @@ mod tests {
 
     /// Create a test `OciLocalStorage` backed by a temporary directory.
     fn test_storage(tmp: &tempfile::TempDir) -> OciLocalStorage {
-        let db_path = tmp.path().join("bencher.db");
+        let db_path = Utf8Path::from_path(tmp.path())
+            .expect("temp dir path should be valid UTF-8")
+            .join("bencher.db");
         let log = Logger::root(slog::Discard, slog::o!());
         OciLocalStorage::new(log, &db_path, 3600, 0x4000_0000, crate::Clock::System)
     }

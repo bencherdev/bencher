@@ -30,6 +30,7 @@ use bencher_json::{
     },
 };
 use bytes::Bytes;
+use camino::Utf8Path;
 use chrono::Utc;
 use futures::stream::{self, StreamExt as _};
 use hyper::body::Frame;
@@ -296,13 +297,21 @@ impl OciStorage {
         let body_size = max_body_size.unwrap_or(DEFAULT_MAX_BODY_SIZE);
         let clock = clock.unwrap_or(Clock::System);
         match data_store {
-            Some(RegistryDataStore::Local) | None => Ok(OciStorage::Local(OciLocalStorage::new(
-                log,
-                database_path,
-                timeout,
-                body_size,
-                clock,
-            ))),
+            Some(RegistryDataStore::Local) | None => {
+                let database_path = Utf8Path::from_path(database_path).ok_or_else(|| {
+                    OciStorageError::Config(format!(
+                        "Database path is not valid UTF-8: {}",
+                        database_path.display()
+                    ))
+                })?;
+                Ok(OciStorage::Local(OciLocalStorage::new(
+                    log,
+                    database_path,
+                    timeout,
+                    body_size,
+                    clock,
+                )))
+            },
             Some(RegistryDataStore::AwsS3 {
                 access_key_id,
                 secret_access_key,

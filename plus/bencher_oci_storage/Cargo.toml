@@ -16,6 +16,7 @@ plus = [
     "dep:aws-sdk-s3",
     "dep:bencher_json",
     "dep:bytes",
+    "dep:camino",
     "dep:chrono",
     "dep:futures",
     "dep:hex",
@@ -46,6 +47,7 @@ sentry = { workspace = true, optional = true }
 
 # External dependencies
 bytes = { workspace = true, optional = true }
+camino = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
