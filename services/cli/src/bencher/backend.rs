@@ -30,8 +30,6 @@ enum BackendKind {
 pub enum BackendError {
     #[error("Failed to parse host URL: {0}")]
     ParseHost(bencher_json::ValidError),
-    #[error("Failed to parse API token: {0}")]
-    ParseToken(bencher_json::ValidError),
     #[error(
         "Failed to find Bencher API credential, and this API endpoint requires authorization. Set `--token`/`BENCHER_API_TOKEN` or `--key`/`BENCHER_API_KEY`."
     )]
