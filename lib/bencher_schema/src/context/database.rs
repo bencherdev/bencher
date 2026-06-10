@@ -1,11 +1,8 @@
-use std::{
-    path::{Path, PathBuf},
-    str::FromStr,
-    sync::Arc,
-};
+use std::{str::FromStr, sync::Arc};
 
+use aws_sdk_s3::{error::SdkError, operation::put_object::PutObjectError};
 use bencher_json::{Secret, system::config::DataStore as DataStoreConfig};
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use dropshot::HttpError;
 
@@ -14,7 +11,7 @@ use crate::error::issue_error;
 pub type DbConnection = diesel::SqliteConnection;
 
 pub struct Database {
-    pub path: PathBuf,
+    pub path: Utf8PathBuf,
     pub busy_timeout: u32,
     /// The public database connection pool.
     /// Unauthenticated requests should only use this pool.
@@ -84,10 +81,10 @@ pub struct AwsS3 {
 
 #[derive(Debug, thiserror::Error)]
 pub enum DataStoreError {
-    #[error("Failed to configure data store: {0}")]
-    DataStore(String),
-    #[error("Failed to use AWS S3: {0}")]
-    AwsS3(String),
+    #[error("Failed to read database backup file: {0}")]
+    ByteStream(aws_sdk_s3::primitives::ByteStreamError),
+    #[error("Failed to put database backup object to AWS S3: {0}")]
+    PutObject(Box<SdkError<PutObjectError>>),
     #[error("Failed to parse S3 ARN ({access_point}): {error}")]
     S3Arn {
         access_point: String,
@@ -110,7 +107,11 @@ impl TryFrom<DataStoreConfig> for DataStore {
 }
 
 impl DataStore {
-    pub async fn backup(&self, source_path: &Path, file_name: &str) -> Result<(), DataStoreError> {
+    pub async fn backup(
+        &self,
+        source_path: &Utf8Path,
+        file_name: &str,
+    ) -> Result<(), DataStoreError> {
         match self {
             Self::AwsS3(aws_s3) => aws_s3.backup(source_path, file_name).await,
         }
@@ -148,7 +149,7 @@ impl AwsS3 {
         Ok(Self { client, s3_arn })
     }
 
-    async fn backup(&self, source_path: &Path, file_name: &str) -> Result<(), DataStoreError> {
+    async fn backup(&self, source_path: &Utf8Path, file_name: &str) -> Result<(), DataStoreError> {
         let key = if let Some(bucket_path) = &self.s3_arn.bucket_path {
             Utf8PathBuf::from(bucket_path).join(file_name).to_string()
         } else {
@@ -157,7 +158,7 @@ impl AwsS3 {
 
         let body = aws_sdk_s3::primitives::ByteStream::from_path(source_path)
             .await
-            .map_err(|e| DataStoreError::AwsS3(e.to_string()))?;
+            .map_err(DataStoreError::ByteStream)?;
 
         self.client
             .put_object()
@@ -166,7 +167,7 @@ impl AwsS3 {
             .body(body)
             .send()
             .await
-            .map_err(|e| DataStoreError::AwsS3(e.to_string()))?;
+            .map_err(|e| DataStoreError::PutObject(Box::new(e)))?;
 
         Ok(())
     }

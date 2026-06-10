@@ -49,8 +49,7 @@ pub async fn server_stats_get(
 
 async fn get_one_inner(log: &Logger, context: &ApiContext) -> Result<JsonServerStats, HttpError> {
     let query_server = QueryServer::get_server(auth_conn!(context))?;
-    let conn = DbConnection::establish(context.database.path.to_string_lossy().as_ref())
-        .map_err(not_found_error)?;
+    let conn = DbConnection::establish(context.database.path.as_str()).map_err(not_found_error)?;
     query_server
         .get_stats(log.clone(), conn, context.is_bencher_cloud)
         .await

@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use rustls::crypto::aws_lc_rs;
 
@@ -106,7 +106,7 @@ impl TestServer {
         let rbac = init_rbac().expect("Failed to init RBAC").into();
 
         let database = Database {
-            path: PathBuf::from(&db_path),
+            path: db_path.clone().into(),
             busy_timeout: 5_000,
             public_pool,
             auth_pool,
@@ -196,7 +196,7 @@ impl TestServer {
         let rbac = init_rbac().expect("Failed to init RBAC").into();
 
         let database = Database {
-            path: PathBuf::from(&db_path),
+            path: db_path.clone().into(),
             busy_timeout: 5_000,
             public_pool,
             auth_pool,

@@ -35,6 +35,7 @@ bencher_rbac.workspace = true
 bencher_recaptcha = { workspace = true, optional = true }
 bencher_schema.workspace = true
 bencher_token.workspace = true
+camino.workspace = true
 diesel.workspace = true
 dropshot.workspace = true
 oso.workspace = true

@@ -3,7 +3,7 @@
     reason = "dependencies used by lib but not binary"
 )]
 
-#[cfg(feature = "sentry")]
+#[cfg(feature = "plus")]
 use std::path::PathBuf;
 use std::sync::Arc;
 

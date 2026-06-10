@@ -64,7 +64,7 @@ pub struct Config(JsonConfig);
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
     #[error("Failed to parse config string: {0}")]
-    ParseStr(String),
+    ParseStr(serde_json::Error),
     #[error("Failed to open config file ({0}): {1}")]
     OpenFile(String, std::io::Error),
     #[error("Failed to parse config file ({0}): {1}")]
@@ -122,7 +122,7 @@ impl Config {
                 log,
                 "Failed to parse config string from \"{BENCHER_CONFIG}\": {e}"
             );
-            ConfigError::ParseStr(config_str.clone())
+            ConfigError::ParseStr(e)
         })?;
         info!(
             log,

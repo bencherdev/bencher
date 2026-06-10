@@ -1,7 +1,6 @@
-use std::{ffi::OsStr, path::PathBuf};
-
 use async_compression::tokio::write::GzipEncoder;
 use bencher_json::{DateTime, JsonBackup, JsonBackupCreated, system::backup::JsonDataStore};
+use camino::{Utf8Path, Utf8PathBuf};
 use chrono::Utc;
 use tokio::{
     fs::remove_file,
@@ -18,7 +17,7 @@ const PAUSE_BETWEEN_PAGES: std::time::Duration = std::time::Duration::from_milli
 const PAGES_PER_STEP_COEFFICIENT: usize = SQLITE_PAGE_SIZE * 10 * 60 * 10;
 
 pub struct ServerBackup {
-    pub file_path: PathBuf,
+    pub file_path: Utf8PathBuf,
     pub file_name: String,
     pub created: DateTime,
 }
@@ -27,17 +26,17 @@ pub struct ServerBackup {
 pub enum ServerBackupError {
     #[error("Failed to get source database size ({path}): {error}")]
     GetSourceDatabaseSize {
-        path: PathBuf,
+        path: Utf8PathBuf,
         error: std::io::Error,
     },
     #[error("Failed to open source database ({path}): {error}")]
     OpenSourceDatabase {
-        path: PathBuf,
+        path: Utf8PathBuf,
         error: rusqlite::Error,
     },
     #[error("Failed to open destination database ({path}): {error}")]
     OpenDestinationDatabase {
-        path: PathBuf,
+        path: Utf8PathBuf,
         error: rusqlite::Error,
     },
     #[error("Failed to create online backup: {0}")]
@@ -66,7 +65,7 @@ pub enum ServerBackupError {
 
 impl ServerBackup {
     pub async fn run(
-        file_path: PathBuf,
+        file_path: Utf8PathBuf,
         data_store: Option<&DataStore>,
         json_backup: JsonBackup,
     ) -> Result<JsonBackupCreated, ServerBackupError> {
@@ -113,21 +112,15 @@ impl ServerBackup {
         Ok(JsonBackupCreated { created })
     }
 
-    pub fn backup_database(file_path: &PathBuf) -> Result<Self, ServerBackupError> {
-        let file_stem = file_path
-            .file_stem()
-            .unwrap_or_else(|| OsStr::new("bencher"))
-            .to_string_lossy();
-        let file_extension = file_path
-            .extension()
-            .unwrap_or_else(|| OsStr::new("db"))
-            .to_string_lossy();
+    pub fn backup_database(file_path: &Utf8Path) -> Result<Self, ServerBackupError> {
+        let file_stem = file_path.file_stem().unwrap_or("bencher");
+        let file_extension = file_path.extension().unwrap_or("db");
         let date_time = Utc::now();
         let file_name = format!(
             "backup-{file_stem}-{}.{file_extension}",
             date_time.format("%Y-%m-%d-%H-%M-%S")
         );
-        let mut backup_file_path = file_path.clone();
+        let mut backup_file_path = file_path.to_path_buf();
         backup_file_path.set_file_name(&file_name);
 
         run_online_backup(file_path, &backup_file_path)?;
@@ -140,12 +133,12 @@ impl ServerBackup {
     }
 }
 
-fn run_online_backup(src: &PathBuf, dest: &PathBuf) -> Result<(), ServerBackupError> {
+fn run_online_backup(src: &Utf8Path, dest: &Utf8Path) -> Result<(), ServerBackupError> {
     // Get the total size of the source database
     let src_size = src
         .metadata()
         .map_err(|error| ServerBackupError::GetSourceDatabaseSize {
-            path: src.clone(),
+            path: src.to_path_buf(),
             error,
         })?
         .len();
@@ -160,12 +153,12 @@ fn run_online_backup(src: &PathBuf, dest: &PathBuf) -> Result<(), ServerBackupEr
 
     let src_connection =
         rusqlite::Connection::open(src).map_err(|error| ServerBackupError::OpenSourceDatabase {
-            path: src.clone(),
+            path: src.to_path_buf(),
             error,
         })?;
     let mut dest_connection = rusqlite::Connection::open(dest).map_err(|error| {
         ServerBackupError::OpenDestinationDatabase {
-            path: dest.clone(),
+            path: dest.to_path_buf(),
             error,
         }
     })?;
@@ -178,9 +171,9 @@ fn run_online_backup(src: &PathBuf, dest: &PathBuf) -> Result<(), ServerBackupEr
 }
 
 async fn compress_database(
-    backup_file_path: PathBuf,
+    backup_file_path: Utf8PathBuf,
     backup_file_name: &str,
-) -> Result<(PathBuf, String), ServerBackupError> {
+) -> Result<(Utf8PathBuf, String), ServerBackupError> {
     let backup_file = tokio::fs::File::open(&backup_file_path)
         .await
         .map_err(ServerBackupError::OpenBackupFile)?;

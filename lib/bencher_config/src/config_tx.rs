@@ -1,9 +1,4 @@
-use std::{
-    fs,
-    num::NonZeroUsize,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{fs, num::NonZeroUsize, sync::Arc};
 
 use bencher_endpoint::Registrar;
 #[cfg(feature = "plus")]
@@ -29,6 +24,7 @@ use bencher_schema::{
     write_conn,
 };
 use bencher_token::TokenKey;
+use camino::{Utf8Path, Utf8PathBuf};
 use diesel::{
     Connection as _,
     connection::SimpleConnection as _,
@@ -62,7 +58,9 @@ pub enum ConfigTxError {
     #[error("Failed to run database pragma: {0}")]
     Pragma(diesel::result::Error),
     #[error("Failed to create temp directory ({0}): {1}")]
-    TempDir(PathBuf, std::io::Error),
+    TempDir(Utf8PathBuf, std::io::Error),
+    #[error("Database file path is not valid UTF-8: {0}")]
+    DatabasePath(camino::FromPathBufError),
     #[error("Failed to parse role based access control (RBAC) rules: {0}")]
     Polar(Box<oso::OsoError>),
     #[error("Invalid endpoint URL: {0}")]
@@ -194,20 +192,25 @@ async fn into_context(
 
     let rbac = init_rbac().map_err(ConfigTxError::Polar)?.into();
 
-    let database_path = json_database.file.to_string_lossy();
-    diesel_database_url(log, &database_path);
+    let JsonDatabase {
+        file,
+        data_store,
+        busy_timeout,
+    } = json_database;
+    let database_path = Utf8PathBuf::try_from(file).map_err(ConfigTxError::DatabasePath)?;
+    diesel_database_url(log, database_path.as_str());
 
-    sqlite_tmpdir(log, &json_database.file)?;
+    sqlite_tmpdir(log, &database_path)?;
 
     info!(log, "Connecting to database: {database_path}");
-    let mut database_connection = DbConnection::establish(&database_path)
+    let mut database_connection = DbConnection::establish(database_path.as_str())
         .map_err(|e| ConfigTxError::DatabaseConnection(database_path.to_string(), e))?;
 
     // Set essential SQLite PRAGMAs for concurrent access.
     // WAL mode allows concurrent readers with a single writer.
     // busy_timeout prevents immediate SQLITE_BUSY errors under lock contention.
     // synchronous=NORMAL is safe with WAL mode and reduces fsync overhead.
-    let busy_timeout = json_database.busy_timeout.unwrap_or(DEFAULT_BUSY_TIMEOUT);
+    let busy_timeout = busy_timeout.unwrap_or(DEFAULT_BUSY_TIMEOUT);
     info!(
         log,
         "Setting database PRAGMAs (busy_timeout: {busy_timeout}ms)"
@@ -240,17 +243,17 @@ async fn into_context(
     info!(log, "Running database migrations");
     bencher_schema::run_migrations(&mut database_connection)?;
 
-    let public_pool = connection_pool(log, &database_path, busy_timeout)?;
-    let auth_pool = connection_pool(log, &database_path, busy_timeout)?;
+    let public_pool = connection_pool(log, database_path.as_str(), busy_timeout)?;
+    let auth_pool = connection_pool(log, database_path.as_str(), busy_timeout)?;
 
-    let data_store = if let Some(data_store) = json_database.data_store {
+    let data_store = if let Some(data_store) = data_store {
         Some(data_store.try_into().map_err(ConfigTxError::DataStore)?)
     } else {
         None
     };
 
     let database = Database {
-        path: json_database.file,
+        path: database_path,
         busy_timeout,
         public_pool,
         auth_pool,
@@ -382,19 +385,19 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
 // This prevents temp files from filling up the root filesystem on containerized deployments.
 // Must be called BEFORE establishing any SQLite connections.
 // https://www.sqlite.org/tempfiles.html
-fn sqlite_tmpdir(log: &Logger, database_path: &Path) -> Result<(), ConfigTxError> {
+fn sqlite_tmpdir(log: &Logger, database_path: &Utf8Path) -> Result<(), ConfigTxError> {
     // Get the parent directory of the database file and create a tmp subdirectory
     let temp_dir = database_path
         .parent()
-        .map_or_else(|| PathBuf::from("tmp"), |p| p.join("tmp"));
+        .map_or_else(|| Utf8PathBuf::from("tmp"), |p| p.join("tmp"));
 
     // Create the temp directory if it doesn't exist
     if !temp_dir.exists() {
-        info!(log, "Creating SQLite temp directory: {temp_dir:?}");
+        info!(log, "Creating SQLite temp directory: {temp_dir}");
         fs::create_dir_all(&temp_dir).map_err(|e| ConfigTxError::TempDir(temp_dir.clone(), e))?;
     }
 
-    info!(log, "Setting \"{SQLITE_TMPDIR}\" to {temp_dir:?}");
+    info!(log, "Setting \"{SQLITE_TMPDIR}\" to {temp_dir}");
     // Set the SQLITE_TMPDIR environment variable
     // SQLite checks this env var when determining where to store temporary files
     // SAFETY: This is safe because we are the only process running in production
@@ -402,7 +405,7 @@ fn sqlite_tmpdir(log: &Logger, database_path: &Path) -> Result<(), ConfigTxError
     // This must be set before any SQLite connections are established.
     #[expect(unsafe_code, reason = "SQLITE_TMPDIR")]
     unsafe {
-        std::env::set_var(SQLITE_TMPDIR, temp_dir.as_os_str());
+        std::env::set_var(SQLITE_TMPDIR, temp_dir.as_str());
     }
 
     Ok(())

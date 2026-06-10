@@ -1,4 +1,4 @@
-use std::{net::IpAddr, path::Path, time::Duration};
+use std::{net::IpAddr, time::Duration};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -374,7 +374,7 @@ impl RateLimiting {
         remote_ip::remote_ip(log, headers)
     }
 
-    pub fn save(&self, db_path: &Path, log: &Logger) -> Result<(), RateLimitingPersistError> {
+    pub fn save(&self, db_path: &Utf8Path, log: &Logger) -> Result<(), RateLimitingPersistError> {
         let snapshot = RateLimitingSnapshot::new(
             self.public.snapshot(),
             self.user.snapshot(),
@@ -382,7 +382,7 @@ impl RateLimiting {
             self.runner.snapshot(),
             self.bandwidth.snapshot(),
         );
-        let snapshot_path = Self::snapshot_path(db_path)?;
+        let snapshot_path = Self::snapshot_path(db_path);
         let partial_path = snapshot_path.with_extension("json.partial");
         let json = serde_json::to_string(&snapshot).map_err(RateLimitingPersistError::Serialize)?;
         std::fs::write(&partial_path, json)
@@ -394,8 +394,8 @@ impl RateLimiting {
         Ok(())
     }
 
-    pub fn load(&self, db_path: &Path, log: &Logger) -> Result<(), RateLimitingPersistError> {
-        let snapshot_path = Self::snapshot_path(db_path)?;
+    pub fn load(&self, db_path: &Utf8Path, log: &Logger) -> Result<(), RateLimitingPersistError> {
+        let snapshot_path = Self::snapshot_path(db_path);
         if !snapshot_path.exists() {
             return Ok(());
         }
@@ -419,17 +419,14 @@ impl RateLimiting {
         Ok(())
     }
 
-    fn snapshot_path(db_path: &Path) -> Result<Utf8PathBuf, RateLimitingPersistError> {
-        let db_path = Utf8Path::from_path(db_path).ok_or(RateLimitingPersistError::NonUtf8Path)?;
+    fn snapshot_path(db_path: &Utf8Path) -> Utf8PathBuf {
         let parent = db_path.parent().unwrap_or(Utf8Path::new("."));
-        Ok(parent.join("rate_limiting.json"))
+        parent.join("rate_limiting.json")
     }
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum RateLimitingPersistError {
-    #[error("Database path is not valid UTF-8")]
-    NonUtf8Path,
     #[error("Failed to serialize rate limiting snapshot: {0}")]
     Serialize(serde_json::Error),
     #[error("Failed to write rate limiting snapshot to {1}: {0}")]

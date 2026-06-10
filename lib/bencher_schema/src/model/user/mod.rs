@@ -90,7 +90,7 @@ impl QueryUser {
             .map_err(resource_not_found_err!(User, email))
     }
 
-    pub fn get_email_from_id(conn: &mut DbConnection, id: UserId) -> Result<String, HttpError> {
+    pub fn get_email_from_id(conn: &mut DbConnection, id: UserId) -> Result<Email, HttpError> {
         schema::user::table
             .filter(schema::user::id.eq(id))
             .select(schema::user::email)

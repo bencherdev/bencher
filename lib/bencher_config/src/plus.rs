@@ -1,7 +1,5 @@
 #![cfg(feature = "plus")]
 
-use std::path::Path;
-
 use bencher_billing::Biller;
 use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
@@ -15,6 +13,7 @@ use bencher_license::Licensor;
 use bencher_oci_storage::OciStorage;
 use bencher_recaptcha::RecaptchaClient;
 use bencher_schema::context::{Indexer, StatsSettings};
+use camino::Utf8Path;
 use slog::{Logger, info};
 use tokio::runtime::Handle;
 use url::Url;
@@ -60,7 +59,7 @@ impl Plus {
         log: &Logger,
         console_url: &Url,
         plus: Option<JsonPlus>,
-        database_path: &Path,
+        database_path: &Utf8Path,
     ) -> Result<Self, PlusError> {
         let Some(plus) = plus else {
             // No Plus config, but still provide local OCI storage
@@ -77,7 +76,7 @@ impl Plus {
                 oci_storage: OciStorage::try_from_config(
                     log.clone(),
                     None,
-                    database_path,
+                    database_path.as_std_path(),
                     None,
                     None,
                     None,
@@ -109,7 +108,7 @@ impl Plus {
         let oci_storage = OciStorage::try_from_config(
             log.clone(),
             registry_data_store,
-            database_path,
+            database_path.as_std_path(),
             upload_timeout,
             max_body_size,
             None,

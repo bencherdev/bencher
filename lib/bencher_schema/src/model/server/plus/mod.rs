@@ -1,7 +1,6 @@
 #![cfg(feature = "plus")]
 
 use std::cmp;
-use std::path::PathBuf;
 use std::sync::LazyLock;
 
 use bencher_json::system::server::SelfHostedStats;
@@ -10,6 +9,7 @@ use bencher_json::{
     PlanLevel, SelfHostedStartup, ServerUuid,
 };
 use bencher_license::Licensor;
+use camino::Utf8PathBuf;
 use chrono::{Duration, Utc};
 use diesel::{Connection as _, RunQueryDsl as _, connection::SimpleConnection as _};
 use dropshot::HttpError;
@@ -77,7 +77,7 @@ impl QueryServer {
     pub fn spawn_stats(
         self,
         log: Logger,
-        db_path: PathBuf,
+        db_path: Utf8PathBuf,
         busy_timeout: u32,
         stats: StatsSettings,
         messenger: Option<Messenger>,
@@ -116,8 +116,7 @@ impl QueryServer {
                 .unwrap_or(std::time::Duration::from_hours(24));
                 tokio::time::sleep(sleep_time).await;
 
-                let Ok(mut conn) = DbConnection::establish(db_path.to_string_lossy().as_ref())
-                else {
+                let Ok(mut conn) = DbConnection::establish(db_path.as_str()) else {
                     slog::error!(log, "Failed to establish database connection");
                     continue;
                 };
@@ -189,8 +188,7 @@ impl QueryServer {
                 if let Some(messenger) = messenger.as_ref() {
                     slog::info!(log, "Bencher Cloud Stats: {json_stats_str:?}");
 
-                    let Ok(mut conn) = DbConnection::establish(db_path.to_string_lossy().as_ref())
-                    else {
+                    let Ok(mut conn) = DbConnection::establish(db_path.as_str()) else {
                         slog::error!(
                             log,
                             "Failed to establish database connection for sending stats"

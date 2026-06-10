@@ -66,6 +66,7 @@ mod tests {
     use std::{collections::HashMap, hash::Hash, time::SystemTime};
 
     use bencher_rate_limiter::snapshot::WindowSnapshot;
+    use camino::Utf8PathBuf;
 
     use super::*;
 
@@ -145,7 +146,7 @@ mod tests {
         limiter.public_request(ip).unwrap();
 
         let dir = tempfile::tempdir().unwrap();
-        let db_path = dir.path().join("bencher.db");
+        let db_path = Utf8PathBuf::from_path_buf(dir.path().join("bencher.db")).unwrap();
         let log = slog::Logger::root(slog::Discard, slog::o!());
 
         limiter.save(&db_path, &log).unwrap();
@@ -169,7 +170,7 @@ mod tests {
         use crate::context::RateLimiting;
 
         let dir = tempfile::tempdir().unwrap();
-        let db_path = dir.path().join("bencher.db");
+        let db_path = Utf8PathBuf::from_path_buf(dir.path().join("bencher.db")).unwrap();
         let snapshot_path = dir.path().join("rate_limiting.json");
         let log = slog::Logger::root(slog::Discard, slog::o!());
 
@@ -237,7 +238,7 @@ mod tests {
         use crate::context::RateLimiting;
 
         let dir = tempfile::tempdir().unwrap();
-        let db_path = dir.path().join("bencher.db");
+        let db_path = Utf8PathBuf::from_path_buf(dir.path().join("bencher.db")).unwrap();
         let log = slog::Logger::root(slog::Discard, slog::o!());
 
         let limiter = RateLimiting::default();
@@ -249,7 +250,7 @@ mod tests {
         use crate::context::RateLimiting;
 
         let dir = tempfile::tempdir().unwrap();
-        let db_path = dir.path().join("bencher.db");
+        let db_path = Utf8PathBuf::from_path_buf(dir.path().join("bencher.db")).unwrap();
         let snapshot_path = dir.path().join("rate_limiting.json");
         std::fs::write(&snapshot_path, "not valid json").unwrap();
 
@@ -269,7 +270,7 @@ mod tests {
         limiter.record_oci_bandwidth(org_uuid, 2048);
 
         let dir = tempfile::tempdir().unwrap();
-        let db_path = dir.path().join("bencher.db");
+        let db_path = Utf8PathBuf::from_path_buf(dir.path().join("bencher.db")).unwrap();
         let log = slog::Logger::root(slog::Discard, slog::o!());
 
         limiter.save(&db_path, &log).unwrap();
