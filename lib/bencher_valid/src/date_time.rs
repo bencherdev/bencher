@@ -209,8 +209,17 @@ mod db {
 
 #[cfg(test)]
 mod tests {
-    use super::DateTime;
+    use super::{DateTime, DateTimeMillis};
+    use crate::ValidError;
     use chrono::Duration;
+    use pretty_assertions::assert_eq;
+
+    /// The timestamp behind [`DateTime::TEST`]: 06:23:00 UTC, 11 July 2024.
+    pub(super) const TEST_TIMESTAMP: i64 = 1_720_678_980;
+    pub(super) const TEST_TIMESTAMP_MILLIS: i64 = 1_720_678_980_000;
+    /// 9999-12-31T23:59:59Z, the largest commonly used four digit year timestamp.
+    const YEAR_9999_TIMESTAMP: i64 = 253_402_300_799;
+    const TEST_RFC3339_JSON: &str = "\"2024-07-11T06:23:00Z\"";
 
     #[test]
     fn elapsed_secs_positive_duration() {
@@ -237,5 +246,199 @@ mod tests {
         let start = DateTime::TEST;
         let now = start + Duration::milliseconds(1500);
         assert!((start.elapsed_secs(now) - 1.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn date_time_try_from_valid() {
+        for timestamp in [0, 1, -1, TEST_TIMESTAMP, YEAR_9999_TIMESTAMP] {
+            let date_time = DateTime::try_from(timestamp).expect("valid timestamp");
+            assert_eq!(timestamp, date_time.timestamp(), "{timestamp}");
+        }
+        assert_eq!(
+            DateTime::TEST,
+            DateTime::try_from(TEST_TIMESTAMP).expect("test timestamp")
+        );
+    }
+
+    #[test]
+    fn date_time_try_from_invalid() {
+        for timestamp in [i64::MAX, i64::MIN] {
+            let error = DateTime::try_from(timestamp).expect_err("out of range timestamp");
+            assert!(
+                matches!(error, ValidError::DateTime(t) if t == timestamp),
+                "{error}"
+            );
+        }
+    }
+
+    #[test]
+    fn date_time_millis_try_from_valid() {
+        for millis in [
+            0,
+            1,
+            999,
+            TEST_TIMESTAMP_MILLIS,
+            TEST_TIMESTAMP_MILLIS + 123,
+            -1_000,
+        ] {
+            let date_time_millis = DateTimeMillis::try_from(millis).expect("valid millis");
+            assert_eq!(millis, i64::from(date_time_millis), "{millis}");
+        }
+    }
+
+    #[test]
+    fn date_time_millis_try_from_invalid() {
+        // Negative timestamps with sub-second precision are rejected:
+        // the nanosecond remainder is negative and fails the `u32` conversion.
+        for millis in [-1, -999, -1_001, i64::MAX, i64::MIN] {
+            let error = DateTimeMillis::try_from(millis).expect_err("invalid millis");
+            assert!(
+                matches!(error, ValidError::DateTimeMillis(m) if m == millis),
+                "{error}"
+            );
+        }
+    }
+
+    #[test]
+    fn date_time_millis_round_trip() {
+        let date_time_millis = DateTimeMillis::from(DateTime::TEST);
+        assert_eq!(TEST_TIMESTAMP_MILLIS, i64::from(date_time_millis));
+        assert_eq!(DateTime::TEST, DateTime::from(date_time_millis));
+
+        let sub_second_millis = TEST_TIMESTAMP_MILLIS + 123;
+        let date_time_millis = DateTimeMillis::try_from(sub_second_millis).expect("valid millis");
+        let date_time = DateTime::from(date_time_millis);
+        assert_eq!(sub_second_millis, date_time.timestamp_millis());
+        assert_eq!(TEST_TIMESTAMP, date_time.timestamp());
+    }
+
+    #[test]
+    fn date_time_from_str_valid() {
+        let date_time: DateTime = "1720678980".parse().expect("valid timestamp string");
+        assert_eq!(DateTime::TEST, date_time);
+    }
+
+    #[test]
+    fn date_time_from_str_invalid() {
+        let error = "abc".parse::<DateTime>().expect_err("non-numeric string");
+        assert!(matches!(error, ValidError::DateTimeStr(_)), "{error}");
+
+        let error = "".parse::<DateTime>().expect_err("empty string");
+        assert!(matches!(error, ValidError::DateTimeStr(_)), "{error}");
+
+        let error = "9223372036854775807"
+            .parse::<DateTime>()
+            .expect_err("out of range timestamp string");
+        assert!(
+            matches!(error, ValidError::DateTime(t) if t == i64::MAX),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn date_time_serde_round_trip() {
+        let json = serde_json::to_string(&DateTime::TEST).expect("serialize date time");
+        assert_eq!(TEST_RFC3339_JSON, json);
+        let date_time: DateTime = serde_json::from_str(&json).expect("deserialize date time");
+        assert_eq!(DateTime::TEST, date_time);
+    }
+
+    // Note: `DateTimeMillis` only implements `Deserialize`, not `Serialize`.
+    // The visitor only implements `visit_i64`, which is what string-based
+    // deserializers (e.g. query parameters) call.
+    #[test]
+    fn date_time_millis_deserialize_i64() {
+        use serde::{
+            Deserialize as _,
+            de::value::{Error as DeserializeError, I64Deserializer},
+        };
+
+        let millis = TEST_TIMESTAMP_MILLIS + 123;
+        let date_time_millis =
+            DateTimeMillis::deserialize(I64Deserializer::<DeserializeError>::new(millis))
+                .expect("deserialize millis");
+        assert_eq!(millis, i64::from(date_time_millis));
+
+        for invalid in [i64::MAX, i64::MIN, -1] {
+            DateTimeMillis::deserialize(I64Deserializer::<DeserializeError>::new(invalid))
+                .unwrap_err();
+        }
+    }
+
+    #[test]
+    fn date_time_millis_serde_json() {
+        // serde_json parses positive integers as `u64` and calls `visit_u64`,
+        // which the visitor does not implement, so positive JSON integers are
+        // rejected even when they are valid millisecond timestamps.
+        serde_json::from_str::<DateTimeMillis>("1720678980123").unwrap_err();
+        // Negative integers are parsed as `i64` and hit `visit_i64`,
+        // so a negative whole-second timestamp is accepted.
+        let date_time_millis =
+            serde_json::from_str::<DateTimeMillis>("-1000").expect("negative whole second");
+        assert_eq!(-1_000, i64::from(date_time_millis));
+    }
+
+    #[test]
+    fn date_time_millis_serde_invalid() {
+        serde_json::from_str::<DateTimeMillis>("9223372036854775807").unwrap_err();
+        serde_json::from_str::<DateTimeMillis>("-1").unwrap_err();
+        serde_json::from_str::<DateTimeMillis>("\"1720678980123\"").unwrap_err();
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "db")]
+mod db_tests {
+    use diesel::{Connection as _, IntoSql as _, RunQueryDsl as _, SqliteConnection};
+    use pretty_assertions::assert_eq;
+
+    use super::{
+        DateTime, DateTimeMillis,
+        tests::{TEST_TIMESTAMP, TEST_TIMESTAMP_MILLIS},
+    };
+
+    fn connection() -> SqliteConnection {
+        SqliteConnection::establish(":memory:").expect("Failed to create in-memory database")
+    }
+
+    #[test]
+    fn date_time_sql_round_trip() {
+        let mut conn = connection();
+        let date_time: DateTime =
+            diesel::select(DateTime::TEST.into_sql::<diesel::sql_types::BigInt>())
+                .get_result(&mut conn)
+                .expect("Failed to round trip DateTime");
+        assert_eq!(DateTime::TEST, date_time);
+
+        let raw: i64 = diesel::select(DateTime::TEST.into_sql::<diesel::sql_types::BigInt>())
+            .get_result(&mut conn)
+            .expect("Failed to select DateTime as i64");
+        assert_eq!(TEST_TIMESTAMP, raw);
+    }
+
+    #[test]
+    fn date_time_to_sql_truncates_sub_second() {
+        let mut conn = connection();
+        let date_time_millis =
+            DateTimeMillis::try_from(TEST_TIMESTAMP_MILLIS + 123).expect("valid millis");
+        let date_time = DateTime::from(date_time_millis);
+        let raw: i64 = diesel::select(date_time.into_sql::<diesel::sql_types::BigInt>())
+            .get_result(&mut conn)
+            .expect("Failed to select DateTime as i64");
+        // `ToSql` stores whole seconds, so the milliseconds are dropped.
+        assert_eq!(TEST_TIMESTAMP, raw);
+    }
+
+    #[test]
+    fn date_time_from_sql_invalid() {
+        let mut conn = connection();
+        let error = diesel::select(i64::MAX.into_sql::<diesel::sql_types::BigInt>())
+            .get_result::<DateTime>(&mut conn)
+            .expect_err("Out of range i64 should not deserialize to DateTime");
+        let message = error.to_string();
+        assert!(
+            message.contains(&format!("Failed to validate date time: {}", i64::MAX)),
+            "{message}"
+        );
     }
 }

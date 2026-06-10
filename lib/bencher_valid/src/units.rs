@@ -383,3 +383,255 @@ fn format_number(number: f64, trim_decimal: bool) -> String {
         number_str.chars().rev().collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ordered_float::OrderedFloat;
+    use pretty_assertions::assert_eq;
+
+    use crate::ResourceName;
+
+    use super::{BYTES, DECIBELS, NANOSECONDS, PERCENTAGE, SECONDS, Units};
+
+    const ONE: f64 = 1.0;
+    const THOUSAND: f64 = 1_000.0;
+    const MILLION: f64 = 1_000_000.0;
+    const BILLION: f64 = 1_000_000_000.0;
+    const TRILLION: f64 = 1_000_000_000_000.0;
+    const QUADRILLION: f64 = 1_000_000_000_000_000.0;
+    const MINUTE_NANOS: f64 = 60_000_000_000.0;
+    const HOUR_NANOS: f64 = 3_600_000_000_000.0;
+    const MINUTE_SECS: f64 = 60.0;
+    const HOUR_SECS: f64 = 3_600.0;
+
+    const GENERIC_UNITS: &str = "widgets (w)";
+    const GENERIC_UNITS_NO_SYMBOL: &str = "widgets";
+    const GENERIC_UNITS_UNCLOSED_SYMBOL: &str = "broken (oops";
+
+    fn units(min: f64, units: &str) -> Units {
+        Units::new(
+            min,
+            units.parse::<ResourceName>().expect("valid resource name"),
+        )
+    }
+
+    fn assert_scale(
+        min: f64,
+        units_str: &str,
+        expected_factor: f64,
+        expected_units: &str,
+        expected_symbol: &str,
+    ) {
+        let units = units(min, units_str);
+        assert_eq!(
+            OrderedFloat::from(expected_factor),
+            units.scale_factor(),
+            "scale factor for `{units_str}` at min {min}"
+        );
+        assert_eq!(
+            expected_units,
+            units.scale_units(),
+            "scale units for `{units_str}` at min {min}"
+        );
+        assert_eq!(
+            expected_symbol,
+            units.scale_units_symbol(),
+            "scale units symbol for `{units_str}` at min {min}"
+        );
+    }
+
+    #[test]
+    fn nanoseconds_scale_boundaries() {
+        let cases = [
+            (-1.0, ONE, "nanoseconds (ns)", "ns"),
+            (0.0, ONE, "nanoseconds (ns)", "ns"),
+            (1.0, ONE, "nanoseconds (ns)", "ns"),
+            (999.999, ONE, "nanoseconds (ns)", "ns"),
+            (THOUSAND, THOUSAND, "microseconds (µs)", "µs"),
+            (999_999.0, THOUSAND, "microseconds (µs)", "µs"),
+            (MILLION, MILLION, "milliseconds (ms)", "ms"),
+            (999_999_999.0, MILLION, "milliseconds (ms)", "ms"),
+            (BILLION, BILLION, "seconds (s)", "s"),
+            (59_999_999_999.0, BILLION, "seconds (s)", "s"),
+            (MINUTE_NANOS, MINUTE_NANOS, "minutes (m)", "m"),
+            (3_599_999_999_999.0, MINUTE_NANOS, "minutes (m)", "m"),
+            (HOUR_NANOS, HOUR_NANOS, "hours (h)", "h"),
+            (f64::MAX, HOUR_NANOS, "hours (h)", "h"),
+        ];
+        for (min, factor, scale_units, symbol) in cases {
+            assert_scale(min, NANOSECONDS, factor, scale_units, symbol);
+        }
+    }
+
+    #[test]
+    fn seconds_scale_boundaries() {
+        let cases = [
+            (0.0, ONE, "seconds (s)", "s"),
+            (59.999, ONE, "seconds (s)", "s"),
+            (MINUTE_SECS, MINUTE_SECS, "minutes (m)", "m"),
+            (3_599.999, MINUTE_SECS, "minutes (m)", "m"),
+            (HOUR_SECS, HOUR_SECS, "hours (h)", "h"),
+            (f64::MAX, HOUR_SECS, "hours (h)", "h"),
+        ];
+        for (min, factor, scale_units, symbol) in cases {
+            assert_scale(min, SECONDS, factor, scale_units, symbol);
+        }
+    }
+
+    #[test]
+    fn bytes_scale_boundaries() {
+        let cases = [
+            (0.0, ONE, "bytes (B)", "B"),
+            (999.0, ONE, "bytes (B)", "B"),
+            (THOUSAND, THOUSAND, "kilobytes (KB)", "KB"),
+            (999_999.0, THOUSAND, "kilobytes (KB)", "KB"),
+            (MILLION, MILLION, "megabytes (MB)", "MB"),
+            (999_999_999.0, MILLION, "megabytes (MB)", "MB"),
+            (BILLION, BILLION, "gigabytes (GB)", "GB"),
+            (999_999_999_999.0, BILLION, "gigabytes (GB)", "GB"),
+            (TRILLION, TRILLION, "terabytes (TB)", "TB"),
+            (999_999_999_999_999.0, TRILLION, "terabytes (TB)", "TB"),
+            (QUADRILLION, QUADRILLION, "petabytes (PB)", "PB"),
+            (f64::MAX, QUADRILLION, "petabytes (PB)", "PB"),
+        ];
+        for (min, factor, scale_units, symbol) in cases {
+            assert_scale(min, BYTES, factor, scale_units, symbol);
+        }
+    }
+
+    #[test]
+    fn generic_scale_boundaries() {
+        let cases = [
+            (0.0, ONE, "widgets (w)", "w"),
+            (999.0, ONE, "widgets (w)", "w"),
+            (THOUSAND, THOUSAND, "widgets (w) x 1e3", "w x 1e3"),
+            (999_999.0, THOUSAND, "widgets (w) x 1e3", "w x 1e3"),
+            (MILLION, MILLION, "widgets (w) x 1e6", "w x 1e6"),
+            (BILLION, BILLION, "widgets (w) x 1e9", "w x 1e9"),
+            (TRILLION, TRILLION, "widgets (w) x 1e12", "w x 1e12"),
+            (QUADRILLION, QUADRILLION, "widgets (w) x 1e15", "w x 1e15"),
+            (f64::MAX, QUADRILLION, "widgets (w) x 1e15", "w x 1e15"),
+        ];
+        for (min, factor, scale_units, symbol) in cases {
+            assert_scale(min, GENERIC_UNITS, factor, scale_units, symbol);
+        }
+    }
+
+    #[test]
+    fn generic_scale_without_symbol() {
+        let cases = [
+            (0.0, ONE, "widgets", ""),
+            (THOUSAND, THOUSAND, "widgets x 1e3", "x 1e3"),
+            (QUADRILLION, QUADRILLION, "widgets x 1e15", "x 1e15"),
+        ];
+        for (min, factor, scale_units, symbol) in cases {
+            assert_scale(min, GENERIC_UNITS_NO_SYMBOL, factor, scale_units, symbol);
+        }
+    }
+
+    #[test]
+    fn generic_scale_unclosed_symbol() {
+        // An opening parenthesis without a closing one yields no symbol.
+        let cases = [
+            (0.0, ONE, "broken (oops", ""),
+            (THOUSAND, THOUSAND, "broken (oops x 1e3", "x 1e3"),
+        ];
+        for (min, factor, scale_units, symbol) in cases {
+            assert_scale(
+                min,
+                GENERIC_UNITS_UNCLOSED_SYMBOL,
+                factor,
+                scale_units,
+                symbol,
+            );
+        }
+    }
+
+    #[test]
+    fn percentage_and_decibels_use_generic_scaling() {
+        assert_scale(0.0, PERCENTAGE, ONE, "percentage (%)", "%");
+        assert_scale(
+            THOUSAND,
+            PERCENTAGE,
+            THOUSAND,
+            "percentage (%) x 1e3",
+            "% x 1e3",
+        );
+        assert_scale(0.0, DECIBELS, ONE, "decibels (dB)", "dB");
+        assert_scale(
+            MILLION,
+            DECIBELS,
+            MILLION,
+            "decibels (dB) x 1e6",
+            "dB x 1e6",
+        );
+    }
+
+    #[test]
+    fn nan_min_selects_largest_scale() {
+        // NaN fails every `<` comparison, so it falls through to the largest scale.
+        assert_scale(f64::NAN, NANOSECONDS, HOUR_NANOS, "hours (h)", "h");
+        assert_scale(f64::NAN, SECONDS, HOUR_SECS, "hours (h)", "h");
+        assert_scale(f64::NAN, BYTES, QUADRILLION, "petabytes (PB)", "PB");
+        assert_scale(
+            f64::NAN,
+            GENERIC_UNITS,
+            QUADRILLION,
+            "widgets (w) x 1e15",
+            "w x 1e15",
+        );
+    }
+
+    #[test]
+    fn format_float_pads_two_decimals() {
+        assert_eq!("0.00", Units::format_float(0.0));
+        assert_eq!("1.00", Units::format_float(1.0));
+        assert_eq!("999.00", Units::format_float(999.0));
+        assert_eq!("0.50", Units::format_float(0.5));
+    }
+
+    #[test]
+    fn format_float_inserts_commas() {
+        assert_eq!("1,000.00", Units::format_float(1_000.0));
+        assert_eq!("123,456.00", Units::format_float(123_456.0));
+        assert_eq!("1,234,567.00", Units::format_float(1_234_567.0));
+        assert_eq!("1,000,000,000.00", Units::format_float(1_000_000_000.0));
+    }
+
+    #[test]
+    fn format_float_rounds_to_two_decimals() {
+        assert_eq!("12,345.68", Units::format_float(12_345.678));
+        // Rounding happens before comma insertion.
+        assert_eq!("1,000.00", Units::format_float(999.999));
+    }
+
+    #[test]
+    fn format_float_negative() {
+        assert_eq!("-1.00", Units::format_float(-1.0));
+        assert_eq!("-0.50", Units::format_float(-0.5));
+        assert_eq!("-1,234.50", Units::format_float(-1_234.5));
+    }
+
+    #[test]
+    fn format_number_trims_whole_decimal() {
+        assert_eq!("0", Units::format_number(0.0, true));
+        assert_eq!("5", Units::format_number(5.0, true));
+        assert_eq!("1,000", Units::format_number(1_000.0, true));
+        assert_eq!("-5", Units::format_number(-5.0, true));
+        assert_eq!("-1,000", Units::format_number(-1_000.0, true));
+    }
+
+    #[test]
+    fn format_number_keeps_nonzero_decimal() {
+        assert_eq!("5.25", Units::format_number(5.25, true));
+        // Only an all-zero decimal (".00") is trimmed; trailing zeros remain.
+        assert_eq!("5.10", Units::format_number(5.1, true));
+        assert_eq!("0.50", Units::format_number(0.5, true));
+    }
+
+    #[test]
+    fn format_number_no_trim_keeps_decimal() {
+        assert_eq!("5.00", Units::format_number(5.0, false));
+        assert_eq!("1,000.00", Units::format_number(1_000.0, false));
+    }
+}

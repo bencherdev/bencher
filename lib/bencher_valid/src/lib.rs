@@ -1,3 +1,7 @@
+#[cfg(all(test, not(feature = "db")))]
+use diesel as _;
+#[cfg(test)]
+use libsqlite3_sys as _;
 #[cfg(feature = "server")]
 use regex as _;
 #[cfg(test)]
