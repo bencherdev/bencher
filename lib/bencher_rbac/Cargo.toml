@@ -12,6 +12,7 @@ oso.workspace = true
 
 [dev-dependencies]
 literally.workspace = true
+pretty_assertions.workspace = true
 uuid = { workspace = true, features = ["v4"] }
 
 [lints]

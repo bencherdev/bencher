@@ -1520,6 +1520,7 @@ dependencies = [
  "bencher_json",
  "literally",
  "oso",
+ "pretty_assertions",
  "uuid",
 ]
 
@@ -1651,7 +1652,9 @@ dependencies = [
  "bencher_json",
  "chrono",
  "jsonwebtoken",
+ "pretty_assertions",
  "serde",
+ "serde_json",
  "thiserror 2.0.18",
  "uuid",
 ]
@@ -1669,6 +1672,7 @@ dependencies = [
  "git-validate",
  "gix-hash",
  "hex",
+ "libsqlite3-sys",
  "ordered-float",
  "pretty_assertions",
  "rand 0.10.1",

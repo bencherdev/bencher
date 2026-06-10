@@ -50,3 +50,44 @@ impl From<Audience> for String {
         audience.to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use pretty_assertions::assert_eq;
+
+    use super::Audience;
+
+    /// Every `Audience` variant paired with its expected wire string.
+    const AUDIENCES: [(Audience, &str); 9] = [
+        (Audience::Auth, "auth"),
+        (Audience::Client, "client"),
+        (Audience::ApiKey, "api_key"),
+        (Audience::Invite, "invite"),
+        (Audience::OAuth, "oauth"),
+        (Audience::OciPublic, "oci_public"),
+        (Audience::OciAuth, "oci_auth"),
+        (Audience::OciProject, "oci_project"),
+        (Audience::OciRunner, "oci_runner"),
+    ];
+
+    #[test]
+    fn audience_as_str_matches_expected() {
+        for (audience, expected) in AUDIENCES {
+            assert_eq!(audience.as_str(), expected);
+        }
+    }
+
+    #[test]
+    fn audience_display_matches_as_str() {
+        for (audience, expected) in AUDIENCES {
+            assert_eq!(audience.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn audience_string_from_matches_display() {
+        for (audience, expected) in AUDIENCES {
+            assert_eq!(String::from(audience), expected);
+        }
+    }
+}

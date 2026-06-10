@@ -97,3 +97,80 @@ impl ToPolar for Permission {
         PolarValue::String(self.to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr as _;
+
+    use oso::{PolarValue, ToPolar as _};
+    use pretty_assertions::assert_eq;
+
+    use super::{Permission, Role};
+
+    /// Every project `Role` variant paired with its expected string.
+    const ROLES: [(Role, &str); 3] = [
+        (Role::Viewer, "viewer"),
+        (Role::Developer, "developer"),
+        (Role::Maintainer, "maintainer"),
+    ];
+
+    /// Every project `Permission` variant paired with its expected string.
+    const PERMISSIONS: [(Permission, &str); 9] = [
+        (Permission::View, "view"),
+        (Permission::Create, "create"),
+        (Permission::Edit, "edit"),
+        (Permission::Delete, "delete"),
+        (Permission::Manage, "manage"),
+        (Permission::ViewRole, "view_role"),
+        (Permission::CreateRole, "create_role"),
+        (Permission::EditRole, "edit_role"),
+        (Permission::DeleteRole, "delete_role"),
+    ];
+
+    #[test]
+    fn project_role_display_matches_expected() {
+        for (role, expected) in ROLES {
+            assert_eq!(role.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn project_role_from_str_round_trip() {
+        for (_, expected) in ROLES {
+            let role = Role::from_str(expected).unwrap();
+            assert_eq!(role.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn project_role_from_str_invalid() {
+        for invalid in ["", "member", "leader", "Viewer", "MAINTAINER", " viewer"] {
+            let error = Role::from_str(invalid).unwrap_err();
+            assert_eq!(error, invalid);
+        }
+    }
+
+    #[test]
+    fn project_role_to_polar() {
+        for (role, expected) in ROLES {
+            assert_eq!(role.to_polar(), PolarValue::String(expected.to_owned()));
+        }
+    }
+
+    #[test]
+    fn project_permission_display_matches_expected() {
+        for (permission, expected) in PERMISSIONS {
+            assert_eq!(permission.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn project_permission_to_polar() {
+        for (permission, expected) in PERMISSIONS {
+            assert_eq!(
+                permission.to_polar(),
+                PolarValue::String(expected.to_owned())
+            );
+        }
+    }
+}

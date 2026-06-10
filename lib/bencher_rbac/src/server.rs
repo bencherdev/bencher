@@ -63,3 +63,58 @@ impl ToPolar for Permission {
         PolarValue::String(self.to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use oso::{PolarValue, ToPolar as _};
+    use pretty_assertions::assert_eq;
+
+    use super::{ADMINISTER_PEM, Permission, Role, SESSION_PEM};
+
+    /// Every server `Role` variant paired with its expected string.
+    /// Note: server `Role` has no `FromStr` impl — it is write-only to Polar.
+    const ROLES: [(Role, &str); 3] = [
+        (Role::Locked, "locked"),
+        (Role::User, "user"),
+        (Role::Admin, "admin"),
+    ];
+
+    /// Every server `Permission` variant paired with its expected string.
+    const PERMISSIONS: [(Permission, &str); 2] = [
+        (Permission::Session, SESSION_PEM),
+        (Permission::Administer, ADMINISTER_PEM),
+    ];
+
+    #[test]
+    fn server_role_display_matches_expected() {
+        for (role, expected) in ROLES {
+            assert_eq!(role.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn server_role_to_polar() {
+        for (role, expected) in ROLES {
+            assert_eq!(role.to_polar(), PolarValue::String(expected.to_owned()));
+        }
+    }
+
+    #[test]
+    fn server_permission_display_matches_expected() {
+        assert_eq!(SESSION_PEM, "session");
+        assert_eq!(ADMINISTER_PEM, "administer");
+        for (permission, expected) in PERMISSIONS {
+            assert_eq!(permission.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn server_permission_to_polar() {
+        for (permission, expected) in PERMISSIONS {
+            assert_eq!(
+                permission.to_polar(),
+                PolarValue::String(expected.to_owned())
+            );
+        }
+    }
+}

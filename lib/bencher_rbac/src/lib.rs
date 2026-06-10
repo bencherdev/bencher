@@ -54,6 +54,64 @@ mod tests {
 
     static OSO: LazyLock<Oso> = LazyLock::new(|| init_rbac().expect(OSO_ERROR));
 
+    /// Pins current `bencher.polar` behavior: `locked` is only enforced at the
+    /// `Server` resource level (no `session`/`administer` permission).
+    /// The `Organization` and `Project` `has_role` rules do NOT check
+    /// `user.locked`, so a locked user who still holds organization/project
+    /// roles remains allowed at those resource levels. Callers must gate on
+    /// the server-level `session` permission first.
+    #[test]
+    fn rbac_locked_user_with_roles_keeps_org_and_project_permissions() {
+        let oso = &*OSO;
+
+        let server = Server {};
+        let org_id = Uuid::new_v4();
+        let proj_id = Uuid::new_v4();
+
+        let locked_leader = User {
+            admin: false,
+            locked: true,
+            organizations: literally::hmap! {
+                org_id.to_string() => OrgRole::Leader
+            },
+            projects: literally::hmap! {
+                proj_id.to_string() => ProjRole::Maintainer
+            },
+        };
+
+        let org = Organization {
+            id: org_id.to_string(),
+        };
+        let proj = Project {
+            id: proj_id.to_string(),
+            organization_id: org_id.to_string(),
+        };
+
+        // Denied at the server level: the lock removes `session`.
+        assert!(
+            !oso.is_allowed(locked_leader.clone(), SvrPerm::Session, server)
+                .unwrap()
+        );
+
+        // Still allowed at the organization and project levels.
+        assert!(
+            oso.is_allowed(locked_leader.clone(), OrgPerm::View, org.clone())
+                .unwrap()
+        );
+        assert!(
+            oso.is_allowed(locked_leader.clone(), OrgPerm::Manage, org)
+                .unwrap()
+        );
+        assert!(
+            oso.is_allowed(locked_leader.clone(), ProjPerm::View, proj.clone())
+                .unwrap()
+        );
+        assert!(
+            oso.is_allowed(locked_leader, ProjPerm::Manage, proj)
+                .unwrap()
+        );
+    }
+
     #[test]
     #[expect(
         clippy::cognitive_complexity,
