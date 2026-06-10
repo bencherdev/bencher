@@ -9,5 +9,10 @@ publish = false
 [dependencies]
 diesel.workspace = true
 
+[dev-dependencies]
+diesel = { workspace = true, features = ["sqlite"] }
+libsqlite3-sys.workspace = true
+pretty_assertions.workspace = true
+
 [lints]
 workspace = true

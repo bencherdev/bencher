@@ -1500,6 +1500,8 @@ name = "bencher_rank"
 version = "0.6.6"
 dependencies = [
  "diesel",
+ "libsqlite3-sys",
+ "pretty_assertions",
 ]
 
 [[package]]
