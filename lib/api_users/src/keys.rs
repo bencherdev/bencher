@@ -9,7 +9,7 @@ use bencher_json::{
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{conflict_error, resource_conflict_err, resource_not_found_err},
+    error::{conflict_error, forbidden_error, resource_conflict_err, resource_not_found_err},
     model::user::{
         QueryUser, UserId,
         auth::{AuthUser, BearerToken},
@@ -178,6 +178,10 @@ fn get_ls_query<'q>(
 /// Create a new `bencher_user_*` API key for a user.
 /// The plaintext key is only returned once in the response.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
+/// This endpoint cannot be called with a user API key:
+/// a key cannot be used to create another key, so revoking a key
+/// also cuts off any credentials that could have been derived from it.
+/// Authenticate with an API token (JWT) instead.
 #[endpoint {
     method = POST,
     path =  "/v0/users/{user}/keys",
@@ -189,7 +193,18 @@ pub async fn user_key_post(
     path_params: Path<UserKeysParams>,
     body: TypedBody<JsonNewUserKey>,
 ) -> Result<ResponseCreated<JsonUserKeyCreated>, HttpError> {
+    let is_user_key = matches!(bearer_token, BearerToken::UserKey(_));
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    // Check only after successful authentication: an invalid or revoked key
+    // still gets the opaque `Invalid user key` 401, while a valid key gets a
+    // 403 that explains the policy.
+    if is_user_key {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyCreateBlocked);
+        return Err(forbidden_error(
+            "A user API key cannot be used to create another user API key. Authenticate with an API token (JWT) instead.",
+        ));
+    }
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),

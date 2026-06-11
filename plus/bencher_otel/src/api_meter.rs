@@ -105,6 +105,7 @@ pub enum ApiCounter {
     UserTokenRevokedUse,
 
     UserKeyCreate,
+    UserKeyCreateBlocked,
     UserKeyRevoke,
     UserKeyAuthFailed(UserKeyAuthFailureReason),
 
@@ -186,7 +187,9 @@ impl ApiCounter {
             Self::UserSsoJoin(_) => "{join}",
             Self::UserCheckout => "{checkout}",
 
-            Self::UserAttemptMax(_, _) | Self::UserTokenRevokedUse => "{attempt}",
+            Self::UserAttemptMax(_, _) | Self::UserTokenRevokedUse | Self::UserKeyCreateBlocked => {
+                "{attempt}"
+            },
             Self::UserCredentialMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
             Self::UserKeyCreate | Self::UserKeyRevoke | Self::RunnerKeyRotate => "{key}",
             Self::ProjectKeyAuthFailed(_) | Self::UserKeyAuthFailed(_) => "{auth_failure}",
@@ -244,6 +247,7 @@ impl ApiCounter {
             Self::UserTokenRevokedUse => "user.token.revoked.use",
 
             Self::UserKeyCreate => "user.key.create",
+            Self::UserKeyCreateBlocked => "user.key.create.blocked",
             Self::UserKeyRevoke => "user.key.revoke",
             Self::UserKeyAuthFailed(_) => "user.key.auth.failed",
 
@@ -332,6 +336,9 @@ impl ApiCounter {
             },
 
             Self::UserKeyCreate => "Counts the number of user API key creations",
+            Self::UserKeyCreateBlocked => {
+                "Counts the number of user API key creation attempts blocked because the caller authenticated with a user API key"
+            },
             Self::UserKeyRevoke => "Counts the number of user API key revocations",
             Self::UserKeyAuthFailed(_) => "Counts the number of user key authentication failures",
 
@@ -412,6 +419,7 @@ impl ApiCounter {
             | Self::UserTokenRevoke
             | Self::UserTokenRevokedUse
             | Self::UserKeyCreate
+            | Self::UserKeyCreateBlocked
             | Self::UserKeyRevoke
             | Self::MetricsBilled
             | Self::MetricsBilledFailed

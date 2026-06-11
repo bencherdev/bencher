@@ -11,7 +11,8 @@
 //! These mirror `lib/api_projects/tests/project_key_auth.rs` but verify the
 //! complementary property: a user-scoped key must authenticate as the owning
 //! user across *every* endpoint a JWT can reach — organizations, projects,
-//! user mgmt, token mgmt, even minting more keys.
+//! user mgmt, token mgmt — except minting more user keys, which is forbidden
+//! so that a leaked key cannot outlive its own revocation.
 
 use bencher_api_tests::TestServer;
 use bencher_json::{
@@ -149,10 +150,11 @@ async fn user_key_create_project_on_personal_org() {
 }
 
 #[tokio::test]
-async fn user_key_can_mint_another_user_key() {
-    let (server, user_slug, _token, key) = setup().await;
+async fn user_key_cannot_mint_another_user_key() {
+    let (server, user_slug, token, key) = setup().await;
 
-    // Use the key (not the JWT) to mint a second key.
+    // A user key cannot mint another user key: a leaked key must not be able
+    // to establish persistence that survives its own revocation.
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
@@ -165,12 +167,27 @@ async fn user_key_can_mint_another_user_key() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::CREATED);
-    let created: JsonUserKeyCreated = resp.json().await.expect("Failed to parse second key");
-    let name: &str = created.name.as_ref();
-    assert_eq!(name, "second-key");
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+    // No key was created: the JWT still sees only the original key.
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let keys: JsonUserKeys = resp.json().await.expect("Failed to parse keys");
+    assert_eq!(keys.0.len(), 1);
 }
 
+// The tokens endpoint is deliberately out of scope for the mint restriction:
+// tightening JWT API token semantics is a separate decision.
 #[tokio::test]
 async fn user_key_can_mint_user_jwt_token() {
     let (server, user_slug, _token, key) = setup().await;

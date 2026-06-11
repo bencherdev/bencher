@@ -10181,7 +10181,7 @@
           "keys"
         ],
         "summary": "Create a user API key",
-        "description": "Create a new `bencher_user_*` API key for a user. The plaintext key is only returned once in the response. Only the authenticated user themselves and server admins have access to this endpoint.",
+        "description": "Create a new `bencher_user_*` API key for a user. The plaintext key is only returned once in the response. Only the authenticated user themselves and server admins have access to this endpoint. This endpoint cannot be called with a user API key: a key cannot be used to create another key, so revoking a key also cuts off any credentials that could have been derived from it. Authenticate with an API token (JWT) instead.",
         "operationId": "user_key_post",
         "parameters": [
           {
