@@ -13,7 +13,7 @@ use bencher_schema::{
     model::user::{
         QueryUser, UserId,
         auth::{AuthUser, BearerToken},
-        key::{InsertUserKey, QueryUserKey, UpdateUserKey},
+        key::{InsertUserKey, QueryUserKey, UpdateUserKey, UserKeyId},
         same_user,
     },
     schema, write_conn, write_transaction,
@@ -71,6 +71,8 @@ pub async fn user_keys_options(
 ///
 /// List all `bencher_user_*` API keys for a user.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
+/// When authenticated with a user API key, only that key itself is listed:
+/// a key cannot enumerate the user's other keys.
 /// By default, the keys are sorted in alphabetical order by name.
 /// The HTTP response header `X-Total-Count` contains the total number of keys.
 #[endpoint {
@@ -107,28 +109,38 @@ async fn get_ls_inner(
     let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
-    let keys = get_ls_query(&pagination_params, &query_params, query_user.id)
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryUserKey>(auth_conn!(context))
-        .map_err(resource_not_found_err!(
-            UserKey,
-            (&pagination_params, &query_params, auth_user)
-        ))?;
+    let keys = get_ls_query(
+        &pagination_params,
+        &query_params,
+        query_user.id,
+        auth_user.user_key_id,
+    )
+    .offset(pagination_params.offset())
+    .limit(pagination_params.limit())
+    .load::<QueryUserKey>(auth_conn!(context))
+    .map_err(resource_not_found_err!(
+        UserKey,
+        (&pagination_params, &query_params, auth_user)
+    ))?;
 
     let json_keys: JsonUserKeys = keys
         .into_iter()
         .map(|query_key| query_key.into_json_for_user(&query_user))
         .collect();
 
-    let total_count = get_ls_query(&pagination_params, &query_params, query_user.id)
-        .count()
-        .get_result::<i64>(auth_conn!(context))
-        .map_err(resource_not_found_err!(
-            UserKey,
-            (&pagination_params, &query_params, auth_user)
-        ))?
-        .try_into()?;
+    let total_count = get_ls_query(
+        &pagination_params,
+        &query_params,
+        query_user.id,
+        auth_user.user_key_id,
+    )
+    .count()
+    .get_result::<i64>(auth_conn!(context))
+    .map_err(resource_not_found_err!(
+        UserKey,
+        (&pagination_params, &query_params, auth_user)
+    ))?
+    .try_into()?;
 
     Ok((json_keys, total_count))
 }
@@ -137,10 +149,16 @@ fn get_ls_query<'q>(
     pagination_params: &UserKeysPagination,
     query_params: &'q UserKeysQuery,
     user_id: UserId,
+    auth_key_id: Option<UserKeyId>,
 ) -> schema::user_key::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = schema::user_key::table
         .filter(schema::user_key::user_id.eq(user_id))
         .into_boxed();
+
+    // A user key can only see itself.
+    if let Some(auth_key_id) = auth_key_id {
+        query = query.filter(schema::user_key::id.eq(auth_key_id));
+    }
 
     if let Some(true) = query_params.revoked {
         query = query.filter(schema::user_key::revoked.is_not_null());
@@ -193,12 +211,11 @@ pub async fn user_key_post(
     path_params: Path<UserKeysParams>,
     body: TypedBody<JsonNewUserKey>,
 ) -> Result<ResponseCreated<JsonUserKeyCreated>, HttpError> {
-    let is_user_key = matches!(bearer_token, BearerToken::UserKey(_));
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     // Check only after successful authentication: an invalid or revoked key
     // still gets the opaque `Invalid user key` 401, while a valid key gets a
     // 403 that explains the policy.
-    if is_user_key {
+    if auth_user.user_key_id.is_some() {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyCreateBlocked);
         return Err(forbidden_error(
@@ -267,6 +284,9 @@ pub async fn user_key_options(
 ///
 /// View an API key for a user.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
+/// When authenticated with a user API key, only that key itself may be viewed:
+/// a key cannot inspect the user's other keys.
+/// Authenticate with an API token (JWT) to view other keys.
 #[endpoint {
     method = GET,
     path =  "/v0/users/{user}/keys/{key}",
@@ -292,6 +312,18 @@ async fn get_one_inner(
 
     let query_key =
         QueryUserKey::get_user_key(auth_conn!(context), query_user.id, path_params.key)?;
+
+    // A user key can only see itself.
+    if let Some(auth_key_id) = auth_user.user_key_id
+        && auth_key_id != query_key.id
+    {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyViewBlocked);
+        return Err(forbidden_error(
+            "A user API key can only view itself. Authenticate with an API token (JWT) to view other keys.",
+        ));
+    }
+
     Ok(query_key.into_json_for_user(&query_user))
 }
 
@@ -299,6 +331,9 @@ async fn get_one_inner(
 ///
 /// Update an API key for a user (rename only).
 /// Only the authenticated user themselves and server admins have access to this endpoint.
+/// When authenticated with a user API key, only that key itself may be updated:
+/// a key cannot modify the user's other keys.
+/// Authenticate with an API token (JWT) to update other keys.
 #[endpoint {
     method = PATCH,
     path =  "/v0/users/{user}/keys/{key}",
@@ -333,6 +368,17 @@ async fn patch_inner(
     let query_key =
         QueryUserKey::get_user_key(auth_conn!(context), query_user.id, path_params.key)?;
 
+    // A user key may only mutate itself.
+    if let Some(auth_key_id) = auth_user.user_key_id
+        && auth_key_id != query_key.id
+    {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyUpdateBlocked);
+        return Err(forbidden_error(
+            "A user API key can only update itself. Authenticate with an API token (JWT) to update other keys.",
+        ));
+    }
+
     let update_key = UpdateUserKey::from(json_key);
     write_transaction!(context, |conn| {
         diesel::update(schema::user_key::table.filter(schema::user_key::id.eq(query_key.id)))
@@ -353,6 +399,9 @@ async fn patch_inner(
 /// Revocation is terminal: a revoked key can no longer authenticate any request,
 /// and the revocation cannot be undone.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
+/// When authenticated with a user API key, only that key itself may be revoked:
+/// a key can always destroy itself, but it cannot revoke the user's other keys.
+/// Authenticate with an API token (JWT) to revoke other keys.
 #[endpoint {
     method = DELETE,
     path =  "/v0/users/{user}/keys/{key}",
@@ -378,6 +427,19 @@ async fn delete_inner(
 
     let query_key =
         QueryUserKey::get_user_key(auth_conn!(context), query_user.id, path_params.key)?;
+
+    // A user key may always revoke itself (burn-after-use, in-CI incident
+    // response) but never the user's other keys: a stolen key revoking its
+    // siblings is a denial-of-service vector with no legitimate workflow.
+    if let Some(auth_key_id) = auth_user.user_key_id
+        && auth_key_id != query_key.id
+    {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyRevokeBlocked);
+        return Err(forbidden_error(
+            "A user API key can only revoke itself. Authenticate with an API token (JWT) to revoke other keys.",
+        ));
+    }
 
     let now = context.clock.now();
     let rows = write_transaction!(context, |conn| QueryUserKey::revoke(

@@ -46,19 +46,19 @@ impl QueryUserKey {
             .map_err(resource_not_found_err!(UserKey, (user_id, &uuid)))
     }
 
-    /// Unfiltered lookup by hash. Returns the key row (if any) joined with its owning user,
+    /// Unfiltered lookup by hash. Returns the owning user joined with the key row (if any),
     /// without filtering on `revoked`, `expiration`, or `user.locked`. The caller checks
     /// those fields in Rust so it can distinguish `NotFound`, `Revoked`, `Expired`, and
     /// `Locked` for telemetry without a second query.
     pub fn from_hash(
         conn: &mut DbConnection,
         key_hash: &UserKeyHash,
-    ) -> diesel::QueryResult<(Self, QueryUser)> {
+    ) -> diesel::QueryResult<(QueryUser, Self)> {
         schema::user_key::table
             .inner_join(schema::user::table)
             .filter(schema::user_key::key_hash.eq(key_hash.as_ref()))
-            .select((schema::user_key::all_columns, schema::user::all_columns))
-            .first::<(QueryUserKey, QueryUser)>(conn)
+            .select((schema::user::all_columns, schema::user_key::all_columns))
+            .first::<(QueryUser, QueryUserKey)>(conn)
     }
 
     pub fn revoke(

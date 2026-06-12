@@ -2328,7 +2328,9 @@ impl SeedTest {
         let _json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // cargo run -- user key revoke --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge <uuid>
+        // A user key may revoke itself (burn-after-use), even though it cannot
+        // create or mutate the user's other keys.
+        // cargo run -- user key revoke --host http://localhost:61016 --key $USER_KEY muriel-bagge <uuid>
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "user",
@@ -2336,8 +2338,8 @@ impl SeedTest {
             "revoke",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            user_key.as_str(),
             ORG_SLUG,
             user_key_uuid_str.as_str(),
         ])

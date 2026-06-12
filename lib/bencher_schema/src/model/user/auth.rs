@@ -23,7 +23,10 @@ use crate::{
     model::{
         organization::OrganizationId,
         project::ProjectId,
-        user::{key::QueryUserKey, token::QueryToken},
+        user::{
+            key::{QueryUserKey, UserKeyId},
+            token::QueryToken,
+        },
     },
     public_conn, schema,
 };
@@ -38,6 +41,11 @@ pub struct AuthUser {
     pub organizations: Vec<OrganizationId>,
     pub projects: Vec<OrgProjectId>,
     pub rbac: RbacUser,
+    /// The `bencher_user_*` key that authenticated this request, if any.
+    /// `None` means a JWT (or an internally constructed `AuthUser`, e.g. OCI).
+    /// Used to gate credential management: a user key cannot create another
+    /// key and can only revoke itself.
+    pub user_key_id: Option<UserKeyId>,
 }
 
 impl AuthUser {
@@ -54,15 +62,18 @@ impl AuthUser {
         // Check out a single connection for the entire auth flow:
         // credential resolution and RBAC hydration share one pool checkout.
         let conn = public_conn!(context);
-        let query_user = match bearer_token {
-            BearerToken::Jwt(jwt) => Self::user_from_jwt(context, conn, &jwt)?,
-            BearerToken::UserKey(key) => Self::user_from_user_key(context, conn, &key)?,
+        let (query_user, user_key_id) = match bearer_token {
+            BearerToken::Jwt(jwt) => (Self::user_from_jwt(context, conn, &jwt)?, None),
+            BearerToken::UserKey(key) => {
+                let (query_user, query_key) = Self::user_from_user_key(context, conn, &key)?;
+                (query_user, Some(query_key.id))
+            },
         };
 
         #[cfg(feature = "plus")]
         context.rate_limiting.user_request(query_user.uuid)?;
 
-        Self::load(conn, query_user)
+        Self::load_inner(conn, query_user, user_key_id)
     }
 
     fn user_from_jwt(
@@ -113,7 +124,7 @@ impl AuthUser {
         context: &ApiContext,
         conn: &mut DbConnection,
         key: &UserKey,
-    ) -> Result<QueryUser, HttpError> {
+    ) -> Result<(QueryUser, QueryUserKey), HttpError> {
         let key_hash = UserKeyHash::from(key);
         let lookup = QueryUserKey::from_hash(conn, &key_hash)
             .optional()
@@ -126,7 +137,7 @@ impl AuthUser {
             })
             .map_err(|_err| unauthorized_error(INVALID_USER_KEY))?;
 
-        let Some((query_key, query_user)) = lookup else {
+        let Some((query_user, query_key)) = lookup else {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
                 bencher_otel::UserKeyAuthFailureReason::NotFound,
@@ -158,14 +169,22 @@ impl AuthUser {
             return Err(unauthorized_error(INVALID_USER_KEY));
         }
 
-        Ok(query_user)
+        Ok((query_user, query_key))
     }
 
     pub fn reload(&self, conn: &mut DbConnection) -> Result<Self, HttpError> {
-        Self::load(conn, self.user.clone())
+        Self::load_inner(conn, self.user.clone(), self.user_key_id)
     }
 
     pub fn load(conn: &mut DbConnection, query_user: QueryUser) -> Result<Self, HttpError> {
+        Self::load_inner(conn, query_user, None)
+    }
+
+    fn load_inner(
+        conn: &mut DbConnection,
+        query_user: QueryUser,
+        user_key_id: Option<UserKeyId>,
+    ) -> Result<Self, HttpError> {
         let (org_ids, org_roles) = Self::organization_roles(conn, &query_user)?;
         let (proj_ids, proj_roles) = Self::project_roles(conn, &query_user)?;
 
@@ -181,6 +200,7 @@ impl AuthUser {
             organizations: org_ids,
             projects: proj_ids,
             rbac,
+            user_key_id,
         })
     }
 

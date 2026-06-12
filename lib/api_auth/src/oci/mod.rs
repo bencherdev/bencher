@@ -369,8 +369,9 @@ async fn user_key_oci_token(
 ) -> Result<Jwt, HttpError> {
     // Validate the user key. Not found, revoked, expired, and locked all fail
     // closed inside `user_from_user_key` with distinct telemetry per reason.
-    let query_user = AuthUser::user_from_user_key(context, public_conn!(context), user_key)
-        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
+    let (query_user, query_key) =
+        AuthUser::user_from_user_key(context, public_conn!(context), user_key)
+            .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
     // Verify the email matches the key owner
     if query_user.email != *email {
@@ -378,6 +379,13 @@ async fn user_key_oci_token(
     }
 
     context.rate_limiting.user_request(query_user.uuid)?;
+
+    slog::info!(
+        &rqctx.log,
+        "Issuing OCI user token via user key";
+        "user_key_uuid" => %query_key.uuid,
+        "user_uuid" => %query_user.uuid
+    );
 
     user_oci_token(rqctx, context, scope, email, repository, actions).await
 }

@@ -10043,7 +10043,7 @@
           "keys"
         ],
         "summary": "List user API keys",
-        "description": "List all `bencher_user_*` API keys for a user. Only the authenticated user themselves and server admins have access to this endpoint. By default, the keys are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of keys.",
+        "description": "List all `bencher_user_*` API keys for a user. Only the authenticated user themselves and server admins have access to this endpoint. When authenticated with a user API key, only that key itself is listed: a key cannot enumerate the user's other keys. By default, the keys are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of keys.",
         "operationId": "user_keys_get",
         "parameters": [
           {
@@ -10268,7 +10268,7 @@
           "keys"
         ],
         "summary": "View a user API key",
-        "description": "View an API key for a user. Only the authenticated user themselves and server admins have access to this endpoint.",
+        "description": "View an API key for a user. Only the authenticated user themselves and server admins have access to this endpoint. When authenticated with a user API key, only that key itself may be viewed: a key cannot inspect the user's other keys. Authenticate with an API token (JWT) to view other keys.",
         "operationId": "user_key_get",
         "parameters": [
           {
@@ -10352,7 +10352,7 @@
           "keys"
         ],
         "summary": "Revoke a user API key",
-        "description": "Revoke an API key for a user. Revocation is terminal: a revoked key can no longer authenticate any request, and the revocation cannot be undone. Only the authenticated user themselves and server admins have access to this endpoint.",
+        "description": "Revoke an API key for a user. Revocation is terminal: a revoked key can no longer authenticate any request, and the revocation cannot be undone. Only the authenticated user themselves and server admins have access to this endpoint. When authenticated with a user API key, only that key itself may be revoked: a key can always destroy itself, but it cannot revoke the user's other keys. Authenticate with an API token (JWT) to revoke other keys.",
         "operationId": "user_key_delete",
         "parameters": [
           {
@@ -10429,7 +10429,7 @@
           "keys"
         ],
         "summary": "Update a user API key",
-        "description": "Update an API key for a user (rename only). Only the authenticated user themselves and server admins have access to this endpoint.",
+        "description": "Update an API key for a user (rename only). Only the authenticated user themselves and server admins have access to this endpoint. When authenticated with a user API key, only that key itself may be updated: a key cannot modify the user's other keys. Authenticate with an API token (JWT) to update other keys.",
         "operationId": "user_key_patch",
         "parameters": [
           {

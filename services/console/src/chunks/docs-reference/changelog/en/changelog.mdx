@@ -1,6 +1,6 @@
 ## Pending
 - Fix the OCI registry token endpoint for the Docker 29+ containerd image store, which sends multiple `scope` query parameters and an `OAuth2` POST token exchange (Thank you [@travishathaway](https://github.com/travishathaway))
-- Add user-scoped API keys (`bencher_user_...`) that authenticate as the owning user across every endpoint a JWT can reach, including `docker login`; the one exception is creating more user API keys, so a leaked key cannot mint credentials that outlive its own revocation
+- Add user-scoped API keys (`bencher_user_...`) that authenticate as the owning user across every endpoint a JWT can reach, including `docker login`; the one exception is key management: a user API key cannot create more keys and can only see, update, or revoke itself, so a leaked key cannot mint credentials that outlive its own revocation, tamper with the user's other keys, or enumerate them
 - Add `bencher user key {create,list,view,update,revoke}` CLI subcommands and an "API Keys" page in the Console for managing user API keys
 - `--key`/`BENCHER_API_KEY` now accepts either a project-scoped key (`bencher_run_*`) or a user-scoped key (`bencher_user_*`); the `--project` requirement applies only to project-scoped keys
 
