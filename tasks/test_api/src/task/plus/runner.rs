@@ -1,12 +1,12 @@
 use std::process::Command;
 
 use assert_cmd::cargo::CommandCargoExt as _;
-use bencher_json::{JsonProjectKeyCreated, Jwt, Url};
+use bencher_json::{JsonProjectKeyCreated, JsonUserKeyCreated, Jwt, Url};
 use pretty_assertions::assert_eq;
 
 use crate::parser::TaskRunner;
 use crate::task::test::seed_test::{
-    BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, TOKEN_ARG, USER_EMAIL,
+    BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, TOKEN_ARG, USER_EMAIL, USER_SLUG,
 };
 use crate::task::{is_dev, unwrap_admin_token, unwrap_url, unwrap_user_token};
 
@@ -69,6 +69,7 @@ impl RunnerTest {
                 "no-sandbox-spec"
             };
             run_runner_test(&self.url, &self.username, &self.token, spec)?;
+            run_user_key_runner_test(&self.url, &self.username, &self.token, spec)?;
             run_project_key_runner_test(&self.url, &self.admin_token, spec)
         }
     }
@@ -256,8 +257,15 @@ impl RunnerTest {
             Ok(())
         };
 
+        // Run a test using a user key for authentication
+        let user_key_result = if detach_result.is_ok() {
+            run_user_key_runner_test(&self.url, &self.username, &self.token, spec)
+        } else {
+            Ok(())
+        };
+
         // Run a test using a project key for authentication
-        let project_key_result = if detach_result.is_ok() {
+        let project_key_result = if user_key_result.is_ok() {
             run_project_key_runner_test(&self.url, &self.admin_token, spec)
         } else {
             Ok(())
@@ -284,6 +292,7 @@ impl RunnerTest {
         result?;
         no_sandbox_result?;
         detach_result?;
+        user_key_result?;
         project_key_result?;
         image_only_result?;
         println!("=== Runner Daemon Test Passed ===");
@@ -563,6 +572,114 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     }
 
     println!("Detach runner smoke test passed!");
+    Ok(())
+}
+
+/// Run the runner smoke test with user key authentication.
+///
+/// Creates a `bencher_user_*` key, logs into Docker with the user's email as
+/// username and the key as password (the same `email:credential` shape as an
+/// API token login), pushes the image, and submits a job via `bencher run --key`.
+#[expect(clippy::panic_in_result_fn, reason = "test harness")]
+fn run_user_key_runner_test(url: &Url, email: &str, token: &Jwt, spec: &str) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("Running user key runner smoke test against: {host}");
+
+    // Step 1: Create a user key
+    println!("Step 1: Creating user key...");
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "user",
+        "key",
+        "create",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        "--name",
+        "runner-test-user-key",
+        USER_SLUG,
+    ])
+    .current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "Failed to create user key:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let user_key_created: JsonUserKeyCreated = serde_json::from_slice(&output.stdout)?;
+    let user_key = user_key_created.key;
+
+    // Step 2: Docker login with the user's email as username and the user key as password
+    let registry = if cfg!(target_os = "macos") {
+        let port = registry_host(host)?
+            .rsplit_once(':')
+            .and_then(|(_, p)| p.parse::<u16>().ok())
+            .unwrap_or(bencher_json::BENCHER_API_PORT);
+        format!("host.docker.internal:{port}")
+    } else {
+        registry_for_api(host)?
+    };
+    println!("Step 2: Docker login with user key to {registry}...");
+    docker_login(&registry, email, user_key.as_ref())?;
+
+    // Step 3: Push the image (already tagged from the previous test)
+    let local_ref = format!("{registry}/{PROJECT_SLUG}:{IMAGE_TAG}");
+    println!("Step 3: Pushing image with user key auth...");
+    docker_push(&local_ref)?;
+
+    // Step 4: Submit a job via `bencher run --key`
+    println!("Step 4: Submitting job via bencher run --key...");
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
+    cmd.args([
+        "run",
+        HOST_ARG,
+        host,
+        KEY_ARG,
+        user_key.as_ref(),
+        "--project",
+        PROJECT_SLUG,
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+        "--image",
+        &image_ref,
+        "--spec",
+        spec,
+        "--format",
+        "json",
+        "--quiet",
+        "--job-timeout",
+        "120",
+        "--job-poll-interval",
+        "1",
+        "--exec",
+        "mock",
+    ])
+    .current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run --key failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Step 5: Verify the results
+    println!("Step 5: Verifying results...");
+    let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(json.project.slug.to_string(), PROJECT_SLUG);
+    #[cfg(feature = "plus")]
+    assert!(
+        json.job.is_some(),
+        "Expected job UUID in user key report: {json:?}"
+    );
+
+    println!("User key runner smoke test passed!");
     Ok(())
 }
 

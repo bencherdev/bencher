@@ -72,3 +72,6 @@ result
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
+# Transient lock file written by the Claude Code harness next to .claude/settings.json
+.claude/scheduled_tasks.lock

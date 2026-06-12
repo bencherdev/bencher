@@ -153,6 +153,8 @@ Defined in `.cargo/config.toml`:
 - `cargo xtask` - Administrative tasks
 - `cargo gen-types` / `cargo gen-spec` / `cargo gen-ts` - Type generation
 - `cargo test-api` - API testing and DB seeding
+  - `cargo test-api seed` needs the API server already running (`cargo run` in `services/api`) with a fresh database (`services/api/data` holds only a tracked `.gitignore`; delete `services/api/data/bencher.db`, not the whole directory)
+  - Pass `--no-git` when running the seed test in this repo: there is no colocated `.git`, so `bencher run` cannot derive a git context and the on-the-fly project naming assertions (`bencher` vs `Project`) will fail without it
 - `cargo test-runner` - Runner integration tests (requires Linux + KVM)
 
 ## Git Flow
