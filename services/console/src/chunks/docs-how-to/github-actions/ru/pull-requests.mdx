@@ -31,14 +31,14 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
    Для обработки Fork PRs см. [Pull Requests из Fork][pull requests from forks] ниже.
    (пример: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
 5. Установите [разрешения для `GITHUB_TOKEN`][github token permissions]
-   на `write` для `pull-requests`.
+   на `write` для `checks` и `pull-requests`.
    В зависимости от настроек GitHub, это может не требоваться.
    Но для всех организаций и личных репозиториев,
    [созданных после 02 февраля 2023][github token read only],
    это поведение является поведением по умолчанию.
    См. [документацию GitHub][github token permissions security]
    для полного обзора.
-   (пример: `permissions: pull-requests: write`)
+   (пример: `permissions: checks: write pull-requests: write`)
 6. Установите тип машины, на которой будет выполняться job.
    См. [документацию GitHub Actions `runs-on`][github actions runs-on]
    для полного обзора.
@@ -87,7 +87,7 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 16. Установите опцию `--adapter` на [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    См. [адаптеры тестовых сред][adapter json] для полного обзора.
    (пример: `--adapter json`)
-17. Установите опцию `--github-actions` на токен аутентификации API GitHub для публикации результатов как комментарий к Pull Request с использованием
+17. Установите опцию `--github-actions` на токен аутентификации API GitHub для публикации результатов как проверка GitHub и комментарий к Pull Request с использованием
     [переменной окружения `GITHUB_TOKEN`][github token].
     См. [документацию `--github-actions`][github actions option] для подробностей.
     (пример: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)

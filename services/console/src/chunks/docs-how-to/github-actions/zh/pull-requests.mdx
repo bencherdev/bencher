@@ -28,11 +28,11 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
    ⚠️ 不要删除此行！
    处理 Fork PR 请参见下面的[来自 Fork 的拉取请求][pull requests from forks]。
    （例如：`if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`）
-5. 将 [`GITHUB_TOKEN` 的权限][github token permissions] 设置为 `write` 以用于 `pull-requests`。
+5. 将 [`GITHUB_TOKEN` 的权限][github token permissions] 设置为 `write` 以用于 `checks` 和 `pull-requests`。
    依赖于您的 GitHub 设置，这可能不是必需的。
    但对于 2023 年 2 月 2 日之后创建的所有组织和个人仓库，这是默认行为。
    查看 [GitHub 文档][github token permissions security] 以获取完整概览。
-   （例如：`permissions: pull-requests: write`）
+   （例如：`permissions: checks: write pull-requests: write`）
 6. 设置运行作业的机器类型。
    查看 [GitHub Actions `runs-on` 文档][github actions runs-on] 以获取完整概览。
    （例如：`runs-on: ubuntu-latest`）
@@ -74,7 +74,7 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 16. 将 `--adapter` 选项设置为 [由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的 Bencher Metric Format JSON (`json`)][bmf]。
    查看 [基准测试适配器][adapter json] 以获取完整概览。
    （例如：`--adapter json`）
-17. 使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将 `--github-actions` 选项设置为 GitHub API 身份验证令牌，以便将结果作为评论发布在拉取请求上。
+17. 使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将 `--github-actions` 选项设置为 GitHub API 身份验证令牌，以便将结果作为 GitHub 检查和评论发布在拉取请求上。
     查看 [`--github-actions` 文档][github actions option] 以获取更多详细信息。
     （例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`）
 18. 指定基准测试命令参数。

@@ -27,9 +27,9 @@ Um Performance-Regressionen in Pull Requests zu erfassen, müssen Sie Ihre Bench
    ⚠️ ENTFERNEN SIE NICHT DIESE ZEILE!
    Für die Handhabung von Fork PRs siehe unten [Pull Requests aus Forks][pull requests from forks].
    (z.B.: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. Legen Sie [die Berechtigungen für das `GITHUB_TOKEN`][github token permissions] auf `write` für `pull-requests` fest.
+5. Legen Sie [die Berechtigungen für das `GITHUB_TOKEN`][github token permissions] auf `write` für `checks` und `pull-requests` fest.
    Je nach Ihren GitHub-Einstellungen ist dies möglicherweise nicht erforderlich. Aber für alle Organisationen und persönlichen Repos [erstellt nach dem 02. Feb 2023][github token read only], ist dies das standardmäßige Verhalten. Sehen Sie [die GitHub Dokumentation][github token permissions security] für einen vollständigen Überblick.
-   (z.B.: `permissions: pull-requests: write`)
+   (z.B.: `permissions: checks: write pull-requests: write`)
 6. Legen Sie die Art der Maschine fest, auf der der Job läuft.
    Siehe die [GitHub Actions `runs-on` Dokumentation][github actions runs-on] für einen vollständigen Überblick.
    (z.B.: `runs-on: ubuntu-latest`)
@@ -71,7 +71,7 @@ Um Performance-Regressionen in Pull Requests zu erfassen, müssen Sie Ihre Bench
 16. Setzen Sie die `--adapter`-Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
    Siehe [Benchmark-Harness-Adapter][adapter json] für einen vollständigen Überblick.
    (z.B.: `--adapter json`)
-17. Setzen Sie die `--github-actions`-Option auf das GitHub API-Authentifizierungstoken, um Ergebnisse als Kommentar im Pull Request zu posten, unter Verwendung der [GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token].
+17. Setzen Sie die `--github-actions`-Option auf das GitHub API-Authentifizierungstoken, um Ergebnisse als GitHub-Prüfung und als Kommentar im Pull Request zu posten, unter Verwendung der [GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token].
     Siehe [die `--github-actions` Dokumentation][github actions option] für mehr Details.
     (z.B.: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
 18. Geben Sie die Argumente für den Benchmark-Befehl an.

@@ -4,12 +4,15 @@
 
 Optional: Setzen Sie das GitHub API-Authentifizierungstoken.
 Die bequemste Methode hierfür ist die Verwendung der [GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token] (d.h. `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
-Wenn diese Option gesetzt ist und `bencher run` in GitHub Actions als Teil einer Pull-Anfrage verwendet wird,
-dann werden die Ergebnisse als Kommentar zur Pull-Anfrage hinzugefügt.
-Dies erfordert, dass das Token [den `pull-requests` Bereich mit `write` Berechtigungen][github token permissions] hat.
-Andernfalls werden die Ergebnisse dem Commit als GitHub-Prüfung hinzugefügt.
+Wenn diese Option gesetzt ist und `bencher run` in GitHub Actions verwendet wird,
+dann werden die Ergebnisse dem Head-Commit als GitHub-Prüfung mit dem Namen `Bencher Report` hinzugefügt (oder `Bencher Report (<ID>)`, wenn `--ci-id` gesetzt ist).
+Die GitHub-Prüfung schlägt fehl, wenn ein Alert generiert wird, sodass sie als erforderliche Statusprüfung im Branch-Schutz verwendet werden kann.
 Dies erfordert, dass das Token [den `checks` Bereich mit `write` Berechtigungen][github token permissions] hat.
-In jedem Fall werden die Ergebnisse auch zur Zusammenfassung des Jobs hinzugefügt.
+Wenn die GitHub-Prüfung nicht erstellt werden kann, protokolliert `bencher run` eine Warnung und fährt fort.
+Wenn `bencher run` als Teil einer Pull-Anfrage verwendet wird,
+dann werden die Ergebnisse auch als Kommentar zur Pull-Anfrage hinzugefügt.
+Dies erfordert, dass das Token [den `pull-requests` Bereich mit `write` Berechtigungen][github token permissions] hat.
+Die Ergebnisse werden außerdem immer zur Zusammenfassung des Jobs hinzugefügt.
 
 [github token]: https://docs.github.com/de/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/de/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token

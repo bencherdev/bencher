@@ -31,14 +31,14 @@ alors vous pouvez simplement créer un autre workflow pour fonctionner avec des 
    Pour gérer les PRs de Forks, voir [Pull Requests depuis des Forks][pull requests from forks] ci-dessous.
    (ex : `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
 5. Définissez [les permissions pour le `GITHUB_TOKEN`][github token permissions]
-   sur `write` pour les `pull-requests`.
+   sur `write` pour les `checks` et `pull-requests`.
    Selon vos paramètres GitHub, cela peut ne pas être nécessaire.
    Mais pour toutes les organisations et dépôts personnels
    [créés après le 02 février 2023][github token read only],
    c'est le comportement par défaut.
    Voir [la documentation GitHub][github token permissions security]
    pour un aperçu complet.
-   (ex : `permissions: pull-requests: write`)
+   (ex : `permissions: checks: write pull-requests: write`)
 6. Définissez le type de machine sur laquelle le job s'exécutera.
    Voir la [documentation `runs-on` de GitHub Actions][github actions runs-on]
    pour un aperçu complet.
@@ -87,7 +87,7 @@ alors vous pouvez simplement créer un autre workflow pour fonctionner avec des 
 16. Définissez l'option `--adapter` sur le Format de Métrique Bencher JSON (`json`) généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Voir [les adaptateurs de harnais de benchmark][adapter json] pour un aperçu complet.
    (ex : `--adapter json`)
-17. Définissez l'option `--github-actions` sur le token d'authentification de l'API GitHub pour poster les résultats en tant que commentaire sur la Pull Request en utilisant
+17. Définissez l'option `--github-actions` sur le token d'authentification de l'API GitHub pour poster les résultats en tant que vérification GitHub et commentaire sur la Pull Request en utilisant
     [la variable d'environnement `GITHUB_TOKEN` de GitHub Actions][github token].
     Voir [la documentation `--github-actions`][github actions option] pour plus de détails.
     (ex : `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)

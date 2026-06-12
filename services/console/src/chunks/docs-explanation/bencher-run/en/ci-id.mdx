@@ -5,4 +5,6 @@
 Optional: Custom ID for posting results to CI.
 By default, Bencher will automatically segment out results by the combination of: Project, Branch, Testbed, and [Adapter](/docs/explanation/adapters/).
 Setting a custom ID is useful when Bencher is being run multiple times in the same CI workflow for the same Project, Branch, Testbed, and Adapter combination.
+The ID is also appended to the GitHub Check name (ie `Bencher Report (<ID>)`),
+so each invocation gets a stable name that can be used as a separate required status check.
 Requires: `--github-actions`

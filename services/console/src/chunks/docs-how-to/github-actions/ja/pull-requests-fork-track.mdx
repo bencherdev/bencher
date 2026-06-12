@@ -13,12 +13,12 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 5. 前のワークフローの結論が成功した場合にのみこのジョブを実行します。
    [GitHub Actions の `workflow_run` イベント][github actions workflow_run]を使用して検証します。
    (例: `if: github.event.workflow_run.conclusion == 'success'`)
-6. `GITHUB_TOKEN` の[権限を設定][github token permissions]し、`pull-requests` 用に `write` に設定します。
+6. `GITHUB_TOKEN` の[権限を設定][github token permissions]し、`checks` と `pull-requests` 用に `write` に設定します。
    GitHub の設定によっては、これが必要ない場合もあります。
    しかし、[2023年2月2日以降に作成された][github token read only]すべての組織と個人リポジトリでは、
    これはデフォルトの動作です。
    完全な概要については、[GitHub のドキュメント][github token permissions security]を参照してください。
-   (例: `permissions: pull-requests: write`)
+   (例: `permissions: checks: write pull-requests: write`)
 7. ジョブが実行されるマシンのタイプを設定します。
    完全な概要については、[GitHub Actions `runs-on` ドキュメント][github actions runs-on]を参照してください。
    (例: `runs-on: ubuntu-latest`)
@@ -69,7 +69,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 20. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成された[Bencher Metric Format JSON (`json`)][bmf] に `--adapter` オプションを設定します。
    完全な概要については、[ベンチマークハーネスアダプタ][adapter json]を参照してください。
    (例: `--adapter json`)
-21. [GitHub Actions `GITHUB_TOKEN` 環境変数][github token]を使用してプルリクエストにコメントとして結果を投稿するために、GitHub API 認証トークンに `--github-actions` オプションを設定します。
+21. [GitHub Actions `GITHUB_TOKEN` 環境変数][github token]を使用して GitHub チェックおよびプルリクエストへのコメントとして結果を投稿するために、GitHub API 認証トークンに `--github-actions` オプションを設定します。
     詳細は、[`--github-actions` ドキュメント][github actions option]をご覧ください。
     (例: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
 22. [中間環境変数][github intermediate environment variable]を使用して、プルリクエスト番号に `--ci-number` オプションを設定します。

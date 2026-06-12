@@ -31,14 +31,14 @@ entonces simplemente puedes crear otro flujo de trabajo para ejecutar `on` event
    Para manejar PRs de Forks, consulta [Pull Requests desde Forks][pull requests from forks] a continuación.
    (ej: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
 5. Establece [los permisos para el `GITHUB_TOKEN`][github token permissions]
-   a `write` para `pull-requests`.
+   a `write` para `checks` y `pull-requests`.
    Dependiendo de tu configuración de GitHub, esto puede no ser necesario.
    Pero para todas las organizaciones y repos personales
    [creados después del 02 de febrero de 2023][github token read only],
    este es el comportamiento predeterminado.
    Consulta [la documentación de GitHub][github token permissions security]
    para una visión completa.
-   (ej: `permissions: pull-requests: write`)
+   (ej: `permissions: checks: write pull-requests: write`)
 6. Establece el tipo de máquina en la que se ejecutará el trabajo.
    Consulta la documentación de [GitHub Actions `runs-on`][github actions runs-on]
    para una visión completa.
@@ -87,7 +87,7 @@ entonces simplemente puedes crear otro flujo de trabajo para ejecutar `on` event
 16. Establece la opción `--adapter` al [Formato de Métrica Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Consulta [adaptadores de harness de benchmark][adapter json] para una visión completa.
    (ej: `--adapter json`)
-17. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como un comentario en la Pull Request usando
+17. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como una Verificación de GitHub y un comentario en la Pull Request usando
     [la variable de entorno `GITHUB_TOKEN` de GitHub Actions][github token].
     Consulta [los documentos de `--github-actions`][github actions option] para más detalles.
     (ej: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)

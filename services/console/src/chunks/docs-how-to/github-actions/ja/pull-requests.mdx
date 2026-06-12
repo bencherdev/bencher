@@ -30,12 +30,12 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
    ⚠️この行を削除しないでください！
    フォークからのPRの処理については、以下の[フォークからのプルリクエスト][pull requests from forks]を参照してください。
    (例: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. [`GITHUB_TOKEN`の権限][github token permissions]を`pull-requests`に対して`write`に設定します。
+5. [`GITHUB_TOKEN`の権限][github token permissions]を`checks`と`pull-requests`に対して`write`に設定します。
    GitHubの設定により、これは必要ないかもしれません。
    しかし、2023年2月2日以降に作成されたすべての組織および個人リポジトリでは、
    これはデフォルトの動作です。
    [GitHubのドキュメント][github token permissions security]を参照し、全体を把握してください。
-   (例: `permissions: pull-requests: write`)
+   (例: `permissions: checks: write pull-requests: write`)
 6. ジョブが実行されるマシンタイプを設定します。
    [GitHub Actionsの`runs-on`ドキュメント][github actions runs-on]を参照し、全体を把握してください。
    (例: `runs-on: ubuntu-latest`)
@@ -78,7 +78,7 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 16. Bencher Metric Format JSON (`json`)を生成する<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>を使用して、[`Bencher Metric Format JSON`（`json`）][bmf]に`--adapter`オプションを設定します。
    ベンチマークハーネスアダプタを参照し、全体を把握してください。
    (例: `--adapter json`)
-17. [`GITHUB_TOKEN`環境変数を使用して][github token]GitHub API認証トークンを使ってプルリクエストにコメントとして結果を投稿するために、`--github-actions`オプションを設定します。
+17. [`GITHUB_TOKEN`環境変数を使用して][github token]GitHub API認証トークンを使ってGitHubチェックおよびプルリクエストへのコメントとして結果を投稿するために、`--github-actions`オプションを設定します。
     詳細は[`--github-actions`ドキュメント][github actions option]を参照してください。
     (例: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
 18. ベンチマークコマンドの引数を指定します。
