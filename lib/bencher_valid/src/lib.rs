@@ -41,7 +41,7 @@ use error::REGEX_ERROR;
 pub use error::ValidError;
 pub use index::Index;
 pub use jwt::Jwt;
-pub use keys::{PROJECT_KEY_PREFIX, ProjectKey, ProjectKeyHash};
+pub use keys::{BencherKey, ProjectKey, ProjectKeyHash, UserKey, UserKeyHash};
 pub use model::{
     Model,
     boundary::{Boundary, CdfBoundary, IqrBoundary, PercentageBoundary},

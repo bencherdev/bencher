@@ -695,7 +695,7 @@
           "oci"
         ],
         "summary": "OCI token endpoint (GET)",
-        "description": "Authenticates via Basic auth and returns a short-lived JWT for OCI operations. Supports two credential types: - `email:api-key-jwt`: user authentication - `project-slug-or-uuid:bencher_run_xxxxx`: project key authentication\n\nIf no Basic auth credentials are provided, issues a public (anonymous) OCI token.\n\nAccepts multiple `scope` query parameters (Docker 29+ / containerd sends these).",
+        "description": "Authenticates via Basic auth and returns a short-lived JWT for OCI operations. Supports three credential types: - `email:api-key-jwt`: user authentication via API token - `email:bencher_user_xxxxx`: user authentication via user API key - `project-slug-or-uuid:bencher_run_xxxxx`: project key authentication\n\nIf no Basic auth credentials are provided, issues a public (anonymous) OCI token.\n\nAccepts multiple `scope` query parameters (Docker 29+ / containerd sends these).",
         "operationId": "auth_oci_token_get",
         "parameters": [
           {
@@ -10036,6 +10036,488 @@
         }
       }
     },
+    "/v0/users/{user}/keys": {
+      "get": {
+        "tags": [
+          "users",
+          "keys"
+        ],
+        "summary": "List user API keys",
+        "description": "List all `bencher_user_*` API keys for a user. Only the authenticated user themselves and server admins have access to this endpoint. When authenticated with a user API key, only that key itself is listed: a key cannot enumerate the user's other keys. By default, the keys are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of keys.",
+        "operationId": "user_keys_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user",
+            "description": "The slug or UUID for a user.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
+            "schema": {
+              "$ref": "#/components/schemas/UserKeysSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "description": "Filter by key name, exact match.",
+            "schema": {
+              "$ref": "#/components/schemas/ResourceName"
+            }
+          },
+          {
+            "in": "query",
+            "name": "revoked",
+            "description": "If set to `true`, only returns revoked keys. If not set or set to `false`, only returns non-revoked keys.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "description": "Search by key name or UUID.",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonUserKeys"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "users",
+          "keys"
+        ],
+        "summary": "Create a user API key",
+        "description": "Create a new `bencher_user_*` API key for a user. The plaintext key is only returned once in the response. Only the authenticated user themselves and server admins have access to this endpoint. This endpoint cannot be called with a user API key: a key cannot be used to create another key, so revoking a key also cuts off any credentials that could have been derived from it. Authenticate with an API token (JWT) instead.",
+        "operationId": "user_key_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user",
+            "description": "The slug or UUID for a user.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewUserKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "successful creation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonUserKeyCreated"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/users/{user}/keys/{key}": {
+      "get": {
+        "tags": [
+          "users",
+          "keys"
+        ],
+        "summary": "View a user API key",
+        "description": "View an API key for a user. Only the authenticated user themselves and server admins have access to this endpoint. When authenticated with a user API key, only that key itself may be viewed: a key cannot inspect the user's other keys. Authenticate with an API token (JWT) to view other keys.",
+        "operationId": "user_key_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "description": "The UUID for a user key.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/UserKeyUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "description": "The slug or UUID for a user.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonUserKey"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users",
+          "keys"
+        ],
+        "summary": "Revoke a user API key",
+        "description": "Revoke an API key for a user. Revocation is terminal: a revoked key can no longer authenticate any request, and the revocation cannot be undone. Only the authenticated user themselves and server admins have access to this endpoint. When authenticated with a user API key, only that key itself may be revoked: a key can always destroy itself, but it cannot revoke the user's other keys. Authenticate with an API token (JWT) to revoke other keys.",
+        "operationId": "user_key_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "description": "The UUID for a user key.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/UserKeyUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "description": "The slug or UUID for a user.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "users",
+          "keys"
+        ],
+        "summary": "Update a user API key",
+        "description": "Update an API key for a user (rename only). Only the authenticated user themselves and server admins have access to this endpoint. When authenticated with a user API key, only that key itself may be updated: a key cannot modify the user's other keys. Authenticate with an API token (JWT) to update other keys.",
+        "operationId": "user_key_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "description": "The UUID for a user key.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/UserKeyUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "description": "The slug or UUID for a user.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateUserKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonUserKey"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/users/{user}/tokens": {
       "get": {
         "tags": [
@@ -13869,6 +14351,29 @@
           "name"
         ]
       },
+      "JsonNewUserKey": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "The name of the user key. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          },
+          "ttl": {
+            "nullable": true,
+            "description": "The time-to-live (TTL) for the key in seconds. If not provided, the key will not expire for over 128 years.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
       "JsonOAuth": {
         "type": "object",
         "properties": {
@@ -17066,6 +17571,20 @@
           }
         }
       },
+      "JsonUpdateUserKey": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "nullable": true,
+            "description": "The new name of the user key. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          }
+        }
+      },
       "JsonUsage": {
         "type": "object",
         "properties": {
@@ -17171,6 +17690,84 @@
           "slug",
           "uuid"
         ]
+      },
+      "JsonUserKey": {
+        "type": "object",
+        "properties": {
+          "creation": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "expiration": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "name": {
+            "$ref": "#/components/schemas/ResourceName"
+          },
+          "revoked": {
+            "nullable": true,
+            "description": "The time at which the key was revoked, if any. `None` means the key is active.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserUuid"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/UserKeyUuid"
+          }
+        },
+        "required": [
+          "creation",
+          "expiration",
+          "name",
+          "user",
+          "uuid"
+        ]
+      },
+      "JsonUserKeyCreated": {
+        "type": "object",
+        "properties": {
+          "creation": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "expiration": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "key": {
+            "description": "The plaintext user key. Only returned once, at creation.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserKey"
+              }
+            ]
+          },
+          "name": {
+            "$ref": "#/components/schemas/ResourceName"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserUuid"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/UserKeyUuid"
+          }
+        },
+        "required": [
+          "creation",
+          "expiration",
+          "key",
+          "name",
+          "user",
+          "uuid"
+        ]
+      },
+      "JsonUserKeys": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonUserKey"
+        }
       },
       "JsonUserRateLimiter": {
         "type": "object",
@@ -17735,6 +18332,13 @@
           }
         ]
       },
+      "UserKey": {
+        "type": "string"
+      },
+      "UserKeyUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "UserName": {
         "type": "string"
       },
@@ -18044,6 +18648,17 @@
         "oneOf": [
           {
             "description": "Sort by user name.",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
+        ]
+      },
+      "UserKeysSort": {
+        "oneOf": [
+          {
+            "description": "Sort by key name.",
             "type": "string",
             "enum": [
               "name"

@@ -14,6 +14,8 @@ pub(crate) const HOST_ARG: &str = "--host";
 pub(crate) const TOKEN_ARG: &str = "--token";
 const KEY_ARG: &str = "--key";
 const ORG_SLUG: &str = "muriel-bagge";
+/// Muriel's personal org slug doubles as her user slug.
+pub(crate) const USER_SLUG: &str = ORG_SLUG;
 const PROJECT_ARG: &str = "--project";
 pub(crate) const PROJECT_SLUG: &str = "the-computer";
 const BRANCH_ARG: &str = "--branch";
@@ -33,6 +35,8 @@ const UNCLAIMED_SLUG: &str = "unclaimed";
 const CLAIMED_SLUG: &str = "claimed";
 const PROJECT_KEY_NAME: &str = "seed-test-key";
 const PROJECT_KEY_UPDATED_NAME: &str = "seed-test-key-updated";
+const USER_KEY_NAME: &str = "seed-test-user-key";
+const USER_KEY_UPDATED_NAME: &str = "seed-test-user-key-updated";
 
 pub(crate) const CLI_DIR: &str = "./services/cli";
 
@@ -2117,6 +2121,310 @@ impl SeedTest {
             token,
             PROJECT_SLUG,
             project_key_uuid_str.as_str(),
+        ])
+        .current_dir(CLI_DIR);
+        cmd.assert().failure();
+
+        // A project key without `--project` must fail fast in the CLI,
+        // before any request is made (so the revoked state above is irrelevant).
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            KEY_ARG,
+            project_key.as_str(),
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+            "--seed",
+            PERFECT_SEED,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().failure();
+        let output = assert.get_output();
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("requires `--project`"),
+            "project key without --project should fail fast: {output:?}"
+        );
+
+        // ========== User Key CRUD Lifecycle ==========
+
+        // cargo run -- user key create --host http://localhost:61016 --token $BENCHER_API_TOKEN --name seed-test-user-key muriel-bagge
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user",
+            "key",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            "--name",
+            USER_KEY_NAME,
+            ORG_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let user_key_created: bencher_json::JsonUserKeyCreated =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        let user_key = user_key_created.key.as_ref().to_owned();
+        let user_key_uuid_str = user_key_created.uuid.to_string();
+
+        // cargo run -- run --host http://localhost:61016 --key $USER_KEY --project the-computer --quiet bencher mock --seed 6
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            KEY_ARG,
+            user_key.as_str(),
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+            "--seed",
+            PERFECT_SEED,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // A user key is a drop-in JWT replacement on user endpoints too:
+        // cargo run -- user view --host http://localhost:61016 --key $USER_KEY muriel-bagge
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user",
+            "view",
+            HOST_ARG,
+            host,
+            KEY_ARG,
+            user_key.as_str(),
+            ORG_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        cmd.assert().success();
+
+        // A user key must NOT be able to create another user key
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user",
+            "key",
+            "create",
+            HOST_ARG,
+            host,
+            KEY_ARG,
+            user_key.as_str(),
+            "--name",
+            "minted-by-key",
+            ORG_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().failure();
+        let output = assert.get_output();
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("Status: 403"),
+            "user key creating a user key should 403: {output:?}"
+        );
+
+        // cargo run -- user key list --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user", "key", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let keys: bencher_json::JsonUserKeys =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(
+            keys.0.len(),
+            1,
+            "should have exactly one active user key: {keys:?}"
+        );
+        #[expect(
+            clippy::indexing_slicing,
+            reason = "test asserts exactly one key above"
+        )]
+        {
+            assert_eq!(keys.0[0].uuid, user_key_created.uuid);
+            assert!(
+                keys.0[0].revoked.is_none(),
+                "key should not be revoked: {keys:?}"
+            );
+        }
+
+        // cargo run -- user key view --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge <uuid>
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user",
+            "key",
+            "view",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            ORG_SLUG,
+            user_key_uuid_str.as_str(),
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let key_view: bencher_json::JsonUserKey =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(key_view.uuid, user_key_created.uuid);
+        assert_eq!(key_view.name.as_ref(), USER_KEY_NAME);
+        assert!(
+            key_view.revoked.is_none(),
+            "key should not be revoked: {key_view:?}"
+        );
+
+        // cargo run -- user key update --host http://localhost:61016 --token $BENCHER_API_TOKEN --name seed-test-user-key-updated muriel-bagge <uuid>
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user",
+            "key",
+            "update",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            "--name",
+            USER_KEY_UPDATED_NAME,
+            ORG_SLUG,
+            user_key_uuid_str.as_str(),
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let key_updated: bencher_json::JsonUserKey =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(key_updated.uuid, user_key_created.uuid);
+        assert_eq!(key_updated.name.as_ref(), USER_KEY_UPDATED_NAME);
+
+        // Verify the key still works after rename
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            KEY_ARG,
+            user_key.as_str(),
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+            "--seed",
+            PERFECT_SEED,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+
+        // A user key may revoke itself (burn-after-use), even though it cannot
+        // create or mutate the user's other keys.
+        // cargo run -- user key revoke --host http://localhost:61016 --key $USER_KEY muriel-bagge <uuid>
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user",
+            "key",
+            "revoke",
+            HOST_ARG,
+            host,
+            KEY_ARG,
+            user_key.as_str(),
+            ORG_SLUG,
+            user_key_uuid_str.as_str(),
+        ])
+        .current_dir(CLI_DIR);
+        cmd.assert().success();
+
+        // The revoked key must NOT authenticate a bencher run
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "run",
+            HOST_ARG,
+            host,
+            KEY_ARG,
+            user_key.as_str(),
+            PROJECT_ARG,
+            PROJECT_SLUG,
+            "--format",
+            "json",
+            "--quiet",
+            &bencher_cmd,
+            "mock",
+            "--seed",
+            PERFECT_SEED,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().failure();
+        let output = assert.get_output();
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("Status: 401"),
+            "revoked user key should 401: {output:?}"
+        );
+
+        // Default list must hide the revoked key
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user", "key", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let keys: bencher_json::JsonUserKeys =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert!(
+            keys.0.iter().all(|k| k.uuid != user_key_created.uuid),
+            "default list should hide revoked keys: {keys:?}"
+        );
+
+        // --revoked flag must surface the revoked key
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user",
+            "key",
+            "list",
+            "--revoked",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            ORG_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let keys: bencher_json::JsonUserKeys =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        let revoked_entry = keys
+            .0
+            .iter()
+            .find(|k| k.uuid == user_key_created.uuid)
+            .expect("revoked key should appear when --revoked is set");
+        assert!(
+            revoked_entry.revoked.is_some(),
+            "revoked key must carry a revoked timestamp: {revoked_entry:?}"
+        );
+
+        // Revoking the same key again should fail (already revoked)
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user",
+            "key",
+            "revoke",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
+            ORG_SLUG,
+            user_key_uuid_str.as_str(),
         ])
         .current_dir(CLI_DIR);
         cmd.assert().failure();

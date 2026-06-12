@@ -10,7 +10,8 @@ use bencher_comment::ReportComment;
 #[cfg(feature = "plus")]
 use bencher_json::SpecResourceId;
 use bencher_json::{
-    DateTime, JsonReport, ProjectResourceId, RunContext, TestbedNameId, project::report::Iteration,
+    BencherKey, DateTime, JsonReport, ProjectResourceId, RunContext, TestbedNameId,
+    project::report::Iteration,
 };
 
 use crate::{
@@ -169,6 +170,15 @@ impl TryFrom<CliRun> for Run {
         };
         #[cfg(not(feature = "plus"))]
         let runner = Some(cmd.try_into()?);
+
+        // Project-scoped keys (`bencher_run_*`) are bound to a single existing
+        // project at issue time and cannot perform slug auto-creation, so a
+        // `--project` is mandatory whenever `--key` is one of them. User-scoped
+        // keys (`bencher_user_*`) and JWT tokens have no such restriction.
+        if backend.key.as_ref().is_some_and(BencherKey::is_project) && project.project.is_none() {
+            return Err(RunError::ProjectKeyRequiresProject.into());
+        }
+
         Ok(Self {
             project: map_project(project)?,
             branch: branch.try_into().map_err(RunError::Branch)?,

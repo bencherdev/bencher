@@ -1,0 +1,62 @@
+use bencher_client::types::JsonNewUserKey;
+use bencher_json::{ResourceName, UserResourceId};
+
+use crate::{
+    CliError,
+    bencher::{backend::AuthBackend, sub::SubCmd},
+    parser::user::key::CliUserKeyCreate,
+};
+
+#[derive(Debug, Clone)]
+pub struct Create {
+    pub user: UserResourceId,
+    pub name: ResourceName,
+    pub ttl: Option<u32>,
+    pub backend: AuthBackend,
+}
+
+impl TryFrom<CliUserKeyCreate> for Create {
+    type Error = CliError;
+
+    fn try_from(create: CliUserKeyCreate) -> Result<Self, Self::Error> {
+        let CliUserKeyCreate {
+            user,
+            name,
+            ttl,
+            backend,
+        } = create;
+        Ok(Self {
+            user,
+            name,
+            ttl,
+            backend: backend.try_into()?,
+        })
+    }
+}
+
+impl From<Create> for JsonNewUserKey {
+    fn from(create: Create) -> Self {
+        let Create { name, ttl, .. } = create;
+        Self {
+            name: name.into(),
+            ttl,
+        }
+    }
+}
+
+impl SubCmd for Create {
+    async fn exec(&self) -> Result<(), CliError> {
+        let _json = self
+            .backend
+            .send(|client| async move {
+                client
+                    .user_key_post()
+                    .user(self.user.clone())
+                    .body(self.clone())
+                    .send()
+                    .await
+            })
+            .await?;
+        Ok(())
+    }
+}

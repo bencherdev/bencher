@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{BENCHER_API_URL_STR, Jwt, ProjectKey, Url};
+use bencher_json::{BENCHER_API_URL_STR, BencherKey, Jwt, Url};
 use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 pub mod compose;
@@ -142,14 +142,21 @@ pub enum CliSub {
 }
 
 #[derive(Args, Debug)]
+#[clap(group(ArgGroup::new("bencher_credential").args(["token", "key"]).multiple(false)))]
 pub struct CliBackend {
     /// Backend host URL
     #[clap(long, value_name = "URL", env = "BENCHER_HOST", default_value = BENCHER_API_URL_STR)]
     pub host: Url,
 
-    /// User API token (JWT)
+    /// User API token (JWT). Deprecated: prefer `--key`/`BENCHER_API_KEY` with a
+    /// `bencher_user_*` API key.
     #[clap(long, env = "BENCHER_API_TOKEN")]
     pub token: Option<Jwt>,
+
+    /// Bencher API key. Either a user-scoped key (`bencher_user_*`) or a
+    /// project-scoped key (`bencher_run_*`).
+    #[clap(long, env = "BENCHER_API_KEY")]
+    pub key: Option<BencherKey>,
 
     /// Allow insecure connections to an HTTPS host
     #[clap(long)]
@@ -178,17 +185,6 @@ pub struct CliBackend {
     /// Strictly parse JSON responses
     #[clap(long)]
     pub strict: bool,
-}
-
-#[derive(Args, Debug)]
-#[clap(group(ArgGroup::new("bencher_credential").args(["token", "key"]).multiple(false)))]
-pub struct CliProjectBackend {
-    #[clap(flatten)]
-    pub backend: CliBackend,
-
-    /// Project-scoped API key
-    #[clap(long, env = "BENCHER_API_KEY")]
-    pub key: Option<ProjectKey>,
 }
 
 #[derive(Args, Debug)]

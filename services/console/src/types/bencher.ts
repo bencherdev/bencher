@@ -438,6 +438,8 @@ export type TestbedNameId = Uuid | Slug | string;
 /** An testbed UUID or slug. */
 export type TestbedResourceId = Uuid | Slug;
 
+export type UserKey = string;
+
 export type UserName = string;
 
 /** An user UUID or slug. */
@@ -783,6 +785,19 @@ export interface JsonNewToken {
 	ttl?: number;
 }
 
+export interface JsonNewUserKey {
+	/**
+	 * The name of the user key.
+	 * Maximum length is 64 characters.
+	 */
+	name: ResourceName;
+	/**
+	 * The time-to-live (TTL) for the key in seconds.
+	 * If not provided, the key will not expire for over 128 years.
+	 */
+	ttl?: number;
+}
+
 export interface JsonOAuth {
 	state: Jwt;
 	code: Secret;
@@ -1109,6 +1124,14 @@ export interface JsonUpdateUser {
 	locked?: boolean;
 }
 
+export interface JsonUpdateUserKey {
+	/**
+	 * The new name of the user key.
+	 * Maximum length is 64 characters.
+	 */
+	name?: ResourceName;
+}
+
 export enum UsageKind {
 	/** Bencher Cloud (Free) */
 	CloudFree = "cloud_free",
@@ -1139,6 +1162,29 @@ export interface JsonUsage {
 	metrics?: number;
 	/** The runner minutes usage amount. */
 	runner_minutes?: number;
+}
+
+export interface JsonUserKey {
+	uuid: UserKeyUuid;
+	user: Uuid;
+	name: ResourceName;
+	creation: string;
+	expiration: string;
+	/**
+	 * The time at which the key was revoked, if any.
+	 * `None` means the key is active.
+	 */
+	revoked?: string;
+}
+
+export interface JsonUserKeyCreated {
+	uuid: UserKeyUuid;
+	user: Uuid;
+	name: ResourceName;
+	/** The plaintext user key. Only returned once, at creation. */
+	key: UserKey;
+	creation: string;
+	expiration: string;
 }
 
 export enum OrganizationPermission {

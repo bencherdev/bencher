@@ -4,8 +4,8 @@ use std::sync::LazyLock;
 use dropshot::{ClientErrorStatusCode, ErrorStatusCode, HttpError};
 use thiserror::Error;
 
-pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`. Where `<bencher.api.token>` is your Bencher API token.";
-pub const BEARER_AUTH_FORMAT: &str = "Expected format is `Authorization: Bearer <token>`. Where `<token>` is your Bencher API token or project API key (`bencher_run_...`).";
+pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`. Where `<bencher.api.token>` is your Bencher API token (JWT) or user API key (`bencher_user_...`).";
+pub const BEARER_AUTH_FORMAT: &str = "Expected format is `Authorization: Bearer <token>`. Where `<token>` is your Bencher API token (JWT), user API key (`bencher_user_...`), or project API key (`bencher_run_...`).";
 
 #[derive(Debug, Clone, Copy)]
 pub enum BencherResource {
@@ -38,6 +38,7 @@ pub enum BencherResource {
     Spec,
     Job,
     User,
+    UserKey,
     Token,
     #[cfg(feature = "plus")]
     Plan,
@@ -82,6 +83,7 @@ impl fmt::Display for BencherResource {
                 Self::Spec => "Spec",
                 Self::Job => "Job",
                 Self::User => "User",
+                Self::UserKey => "User Key",
                 Self::Token => "Token",
                 #[cfg(feature = "plus")]
                 Self::Plan => "Plan",

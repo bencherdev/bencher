@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliPagination, CliProjectBackend, ElidedOption};
+use crate::parser::{CliBackend, CliPagination, ElidedOption};
 
 #[derive(Subcommand, Debug)]
 pub enum CliPlot {
@@ -42,7 +42,7 @@ pub struct CliPlotList {
     pub pagination: CliPagination<CliPlotsSort>,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -119,7 +119,7 @@ pub struct CliPlotCreate {
     pub measures: Vec<MeasureUuid>,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 /// Supported X-Axises
@@ -139,7 +139,7 @@ pub struct CliPlotView {
     pub plot: PlotUuid,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -167,7 +167,7 @@ pub struct CliPlotUpdate {
     pub window: Option<Window>,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -179,5 +179,5 @@ pub struct CliPlotDelete {
     pub plot: PlotUuid,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }

@@ -1,16 +1,26 @@
 import type { Params } from "astro";
 import { createSignal } from "solid-js";
-import type { JsonProjectKeyCreated } from "../../../types/bencher";
 import { KEY_ICON } from "../../../config/project/keys";
+import { BencherResource } from "../../../config/types";
 import { createdUuidPath } from "../../../config/util";
 import { pathname } from "../../../util/url";
+import type { JsonKeyCreated } from "./KeyAddPanel";
 
 interface Props {
 	params: Params;
-	data: JsonProjectKeyCreated;
+	resource: BencherResource;
+	data: JsonKeyCreated;
 }
 
-const SANITIZED_PROJECT_KEY = "bencher_run_******************************";
+const KEY_BODY_LEN = 30;
+
+// Mask the random body but keep the `bencher_*_` prefix visible,
+// e.g. `bencher_user_******************************`.
+const sanitizedKey = (key: string) =>
+	`${key.slice(0, key.lastIndexOf("_") + 1)}${"*".repeat(KEY_BODY_LEN)}`;
+
+const keyLabel = (resource: BencherResource) =>
+	resource === BencherResource.USER_KEYS ? "API Key" : "Project Key";
 
 const KeyCreated = (props: Props) => {
 	const [copied, setCopied] = createSignal(false);
@@ -24,7 +34,7 @@ const KeyCreated = (props: Props) => {
 		} catch (e) {
 			console.error(e);
 			const input = document.getElementById(
-				"project-key",
+				"created-key",
 			) as HTMLInputElement | null;
 			input?.select();
 		}
@@ -40,7 +50,7 @@ const KeyCreated = (props: Props) => {
 						<span class="icon mr-2">
 							<i class={KEY_ICON} />
 						</span>
-						<span>Project Key Created</span>
+						<span>{keyLabel(props.resource)} Created</span>
 					</h3>
 
 					<article class="message is-warning">
@@ -50,16 +60,18 @@ const KeyCreated = (props: Props) => {
 					</article>
 
 					<div class="field">
-						<label class="label" for="project-key">
-							Project Key
+						<label class="label" for="created-key">
+							{keyLabel(props.resource)}
 						</label>
 						<div class="field has-addons">
 							<div class="control is-expanded">
 								<input
-									id="project-key"
+									id="created-key"
 									class="input is-family-monospace"
 									type="text"
-									value={revealed() ? props.data.key : SANITIZED_PROJECT_KEY}
+									value={
+										revealed() ? props.data.key : sanitizedKey(props.data.key)
+									}
 									readonly
 								/>
 							</div>

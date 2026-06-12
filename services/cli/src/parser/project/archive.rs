@@ -3,7 +3,7 @@ use bencher_json::{
 };
 use clap::{ArgGroup, Args, Parser};
 
-use crate::parser::CliProjectBackend;
+use crate::parser::CliBackend;
 
 #[derive(Parser, Debug)]
 pub struct CliArchive {
@@ -15,7 +15,7 @@ pub struct CliArchive {
     pub dimension: CliArchiveDimension,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(Args, Debug)]

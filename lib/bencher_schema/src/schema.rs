@@ -419,6 +419,19 @@ diesel::table! {
 }
 
 diesel::table! {
+    user_key (id) {
+        id -> Integer,
+        uuid -> Text,
+        user_id -> Integer,
+        name -> Text,
+        key_hash -> Text,
+        creation -> BigInt,
+        expiration -> BigInt,
+        revoked -> Nullable<BigInt>,
+    }
+}
+
+diesel::table! {
     version (id) {
         id -> Integer,
         uuid -> Text,
@@ -478,6 +491,7 @@ diesel::joinable!(threshold -> measure (measure_id));
 diesel::joinable!(threshold -> project (project_id));
 diesel::joinable!(threshold -> testbed (testbed_id));
 diesel::joinable!(token -> user (user_id));
+diesel::joinable!(user_key -> user (user_id));
 diesel::joinable!(version -> project (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -515,5 +529,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     threshold,
     token,
     user,
+    user_key,
     version,
 );

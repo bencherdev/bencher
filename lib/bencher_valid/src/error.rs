@@ -105,6 +105,14 @@ pub enum ValidError {
     ProjectKey(String),
     #[error("Failed to validate project key hash: {0}")]
     ProjectKeyHash(String),
+    #[error("Failed to validate user key: {0}")]
+    UserKey(String),
+    #[error("Failed to validate user key hash: {0}")]
+    UserKeyHash(String),
+    #[error(
+        "Failed to validate Bencher API key: {0}. Expected prefix `bencher_user_` or `bencher_run_`."
+    )]
+    BencherKey(String),
     #[cfg(feature = "plus")]
     #[error("Failed to validate runner key: {0}")]
     RunnerKey(String),

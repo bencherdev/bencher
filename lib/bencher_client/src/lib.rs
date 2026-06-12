@@ -64,6 +64,7 @@ from_client!(
     ModelUuid,
     AlertUuid,
     UserUuid,
+    UserKeyUuid,
     TokenUuid
 );
 
@@ -182,6 +183,9 @@ try_from_client!(
     JsonPubUser,
     JsonTokens,
     JsonToken,
+    JsonUserKeys,
+    JsonUserKey,
+    JsonUserKeyCreated,
     JsonSignup,
     JsonLogin,
     JsonConfirm,

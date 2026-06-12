@@ -3,7 +3,7 @@
 use bencher_json::{JobUuid, ProjectResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::parser::{CliPagination, CliProjectBackend};
+use crate::parser::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliJob {
@@ -28,7 +28,7 @@ pub struct CliJobList {
     pub pagination: CliPagination<CliJobsSort>,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }
 
 #[derive(ValueEnum, Debug, Clone, Copy)]
@@ -59,5 +59,5 @@ pub struct CliJobView {
     pub job: JobUuid,
 
     #[clap(flatten)]
-    pub backend: CliProjectBackend,
+    pub backend: CliBackend,
 }

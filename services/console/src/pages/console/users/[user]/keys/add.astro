@@ -1,0 +1,21 @@
+---
+export const prerender = false;
+
+import { BENCHER_API_URL } from "astro:env/server";
+
+import UserLayout from "../../../../../layouts/console/UserLayout.astro";
+import KeyAddPanel from "../../../../../components/console/poster/KeyAddPanel";
+import { BencherResource } from "../../../../../config/types";
+
+const params = Astro.params;
+const title = "Add API Key";
+---
+
+<UserLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <KeyAddPanel
+    client:only="solid-js"
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    resource={BencherResource.USER_KEYS}
+  />
+</UserLayout>

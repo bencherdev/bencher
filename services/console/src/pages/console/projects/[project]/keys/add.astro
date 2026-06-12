@@ -5,6 +5,7 @@ import { BENCHER_API_URL } from "astro:env/server";
 
 import ProjectLayout from "../../../../../layouts/console/ProjectLayout.astro";
 import KeyAddPanel from "../../../../../components/console/poster/KeyAddPanel";
+import { BencherResource } from "../../../../../config/types";
 
 const params = Astro.params;
 const title = "Add Project Key";
@@ -15,5 +16,6 @@ const title = "Add Project Key";
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}
     params={params}
+    resource={BencherResource.PROJECT_KEYS}
   />
 </ProjectLayout>

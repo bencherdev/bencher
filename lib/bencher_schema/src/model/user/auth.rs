@@ -3,7 +3,7 @@ use std::ops::Deref;
 use async_trait::async_trait;
 #[cfg(feature = "plus")]
 use bencher_json::system::payment::JsonCustomer;
-use bencher_json::{Jwt, Sanitize};
+use bencher_json::{Jwt, Sanitize, UserKey, UserKeyHash};
 use bencher_rbac::{
     Organization, Project, Server, User as RbacUser,
     server::Permission,
@@ -19,12 +19,21 @@ use oso::{PolarValue, ToPolar};
 
 use crate::{
     context::{ApiContext, DbConnection, Rbac},
-    error::{BEARER_TOKEN_FORMAT, bad_request_error, unauthorized_error},
-    model::{organization::OrganizationId, project::ProjectId, user::token::QueryToken},
+    error::{BEARER_TOKEN_FORMAT, bad_request_error, issue_error, unauthorized_error},
+    model::{
+        organization::OrganizationId,
+        project::ProjectId,
+        user::{
+            key::{QueryUserKey, UserKeyId},
+            token::QueryToken,
+        },
+    },
     public_conn, schema,
 };
 
 use super::QueryUser;
+
+const INVALID_USER_KEY: &str = "Invalid user key";
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
@@ -32,6 +41,11 @@ pub struct AuthUser {
     pub organizations: Vec<OrganizationId>,
     pub projects: Vec<OrgProjectId>,
     pub rbac: RbacUser,
+    /// The `bencher_user_*` key that authenticated this request, if any.
+    /// `None` means a JWT (or an internally constructed `AuthUser`, e.g. OCI).
+    /// Used to gate credential management: a user key cannot create another
+    /// key and can only revoke itself.
+    pub user_key_id: Option<UserKeyId>,
 }
 
 impl AuthUser {
@@ -45,13 +59,34 @@ impl AuthUser {
         context: &ApiContext,
         bearer_token: BearerToken,
     ) -> Result<Self, HttpError> {
+        // Check out a single connection for the entire auth flow:
+        // credential resolution and RBAC hydration share one pool checkout.
+        let conn = public_conn!(context);
+        let (query_user, user_key_id) = match bearer_token {
+            BearerToken::Jwt(jwt) => (Self::user_from_jwt(context, conn, &jwt)?, None),
+            BearerToken::UserKey(key) => {
+                let (query_user, query_key) = Self::user_from_user_key(context, conn, &key)?;
+                (query_user, Some(query_key.id))
+            },
+        };
+
+        #[cfg(feature = "plus")]
+        context.rate_limiting.user_request(query_user.uuid)?;
+
+        Self::load_inner(conn, query_user, user_key_id)
+    }
+
+    fn user_from_jwt(
+        context: &ApiContext,
+        conn: &mut DbConnection,
+        jwt: &Jwt,
+    ) -> Result<QueryUser, HttpError> {
         let claims = context
             .token_key
-            .validate_client(&bearer_token)
+            .validate_client(jwt)
             .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
         let email = claims.email();
 
-        let conn = public_conn!(context);
         let query_user = QueryUser::get_with_email(conn, email)?;
         query_user.check_is_locked()?;
 
@@ -62,7 +97,7 @@ impl AuthUser {
         // have been revoked. Short-lived client (browser session) JWTs are never
         // persisted and skip this lookup.
         if claims.audience() == Audience::ApiKey.as_str()
-            && let Some(row) = QueryToken::get_by_user_jwt(conn, query_user.id, &bearer_token)
+            && let Some(row) = QueryToken::get_by_user_jwt(conn, query_user.id, jwt)
                 .optional()
                 .map_err(|e| unauthorized_error(format!("Failed to look up API token: {e}")))?
             && row.revoked.is_some()
@@ -74,17 +109,82 @@ impl AuthUser {
             ));
         }
 
-        #[cfg(feature = "plus")]
-        context.rate_limiting.user_request(query_user.uuid)?;
+        Ok(query_user)
+    }
 
-        Self::load(conn, query_user)
+    /// Authenticate via a `bencher_user_*` API key.
+    /// Performs a single indexed lookup that returns the key row alongside its owning
+    /// user. `revoked`, `expiration`, and `user.locked` are checked in Rust so each
+    /// failure mode can be reported distinctly via `UserKeyAuthFailureReason` without
+    /// a second query. All adverse cases return the same opaque `INVALID_USER_KEY`
+    /// message to avoid leaking which condition tripped.
+    /// Public so the OCI token endpoint (`api_auth`) can validate `docker login`
+    /// user-key credentials through the exact same checks and telemetry.
+    pub fn user_from_user_key(
+        context: &ApiContext,
+        conn: &mut DbConnection,
+        key: &UserKey,
+    ) -> Result<(QueryUser, QueryUserKey), HttpError> {
+        let key_hash = UserKeyHash::from(key);
+        let lookup = QueryUserKey::from_hash(conn, &key_hash)
+            .optional()
+            .inspect_err(|err| {
+                issue_error(
+                    "Failed to lookup user key",
+                    &format!("Failed to lookup user key by hash: {key_hash}"),
+                    err,
+                );
+            })
+            .map_err(|_err| unauthorized_error(INVALID_USER_KEY))?;
+
+        let Some((query_user, query_key)) = lookup else {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
+                bencher_otel::UserKeyAuthFailureReason::NotFound,
+            ));
+            return Err(unauthorized_error(INVALID_USER_KEY));
+        };
+
+        if query_key.revoked.is_some() {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
+                bencher_otel::UserKeyAuthFailureReason::Revoked,
+            ));
+            return Err(unauthorized_error(INVALID_USER_KEY));
+        }
+
+        if query_key.expiration.timestamp() <= context.clock.now().timestamp() {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
+                bencher_otel::UserKeyAuthFailureReason::Expired,
+            ));
+            return Err(unauthorized_error(INVALID_USER_KEY));
+        }
+
+        if query_user.locked {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
+                bencher_otel::UserKeyAuthFailureReason::Locked,
+            ));
+            return Err(unauthorized_error(INVALID_USER_KEY));
+        }
+
+        Ok((query_user, query_key))
     }
 
     pub fn reload(&self, conn: &mut DbConnection) -> Result<Self, HttpError> {
-        Self::load(conn, self.user.clone())
+        Self::load_inner(conn, self.user.clone(), self.user_key_id)
     }
 
     pub fn load(conn: &mut DbConnection, query_user: QueryUser) -> Result<Self, HttpError> {
+        Self::load_inner(conn, query_user, None)
+    }
+
+    fn load_inner(
+        conn: &mut DbConnection,
+        query_user: QueryUser,
+        user_key_id: Option<UserKeyId>,
+    ) -> Result<Self, HttpError> {
         let (org_ids, org_roles) = Self::organization_roles(conn, &query_user)?;
         let (proj_ids, proj_roles) = Self::project_roles(conn, &query_user)?;
 
@@ -100,6 +200,7 @@ impl AuthUser {
             organizations: org_ids,
             projects: proj_ids,
             rbac,
+            user_key_id,
         })
     }
 
@@ -118,7 +219,7 @@ impl AuthUser {
             ))
             .load::<(OrganizationId, String)>(conn)
             .map_err(|e| {
-                crate::error::issue_error(
+                issue_error(
                     "User can't query organization roles",
                     &format!(
                         "My user ({email}) on Bencher failed to query organization roles.",
@@ -134,7 +235,7 @@ impl AuthUser {
             .filter_map(|(org_id, role)| match role.parse() {
                 Ok(role) => Some((org_id.to_string(), role)),
                 Err(e) => {
-                    let _err = crate::error::issue_error(
+                    let _err = issue_error(
                         "Failed to parse organization role",
                         &format!("My user ({email}) on Bencher has an invalid organization role ({role}).", email = query_user.email),
                         e,
@@ -163,7 +264,7 @@ impl AuthUser {
             ))
             .load::<(OrganizationId, ProjectId, String)>(conn)
             .map_err(|e| {
-                crate::error::issue_error(
+                issue_error(
                     "User can't query project roles",
                     &format!(
                         "My user ({email}) on Bencher failed to query project roles.",
@@ -185,7 +286,7 @@ impl AuthUser {
             .filter_map(|(_, id, role)| match role.parse() {
                 Ok(role) => Some((id.to_string(), role)),
                 Err(e) => {
-                    let _err = crate::error::issue_error(
+                    let _err = issue_error(
                         "Failed to parse project role",
                         &format!(
                             "My user ({email}) on Bencher has an invalid project role ({role}).",
@@ -263,19 +364,50 @@ impl Sanitize for AuthUser {
 }
 
 // https://github.com/oxidecomputer/cio/blob/master/dropshot-verify-request/src/bearer.rs
-pub struct BearerToken(Jwt);
+/// A bearer credential extracted from the `Authorization` header.
+///
+/// The two shapes are distinguished by prefix: `bencher_user_*` is a user API key,
+/// anything else is parsed as a JWT. Both carry the same authority once resolved —
+/// `AuthUser::from_token` produces an identical `AuthUser` either way.
+pub enum BearerToken {
+    Jwt(Jwt),
+    UserKey(UserKey),
+}
 
 impl From<Jwt> for BearerToken {
     fn from(jwt: Jwt) -> Self {
-        Self(jwt)
+        Self::Jwt(jwt)
     }
 }
 
-impl Deref for BearerToken {
-    type Target = Jwt;
+impl From<UserKey> for BearerToken {
+    fn from(key: UserKey) -> Self {
+        Self::UserKey(key)
+    }
+}
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl BearerToken {
+    /// Parse a raw (Bearer-prefix-stripped) credential string into a `BearerToken`.
+    /// Centralized so the `SharedExtractor` impl and `ApiActor`'s dispatch agree on
+    /// the prefix detection rules.
+    pub fn from_raw(raw: &str) -> Result<Self, HttpError> {
+        if raw.starts_with(UserKey::PREFIX) {
+            raw.parse::<UserKey>().map(Self::UserKey).map_err(|e| {
+                // Mirror `ProjectKeyAuthFailureReason::Invalid` (emitted in
+                // `actor.rs::authenticate_project_key`) so crafted
+                // `bencher_user_*` probes are observable as a dedicated metric
+                // and not just `bad_request_error` log lines.
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
+                    bencher_otel::UserKeyAuthFailureReason::Invalid,
+                ));
+                bad_request_error(format!("Malformed user API key: {e}"))
+            })
+        } else {
+            raw.parse::<Jwt>()
+                .map(Self::Jwt)
+                .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))
+        }
     }
 }
 
@@ -305,10 +437,7 @@ impl SharedExtractor for BearerToken {
             )));
         };
 
-        token
-            .parse::<Jwt>()
-            .map(Into::into)
-            .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))
+        Self::from_raw(token)
     }
 
     fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
