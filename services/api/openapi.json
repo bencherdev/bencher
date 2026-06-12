@@ -695,7 +695,7 @@
           "oci"
         ],
         "summary": "OCI token endpoint (GET)",
-        "description": "Authenticates via Basic auth and returns a short-lived JWT for OCI operations. Supports two credential types: - `email:api-key-jwt`: user authentication - `project-slug-or-uuid:bencher_run_xxxxx`: project key authentication\n\nIf no Basic auth credentials are provided, issues a public (anonymous) OCI token.\n\nAccepts multiple `scope` query parameters (Docker 29+ / containerd sends these).",
+        "description": "Authenticates via Basic auth and returns a short-lived JWT for OCI operations. Supports three credential types: - `email:api-key-jwt`: user authentication via API token - `email:bencher_user_xxxxx`: user authentication via user API key - `project-slug-or-uuid:bencher_run_xxxxx`: project key authentication\n\nIf no Basic auth credentials are provided, issues a public (anonymous) OCI token.\n\nAccepts multiple `scope` query parameters (Docker 29+ / containerd sends these).",
         "operationId": "auth_oci_token_get",
         "parameters": [
           {

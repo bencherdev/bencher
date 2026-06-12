@@ -6,7 +6,8 @@
 //! - POST /v0/auth/oci/token - `OAuth2` token exchange (Docker 29+ / containerd)
 //!
 //! This endpoint implements the Docker Registry Auth specification.
-//! Clients authenticate using Basic auth with their Bencher API token
+//! Clients authenticate using Basic auth with their Bencher API token (JWT),
+//! user API key (`bencher_user_*`), or project API key (`bencher_run_*`)
 //! as the password, and receive a short-lived JWT for OCI operations.
 //!
 //! Authorization:
@@ -17,7 +18,7 @@
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post};
 use bencher_json::oci::{OCI_ERROR_DENIED, OCI_ERROR_UNAUTHORIZED, oci_error_body};
-use bencher_json::{Email, Jwt, ProjectKey, ProjectKeyHash, ProjectResourceId};
+use bencher_json::{Email, Jwt, ProjectKey, ProjectKeyHash, ProjectResourceId, UserKey};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::ApiContext,
@@ -106,8 +107,9 @@ pub async fn auth_oci_token_options(
 /// OCI token endpoint (GET)
 ///
 /// Authenticates via Basic auth and returns a short-lived JWT for OCI operations.
-/// Supports two credential types:
-/// - `email:api-key-jwt`: user authentication
+/// Supports three credential types:
+/// - `email:api-key-jwt`: user authentication via API token
+/// - `email:bencher_user_xxxxx`: user authentication via user API key
 /// - `project-slug-or-uuid:bencher_run_xxxxx`: project key authentication
 ///
 /// If no Basic auth credentials are provided, issues a public (anonymous) OCI token.
@@ -299,6 +301,18 @@ async fn dispatch_oci_token(
                 Err(unauthorized_with_www_authenticate(rqctx, scope))
             }
         },
+        Some((username, password)) if password.starts_with(UserKey::PREFIX) => {
+            if let (Ok(email), Ok(user_key)) =
+                (username.parse::<Email>(), password.parse::<UserKey>())
+            {
+                user_key_oci_token(
+                    rqctx, context, scope, &email, &user_key, repository, actions,
+                )
+                .await
+            } else {
+                Err(unauthorized_with_www_authenticate(rqctx, scope))
+            }
+        },
         Some((username, password)) => {
             if let (Ok(email), Ok(api_token)) = (username.parse::<Email>(), password.parse::<Jwt>())
             {
@@ -319,7 +333,7 @@ async fn dispatch_oci_token(
     }
 }
 
-/// Issue an authenticated OCI token after validating credentials and RBAC.
+/// Issue an authenticated OCI token after validating an API token (JWT).
 async fn auth_oci_token(
     rqctx: &RequestContext<ApiContext>,
     context: &ApiContext,
@@ -340,6 +354,45 @@ async fn auth_oci_token(
         return Err(unauthorized_with_www_authenticate(rqctx, scope));
     }
 
+    user_oci_token(rqctx, context, scope, email, repository, actions).await
+}
+
+/// Issue an authenticated OCI token after validating a `bencher_user_*` API key.
+async fn user_key_oci_token(
+    rqctx: &RequestContext<ApiContext>,
+    context: &ApiContext,
+    scope: Option<&str>,
+    email: &Email,
+    user_key: &UserKey,
+    repository: Option<String>,
+    actions: Vec<OciAction>,
+) -> Result<Jwt, HttpError> {
+    // Validate the user key. Not found, revoked, expired, and locked all fail
+    // closed inside `user_from_user_key` with distinct telemetry per reason.
+    let query_user = AuthUser::user_from_user_key(context, public_conn!(context), user_key)
+        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
+
+    // Verify the email matches the key owner
+    if query_user.email != *email {
+        return Err(unauthorized_with_www_authenticate(rqctx, scope));
+    }
+
+    context.rate_limiting.user_request(query_user.uuid)?;
+
+    user_oci_token(rqctx, context, scope, email, repository, actions).await
+}
+
+/// Shared authorization for user-credential OCI tokens (API token or user key):
+/// the admin gate for pull-only access, RBAC for claimed-org pushes, then minting.
+/// The caller must already have verified that `email` belongs to the credential.
+async fn user_oci_token(
+    rqctx: &RequestContext<ApiContext>,
+    context: &ApiContext,
+    scope: Option<&str>,
+    email: &Email,
+    repository: Option<String>,
+    actions: Vec<OciAction>,
+) -> Result<Jwt, HttpError> {
     // Check admin status for pull-only requests
     // Only server admins can pull OCI images standalone (to prevent abuse of the registry).
     // When push is also requested, we keep pull because Docker's push protocol

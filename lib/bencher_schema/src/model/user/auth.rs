@@ -107,7 +107,9 @@ impl AuthUser {
     /// failure mode can be reported distinctly via `UserKeyAuthFailureReason` without
     /// a second query. All adverse cases return the same opaque `INVALID_USER_KEY`
     /// message to avoid leaking which condition tripped.
-    fn user_from_user_key(
+    /// Public so the OCI token endpoint (`api_auth`) can validate `docker login`
+    /// user-key credentials through the exact same checks and telemetry.
+    pub fn user_from_user_key(
         context: &ApiContext,
         conn: &mut DbConnection,
         key: &UserKey,

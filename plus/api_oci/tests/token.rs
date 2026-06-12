@@ -7,7 +7,7 @@
 //! Integration tests for the OCI token endpoint (GET and POST /v0/auth/oci/token).
 
 use bencher_api_tests::TestServer;
-use bencher_json::ProjectKey;
+use bencher_json::{JsonUserKeyCreated, ProjectKey, UserKey};
 use http::StatusCode;
 use serde_json::Value;
 
@@ -445,4 +445,228 @@ async fn oci_token_post_no_credentials() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+// --- User API key (`bencher_user_*`) credentials ------------------------------
+
+#[expect(
+    clippy::expect_used,
+    clippy::missing_assert_message,
+    reason = "test helper outside #[test] fns"
+)]
+async fn mint_user_key(server: &TestServer, user_slug: &str, token: &str) -> JsonUserKeyCreated {
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{user_slug}/keys")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .json(&serde_json::json!({"name": "oci-login-key"}))
+        .send()
+        .await
+        .expect("Failed to create user key");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    resp.json().await.expect("Failed to parse new user key")
+}
+
+// GET with email + user API key → 200, token works for push, same as email + JWT
+#[tokio::test]
+async fn oci_token_user_key() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("UserKey User", "userkey-oci@example.com")
+        .await;
+    let org = server.create_org(&user, "UserKey Org").await;
+    let project = server.create_project(&user, &org, "UserKey Project").await;
+    let user_slug: &str = user.slug.as_ref();
+    let created = mint_user_key(&server, user_slug, &user.token).await;
+
+    assert!(
+        created.key.as_ref().starts_with(UserKey::PREFIX),
+        "User key should start with bencher_user_ prefix"
+    );
+
+    let project_slug: &str = project.slug.as_ref();
+    let scope = format!("repository:{project_slug}:push");
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/auth/oci/token?scope={scope}&service=localhost"
+        )))
+        .basic_auth(user.email.as_ref(), Some(created.key.as_ref()))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body: Value = resp.json().await.expect("Invalid JSON");
+    let token = body["token"].as_str().unwrap();
+
+    // The auth token should be accepted by the /v2/ base endpoint
+    let v2_resp = server
+        .client
+        .get(server.api_url("/v2/"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(v2_resp.status(), StatusCode::OK);
+}
+
+// POST with grant_type=password and email + user API key → 200 with access_token
+#[tokio::test]
+async fn oci_token_post_user_key() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("PostUserKey User", "postuserkey-oci@example.com")
+        .await;
+    let org = server.create_org(&user, "PostUserKey Org").await;
+    let project = server
+        .create_project(&user, &org, "PostUserKey Project")
+        .await;
+    let user_slug: &str = user.slug.as_ref();
+    let created = mint_user_key(&server, user_slug, &user.token).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let scope = format!("repository:{project_slug}:push");
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/auth/oci/token"))
+        .form(&[
+            ("grant_type", "password"),
+            ("username", user.email.as_ref()),
+            ("password", created.key.as_ref()),
+            ("scope", &scope),
+            ("service", "localhost"),
+        ])
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body: Value = resp.json().await.expect("Invalid JSON");
+    assert!(body["access_token"].is_string());
+
+    let token = body["access_token"].as_str().unwrap();
+    let v2_resp = server
+        .client
+        .get(server.api_url("/v2/"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(v2_resp.status(), StatusCode::OK);
+}
+
+// GET with an email that does not own the user key → 401
+#[tokio::test]
+async fn oci_token_user_key_wrong_email() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("KeyOwner User", "keyowner-oci@example.com")
+        .await;
+    let other = server
+        .signup("OtherUser User", "otheruser-oci@example.com")
+        .await;
+    let user_slug: &str = user.slug.as_ref();
+    let created = mint_user_key(&server, user_slug, &user.token).await;
+
+    let resp = server
+        .client
+        .get(server.api_url("/v0/auth/oci/token?scope=repository:test:push"))
+        .basic_auth(other.email.as_ref(), Some(created.key.as_ref()))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
+}
+
+// GET with a revoked user key → 401
+#[tokio::test]
+async fn oci_token_user_key_revoked() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("RevokedKey User", "revokedkey-oci@example.com")
+        .await;
+    let user_slug: &str = user.slug.as_ref();
+    let created = mint_user_key(&server, user_slug, &user.token).await;
+
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/users/{user_slug}/keys/{}", created.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Failed to revoke user key");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    let resp = server
+        .client
+        .get(server.api_url("/v0/auth/oci/token?scope=repository:test:push"))
+        .basic_auth(user.email.as_ref(), Some(created.key.as_ref()))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
+}
+
+// GET with a well-formed but unknown user key → 401
+#[tokio::test]
+async fn oci_token_user_key_unknown() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("UnknownKey User", "unknownkey-oci@example.com")
+        .await;
+
+    let unknown_key = format!("{}{}", UserKey::PREFIX, "A".repeat(30));
+    let resp = server
+        .client
+        .get(server.api_url("/v0/auth/oci/token?scope=repository:test:push"))
+        .basic_auth(user.email.as_ref(), Some(&unknown_key))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
+}
+
+// GET with a `bencher_user_`-prefixed password that is not a valid key → 401
+#[tokio::test]
+async fn oci_token_user_key_malformed() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("MalformedKey User", "malformedkey-oci@example.com")
+        .await;
+
+    let resp = server
+        .client
+        .get(server.api_url("/v0/auth/oci/token?scope=repository:test:push"))
+        .basic_auth(user.email.as_ref(), Some("bencher_user_not-a-real-key"))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
 }
