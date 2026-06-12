@@ -2,4 +2,18 @@
 
 <br />
 
-Opcional: La opción `--key` o la variable de entorno `BENCHER_API_KEY` puede establecerse con una clave de API de proyecto válida. Si ambas se especifican, la opción `--key` tiene precedencia sobre la variable de entorno `BENCHER_API_KEY`. Las claves de API de proyecto están limitadas a un solo proyecto y solo pueden usarse para `bencher run` y otros comandos no destructivos. Una clave de API de proyecto no puede usarse para crear un nuevo Proyecto ni para reclamar un Proyecto existente. Entra en conflicto con [la opción `--token`](#--token-token).
+Opcional: Puede establecerse la opción `--key` o la variable de entorno `BENCHER_API_KEY`
+con una clave de API válida.
+Si ambas se especifican, la opción `--key` tiene prioridad sobre la variable de entorno `BENCHER_API_KEY`.
+Hay dos tipos de clave de API:
+
+- Una clave de API de usuario (`bencher_user_*`) está limitada a un usuario y se autentica como ese usuario.
+  [Haga clic aquí para crear una clave de API de usuario](/console/users/keys/add?back=L2VzL2RvY3MvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0ta2V5LWtleQ==).
+- Una clave de API de proyecto (`bencher_run_*`) está limitada a un solo proyecto
+  y solo puede usarse para `bencher run` y otros comandos no destructivos.
+  Una clave de API de proyecto no puede usarse para crear un nuevo Proyecto ni para reclamar un Proyecto existente,
+  por lo que requiere que [la opción `--project`](#--project-project) se establezca en un Proyecto existente.
+
+Si no se especifica ni la opción `--key` ni [la opción obsoleta `--token`](#--token-token),
+el Proyecto debe estar `no reclamado`.
+Entra en conflicto con [la opción obsoleta `--token`](#--token-token).

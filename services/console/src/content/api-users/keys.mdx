@@ -1,0 +1,27 @@
+---
+title: "User Keys"
+description: "The Bencher User Keys REST API"
+heading: "User Keys REST API"
+sortOrder: 2
+paths:
+  - path: /v0/users/{user}/keys
+    method: get
+    headers: auth
+    cli: user key list USER
+  - path: /v0/users/{user}/keys
+    method: post
+    headers: auth
+    cli: user key create USER
+  - path: /v0/users/{user}/keys/{key}
+    method: get
+    headers: auth
+    cli: user key view USER KEY
+  - path: /v0/users/{user}/keys/{key}
+    method: patch
+    headers: auth
+    cli: user key update USER KEY
+  - path: /v0/users/{user}/keys/{key}
+    method: delete
+    headers: auth
+    cli: user key revoke USER KEY
+---

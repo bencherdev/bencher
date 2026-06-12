@@ -6,8 +6,8 @@
 )]
 //! Integration tests for user CRUD endpoints.
 
-use bencher_api_tests::TestServer;
-use bencher_json::{Email, JsonToken, JsonTokens, JsonUser};
+use bencher_api_tests::{TestServer, helpers::seed_token};
+use bencher_json::{Email, JsonTokens, JsonUser};
 use http::StatusCode;
 
 // GET /v0/users - admin can list all users
@@ -223,20 +223,8 @@ async fn users_update_email_revokes_tokens() {
     let user = server.signup("Test User", "emailrevoke@example.com").await;
     let user_slug: &str = user.slug.as_ref();
 
-    // Create an API token
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .json(&serde_json::json!({ "name": "My Token" }))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(create_resp.status(), StatusCode::CREATED);
-    let api_token: JsonToken = create_resp.json().await.expect("Failed to parse response");
+    // Seed an API token (token creation via the API is deprecated)
+    let api_token = seed_token(&server, &user, "My Token");
 
     // Verify the API token authenticates
     let pre_resp = server
@@ -322,20 +310,8 @@ async fn users_update_name_no_revoke() {
     let user = server.signup("Test User", "namenorevoke@example.com").await;
     let user_slug: &str = user.slug.as_ref();
 
-    // Create an API token
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .json(&serde_json::json!({ "name": "Keep Me" }))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(create_resp.status(), StatusCode::CREATED);
-    let api_token: JsonToken = create_resp.json().await.expect("Failed to parse response");
+    // Seed an API token (token creation via the API is deprecated)
+    let api_token = seed_token(&server, &user, "Keep Me");
 
     // Update only the name
     let patch_resp = server

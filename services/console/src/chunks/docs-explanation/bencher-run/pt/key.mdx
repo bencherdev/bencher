@@ -2,4 +2,15 @@
 
 <br />
 
-Opcional: A opção `--key` ou a variável de ambiente `BENCHER_API_KEY` pode ser definida com uma chave de API de projeto válida. Se ambas forem especificadas, a opção `--key` tem precedência sobre a variável de ambiente `BENCHER_API_KEY`. As chaves de API de projeto são limitadas a um único projeto e só podem ser usadas para `bencher run` e outros comandos não destrutivos. Uma chave de API de projeto não pode ser usada para criar um novo Projeto nem para reivindicar um Projeto existente. Conflita com [a opção `--token`](#--token-token).
+Opcional: A opção `--key` ou a variável de ambiente `BENCHER_API_KEY` pode ser definida com uma chave de API válida. Se ambas forem especificadas, a opção `--key` tem precedência sobre a variável de ambiente `BENCHER_API_KEY`. Existem dois tipos de chave de API:
+
+- Uma chave de API de usuário (`bencher_user_*`) é limitada a um usuário e autentica como esse usuário.
+  [Clique aqui para criar uma chave de API de usuário](/console/users/keys/add?back=L3B0L2RvY3MvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0ta2V5LWtleQ==).
+- Uma chave de API de projeto (`bencher_run_*`) é limitada a um único projeto
+  e só pode ser usada para `bencher run` e outros comandos não destrutivos.
+  Uma chave de API de projeto não pode ser usada para criar um novo Projeto nem para reivindicar um Projeto existente,
+  portanto requer que [a opção `--project`](#--project-project) esteja definida como um Projeto existente.
+
+Se nem a opção `--key` nem [a opção obsoleta `--token`](#--token-token) forem especificadas,
+o Projeto deve estar `não reivindicado`.
+Conflita com [a opção obsoleta `--token`](#--token-token).

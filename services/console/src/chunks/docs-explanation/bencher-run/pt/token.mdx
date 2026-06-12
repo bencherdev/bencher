@@ -2,4 +2,8 @@
 
 <br />
 
-Opcional: A opção `--token` ou a variável de ambiente `BENCHER_API_TOKEN` podem ser configuradas com um token de API válido. Se ambos forem especificados, a opção `--token` prevalece sobre a variável de ambiente `BENCHER_API_TOKEN`. Se nenhum dos dois for especificado, o Projeto deve estar `não reivindicado`. Ou seja, se você já `reivindicou` um Projeto, deve fornecer um token de API válido. Conflita com [a opção `--key`](#--key-key). [Clique aqui para criar um token de API](/console/users/tokens/add?back=L3B0L2RvY3MvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0tdG9rZW4tdG9rZW4=).
+> 🐰 OBSOLETO: Os tokens de API estão obsoletos em favor das chaves de API.
+> Novos tokens de API não podem mais ser criados; os tokens de API existentes continuam funcionando.
+> Use [a opção `--key`](#--key-key) em vez disso.
+
+Opcional: A opção `--token` ou a variável de ambiente `BENCHER_API_TOKEN` podem ser configuradas com um token de API válido. Se ambos forem especificados, a opção `--token` prevalece sobre a variável de ambiente `BENCHER_API_TOKEN`. Se nem a opção `--token` nem [a opção `--key`](#--key-key) forem especificadas, o Projeto deve estar `não reivindicado`. Ou seja, se você já `reivindicou` um Projeto, deve fornecer uma chave de API ou um token de API válidos. Conflita com [a opção `--key`](#--key-key).

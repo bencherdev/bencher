@@ -3,12 +3,13 @@
 //! These helpers are used by both `api_projects` and `api_runners` integration tests.
 
 use bencher_json::{
-    BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, ReportUuid, TestbedUuid, VersionUuid,
+    BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, ReportUuid, ResourceName, TestbedUuid,
+    TokenUuid, VersionUuid,
 };
-use bencher_schema::schema;
+use bencher_schema::{model::user::UserId, schema};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
-use crate::TestServer;
+use crate::{TestServer, seed::TestUser};
 
 /// Fixed base timestamp for deterministic tests (Unix epoch + 1 billion seconds).
 #[expect(clippy::expect_used, reason = "test helper creating fixed timestamp")]
@@ -125,6 +126,51 @@ pub fn create_test_report(server: &TestServer, project_id: i32) -> i32 {
         .select(schema::report::id)
         .first(&mut conn)
         .expect("Failed to get report ID")
+}
+
+/// A user API token seeded directly into the database.
+pub struct TestToken {
+    pub uuid: TokenUuid,
+    pub token: Jwt,
+}
+
+/// Seed a user API token directly into the database.
+/// The `POST /v0/users/{user}/tokens` endpoint is deprecated and always fails,
+/// so tests for the remaining token endpoints must seed tokens at the DB layer.
+#[expect(clippy::expect_used, reason = "test helper inserting a user API token")]
+pub fn seed_token(server: &TestServer, user: &TestUser, name: &str) -> TestToken {
+    let mut conn = server.db_conn();
+
+    let name: ResourceName = name.parse().expect("Invalid token name");
+    let user_id: UserId = schema::user::table
+        .filter(schema::user::uuid.eq(&user.uuid))
+        .select(schema::user::id)
+        .first(&mut conn)
+        .expect("Failed to get user ID");
+
+    let jwt = server
+        .token_key()
+        .new_api_key(user.email.clone(), u32::MAX)
+        .expect("Failed to mint user API token");
+    let claims = server
+        .token_key()
+        .validate_api_key(&jwt)
+        .expect("Failed to validate user API token");
+
+    let uuid = TokenUuid::new();
+    diesel::insert_into(schema::token::table)
+        .values((
+            schema::token::uuid.eq(&uuid),
+            schema::token::user_id.eq(user_id),
+            schema::token::name.eq(&name),
+            schema::token::jwt.eq(&jwt),
+            schema::token::creation.eq(claims.issued_at()),
+            schema::token::expiration.eq(claims.expiration()),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert token");
+
+    TestToken { uuid, token: jwt }
 }
 
 /// Set job status directly in the database.

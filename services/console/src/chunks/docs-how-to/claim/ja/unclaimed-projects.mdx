@@ -1,15 +1,15 @@
 ## `unclaimed` プロジェクト
 
-Bencherを使用すると、アカウントを作成せずにベンチマークの結果を追跡できます。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを[ `--token`オプション][token option]を設定せずに呼び出すと、Bencherはベンチマークの結果用に新しい`unclaimed`[オンザフライ][on the fly projects]プロジェクトを作成します。[クイックスタート][quickstart]や[自社ホストクイックスタート][self-hosted quickstart]チュートリアルに従った場合、あなたはこの機能を活用していました。
+Bencherを使用すると、アカウントを作成せずにベンチマークの結果を追跡できます。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを[ `--key`オプション][key option]を設定せずに呼び出すと、Bencherはベンチマークの結果用に新しい`unclaimed`[オンザフライ][on the fly projects]プロジェクトを作成します。[クイックスタート][quickstart]や[自社ホストクイックスタート][self-hosted quickstart]チュートリアルに従った場合、あなたはこの機能を活用していました。
 
 誰でも`unclaimed`プロジェクトにベンチマークの結果を視聴したり投稿したりできます。`unclaimed`プロジェクトを主張するには、アカウントを作成する必要があります。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>の出力の最後にある `Claim this project` サインアップリンクに従うと、アカウントが作成されると同時にプロジェクトを自動的に主張します。
 
-すでにBencherアカウントを持っている場合、プロジェクトの[公開パフォーマンスページ][bencher perf]に移動し、ページの上部にある `Claim this project` ボタンをクリックできます。同様に、すでにAPIトークンを持っている場合、次回<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>を呼び出す際に[ `--token`オプション][token option]とAPIトークンを使用してプロジェクトを主張できます。
+すでにBencherアカウントを持っている場合、プロジェクトの[公開パフォーマンスページ][bencher perf]に移動し、ページの上部にある `Claim this project` ボタンをクリックできます。同様に、すでにユーザーAPIキーを持っている場合、次回<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>を呼び出す際に[ `--key`オプション][key option]とユーザーAPIキーを使用してプロジェクトを主張できます。
 
 > 🐰 重要: プロジェクトが `claimed` になってしまうと、匿名で投稿することはできなくなります。
-> **必ず** [ `--token`オプション][token option]を使用してAPIトークンを使用しなければなりません。
+> **必ず** [ `--key`オプション][key option]を使用してユーザーAPIキーを使用しなければなりません。
 
-[token option]: /ja/docs/explanation/bencher-run/#--token-token
+[key option]: /ja/docs/explanation/bencher-run/#--key-key
 [on the fly projects]: #on-the-fly-projects
 [quickstart]: /ja/docs/tutorial/quickstart/
 [self-hosted quickstart]: /ja/docs/tutorial/self-hosted/

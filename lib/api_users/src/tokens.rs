@@ -9,12 +9,12 @@ use bencher_json::{
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{conflict_error, resource_conflict_err, resource_not_found_err},
+    error::{conflict_error, forbidden_error, resource_conflict_err, resource_not_found_err},
     model::user::{
         QueryUser, UserId,
         auth::{AuthUser, BearerToken},
         same_user,
-        token::{InsertToken, QueryToken, UpdateToken},
+        token::{QueryToken, UpdateToken},
     },
     schema, write_conn, write_transaction,
 };
@@ -174,65 +174,30 @@ fn get_ls_query<'q>(
 
 /// Create a token
 ///
-/// Create an API token for a user.
-/// Only the authenticated user themselves and server admins have access to this endpoint.
+/// DEPRECATED: User API tokens have been deprecated in favor of user API keys,
+/// so this endpoint always fails with a `403 Forbidden` error.
+/// Create a user API key instead: <https://bencher.dev/docs/explanation/bencher-run/#--key-key>
+/// Existing API tokens continue to work and can still be viewed, updated, and revoked.
 #[endpoint {
     method = POST,
     path =  "/v0/users/{user}/tokens",
-    tags = ["users", "tokens"]
+    tags = ["users", "tokens"],
+    deprecated = true,
 }]
 pub async fn user_token_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
-    path_params: Path<UserTokensParams>,
-    body: TypedBody<JsonNewToken>,
+    _path_params: Path<UserTokensParams>,
+    _body: TypedBody<JsonNewToken>,
 ) -> Result<ResponseCreated<JsonToken>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = post_inner(
-        rqctx.context(),
-        path_params.into_inner(),
-        body.into_inner(),
-        &auth_user,
-    )
-    .await?;
-    Ok(Post::auth_response_created(json))
-}
-
-async fn post_inner(
-    context: &ApiContext,
-    path_params: UserTokensParams,
-    json_token: JsonNewToken,
-    auth_user: &AuthUser,
-) -> Result<JsonToken, HttpError> {
-    #[cfg(feature = "plus")]
-    context
-        .rate_limiting
-        .create_credential(auth_user.user.uuid)?;
-
-    let insert_token = InsertToken::from_json(
-        auth_conn!(context),
-        &context.rbac,
-        &context.token_key,
-        &path_params.user,
-        json_token,
-        auth_user,
-    )?;
-
-    diesel::insert_into(schema::token::table)
-        .values(&insert_token)
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Token, insert_token))?;
-
+    // Authenticate first: invalid credentials still get a 401,
+    // while valid credentials get a 403 that explains the deprecation.
+    let _auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenCreate);
-
-    auth_conn!(context, |conn| {
-        schema::token::table
-            .filter(schema::token::uuid.eq(&insert_token.uuid))
-            .first::<QueryToken>(conn)
-            .map_err(resource_not_found_err!(Token, insert_token))?
-            .into_json(conn)
-    })
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenCreateBlocked);
+    Err(forbidden_error(
+        "User API tokens are deprecated and can no longer be created. Create a user API key instead: https://bencher.dev/docs/explanation/bencher-run/#--key-key",
+    ))
 }
 
 #[derive(Deserialize, JsonSchema)]

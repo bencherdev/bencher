@@ -49,6 +49,10 @@ npx biome format --write .
 npx biome lint .
 ```
 
+Do **NOT** use `npx biome check .` to validate the codebase: `check` additionally
+enforces `organizeImports`, which is not part of CI and fails on many existing files.
+Use `lint` and `format` (as above) like CI does.
+
 ## Console Setup
 
 Runs Typeshare, WASM, and copies files to set up the console.

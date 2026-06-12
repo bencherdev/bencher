@@ -2,7 +2,7 @@
 title: "API Tokens"
 description: "The Bencher User API Tokens REST API"
 heading: "API Tokens REST API"
-sortOrder: 2
+sortOrder: 3
 paths:
   - path: /v0/users/{user}/tokens
     method: get
@@ -20,4 +20,8 @@ paths:
     method: patch
     headers: auth
     cli: token update USER TOKEN
+  - path: /v0/users/{user}/tokens/{token}
+    method: delete
+    headers: auth
+    cli: token revoke USER TOKEN
 ---

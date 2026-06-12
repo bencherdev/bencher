@@ -7,6 +7,9 @@ use crate::UserUuid;
 
 crate::typed_uuid::typed_uuid!(TokenUuid);
 
+/// DEPRECATED: User API tokens have been deprecated in favor of user API keys,
+/// so creating a new token always fails with a `403 Forbidden` error.
+/// Create a user API key instead.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

@@ -53,6 +53,11 @@ const methodClass = new Method(method);
           <div class="level-item">
               <code>{path}</code>
           </div>
+          { operation?.deprecated &&
+          <div class="level-item">
+              <span class="tag is-warning is-medium is-rounded">Deprecated</span>
+          </div>
+          }
       </div>
     </div>
     <Endpoint />

@@ -101,6 +101,7 @@ pub enum ApiCounter {
     UserCheckout,
 
     UserTokenCreate,
+    UserTokenCreateBlocked,
     UserTokenRevoke,
     UserTokenRevokedUse,
 
@@ -191,6 +192,7 @@ impl ApiCounter {
             Self::UserCheckout => "{checkout}",
 
             Self::UserAttemptMax(_, _)
+            | Self::UserTokenCreateBlocked
             | Self::UserTokenRevokedUse
             | Self::UserKeyCreateBlocked
             | Self::UserKeyViewBlocked
@@ -249,6 +251,7 @@ impl ApiCounter {
             Self::UserCheckout => "user.checkout",
 
             Self::UserTokenCreate => "user.token.create",
+            Self::UserTokenCreateBlocked => "user.token.create.blocked",
             Self::UserTokenRevoke => "user.token.revoke",
             Self::UserTokenRevokedUse => "user.token.revoked.use",
 
@@ -339,6 +342,9 @@ impl ApiCounter {
             Self::UserCheckout => "Counts the number of user checkouts",
 
             Self::UserTokenCreate => "Counts the number of user API token creations",
+            Self::UserTokenCreateBlocked => {
+                "Counts the number of user API token creation attempts blocked because user API tokens are deprecated"
+            },
             Self::UserTokenRevoke => "Counts the number of user API token revocations",
             Self::UserTokenRevokedUse => {
                 "Counts the number of authentication attempts with a revoked API token"
@@ -434,6 +440,7 @@ impl ApiCounter {
             | Self::UserClaim
             | Self::UserCheckout
             | Self::UserTokenCreate
+            | Self::UserTokenCreateBlocked
             | Self::UserTokenRevoke
             | Self::UserTokenRevokedUse
             | Self::UserKeyCreate

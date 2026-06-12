@@ -1,6 +1,6 @@
 pub mod key;
 pub mod token;
-use bencher_valid::{Email, ResourceId, UserName};
+use bencher_valid::{DateTime, Email, ResourceId, UserName};
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -29,6 +29,10 @@ pub struct JsonUser {
     pub email: Email,
     pub admin: bool,
     pub locked: bool,
+    /// The time at which the user account was created.
+    /// Optional for backwards compatibility with older servers.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created: Option<DateTime>,
 }
 
 #[typeshare::typeshare]

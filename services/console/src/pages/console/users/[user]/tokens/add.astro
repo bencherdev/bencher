@@ -1,21 +1,6 @@
 ---
 export const prerender = false;
 
-import { BENCHER_API_URL } from "astro:env/server";
-
-import UserLayout from "../../../../../layouts/console/UserLayout.astro";
-import PosterPanel from "../../../../../components/console/poster/PosterPanel";
-import { BencherResource } from "../../../../../config/types";
-
-const params = Astro.params;
-const title = "Add Token";
+// User API tokens are deprecated: redirect to adding a user API key instead.
+return Astro.redirect(`/console/users/${Astro.params.user}/keys/add`);
 ---
-
-<UserLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
-  <PosterPanel
-    client:only="solid-js"
-    apiUrl={BENCHER_API_URL}
-    params={params}
-    resource={BencherResource.TOKENS}
-  />
-</UserLayout>

@@ -8,7 +8,8 @@ pub enum CliToken {
     /// List tokens
     #[clap(alias = "ls")]
     List(CliTokenList),
-    /// Create a token
+    /// Create a token. Deprecated: this always fails, as user API tokens
+    /// can no longer be created. Use `bencher user key create` instead.
     #[clap(alias = "add")]
     Create(CliTokenCreate),
     /// View a token

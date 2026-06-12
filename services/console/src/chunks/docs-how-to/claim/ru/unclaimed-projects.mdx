@@ -1,14 +1,14 @@
 ## `unclaimed` проекты
 
-Bencher позволяет отслеживать результаты тестов производительности без создания учетной записи. Когда вы вызываете подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> без выбора [опции `--token`][token option], Bencher создаст новый `unclaimed` проект [на лету][on the fly projects] для ваших результатов бенчмарков. Если вы следовали инструкциям из руководств [Краткое руководство][quickstart] или [Краткое руководство для самостоятельного размещения][self-hosted quickstart], то вы уже использовали эту функциональность.
+Bencher позволяет отслеживать результаты тестов производительности без создания учетной записи. Когда вы вызываете подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> без выбора [опции `--key`][key option], Bencher создаст новый `unclaimed` проект [на лету][on the fly projects] для ваших результатов бенчмарков. Если вы следовали инструкциям из руководств [Краткое руководство][quickstart] или [Краткое руководство для самостоятельного размещения][self-hosted quickstart], то вы уже использовали эту функциональность.
 
 Любой может просматривать и добавлять результаты тестов производительности в `unclaimed` проект. Чтобы авторизовать `unclaimed` проект, вам нужно создать учетную запись. Если вы перейдете по ссылке `Claim this project` в конце вашего вывода <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>, проект будет автоматически авторизован при создании вашей учетной записи.
 
-Если у вас уже есть учетная запись Bencher, вы можете перейти на [публичную страницу производительности][bencher perf] проекта и нажать кнопку `Claim this project` в верхней части страницы. Аналогично, если у вас уже есть API токен, вы можете использовать его с [опцией `--token`][token option] при следующем вызове <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>, чтобы авторизовать проект.
+Если у вас уже есть учетная запись Bencher, вы можете перейти на [публичную страницу производительности][bencher perf] проекта и нажать кнопку `Claim this project` в верхней части страницы. Аналогично, если у вас уже есть ключ API пользователя, вы можете использовать его с [опцией `--key`][key option] при следующем вызове <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>, чтобы авторизовать проект.
 
-> 🐰 ВАЖНО: Как только проект будет `claimed`, в него нельзя будет добавлять информацию анонимно. Вы **должны** использовать API токен с [опцией `--token`][token option].
+> 🐰 ВАЖНО: Как только проект будет `claimed`, в него нельзя будет добавлять информацию анонимно. Вы **должны** использовать ключ API пользователя с [опцией `--key`][key option].
 
-[token option]: /ru/docs/explanation/bencher-run/#--token-token
+[key option]: /ru/docs/explanation/bencher-run/#--key-key
 [on the fly projects]: #on-the-fly-projects
 [quickstart]: /ru/docs/tutorial/quickstart/
 [self-hosted quickstart]: /ru/docs/tutorial/self-hosted/

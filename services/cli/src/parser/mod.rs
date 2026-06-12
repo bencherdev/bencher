@@ -119,7 +119,8 @@ pub enum CliSub {
     /// Manage user
     #[clap(subcommand)]
     User(CliUser),
-    /// Manage user API tokens
+    /// Manage user API tokens. Deprecated: prefer user API keys
+    /// (`bencher user key`); existing tokens can still be managed.
     #[clap(subcommand)]
     Token(CliToken),
 

@@ -11,15 +11,15 @@
 //! These mirror `lib/api_projects/tests/project_key_auth.rs` but verify the
 //! complementary property: a user-scoped key must authenticate as the owning
 //! user across *every* endpoint a JWT can reach — organizations, projects,
-//! user mgmt, token mgmt — except key management: a key cannot mint more user
-//! keys and can only see, update, or revoke *itself*, so a leaked key cannot
-//! outlive its own revocation, tamper with the user's other keys, or
-//! enumerate them.
+//! user mgmt, token mgmt — except credential creation: a key cannot mint more
+//! user keys (and token creation is deprecated for everyone) and can only see,
+//! update, or revoke *itself*, so a leaked key cannot outlive its own
+//! revocation, tamper with the user's other keys, or enumerate them.
 
 use bencher_api_tests::TestServer;
 use bencher_json::{
-    JsonOrganization, JsonOrganizations, JsonProject, JsonToken, JsonUser, JsonUserKey,
-    JsonUserKeyCreated, JsonUserKeys, UserKey,
+    JsonOrganization, JsonOrganizations, JsonProject, JsonUser, JsonUserKey, JsonUserKeyCreated,
+    JsonUserKeys, UserKey,
 };
 use http::StatusCode;
 
@@ -188,10 +188,10 @@ async fn user_key_cannot_mint_another_user_key() {
     assert_eq!(keys.0.len(), 1);
 }
 
-// The tokens endpoint is deliberately out of scope for the mint restriction:
-// tightening JWT API token semantics is a separate decision.
+// User API token creation is deprecated for every credential,
+// so a user key cannot mint a JWT API token that outlives its own revocation.
 #[tokio::test]
-async fn user_key_can_mint_user_jwt_token() {
+async fn user_key_cannot_mint_user_jwt_token() {
     let (server, user_slug, _token, key) = setup().await;
 
     let resp = server
@@ -206,8 +206,7 @@ async fn user_key_can_mint_user_jwt_token() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::CREATED);
-    let _json: JsonToken = resp.json().await.expect("Failed to parse token");
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
 
 #[tokio::test]

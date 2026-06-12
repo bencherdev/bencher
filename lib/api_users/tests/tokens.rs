@@ -5,57 +5,19 @@
     reason = "integration test file"
 )]
 //! Integration tests for user token endpoints.
+//!
+//! User API tokens are deprecated: `POST /v0/users/{user}/tokens` always fails
+//! with a `403 Forbidden` error pointing at user API keys. Existing tokens can
+//! still be listed, viewed, updated, and revoked, so those tests seed tokens
+//! directly into the database via `seed_token`.
 
-use bencher_api_tests::TestServer;
+use bencher_api_tests::{TestServer, helpers::seed_token};
 use bencher_json::{JsonToken, JsonTokens};
 use http::StatusCode;
 
-// GET /v0/users/{user}/tokens - list tokens (after creating one)
+// POST /v0/users/{user}/tokens - token creation is deprecated and always fails
 #[tokio::test]
-async fn tokens_list() {
-    let server = TestServer::new().await;
-    let user = server.signup("Test User", "tokenslist@example.com").await;
-
-    // First create a token so the list isn't empty
-    let create_body = serde_json::json!({
-        "name": "List Test Token"
-    });
-
-    let user_slug: &str = user.slug.as_ref();
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .json(&create_body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(create_resp.status(), StatusCode::CREATED);
-
-    // Now list tokens
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let tokens: JsonTokens = resp.json().await.expect("Failed to parse response");
-    assert!(!tokens.0.is_empty());
-}
-
-// POST /v0/users/{user}/tokens - create token
-#[tokio::test]
-async fn tokens_create() {
+async fn tokens_create_deprecated() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "tokenscreate@example.com").await;
 
@@ -76,36 +38,108 @@ async fn tokens_create() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::CREATED);
-    let token: JsonToken = resp.json().await.expect("Failed to parse response");
-    assert_eq!(token.name.as_ref(), "Test Token");
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    let message = resp.text().await.expect("Failed to read response");
+    assert!(
+        message.contains("deprecated"),
+        "the 403 must explain the deprecation: {message}"
+    );
+
+    // No token was created
+    let list_resp = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(list_resp.status(), StatusCode::OK);
+    let tokens: JsonTokens = list_resp.json().await.expect("Failed to parse response");
+    assert!(tokens.0.is_empty());
 }
 
-// POST /v0/users/{user}/tokens - create token with TTL
+// POST /v0/users/{user}/tokens - invalid credentials still get a 401, not the 403
 #[tokio::test]
-async fn tokens_create_with_ttl() {
+async fn tokens_create_unauthenticated() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "tokensttl@example.com").await;
+    let user = server.signup("Test User", "tokensnoauth@example.com").await;
 
     let body = serde_json::json!({
-        "name": "TTL Token",
-        "ttl": 3600  // 1 hour
+        "name": "No Auth Token"
     });
 
+    // Valid format, no row in `user_key` table.
+    let unknown = "bencher_user_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh";
     let user_slug: &str = user.slug.as_ref();
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
         .header(
             bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
+            bencher_json::bearer_header(unknown),
         )
         .json(&body)
         .send()
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::CREATED);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+// POST /v0/users/{user}/tokens - deprecated even for another user's path
+#[tokio::test]
+async fn tokens_create_other_user_deprecated() {
+    let server = TestServer::new().await;
+    let user1 = server.signup("User One", "token1@example.com").await;
+    let user2 = server.signup("User Two", "token2@example.com").await;
+
+    let body = serde_json::json!({
+        "name": "Sneaky Token"
+    });
+
+    // User1 tries to create a token for User2
+    let user2_slug: &str = user2.slug.as_ref();
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{}/tokens", user2_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user1.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+// GET /v0/users/{user}/tokens - list tokens (after seeding one)
+#[tokio::test]
+async fn tokens_list() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "tokenslist@example.com").await;
+
+    let seeded = seed_token(&server, &user, "List Test Token");
+
+    let user_slug: &str = user.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let tokens: JsonTokens = resp.json().await.expect("Failed to parse response");
+    assert!(tokens.0.iter().any(|t| t.uuid == seeded.uuid));
 }
 
 // GET /v0/users/{user}/tokens/{token} - view token
@@ -114,34 +148,12 @@ async fn tokens_get() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "tokensget@example.com").await;
 
-    // First create a token
-    let body = serde_json::json!({
-        "name": "View Token"
-    });
+    let seeded = seed_token(&server, &user, "View Token");
 
     let user_slug: &str = user.slug.as_ref();
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(create_resp.status(), StatusCode::CREATED);
-    let created_token: JsonToken = create_resp.json().await.expect("Failed to parse response");
-
-    // Now fetch it
     let resp = server
         .client
-        .get(server.api_url(&format!(
-            "/v0/users/{}/tokens/{}",
-            user_slug, created_token.uuid
-        )))
+        .get(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
@@ -152,7 +164,8 @@ async fn tokens_get() {
 
     assert_eq!(resp.status(), StatusCode::OK);
     let fetched: JsonToken = resp.json().await.expect("Failed to parse response");
-    assert_eq!(fetched.uuid, created_token.uuid);
+    assert_eq!(fetched.uuid, seeded.uuid);
+    assert_eq!(fetched.name.as_ref(), "View Token");
 }
 
 // GET /v0/users/{user}/tokens/{token} - token not found
@@ -187,38 +200,16 @@ async fn tokens_update() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "tokensupdate@example.com").await;
 
-    // First create a token
-    let body = serde_json::json!({
-        "name": "Original Token"
-    });
+    let seeded = seed_token(&server, &user, "Original Token");
 
-    let user_slug: &str = user.slug.as_ref();
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(create_resp.status(), StatusCode::CREATED);
-    let created_token: JsonToken = create_resp.json().await.expect("Failed to parse response");
-
-    // Now update it
     let update_body = serde_json::json!({
         "name": "Updated Token"
     });
 
+    let user_slug: &str = user.slug.as_ref();
     let resp = server
         .client
-        .patch(server.api_url(&format!(
-            "/v0/users/{}/tokens/{}",
-            user_slug, created_token.uuid
-        )))
+        .patch(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
@@ -242,24 +233,11 @@ async fn tokens_revoke_hides_from_list() {
         .await;
     let user_slug: &str = user.slug.as_ref();
 
-    let body = serde_json::json!({ "name": "Revoke Me" });
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(create_resp.status(), StatusCode::CREATED);
-    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+    let seeded = seed_token(&server, &user, "Revoke Me");
 
     let revoke_resp = server
         .client
-        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
@@ -282,7 +260,7 @@ async fn tokens_revoke_hides_from_list() {
     assert_eq!(list_resp.status(), StatusCode::OK);
     let tokens: JsonTokens = list_resp.json().await.expect("Failed to parse response");
     assert!(
-        tokens.0.iter().all(|t| t.uuid != created.uuid),
+        tokens.0.iter().all(|t| t.uuid != seeded.uuid),
         "revoked token must be hidden from default list: {:?}",
         tokens
     );
@@ -305,7 +283,7 @@ async fn tokens_revoke_hides_from_list() {
     let entry = tokens
         .0
         .iter()
-        .find(|t| t.uuid == created.uuid)
+        .find(|t| t.uuid == seeded.uuid)
         .expect("revoked token should appear when `?revoked=true`");
     assert!(
         entry.revoked.is_some(),
@@ -323,23 +301,11 @@ async fn tokens_revoke_visible_on_direct_get() {
         .await;
     let user_slug: &str = user.slug.as_ref();
 
-    let body = serde_json::json!({ "name": "Visible After Revoke" });
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+    let seeded = seed_token(&server, &user, "Visible After Revoke");
 
     let revoke_resp = server
         .client
-        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
@@ -351,7 +317,7 @@ async fn tokens_revoke_visible_on_direct_get() {
 
     let get_resp = server
         .client
-        .get(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .get(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
@@ -377,27 +343,15 @@ async fn tokens_revoke_breaks_auth() {
         .await;
     let user_slug: &str = user.slug.as_ref();
 
-    let body = serde_json::json!({ "name": "About To Be Revoked" });
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+    let seeded = seed_token(&server, &user, "About To Be Revoked");
 
-    // The freshly minted JWT authenticates.
+    // The seeded JWT authenticates.
     let pre_auth = server
         .client
         .get(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
         .header(
             bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&created.token),
+            bencher_json::bearer_header(&seeded.token),
         )
         .send()
         .await
@@ -406,7 +360,7 @@ async fn tokens_revoke_breaks_auth() {
 
     let revoke_resp = server
         .client
-        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
@@ -422,7 +376,7 @@ async fn tokens_revoke_breaks_auth() {
         .get(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
         .header(
             bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&created.token),
+            bencher_json::bearer_header(&seeded.token),
         )
         .send()
         .await
@@ -441,24 +395,11 @@ async fn tokens_revoke_other_user_forbidden() {
         .await;
     let owner_slug: &str = owner.slug.as_ref();
 
-    let body = serde_json::json!({ "name": "Owner Token" });
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", owner_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&owner.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(create_resp.status(), StatusCode::CREATED);
-    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+    let seeded = seed_token(&server, &owner, "Owner Token");
 
     let revoke_resp = server
         .client
-        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", owner_slug, created.uuid)))
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", owner_slug, seeded.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&attacker.token),
@@ -483,27 +424,11 @@ async fn tokens_revoke_admin_can_revoke_other_user() {
     let target = server.signup("Target", "revoketarget@example.com").await;
     let target_slug: &str = target.slug.as_ref();
 
-    let body = serde_json::json!({ "name": "Target Token" });
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", target_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&target.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(create_resp.status(), StatusCode::CREATED);
-    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+    let seeded = seed_token(&server, &target, "Target Token");
 
     let revoke_resp = server
         .client
-        .delete(server.api_url(&format!(
-            "/v0/users/{}/tokens/{}",
-            target_slug, created.uuid
-        )))
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", target_slug, seeded.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&admin.token),
@@ -527,23 +452,11 @@ async fn tokens_revoke_double_rejected() {
         .await;
     let user_slug: &str = user.slug.as_ref();
 
-    let body = serde_json::json!({ "name": "Revoke Twice" });
-    let create_resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-    let created: JsonToken = create_resp.json().await.expect("Failed to parse response");
+    let seeded = seed_token(&server, &user, "Revoke Twice");
 
     let first = server
         .client
-        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
@@ -555,7 +468,7 @@ async fn tokens_revoke_double_rejected() {
 
     let second = server
         .client
-        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, created.uuid)))
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user_slug, seeded.uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
@@ -564,38 +477,4 @@ async fn tokens_revoke_double_rejected() {
         .await
         .expect("Request failed");
     assert_eq!(second.status(), StatusCode::CONFLICT);
-}
-
-// POST /v0/users/{user}/tokens - cannot create token for other user
-#[tokio::test]
-async fn tokens_create_other_user_forbidden() {
-    let server = TestServer::new().await;
-    let user1 = server.signup("User One", "token1@example.com").await;
-    let user2 = server.signup("User Two", "token2@example.com").await;
-
-    let body = serde_json::json!({
-        "name": "Sneaky Token"
-    });
-
-    // User1 tries to create token for User2
-    let user2_slug: &str = user2.slug.as_ref();
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user2_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user1.token),
-        )
-        .json(&body)
-        .send()
-        .await
-        .expect("Request failed");
-
-    // First user is admin, so may succeed
-    // Non-admin would get forbidden
-    assert!(
-        resp.status() == StatusCode::CREATED || resp.status() == StatusCode::FORBIDDEN,
-        "Expected CREATED (admin) or FORBIDDEN, got: {}",
-        resp.status()
-    );
 }

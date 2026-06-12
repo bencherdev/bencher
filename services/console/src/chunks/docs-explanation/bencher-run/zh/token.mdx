@@ -2,9 +2,12 @@
 
 <br />
 
+> 🐰 已弃用：API 令牌已被弃用，请改用 API 密钥。
+> 无法再创建新的 API 令牌；现有的 API 令牌仍可继续使用。
+> 请改用 [`--key` 选项](#--key-key)。
+
 可选：可以通过 `--token` 选项或 `BENCHER_API_TOKEN` 环境变量来设置一个有效的 API 令牌。
 如果两者都指定了，则 `--token` 选项优先于 `BENCHER_API_TOKEN` 环境变量。
-如果两者都未指定，则项目必须是“未认领”的。
-也就是说，如果您已经”认领”了一个项目，则必须提供一个有效的 API 令牌。
+如果 `--token` 选项和 [`--key` 选项](#--key-key)都未指定，则项目必须是 `unclaimed`（未认领）的。
+也就是说，如果您已经 `claimed`（认领）了一个项目，则必须提供一个有效的 API 密钥或 API 令牌。
 与 [`--key` 选项](#--key-key)冲突。
-[点击这里创建一个 API 令牌](/console/users/tokens/add?back=L2RvY3MvemgvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0tdG9rZW4tdG9rZW4=)。
