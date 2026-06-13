@@ -10,8 +10,7 @@ use bencher_comment::ReportComment;
 #[cfg(feature = "plus")]
 use bencher_json::SpecResourceId;
 use bencher_json::{
-    BencherKey, DateTime, JsonReport, ProjectResourceId, RunContext, TestbedNameId,
-    project::report::Iteration,
+    DateTime, JsonReport, ProjectResourceId, RunContext, TestbedNameId, project::report::Iteration,
 };
 
 use crate::{
@@ -33,7 +32,7 @@ use branch::Branch;
 use ci::Ci;
 pub use error::RunError;
 use format::Format;
-use project::map_project;
+use project::resolve_project;
 use runner::Runner;
 use sub_adapter::SubAdapter;
 
@@ -171,16 +170,20 @@ impl TryFrom<CliRun> for Run {
         #[cfg(not(feature = "plus"))]
         let runner = Some(cmd.try_into()?);
 
-        // Project-scoped keys (`bencher_run_*`) are bound to a single existing
-        // project at issue time and cannot perform slug auto-creation, so a
-        // `--project` is mandatory whenever `--key` is one of them. User-scoped
-        // keys (`bencher_user_*`) and JWT tokens have no such restriction.
-        if backend.key.as_ref().is_some_and(BencherKey::is_project) && project.project.is_none() {
-            return Err(RunError::ProjectKeyRequiresProject.into());
-        }
+        // The server derives the target project from the job image repository
+        // (`[{registry}/]{project}:{tag}`) when `--project` is not specified.
+        // Mirror that derivation here to relax the `--project` requirements.
+        #[cfg(feature = "plus")]
+        let has_image_project = job.as_ref().is_some_and(|job| {
+            job.image
+                .project_repository()
+                .is_some_and(|repository| repository.parse::<ProjectResourceId>().is_ok())
+        });
+        #[cfg(not(feature = "plus"))]
+        let has_image_project = false;
 
         Ok(Self {
-            project: map_project(project)?,
+            project: resolve_project(project, backend.key.as_ref(), has_image_project)?,
             branch: branch.try_into().map_err(RunError::Branch)?,
             testbed,
             #[cfg(feature = "plus")]
@@ -607,4 +610,92 @@ fn run_sender(
         let json_new_run = json_new_run.clone();
         Box::pin(async move { client.run_post().body(json_new_run.clone()).send().await })
     })
+}
+
+#[cfg(test)]
+mod tests {
+    mod project_key {
+        use clap::Parser as _;
+
+        use super::super::Run;
+        use crate::CliError;
+        use crate::bencher::sub::RunError;
+        use crate::parser::run::CliRun;
+
+        const PROJECT_KEY: &str = "bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh";
+
+        fn parse_run(args: &[&str]) -> CliRun {
+            CliRun::try_parse_from(std::iter::once("run").chain(args.iter().copied()))
+                .expect("Failed to parse args")
+        }
+
+        #[test]
+        fn without_project_errors() {
+            let result = Run::try_from(parse_run(&["--key", PROJECT_KEY, "bencher", "mock"]));
+            assert!(
+                matches!(
+                    result,
+                    Err(CliError::Run(RunError::ProjectKeyRequiresProject))
+                ),
+                "{result:?}"
+            );
+        }
+
+        #[test]
+        fn with_project() {
+            Run::try_from(parse_run(&[
+                "--key",
+                PROJECT_KEY,
+                "--project",
+                "my-project",
+                "bencher",
+                "mock",
+            ]))
+            .expect("project key with `--project` should be accepted");
+        }
+
+        #[cfg(feature = "plus")]
+        #[test]
+        fn with_qualified_image_project() {
+            Run::try_from(parse_run(&[
+                "--key",
+                PROJECT_KEY,
+                "--image",
+                "localhost/my-project:v1",
+            ]))
+            .expect("project key with an image-derived project should be accepted");
+        }
+
+        #[cfg(feature = "plus")]
+        #[test]
+        fn with_unqualified_image_project() {
+            Run::try_from(parse_run(&[
+                "--key",
+                PROJECT_KEY,
+                "--image",
+                "my-project:v1",
+            ]))
+            .expect("project key with an image-derived project should be accepted");
+        }
+
+        #[cfg(feature = "plus")]
+        #[test]
+        fn with_image_without_project_repository_errors() {
+            // Multi-segment repositories (`{user}/{image}`) are not supported
+            // by the Bencher registry, so no project can be derived
+            let result = Run::try_from(parse_run(&[
+                "--key",
+                PROJECT_KEY,
+                "--image",
+                "ghcr.io/owner/repo:v1",
+            ]));
+            assert!(
+                matches!(
+                    result,
+                    Err(CliError::Run(RunError::ProjectKeyRequiresProject))
+                ),
+                "{result:?}"
+            );
+        }
+    }
 }

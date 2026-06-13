@@ -126,6 +126,27 @@ impl ImageReference {
         &self.repository
     }
 
+    /// The repository as a candidate project resource ID.
+    ///
+    /// Bencher registry images are named `[{registry}/]{project}:{tag}`,
+    /// so a repository with a single path segment is a project candidate.
+    /// The implied `library/` namespace for default-registry images is
+    /// ignored, matching Docker semantics where `{name}` and
+    /// `library/{name}` are equivalent.
+    /// Multi-segment repositories (e.g. `{user}/{image}`) are not supported
+    /// by the Bencher registry, so `None` is returned for them.
+    #[must_use]
+    pub fn project_repository(&self) -> Option<&str> {
+        let repository = if self.registry == DEFAULT_OCI_REGISTRY {
+            self.repository
+                .strip_prefix("library/")
+                .unwrap_or(&self.repository)
+        } else {
+            &self.repository
+        };
+        (!repository.contains('/')).then_some(repository)
+    }
+
     /// Tag or digest reference.
     #[must_use]
     pub fn reference(&self) -> &str {
@@ -140,15 +161,32 @@ impl ImageReference {
 
     /// Validate that this image's registry is either the default (`docker.io`)
     /// or the expected Bencher registry.
-    pub fn validate_registry(&self, expected_registry: &str) -> Result<(), ImageRegistryError> {
+    ///
+    /// The expected registry matches either as a bare host (`expected_host`)
+    /// or as a full authority (`expected_host:expected_port`), so both
+    /// `registry.bencher.dev/...` and `registry.bencher.dev:443/...` are
+    /// accepted for a registry served on that host and port. Pass the registry
+    /// URL's `port_or_known_default()` as `expected_port` so the scheme's
+    /// default port (e.g. 443 for HTTPS) is matched as well as an explicit
+    /// port (e.g. a self-hosted `:8443`).
+    pub fn validate_registry(
+        &self,
+        expected_host: &str,
+        expected_port: Option<u16>,
+    ) -> Result<(), ImageRegistryError> {
         let image_registry = self.registry();
-        if image_registry != DEFAULT_OCI_REGISTRY && image_registry != expected_registry {
-            return Err(ImageRegistryError::UnsupportedRegistry {
-                image_registry: image_registry.to_owned(),
-                expected_registry: expected_registry.to_owned(),
-            });
+        if image_registry == DEFAULT_OCI_REGISTRY || image_registry == expected_host {
+            return Ok(());
         }
-        Ok(())
+        if let Some(port) = expected_port
+            && image_registry == format!("{expected_host}:{port}")
+        {
+            return Ok(());
+        }
+        Err(ImageRegistryError::UnsupportedRegistry {
+            image_registry: image_registry.to_owned(),
+            expected_registry: expected_host.to_owned(),
+        })
     }
 }
 
@@ -264,6 +302,42 @@ mod tests {
     }
 
     #[test]
+    fn project_repository_unqualified() {
+        let ref_ = ImageReference::parse("my-project:v1").unwrap();
+        assert_eq!(ref_.project_repository(), Some("my-project"));
+    }
+
+    #[test]
+    fn project_repository_qualified() {
+        let ref_ = ImageReference::parse("localhost/my-project:v1").unwrap();
+        assert_eq!(ref_.project_repository(), Some("my-project"));
+    }
+
+    #[test]
+    fn project_repository_qualified_with_port() {
+        let ref_ = ImageReference::parse("localhost:5000/my-project:v1").unwrap();
+        assert_eq!(ref_.project_repository(), Some("my-project"));
+    }
+
+    #[test]
+    fn project_repository_explicit_library() {
+        let ref_ = ImageReference::parse("library/my-project:v1").unwrap();
+        assert_eq!(ref_.project_repository(), Some("my-project"));
+    }
+
+    #[test]
+    fn project_repository_user_image() {
+        let ref_ = ImageReference::parse("myuser/myimage:v1").unwrap();
+        assert_eq!(ref_.project_repository(), None);
+    }
+
+    #[test]
+    fn project_repository_custom_registry_multi_segment() {
+        let ref_ = ImageReference::parse("ghcr.io/owner/repo:latest").unwrap();
+        assert_eq!(ref_.project_repository(), None);
+    }
+
+    #[test]
     fn round_trip_serde() {
         let original = ImageReference::parse("ghcr.io/owner/repo:v1").unwrap();
         let json = serde_json::to_string(&original).unwrap();
@@ -337,21 +411,48 @@ mod tests {
     fn validate_registry_default_ok() {
         // Images from docker.io are always accepted
         let ref_ = ImageReference::parse("alpine:3.18").unwrap();
-        ref_.validate_registry("registry.bencher.dev").unwrap();
+        ref_.validate_registry("registry.bencher.dev", Some(443))
+            .unwrap();
     }
 
     #[test]
     fn validate_registry_expected_ok() {
-        // Images from the expected registry are accepted
+        // Images from the expected registry (bare host) are accepted
         let ref_ = ImageReference::parse("registry.bencher.dev/owner/repo:v1").unwrap();
-        ref_.validate_registry("registry.bencher.dev").unwrap();
+        ref_.validate_registry("registry.bencher.dev", Some(443))
+            .unwrap();
+    }
+
+    #[test]
+    fn validate_registry_default_port_ok() {
+        // The scheme's default port (443 for HTTPS) is accepted explicitly
+        let ref_ = ImageReference::parse("registry.bencher.dev:443/owner/repo:v1").unwrap();
+        ref_.validate_registry("registry.bencher.dev", Some(443))
+            .unwrap();
+    }
+
+    #[test]
+    fn validate_registry_custom_port_ok() {
+        // A self-hosted registry on a non-default port accepts the host:port form
+        let ref_ = ImageReference::parse("localhost:61016/my-project:v1").unwrap();
+        ref_.validate_registry("localhost", Some(61016)).unwrap();
+    }
+
+    #[test]
+    fn validate_registry_bare_host_for_custom_port_ok() {
+        // The bare host is accepted even when the registry serves on a non-default port
+        let ref_ = ImageReference::parse("bencher.example.com/my-project:v1").unwrap();
+        ref_.validate_registry("bencher.example.com", Some(8443))
+            .unwrap();
     }
 
     #[test]
     fn validate_registry_unsupported() {
         // Images from an external registry are rejected
         let ref_ = ImageReference::parse("ghcr.io/owner/repo:v1").unwrap();
-        let err = ref_.validate_registry("registry.bencher.dev").unwrap_err();
+        let err = ref_
+            .validate_registry("registry.bencher.dev", Some(443))
+            .unwrap_err();
         let msg = err.to_string();
         assert!(
             msg.contains("ghcr.io"),
@@ -364,9 +465,18 @@ mod tests {
     }
 
     #[test]
+    fn validate_registry_wrong_port_unsupported() {
+        // The right host on the wrong port is rejected
+        let ref_ = ImageReference::parse("registry.bencher.dev:8080/owner/repo:v1").unwrap();
+        ref_.validate_registry("registry.bencher.dev", Some(443))
+            .unwrap_err();
+    }
+
+    #[test]
     fn validate_registry_user_image_ok() {
         // user/image format defaults to docker.io, which is allowed
         let ref_ = ImageReference::parse("myuser/myimage:v1").unwrap();
-        ref_.validate_registry("registry.bencher.dev").unwrap();
+        ref_.validate_registry("registry.bencher.dev", Some(443))
+            .unwrap();
     }
 }

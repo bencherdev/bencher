@@ -316,6 +316,247 @@ async fn run_post_with_job_creates_job() {
     );
 }
 
+// POST /v0/run with job but no project field derives project from image repository
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_project_from_image() {
+    let server = TestServer::new().await;
+    let user = server.signup("Job User", "runjobimg@example.com").await;
+    let org = server.create_org(&user, "Job Image Org").await;
+    let project = server
+        .create_project(&user, &org, "Job Image Project")
+        .await;
+
+    let _spec = create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    let body = serde_json::json!({
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+    assert_eq!(
+        AsRef::<str>::as_ref(&report.project.slug),
+        project_slug,
+        "Project should be derived from image repository"
+    );
+}
+
+// POST /v0/run with an unqualified job image derives the project from the image repository
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_project_from_unqualified_image() {
+    let server = TestServer::new().await;
+    let user = server.signup("Job User", "runjobimgunq@example.com").await;
+    let org = server.create_org(&user, "Job Unqualified Org").await;
+    let project = server
+        .create_project(&user, &org, "Job Unqualified Project")
+        .await;
+
+    let _spec = create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    let body = serde_json::json!({
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("{project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+    assert_eq!(
+        AsRef::<str>::as_ref(&report.project.slug),
+        project_slug,
+        "Project should be derived from the unqualified image repository"
+    );
+}
+
+// POST /v0/run with both a context and a job image derives the project from the image
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_project_from_image_overrides_context() {
+    let server = TestServer::new().await;
+    let user = server.signup("Job User", "runjobimgctx@example.com").await;
+    let org = server.create_org(&user, "Job Context Org").await;
+    let project = server
+        .create_project(&user, &org, "Job Context Project")
+        .await;
+
+    let _spec = create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    // Without the image, this context would get-or-create a context-derived project
+    let body = serde_json::json!({
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "context": {
+            "bencher.dev/v0/repo/name": "context-repo",
+            "bencher.dev/v0/repo/hash": "0123456789abcdef0123456789abcdef01234567",
+            "bencher.dev/v0/testbed/fingerprint": "0123456789ABCDEF"
+        },
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+    assert_eq!(
+        AsRef::<str>::as_ref(&report.project.slug),
+        project_slug,
+        "Image-derived project should take precedence over the run context"
+    );
+}
+
+// POST /v0/run with a project key rejects a job image that references a different project
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_project_key_job_image_other_project() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjobkeyother@example.com")
+        .await;
+    let org = server.create_org(&user, "Key Image Org").await;
+    let key_project = server.create_project(&user, &org, "Key Project").await;
+    let image_project = server.create_project(&user, &org, "Image Project").await;
+
+    let _spec = create_fallback_spec(&server, &user).await;
+
+    let image_project_slug: &str = image_project.slug.as_ref();
+    push_test_image(&server, &image_project, &user, "v1").await;
+
+    let project_key = server
+        .create_project_key(&user, &key_project, "Run Key")
+        .await;
+
+    let body = serde_json::json!({
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{image_project_slug}:v1")
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(project_key.key.as_ref()),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::UNAUTHORIZED,
+        "A project key must not run a job image for a different project"
+    );
+}
+
+// POST /v0/run with a project key skips verification when the job image repository is not a project
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_project_key_job_image_unknown_project() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjobkeyunknown@example.com")
+        .await;
+    let org = server.create_org(&user, "Key Unknown Org").await;
+    let project = server
+        .create_project(&user, &org, "Key Unknown Project")
+        .await;
+
+    let _spec = create_fallback_spec(&server, &user).await;
+
+    let project_key = server.create_project_key(&user, &project, "Run Key").await;
+
+    // The image repository parses as a valid project slug, but no such project exists
+    let body = serde_json::json!({
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": "localhost/no-such-project:v1"
+        }
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(project_key.key.as_ref()),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    // The unresolvable derived project must not 404; image digest resolution fails instead
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
 // POST /v0/run with job + explicit spec creates a job using that spec
 #[cfg(feature = "plus")]
 #[tokio::test]
