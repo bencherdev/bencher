@@ -25,18 +25,8 @@ ignore = [
     "RUSTSEC-2024-0436",
     # https://rustsec.org/advisories/RUSTSEC-2025-0134.html
     "RUSTSEC-2025-0134",
-    # https://rustsec.org/advisories/RUSTSEC-2026-0049.html
-    "RUSTSEC-2026-0049",
-    # https://rustsec.org/advisories/RUSTSEC-2026-0098.html
-    "RUSTSEC-2026-0098",
-    # https://rustsec.org/advisories/RUSTSEC-2026-0099.html
-    "RUSTSEC-2026-0099",
-    # https://rustsec.org/advisories/RUSTSEC-2026-0104.html
-    "RUSTSEC-2026-0104",
-    # https://rustsec.org/advisories/RUSTSEC-2026-0118.html
-    "RUSTSEC-2026-0118",
-    # https://rustsec.org/advisories/RUSTSEC-2026-0119.html
-    "RUSTSEC-2026-0119",
+    # https://rustsec.org/advisories/RUSTSEC-2026-0173.html
+    "RUSTSEC-2026-0173",
 ]
 
 [bans]
