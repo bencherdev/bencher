@@ -21,6 +21,10 @@ Version control uses Jujutsu (`jj`) with Git.
 - Do **NOT** add `Co-Authored-By` lines to commit messages
 - Do **NOT** add `🤖 Generated with [Claude Code](https://claude.com/claude-code)` to PR descriptions
 
+## Writing Style
+
+- **NEVER** use emdashes in any writing output: code comments, commit messages, PR descriptions, docs, issue/PR replies, and chat responses. Use a colon, semicolon, comma, parentheses, or two sentences instead.
+
 ## Development Methodology
 
 - Practice test-driven development (TDD)

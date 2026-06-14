@@ -12,11 +12,11 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
    （例如：`jobs: track_fork_pr_branch`）
 5. 当上一个工作流的结论为成功时，仅运行此作业，使用[GitHub Actions `workflow_run` 事件][github actions workflow_run]。
    （例如：`if: github.event.workflow_run.conclusion == 'success'`）
-6. 将[`GITHUB_TOKEN` 的权限][github token permissions] 设置为 `pull-requests` 的 `write`。
+6. 将[`GITHUB_TOKEN` 的权限][github token permissions] 设置为 `checks` 和 `pull-requests` 的 `write`。
    根据您的 GitHub 设置，这可能不是必需的。
    但对于所有在 2023 年 2 月 2 日之后创建的组织和个人仓库[默认行为][github token read only]。
    有关完整概述，请参见[GitHub 文档][github token permissions security]。
-   （例如：`permissions: pull-requests: write`）
+   （例如：`permissions: checks: write pull-requests: write`）
 7. 设置作业运行的机器类型。
    有关完整概述，请参见[GitHub Actions `runs-on` 文档][github actions runs-on]。
    （例如：`runs-on: ubuntu-latest`）
@@ -67,7 +67,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 20. 将 `--adapter` 选项设置为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的[Bencher Metric Format JSON (`json`)][bmf]。
    有关完整概述，请参见[基准测试硬件适配器][adapter json]。
    （例如：`--adapter json`）
-21. 将 `--github-actions` 选项设置为 GitHub API 认证令牌，以使用[GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将结果作为评论发布在 Pull Request 上。
+21. 将 `--github-actions` 选项设置为 GitHub API 认证令牌，以使用[GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将结果作为 GitHub 检查和评论发布在 Pull Request 上。
     有关更多细节，请参见[`--github-actions` 文档][github actions option]。
     （例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`）
 22. 使用[中间环境变量][github intermediate environment variable]，将 `--ci-number` 选项设置为请求编号。

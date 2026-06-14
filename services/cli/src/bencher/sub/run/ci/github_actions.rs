@@ -19,6 +19,8 @@ const PULL_REQUEST_TARGET: &str = "pull_request_target";
 
 const FULL_NAME: &str = "full_name";
 
+const BENCHER_REPORT: &str = "Bencher Report";
+
 // There is an undocumented maximum length of 65536 characters for comments.
 // - Check Run (https://github.com/bencherdev/bencher/issues/534):
 //   - REST: https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#create-a-check-run
@@ -190,13 +192,25 @@ impl GitHubActions {
         // so it is done regardless of the `ci_only_thresholds` option.
         self.create_job_summary(report_comment, log);
 
-        // Only post to CI if there are thresholds set
+        let (event_str, event) = github_event()?;
+
+        // Always create a GitHub Check, best-effort.
+        // The check is created regardless of `--ci-only-thresholds` and
+        // `--ci-only-on-alert` so that a `success`/`failure` conclusion is always
+        // reported and the check can be used as a required status check.
+        if let Err(err) = self
+            .create_github_check(report_comment, log, &event_str, &event)
+            .await
+        {
+            cli_eprintln_quietable!(log, "Failed to create GitHub Check\n{err}");
+        }
+
+        // Only post a pull request comment if there are thresholds set
         if self.ci_only_thresholds && !report_comment.has_threshold() {
-            cli_println_quietable!(log, "No thresholds set. Skipping CI integration.");
+            cli_println_quietable!(log, "No thresholds set. Skipping pull request comment.");
             return Ok(());
         }
 
-        let (event_str, event) = github_event()?;
         let issue_number = if let Some(issue_number) = self.ci_number {
             issue_number
         } else if let Ok(event_name @ (PULL_REQUEST | PULL_REQUEST_TARGET)) =
@@ -214,12 +228,10 @@ impl GitHubActions {
         } else {
             cli_println_quietable!(
                 log,
-                "Not running as a GitHub Action pull request event (`pull_request` or `pull_request_target`) and the `--ci-number` option was not set. Creating a GitHub Check instead.\n{}",
+                "Not running as a GitHub Action pull request event (`pull_request` or `pull_request_target`) and the `--ci-number` option was not set. Skipping PR comment.\n{}",
                 docker_env(GITHUB_EVENT_NAME)
             );
-            return self
-                .create_github_check(report_comment, log, &event_str, &event)
-                .await;
+            return Ok(());
         };
 
         self.create_pull_request_comment(report_comment, log, &event_str, &event, issue_number)
@@ -248,8 +260,13 @@ impl GitHubActions {
     ) -> Result<(), GitHubError> {
         let full_name = repository_full_name(event_str, event)?;
         let (owner, repo) = split_full_name(full_name)?;
-        let Ok(head_sha) = std::env::var(GITHUB_SHA) else {
-            return Err(GitHubError::NoSha);
+        let head_sha = if let Some(head_sha) = check_head_sha(event) {
+            head_sha.to_owned()
+        } else {
+            let Ok(head_sha) = std::env::var(GITHUB_SHA) else {
+                return Err(GitHubError::NoSha);
+            };
+            head_sha
         };
         let summary = report_comment.html_with_max_length(
             self.ci_only_thresholds,
@@ -272,7 +289,7 @@ impl GitHubActions {
             .build()
             .map_err(GitHubError::Auth)?
             .checks(owner, repo)
-            .create_check_run("Bencher Report", head_sha)
+            .create_check_run(check_run_name(self.ci_id.as_deref()), head_sha)
             .output(report)
             .conclusion(if report_comment.has_alert() {
                 CheckRunConclusion::Failure
@@ -399,6 +416,35 @@ fn split_full_name(full_name: &str) -> Result<(&str, &str), GitHubError> {
         .ok_or_else(|| GitHubError::InvalidFullName(full_name.to_owned()))
 }
 
+// Probe the GitHub event payload for the head SHA of the commit under test.
+// For `pull_request` and `pull_request_target` events, `GITHUB_SHA` is the
+// ephemeral merge commit (or the base branch), so a GitHub Check created on it
+// would not appear on the pull request.
+// https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+// https://docs.github.com/en/webhooks/webhook-events-and-payloads#workflow_run
+fn check_head_sha(event: &serde_json::Value) -> Option<&str> {
+    event
+        .get("pull_request")
+        .and_then(|pull_request| pull_request.get("head"))
+        .and_then(|head| head.get("sha"))
+        .or_else(|| {
+            event
+                .get("workflow_run")
+                .and_then(|workflow_run| workflow_run.get("head_sha"))
+        })
+        .and_then(serde_json::Value::as_str)
+}
+
+// Required status checks in branch protection match by exact check run name,
+// so the name must be stable across runs for a given `bencher run` invocation.
+fn check_run_name(ci_id: Option<&str>) -> String {
+    if let Some(ci_id) = ci_id {
+        format!("{BENCHER_REPORT} ({ci_id})")
+    } else {
+        BENCHER_REPORT.to_owned()
+    }
+}
+
 pub async fn get_comment(
     github_client: &Octocrab,
     owner: &str,
@@ -455,5 +501,83 @@ fn github_api_url(log: bool) -> Option<String> {
             docker_env(GITHUB_API_URL)
         );
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{check_head_sha, check_run_name};
+
+    #[test]
+    fn check_head_sha_pull_request() {
+        let event = serde_json::json!({
+            "number": 1234,
+            "pull_request": {
+                "head": {
+                    "ref": "feature",
+                    "sha": "f1e2d3c4b5a697887766554433221100ffeeddcc",
+                    "repo": { "full_name": "contributor/repo" }
+                },
+                "base": {
+                    "ref": "main",
+                    "sha": "0011223344556677889900aabbccddeeff001122"
+                }
+            },
+            "repository": { "full_name": "owner/repo" }
+        });
+        assert_eq!(
+            check_head_sha(&event),
+            Some("f1e2d3c4b5a697887766554433221100ffeeddcc")
+        );
+    }
+
+    #[test]
+    fn check_head_sha_workflow_run() {
+        let event = serde_json::json!({
+            "action": "completed",
+            "workflow_run": {
+                "event": "pull_request",
+                "conclusion": "success",
+                "head_branch": "feature",
+                "head_sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"
+            },
+            "repository": { "full_name": "owner/repo" }
+        });
+        assert_eq!(
+            check_head_sha(&event),
+            Some("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678")
+        );
+    }
+
+    #[test]
+    fn check_head_sha_push() {
+        let event = serde_json::json!({
+            "ref": "refs/heads/main",
+            "before": "0011223344556677889900aabbccddeeff001122",
+            "after": "f1e2d3c4b5a697887766554433221100ffeeddcc",
+            "repository": { "full_name": "owner/repo" }
+        });
+        assert_eq!(check_head_sha(&event), None);
+    }
+
+    #[test]
+    fn check_head_sha_non_string() {
+        let event = serde_json::json!({
+            "pull_request": { "head": { "sha": 1234 } }
+        });
+        assert_eq!(check_head_sha(&event), None);
+    }
+
+    #[test]
+    fn check_run_name_default() {
+        assert_eq!(check_run_name(None), "Bencher Report");
+    }
+
+    #[test]
+    fn check_run_name_with_ci_id() {
+        assert_eq!(
+            check_run_name(Some("embedded")),
+            "Bencher Report (embedded)"
+        );
     }
 }

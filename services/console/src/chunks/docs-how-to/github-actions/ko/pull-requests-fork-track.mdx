@@ -13,12 +13,12 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 5. 이전 워크플로우의 결론이 성공일 경우에만 이 작업을 실행합니다
    [GitHub Actions `workflow_run` 이벤트][github actions workflow_run].
    (예: `if: github.event.workflow_run.conclusion == 'success'`)
-6. `GITHUB_TOKEN`에 대한 [권한을][github token permissions] `pull-requests`에 대해 `write`로 설정합니다.
+6. `GITHUB_TOKEN`에 대한 [권한을][github token permissions] `checks` 및 `pull-requests`에 대해 `write`로 설정합니다.
    GitHub 설정에 따라, 이 작업이 필요하지 않을 수 있습니다.
    하지만 2023년 2월 2일 이후에 [생성된 모든 조직과 개인 저장소][github token read only]에서는
    이 동작이 기본입니다.
    전체 개요는 [GitHub 문서][github token permissions security]를 참조하세요.
-   (예: `permissions: pull-requests: write`)
+   (예: `permissions: checks: write pull-requests: write`)
 7. 작업이 실행될 머신 유형을 설정합니다.
    전체 개요는 [GitHub Actions `runs-on` documentation][github actions runs-on]을 참조하세요.
    (예: `runs-on: ubuntu-latest`)
@@ -74,7 +74,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 20. <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 [Bencher Metric Format JSON (`json`)][bmf]으로 `--adapter` 옵션을 설정합니다.
    전체 개요는 [benchmark harness adapters][adapter json]를 참조하세요.
    (예: `--adapter json`)
-21. GitHub API 인증 토큰을 사용하여 Pull Request에 결과를 주석으로 게시하기 위해 `--github-actions` 옵션을 설정합니다
+21. GitHub API 인증 토큰을 사용하여 결과를 GitHub Check 및 Pull Request 주석으로 게시하기 위해 `--github-actions` 옵션을 설정합니다
     [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여.
     더 자세한 내용은 [`--github-actions` 문서][github actions option]를 참조하세요.
     (예: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)

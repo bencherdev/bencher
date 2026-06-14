@@ -15,14 +15,14 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
    [el evento `workflow_run` de GitHub Actions][github actions workflow_run].
    (ej: `if: github.event.workflow_run.conclusion == 'success'`)
 6. Establece [los permisos para el `GITHUB_TOKEN`][github token permissions]
-   como `write` para `pull-requests`.
+   como `write` para `checks` y `pull-requests`.
    Dependiendo de la configuración de tu GitHub, esto puede no ser necesario.
    Pero para todas las organizaciones y repositorios personales
    [creados después del 02 de febrero de 2023][github token read only],
    este es el comportamiento predeterminado.
    Consulta [la documentación de GitHub][github token permissions security]
    para una visión completa.
-   (ej: `permissions: pull-requests: write`)
+   (ej: `permissions: checks: write pull-requests: write`)
 7. Establece el tipo de máquina en la que el job se ejecutará.
    Consulta la [documentación de `runs-on` de GitHub Actions][github actions runs-on]
    para una visión completa.
@@ -80,7 +80,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 20. Establece la opción `--adapter` al [Formato de Métrica Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Consulta [los adaptadores de harness de benchmark][adapter json] para una visión completa.
    (ej: `--adapter json`)
-21. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como un comentario en la Pull Request usando
+21. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como una Verificación de GitHub y un comentario en la Pull Request usando
     [la variable de entorno `GITHUB_TOKEN` de GitHub Actions][github token].
     Consulta [los documentos de `--github-actions`][github actions option] para más detalles.
     (ej: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)

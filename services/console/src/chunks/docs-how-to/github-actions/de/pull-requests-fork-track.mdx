@@ -15,14 +15,14 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
    [des GitHub Actions `workflow_run` Events][github actions workflow_run].
    (z.B.: `if: github.event.workflow_run.conclusion == 'success'`)
 6. Setzen Sie [die Berechtigungen für den `GITHUB_TOKEN`][github token permissions]
-   auf `write` für `pull-requests`.
+   auf `write` für `checks` und `pull-requests`.
    Abhängig von Ihren GitHub-Einstellungen ist dies möglicherweise nicht erforderlich.
    Aber für alle Organisationen und persönlichen Repositories
    [die nach dem 02. Feb 2023 erstellt wurden][github token read only],
    ist dies das Standardverhalten.
    Siehe [die GitHub-Dokumentation][github token permissions security]
    für einen vollständigen Überblick.
-   (z.B.: `permissions: pull-requests: write`)
+   (z.B.: `permissions: checks: write pull-requests: write`)
 7. Setzen Sie den Typ der Maschine, auf der der Job ausgeführt wird.
    Siehe die [GitHub Actions `runs-on` Dokumentation][github actions runs-on]
    für einen vollständigen Überblick.
@@ -80,7 +80,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 20. Setzen Sie die `--adapter` Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> erzeugt wird.
    Siehe [Benchmark-Harness-Adapter][adapter json] für einen vollständigen Überblick.
    (z.B.: `--adapter json`)
-21. Setzen Sie die `--github-actions` Option auf das GitHub API-Authentifizierungstoken, um Ergebnisse als Kommentar im Pull Request zu posten, unter Verwendung
+21. Setzen Sie die `--github-actions` Option auf das GitHub API-Authentifizierungstoken, um Ergebnisse als GitHub-Prüfung und als Kommentar im Pull Request zu posten, unter Verwendung
     [der `GITHUB_TOKEN` Umgebungsvariable der GitHub Actions][github token].
     Siehe [die `--github-actions` Dokumentation][github actions option] für weitere Details.
     (z.B.: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)

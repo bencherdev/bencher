@@ -242,7 +242,7 @@ pub enum CliRunFormat {
         .args(&["github_actions"]),
 ))]
 pub struct CliRunCi {
-    /// GitHub API authentication token for GitHub Actions to comment on PRs (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`)
+    /// GitHub API authentication token for GitHub Actions to create a GitHub Check and comment on PRs (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`)
     #[clap(long)]
     pub github_actions: Option<String>,
     /// Only post results to CI if a Threshold exists for the Branch, Testbed, and Measure (requires: `--github-actions`)
@@ -254,7 +254,7 @@ pub struct CliRunCi {
     /// All links should be to public URLs that do not require a login (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_public_links: bool,
-    /// Custom ID for posting results to CI (requires: `--github-actions`)
+    /// Custom ID for posting results to CI, also appended to the GitHub Check name (ie `Bencher Report (<ID>)`) (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_id: Option<String>,
     /// Issue number for posting results to CI (requires: `--github-actions`)

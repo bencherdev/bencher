@@ -3,6 +3,9 @@
 - Add user-scoped API keys (`bencher_user_...`) that authenticate as the owning user across every endpoint a JWT can reach, including `docker login`; the one exception is key management: a user API key cannot create more keys and can only see, update, or revoke itself, so a leaked key cannot mint credentials that outlive its own revocation, tamper with the user's other keys, or enumerate them
 - Add `bencher user key {create,list,view,update,revoke}` CLI subcommands and an "API Keys" page in the Console for managing user API keys
 - `--key`/`BENCHER_API_KEY` now accepts either a project-scoped key (`bencher_run_*`) or a user-scoped key (`bencher_user_*`); the `--project` requirement applies only to project-scoped keys
+- `bencher run --github-actions` now always creates a `Bencher Report` GitHub Check (failing on an active Alert), so it can be used as a required status check in branch protection; the check is created on a best effort basis, so check creation failures are now warnings instead of errors (Thank you [@OmarTawfik](https://github.com/OmarTawfik))
+- Create the GitHub Check on the pull request head commit (`pull_request.head.sha` or `workflow_run.head_sha`) instead of `GITHUB_SHA`, so the check appears on the pull request
+- Append the `--ci-id` ID to the GitHub Check name (ie `Bencher Report (<ID>)`) so multiple `bencher run` invocations on the same commit get distinct, stable check names
 
 ## `v0.6.6`
 - Show context-aware auth hints in API 404 errors: routes that accept project API keys now mention both API tokens and project keys, while token-only routes mention only API tokens

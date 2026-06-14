@@ -15,14 +15,14 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
    [o evento `workflow_run` do GitHub Actions][github actions workflow_run].
    (ex: `if: github.event.workflow_run.conclusion == 'success'`)
 6. Defina [as permissões para o `GITHUB_TOKEN`][github token permissions]
-   como `write` para `pull-requests`.
+   como `write` para `checks` e `pull-requests`.
    Dependendo das suas configurações do GitHub, isso pode não ser necessário.
    Mas para todas as organizações e repositórios pessoais
    [criados após 02 de fevereiro de 2023][github token read only],
    esse é o comportamento padrão.
    Consulte [a documentação do GitHub][github token permissions security]
    para uma visão completa.
-   (ex: `permissions: pull-requests: write`)
+   (ex: `permissions: checks: write pull-requests: write`)
 7. Defina o tipo de máquina em que o job será executado.
    Veja a [documentação de `runs-on` do GitHub Actions][github actions runs-on]
    para uma visão completa.
@@ -80,7 +80,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 20. Defina a opção `--adapter` para [Formato de Métrica Bencher JSON (`json`)][bmf] que é gerado por <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Veja [adaptadores de benchmark harness][adapter json] para uma visão completa.
    (ex: `--adapter json`)
-21. Defina a opção `--github-actions` para o token de autenticação da API do GitHub para postar resultados como um comentário no Pull Request usando
+21. Defina a opção `--github-actions` para o token de autenticação da API do GitHub para postar resultados como uma Verificação do GitHub e um comentário no Pull Request usando
     [a variável de ambiente `GITHUB_TOKEN` do GitHub Actions][github token].
     Veja [os docs de `--github-actions`][github actions option] para mais detalhes.
     (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)

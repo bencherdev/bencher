@@ -5,4 +5,6 @@
 Optional: Benutzerdefinierte ID zum Posten von Ergebnissen an CI.
 Standardmäßig segmentiert Bencher die Ergebnisse automatisch anhand der Kombination von: Projekt, Branch, Testbed und [Adapter](/de/docs/explanation/adapters/).
 Das Festlegen einer benutzerdefinierten ID ist nützlich, wenn Bencher im gleichen CI-Workflow mehrmals für die gleiche Projekt-, Branch-, Testbed- und Adapter-Kombination ausgeführt wird.
+Die ID wird außerdem an den Namen der GitHub-Prüfung angehängt (d.h. `Bencher Report (<ID>)`),
+sodass jeder Aufruf einen stabilen Namen erhält, der als separate erforderliche Statusprüfung verwendet werden kann.
 Erforderlich: `--github-actions`

@@ -15,13 +15,13 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
    [событие `workflow_run` GitHub Actions][github actions workflow_run].
    (например, `if: github.event.workflow_run.conclusion == 'success'`)
 6. Установите [разрешения для `GITHUB_TOKEN`][github token permissions]
-   на `write` для `pull-requests`.
+   на `write` для `checks` и `pull-requests`.
    В зависимости от ваших настроек GitHub, это может не требоваться.
    Однако для всех организаций и персональных репозиториев,
    [созданных после 02 февраля 2023 года][github token read only],
    это поведение по умолчанию.
    Полный обзор см. в [документации GitHub][github token permissions security].
-   (например, `permissions: pull-requests: write`)
+   (например, `permissions: checks: write pull-requests: write`)
 7. Установите тип компьютера, на котором будет выполняться задача.
    Полный обзор см. в [документации `runs-on` для GitHub Actions][github actions runs-on].
    (например, `runs-on: ubuntu-latest`)
@@ -78,7 +78,7 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 20. Установите параметр `--adapter` в значение [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Полный обзор см. в [документации адаптеров][adapter json].
    (например, `--adapter json`)
-21. Установите параметр `--github-actions` на значение токена аутентификации GitHub API для публикации результатов в виде комментария к Pull Request, используя
+21. Установите параметр `--github-actions` на значение токена аутентификации GitHub API для публикации результатов в виде проверки GitHub и комментария к Pull Request, используя
     [переменную среды `GITHUB_TOKEN` GitHub Actions][github token].
     Подробности смотрите в [документации `--github-actions`][github actions option].
     (например, `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)

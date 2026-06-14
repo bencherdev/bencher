@@ -4,11 +4,13 @@
 
 オプション: GitHub API認証トークンを設定します。
 これを行う最も便利な方法は、[GitHub Actions `GITHUB_TOKEN` 環境変数][github token]を使用することです（例：`--github-actions ${{ secrets.GITHUB_TOKEN }}`）。
-このオプションが設定され、GitHub Actions内で`bencher run`がプルリクエストの一部として使用されると、結果はコメントとしてプルリクエストに追加されます。
-これにはトークンが[`pull-requests` スコープに対する`write`権限][github token permissions]を持っている必要があります。
-そうでなければ、結果はコミットに対するGitHubチェックとして追加されます。
+このオプションが設定され、GitHub Actions内で`bencher run`が使用されると、結果は`Bencher Report`という名前のGitHubチェック（`--ci-id`が設定されている場合は`Bencher Report (<ID>)`）としてヘッドコミットに追加されます。
+アラートが生成されるとGitHubチェックは失敗するため、ブランチ保護の必須ステータスチェックとして使用できます。
 これにはトークンが[`checks` スコープに対する`write`権限][github token permissions]を持っている必要があります。
-いずれの場合でも、結果はジョブサマリーにも追加されます。
+GitHubチェックを作成できない場合、`bencher run`は警告をログに記録して続行します。
+`bencher run`がプルリクエストの一部として使用されると、結果はコメントとしてプルリクエストにも追加されます。
+これにはトークンが[`pull-requests` スコープに対する`write`権限][github token permissions]を持っている必要があります。
+結果は常にジョブサマリーにも追加されます。
 
 [github token]: https://docs.github.com/ja/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/ja/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
