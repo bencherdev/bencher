@@ -2,8 +2,17 @@
 
 <br />
 
-可选：`--key` 选项或 `BENCHER_API_KEY` 环境变量可以设置为有效的项目 API 密钥。
+可选：可以将 `--key` 选项或 `BENCHER_API_KEY` 环境变量设置为有效的 API 密钥。
 如果两者都指定，`--key` 选项优先于 `BENCHER_API_KEY` 环境变量。
-项目 API 密钥限定于单个项目，只能用于 `bencher run` 和其他非破坏性命令。
-项目 API 密钥不能用于创建新项目或认领已存在的项目。
-与 [`--token` 选项](#--token-token)冲突。
+API 密钥有两种：
+
+- 用户 API 密钥（`bencher_user_*`）的作用范围限定于某个用户，并以该用户的身份进行认证。
+  [点击这里创建一个用户 API 密钥](/console/users/keys/add?back=L3poL2RvY3MvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0ta2V5LWtleQ==)。
+- 项目 API 密钥（`bencher_run_*`）的作用范围限定于单个项目，
+  只能用于 `bencher run` 和其他非破坏性命令。
+  项目 API 密钥不能用于创建新项目或认领现有项目，
+  因此需要将 [`--project` 选项](#--project-project)设置为现有项目。
+
+如果 `--key` 选项和[已弃用的 `--token` 选项](#--token-token)都未指定，
+则项目必须是 `unclaimed`（未认领）的。
+与[已弃用的 `--token` 选项](#--token-token)冲突。

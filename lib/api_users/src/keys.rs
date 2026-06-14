@@ -199,7 +199,7 @@ fn get_ls_query<'q>(
 /// This endpoint cannot be called with a user API key:
 /// a key cannot be used to create another key, so revoking a key
 /// also cuts off any credentials that could have been derived from it.
-/// Authenticate with an API token (JWT) instead.
+/// Authenticate with a JWT (user session token) instead.
 #[endpoint {
     method = POST,
     path =  "/v0/users/{user}/keys",
@@ -219,7 +219,7 @@ pub async fn user_key_post(
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyCreateBlocked);
         return Err(forbidden_error(
-            "A user API key cannot be used to create another user API key. Authenticate with an API token (JWT) instead.",
+            "A user API key cannot be used to create another user API key. Authenticate with a JWT (user session token) instead.",
         ));
     }
     let json = post_inner(
@@ -286,7 +286,7 @@ pub async fn user_key_options(
 /// Only the authenticated user themselves and server admins have access to this endpoint.
 /// When authenticated with a user API key, only that key itself may be viewed:
 /// a key cannot inspect the user's other keys.
-/// Authenticate with an API token (JWT) to view other keys.
+/// Authenticate with a JWT (user session token) to view other keys.
 #[endpoint {
     method = GET,
     path =  "/v0/users/{user}/keys/{key}",
@@ -320,7 +320,7 @@ async fn get_one_inner(
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyViewBlocked);
         return Err(forbidden_error(
-            "A user API key can only view itself. Authenticate with an API token (JWT) to view other keys.",
+            "A user API key can only view itself. Authenticate with a JWT (user session token) to view other keys.",
         ));
     }
 
@@ -333,7 +333,7 @@ async fn get_one_inner(
 /// Only the authenticated user themselves and server admins have access to this endpoint.
 /// When authenticated with a user API key, only that key itself may be updated:
 /// a key cannot modify the user's other keys.
-/// Authenticate with an API token (JWT) to update other keys.
+/// Authenticate with a JWT (user session token) to update other keys.
 #[endpoint {
     method = PATCH,
     path =  "/v0/users/{user}/keys/{key}",
@@ -375,7 +375,7 @@ async fn patch_inner(
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyUpdateBlocked);
         return Err(forbidden_error(
-            "A user API key can only update itself. Authenticate with an API token (JWT) to update other keys.",
+            "A user API key can only update itself. Authenticate with a JWT (user session token) to update other keys.",
         ));
     }
 
@@ -401,7 +401,7 @@ async fn patch_inner(
 /// Only the authenticated user themselves and server admins have access to this endpoint.
 /// When authenticated with a user API key, only that key itself may be revoked:
 /// a key can always destroy itself, but it cannot revoke the user's other keys.
-/// Authenticate with an API token (JWT) to revoke other keys.
+/// Authenticate with a JWT (user session token) to revoke other keys.
 #[endpoint {
     method = DELETE,
     path =  "/v0/users/{user}/keys/{key}",
@@ -437,7 +437,7 @@ async fn delete_inner(
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyRevokeBlocked);
         return Err(forbidden_error(
-            "A user API key can only revoke itself. Authenticate with an API token (JWT) to revoke other keys.",
+            "A user API key can only revoke itself. Authenticate with a JWT (user session token) to revoke other keys.",
         ));
     }
 

@@ -3,8 +3,17 @@
 <br />
 
 Optional: Either the `--key` option or the `BENCHER_API_KEY` environment variable
-may be set to a valid project API key.
+may be set to a valid API key.
 If both are specified, the `--key` option takes precedence over the `BENCHER_API_KEY` environment variable.
-Project API keys are scoped to a single project and can only be used for `bencher run` and other non-destructive commands.
-A project API key cannot be used to create a new Project or claim an existing Project.
-Conflicts with [the `--token` option](#--token-token).
+There are two kinds of API key:
+
+- A user API key (`bencher_user_*`) is scoped to a user and authenticates as that user.
+  [Click here to create a user API key](/console/users/keys/add?back=L2RvY3MvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0ta2V5LWtleQ==).
+- A project API key (`bencher_run_*`) is scoped to a single project
+  and can only be used for `bencher run` and other non-destructive commands.
+  A project API key cannot be used to create a new Project or claim an existing Project,
+  so it requires [the `--project` option](#--project-project) to be set to an existing Project.
+
+If neither the `--key` option nor [the deprecated `--token` option](#--token-token) are specified
+then the Project must be `unclaimed`.
+Conflicts with [the deprecated `--token` option](#--token-token).

@@ -462,6 +462,11 @@ export interface JsonUser {
 	email: Email;
 	admin: boolean;
 	locked: boolean;
+	/**
+	 * The time at which the user account was created.
+	 * Optional for backwards compatibility with older servers.
+	 */
+	created?: string;
 }
 
 export interface JsonAuthUser {
@@ -772,6 +777,11 @@ export interface JsonNewSso {
 	domain: NonEmpty;
 }
 
+/**
+ * DEPRECATED: User API tokens have been deprecated in favor of user API keys,
+ * so creating a new token always fails with a `403 Forbidden` error.
+ * Create a user API key instead.
+ */
 export interface JsonNewToken {
 	/**
 	 * The name of the token.

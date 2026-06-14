@@ -15,6 +15,7 @@ pub(crate) const TOKEN_ARG: &str = "--token";
 const KEY_ARG: &str = "--key";
 const ORG_SLUG: &str = "muriel-bagge";
 /// Muriel's personal org slug doubles as her user slug.
+#[cfg(feature = "plus")]
 pub(crate) const USER_SLUG: &str = ORG_SLUG;
 const PROJECT_ARG: &str = "--project";
 pub(crate) const PROJECT_SLUG: &str = "the-computer";
@@ -2991,7 +2992,6 @@ impl SeedTest {
     #[cfg(feature = "plus")]
     #[expect(
         clippy::panic_in_result_fn,
-        clippy::too_many_lines,
         reason = "integration test exercises full self-hosted workflow"
     )]
     fn bencher_self_hosted_exec(&self) -> anyhow::Result<()> {
@@ -3039,8 +3039,11 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.0.len(), 0);
 
-        // Exercise the API token revocation lifecycle via the CLI.
-        // cargo run -- token create --host http://localhost:61016 --token $BENCHER_API_TOKEN --name "seed-revoke" muriel-bagge
+        // User API token creation is deprecated and must always fail with a 403
+        // pointing at user API keys. The full token lifecycle (list/view/update/revoke)
+        // is covered by the `api_users` integration tests with DB-seeded tokens;
+        // the user key lifecycle is exercised above.
+        // cargo run -- token create --host http://localhost:61016 --token $BENCHER_API_TOKEN --name "seed-deprecated" muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "token",
@@ -3050,20 +3053,18 @@ impl SeedTest {
             TOKEN_ARG,
             token,
             "--name",
-            "seed-revoke",
+            "seed-deprecated",
             ORG_SLUG,
         ])
         .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let created: bencher_json::JsonToken =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        let assert = cmd.assert().failure();
+        let output = assert.get_output();
         assert!(
-            created.revoked.is_none(),
-            "freshly created token must not be revoked: {created:?}"
+            String::from_utf8_lossy(&output.stderr).contains("Status: 403 Forbidden"),
+            "deprecated token creation should 403: {output:?}"
         );
-        let created_uuid_str = created.uuid.to_string();
-        let created_jwt_str = created.token.as_ref().to_owned();
 
+        // Existing tokens can still be listed; this user never got one.
         // cargo run -- token list --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args(["token", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
@@ -3072,110 +3073,9 @@ impl SeedTest {
         let tokens: bencher_json::JsonTokens =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert!(
-            tokens.0.iter().any(|t| t.uuid == created.uuid),
-            "freshly created token should be in default list: {tokens:?}"
+            tokens.0.is_empty(),
+            "no tokens should exist after blocked creation: {tokens:?}"
         );
-
-        // Prove the new token can authenticate: cargo run -- user view using the newly minted JWT.
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "user",
-            "view",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            created_jwt_str.as_str(),
-            ORG_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        cmd.assert().success();
-
-        // cargo run -- token revoke --host http://localhost:61016 --token $BENCHER_API_TOKEN muriel-bagge <uuid>
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "token",
-            "revoke",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            ORG_SLUG,
-            created_uuid_str.as_str(),
-        ])
-        .current_dir(CLI_DIR);
-        cmd.assert().success();
-
-        // The revoked JWT must no longer authenticate.
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "user",
-            "view",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            created_jwt_str.as_str(),
-            ORG_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().failure();
-        let output = assert.get_output();
-        assert!(
-            String::from_utf8_lossy(&output.stderr).contains("Status: 401"),
-            "revoked token should 401: {output:?}"
-        );
-
-        // Default list must hide the revoked token.
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["token", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let tokens: bencher_json::JsonTokens =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert!(
-            tokens.0.iter().all(|t| t.uuid != created.uuid),
-            "default list should hide revoked tokens: {tokens:?}"
-        );
-
-        // --revoked flag must surface the revoked token with a non-null `revoked` timestamp.
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "token",
-            "list",
-            "--revoked",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            ORG_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let tokens: bencher_json::JsonTokens =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        let revoked_entry = tokens
-            .0
-            .iter()
-            .find(|t| t.uuid == created.uuid)
-            .expect("revoked token should appear when --revoked is set");
-        assert!(
-            revoked_entry.revoked.is_some(),
-            "revoked token must carry a revoked timestamp: {revoked_entry:?}"
-        );
-
-        // Revoking the same token again is a 4xx (already revoked).
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "token",
-            "revoke",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            ORG_SLUG,
-            created_uuid_str.as_str(),
-        ])
-        .current_dir(CLI_DIR);
-        cmd.assert().failure();
 
         Ok(())
     }

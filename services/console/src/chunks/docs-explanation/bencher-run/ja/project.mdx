@@ -4,7 +4,7 @@
 
 任意: `--project` オプションまたは環境変数 `BENCHER_PROJECT` のいずれかに、Project のスラッグまたは UUID を設定できます。
 [プロジェクトAPIキー](#--key-key)は、新しい Project の作成や既存の Project の取得には使用できないため、`--project`/`BENCHER_PROJECT` を既存の Project に設定する必要があります。
-指定された値がスラッグで、まだ Project が存在しない場合は、[`--token` オプション](#--token-token)が使用されるか、認証情報が提供されないときに自動的に作成されます。
+指定された値がスラッグで、まだ Project が存在しない場合は、ユーザーAPIキー（[`--key` オプション](#--key-key)）または[非推奨の `--token` オプション](#--token-token)が使用されるか、認証情報が提供されないときに自動的に作成されます。
 ただし、指定された値が UUID の場合は、Project が既に存在している必要があります。
 両方が指定されている場合は、`--project` オプションが環境変数 `BENCHER_PROJECT` より優先されます。
 どちらも指定されていない場合、以下に基づいて Project スラッグが自動生成されます:
@@ -16,7 +16,7 @@
 例えば、生成される Project スラッグは次のようになることがあります: `project-abc4567-wxyz123456789`
 
 スラッグが指定されている場合でも自動生成された場合でも、新しい Project は必ず Organization に所属します。
-ユーザーが[`--token` オプション](#--token-token)で認証されている場合、そのユーザーの個人 Organization の下に Project が追加されます。
+ユーザーがユーザーAPIキー（[`--key` オプション](#--key-key)）または[非推奨の `--token` オプション](#--token-token)で認証されている場合、そのユーザーの個人 Organization の下に Project が追加されます。
 ユーザーが認証されていない場合、Project は新しい `unclaimed` Organization の下に作成されます。
 この Organization は、Project の公開 Perf ページから `claimed` するか、後続の `bencher run` 実行時に認証した状態で Project スラッグを使用することで取得できます。
 

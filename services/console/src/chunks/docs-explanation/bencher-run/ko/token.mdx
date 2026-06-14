@@ -2,9 +2,12 @@
 
 <br />
 
+> 🐰 사용 중단: API 토큰은 API 키로 대체되어 더 이상 사용되지 않습니다.
+> 새 API 토큰은 더 이상 생성할 수 없지만, 기존 API 토큰은 계속 작동합니다.
+> 대신 [`--key` 옵션](#--key-key)을 사용하세요.
+
 선택 사항: `--token` 옵션 또는 `BENCHER_API_TOKEN` 환경 변수를 유효한 API 토큰으로 설정할 수 있습니다.
 둘 다 지정된 경우, `--token` 옵션이 `BENCHER_API_TOKEN` 환경 변수보다 우선합니다.
-둘 다 지정되지 않은 경우 프로젝트는 `unclaimed` 이어야 합니다.
-즉, 이미 프로젝트를 `claimed`했다면 유효한 API 토큰을 제공해야 합니다.
+`--token` 옵션과 [`--key` 옵션](#--key-key)이 모두 지정되지 않은 경우 프로젝트는 `unclaimed` 이어야 합니다.
+즉, 이미 프로젝트를 `claimed`했다면 유효한 API 키 또는 API 토큰을 제공해야 합니다.
 [`--key` 옵션](#--key-key)과 충돌합니다.
-[API 토큰을 생성하려면 여기를 클릭하세요](/console/users/tokens/add?back=L2tvL2RvY3MvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0tdG9rZW4tdG9rZW4=).

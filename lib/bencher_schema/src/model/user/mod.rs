@@ -157,6 +157,7 @@ impl QueryUser {
             email,
             admin,
             locked,
+            created,
             ..
         } = self;
         JsonUser {
@@ -166,6 +167,7 @@ impl QueryUser {
             email,
             admin,
             locked,
+            created: Some(created),
         }
     }
 

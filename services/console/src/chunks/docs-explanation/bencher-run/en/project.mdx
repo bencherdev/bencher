@@ -5,7 +5,7 @@
 Optional: Either the `--project` option or the `BENCHER_PROJECT` environment variable
 may be set to the slug or UUID for a Project.
 A [project API key](#--key-key) cannot be used to create a new Project or claim an existing Project, so it requires `--project`/`BENCHER_PROJECT` to be set to an existing Project.
-If the value specified is a slug and the Project does not already exist, it will be created for you when [the `--token` option](#--token-token) is used or no credentials are provided.
+If the value specified is a slug and the Project does not already exist, it will be created for you when a user API key ([the `--key` option](#--key-key)), [the deprecated `--token` option](#--token-token), or no credentials at all are used.
 However, if the value specified is a UUID then the Project must already exist.
 If both are specified, the `--project` option takes precedence over the `BENCHER_PROJECT` environment variable.
 If neither are specified then a Project slug will be generated for you based on:
@@ -18,7 +18,7 @@ For example, a generated Project slug might look like: `project-abc4567-wxyz1234
 
 When a new Project is created for you, whether the slug is specified or generated,
 the Project has to belong to an Organization.
-If the user is authenticated with [the `--token` option](#--token-token), then the Project is added under that user's personal Organization.
+If the user is authenticated with a user API key ([the `--key` option](#--key-key)) or [the deprecated `--token` option](#--token-token), then the Project is added under that user's personal Organization.
 If the user is not authenticated, the Project will be created under a new `unclaimed` Organization.
 This Organization can then be `claimed` from the Project's public Perf Page
 or by using the Project slug while authenticated in a subsequent invocation of `bencher run`.

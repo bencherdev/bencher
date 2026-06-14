@@ -2,8 +2,16 @@
 
 <br />
 
-선택사항: `--key` 옵션 또는 `BENCHER_API_KEY` 환경 변수를 유효한 프로젝트 API 키로 설정할 수 있습니다.
+선택사항: `--key` 옵션 또는 `BENCHER_API_KEY` 환경 변수를 유효한 API 키로 설정할 수 있습니다.
 둘 다 지정된 경우 `--key` 옵션이 `BENCHER_API_KEY` 환경 변수보다 우선합니다.
-프로젝트 API 키는 단일 프로젝트로 제한되며 `bencher run` 및 기타 비파괴적 명령에만 사용할 수 있습니다.
-프로젝트 API 키는 새 프로젝트를 생성하거나 기존 프로젝트를 청구하는 데 사용할 수 없습니다.
-[`--token` 옵션](#--token-token)과 충돌합니다.
+API 키에는 두 가지 종류가 있습니다:
+
+- 사용자 API 키(`bencher_user_*`)는 사용자 단위로 범위가 지정되며 해당 사용자로 인증합니다.
+  [사용자 API 키를 생성하려면 여기를 클릭하세요](/console/users/keys/add?back=L2tvL2RvY3MvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0ta2V5LWtleQ==).
+- 프로젝트 API 키(`bencher_run_*`)는 단일 프로젝트로 제한되며
+  `bencher run` 및 기타 비파괴적 명령에만 사용할 수 있습니다.
+  프로젝트 API 키는 새 프로젝트를 생성하거나 기존 프로젝트를 청구하는 데 사용할 수 없으므로,
+  [`--project` 옵션](#--project-project)이 기존 프로젝트로 설정되어 있어야 합니다.
+
+`--key` 옵션과 [사용 중단된 `--token` 옵션](#--token-token)이 모두 지정되지 않은 경우 프로젝트는 `unclaimed` 이어야 합니다.
+[사용 중단된 `--token` 옵션](#--token-token)과 충돌합니다.

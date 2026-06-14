@@ -2,8 +2,17 @@
 
 <br />
 
-オプション: `--key` オプションまたは `BENCHER_API_KEY` 環境変数のいずれかを設定して、有効なプロジェクトAPIキーを指定できます。
+オプション: `--key` オプションまたは `BENCHER_API_KEY` 環境変数のいずれかを設定して、有効なAPIキーを指定できます。
 両方が指定されている場合、`--key` オプションが `BENCHER_API_KEY` 環境変数よりも優先されます。
-プロジェクトAPIキーは単一のプロジェクトに限定され、`bencher run` およびその他の非破壊的なコマンドにのみ使用できます。
-プロジェクトAPIキーは、新しい Project の作成や既存の Project の取得には使用できません。
-[`--token` オプション](#--token-token)と競合します。
+APIキーには 2 種類あります:
+
+- ユーザーAPIキー（`bencher_user_*`）は特定のユーザーに限定され、そのユーザーとして認証されます。
+  [こちらをクリックしてユーザーAPIキーを作成してください](/console/users/keys/add?back=L2phL2RvY3MvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0ta2V5LWtleQ==)。
+- プロジェクトAPIキー（`bencher_run_*`）は単一のプロジェクトに限定され、
+  `bencher run` およびその他の非破壊的なコマンドにのみ使用できます。
+  プロジェクトAPIキーは、新しい Project の作成や既存の Project の取得には使用できないため、
+  [`--project` オプション](#--project-project)を既存の Project に設定する必要があります。
+
+`--key` オプションと[非推奨の `--token` オプション](#--token-token)のどちらも指定されていない場合、
+プロジェクトは `unclaimed` でなければなりません。
+[非推奨の `--token` オプション](#--token-token)と競合します。

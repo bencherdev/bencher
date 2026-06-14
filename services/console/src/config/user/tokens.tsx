@@ -1,10 +1,10 @@
 import FieldKind from "../../components/field/kind";
 import IconTitle from "../../components/site/IconTitle";
-import { getUserRaw, isSameUser } from "../../util/auth";
+import { isSameUser } from "../../util/auth";
 import type { Params } from "../../util/url";
-import { validNonZeroU32, validResourceName } from "../../util/valid";
+import { validResourceName } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation } from "../types";
-import { addPath, createdUuidPath, parentPath, viewUuidPath } from "../util";
+import { parentPath, viewUuidPath } from "../util";
 
 export const TOKEN_ICON = "fas fa-stroopwafel";
 
@@ -16,13 +16,6 @@ const TOKEN_FIELDS = {
 		help: "Must be a non-empty string",
 		validate: validResourceName,
 	},
-	ttl: {
-		type: "number",
-		placeholder: "525600",
-		icon: "fas fa-stopwatch",
-		help: "Must be an integer greater than zero",
-		validate: validNonZeroU32,
-	},
 };
 
 const tokensConfig = {
@@ -33,19 +26,6 @@ const tokensConfig = {
 			name: "API Tokens",
 			buttons: [
 				{ kind: Button.SEARCH },
-				{
-					kind: Button.ADD,
-					title: "API Token",
-					path: addPath,
-					is_allowed: async (_apiUrl: string, params: Params) => {
-						const user = getUserRaw();
-						return (
-							user.user.uuid === params?.user ||
-							user.user.slug === params?.user ||
-							user.user.admin
-						);
-					},
-				},
 				{ kind: Button.REVOKED },
 				{ kind: Button.REFRESH },
 			],
@@ -55,16 +35,16 @@ const tokensConfig = {
 			add: {
 				prefix: (
 					<div>
-						<h4>🐰 Create your first API token!</h4>
+						<h4>🐰 API tokens are deprecated</h4>
 						<p>
-							It's easy to create an API token.
+							New API tokens can no longer be created.
 							<br />
-							Tap below to get started.
+							Use an API key instead.
 						</p>
 					</div>
 				),
-				path: addPath,
-				text: "Add an API Token",
+				path: (pathname: string) => `${parentPath(pathname)}/keys/add`,
+				text: "Add an API Key",
 			},
 			row: {
 				key: "name",
@@ -75,39 +55,6 @@ const tokensConfig = {
 				},
 			},
 			name: "tokens",
-		},
-	},
-	[Operation.ADD]: {
-		operation: Operation.ADD,
-		header: {
-			title: "Add API Token",
-			path: parentPath,
-			path_to: "API Tokens",
-		},
-		form: {
-			url: (params: Params) => `/v0/users/${params?.user}/tokens`,
-			fields: [
-				{
-					kind: FieldKind.INPUT,
-					label: "Name",
-					key: "name",
-					value: "",
-					valid: null,
-					validate: true,
-					config: TOKEN_FIELDS.name,
-				},
-				{
-					kind: FieldKind.NUMBER,
-					label: "Time to Live (TTL) (seconds)",
-					key: "ttl",
-					value: "",
-					valid: true,
-					validate: true,
-					nullable: true,
-					config: TOKEN_FIELDS.ttl,
-				},
-			],
-			path: createdUuidPath,
 		},
 	},
 	[Operation.VIEW]: {

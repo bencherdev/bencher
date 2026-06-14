@@ -2,4 +2,17 @@
 
 <br />
 
-Optional: Entweder die Option `--key` oder die Umgebungsvariable `BENCHER_API_KEY` kann auf einen gültigen Projekt-API-Schlüssel gesetzt werden. Wenn beide angegeben sind, hat die Option `--key` Vorrang vor der Umgebungsvariable `BENCHER_API_KEY`. Projekt-API-Schlüssel sind auf ein einzelnes Projekt beschränkt und können nur für `bencher run` und andere nicht-destruktive Befehle verwendet werden. Ein Projekt-API-Schlüssel kann nicht verwendet werden, um ein neues Project zu erstellen oder ein bestehendes Project zu beanspruchen. Steht in Konflikt mit [der `--token` Option](#--token-token).
+Optional: Entweder die Option `--key` oder die Umgebungsvariable `BENCHER_API_KEY` kann auf einen gültigen API-Schlüssel gesetzt werden.
+Wenn beide angegeben sind, hat die Option `--key` Vorrang vor der Umgebungsvariable `BENCHER_API_KEY`.
+Es gibt zwei Arten von API-Schlüsseln:
+
+- Ein Benutzer-API-Schlüssel (`bencher_user_*`) ist auf einen Benutzer beschränkt und authentifiziert sich als dieser Benutzer.
+  [Klicken Sie hier, um einen Benutzer-API-Schlüssel zu erstellen](/console/users/keys/add?back=L2RlL2RvY3MvZXhwbGFuYXRpb24vYmVuY2hlci1ydW4vIy0ta2V5LWtleQ==).
+- Ein Projekt-API-Schlüssel (`bencher_run_*`) ist auf ein einzelnes Projekt beschränkt
+  und kann nur für `bencher run` und andere nicht-destruktive Befehle verwendet werden.
+  Ein Projekt-API-Schlüssel kann nicht verwendet werden, um ein neues Project zu erstellen oder ein bestehendes Project zu beanspruchen,
+  daher muss [die `--project` Option](#--project-project) auf ein bestehendes Project gesetzt sein.
+
+Wenn weder die Option `--key` noch [die veraltete `--token` Option](#--token-token) angegeben ist,
+muss das Project `unclaimed` sein.
+Steht in Konflikt mit [der veralteten `--token` Option](#--token-token).
