@@ -10,7 +10,7 @@ enum Section {
 
 // User API tokens are deprecated:
 // accounts created after this date never see the API Tokens page.
-const API_TOKENS_SUNSET = new Date("2026-06-30T23:59:59Z");
+const API_TOKENS_SUNSET = new Date("2026-06-15T23:59:59Z");
 
 const UserMenu = (props: { user?: JsonAuthUser }) => {
 	const path = (section: Section) =>
