@@ -9,7 +9,7 @@ Thresholdsは、Bencherを使用してパフォーマンスの退行を検出す
 
 各BoundaryはBoundary Limitを計算するために使用されます。その後、すべての新しい[Metric][metric]は各Boundary Limitに対してチェックされます。新しいMetricがLower Boundary Limitを下回ったりUpper Boundary Limitを上回ったりすると、Alertが生成されます。
 
-[Continuous Benchmarking]、すなわちCIでベンチマークを行う際にはThresholdsを作成したいでしょう。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用すると、[the `--branch` option][branch option]でBranchを、[the `--testbed` option][testbed option]でTestbedを既に指定しますので、指定する必要がある唯一の次元はMeasureであり、`--threshold-measure`オプションを使用します。そのMeasureに使用するTestを`--threshold-test`オプションで指定できます。`--threshold-min-sample-size`、`--threshold-max-sample-size`、および`--threshold-window`オプションを使用して、Testで使用されるデータを制御できます。最後に、`--threshold-lower-boundary`と`--threshold-upper-boundary`オプションを使用して、Lower BoundaryとUpper Boundaryを設定できます。指定されていないすべてのModelを削除したい場合は、`--thresholds-reset`フラグでそれを行うことができます。
+[Continuous Benchmarking]、すなわちCIでベンチマークを行う際にはThresholdsを作成したいでしょう。<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用すると、[`--branch` option][branch option]でBranchを、[`--testbed` option][testbed option]でTestbedを既に指定しますので、指定する必要がある唯一の次元はMeasureであり、`--threshold-measure`オプションを使用します。そのMeasureに使用するTestを`--threshold-test`オプションで指定できます。`--threshold-min-sample-size`、`--threshold-max-sample-size`、および`--threshold-window`オプションを使用して、Testで使用されるデータを制御できます。最後に、`--threshold-lower-boundary`と`--threshold-upper-boundary`オプションを使用して、Lower BoundaryとUpper Boundaryを設定できます。指定されていないすべてのModelを削除したい場合は、`--thresholds-reset`フラグでそれを行うことができます。
 
 - Thresholdが存在しない場合は、自動的に作成されます。
 - Thresholdが存在し、指定されたModelが同じ場合、Modelは無視されます。
@@ -20,7 +20,7 @@ Thresholdsは、Bencherを使用してパフォーマンスの退行を検出す
 
 <ThresholdCode />
 
-> 🐰 フィーチャーブランチで作業する際は、ベースである[Start Point][start point] Branchから既存のThresholdsをコピーしたい場合があります。これは、[the `--start-point-clone-thresholds` flag][start point clone thresholds flag]を使用して可能です。ただし、`--thresholds-reset`フラグは、明示的に指定されていないすべてのクローンされたThresholdsも削除します。
+> 🐰 フィーチャーブランチで作業する際は、ベースである[Start Point][start point] Branchから既存のThresholdsをコピーしたい場合があります。これは、[`--start-point-clone-thresholds` flag][start point clone thresholds flag]を使用して可能です。ただし、`--thresholds-reset`フラグは、明示的に指定されていないすべてのクローンされたThresholdsも削除します。
 
 [branch]: /ja/docs/explanation/benchmarking/#branch
 [testbed]: /ja/docs/explanation/benchmarking/#testbed

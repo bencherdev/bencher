@@ -24,36 +24,36 @@ import TargetBranchCode from "../target-branch-code.mdx";
    查看 [the `bencher run` CLI 子命令][bencher run] 以获取完整概述。
    （例如：`bencher run`）
 7. 将 `--project` 选项设置为项目 slug。
-   查看 [the `--project` 文档][project option] 以获取更多详情。
+   查看 [`--project` 文档][project option] 以获取更多详情。
    （例如：`--project project-abc4567-wxyz123456789`）
 8. 将 `--key` 选项设置为已屏蔽的 `BENCHER_API_KEY` 环境变量。
-   查看 [the `--key` 文档][key option] 以获取更多详情。
+   查看 [`--key` 文档][key option] 以获取更多详情。
    （例如：`--key "$BENCHER_API_KEY"`）
 9.  将 `--branch` 选项设置为分支名称。
-   查看 [the `--branch` 文档][branch option] 以获取完整概述。
+   查看 [`--branch` 文档][branch option] 以获取完整概述。
    （例如：`--branch main`）
 10. 将 `--testbed` 选项设置为测试平台名称。
     这可能应与在 `image` 中选择的机器匹配。
-    查看 [the `--tested` 文档][testbed option] 以获取更多详情。
+    查看 [`--testbed` 文档][testbed option] 以获取更多详情。
     （例如：`--testbed debian:bullseye`）
 11. 为 `main` 分支、`debian:bullseye` 测试平台和 `latency` 测量设置阈值：
     1. 将 `--threshold-measure` 选项设置为 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的内置 `latency` 测量。
-    查看 [the `--threshold-measure` 文档][threshold measure option] 以获取更多详情。
+    查看 [`--threshold-measure` 文档][threshold measure option] 以获取更多详情。
     （例如：`--threshold-measure latency`）
     2. 将 `--threshold-test` 选项设置为 Student's t-test (`t_test`)。
-    查看 [the `--threshold-test` 文档][threshold test option] 以获取完整概述。
+    查看 [`--threshold-test` 文档][threshold test option] 以获取完整概述。
     （例如：`--threshold-test t_test`）
     3. 将 `--threshold-max-sample-size` 选项设置为最大样本大小 `64`。
-    查看 [the `--threshold-max-sample-size` 文档][threshold max sample size] 以获取更多详情。
+    查看 [`--threshold-max-sample-size` 文档][threshold max sample size] 以获取更多详情。
     （例如：`--threshold-max-sample-size 64`）
     4. 将 `--threshold-upper-boundary` 选项设置为上界 `0.99`。
-    查看 [the `--threshold-upper-boundary` 文档][threshold upper boundary] 以获取更多详情。
+    查看 [`--threshold-upper-boundary` 文档][threshold upper boundary] 以获取更多详情。
     （例如：`--threshold-upper-boundary 0.99`）
     5. 设置 `--thresholds-reset` 标志以确保只有指定的阈值处于活动状态。
-    查看 [the `--thresholds-reset` 文档][thresholds reset] 以获取完整概述。
+    查看 [`--thresholds-reset` 文档][thresholds reset] 以获取完整概述。
     （例如：`--thresholds-reset`）
 12. 设置 `--error-on-alert` 标志以在生成警报时使命令失败。
-    查看 [the `--error-on-alert` 文档][alert err] 以获取完整概述。
+    查看 [`--error-on-alert` 文档][alert err] 以获取完整概述。
     （例如：`--error-on-alert`）
 13. 将 `--adapter` 选项设置为 [Bencher Metric Format JSON (`json`)][bmf]，由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成。
     查看 [benchmark harness adapters][adapter json] 以获取完整概述。

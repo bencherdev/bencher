@@ -2,9 +2,9 @@
 
 Console サーバーコンテナのポート番号を指定します。
 デフォルトではポート `3000` が使用されます。
-これは `docker run` の [the `--expose` option][docker run expose] のポートのみの形式に似ています。
+これは `docker run` の [`--expose` option][docker run expose] のポートのみの形式に似ています。
 
-`--console-port` オプションを指定した場合は、`console.url` API サーバーの設定を新しいポートに合わせて更新する必要があります。更新は [the `--api-env` option][api env] または [the `--api-volume` option][api volume] のいずれかを使用して行ってください。
+`--console-port` オプションを指定した場合は、`console.url` API サーバーの設定を新しいポートに合わせて更新する必要があります。更新は [`--api-env` option][api env] または [`--api-volume` option][api volume] のいずれかを使用して行ってください。
 
 [api env]: #--api-env-key_value
 [api volume]: #--api-volume-host_container

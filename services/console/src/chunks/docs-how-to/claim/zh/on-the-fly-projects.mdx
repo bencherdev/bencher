@@ -1,10 +1,10 @@
 ## 即时（On-the-Fly）项目
 
 Bencher 允许你即时创建 `claimed` 和 `unclaimed` 项目。
-当你在未设置 [the `--project` option][project option] 的情况下调用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令，或者指定的 slug 未匹配现有项目时，Bencher 会为你的基准测试结果创建一个新的即时项目。
+当你在未设置 [`--project` option][project option] 的情况下调用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令，或者指定的 slug 未匹配现有项目时，Bencher 会为你的基准测试结果创建一个新的即时项目。
 如果你遵循了 [Quickstart][quickstart] 或 [Self-Hosted Quickstart][self-hosted quickstart] 教程，你已经利用了此功能。
 
-如果未指定 [the `--project` option][project option]，则会基于以下内容为你生成一个即时项目的 slug：
+如果未指定 [`--project` option][project option]，则会基于以下内容为你生成一个即时项目的 slug：
 
 1. `git` 仓库父目录的名称（如果可用）。
 2. `git` 仓库首次提交的 7 位十六进制短哈希（如果可用）。
@@ -12,11 +12,11 @@ Bencher 允许你即时创建 `claimed` 和 `unclaimed` 项目。
 
 例如，生成的即时项目 slug 可能类似： `project-abc4567-wxyz123456789`
 
-如果你依赖于即时项目的 slug 并希望在不同机器间跟踪基准测试结果，必须使用 [the `--project` option][project option] 来指定项目。否则，可能会为每台不同的机器创建新的即时项目。
+如果你依赖于即时项目的 slug 并希望在不同机器间跟踪基准测试结果，必须使用 [`--project` option][project option] 来指定项目。否则，可能会为每台不同的机器创建新的即时项目。
 
 > 🐰 重要：如果 `CI` 环境变量被设置为 `true`，
-> 则你需要使用 [the `--project` option][project option] 来指定项目，
-> 或设置 [the `--ci-on-the-fly` flag][ci on the fly]。
+> 则你需要使用 [`--project` option][project option] 来指定项目，
+> 或设置 [`--ci-on-the-fly` flag][ci on the fly]。
 
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
 [quickstart]: /zh/docs/tutorial/quickstart/

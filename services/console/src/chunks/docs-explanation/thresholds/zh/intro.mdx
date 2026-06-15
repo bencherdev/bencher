@@ -18,8 +18,8 @@ Threshold 使用特定的 [Test][tests] 来检测性能回归。
 
 当 [持续基准测试]时，即在持续集成（CI）中进行基准测试时，你会想创建阈值。
 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令，
-你已经用 [the `--branch` option][branch option] 指定了一个 Branch，
-并用 [the `--testbed` option][testbed option] 指定了一个 Testbed。
+你已经用 [`--branch` option][branch option] 指定了一个 Branch，
+并用 [`--testbed` option][testbed option] 指定了一个 Testbed。
 所以你唯一需要指定的其他维度是测量，用 `--threshold-measure` 选项。
 然后你可以使用 `--threshold-test` 选项来指定该测量使用的测试。
 `--threshold-min-sample-size`，`--threshold-max-sample-size`，和 `--threshold-window` 选项
@@ -39,7 +39,7 @@ Threshold 使用特定的 [Test][tests] 来检测性能回归。
 <ThresholdCode />
 
 > 🐰 在处理功能分支时，您可能想从基准 [起点][start point] Branch 复制现有的 Thresholds。
-> 可以通过 [the `--start-point-clone-thresholds` flag][start point clone thresholds flag] 实现。
+> 可以通过 [`--start-point-clone-thresholds` flag][start point clone thresholds flag] 实现。
 注意，`--thresholds-reset` 标志仍会移除任何未明确指定的克隆阈值。
 
 [branch]: /zh/docs/explanation/benchmarking/#branch
