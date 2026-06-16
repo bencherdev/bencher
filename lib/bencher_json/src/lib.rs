@@ -17,8 +17,6 @@ pub use bencher_valid::{
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-#[cfg(all(not(feature = "plus"), feature = "db"))]
-use serde_yaml as _;
 
 mod auth;
 pub mod big_int;

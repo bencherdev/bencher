@@ -3,16 +3,19 @@
 use api_checkout as _;
 use bencher_config as _;
 use bencher_json as _;
+#[cfg(feature = "plus")]
+use bencher_litestream as _;
 use bencher_logger as _;
 #[cfg(feature = "otel")]
 use bencher_otel as _;
 #[cfg(any(feature = "plus", feature = "otel"))]
 use bencher_otel_provider as _;
+#[cfg(feature = "plus")]
+use camino as _;
 use futures_concurrency as _;
 use futures_util as _;
 #[cfg(feature = "sentry")]
 use sentry as _;
-use serde_yaml as _;
 use slog as _;
 use thiserror as _;
 use tokio as _;

@@ -61,6 +61,7 @@ bencher_github_client = { path = "plus/bencher_github_client" }
 bencher_google_client = { path = "plus/bencher_google_client" }
 bencher_google_index = { path = "plus/bencher_google_index" }
 bencher_license = { path = "plus/bencher_license" }
+bencher_litestream = { path = "plus/bencher_litestream" }
 bencher_otel = { path = "plus/bencher_otel" }
 bencher_otel_provider = { path = "plus/bencher_otel_provider" }
 bencher_oci_storage = { path = "plus/bencher_oci_storage" }

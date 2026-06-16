@@ -1088,16 +1088,17 @@ dependencies = [
  "bencher_config",
  "bencher_endpoint",
  "bencher_json",
+ "bencher_litestream",
  "bencher_logger",
  "bencher_otel",
  "bencher_otel_provider",
  "bencher_schema",
+ "camino",
  "dropshot",
  "futures-concurrency",
  "futures-util",
  "libsqlite3-sys",
  "sentry",
- "serde_yaml",
  "slog",
  "thiserror 2.0.18",
  "tokio",
@@ -1248,6 +1249,7 @@ dependencies = [
  "bencher_google_client",
  "bencher_json",
  "bencher_license",
+ "bencher_litestream",
  "bencher_oci_storage",
  "bencher_rbac",
  "bencher_recaptcha",
@@ -1346,18 +1348,17 @@ name = "bencher_json"
 version = "0.6.7"
 dependencies = [
  "bencher_context",
+ "bencher_litestream",
  "bencher_valid",
  "camino",
  "derive_more",
  "diesel",
  "ordered-float",
  "percent-encoding",
- "pretty_assertions",
  "schemars",
  "serde",
  "serde_json",
  "serde_urlencoded",
- "serde_yaml",
  "tabled",
  "thiserror 2.0.18",
  "typeshare",
@@ -1375,6 +1376,21 @@ dependencies = [
  "pretty_assertions",
  "serde",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "bencher_litestream"
+version = "0.6.7"
+dependencies = [
+ "bencher_valid",
+ "camino",
+ "pretty_assertions",
+ "schemars",
+ "serde",
+ "serde_yaml",
+ "slog",
+ "thiserror 2.0.18",
+ "tokio",
 ]
 
 [[package]]

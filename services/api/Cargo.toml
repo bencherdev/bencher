@@ -12,6 +12,8 @@ plus = [
     "dep:api_oci",
     "dep:api_runners",
     "dep:api_specs",
+    "dep:bencher_litestream",
+    "dep:camino",
     "api_auth/plus",
     "api_checkout/plus",
     "api_oci/plus",
@@ -76,16 +78,17 @@ api_users.workspace = true
 bencher_config.workspace = true
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
+bencher_litestream = { workspace = true, optional = true, features = ["runtime", "server"] }
 bencher_logger.workspace = true
 bencher_schema.workspace = true
 bencher_otel = { workspace = true, optional = true }
 bencher_otel_provider = { workspace = true, optional = true }
+camino = { workspace = true, optional = true }
 dropshot.workspace = true
 futures-concurrency.workspace = true
 futures-util.workspace = true
 libsqlite3-sys.workspace = true
 sentry = { workspace = true, optional = true }
-serde_yaml.workspace = true
 slog.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }

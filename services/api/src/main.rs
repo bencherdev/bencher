@@ -3,16 +3,16 @@
     reason = "dependencies used by lib but not binary"
 )]
 
-#[cfg(feature = "sentry")]
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use bencher_api::api::Api;
 use bencher_config::{Config, ConfigTx};
 use bencher_json::BENCHER_API_VERSION;
 #[cfg(feature = "plus")]
-use bencher_json::system::config::JsonLitestream;
+use bencher_litestream::{LitestreamError, LitestreamLevel, run_litestream};
 use bencher_schema::context::ApiContext;
+#[cfg(feature = "plus")]
+use camino::Utf8PathBuf;
 use dropshot::HttpServer;
 use futures_concurrency::future::Race as _;
 use futures_util::FutureExt as _;
@@ -20,11 +20,7 @@ use futures_util::FutureExt as _;
 use sentry::ClientInitGuard;
 use slog::{Logger, error, info};
 #[cfg(feature = "plus")]
-use tokio::process::Command;
-#[cfg(feature = "plus")]
 use tokio::sync;
-#[cfg(feature = "plus")]
-use tokio::task::JoinHandle;
 use tokio_rustls::rustls::crypto::{CryptoProvider, aws_lc_rs};
 
 #[derive(Debug, thiserror::Error)]
@@ -103,8 +99,25 @@ async fn run(
         .as_ref()
         .and_then(|plus| plus.litestream.clone())
     {
+        // Absolutize the database path so Litestream resolves it independently of the CWD.
+        let db_path = if config.database.file.is_absolute() {
+            config.database.file.clone()
+        } else {
+            std::env::current_dir()
+                .map_err(LitestreamError::Database)?
+                .join(&config.database.file)
+        };
+        let db_path =
+            Utf8PathBuf::from_path_buf(db_path).map_err(LitestreamError::DatabasePathNotUtf8)?;
+        #[cfg(debug_assertions)]
+        let config_path = Utf8PathBuf::from("etc/litestream.yml");
+        #[cfg(not(debug_assertions))]
+        let config_path = Utf8PathBuf::from("/etc/litestream.yml");
+        let log_level = LitestreamLevel::from(config.logging.log.level());
+
         let (restore_tx, restore_rx) = sync::oneshot::channel();
-        let litestream_handle = run_litestream(log, &config, litestream, restore_tx)?;
+        let litestream_handle =
+            run_litestream(log, litestream, db_path, config_path, log_level, restore_tx)?;
         // Wait for Litestream restore to complete (replicate starts in background)
         restore_rx.await.map_err(LitestreamError::RestoreRecv)?;
 
@@ -177,105 +190,6 @@ fn init_sentry(log: &Logger, config: &Config) -> Option<ClientInitGuard> {
                 },
             ))
         })
-}
-
-#[cfg(feature = "plus")]
-#[derive(Debug, thiserror::Error)]
-pub enum LitestreamError {
-    #[error("Failed to absolutize the database path: {0}")]
-    Database(std::io::Error),
-    #[error(
-        "Failed to convert Bencher config to Litestream config. This is likely a bug. Please report this: {0}"
-    )]
-    Yaml(serde_yaml::Error),
-    #[error("Failed to write Litestream config ({0}): {1}")]
-    WriteYaml(PathBuf, std::io::Error),
-    #[error("Failed to run `litestream restore`: {0}")]
-    Restore(std::io::Error),
-    #[error("Failed to run `litestream replicate`: {0}")]
-    Replicate(std::io::Error),
-    #[error("Failed to restore (exit status {status})\nstdout: {stdout}\nstderr: {stderr}")]
-    RestoreExit {
-        status: std::process::ExitStatus,
-        stdout: String,
-        stderr: String,
-    },
-    #[error(
-        "Failed to send restore completion message: receiver dropped, server likely crashed during startup"
-    )]
-    RestoreSend(()),
-    #[error("Failed to receive restore completion message")]
-    RestoreRecv(sync::oneshot::error::RecvError),
-    #[error("Failed to replicate: {0}")]
-    ReplicateExit(std::process::ExitStatus),
-    #[error("Failed to join Litestream handle: {0}")]
-    JoinHandle(tokio::task::JoinError),
-}
-
-#[cfg(feature = "plus")]
-fn run_litestream(
-    log: &Logger,
-    config: &Config,
-    litestream: JsonLitestream,
-    restore_tx: sync::oneshot::Sender<()>,
-) -> Result<JoinHandle<Result<(), LitestreamError>>, LitestreamError> {
-    // Get the absolute database path from the config
-    let db_path = if config.database.file.is_absolute() {
-        config.database.file.clone()
-    } else {
-        std::env::current_dir()
-            .map_err(LitestreamError::Database)?
-            .join(&config.database.file)
-    };
-    #[cfg(debug_assertions)]
-    let config_path = PathBuf::from("etc/litestream.yml");
-    #[cfg(not(debug_assertions))]
-    let config_path = PathBuf::from("/etc/litestream.yml");
-    let yaml = litestream
-        .into_yaml(db_path.clone(), config.logging.log.level())
-        .map_err(LitestreamError::Yaml)?;
-    std::fs::write(&config_path, yaml)
-        .map_err(|e| LitestreamError::WriteYaml(config_path.clone(), e))?;
-
-    let litestream_logger = log.clone();
-    Ok(tokio::spawn(async move {
-        // https://litestream.io/reference/restore/
-        let restore = Command::new("litestream")
-            .arg("restore")
-            .arg("-if-replica-exists")
-            .arg("-if-db-not-exists")
-            .arg("-config")
-            .arg(&config_path)
-            .arg("-no-expand-env")
-            .arg(&db_path)
-            .output()
-            .await
-            .map_err(LitestreamError::Restore)?;
-        slog::info!(litestream_logger, "Litestream restore: {restore:?}");
-        if !restore.status.success() {
-            return Err(LitestreamError::RestoreExit {
-                status: restore.status,
-                stdout: String::from_utf8_lossy(&restore.stdout).into_owned(),
-                stderr: String::from_utf8_lossy(&restore.stderr).into_owned(),
-            });
-        }
-
-        // Signal the server that restore is complete (DB file exists)
-        restore_tx.send(()).map_err(LitestreamError::RestoreSend)?;
-
-        // https://litestream.io/reference/replicate/
-        let mut replicate = Command::new("litestream")
-            .arg("replicate")
-            .arg("-config")
-            .arg(&config_path)
-            .arg("-no-expand-env")
-            .spawn()
-            .map_err(LitestreamError::Replicate)?;
-        // Litestream should run indefinitely
-        Err(LitestreamError::ReplicateExit(
-            replicate.wait().await.map_err(LitestreamError::Replicate)?,
-        ))
-    }))
 }
 
 async fn create_api_server(config: Config) -> Result<HttpServer<ApiContext>, ApiError> {
