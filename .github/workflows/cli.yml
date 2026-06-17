@@ -28,10 +28,11 @@ on:
         type: boolean
         required: true
     secrets:
-      BENCHER_API_TOKEN:
+      BENCHER_API_KEY:
         required: true
 
 env:
+  BENCHER_PROJECT: bencher
   CARGO_TERM_COLOR: always
   CLI_BIN_NAME: bencher
 
@@ -47,7 +48,7 @@ jobs:
     steps:
       - uses: bencherdev/bencher@main # zizmor: ignore[unpinned-uses] first-party action; intentionally tracks @main to exercise the latest released CLI
       - name: Run Bencher CLI
-        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+        run: bencher run --project ${{ env.BENCHER_PROJECT }} --key ${{ secrets.BENCHER_API_KEY }} --dry-run "bencher mock"
 
   action_devel:
     name: Action `devel`
@@ -62,7 +63,7 @@ jobs:
     steps:
       - uses: bencherdev/bencher@devel # zizmor: ignore[unpinned-uses] first-party action; intentionally tracks @devel to exercise the unreleased CLI
       - name: Run Bencher CLI
-        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+        run: bencher run --project ${{ env.BENCHER_PROJECT }} --key ${{ secrets.BENCHER_API_KEY }} --dry-run "bencher mock"
 
   script_cloud:
     name: Script Cloud
@@ -80,7 +81,7 @@ jobs:
         if: matrix.os == 'windows-2022'
         run: powershell -c "irm https://bencher.dev/download/install-cli.ps1 | iex"
       - name: Run Bencher CLI
-        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+        run: bencher run --project ${{ env.BENCHER_PROJECT }} --key ${{ secrets.BENCHER_API_KEY }} --dry-run "bencher mock"
 
   script_gen:
     name: Script Gen
@@ -103,7 +104,7 @@ jobs:
         if: matrix.os == 'windows-2022'
         run: powershell -c "gc -Raw services/cli/templates/output/install-cli.ps1 | iex"
       - name: Run Bencher CLI
-        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+        run: bencher run --project ${{ env.BENCHER_PROJECT }} --key ${{ secrets.BENCHER_API_KEY }} --dry-run "bencher mock"
 
   script_gen_version:
     name: Script Gen Version
@@ -130,7 +131,7 @@ jobs:
           BENCHER_VERSION: ${{ inputs.bencher-version }}
         run: powershell -c "gc -Raw services/cli/templates/output/install-cli.ps1 | iex"
       - name: Run Bencher CLI
-        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+        run: bencher run --project ${{ env.BENCHER_PROJECT }} --key ${{ secrets.BENCHER_API_KEY }} --dry-run "bencher mock"
 
   cargo_main:
     name: Cargo `main`
@@ -146,7 +147,7 @@ jobs:
       - name: Cargo CLI Install main
         run: cargo install --git https://github.com/bencherdev/bencher --branch main --locked bencher_cli
       - name: Run Bencher CLI
-        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+        run: bencher run --project ${{ env.BENCHER_PROJECT }} --key ${{ secrets.BENCHER_API_KEY }} --dry-run "bencher mock"
 
   cargo_devel:
     name: Cargo `devel`
@@ -162,7 +163,7 @@ jobs:
       - name: Cargo CLI Install devel
         run: cargo install --git https://github.com/bencherdev/bencher --branch devel --locked bencher_cli
       - name: Run Bencher CLI
-        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
+        run: bencher run --project ${{ env.BENCHER_PROJECT }} --key ${{ secrets.BENCHER_API_KEY }} --dry-run "bencher mock"
 
   build_cli:
     name: Build CLI

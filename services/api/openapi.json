@@ -10525,7 +10525,7 @@
           "tokens"
         ],
         "summary": "List tokens for a user",
-        "description": "List all API tokens for a user. Only the authenticated user themselves and server admins have access to this endpoint. By default, the tokens are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of tokens.",
+        "description": "DEPRECATED: User API tokens have been deprecated in favor of user API keys. This endpoint remains available to manage existing API tokens. Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.\n\nList all API tokens for a user. Only the authenticated user themselves and server admins have access to this endpoint. By default, the tokens are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of tokens.",
         "operationId": "user_tokens_get",
         "parameters": [
           {
@@ -10655,7 +10655,8 @@
           "5XX": {
             "$ref": "#/components/responses/Error"
           }
-        }
+        },
+        "deprecated": true
       },
       "post": {
         "tags": [
@@ -10663,7 +10664,7 @@
           "tokens"
         ],
         "summary": "Create a token",
-        "description": "DEPRECATED: User API tokens have been deprecated in favor of user API keys, so this endpoint always fails with a `403 Forbidden` error. Create a user API key instead: <https://bencher.dev/docs/explanation/bencher-run/#--key-key> Existing API tokens continue to work and can still be viewed, updated, and revoked.",
+        "description": "DEPRECATED: User API tokens have been deprecated in favor of user API keys, so this endpoint always fails with a `403 Forbidden` error. Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead. Existing API tokens continue to work and can still be viewed, updated, and revoked.",
         "operationId": "user_token_post",
         "parameters": [
           {
@@ -10751,7 +10752,7 @@
           "tokens"
         ],
         "summary": "View a token",
-        "description": "View an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.",
+        "description": "DEPRECATED: User API tokens have been deprecated in favor of user API keys. This endpoint remains available to manage existing API tokens. Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.\n\nView an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.",
         "operationId": "user_token_get",
         "parameters": [
           {
@@ -10828,7 +10829,8 @@
           "5XX": {
             "$ref": "#/components/responses/Error"
           }
-        }
+        },
+        "deprecated": true
       },
       "delete": {
         "tags": [
@@ -10836,7 +10838,7 @@
           "tokens"
         ],
         "summary": "Revoke a token",
-        "description": "Revoke an API token for a user. Revocation is terminal: a revoked token can no longer authenticate any request, and the revocation cannot be undone (for security — a leaked JWT must not become valid again). Only the authenticated user themselves and server admins have access to this endpoint.",
+        "description": "DEPRECATED: User API tokens have been deprecated in favor of user API keys. This endpoint remains available to manage existing API tokens. Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.\n\nRevoke an API token for a user. Revocation is terminal: a revoked token can no longer authenticate any request, and the revocation cannot be undone (for security — a leaked JWT must not become valid again). Only the authenticated user themselves and server admins have access to this endpoint.",
         "operationId": "user_token_delete",
         "parameters": [
           {
@@ -10906,7 +10908,8 @@
           "5XX": {
             "$ref": "#/components/responses/Error"
           }
-        }
+        },
+        "deprecated": true
       },
       "patch": {
         "tags": [
@@ -10914,7 +10917,7 @@
           "tokens"
         ],
         "summary": "Update a token",
-        "description": "Update an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.",
+        "description": "DEPRECATED: User API tokens have been deprecated in favor of user API keys. This endpoint remains available to manage existing API tokens. Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.\n\nUpdate an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.",
         "operationId": "user_token_patch",
         "parameters": [
           {
@@ -11001,7 +11004,8 @@
           "5XX": {
             "$ref": "#/components/responses/Error"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/v2": {

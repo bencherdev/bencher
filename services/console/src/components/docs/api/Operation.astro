@@ -24,6 +24,42 @@ const { path, method, headers, cli, index } = Astro.props;
 const operation = openapi?.paths?.[path]?.[method];
 const id = slugify(`${method}-${path}`, { lower: true, strict: true });
 const methodClass = new Method(method);
+
+// Render an OpenAPI description: split into paragraphs on blank lines, and within
+// each paragraph render markdown links `[text](url)` as real anchors. Everything
+// else renders as plain text, so link-free descriptions are unchanged.
+type InlineSegment =
+	| { kind: "text"; value: string }
+	| { kind: "link"; text: string; href: string };
+
+const parseInline = (paragraph: string): InlineSegment[] => {
+	const segments: InlineSegment[] = [];
+	const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+	let lastIndex = 0;
+	let match: RegExpExecArray | null = linkPattern.exec(paragraph);
+	while (match !== null) {
+		if (match.index > lastIndex) {
+			segments.push({
+				kind: "text",
+				value: paragraph.slice(lastIndex, match.index),
+			});
+		}
+		segments.push({ kind: "link", text: match[1] ?? "", href: match[2] ?? "" });
+		lastIndex = linkPattern.lastIndex;
+		match = linkPattern.exec(paragraph);
+	}
+	if (lastIndex < paragraph.length) {
+		segments.push({ kind: "text", value: paragraph.slice(lastIndex) });
+	}
+	return segments;
+};
+
+const description: string = operation?.description ?? "";
+const descriptionParagraphs = description
+	.split(/\n\n+/)
+	.map((paragraph) => paragraph.trim())
+	.filter((paragraph) => paragraph.length > 0)
+	.map(parseInline);
 ---
 
 <h2 id={id} class="title is-4" style={index > 0 ? "margin-top: 6rem;" : ""}>
@@ -38,7 +74,15 @@ const methodClass = new Method(method);
 </blockquote>
 <div class="columns">
   <div class="column">
-    <p>{operation?.description}</p>
+    {descriptionParagraphs.map((paragraph) => (
+      <p>{paragraph.map((segment) =>
+        segment.kind === "link" ? (
+          <a href={segment.href}>{segment.text}</a>
+        ) : (
+          segment.value
+        ),
+      )}</p>
+    ))}
     <Headers headers={headers} />
     <PathParameters parameters={operation?.parameters} />
     <QueryParameters path={path} parameters={operation?.parameters} />

@@ -5,6 +5,11 @@ on:
     workflows: [CI]
     types: [completed]
 
+env:
+  # The Bencher project slug. For a project-scoped API key (`bencher_run_*`) this
+  # is also the `docker login` username for the OCI registry. Replace with your own.
+  BENCHER_PROJECT: bencher
+
 jobs:
   track_pr_benchmarks:
     name: Track PR Benchmarks with Bencher
@@ -36,7 +41,7 @@ jobs:
         run: |
           docker load -i bench_image.tar
           docker tag bench:ci registry.bencher.dev/bencher:${GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA}
-          echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
+          echo '${{ secrets.BENCHER_API_KEY }}' | docker login registry.bencher.dev -u "$BENCHER_PROJECT" --password-stdin
           docker push registry.bencher.dev/bencher:${GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA}
       - name: Read PR Event Data
         if: steps.download_bench.outcome == 'success'
@@ -55,12 +60,12 @@ jobs:
       - name: Track Benchmarks with Bencher
         if: steps.download_bench.outcome == 'success'
         env:
-          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+          BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
           GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           bencher run \
-          --project bencher \
-          --token "$BENCHER_API_TOKEN" \
+          --project "$BENCHER_PROJECT" \
+          --key "$BENCHER_API_KEY" \
           --image "bencher:${GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA}" \
           --branch "$PR_HEAD" \
           --hash "$PR_HEAD_SHA" \

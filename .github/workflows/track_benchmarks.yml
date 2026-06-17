@@ -3,10 +3,13 @@ name: Track Benchmarks
 on:
   workflow_call:
     secrets:
-      BENCHER_API_TOKEN:
+      BENCHER_API_KEY:
         required: true
-      BENCHER_USER_EMAIL:
-        required: true
+
+env:
+  # The Bencher project slug. For a project-scoped API key (`bencher_run_*`) this
+  # is also the `docker login` username for the OCI registry. Replace with your own.
+  BENCHER_PROJECT: bencher
 
 jobs:
   track_benchmarks:
@@ -35,14 +38,14 @@ jobs:
         run: |
           docker load -i bench_image.tar
           docker tag bench:ci registry.bencher.dev/bencher:${{ github.sha }}
-          echo '${{ secrets.BENCHER_API_TOKEN }}' | docker login registry.bencher.dev -u '${{ secrets.BENCHER_USER_EMAIL }}' --password-stdin
+          echo '${{ secrets.BENCHER_API_KEY }}' | docker login registry.bencher.dev -u "$BENCHER_PROJECT" --password-stdin
           docker push registry.bencher.dev/bencher:${{ github.sha }}
       - uses: bencherdev/bencher@main # zizmor: ignore[unpinned-uses] first-party action; intentionally tracks @main to exercise the latest released CLI
       - name: Track Noise (ubuntu)
         run: |
           bencher run \
-          --project bencher \
-          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --project "$BENCHER_PROJECT" \
+          --key '${{ secrets.BENCHER_API_KEY }}' \
           --branch ${GITHUB_REF_NAME} \
           --hash '${{ github.sha }}' \
           --testbed ubuntu-22.04 \
@@ -58,8 +61,8 @@ jobs:
       - name: Track Noise (macos)
         run: |
           bencher run \
-          --project bencher \
-          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --project "$BENCHER_PROJECT" \
+          --key '${{ secrets.BENCHER_API_KEY }}' \
           --branch ${GITHUB_REF_NAME} \
           --hash '${{ github.sha }}' \
           --testbed macos-14 \
@@ -75,8 +78,8 @@ jobs:
       - name: Track Noise (windows)
         run: |
           bencher run \
-          --project bencher \
-          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --project "$BENCHER_PROJECT" \
+          --key '${{ secrets.BENCHER_API_KEY }}' \
           --branch ${GITHUB_REF_NAME} \
           --hash '${{ github.sha }}' \
           --testbed windows-2022 \
@@ -92,8 +95,8 @@ jobs:
       - name: Track benchmarks with Bencher
         run: |
           bencher run \
-          --project bencher \
-          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --project "$BENCHER_PROJECT" \
+          --key '${{ secrets.BENCHER_API_KEY }}' \
           --image "bencher:${{ github.sha }}" \
           --branch ${GITHUB_REF_NAME} \
           --hash '${{ github.sha }}' \

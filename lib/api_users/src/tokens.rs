@@ -70,6 +70,10 @@ pub async fn user_tokens_options(
 
 /// List tokens for a user
 ///
+/// DEPRECATED: User API tokens have been deprecated in favor of user API keys.
+/// This endpoint remains available to manage existing API tokens.
+/// Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.
+///
 /// List all API tokens for a user.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
 /// By default, the tokens are sorted in alphabetical order by name.
@@ -77,7 +81,8 @@ pub async fn user_tokens_options(
 #[endpoint {
     method = GET,
     path =  "/v0/users/{user}/tokens",
-    tags = ["users", "tokens"]
+    tags = ["users", "tokens"],
+    deprecated = true,
 }]
 pub async fn user_tokens_get(
     rqctx: RequestContext<ApiContext>,
@@ -176,7 +181,7 @@ fn get_ls_query<'q>(
 ///
 /// DEPRECATED: User API tokens have been deprecated in favor of user API keys,
 /// so this endpoint always fails with a `403 Forbidden` error.
-/// Create a user API key instead: <https://bencher.dev/docs/explanation/bencher-run/#--key-key>
+/// Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.
 /// Existing API tokens continue to work and can still be viewed, updated, and revoked.
 #[endpoint {
     method = POST,
@@ -222,12 +227,17 @@ pub async fn user_token_options(
 
 /// View a token
 ///
+/// DEPRECATED: User API tokens have been deprecated in favor of user API keys.
+/// This endpoint remains available to manage existing API tokens.
+/// Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.
+///
 /// View an API token for a user.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
 #[endpoint {
     method = GET,
     path =  "/v0/users/{user}/tokens/{token}",
-    tags = ["users", "tokens"]
+    tags = ["users", "tokens"],
+    deprecated = true,
 }]
 pub async fn user_token_get(
     rqctx: RequestContext<ApiContext>,
@@ -259,12 +269,17 @@ async fn get_one_inner(
 
 /// Update a token
 ///
+/// DEPRECATED: User API tokens have been deprecated in favor of user API keys.
+/// This endpoint remains available to manage existing API tokens.
+/// Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.
+///
 /// Update an API token for a user.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
 #[endpoint {
     method = PATCH,
     path =  "/v0/users/{user}/tokens/{token}",
-    tags = ["users", "tokens"]
+    tags = ["users", "tokens"],
+    deprecated = true,
 }]
 pub async fn user_token_patch(
     rqctx: RequestContext<ApiContext>,
@@ -311,6 +326,10 @@ async fn patch_inner(
 
 /// Revoke a token
 ///
+/// DEPRECATED: User API tokens have been deprecated in favor of user API keys.
+/// This endpoint remains available to manage existing API tokens.
+/// Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.
+///
 /// Revoke an API token for a user.
 /// Revocation is terminal: a revoked token can no longer authenticate any request,
 /// and the revocation cannot be undone (for security — a leaked JWT must not become valid again).
@@ -318,7 +337,8 @@ async fn patch_inner(
 #[endpoint {
     method = DELETE,
     path =  "/v0/users/{user}/tokens/{token}",
-    tags = ["users", "tokens"]
+    tags = ["users", "tokens"],
+    deprecated = true,
 }]
 pub async fn user_token_delete(
     rqctx: RequestContext<ApiContext>,
