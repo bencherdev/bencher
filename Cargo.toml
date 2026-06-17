@@ -132,7 +132,7 @@ nom = "8.0"
 notify-rust = "4.12"
 oauth2 = { version = "5.0", default-features = false }
 oauth2-reqwest = "0.1.0-alpha.3"
-oci-spec = "0.9"
+oci-spec = "0.10"
 octocrab = { version = "0.53", default-features = false, features = ["follow-redirect", "retry", "rustls", "timeout", "tracing", "default-client", "rustls-aws-lc-rs", "jwt-rust-crypto", "rustls-webpki-tokio"] }
 opentelemetry = "0.32"
 opentelemetry-otlp = "0.32"
