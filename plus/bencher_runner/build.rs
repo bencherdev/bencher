@@ -48,8 +48,8 @@ const DEFAULT_FIRECRACKER_VERSION: &str = "v1.15.1";
 /// Default kernel URL to download (per-architecture).
 ///
 /// Uses versioned CI build artifacts from the Firecracker project.
-const DEFAULT_KERNEL_URL_X86_64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260610-d300fd253667-0/x86_64/vmlinux-6.1.172";
-const DEFAULT_KERNEL_URL_AARCH64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260610-d300fd253667-0/aarch64/vmlinux-6.1.172";
+const DEFAULT_KERNEL_URL_X86_64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260617-a093a70f7979-0/x86_64/vmlinux-6.1.174";
+const DEFAULT_KERNEL_URL_AARCH64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20260617-a093a70f7979-0/aarch64/vmlinux-6.1.174";
 
 /// Expected SHA256 hashes for Firecracker `.tgz` archives.
 ///
@@ -65,9 +65,9 @@ const FIRECRACKER_TGZ_SHA256_AARCH64: &str =
 /// These MUST be updated whenever `DEFAULT_KERNEL_URL_*` changes.
 /// Compute with: `curl -sL <url> | sha256sum`
 const KERNEL_SHA256_X86_64: &str =
-    "970b8853e1fb8af4517b42414675b3fbb8cceeb2aa421745157e8429f2ca90a9";
+    "7f70be51b78157629a019a530bdb8e39cc7bad325e235e75c66cad289e04aecd";
 const KERNEL_SHA256_AARCH64: &str =
-    "eff7139c08dc1b88dc8ba40baa410f3f01bf0f74e82ef901fdd011fc9325b9ff";
+    "7e92ea3bd780044f4b92d12892e2767e968e3f893aa8f73a13c58426e91ecfe7";
 
 fn main() {
     let crypto_provider = aws_lc_rs::default_provider();
