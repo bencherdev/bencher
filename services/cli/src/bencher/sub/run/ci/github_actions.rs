@@ -308,7 +308,6 @@ impl GitHubActions {
                 },
             )
         } else {
-            cli_println_quietable!(log, "Created GitHub Check.");
             Ok(())
         }
     }
