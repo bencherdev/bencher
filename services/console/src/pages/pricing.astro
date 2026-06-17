@@ -69,7 +69,7 @@ const description =
           5 benchmarks × 10 runs = 50 Metrics.
           Even if your harness runs each benchmark 1,000 times internally for accuracy,
           that's still 1 Metric per run.
-          Bencher Bare Metal runner time is billed separately.
+          On Pro, private Metrics and Bencher Bare Metal runner time both draw from one shared monthly usage credit.
         </p>
       </div>
     </section>
@@ -112,13 +112,16 @@ const description =
             A benchmark result (called a Metric) is a single point-in-time measurement. Each benchmark run produces one Metric, so 5 benchmarks × 10 runs = 50 Metrics. Even if your harness samples a benchmark 1,000 times internally for accuracy, that still counts as 1 Metric per run. A benchmark with multiple measures (like latency and throughput) creates one Metric per measure per run, so 5 benchmarks × 2 measures × 10 runs = 100 Metrics.
           </FaqItem>
           <FaqItem id="faq-public-private" q="What is a Public vs. Private Project?">
-            A Public Project is visible to anyone who can reach your Bencher instance. On Bencher Cloud, <a href="/perf" target="_blank" rel="noreferrer">all Public Projects are listed here</a>. A Private Project is only visible to members of your organization and requires an active Bencher Plus plan (Team or Enterprise).
+            A Public Project is visible to anyone who can reach your Bencher instance. On Bencher Cloud, <a href="/perf" target="_blank" rel="noreferrer">all Public Projects are listed here</a>. A Private Project is only visible to members of your organization and requires a paid plan (Pro or Enterprise).
           </FaqItem>
           <FaqItem id="faq-billing" q="How are benchmark results billed?">
-            On Bencher Cloud, benchmark results (called Metrics) are billed monthly based on metered usage. If you create 5,280 Metrics in a month, you're billed for 5,280 Metrics. Bencher Self-Hosted Metrics are billed annually based on a licensed quantity.
+            On Bencher Cloud, the Pro plan is $20/month and includes $20 of usage credit. Private Metrics ($0.01 each) and Bencher Bare Metal runner time ($1.00/hour) both draw from this single monthly credit, so most teams pay exactly $20. If you go past the included credit, additional usage is billed at the same rates, with no spend cliff. Credit is granted fresh each month and does not roll over. Bencher Self-Hosted Metrics are billed annually based on a licensed quantity.
+          </FaqItem>
+          <FaqItem id="faq-trial" q="Is there a free trial for Pro?">
+            Yes. Pro starts with a 1-month free trial: your first month's $20 base fee is waived and you get $20 of usage credit to spend across Metrics and Bare Metal. A credit card is required to start the trial. After 30 days it converts to the standard $20/month. There is no per-seat pricing on any plan.
           </FaqItem>
           <FaqItem id="faq-public-projects" q="Are benchmark results for Public Projects counted?">
-            Yes. On Team or Enterprise, benchmark results (called Metrics) from both Public and Private Projects count toward your plan. The Free plan isn't billed for Metrics, but <a href="#faq-rate-limiting">daily rate limits</a> apply.
+            No. Metrics from Public Projects are always free and unlimited. Only Private Project Metrics draw from your Pro usage credit. The Free plan supports Public Projects only, with <a href="#faq-rate-limiting">daily rate limits</a>.
           </FaqItem>
           <FaqItem id="faq-rate-limiting" q="Is there rate limiting?">
             <ul>
@@ -129,7 +132,7 @@ const description =
           </FaqItem>
           <FaqItem id="faq-support" q="What support do I get with each plan?">
             <p><strong>Community support</strong> (Free): GitHub issues and our Discord community.</p>
-            <p><strong>Customer support</strong> (Team): Email support with responses within 1 business day.</p>
+            <p><strong>Customer support</strong> (Pro): Email support with responses within 1 business day.</p>
             <p><strong>Priority support</strong> (Enterprise): Dedicated Slack channel with direct access to Bencher engineering, priority on bug fixes and feature requests, and dedicated onboarding.</p>
           </FaqItem>
           <FaqItem id="faq-change-plan" q="Can I change or cancel my plan?">
@@ -168,14 +171,14 @@ const description =
             <p>Bencher Self-Hosted runners can run on Linux (x86_64 or ARM64), macOS, and Windows.</p>
             <p>See the <a href="/docs/explanation/bare-metal/#runner">bare metal runner reference</a> for details.</p>
           </FaqItem>
-          <FaqItem id="faq-bare-metal-billing" q="Are Bencher Bare Metal minutes billed separately from Metrics?">
-            <p>Yes. Metrics are billed per result as described above. On Bencher Cloud, Bare Metal runner time is billed separately at $1.00/hr ($0.01666/min) and covers the compute used to execute your benchmarks. You're only billed for the minutes your benchmarks are actively running.</p>
+          <FaqItem id="faq-bare-metal-billing" q="How is Bencher Bare Metal runner time billed?">
+            <p>On Bencher Cloud, Bare Metal On-Demand runner time costs $1.00/hr ($0.01666/min) and draws from the same monthly Pro usage credit as private Metrics. One credit pool covers both, so you reason about a single number. You're only billed for the minutes your benchmarks are actively running, and overage past the included credit is billed at the same rate.</p>
             <p>Bencher Self-Hosted users do not pay for runner minutes.</p>
           </FaqItem>
           <FaqItem id="faq-bare-metal-minimums" q="Is there a minimum commitment for Bencher Bare Metal?">
-            <p>No minimums, no monthly fees.</p>
+            <p>The Pro plan is $20/month and includes $20 of usage credit shared across Metrics and runner time. There is no per-seat pricing and no separate runner minimum.</p>
             <ul>
-              <li><strong>On-Demand</strong> (Team, Enterprise): billed for the minutes your benchmarks are actively running</li>
+              <li><strong>On-Demand</strong> (Pro, Enterprise): billed for the minutes your benchmarks are actively running, drawn from your monthly credit</li>
               <li><strong>Dedicated</strong> (Enterprise): flat monthly rate</li>
               <li><strong>Custom</strong> (Enterprise): usage-based</li>
             </ul>
@@ -183,11 +186,11 @@ const description =
           </FaqItem>
           <FaqItem id="faq-bare-metal-free-tier" q="What's included in the Free tier?">
             <p>Free users get one concurrent Bare Metal job with a 5 minute timeout and Standard queue priority. This is the same for both Bencher Cloud and Bencher Self-Hosted.</p>
-            <p>For Bencher Cloud On-Demand runners, you're running on the same Bare Metal machines as Team and Enterprise customers, just with lower queue position during busy periods.</p>
+            <p>For Bencher Cloud On-Demand runners, you're running on the same Bare Metal machines as Pro and Enterprise customers, just with lower queue position during busy periods.</p>
             <p>Bencher Bare Metal runners usually execute your already-compiled benchmark binaries. Compilation happens locally or in your CI pipeline and is typically the longest step, so most benchmark suites fit well under the 5 minute timeout.</p>
           </FaqItem>
-          <FaqItem id="faq-queue-priority" q="How does queue priority work between Free, Team, and Enterprise?">
-            Team and Enterprise jobs are prioritized ahead of Free jobs in the runner queue and share equal priority with each other. All Bencher Cloud On-Demand jobs run on the same Bare Metal hardware. During idle periods Free jobs run immediately. During busy periods paid jobs are scheduled first, and Free jobs wait for the next available slot.
+          <FaqItem id="faq-queue-priority" q="How does queue priority work between Free, Pro, and Enterprise?">
+            Pro and Enterprise jobs are prioritized ahead of Free jobs in the runner queue and share equal priority with each other. All Bencher Cloud On-Demand jobs run on the same Bare Metal hardware. During idle periods Free jobs run immediately. During busy periods paid jobs are scheduled first, and Free jobs wait for the next available slot.
           </FaqItem>
         </div>
       </div>

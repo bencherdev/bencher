@@ -2,11 +2,11 @@
 
 use bencher_billing::Biller;
 use bencher_endpoint::{
-    CorsResponse, Delete, Endpoint, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk,
+    CorsResponse, Delete, Endpoint, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
 use bencher_json::{
-    DateTime, OrganizationResourceId,
-    organization::plan::{JsonNewPlan, JsonPlan},
+    DateTime, MeteredPlanId, OrganizationResourceId,
+    organization::plan::{JsonNewPlan, JsonPlan, JsonUpdatePlan, PRO_INCLUDED_CREDIT_CENTS},
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
@@ -45,7 +45,12 @@ pub async fn org_plan_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgPlanParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into(), Delete.into()]))
+    Ok(Endpoint::cors(&[
+        Get.into(),
+        Post.into(),
+        Patch.into(),
+        Delete.into(),
+    ]))
 }
 
 #[endpoint {
@@ -127,6 +132,82 @@ pub async fn org_plan_post(
         let _ = e;
     })?;
     Ok(Post::auth_response_created(json))
+}
+
+#[endpoint {
+    method = PATCH,
+    path =  "/v0/organizations/{organization}/plan",
+    tags = ["organizations", "plan"]
+}]
+pub async fn org_plan_patch(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
+    path_params: Path<OrgPlanParams>,
+    body: TypedBody<JsonUpdatePlan>,
+) -> Result<ResponseOk<JsonPlan>, HttpError> {
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = patch_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await?;
+    Ok(Patch::auth_response_ok(json))
+}
+
+/// Update the organization's metered (Pro) subscription: schedule or clear a
+/// cancel-at-period-end. Returns the refreshed plan.
+async fn patch_inner(
+    context: &ApiContext,
+    path_params: OrgPlanParams,
+    json_plan: JsonUpdatePlan,
+    auth_user: &AuthUser,
+) -> Result<JsonPlan, HttpError> {
+    let biller = context.biller()?;
+
+    // Get the organization
+    let query_organization =
+        QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
+    // Check to see if user has permission to manage the organization
+    context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
+        .map_err(forbidden_error)?;
+    // Get the plan for the organization
+    let query_plan = QueryPlan::belonging_to(&query_organization)
+        .first::<QueryPlan>(auth_conn!(context))
+        .map_err(resource_not_found_err!(Plan, query_organization))?;
+
+    // The cancel-at-period-end schedule only applies to a metered (Pro)
+    // subscription; licensed plans are canceled immediately and have no
+    // period-end schedule to change.
+    let Some(metered_plan_id) = query_plan.metered_plan.as_ref() else {
+        return Err(bad_request_error(
+            "Only a metered plan's cancellation can be updated; this organization has no metered subscription",
+        ));
+    };
+    if json_plan.cancel_at_period_end {
+        biller
+            .cancel_metered_subscription(metered_plan_id)
+            .await
+            .map_err(resource_conflict_err!(Plan, query_plan))?;
+    } else {
+        biller
+            .resume_metered_subscription(metered_plan_id)
+            .await
+            .map_err(resource_conflict_err!(Plan, query_plan))?;
+    }
+
+    query_plan.to_metered_plan(biller).await?.ok_or_else(|| {
+        issue_error(
+            "Failed to find subscription for updated plan",
+            &format!(
+                "Failed to find metered plan for organization ({query_organization:?}) after update even though plan exists ({query_plan:?})."
+            ),
+            "Failed to find subscription for updated plan",
+        )
+    })
 }
 
 async fn post_inner(
@@ -221,6 +302,9 @@ async fn post_inner(
             .as_ref()
             .parse()
             .map_err(resource_not_found_err!(Plan, subscription_id))?;
+        // Grant the first period's included usage credit so a new Pro org has its
+        // credit immediately (best-effort; the daily sweep handles later periods).
+        grant_initial_pro_credit(biller, &metered_plan_id).await;
         InsertPlan::metered_plan(write_conn!(context), metered_plan_id, &query_organization)?;
         QueryPlan::belonging_to(&query_organization)
             .first::<QueryPlan>(auth_conn!(context))
@@ -300,11 +384,32 @@ async fn delete_inner(
             let _ = e;
         });
 
-    diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Plan, query_plan))?;
+    // Keep the local plan row only when we scheduled a remote cancel-at-period-end
+    // on a metered (Pro) subscription (see `cancel_metered_subscription`): the org
+    // retains access until the subscription lapses, when the daily sweep prunes it.
+    // Otherwise — licensed plans (canceled immediately), or a `remote=false` local
+    // detach — remove the row now.
+    if !(query_plan.metered_plan.is_some() && remote) {
+        diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
+            .execute(write_conn!(context))
+            .map_err(resource_conflict_err!(Plan, query_plan))?;
+    }
 
     delete_plan_result
+}
+
+/// Best-effort grant of the first period's included usage credit for a new Pro
+/// subscription. Idempotent and Pro-self-guarding; never blocks plan creation.
+async fn grant_initial_pro_credit(biller: &Biller, metered_plan_id: &MeteredPlanId) {
+    let _credit = biller
+        .ensure_period_credit(metered_plan_id, PRO_INCLUDED_CREDIT_CENTS)
+        .await
+        .inspect_err(|e| {
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(e);
+            #[cfg(not(feature = "sentry"))]
+            let _ = e;
+        });
 }
 
 async fn delete_plan(

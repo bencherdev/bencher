@@ -4,13 +4,14 @@ use std::cmp;
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
+use bencher_billing::Biller;
 use bencher_json::system::server::SelfHostedStats;
 use bencher_json::{
     BENCHER_API_URL, BENCHER_API_VERSION, BooleanParam, DateTime, JsonServer, JsonServerStats,
-    PlanLevel, SelfHostedStartup, ServerUuid,
+    PlanLevel, SelfHostedStartup, ServerUuid, organization::plan::PRO_INCLUDED_CREDIT_CENTS,
 };
 use bencher_license::Licensor;
-use chrono::{Duration, Utc};
+use chrono::{Duration, NaiveTime, Utc};
 use diesel::{Connection as _, RunQueryDsl as _, connection::SimpleConnection as _};
 use dropshot::HttpError;
 use slog::Logger;
@@ -22,7 +23,10 @@ use crate::{
     context::{Body, DbConnection, Message, Messenger, ServerStatsBody},
     error::{request_timeout_error, resource_conflict_err},
     macros::fn_get::fn_get,
-    model::{organization::plan::LicenseUsage, user::QueryUser},
+    model::{
+        organization::plan::{LicenseUsage, QueryPlan},
+        user::QueryUser,
+    },
     schema::{self, server as server_table},
 };
 
@@ -33,6 +37,19 @@ crate::macros::typed_id::typed_id!(ServerId);
 const SERVER_ID: ServerId = ServerId(1);
 
 const LICENSE_GRACE_PERIOD: usize = 7;
+
+/// Time of day (UTC) at which the daily Pro credit sweep runs. A fixed time so
+/// the sweep happens at the same time every day rather than drifting with
+/// server restarts.
+const CREDIT_SWEEP_TIME: NaiveTime = NaiveTime::MIN;
+
+/// How long to wait before retrying a failed database connection during the
+/// daily credit sweep, so a transient failure does not skip the whole day's run.
+const CREDIT_SWEEP_RETRY_DELAY: std::time::Duration = std::time::Duration::from_mins(1);
+
+/// Maximum number of connection attempts for a single daily sweep before giving
+/// up until the next scheduled run.
+const CREDIT_SWEEP_RETRY_LIMIT: usize = 5;
 
 #[expect(clippy::panic, reason = "valid constant URL with known path")]
 static BENCHER_STATS_API_URL: LazyLock<Url> = LazyLock::new(|| {
@@ -327,6 +344,106 @@ impl Default for InsertServer {
             created: DateTime::now(),
         }
     }
+}
+
+/// Daily background sweep (Bencher Cloud only) that keeps each Pro
+/// subscription's included usage credit granted for the current billing period
+/// and prunes the local plan row once a subscription has fully lapsed. This
+/// replaces granting credit on the report-ingestion path, keeping that hot path
+/// free of billing-side Stripe calls.
+pub fn spawn_pro_credit_grants(log: Logger, db_path: PathBuf, busy_timeout: u32, biller: Biller) {
+    tokio::spawn(async move {
+        loop {
+            // Sleep until the next occurrence of the daily sweep time (UTC) so the
+            // sweep runs at a fixed time of day, not relative to server start.
+            let now = Utc::now().naive_utc().time();
+            let sleep_time = match now.cmp(&CREDIT_SWEEP_TIME) {
+                cmp::Ordering::Less => CREDIT_SWEEP_TIME - now,
+                cmp::Ordering::Equal => Duration::days(1),
+                cmp::Ordering::Greater => Duration::days(1) - (now - CREDIT_SWEEP_TIME),
+            }
+            .to_std()
+            .unwrap_or(std::time::Duration::from_hours(24));
+            tokio::time::sleep(sleep_time).await;
+
+            // Open a configured connection for this sweep, retrying briefly on a
+            // transient failure rather than skipping the whole day's run.
+            let mut attempt = 0;
+            let conn = loop {
+                attempt += 1;
+                match DbConnection::establish(db_path.to_string_lossy().as_ref()) {
+                    Ok(mut conn) => {
+                        match configure_standalone_connection(&mut conn, busy_timeout) {
+                            Ok(()) => break Some(conn),
+                            Err(e) => slog::error!(
+                                log,
+                                "Failed to configure database connection PRAGMAs for credit sweep: {e}"
+                            ),
+                        }
+                    },
+                    Err(e) => slog::error!(
+                        log,
+                        "Failed to establish database connection for credit sweep: {e}"
+                    ),
+                }
+                if attempt >= CREDIT_SWEEP_RETRY_LIMIT {
+                    break None;
+                }
+                tokio::time::sleep(CREDIT_SWEEP_RETRY_DELAY).await;
+            };
+            let Some(mut conn) = conn else {
+                slog::error!(
+                    log,
+                    "Giving up on credit sweep until the next scheduled run after {CREDIT_SWEEP_RETRY_LIMIT} failed connection attempts"
+                );
+                continue;
+            };
+
+            let plans = match QueryPlan::all_metered(&mut conn) {
+                Ok(plans) => plans,
+                Err(e) => {
+                    slog::error!(log, "Failed to load metered plans for credit sweep: {e}");
+                    continue;
+                },
+            };
+
+            for plan in plans {
+                let Some(metered_plan_id) = plan.metered_plan.clone() else {
+                    continue;
+                };
+                let plan_id = plan.id;
+                match biller.get_metered_plan_status(&metered_plan_id).await {
+                    // Active (or trialing): ensure this period's included credit.
+                    // Idempotent, and a no-op for grandfathered Team metered plans.
+                    Ok((status, _)) if status.is_active() => {
+                        if let Err(e) = biller
+                            .ensure_period_credit(&metered_plan_id, PRO_INCLUDED_CREDIT_CENTS)
+                            .await
+                        {
+                            slog::warn!(
+                                log,
+                                "Failed to ensure period credit for {metered_plan_id}: {e}"
+                            );
+                            #[cfg(feature = "sentry")]
+                            sentry::capture_error(&e);
+                        }
+                    },
+                    // Lapsed (canceled/past due/unpaid): prune the local plan row so
+                    // the org reads as Free and we stop querying a dead subscription.
+                    Ok(_) => {
+                        if let Err(e) = QueryPlan::delete(&mut conn, plan_id) {
+                            slog::warn!(log, "Failed to prune lapsed plan {metered_plan_id}: {e}");
+                        }
+                    },
+                    Err(e) => {
+                        slog::warn!(log, "Failed to fetch status for {metered_plan_id}: {e}");
+                        #[cfg(feature = "sentry")]
+                        sentry::capture_error(&e);
+                    },
+                }
+            }
+        }
+    });
 }
 
 fn configure_standalone_connection(

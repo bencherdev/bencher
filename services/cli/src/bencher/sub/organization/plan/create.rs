@@ -48,6 +48,7 @@ impl From<CliPlanLevel> for PlanLevel {
         match level {
             CliPlanLevel::Free => Self::Free,
             CliPlanLevel::Team => Self::Team,
+            CliPlanLevel::Pro => Self::Pro,
             CliPlanLevel::Enterprise => Self::Enterprise,
         }
     }

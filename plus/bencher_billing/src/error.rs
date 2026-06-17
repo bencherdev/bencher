@@ -23,6 +23,8 @@ pub enum BillingError {
     IntError(#[from] std::num::TryFromIntError),
     #[error("Failed to send billing request: {0}")]
     Stripe(#[from] stripe::StripeError),
+    #[error("Failed to build idempotency key: {0}")]
+    IdempotencyKey(#[from] stripe::IdempotentKeyError),
     #[error("Email collision: {0:#?} {1:#?}")]
     EmailCollision(Box<Customer>, Vec<Customer>),
     #[error("Failed to find price: {0}")]

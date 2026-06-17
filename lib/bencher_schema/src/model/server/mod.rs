@@ -3,4 +3,4 @@ mod plus;
 
 pub use backup::{ServerBackup, ServerBackupError};
 #[cfg(feature = "plus")]
-pub use plus::{QueryServer, ServerId};
+pub use plus::{QueryServer, ServerId, spawn_pro_credit_grants};

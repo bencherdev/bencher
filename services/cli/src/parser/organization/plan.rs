@@ -76,6 +76,8 @@ pub enum CliPlanLevel {
     Free,
     /// Team
     Team,
+    /// Pro
+    Pro,
     /// Enterprise
     Enterprise,
 }

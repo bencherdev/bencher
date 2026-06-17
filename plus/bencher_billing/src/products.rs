@@ -12,8 +12,11 @@ use stripe_product::{
 
 use crate::BillingError;
 
+#[derive(Clone)]
 pub struct Products {
+    // Legacy self-serve paid tier, retained for grandfathered customers.
     pub team: Product,
+    pub pro: Product,
     pub enterprise: Product,
     pub bare_metal: Product,
 }
@@ -22,12 +25,14 @@ impl Products {
     pub async fn new(client: &StripeClient, products: JsonProducts) -> Result<Self, BillingError> {
         let JsonProducts {
             team,
+            pro,
             enterprise,
             bare_metal,
         } = products;
 
         Ok(Self {
             team: Product::new(client, team).await?,
+            pro: Product::new(client, pro).await?,
             enterprise: Product::new(client, enterprise).await?,
             bare_metal: Product::new(client, bare_metal).await?,
         })
@@ -50,11 +55,13 @@ impl Products {
         self.team
             .preferred_price_ids(preferred)
             .into_iter()
+            .chain(self.pro.preferred_price_ids(preferred))
             .chain(self.enterprise.preferred_price_ids(preferred))
             .collect()
     }
 }
 
+#[derive(Clone)]
 pub struct Product {
     #[expect(
         dead_code,
@@ -64,6 +71,13 @@ pub struct Product {
     pub product: StripeProduct,
     pub metered: HashMap<String, StripePrice>,
     pub licensed: HashMap<String, StripePrice>,
+    // Flat recurring base prices (e.g. the Pro `$20/mo` platform fee).
+    // Deliberately excluded from `preferred_price_ids` so it is never treated
+    // as the metered "plan item" when resolving a subscription's plan level.
+    pub base: HashMap<String, StripePrice>,
+    // Stripe coupon ID for this product's free trial (waives the first month's
+    // base fee). `None` if the product has no trial. Only Pro uses it today.
+    pub trial_coupon: Option<String>,
 }
 
 impl Product {
@@ -72,17 +86,22 @@ impl Product {
             id,
             metered,
             licensed,
+            base,
+            trial_coupon,
         } = product;
 
         let product_id: ProductId = id.as_str().into();
         let product = RetrieveProduct::new(product_id).send(client).await?;
         let metered = Self::pricing(client, metered).await?;
         let licensed = Self::pricing(client, licensed).await?;
+        let base = Self::pricing(client, base).await?;
 
         Ok(Self {
             product,
             metered,
             licensed,
+            base,
+            trial_coupon,
         })
     }
 

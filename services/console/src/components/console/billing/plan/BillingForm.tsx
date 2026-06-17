@@ -15,6 +15,7 @@ import {
 	PlanLevel,
 } from "../../../../types/bencher";
 import { fmtDate } from "../../../../util/convert";
+import { BENCHER_CALENDLY_URL } from "../../../../util/ext";
 import { useSearchParams } from "../../../../util/url";
 import {
 	type InitValid,
@@ -30,7 +31,7 @@ import { getThemeColor } from "../../../navbar/theme/util";
 import {
 	ENTERPRISE_TEXT,
 	FREE_TEXT,
-	TEAM_TEXT,
+	PRO_TEXT,
 } from "../../../pricing/ConsoleFallbackPricingTable";
 import Checkout from "./Checkout";
 
@@ -65,6 +66,7 @@ const BillingForm = (props: Props) => {
 			case PlanLevel.Free:
 				return null;
 			case PlanLevel.Team:
+			case PlanLevel.Pro:
 			case PlanLevel.Enterprise:
 				return entitlements() * 10_000;
 		}
@@ -74,6 +76,7 @@ const BillingForm = (props: Props) => {
 			case PlanLevel.Free:
 				return 0.0;
 			case PlanLevel.Team:
+			case PlanLevel.Pro:
 				return (entitlementsAnnual() ?? 0.0) * 0.01;
 			case PlanLevel.Enterprise:
 				return (entitlementsAnnual() ?? 0.0) * 0.05;
@@ -118,9 +121,9 @@ const BillingForm = (props: Props) => {
 			return;
 		}
 		if (!validPlanLevel(searchParams[PLAN_PARAM])) {
-			setPlanLevel(props.onboard ? PlanLevel.Team : PlanLevel.Free);
+			setPlanLevel(props.onboard ? PlanLevel.Pro : PlanLevel.Free);
 		} else if (props.onboard && plan() === PlanLevel.Free) {
-			setPlanLevel(PlanLevel.Team);
+			setPlanLevel(PlanLevel.Pro);
 		}
 	});
 
@@ -132,8 +135,8 @@ const BillingForm = (props: Props) => {
 				freeText={FREE_TEXT}
 				handleFree={() => setPlanLevel(PlanLevel.Free)}
 				hideFree={props.onboard}
-				teamText={TEAM_TEXT}
-				handleTeam={() => setPlanLevel(PlanLevel.Team)}
+				proText={PRO_TEXT}
+				handlePro={() => setPlanLevel(PlanLevel.Pro)}
 				enterpriseText={ENTERPRISE_TEXT}
 				handleEnterprise={() => setPlanLevel(PlanLevel.Enterprise)}
 			/>
@@ -165,21 +168,56 @@ const BillingForm = (props: Props) => {
 					organizationUuidValid={organizationUuidValidJson}
 					handleRefresh={props.handleRefresh}
 				/> */}
-				<Checkout
-					apiUrl={props.apiUrl}
-					params={props.params}
-					onboard={props.onboard}
-					bencher_valid={props.bencher_valid}
-					user={props.user}
-					organization={props.usage()?.organization}
-					plan={plan}
-					entitlements={entitlementsAnnualJson}
-					organizationUuid={organizationUuidJson}
-					organizationUuidValid={organizationUuidValidJson}
-					handleRefresh={props.handleRefresh}
-				/>
+				<Show
+					when={
+						plan() === PlanLevel.Enterprise && planKind() === PlanKind.Metered
+					}
+					fallback={
+						<Checkout
+							apiUrl={props.apiUrl}
+							params={props.params}
+							onboard={props.onboard}
+							bencher_valid={props.bencher_valid}
+							user={props.user}
+							organization={props.usage()?.organization}
+							plan={plan}
+							entitlements={entitlementsAnnualJson}
+							organizationUuid={organizationUuidJson}
+							organizationUuidValid={organizationUuidValidJson}
+							handleRefresh={props.handleRefresh}
+						/>
+					}
+				>
+					<ContactUs onboard={props.onboard} />
+				</Show>
 			</Show>
 		</>
+	);
+};
+
+// Metered (Cloud) Enterprise is not self-serve (custom hardware/contract), so
+// the API rejects a checkout for it. Route to a sales conversation instead,
+// matching the marketing pricing table. The self-hosted licensed Enterprise
+// path still uses the normal checkout.
+const ContactUs = (props: { onboard: boolean }) => {
+	return (
+		<div class="columns is-centered" style="margin-top: 1rem;">
+			<div class={`column ${props.onboard ? "" : "is-half"}`}>
+				<a
+					class="button is-primary is-fullwidth"
+					href={BENCHER_CALENDLY_URL}
+					target="_blank"
+					rel="noreferrer"
+				>
+					<span class="icon-text">
+						<span>Contact us</span>
+						<span class="icon">
+							<i class="fas fa-chevron-right" />
+						</span>
+					</span>
+				</a>
+			</div>
+		</div>
 	);
 };
 

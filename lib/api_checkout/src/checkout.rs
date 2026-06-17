@@ -2,6 +2,7 @@
 
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_json::{
+    PlanLevel,
     organization::plan::DEFAULT_PRICE_NAME,
     system::payment::{JsonCheckout, JsonNewCheckout},
 };
@@ -67,6 +68,15 @@ async fn checkouts_post_inner(
     if entitlements.is_some() && self_hosted.is_none() {
         return Err(bad_request_error(
             "Licensed plans are only available for Bencher Self-Hosted",
+        ));
+    }
+
+    // Enterprise is no longer self-serve: it is "Contact us" with custom hardware.
+    // Reject metered (self-serve) Enterprise checkouts; licensed Enterprise for
+    // Self-Hosted (sales-issued) remains available via the check above.
+    if level == PlanLevel::Enterprise && entitlements.is_none() {
+        return Err(bad_request_error(
+            "Enterprise plans are not self-serve. Please contact Bencher to set up an Enterprise plan.",
         ));
     }
 
