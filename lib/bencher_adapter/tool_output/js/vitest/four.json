@@ -1,0 +1,124 @@
+{
+  "files": [
+    {
+      "filepath": "/home/runner/project/fib.bench.ts",
+      "groups": [
+        {
+          "fullName": "fib.bench.ts > fibonacci",
+          "benchmarks": [
+            {
+              "id": "fib.bench.ts_0_0",
+              "name": "fib(10)",
+              "rank": 1,
+              "sampleCount": 93,
+              "totalTime": 521.4,
+              "min": 0.8,
+              "max": 1.5,
+              "hz": 1000.0,
+              "period": 1.0,
+              "samples": [],
+              "mean": 1.0,
+              "variance": 0.0625,
+              "sd": 0.25,
+              "sem": 0.0259,
+              "df": 92,
+              "critical": 1.986,
+              "moe": 0.0514,
+              "rme": 25.0,
+              "p75": 1.05,
+              "p99": 1.4,
+              "p995": 1.45,
+              "p999": 1.5,
+              "median": 0.75
+            },
+            {
+              "id": "fib.bench.ts_0_1",
+              "name": "fib(20)",
+              "rank": 2,
+              "sampleCount": 88,
+              "totalTime": 512.0,
+              "min": 1.6,
+              "max": 3.0,
+              "hz": 500.0,
+              "period": 2.0,
+              "samples": [],
+              "mean": 2.0,
+              "variance": 0.25,
+              "sd": 0.5,
+              "sem": 0.0533,
+              "df": 87,
+              "critical": 1.988,
+              "moe": 0.106,
+              "rme": 25.0,
+              "p75": 2.1,
+              "p99": 2.8,
+              "p995": 2.9,
+              "p999": 3.0,
+              "median": 1.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "filepath": "/home/runner/project/sort.bench.ts",
+      "groups": [
+        {
+          "fullName": "sort.bench.ts > sorting",
+          "benchmarks": [
+            {
+              "id": "sort.bench.ts_0_0",
+              "name": "normal",
+              "rank": 1,
+              "sampleCount": 70,
+              "totalTime": 525.0,
+              "min": 4.0,
+              "max": 7.5,
+              "hz": 200.0,
+              "period": 5.0,
+              "samples": [],
+              "mean": 5.0,
+              "variance": 1.5625,
+              "sd": 1.25,
+              "sem": 0.149,
+              "df": 69,
+              "critical": 1.995,
+              "moe": 0.298,
+              "rme": 25.0,
+              "p75": 5.2,
+              "p99": 7.0,
+              "p995": 7.3,
+              "p999": 7.5,
+              "median": 4.0
+            },
+            {
+              "id": "sort.bench.ts_0_1",
+              "name": "reverse",
+              "rank": 2,
+              "sampleCount": 64,
+              "totalTime": 640.0,
+              "min": 8.0,
+              "max": 15.0,
+              "hz": 100.0,
+              "period": 10.0,
+              "samples": [],
+              "mean": 10.0,
+              "variance": 6.25,
+              "sd": 2.5,
+              "sem": 0.3125,
+              "df": 63,
+              "critical": 1.998,
+              "moe": 0.625,
+              "rme": 25.0,
+              "p75": 10.5,
+              "p99": 14.0,
+              "p995": 14.5,
+              "p999": 15.0,
+              "median": 8.0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

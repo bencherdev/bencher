@@ -15,6 +15,7 @@ impl From<CliReportAdapter> for Adapter {
             CliReportAdapter::JavaJmh => Self::JavaJmh,
             CliReportAdapter::JsBenchmark => Self::JsBenchmark,
             CliReportAdapter::JsTime => Self::JsTime,
+            CliReportAdapter::JsVitest => Self::JsVitest,
             CliReportAdapter::PythonAsv => Self::PythonAsv,
             CliReportAdapter::PythonPytest => Self::PythonPytest,
             CliReportAdapter::RubyBenchmark => Self::RubyBenchmark,
