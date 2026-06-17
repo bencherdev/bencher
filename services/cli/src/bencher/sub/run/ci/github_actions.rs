@@ -308,6 +308,7 @@ impl GitHubActions {
                 },
             )
         } else {
+            cli_println_quietable!(log, "Created GitHub Check.");
             Ok(())
         }
     }
@@ -578,6 +579,36 @@ mod tests {
         assert_eq!(
             check_run_name(Some("embedded")),
             "Bencher Report (embedded)"
+        );
+    }
+
+    #[test]
+    fn octocrab_pull_request_accepts_minimal_check_run_payload() {
+        use octocrab::models::pulls::PullRequest;
+
+        // GitHub's check-run response `pull_requests` items are the minimal/simple PR
+        // representation (no `node_id`, etc.). octocrab >= 0.52 models these as optional.
+        // Guards against an octocrab downgrade reintroducing
+        // https://github.com/bencherdev/bencher/issues/894
+        let minimal = serde_json::json!([{
+            "url": "https://api.github.com/repos/owner/repo/pulls/1",
+            "id": 1934,
+            "number": 1,
+            "head": {
+                "ref": "feature",
+                "sha": "f1e2d3c4b5a697887766554433221100ffeeddcc",
+                "repo": { "id": 1, "url": "https://api.github.com/repos/owner/repo", "name": "repo" }
+            },
+            "base": {
+                "ref": "main",
+                "sha": "0011223344556677889900aabbccddeeff001122",
+                "repo": { "id": 1, "url": "https://api.github.com/repos/owner/repo", "name": "repo" }
+            }
+        }]);
+        let parsed: Result<Vec<PullRequest>, _> = serde_json::from_value(minimal);
+        assert!(
+            parsed.is_ok(),
+            "octocrab PullRequest must accept GitHub's minimal check-run payload: {parsed:?}"
         );
     }
 }
