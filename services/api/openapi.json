@@ -2133,6 +2133,8 @@
           "organizations",
           "plan"
         ],
+        "summary": "Delete an organization's subscription plan (admin only).",
+        "description": "Immediately cancels the organization's subscription and removes the plan. Restricted to Bencher server administrators.",
         "operationId": "org_plan_delete",
         "parameters": [
           {
@@ -2190,6 +2192,91 @@
                 "required": true,
                 "schema": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "organizations",
+          "plan"
+        ],
+        "summary": "Update an organization's metered subscription plan.",
+        "description": "Schedules or clears a cancel-at-period-end for the organization's metered subscription. Available to organization managers and must be called with a user session JWT, not a user API key.",
+        "operationId": "org_plan_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "description": "The slug or UUID for an organization.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdatePlan"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonPlan"
                 }
               }
             }
@@ -14819,6 +14906,10 @@
       "JsonPlan": {
         "type": "object",
         "properties": {
+          "cancel_at_period_end": {
+            "description": "Whether the subscription is set to cancel at the end of the current period (the org keeps access until `current_period_end`, then downgrades to Free).",
+            "type": "boolean"
+          },
           "card": {
             "$ref": "#/components/schemas/JsonCardDetails"
           },
@@ -14853,6 +14944,7 @@
           }
         },
         "required": [
+          "cancel_at_period_end",
           "card",
           "current_period_end",
           "current_period_start",
@@ -15086,26 +15178,38 @@
       "JsonProduct": {
         "type": "object",
         "properties": {
+          "base": {
+            "default": {},
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "id": {
             "type": "string"
           },
           "licensed": {
+            "default": {},
             "type": "object",
             "additionalProperties": {
               "type": "string"
             }
           },
           "metered": {
+            "default": {},
             "type": "object",
             "additionalProperties": {
               "type": "string"
             }
+          },
+          "trial_coupon": {
+            "nullable": true,
+            "default": null,
+            "type": "string"
           }
         },
         "required": [
-          "id",
-          "licensed",
-          "metered"
+          "id"
         ]
       },
       "JsonProducts": {
@@ -15117,6 +15221,9 @@
           "enterprise": {
             "$ref": "#/components/schemas/JsonProduct"
           },
+          "pro": {
+            "$ref": "#/components/schemas/JsonProduct"
+          },
           "team": {
             "$ref": "#/components/schemas/JsonProduct"
           }
@@ -15124,6 +15231,7 @@
         "required": [
           "bare_metal",
           "enterprise",
+          "pro",
           "team"
         ]
       },
@@ -17364,6 +17472,18 @@
           }
         ]
       },
+      "JsonUpdatePlan": {
+        "type": "object",
+        "properties": {
+          "cancel_at_period_end": {
+            "description": "Update the subscription's scheduled cancellation. Set to `false` to resume a plan scheduled to cancel at period end, or `true` to schedule it to cancel at the end of the current period. Only applies to metered subscriptions, not licensed (Self-Hosted) plans.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cancel_at_period_end"
+        ]
+      },
       "JsonUpdatePlot": {
         "anyOf": [
           {
@@ -18055,6 +18175,7 @@
         "type": "string",
         "enum": [
           "free",
+          "pro",
           "team",
           "enterprise"
         ]

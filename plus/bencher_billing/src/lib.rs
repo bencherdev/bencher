@@ -10,5 +10,5 @@ mod biller;
 mod error;
 mod products;
 
-pub use biller::Biller;
+pub use biller::{Biller, PeriodCredit};
 pub use error::BillingError;

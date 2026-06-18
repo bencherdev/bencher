@@ -5,6 +5,15 @@
     reason = "integration test file"
 )]
 //! Integration tests for organization plan endpoint.
+//!
+//! NOTE: The organization plan endpoints are registered only on Bencher Cloud
+//! (`is_bencher_cloud` in `lib.rs`), so the test harness (not configured as
+//! Cloud) returns 404 for them; the GET tests below accept that. The newer
+//! guards therefore cannot be exercised end-to-end here and are covered by
+//! inspection instead: PATCH rejects user API keys via the same
+//! `auth_user.user_key_id.is_some()` check tested in `api_users`
+//! `user_key_auth.rs`, and DELETE uses the same `AdminUser` extractor tested by
+//! `organizations_hard_delete_requires_admin`.
 
 use bencher_api_tests::TestServer;
 use http::StatusCode;

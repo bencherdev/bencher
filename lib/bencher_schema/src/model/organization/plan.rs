@@ -111,14 +111,29 @@ impl QueryPlan {
             .await
             .map_err(not_found_error)?;
 
+        // A canceled/lapsed (inactive) subscription gracefully downgrades to
+        // Free: return `None` so the caller falls through to the public/no-plan
+        // logic instead of hard-erroring.
         if plan_status.is_active() {
             Ok(Some(customer_id))
         } else {
-            Err(payment_required_error(PlanKindError::InactiveMeteredPlan {
-                organization: query_organization.clone(),
-                metered_plan_id,
-            }))
+            Ok(None)
         }
+    }
+
+    /// All organization plans with a metered (Stripe) subscription. Used by the
+    /// daily billing sweep to ensure each period's credit and reconcile canceled
+    /// subscriptions.
+    pub fn all_metered(conn: &mut DbConnection) -> diesel::QueryResult<Vec<Self>> {
+        schema::plan::table
+            .filter(schema::plan::metered_plan.is_not_null())
+            .load::<Self>(conn)
+    }
+
+    /// Delete a plan row by id. Used by the daily billing sweep to prune a plan
+    /// whose subscription has fully lapsed.
+    pub fn delete(conn: &mut DbConnection, plan_id: PlanId) -> diesel::QueryResult<usize> {
+        diesel::delete(schema::plan::table.filter(schema::plan::id.eq(plan_id))).execute(conn)
     }
 }
 
@@ -219,11 +234,6 @@ pub enum PlanKind {
 
 #[derive(Debug, thiserror::Error)]
 pub enum PlanKindError {
-    #[error("Organization ({uuid}) has an inactive metered plan ({metered_plan_id})", uuid = organization.uuid)]
-    InactiveMeteredPlan {
-        organization: QueryOrganization,
-        metered_plan_id: MeteredPlanId,
-    },
     #[error("License usage exceeded for organization ({uuid}). {usage} > {entitlements}", uuid = organization.uuid)]
     LicensePlanOverage {
         organization: QueryOrganization,
@@ -253,7 +263,7 @@ impl PlanKind {
             Self::Metered(_) => Priority::Plus,
             Self::Licensed(license_usage) => match license_usage.level {
                 PlanLevel::Free => Priority::Free,
-                PlanLevel::Team | PlanLevel::Enterprise => Priority::Plus,
+                PlanLevel::Pro | PlanLevel::Team | PlanLevel::Enterprise => Priority::Plus,
             },
         }
     }
@@ -394,6 +404,12 @@ impl PlanKind {
                         PlanKindError::NoBiller,
                     ));
                 };
+                // Public Project Metrics are free and unlimited; only Private
+                // Project Metrics are metered. Bare metal runner time is metered
+                // separately (regardless of visibility) via the runner channel.
+                if project.visibility.is_public() {
+                    return Ok(());
+                }
                 if let Err(e) = biller.record_metrics_usage(&customer_id, usage).await {
                     #[cfg(feature = "otel")]
                     bencher_otel::ApiMeter::increment(

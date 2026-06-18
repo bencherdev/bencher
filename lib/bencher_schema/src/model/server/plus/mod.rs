@@ -26,7 +26,10 @@ use crate::{
     schema::{self, server as server_table},
 };
 
+mod credit;
 mod stats;
+
+pub use credit::spawn_credit_grants;
 
 crate::macros::typed_id::typed_id!(ServerId);
 
@@ -329,7 +332,7 @@ impl Default for InsertServer {
     }
 }
 
-fn configure_standalone_connection(
+pub(super) fn configure_standalone_connection(
     conn: &mut DbConnection,
     busy_timeout: u32,
 ) -> diesel::QueryResult<()> {

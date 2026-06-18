@@ -76,6 +76,7 @@ impl bencher_endpoint::Registrar for Api {
                 }
                 api_description.register(plan::org_plan_get)?;
                 api_description.register(plan::org_plan_post)?;
+                api_description.register(plan::org_plan_patch)?;
                 api_description.register(plan::org_plan_delete)?;
             }
 

@@ -28,6 +28,17 @@ pub struct JsonNewPlan {
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdatePlan {
+    /// Update the subscription's scheduled cancellation. Set to `false` to resume
+    /// a plan scheduled to cancel at period end, or `true` to schedule it to
+    /// cancel at the end of the current period. Only applies to metered
+    /// subscriptions, not licensed (Self-Hosted) plans.
+    pub cancel_at_period_end: bool,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPlan {
     pub organization: OrganizationUuid,
     pub customer: JsonCustomer,
@@ -37,6 +48,9 @@ pub struct JsonPlan {
     pub current_period_start: DateTime,
     pub current_period_end: DateTime,
     pub status: PlanStatus,
+    /// Whether the subscription is set to cancel at the end of the current period
+    /// (the org keeps access until `current_period_end`, then downgrades to Free).
+    pub cancel_at_period_end: bool,
     pub license: Option<JsonLicense>,
 }
 
