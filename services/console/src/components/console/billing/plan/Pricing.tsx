@@ -6,6 +6,7 @@ export const per_metric_cost = (plan: PlanLevel) => {
 		case PlanLevel.Free:
 			return 0;
 		case PlanLevel.Team:
+		case PlanLevel.Pro:
 			return 1;
 		case PlanLevel.Enterprise:
 			return 5;
@@ -18,8 +19,8 @@ interface Props {
 	freeText: string;
 	handleFree: () => void;
 	hideFree?: undefined | boolean;
-	teamText: string;
-	handleTeam: () => void;
+	proText: string;
+	handlePro: () => void;
 	enterpriseText: string;
 	handleEnterprise: () => void;
 }
@@ -34,13 +35,13 @@ const Pricing = (props: Props) => {
 			handlePlanLevel={props.handleFree}
 		/>
 	);
-	const Team = (
+	const Pro = (
 		<PlanPanel
 			themeColor={props.themeColor}
 			active={props.plan}
-			plan={PlanLevel.Team}
-			buttonText={props.teamText}
-			handlePlanLevel={props.handleTeam}
+			plan={PlanLevel.Pro}
+			buttonText={props.proText}
+			handlePlanLevel={props.handlePro}
 		/>
 	);
 	const Enterprise = (
@@ -59,12 +60,12 @@ const Pricing = (props: Props) => {
 				fallback={
 					<>
 						<div class="column is-3">{Free}</div>
-						<div class="column is-3">{Team}</div>
+						<div class="column is-3">{Pro}</div>
 						<div class="column is-3">{Enterprise}</div>
 					</>
 				}
 			>
-				<div class="column is-6">{Team}</div>
+				<div class="column is-6">{Pro}</div>
 				<div class="column is-6">{Enterprise}</div>
 			</Show>
 		</div>
@@ -73,10 +74,20 @@ const Pricing = (props: Props) => {
 
 const NO_FEATURE = "\xa0";
 
-const PlanCopy = {
+interface PlanCopyEntry {
+	title: string;
+	price: string;
+	priceNote: string;
+	features: string[];
+}
+
+// Keyed by every `PlanLevel` so `PlanCopy[plan]` is always defined. `Team` is
+// retained for grandfathered customers; new self-serve signups use `Pro`.
+const PlanCopy: Record<PlanLevel, PlanCopyEntry> = {
 	[PlanLevel.Free]: {
 		title: "Free",
 		price: "$0",
+		priceNote: "per month",
 		features: [
 			"Public Projects",
 			NO_FEATURE,
@@ -85,9 +96,22 @@ const PlanCopy = {
 			NO_FEATURE,
 		],
 	},
+	[PlanLevel.Pro]: {
+		title: "Pro",
+		price: "$20",
+		priceNote: "per month + usage",
+		features: [
+			"$20 of included usage credit",
+			"Public & Private Projects",
+			"No per-seat pricing",
+			"Customer Support",
+			NO_FEATURE,
+		],
+	},
 	[PlanLevel.Team]: {
 		title: "Team",
 		price: "$0.01",
+		priceNote: "per benchmark result",
 		features: [
 			"Public Projects",
 			"Private Projects",
@@ -98,13 +122,14 @@ const PlanCopy = {
 	},
 	[PlanLevel.Enterprise]: {
 		title: "Enterprise",
-		price: "$0.05",
+		price: "Contact us",
+		priceNote: "custom hardware",
 		features: [
-			"Public Projects",
-			"Private Projects",
+			"Everything in Pro",
 			"Priority Support",
 			"Single Sign-On (SSO)",
 			"Dedicated Onboarding",
+			NO_FEATURE,
 		],
 	},
 };
@@ -124,7 +149,7 @@ const PlanPanel = (props: {
 					<h2 class="title is-2">{plan.title}</h2>
 					<h3 class="subtitle is-1">{plan.price}</h3>
 					<br />
-					<sup>per benchmark result</sup>
+					<sup>{plan.priceNote}</sup>
 				</div>
 			</div>
 			<For each={plan.features}>

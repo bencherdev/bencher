@@ -3,7 +3,7 @@ import { PlanLevel } from "../../types/bencher";
 
 interface Props {
 	handleFree: () => void;
-	handleTeam: () => void;
+	handlePro: () => void;
 	handleEnterprise: () => void;
 }
 
@@ -26,7 +26,10 @@ interface Tier {
 	title: string;
 	tagline: string;
 	price: string;
+	priceUnit: string;
 	projectsNote: string;
+	// Decodability note: what the included credit buys, shown under the price.
+	creditNote?: string;
 	popular?: boolean;
 	ctaStyle: "primary" | "outlined";
 	features: Feature[];
@@ -40,6 +43,7 @@ const TIERS: Tier[] = [
 		title: "Free",
 		tagline: "For open source projects",
 		price: "$0",
+		priceUnit: " / month",
 		projectsNote: "Public projects only",
 		ctaStyle: "outlined",
 		features: [
@@ -55,16 +59,20 @@ const TIERS: Tier[] = [
 		},
 	},
 	{
-		plan: PlanLevel.Team,
-		title: "Team",
-		tagline: "For engineering teams",
-		price: "$0.01",
+		plan: PlanLevel.Pro,
+		title: "Pro",
+		tagline: "For teams shipping fast",
+		price: "$20",
+		priceUnit: " / month + usage",
 		projectsNote: "Public & private projects",
+		creditNote:
+			"Includes $20 of usage: ~2,000 metrics or 20 runner-hours, mixed freely",
 		popular: true,
 		ctaStyle: "primary",
 		features: [
-			{ mark: "check", label: "Public projects" },
-			{ mark: "check", label: "Private projects" },
+			{ mark: "check", label: "$20 of included usage credit" },
+			{ mark: "check", label: "Public & private projects" },
+			{ mark: "check", label: "No per-seat pricing" },
 			{ mark: "check", label: "Customer support" },
 		],
 		runners: {
@@ -73,18 +81,19 @@ const TIERS: Tier[] = [
 			queuePriority: "Priority",
 			runnerRate: "$1.00 / hr",
 		},
-		billingFooter: "billed at $0.01666 / min · no minimums",
+		billingFooter:
+			"Private metrics $0.01 each. Overage billed at the same rates. First month free.",
 	},
 	{
 		plan: PlanLevel.Enterprise,
 		title: "Enterprise",
 		tagline: "For performance-critical organizations",
-		price: "$0.05",
+		price: "Contact us",
+		priceUnit: "",
 		projectsNote: "Public & private projects",
 		ctaStyle: "outlined",
 		features: [
-			{ mark: "check", label: "Public projects" },
-			{ mark: "check", label: "Private projects" },
+			{ mark: "check", label: "Everything in Pro" },
 			{ mark: "check", label: "Priority support" },
 			{ mark: "check", label: "Single sign-on (SSO)" },
 			{ mark: "check", label: "Dedicated onboarding" },
@@ -93,30 +102,30 @@ const TIERS: Tier[] = [
 			concurrentJobs: "Unlimited",
 			jobTimeout: "Unlimited",
 			queuePriority: "Priority",
-			runnerRate: "$1.00 / hr",
+			runnerRate: "Custom hardware",
 		},
-		billingFooter: "billed at $0.01666 / min · no minimums",
 	},
 ];
 
 const ctaTextFor = (plan: PlanLevel): string => {
-	if (plan === PlanLevel.Free) {
-		return "Sign up for Free";
+	switch (plan) {
+		case PlanLevel.Pro:
+			return "Start 1-month free trial";
+		case PlanLevel.Enterprise:
+			return "Contact us";
+		default:
+			return "Sign up for Free";
 	}
-	if (plan === PlanLevel.Team) {
-		return "Continue with Team";
-	}
-	return "Continue with Enterprise";
 };
 
 const handlerFor = (plan: PlanLevel, props: Props): (() => void) => {
 	switch (plan) {
-		case PlanLevel.Free:
-			return props.handleFree;
-		case PlanLevel.Team:
-			return props.handleTeam;
+		case PlanLevel.Pro:
+			return props.handlePro;
 		case PlanLevel.Enterprise:
 			return props.handleEnterprise;
+		default:
+			return props.handleFree;
 	}
 };
 
@@ -135,9 +144,12 @@ const InnerPricingTable = (props: Props) => {
 						</div>
 						<div class="pricing-price-row">
 							<span class="pricing-price">{tier.price}</span>
-							<span class="pricing-price-unit"> / benchmark result</span>
+							<span class="pricing-price-unit">{tier.priceUnit}</span>
 						</div>
 						<div class="pricing-projects">{tier.projectsNote}</div>
+						<Show when={tier.creditNote}>
+							<div class="pricing-billing-footer">{tier.creditNote}</div>
+						</Show>
 						<button
 							type="button"
 							class={`pricing-cta pricing-cta-${tier.ctaStyle}`}

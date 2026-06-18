@@ -1,5 +1,6 @@
-import { useNavigate } from "../../util/url";
 import { PlanLevel } from "../../types/bencher";
+import { BENCHER_CALENDLY_URL } from "../../util/ext";
+import { useNavigate } from "../../util/url";
 import InnerPricingTable from "./InnerPricingTable";
 
 const PricingTable = () => {
@@ -15,11 +16,12 @@ const PricingTable = () => {
 			handleFree={() => {
 				navigate(URL);
 			}}
-			handleTeam={() => {
-				navigate(url(PlanLevel.Team));
+			handlePro={() => {
+				navigate(url(PlanLevel.Pro));
 			}}
 			handleEnterprise={() => {
-				navigate(url(PlanLevel.Enterprise));
+				// Enterprise is "Contact us" (custom hardware), not self-serve.
+				navigate(BENCHER_CALENDLY_URL);
 			}}
 		/>
 	);
