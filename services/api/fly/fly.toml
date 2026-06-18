@@ -13,7 +13,7 @@ processes = ["app"]
 
 [[services]]
 protocol = "tcp"
-internal_port = 61016
+internal_port = 6610
 auto_start_machines = false
 auto_stop_machines = false
 min_machines_running = 1

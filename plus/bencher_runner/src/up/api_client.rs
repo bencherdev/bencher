@@ -42,7 +42,7 @@ mod tests {
     use super::*;
 
     fn test_host() -> Url {
-        Url::parse("http://localhost:61016/").unwrap()
+        Url::parse("http://localhost:6610/").unwrap()
     }
 
     fn test_https_host() -> Url {
@@ -75,7 +75,7 @@ mod tests {
         assert_eq!(ws_url.scheme(), "ws");
         assert_eq!(
             ws_url.as_str(),
-            "ws://localhost:61016/v0/runners/my-runner/channel"
+            "ws://localhost:6610/v0/runners/my-runner/channel"
         );
     }
 

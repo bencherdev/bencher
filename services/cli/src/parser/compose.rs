@@ -34,7 +34,7 @@ pub struct CliUp {
 
     /// Specify a port number for the API container.
     /// Similar to the `--expose` option for `docker run`.
-    #[clap(long, value_name = "PORT", default_value = "61016")]
+    #[clap(long, value_name = "PORT", default_value = "6610")]
     pub api_port: u16,
 
     /// Pass an environment variable to the Console container.

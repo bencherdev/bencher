@@ -67,11 +67,11 @@ pub struct TaskSmokeTest {
 )]
 pub enum TaskTestEnvironment {
     #[default]
-    /// https://localhost:61016
+    /// http://localhost:6610
     Ci,
-    /// https://localhost:61016
+    /// http://localhost:6610
     Localhost,
-    /// Docker https://localhost:61016
+    /// Docker http://localhost:6610
     Docker,
     /// https://dev.api.bencher.dev
     Dev,

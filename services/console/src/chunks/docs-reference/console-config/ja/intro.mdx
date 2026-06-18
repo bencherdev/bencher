@@ -1,7 +1,7 @@
 Bencher コンソール UI には設定は必要ありません。
 ただし、いくつかのデフォルトは次の環境変数を使って用途に合わせてカスタマイズできます:
 
-- `BENCHER_API_URL`: Bencher API サーバーである [Bencher API サーバー][server config] の URL。デフォルトは `http://localhost:61016` に設定されています。
+- `BENCHER_API_URL`: Bencher API サーバーである [Bencher API サーバー][server config] の URL。デフォルトは `http://localhost:6610` に設定されています。
 - `INTERNAL_API_URL`: `docker compose` のような Docker ベースのネットワーキングを使用する場合、ローカルの `BENCHER_API_URL` を使用する際の Docker 間通信に必要です。`https://bencher.example.com` のようなリモートの `BENCHER_API_URL` を使用する場合は設定しないでください。デフォルトでは設定されていません。
 - `OAUTH_GITHUB`: [セルフホスト型 GitHub アプリ][github app] を使って `Login with GitHub` を有効にするには `true` に設定します。これは [Bencher Plus Enterprise プラン][bencher plus enterprise] が必要です。デフォルトでは設定されていません。
 - `OAUTH_GOOGLE`: [セルフホスト型 Google OAuth2][google oauth2] を使って `Login with Google` を有効にするには `true` に設定します。これは [Bencher Plus Enterprise プラン][bencher plus enterprise] が必要です。デフォルトでは設定されていません。

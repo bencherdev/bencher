@@ -172,10 +172,10 @@ pub fn is_bencher_cloud(url: &url::Url) -> bool {
     || *url == *PROD_BENCHER_URL
 }
 
-// Dynamic and/or Private Ports (49152-65535)
-// https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
-pub const BENCHER_API_PORT: u16 = 61016;
-pub const LOCALHOST_BENCHER_API_URL_STR: &str = "http://localhost:61016";
+// User Ports (1024-49151)
+// https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=6610
+pub const BENCHER_API_PORT: u16 = 6610;
+pub const LOCALHOST_BENCHER_API_URL_STR: &str = "http://localhost:6610";
 pub const DEV_BENCHER_API_URL_STR: &str = "https://dev.api.bencher.dev";
 pub const TEST_BENCHER_API_URL_STR: &str = "https://test.api.bencher.dev";
 pub const PROD_BENCHER_API_URL_STR: &str = "https://api.bencher.dev";
@@ -216,7 +216,7 @@ pub static PROD_BENCHER_API_URL: LazyLock<url::Url> = LazyLock::new(|| {
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{PROD_BENCHER_API_URL_STR}\": {e}"))
 });
 
-pub const LOCALHOST_BENCHER_REGISTRY_URL_STR: &str = "http://localhost:61016";
+pub const LOCALHOST_BENCHER_REGISTRY_URL_STR: &str = "http://localhost:6610";
 pub const DEV_BENCHER_REGISTRY_URL_STR: &str = "https://dev.registry.bencher.dev";
 pub const TEST_BENCHER_REGISTRY_URL_STR: &str = "https://test.registry.bencher.dev";
 pub const PROD_BENCHER_REGISTRY_URL_STR: &str = "https://registry.bencher.dev";

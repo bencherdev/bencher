@@ -22,7 +22,7 @@ Il existe deux options de `service` de stockage :
 
 |             Nom              |                               Exemple                               | Par défaut | Requis |                                              Description                                               |
 | :--------------------------: | :-----------------------------------------------------------------: | :--------: | :----: | :----------------------------------------------------------------------------------------------------: |
-|             url              |              "https://registry.bencher.example.com"                 | "http://localhost:61016" |  Non   | L'URL accessible de l'extérieur du serveur API pour l'accès au registre OCI. |
+|             url              |              "https://registry.bencher.example.com"                 | "http://localhost:6610" |  Non   | L'URL accessible de l'extérieur du serveur API pour l'accès au registre OCI. |
 |          data_store          |                              \{ ... \}                              |    ---     |  Non   |                              Spécifie le backend de stockage OCI. Local si omis.                       |
 |      data_store.service      |                       "local" ou "aws_s3"                           |    ---     |  Oui   |                                   Spécifie le type de service de stockage.                             |
 |   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |    ---     | aws_s3 uniquement |                                            ID de clé d'accès AWS.                                      |

@@ -38,7 +38,7 @@ description: >
   benchmark code, track performance, detect regressions, set up CI performance
   checks, run bare metal benchmarks, configure thresholds, or use the bencher CLI.
   Also use when you see BENCHER_API_TOKEN, bencher CLI usage, bencher.dev
-  URLs, or port 61016 (Bencher self-hosted default) in the project.
+  URLs, or port 6610 (Bencher self-hosted default) in the project.
 argument-hint: [task]
 ---
 ```

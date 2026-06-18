@@ -134,6 +134,6 @@ VOLUME /var/lib/bencher
 # Logs
 VOLUME /var/log/bencher
 
-EXPOSE 61016
+EXPOSE 6610
 
 CMD ["/usr/lib/bencher/api"]

@@ -19,7 +19,7 @@
     "forwardPorts": [
         3000,
         3001,
-        61016
+        6610
     ],
     "customizations": {
         "jetbrains": {

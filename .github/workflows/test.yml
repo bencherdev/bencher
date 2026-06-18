@@ -117,12 +117,12 @@ jobs:
         # Port must match bencher_json::BENCHER_API_PORT
         if: matrix.image-store == 'overlay2'
         run: |
-          echo '{"insecure-registries": ["localhost:61016"]}' | sudo tee /etc/docker/daemon.json
+          echo '{"insecure-registries": ["localhost:6610"]}' | sudo tee /etc/docker/daemon.json
           sudo systemctl restart docker
       - name: Configure Docker for insecure local registry (containerd)
         if: matrix.image-store == 'containerd'
         run: |
-          echo '{"insecure-registries": ["localhost:61016"], "features": {"containerd-snapshotter": true}}' | sudo tee /etc/docker/daemon.json
+          echo '{"insecure-registries": ["localhost:6610"], "features": {"containerd-snapshotter": true}}' | sudo tee /etc/docker/daemon.json
           sudo systemctl restart docker
       - name: Run Smoke Test
         env:

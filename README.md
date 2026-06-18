@@ -466,7 +466,7 @@ Do **not** specify an exact version if using Bencher _Cloud_ as there are still 
 
 The easiest way to contribute is to open this repo as a [Dev Container](https://containers.dev) in [VSCode](https://code.visualstudio.com/download) by simply clicking one of the buttons below.
 Everything you need will already be there!
-Once set up, both the UI and API should be built, running, and seeded at [localhost:3000](http://localhost:3000) and [localhost:61016](http://localhost:61016) respectively.
+Once set up, both the UI and API should be built, running, and seeded at [localhost:3000](http://localhost:3000) and [localhost:6610](http://localhost:6610) respectively.
 To make any changes to the UI or API though, you will have to exit the startup process and restart the UI and API yourself.
 
 For additional information on contributing, see the [Development Getting Started](DEVELOPMENT.md) guide.

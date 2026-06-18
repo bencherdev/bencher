@@ -9,7 +9,7 @@ if ($args[0] -eq "--admin") {
     $env:BENCHER_API_TOKEN="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4"
 }
 
-$env:BENCHER_HOST="http://localhost:61016"
+$env:BENCHER_HOST="http://localhost:6610"
 $env:BENCHER_PROJECT="the-computer"
 $env:BENCHER_BRANCH="master"
 $env:BENCHER_TESTBED="base"

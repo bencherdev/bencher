@@ -22,7 +22,7 @@ Es gibt zwei Speicher-`service`-Optionen:
 
 |             Name             |                              Beispiel                               | Standardwert | Erforderlich |                                            Beschreibung                                             |
 | :--------------------------: | :-----------------------------------------------------------------: | :----------: | :----------: | :-------------------------------------------------------------------------------------------------: |
-|             url              |              "https://registry.bencher.example.com"                 | "http://localhost:61016" |     Nein     | Die extern erreichbare URL des API-Servers für OCI-Registry-Zugriff. |
+|             url              |              "https://registry.bencher.example.com"                 | "http://localhost:6610" |     Nein     | Die extern erreichbare URL des API-Servers für OCI-Registry-Zugriff. |
 |          data_store          |                              \{ ... \}                              |     ---      |     Nein     |                      Gibt das OCI-Speicher-Backend an. Lokal wenn weggelassen.                      |
 |      data_store.service      |                       "local" oder "aws_s3"                         |     ---      |      Ja      |                                   Gibt den Speicherdiensttyp an.                                    |
 |   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |     ---      | nur aws_s3   |                                      AWS-Zugangsschlüssel-ID.                                       |

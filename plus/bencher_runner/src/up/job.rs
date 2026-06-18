@@ -616,7 +616,7 @@ mod tests {
                 "modified": "2025-01-01T00:00:00Z"
             },
             "config": {
-                "registry": "http://localhost:61016",
+                "registry": "http://localhost:6610",
                 "project": "11111111-2222-3333-4444-555555555555",
                 "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
                 "timeout": 300,
@@ -630,7 +630,7 @@ mod tests {
         let result = build_config_from_job(&up_config, &job).unwrap();
         assert_eq!(
             result.oci_image,
-            "localhost:61016/11111111-2222-3333-4444-555555555555@sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+            "localhost:6610/11111111-2222-3333-4444-555555555555@sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
         );
     }
 

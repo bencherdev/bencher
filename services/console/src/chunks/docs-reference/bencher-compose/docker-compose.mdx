@@ -4,7 +4,7 @@ services:
     image: ghcr.io/bencherdev/bencher-api:latest
     container_name: bencher_api
     ports:
-      - 61016:61016
+      - 6610:6610
     volumes:
       # Mount the configuration directory
       - "./services/api/etc:/etc/bencher"
@@ -22,10 +22,10 @@ services:
       - 3000:3000
     environment:
       # Set the API URL to the localhost IPv4 address
-      - BENCHER_API_URL=http://127.0.0.1:61016
+      - BENCHER_API_URL=http://127.0.0.1:6610
       # This is needed for Docker-to-Docker communication when using a local `BENCHER_API_URL`
       # Do not set this when using a remote `BENCHER_API_URL`, such as https://bencher.example.com
-      - INTERNAL_API_URL=http://host.docker.internal:61016
+      - INTERNAL_API_URL=http://host.docker.internal:6610
     depends_on:
       - bencher_api_compose
 ```
