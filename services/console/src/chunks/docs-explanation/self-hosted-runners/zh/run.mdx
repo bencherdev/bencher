@@ -1,0 +1,52 @@
+import RunnerUp from "../../../docs-reference/runner/zh/runner-up.mdx";
+
+## 启动 Runner
+
+在创建好 Runner 并至少分配一个 Spec 后，
+使用 [`runner up`][runner up] 在你的硬件上启动 `runner` 二进制文件。
+提供 API 服务器主机、Runner 的 UUID 或 slug，以及 Runner 密钥，
+既可以作为标志，也可以作为环境变量：
+
+```sh
+runner up \
+  --host https://api.bencher.example.com \
+  --runner my-runner \
+  --key bencher_runner_...
+```
+
+```sh
+export BENCHER_HOST=https://api.bencher.example.com
+export BENCHER_RUNNER=my-runner
+export BENCHER_RUNNER_KEY=bencher_runner_...
+runner up
+```
+
+`runner` 二进制文件向 API 服务器打开单个 [WebSocket 连接][runner protocol]，
+轮询与其 Spec 匹配的 Job，逐个执行，并将结果报告回去。
+该连接在多个 Job 之间保持打开，
+并且当有新版本可用时，二进制文件会在 Job 之间[自我更新][runner up]。
+
+默认情况下，Runner 会拒绝任何其 Spec 没有 [Sandbox][sandbox] 的 Job。
+要让 Runner 直接在主机上执行非沙箱化的 Job，
+请使用 [`--danger-allow-no-sandbox` 标志][danger allow no sandbox] 启动它。
+
+<ul>
+  <li>
+    <details>
+      <summary><code>runner up</code></summary>
+      <br />
+      <div class="box">
+        <RunnerUp />
+      </div>
+    </details>
+  </li>
+</ul>
+
+有关每个选项，请参阅 [`runner` CLI][runner reference] 参考，
+有关与服务器交换的消息，请参阅 [Runner 协议][runner protocol] 参考。
+
+[runner up]: /zh/docs/reference/runner/#runner-up
+[runner reference]: /zh/docs/reference/runner/
+[runner protocol]: /zh/docs/reference/runner-protocol/
+[sandbox]: /zh/docs/explanation/bare-metal/#sandbox
+[danger allow no sandbox]: /zh/docs/reference/runner/#--danger-allow-no-sandbox

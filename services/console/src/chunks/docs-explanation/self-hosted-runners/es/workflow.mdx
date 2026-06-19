@@ -1,0 +1,11 @@
+import SetupDiagram from "../setup-diagram.mdx";
+
+## Flujo de Trabajo del Runner Autoalojado
+
+Una vez que el Runner está conectado, envías benchmarks de la misma forma que con cualquier Bare Metal Runner:
+construyes y subes una [Image][images], luego ejecutas [`bencher run --image`][images] con un Spec coincidente.
+El diagrama de abajo muestra la ruta completa, desde el registro del Runner hasta la ejecución de un Job.
+
+<SetupDiagram />
+
+[images]: /es/docs/explanation/images/

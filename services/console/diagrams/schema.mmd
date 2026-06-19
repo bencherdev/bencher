@@ -24,6 +24,28 @@ token {
     jwt TEXT
     creation BIGINT
     expiration BIGINT
+    revoked BIGINT
+}
+user_key {
+    id INTEGER
+    uuid TEXT
+    user_id INTEGER
+    name TEXT
+    key_hash TEXT
+    creation BIGINT
+    expiration BIGINT
+    revoked BIGINT
+}
+project_key {
+    id INTEGER
+    uuid TEXT
+    project_id INTEGER
+    creator_id INTEGER
+    name TEXT
+    key_hash TEXT
+    creation BIGINT
+    expiration BIGINT
+    revoked BIGINT
 }
 organization {
     id INTEGER
@@ -272,7 +294,7 @@ runner {
     uuid TEXT
     name TEXT
     slug TEXT
-    token_hash TEXT
+    key_hash TEXT
     last_heartbeat BIGINT
     created BIGINT
     modified BIGINT
@@ -316,6 +338,8 @@ user ||--o{ token : "has"
 user ||--o{ organization_role : "has"
 user ||--o{ project_role : "has"
 user ||--o{ report : "writes"
+user ||--o{ user_key : "has"
+user ||--o{ project_key : "creates"
 
 organization ||--o{ organization_role : "assigns"
 organization ||--o{ project : "owns"
@@ -331,6 +355,7 @@ project ||--o{ benchmark : "has"
 project ||--o{ measure : "has"
 project ||--o{ branch : "has"
 project ||--o{ plot : "has"
+project ||--o{ project_key : "has"
 
 threshold ||--o{ model : "uses"
 threshold ||--o{ metric : "relates"

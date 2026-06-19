@@ -1,0 +1,11 @@
+## Conexión
+
+Un Runner mantiene una única conexión WebSocket al servidor API durante todo su ciclo de vida.
+La misma conexión maneja tanto la asignación de Jobs como la ejecución de Jobs,
+y permanece abierta a lo largo de muchos Jobs, evitando una reconexión y un handshake para cada uno.
+
+- **Endpoint:** `/v0/runners/{runner}/channel`
+- **Autenticación:** la clave del Runner se envía como cabecera `Authorization: Bearer bencher_runner_<key>` cuando se establece la conexión.
+- **Tamaño de mensaje:** cada mensaje está limitado por el límite `request_body_max_bytes` del servidor (aplicado tanto al tamaño máximo del mensaje como del frame). Un mensaje que excede este límite, como un payload `completed` que transporta `stdout`, `stderr` o archivos de salida grandes, se rechaza a nivel del protocolo WebSocket.
+
+Cada mensaje es un objeto JSON con un campo `event` que identifica su tipo.

@@ -1,0 +1,30 @@
+## Runner 생성
+
+Runner는 `runner` 바이너리를 Bencher API 서버에 인증하는 리소스입니다.
+[`bencher` CLI][bencher runner cli],
+[Runners REST API][runners api],
+또는 Bencher Console로 하나를 생성하세요.
+
+```sh
+bencher runner create \
+  --host https://api.bencher.example.com \
+  --name "My Runner"
+```
+
+Bencher는 새 Runner와 그 키를 함께 반환합니다:
+
+```json
+{
+  "uuid": "...",
+  "key": "bencher_runner_..."
+}
+```
+
+키는 한 번만 표시되므로 안전하게 보관하세요.
+Runner를 시작할 때 `runner` 바이너리에 이 키를 전달하게 됩니다.
+키를 분실하거나 유출한 경우, [`POST /v0/runners/{runner}/key` API][runner key api]로 키를 교체하세요.
+그러면 이전 키가 즉시 무효화됩니다.
+
+[bencher runner cli]: /ko/docs/api/server/runners/
+[runners api]: /ko/docs/api/server/runners/#post-v0runners
+[runner key api]: /ko/docs/api/server/runners/#post-v0runnersrunnerkey

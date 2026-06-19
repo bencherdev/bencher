@@ -1,0 +1,11 @@
+import SetupDiagram from "../setup-diagram.mdx";
+
+## Workflow d'un Runner auto-hébergé
+
+Une fois le Runner connecté, vous soumettez les benchmarks de la même manière qu'avec n'importe quel Bare Metal Runner :
+construisez et poussez une [Image][images], puis exécutez [`bencher run --image`][images] avec un Spec correspondant.
+Le diagramme ci-dessous montre le chemin complet, de l'enregistrement du Runner jusqu'à l'exécution d'un Job.
+
+<SetupDiagram />
+
+[images]: /fr/docs/explanation/images/

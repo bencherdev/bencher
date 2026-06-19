@@ -1,0 +1,27 @@
+import LifecycleDiagram from "../lifecycle-diagram.mdx";
+
+## Жизненный цикл Job
+
+Каждая Job проходит через фиксированный набор состояний по мере того, как её берут, выполняют и обрабатывают.
+
+| Из        | В           | Триггер                                                                |
+| --------- | ----------- | ---------------------------------------------------------------------- |
+| pending   | claimed     | Runner берёт Job                                                        |
+| pending   | canceled    | Пользователь отменяет Job                                              |
+| claimed   | running     | Runner отправляет `running`                                            |
+| claimed   | failed      | Runner отправляет `failed`, или истекает тайм-аут heartbeat            |
+| claimed   | canceled    | Пользователь отменяет Job                                              |
+| running   | completed   | Runner отправляет `completed`                                          |
+| running   | failed      | Runner отправляет `failed`, или истекает тайм-аут heartbeat            |
+| running   | canceled    | Пользователь отменяет Job, или превышен жёсткий тайм-аут Job           |
+| completed | processed   | Сервер успешно обрабатывает результаты                                 |
+| failed    | completed   | Runner повторно отправляет `completed`, переопределяя сбой по тайм-ауту heartbeat |
+
+`processed` и `canceled` являются терминальными.
+`completed` и `failed` являются квази-терминальными:
+`completed` переходит в `processed`, как только результаты разобраны,
+а `failed` переходит в `completed`, если Runner повторно отправляет `completed`.
+Каждый переход использует фильтр по статусу в своём обновлении базы данных,
+поэтому Job, изменённая конкурентно, перечитывается, а не перезаписывается.
+
+<LifecycleDiagram />

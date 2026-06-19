@@ -1,0 +1,17 @@
+import FlowDiagram from "../flow-diagram.mdx";
+
+## Verbindungsablauf
+
+Nach dem Verbinden tritt der Runner in eine Polling-Schleife im Leerlauf ein
+und sendet `ready`, bis der Server einen `job` zuweist
+(oder `no_job` zurückgibt, wenn das Poll-Timeout abläuft, oder `update`, wenn eine neue Version verfügbar ist).
+Sobald er einen Job hat, sendet der Runner `running`,
+streamt `heartbeat`-Nachrichten, während der Benchmark ausgeführt wird,
+und schließt mit einer terminalen `completed`- oder `failed`-Nachricht ab.
+Der Server bestätigt jede Nachricht mit `ack`,
+und die Verbindung bleibt offen, sodass der Runner für den nächsten Job in die Leerlaufschleife zurückkehrt.
+
+Wird ein Job abgebrochen, antwortet der Server auf ein `heartbeat` mit `cancel`.
+Der Runner stoppt den Benchmark und antwortet mit `canceled`, was der Server bestätigt.
+
+<FlowDiagram />

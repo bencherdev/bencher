@@ -1,0 +1,56 @@
+---
+title: "Runner Protocol"
+description: "Referenz für das WebSocket-Protokoll zwischen einem Bencher Bare Metal Runner und dem API-Server"
+heading: "Bencher Runner Protocol"
+published: "2026-06-19T08:00:00Z"
+modified: "2026-06-19T08:00:00Z"
+sortOrder: 9
+---
+
+import Connection from "../../../chunks/docs-reference/runner-protocol/de/connection.mdx";
+import RunnerMessages from "../../../chunks/docs-reference/runner-protocol/de/runner-messages.mdx";
+import ServerMessages from "../../../chunks/docs-reference/runner-protocol/de/server-messages.mdx";
+import Flow from "../../../chunks/docs-reference/runner-protocol/de/flow.mdx";
+import Lifecycle from "../../../chunks/docs-reference/runner-protocol/de/lifecycle.mdx";
+import Recovery from "../../../chunks/docs-reference/runner-protocol/de/recovery.mdx";
+import Output from "../../../chunks/docs-reference/runner-protocol/de/output.mdx";
+
+Das [`runner`-Binary][runner cli] und der API-Server kommunizieren über eine einzige
+WebSocket-Verbindung. Diese Referenz beschreibt dieses Protokoll: die ausgetauschten Nachrichten, den
+Job-Lebenszyklus, den sie antreiben, und wie Timeouts und Wiederverbindung verhindern, dass Jobs hängen bleiben. Sie ist die ausführliche
+Ergänzung zum Leitfaden [Self-Hosted Runners][self hosted runners].
+
+Sie müssen nichts davon wissen, um einen Runner mit [`runner up`][runner up] zu betreiben;
+es wird zur Transparenz und für alle bereitgestellt, die Tooling rund um die API entwickeln.
+
+[runner cli]: /de/docs/reference/runner/
+[runner up]: /de/docs/reference/runner/#runner-up
+[self hosted runners]: /de/docs/explanation/self-hosted-runners/
+
+<hr />
+
+<Connection />
+
+<hr />
+
+<RunnerMessages />
+
+<hr />
+
+<ServerMessages />
+
+<hr />
+
+<Flow />
+
+<hr />
+
+<Lifecycle />
+
+<hr />
+
+<Recovery />
+
+<hr />
+
+<Output />

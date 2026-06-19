@@ -1,0 +1,27 @@
+import LifecycleDiagram from "../lifecycle-diagram.mdx";
+
+## Ciclo de Vida del Job
+
+Cada Job recorre un conjunto fijo de estados a medida que es reclamado, ejecutado y procesado.
+
+| Desde     | Hacia       | Disparador                                                             |
+| --------- | ----------- | ---------------------------------------------------------------------- |
+| pending   | claimed     | Un Runner reclama el Job                                                |
+| pending   | canceled    | Un usuario cancela el Job                                               |
+| claimed   | running     | El Runner envía `running`                                               |
+| claimed   | failed      | El Runner envía `failed`, o el heartbeat agota su tiempo               |
+| claimed   | canceled    | Un usuario cancela el Job                                               |
+| running   | completed   | El Runner envía `completed`                                             |
+| running   | failed      | El Runner envía `failed`, o el heartbeat agota su tiempo               |
+| running   | canceled    | Un usuario cancela el Job, o se excede el tiempo de espera duro del Job |
+| completed | processed   | El servidor procesa correctamente los resultados                       |
+| failed    | completed   | El Runner reenvía `completed`, anulando un fallo por timeout de heartbeat |
+
+`processed` y `canceled` son terminales.
+`completed` y `failed` son cuasi-terminales:
+`completed` pasa a `processed` una vez que se analizan los resultados,
+y `failed` pasa a `completed` si el Runner reenvía `completed`.
+Cada transición usa un filtro de estado en su actualización de base de datos,
+de modo que un Job que fue modificado de forma concurrente se vuelve a leer en lugar de sobrescribirse.
+
+<LifecycleDiagram />

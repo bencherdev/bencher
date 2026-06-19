@@ -1,0 +1,18 @@
+## Job Output
+
+When a Runner sends `completed` or `failed`,
+the full output is stored in the same OCI storage backend used for container Images,
+at the path `{project}/output/v0/jobs/{job}`.
+
+The stored output contains a per-iteration `results` array and, on failure, an `error` string.
+Each iteration records its `exit_code`, `stdout`, `stderr`,
+and a map of any collected output files to their contents.
+After the output is stored, the server runs the [benchmark harness adapter][adapters] on the results
+to parse Metrics and Alerts into the Report, transitioning the Job to `processed`.
+
+The output is returned when a Job is queried with [the `GET /v0/projects/{project}/jobs/{job}` API][job query api].
+The same `request_body_max_bytes` limit that bounds WebSocket messages
+caps the size of the output a Runner can deliver.
+
+[adapters]: /docs/explanation/adapters/
+[job query api]: /docs/api/projects/jobs/#get-v0projectsprojectjobsjob

@@ -1,0 +1,40 @@
+---
+title: "Runner CLI"
+description: "Referência do binário runner do Bencher usado para operar um Self-Hosted Bare Metal Runner"
+heading: "Bencher CLI `runner`"
+published: "2026-06-19T08:00:00Z"
+modified: "2026-06-19T08:00:00Z"
+sortOrder: 8
+---
+
+import RunnerUp from "../../../chunks/docs-reference/runner/pt/runner-up.mdx";
+import RunnerRun from "../../../chunks/docs-reference/runner/pt/runner-run.mdx";
+
+O binário `runner` é o agente que executa Jobs de benchmark Bare Metal.
+É a referência detalhada para configurar um [Self-Hosted Runner][self hosted runners].
+O binário fornece dois subcomandos:
+
+- [`runner up`][runner up]: Inicia o runner, fazendo polling e executando Jobs de benchmark.
+- [`runner run`][runner run]: Baixa uma Image e a executa uma vez no host local, para testes.
+
+> 🐰 O binário `runner` é distinto dos subcomandos `bencher runner`.
+> O binário `runner` opera um host Runner, enquanto
+> [`bencher runner`][runners api] gerencia recursos Runner através da REST API.
+
+[self hosted runners]: /pt/docs/explanation/self-hosted-runners/
+[runners api]: /pt/docs/api/server/runners/
+
+[runner up]: #runner-up
+[runner run]: #runner-run
+
+<hr />
+
+<div class="box">
+  <RunnerUp />
+</div>
+
+<hr />
+
+<div class="box">
+  <RunnerRun />
+</div>

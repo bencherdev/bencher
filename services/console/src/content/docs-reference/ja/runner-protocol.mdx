@@ -1,0 +1,56 @@
+---
+title: "Runner プロトコル"
+description: "Bencher Bare Metal Runner と API サーバー間の WebSocket プロトコルのリファレンス"
+heading: "Bencher Runner プロトコル"
+published: "2026-06-19T08:00:00Z"
+modified: "2026-06-19T08:00:00Z"
+sortOrder: 9
+---
+
+import Connection from "../../../chunks/docs-reference/runner-protocol/ja/connection.mdx";
+import RunnerMessages from "../../../chunks/docs-reference/runner-protocol/ja/runner-messages.mdx";
+import ServerMessages from "../../../chunks/docs-reference/runner-protocol/ja/server-messages.mdx";
+import Flow from "../../../chunks/docs-reference/runner-protocol/ja/flow.mdx";
+import Lifecycle from "../../../chunks/docs-reference/runner-protocol/ja/lifecycle.mdx";
+import Recovery from "../../../chunks/docs-reference/runner-protocol/ja/recovery.mdx";
+import Output from "../../../chunks/docs-reference/runner-protocol/ja/output.mdx";
+
+[`runner` バイナリ][runner cli] と API サーバーは、単一の WebSocket 接続を通じて
+通信します。このリファレンスでは、そのプロトコル、すなわちやり取りされるメッセージ、それらが
+駆動する Job のライフサイクル、そしてタイムアウトと再接続によって Job が停止しないように
+する仕組みについて説明します。これは [セルフホスト型 Runner][self hosted runners] ガイドの詳細な補足です。
+
+[`runner up`][runner up] で Runner を運用するためにこれらを知る必要はありません。
+これは透明性のため、また API の周辺でツールを構築する人のために提供されています。
+
+[runner cli]: /ja/docs/reference/runner/
+[runner up]: /ja/docs/reference/runner/#runner-up
+[self hosted runners]: /ja/docs/explanation/self-hosted-runners/
+
+<hr />
+
+<Connection />
+
+<hr />
+
+<RunnerMessages />
+
+<hr />
+
+<ServerMessages />
+
+<hr />
+
+<Flow />
+
+<hr />
+
+<Lifecycle />
+
+<hr />
+
+<Recovery />
+
+<hr />
+
+<Output />

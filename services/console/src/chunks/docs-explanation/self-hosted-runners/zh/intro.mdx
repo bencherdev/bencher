@@ -1,0 +1,24 @@
+Self-Hosted Runner 是一个由你自己运行和管理的 [Bare Metal Runner][bare metal]，
+而不是使用 Bencher 托管的 On-Demand 或 Dedicated Runner。
+你将 `runner` 二进制文件指向某个 Bencher API 服务器，
+它便会在你自己的硬件上认领并执行 [Job][job]。
+
+在以下场景中自托管 Runner 是一个不错的选择：
+
+- 在 Bencher Cloud 未提供的特定硬件上运行基准测试
+- 将基准测试工作负载保留在你自己的网络或气隙（air-gapped）环境内
+- 端到端运行 [Bencher Self-Hosted][bencher self hosted]
+
+本指南将逐步介绍如何注册 Runner、用 [Spec][spec] 描述其硬件、
+将两者关联起来，以及启动 `runner` 二进制文件。
+关于 Runner、Spec、Sandbox 和 Job 如何协同工作的概念性概述，
+请参阅 [Bare Metal 概述][bare metal]。
+
+> 🐰 Firecracker 沙箱需要启用了 [KVM][kvm] 的 Linux。
+> 仅服务于非沙箱化 Spec 的 Runner 可以在任何受支持的主机上运行。
+
+[bare metal]: /zh/docs/explanation/bare-metal/
+[job]: /zh/docs/explanation/bare-metal/#job
+[spec]: /zh/docs/explanation/bare-metal/#spec
+[bencher self hosted]: /zh/docs/explanation/bencher-self-hosted/
+[kvm]: https://www.linux-kvm.org/

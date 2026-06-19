@@ -1,0 +1,45 @@
+## Timeouts & Recovery
+
+Three complementary mechanisms ensure a Job never gets stuck,
+even if a Runner crashes or loses its connection.
+
+### Heartbeat Timeout
+
+While the connection is open, a read timeout detects a Runner that is connected but silent.
+Only valid protocol messages reset the timer;
+invalid JSON, ping/pong frames, and binary messages do not.
+On timeout, a Job that has run longer than its timeout plus a grace period is marked `canceled`,
+and otherwise marked `failed` (contact with the Runner was lost).
+
+### Hard Job Timeout
+
+The server enforces a hard maximum execution duration independent of Runner behavior,
+so a buggy or compromised Runner cannot run indefinitely by sending heartbeats.
+When the limit (the Job timeout plus a grace period) is exceeded,
+the Job is marked `canceled` and the Runner receives a `cancel` message.
+
+### Disconnect Recovery
+
+If the connection drops while a Job is still in flight,
+the server schedules a check after the heartbeat timeout.
+If the Runner has reconnected and resumed heartbeats, the Job continues;
+otherwise the Job is marked `failed`, or `canceled` if it had exceeded the hard timeout.
+On startup, the server also recovers orphaned `claimed` Jobs,
+reschedules timeouts for in-flight Jobs,
+and re-processes `completed` Jobs whose results were stored but not yet parsed.
+
+### Reconnection & Result Delivery
+
+Reconnection is supported and idempotent.
+Resending `running` for an already-running Job only refreshes its liveness,
+and resending a terminal `completed`, `failed`, or `canceled` message is always safe.
+Terminal messages carry the Job UUID and receive an `ack`;
+if the connection drops before the `ack` arrives,
+the Runner stores the result and resends it on the next connection before going idle.
+A Runner's actual `completed` result can even override a heartbeat-timeout `failed` status.
+
+### No Automatic Retry
+
+A `failed` Job is not retried automatically.
+A failed benchmark is signal, not an error to hide,
+so re-running it is left to you.

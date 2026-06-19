@@ -1,0 +1,18 @@
+## Вывод Job
+
+Когда Runner отправляет `completed` или `failed`,
+полный вывод сохраняется в том же OCI-хранилище, что используется для контейнерных Image,
+по пути `{project}/output/v0/jobs/{job}`.
+
+Сохранённый вывод содержит массив `results` по каждой итерации и, в случае сбоя, строку `error`.
+Каждая итерация записывает свой `exit_code`, `stdout`, `stderr`
+и карту любых собранных выходных файлов с их содержимым.
+После сохранения вывода сервер запускает [адаптер harness бенчмарка][adapters] по результатам,
+чтобы разобрать Metric и Alert в Report, переводя Job в состояние `processed`.
+
+Вывод возвращается при запросе Job через [API `GET /v0/projects/{project}/jobs/{job}`][job query api].
+Тот же лимит `request_body_max_bytes`, что ограничивает сообщения WebSocket,
+ограничивает размер вывода, который может доставить Runner.
+
+[adapters]: /ru/docs/explanation/adapters/
+[job query api]: /ru/docs/api/projects/jobs/#get-v0projectsprojectjobsjob

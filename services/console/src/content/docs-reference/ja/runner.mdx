@@ -1,0 +1,40 @@
+---
+title: "Runner CLI"
+description: "セルフホスト型 Bare Metal Runner を運用するための Bencher runner バイナリのリファレンス"
+heading: "Bencher `runner` CLI"
+published: "2026-06-19T08:00:00Z"
+modified: "2026-06-19T08:00:00Z"
+sortOrder: 8
+---
+
+import RunnerUp from "../../../chunks/docs-reference/runner/ja/runner-up.mdx";
+import RunnerRun from "../../../chunks/docs-reference/runner/ja/runner-run.mdx";
+
+`runner` バイナリは Bare Metal ベンチマーク Job を実行するエージェントです。
+[セルフホスト型 Runner][self hosted runners] をセットアップするための詳細なリファレンスです。
+このバイナリは 2 つのサブコマンドを提供します。
+
+- [`runner up`][runner up]: Runner を起動し、ベンチマーク Job をポーリングして実行します。
+- [`runner run`][runner run]: Image をプルし、テスト用にローカルホスト上で 1 回だけ実行します。
+
+> 🐰 `runner` バイナリは `bencher runner` サブコマンドとは異なります。
+> `runner` バイナリは Runner ホストを運用するのに対し、
+> [`bencher runner`][runners api] は REST API を通じて Runner リソースを管理します。
+
+[self hosted runners]: /ja/docs/explanation/self-hosted-runners/
+[runners api]: /ja/docs/api/server/runners/
+
+[runner up]: #runner-up
+[runner run]: #runner-run
+
+<hr />
+
+<div class="box">
+  <RunnerUp />
+</div>
+
+<hr />
+
+<div class="box">
+  <RunnerRun />
+</div>

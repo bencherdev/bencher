@@ -1,0 +1,41 @@
+### 主机调优
+
+在每次基准测试之前，`runner` 会应用主机调优以减少测量噪声。
+默认情况下，它会禁用 ASLR、NMI 看门狗、SMT / 超线程和睿频加速（turbo boost）；
+将 CPU 调频调速器（governor）设为 `performance`，swappiness 设为 `10`，`perf_event_paranoid` 设为 `-1`。
+下面的标志会改为将各项优化保持在其主机默认值。
+
+### `--no-tuning`
+
+禁用所有主机调优优化。
+
+### `--aslr`
+
+保持 ASLR 启用（默认：基准测试时禁用）。
+
+### `--nmi-watchdog`
+
+保持 NMI 看门狗启用（默认：基准测试时禁用）。
+
+### `--smt`
+
+保持 SMT / 超线程启用（默认：基准测试时禁用）。
+
+### `--turbo`
+
+保持睿频加速启用（默认：基准测试时禁用）。
+
+### `--swappiness <SWAPPINESS>`
+
+设置 swappiness 值。
+默认使用 `10`。
+
+### `--governor <GOVERNOR>`
+
+设置 CPU 调频调速器。
+默认使用 `performance`。
+
+### `--perf-event-paranoid <PERF_EVENT_PARANOID>`
+
+设置 `perf_event_paranoid` 值。
+默认使用 `-1`。

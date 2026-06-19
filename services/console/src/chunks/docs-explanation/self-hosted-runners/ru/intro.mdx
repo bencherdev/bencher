@@ -1,0 +1,24 @@
+Self-Hosted Runner — это [Bare Metal Runner][bare metal], который вы запускаете и которым управляете сами,
+вместо использования управляемого Bencher On-Demand или Dedicated Runner.
+Вы указываете бинарному файлу `runner` API-сервер Bencher,
+и он берёт и выполняет [Job][job] на вашем собственном оборудовании.
+
+Самостоятельное размещение Runner подходит, когда вы хотите:
+
+- Запускать бенчмарки на определённом оборудовании, которое не предлагает Bencher Cloud
+- Держать benchmark-нагрузки внутри собственной сети или в изолированной (air-gapped) среде
+- Запускать [Bencher Self-Hosted][bencher self hosted] от начала до конца
+
+Это руководство проведёт вас через регистрацию Runner, описание его оборудования с помощью [Spec][spec],
+связывание двух сущностей вместе и запуск бинарного файла `runner`.
+Концептуальный обзор того, как Runner, Spec, Sandbox и Job сочетаются друг с другом,
+смотрите в [обзоре Bare Metal][bare metal].
+
+> 🐰 Изоляция через Firecracker требует Linux с включённым [KVM][kvm].
+> Runner, обслуживающий только не изолированные Spec, может работать на любом поддерживаемом хосте.
+
+[bare metal]: /ru/docs/explanation/bare-metal/
+[job]: /ru/docs/explanation/bare-metal/#job
+[spec]: /ru/docs/explanation/bare-metal/#spec
+[bencher self hosted]: /ru/docs/explanation/bencher-self-hosted/
+[kvm]: https://www.linux-kvm.org/

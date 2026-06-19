@@ -1,0 +1,11 @@
+## 연결
+
+Runner는 전체 수명 주기 동안 API 서버로 단일 WebSocket 연결을 유지합니다.
+동일한 연결이 Job 할당과 Job 실행을 모두 처리하며,
+여러 Job에 걸쳐 열린 상태로 유지되어 각 Job마다 재연결과 핸드셰이크를 피합니다.
+
+- **엔드포인트:** `/v0/runners/{runner}/channel`
+- **인증:** 연결이 수립될 때 Runner 키가 `Authorization: Bearer bencher_runner_<key>` 헤더로 전송됩니다.
+- **메시지 크기:** 각 메시지는 서버의 `request_body_max_bytes` 제한(최대 메시지 크기와 프레임 크기 양쪽에 적용)으로 제한됩니다. 큰 `stdout`, `stderr`, 또는 출력 파일을 담은 `completed` 페이로드처럼 이 제한을 초과하는 메시지는 WebSocket 프로토콜 수준에서 거부됩니다.
+
+모든 메시지는 그 유형을 식별하는 `event` 필드를 가진 JSON 객체입니다.

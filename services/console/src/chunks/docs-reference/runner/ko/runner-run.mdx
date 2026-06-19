@@ -1,0 +1,115 @@
+import Tuning from "./tuning.mdx";
+
+## `runner run`
+
+[Image][images]를 풀(pull)하고, rootfs를 생성한 후, 로컬 호스트에서 한 번 실행합니다.
+[`runner up`][runner up]과 달리, 이 명령은 API 서버에 연결하거나 Job을 청구하지 않습니다.
+단일 Image를 직접 실행하며, 실제 Job을 제출하기 전에 Runner 호스트나
+Image를 테스트하고 디버깅하는 데 유용합니다.
+
+```
+runner run --image <IMAGE> [OPTIONS]
+```
+
+### 옵션
+
+### `--image <IMAGE>`
+
+실행할 [OCI Image][images]로, 로컬 경로 또는 레지스트리 참조입니다.
+
+### `--token <TOKEN>`
+
+Image를 풀할 때 레지스트리 인증에 사용하는 JWT 토큰입니다.
+
+### `--sandbox <SANDBOX>`
+
+벤치마크 실행을 위한 샌드박스 모드입니다.
+Firecracker microVM(Linux 전용)을 사용하려면 `firecracker`를 사용하세요.
+샌드박스 없는 호스트 실행을 위해서는 생략하세요.
+
+### `--timeout <TIMEOUT>`
+
+실행 타임아웃(초)입니다.
+기본적으로 `300`이 사용됩니다.
+
+### `--iter <ITER>`
+
+실행할 벤치마크 반복 횟수입니다.
+기본적으로 `1`이 사용됩니다.
+
+### `--allow-failure`
+
+남은 반복을 중단(short-circuit)하지 않고 벤치마크 실패를 허용합니다.
+
+### `--entrypoint <ENTRYPOINT>`
+
+컨테이너 엔트리포인트를 재정의합니다.
+여러 번 지정할 수 있습니다.
+
+### `--cmd <CMD>`
+
+컨테이너 명령을 재정의합니다.
+여러 번 지정할 수 있습니다.
+
+### `--env <ENV>`
+
+`KEY=VALUE` 형식으로 환경 변수를 설정합니다.
+여러 번 지정할 수 있습니다.
+
+### `--network`
+
+VM 내부에서 네트워크 액세스를 활성화합니다.
+
+### `--output <OUTPUT>`
+
+수집할 게스트 내부의 출력 파일 경로입니다.
+여러 번 지정할 수 있습니다.
+
+### `--vcpus <VCPUS>`
+
+vCPU 개수를 재정의합니다(테스트용).
+
+### `--memory <MEMORY>`
+
+메모리(MiB)를 재정의합니다(테스트용).
+
+### `--disk <DISK>`
+
+디스크 크기(MiB)를 재정의합니다(테스트용).
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+수집된 `stdout` 및 `stderr`의 최대 크기(바이트)입니다.
+기본적으로 `25` MiB가 사용됩니다.
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+디코딩할 출력 파일의 최대 개수입니다.
+기본적으로 `255`가 사용됩니다.
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+경로 확인 중 따라갈 심볼릭 링크의 최대 개수로,
+Linux 커널의 `MAXSYMLINKS` 제한과 일치합니다.
+기본적으로 `40`이 사용됩니다.
+샌드박스 없는 모드에서만 사용되므로, `--sandbox`와 충돌합니다.
+
+### `--grace-period <GRACE_PERIOD>`
+
+벤치마크 종료 후 최종 출력 수집 전까지의 유예 기간(초)입니다.
+기본적으로 `1`이 사용됩니다.
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+샌드박스 프로세스의 로그 레벨입니다.
+`--sandbox`가 필요합니다.
+기본적으로 `warning`이 사용됩니다.
+
+<Tuning />
+
+### `--help`
+
+도움말을 출력합니다.
+
+[images]: /ko/docs/explanation/images/
+[runner up]: #runner-up

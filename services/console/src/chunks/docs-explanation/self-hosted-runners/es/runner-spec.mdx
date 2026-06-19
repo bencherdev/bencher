@@ -1,0 +1,21 @@
+## Asignar un Spec a un Runner
+
+Un Runner Spec vincula un [Spec][spec] a un Runner.
+Un Runner puede soportar múltiples Specs, y un Spec puede ser soportado por múltiples Runners.
+Un Runner solo reclama Jobs cuyo Spec le ha sido asignado.
+
+Añade un Spec a un Runner con la [CLI `bencher`][bencher runner spec cli]
+o la [API REST de Runner Specs][runner specs api]:
+
+```sh
+bencher runner spec add my-runner \
+  --host https://api.bencher.example.com \
+  --spec intel-v1
+```
+
+Elimina la vinculación más tarde con la [API `DELETE /v0/runners/{runner}/specs/{spec}`][delete runner spec api].
+
+[spec]: /es/docs/explanation/bare-metal/#spec
+[bencher runner spec cli]: /es/docs/api/server/runner-specs/
+[runner specs api]: /es/docs/api/server/runner-specs/#post-v0runnersrunnerspecs
+[delete runner spec api]: /es/docs/api/server/runner-specs/#delete-v0runnersrunnerspecsspec

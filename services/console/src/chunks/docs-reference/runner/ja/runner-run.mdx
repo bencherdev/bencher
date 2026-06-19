@@ -1,0 +1,115 @@
+import Tuning from "./tuning.mdx";
+
+## `runner run`
+
+[Image][images] をプルし、rootfs を作成して、ローカルホスト上で 1 回だけ実行します。
+[`runner up`][runner up] とは異なり、これは API サーバーに接続したり Job を要求したりしません。
+単一の Image を直接実行するもので、実際の Job を送信する前に Runner ホストや Image を
+テスト・デバッグするのに役立ちます。
+
+```
+runner run --image <IMAGE> [OPTIONS]
+```
+
+### オプション
+
+### `--image <IMAGE>`
+
+実行する [OCI Image][images]。ローカルパスまたはレジストリ参照として指定します。
+
+### `--token <TOKEN>`
+
+Image をプルする際の、レジストリ認証用の JWT トークン。
+
+### `--sandbox <SANDBOX>`
+
+ベンチマーク実行のサンドボックスモード。
+Firecracker microVM には `firecracker` を使用します (Linux のみ)。
+サンドボックスなしのホスト実行の場合は省略します。
+
+### `--timeout <TIMEOUT>`
+
+実行タイムアウト (秒)。
+デフォルトでは `300` が使用されます。
+
+### `--iter <ITER>`
+
+実行するベンチマークの反復回数。
+デフォルトでは `1` が使用されます。
+
+### `--allow-failure`
+
+ベンチマークの失敗が発生しても、残りの反復を打ち切らずに許可します。
+
+### `--entrypoint <ENTRYPOINT>`
+
+コンテナのエントリーポイントを上書きします。
+複数回指定できます。
+
+### `--cmd <CMD>`
+
+コンテナのコマンドを上書きします。
+複数回指定できます。
+
+### `--env <ENV>`
+
+環境変数を `KEY=VALUE` 形式で設定します。
+複数回指定できます。
+
+### `--network`
+
+VM 内でのネットワークアクセスを有効にします。
+
+### `--output <OUTPUT>`
+
+収集するゲスト内の出力ファイルパス。
+複数回指定できます。
+
+### `--vcpus <VCPUS>`
+
+vCPU 数を上書きします (テスト用)。
+
+### `--memory <MEMORY>`
+
+メモリ (MiB) を上書きします (テスト用)。
+
+### `--disk <DISK>`
+
+ディスクサイズ (MiB) を上書きします (テスト用)。
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+収集される `stdout` と `stderr` の最大サイズ (バイト)。
+デフォルトでは `25` MiB が使用されます。
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+デコードする出力ファイルの最大数。
+デフォルトでは `255` が使用されます。
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+パス解決時にたどるシンボリックリンクの最大数。
+Linux カーネルの `MAXSYMLINKS` 制限に一致します。
+デフォルトでは `40` が使用されます。
+サンドボックスなしモードでのみ使用されるため、`--sandbox` と競合します。
+
+### `--grace-period <GRACE_PERIOD>`
+
+ベンチマーク終了後、最終的な出力収集までの猶予期間 (秒)。
+デフォルトでは `1` が使用されます。
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+サンドボックスプロセスのログレベル。
+`--sandbox` が必要です。
+デフォルトでは `warning` が使用されます。
+
+<Tuning />
+
+### `--help`
+
+ヘルプを表示します。
+
+[images]: /ja/docs/explanation/images/
+[runner up]: #runner-up

@@ -1,0 +1,115 @@
+import Tuning from "./tuning.mdx";
+
+## `runner run`
+
+Récupère une [Image][images], crée un rootfs, et l'exécute une seule fois sur l'hôte local.
+Contrairement à [`runner up`][runner up], cette commande ne se connecte pas à un serveur API et ne réclame pas de Job.
+Elle exécute une seule Image directement, ce qui est utile pour tester et déboguer un hôte Runner
+ou une Image avant de soumettre de vrais Jobs.
+
+```
+runner run --image <IMAGE> [OPTIONS]
+```
+
+### Options
+
+### `--image <IMAGE>`
+
+L'[Image OCI][images] à exécuter, sous forme de chemin local ou de référence de registre.
+
+### `--token <TOKEN>`
+
+Un jeton JWT pour l'authentification au registre lors de la récupération de l'Image.
+
+### `--sandbox <SANDBOX>`
+
+Le mode de sandbox pour l'exécution du benchmark.
+Utilisez `firecracker` pour une microVM Firecracker (Linux uniquement).
+Omettez pour une exécution sur l'hôte sans sandbox.
+
+### `--timeout <TIMEOUT>`
+
+Le délai d'attente d'exécution en secondes.
+Par défaut, `300` est utilisé.
+
+### `--iter <ITER>`
+
+Le nombre d'itérations de benchmark à exécuter.
+Par défaut, `1` est utilisé.
+
+### `--allow-failure`
+
+Autorise un échec de benchmark sans court-circuiter les itérations restantes.
+
+### `--entrypoint <ENTRYPOINT>`
+
+Remplace l'entrypoint du conteneur.
+Peut être spécifié plusieurs fois.
+
+### `--cmd <CMD>`
+
+Remplace la commande du conteneur.
+Peut être spécifié plusieurs fois.
+
+### `--env <ENV>`
+
+Définit une variable d'environnement au format `KEY=VALUE`.
+Peut être spécifié plusieurs fois.
+
+### `--network`
+
+Active l'accès réseau à l'intérieur de la VM.
+
+### `--output <OUTPUT>`
+
+Un chemin de fichier de sortie à l'intérieur de l'invité à collecter.
+Peut être spécifié plusieurs fois.
+
+### `--vcpus <VCPUS>`
+
+Remplace le nombre de vCPU (à des fins de test).
+
+### `--memory <MEMORY>`
+
+Remplace la mémoire en Mio (à des fins de test).
+
+### `--disk <DISK>`
+
+Remplace la taille du disque en Mio (à des fins de test).
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+La taille maximale en octets pour les sorties `stdout` et `stderr` collectées.
+Par défaut, `25` Mio est utilisé.
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+Le nombre maximal de fichiers de sortie à décoder.
+Par défaut, `255` est utilisé.
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+Le nombre maximal de liens symboliques à suivre lors de la résolution des chemins,
+correspondant à la limite `MAXSYMLINKS` du noyau Linux.
+Par défaut, `40` est utilisé.
+Utilisé uniquement en mode sans sandbox, il est donc en conflit avec `--sandbox`.
+
+### `--grace-period <GRACE_PERIOD>`
+
+Le délai de grâce en secondes après la fin du benchmark avant la collecte finale des sorties.
+Par défaut, `1` est utilisé.
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+Le niveau de journalisation du processus de sandbox.
+Nécessite `--sandbox`.
+Par défaut, `warning` est utilisé.
+
+<Tuning />
+
+### `--help`
+
+Affiche l'aide.
+
+[images]: /fr/docs/explanation/images/
+[runner up]: #runner-up

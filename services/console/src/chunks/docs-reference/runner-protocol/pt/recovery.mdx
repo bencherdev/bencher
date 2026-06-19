@@ -1,0 +1,45 @@
+## Timeouts & Recuperação
+
+Três mecanismos complementares garantem que um Job nunca fique travado,
+mesmo que um Runner falhe ou perca sua conexão.
+
+### Timeout de Heartbeat
+
+Enquanto a conexão está aberta, um timeout de leitura detecta um Runner que está conectado mas silencioso.
+Apenas mensagens de protocolo válidas reiniciam o temporizador;
+JSON inválido, frames de ping/pong e mensagens binárias não.
+Em caso de timeout, um Job que rodou por mais tempo do que seu timeout mais um período de carência é marcado como `canceled`,
+e caso contrário marcado como `failed` (o contato com o Runner foi perdido).
+
+### Timeout Rígido do Job
+
+O servidor impõe uma duração máxima de execução rígida, independente do comportamento do Runner,
+de modo que um Runner com bug ou comprometido não possa rodar indefinidamente enviando heartbeats.
+Quando o limite (o timeout do Job mais um período de carência) é excedido,
+o Job é marcado como `canceled` e o Runner recebe uma mensagem `cancel`.
+
+### Recuperação de Desconexão
+
+Se a conexão cai enquanto um Job ainda está em andamento,
+o servidor agenda uma verificação após o timeout de heartbeat.
+Se o Runner reconectou e retomou os heartbeats, o Job continua;
+caso contrário, o Job é marcado como `failed`, ou `canceled` se tiver excedido o timeout rígido.
+Na inicialização, o servidor também recupera Jobs `claimed` órfãos,
+reagenda timeouts para Jobs em andamento
+e reprocessa Jobs `completed` cujos resultados foram armazenados mas ainda não analisados.
+
+### Reconexão & Entrega de Resultados
+
+A reconexão é suportada e idempotente.
+Reenviar `running` para um Job já em execução apenas atualiza sua atividade,
+e reenviar uma mensagem terminal `completed`, `failed` ou `canceled` é sempre seguro.
+Mensagens terminais carregam o UUID do Job e recebem um `ack`;
+se a conexão cair antes de o `ack` chegar,
+o Runner armazena o resultado e o reenvia na próxima conexão antes de ficar ocioso.
+O resultado `completed` real de um Runner pode até sobrepor um status `failed` por timeout de heartbeat.
+
+### Sem Retentativa Automática
+
+Um Job `failed` não é retentado automaticamente.
+Um benchmark que falhou é um sinal, não um erro a ser escondido,
+então reexecutá-lo fica a seu critério.

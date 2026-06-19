@@ -1,0 +1,11 @@
+import SetupDiagram from "../setup-diagram.mdx";
+
+## Fluxo de Trabalho do Self-Hosted Runner
+
+Uma vez que o Runner está conectado, você envia benchmarks da mesma forma que com qualquer Bare Metal Runner:
+construa e publique uma [Image][images], depois execute [`bencher run --image`][images] com uma Spec correspondente.
+O diagrama abaixo mostra o caminho completo, desde o registro do Runner até a execução de um Job.
+
+<SetupDiagram />
+
+[images]: /pt/docs/explanation/images/

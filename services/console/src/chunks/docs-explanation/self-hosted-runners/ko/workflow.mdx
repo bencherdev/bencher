@@ -1,0 +1,11 @@
+import SetupDiagram from "../setup-diagram.mdx";
+
+## Self-Hosted Runner 워크플로
+
+Runner가 연결되면, 다른 Bare Metal Runner와 동일한 방식으로 벤치마크를 제출합니다:
+[Image][images]를 빌드하고 푸시한 다음, 일치하는 Spec으로 [`bencher run --image`][images]를 실행합니다.
+아래 다이어그램은 Runner 등록부터 Job 실행까지 전체 경로를 보여줍니다.
+
+<SetupDiagram />
+
+[images]: /ko/docs/explanation/images/

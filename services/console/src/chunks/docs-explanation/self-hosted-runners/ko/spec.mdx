@@ -1,0 +1,33 @@
+## Spec 생성
+
+[Spec][spec]은 Runner가 제공하는 하드웨어를 설명합니다:
+운영 체제, CPU 아키텍처, [Sandbox][sandbox] 유형, CPU 개수, 메모리, 디스크, 네트워크 액세스.
+Job은 필요한 Spec을 선언하고, Runner는 자신이 지원하는 Spec의 Job만 청구(claim)합니다.
+
+[`bencher` CLI][bencher spec cli],
+[Specs REST API][specs api],
+또는 Bencher Console로 Spec을 생성하세요:
+
+```sh
+bencher spec create \
+  --host https://api.bencher.example.com \
+  --name "Intel v1" \
+  --os linux \
+  --architecture x86_64 \
+  --sandbox firecracker \
+  --cpu 4 \
+  --memory 51539607552 \
+  --disk 137438953472
+```
+
+샌드박스가 없는 Spec을 정의하려면 `--sandbox`를 생략하고,
+이 Spec의 Job에 네트워크 액세스를 허용하려면 `--network`를 전달하세요.
+메모리와 디스크는 바이트 단위로 지정합니다.
+Spec에 대한 자세한 내용과 [Testbed][testbeds]가 각 Report에 사용된 Spec을 어떻게 기록하는지는
+[Testbed & Spec][testbeds]을 참고하세요.
+
+[spec]: /ko/docs/explanation/bare-metal/#spec
+[sandbox]: /ko/docs/explanation/bare-metal/#sandbox
+[bencher spec cli]: /ko/docs/api/server/specs/
+[specs api]: /ko/docs/api/server/specs/#post-v0specs
+[testbeds]: /ko/docs/explanation/testbeds/

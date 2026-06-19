@@ -207,6 +207,34 @@ $disabled: #fdb07e;
   .er.relationshipLine {
     stroke: var(--bulma-text) !important;
   }
+
+  // State diagram (job-status). Without these, the state boxes keep mermaid's
+  // baked cream fill while the `.nodeLabel` text above is forced to
+  // `var(--bulma-text)`, leaving light text on a light box in dark mode. All
+  // selectors here are state-diagram-only (`.statediagram-state`, `.transition`,
+  // `.state-start`, the barb marker), so they cannot touch the other diagrams.
+  .statediagram-state .basic {
+    fill: var(--bulma-background) !important;
+    stroke: var(--bulma-border) !important;
+  }
+  .statediagram-state .divider {
+    stroke: var(--bulma-border) !important;
+  }
+  .transition {
+    stroke: var(--bulma-text) !important;
+  }
+  // The initial dot is a solid mark; without this it inherits the flowchart
+  // `.node.default circle` rule and fills with the page background, vanishing.
+  .node.default circle.state-start {
+    fill: var(--bulma-text) !important;
+    stroke: var(--bulma-text) !important;
+  }
+  // Transition arrowheads: the barb marker path carries no class, so target the
+  // marker by its id suffix.
+  marker[id$="stateDiagram-barbEnd"] path {
+    fill: var(--bulma-text) !important;
+    stroke: var(--bulma-text) !important;
+  }
 }
 
 // Docs search modal

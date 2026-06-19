@@ -1,0 +1,18 @@
+%%{init: {'theme': 'base'}}%%
+sequenceDiagram
+    actor Admin
+    participant API as API Server
+    participant Runner as runner binary
+    participant Registry as OCI Registry
+
+    Admin->>API: bencher runner create
+    API-->>Admin: Runner + key
+    Admin->>API: bencher spec create
+    Admin->>API: bencher runner spec add
+    Admin->>Runner: runner up --host --runner --key
+    Runner->>API: Connect (WebSocket) and poll for Jobs
+    API-->>Runner: Assign matching Job
+    Runner->>Registry: Pull Image
+    Registry-->>Runner: Image layers
+    Runner->>Runner: Run benchmark
+    Runner->>API: Submit results

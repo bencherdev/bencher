@@ -1,0 +1,91 @@
+import Tuning from "./tuning.mdx";
+
+## `runner up`
+
+Runner を起動し、ベンチマーク Job をポーリングして実行します。
+これは [セルフホスト型 Runner][self hosted runners] を運用するために使う、長時間実行コマンドです。
+Runner は API サーバーへの単一の [WebSocket 接続][runner protocol] を開き、
+自身の Spec に一致する Job を要求し、それらを実行して結果を報告します。
+
+```
+runner up [OPTIONS]
+```
+
+### オプション
+
+### `--host <HOST>`
+
+接続先の Bencher API サーバー。
+デフォルトでは `https://api.bencher.dev` が使用されます。
+`BENCHER_HOST` 環境変数でも設定できます。
+
+### `--runner <RUNNER>`
+
+運用する Runner の UUID またはスラッグ。
+`BENCHER_RUNNER` 環境変数でも設定できます。
+
+### `--key <KEY>`
+
+[Runner が作成された][create a runner] ときに返された Runner 認証キー (`bencher_runner_...`)。
+`BENCHER_RUNNER_KEY` 環境変数でも設定できます。
+
+### `--poll-timeout <POLL_TIMEOUT>`
+
+Job を待機する際のロングポーリングのタイムアウト (秒)。`1` から `900` の範囲です。
+デフォルトでは `55` が使用されます。
+
+### `--danger-allow-no-sandbox`
+
+[Sandbox][sandbox] なしでの Job の実行を許可します。
+このフラグがない場合、Sandbox を持たない Spec の Job は実行時に拒否されます。
+サンドボックスなしの Job はホスト上で直接実行されるため、信頼できるワークロードに対してのみ有効にしてください。
+`BENCHER_DANGER_ALLOW_NO_SANDBOX` 環境変数でも設定できます。
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+サンドボックスプロセスのログレベル。
+デフォルトでは `warning` が使用されます。
+
+### `--no-auto-update`
+
+サーバーからの自動更新を無効にします。
+デフォルトでは、サーバーが新しいバージョンを提供すると、Runner は Job の合間に自身を更新します。
+`BENCHER_NO_AUTO_UPDATE` 環境変数でも設定できます。
+
+### `--max-download-size <MAX_DOWNLOAD_SIZE>`
+
+自己更新バイナリの最大ダウンロードサイズ (バイト)。
+デフォルトでは `500` MiB が使用されます。
+`--no-auto-update` と競合します。
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+収集される `stdout` と `stderr` の最大サイズ (バイト)。
+デフォルトでは `25` MiB が使用されます。
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+デコードする出力ファイルの最大数。
+デフォルトでは `255` が使用されます。
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+パス解決時にたどるシンボリックリンクの最大数。
+Linux カーネルの `MAXSYMLINKS` 制限に一致します。
+デフォルトでは `40` が使用されます。
+サンドボックスなしモードでのみ使用されます。
+
+### `--grace-period <GRACE_PERIOD>`
+
+ベンチマーク終了後、最終的な出力収集までの猶予期間 (秒)。
+
+<Tuning />
+
+### `--help`
+
+ヘルプを表示します。
+
+[self hosted runners]: /ja/docs/explanation/self-hosted-runners/
+[create a runner]: /ja/docs/explanation/self-hosted-runners/
+[runner protocol]: /ja/docs/reference/runner-protocol/
+[sandbox]: /ja/docs/explanation/bare-metal/#sandbox

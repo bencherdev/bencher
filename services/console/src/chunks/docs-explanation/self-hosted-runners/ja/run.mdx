@@ -1,0 +1,52 @@
+import RunnerUp from "../../../docs-reference/runner/ja/runner-up.mdx";
+
+## Runner を起動する
+
+Runner を作成し、少なくとも 1 つの Spec を割り当てたら、
+[`runner up`][runner up] でハードウェア上の `runner` バイナリを起動します。
+API サーバーのホスト、Runner の UUID またはスラッグ、そして Runner キーを、
+フラグまたは環境変数として指定します。
+
+```sh
+runner up \
+  --host https://api.bencher.example.com \
+  --runner my-runner \
+  --key bencher_runner_...
+```
+
+```sh
+export BENCHER_HOST=https://api.bencher.example.com
+export BENCHER_RUNNER=my-runner
+export BENCHER_RUNNER_KEY=bencher_runner_...
+runner up
+```
+
+`runner` バイナリは API サーバーへの単一の [WebSocket 接続][runner protocol] を開き、
+自身の Spec に一致する Job をポーリングし、それぞれを実行して結果を報告します。
+接続は複数の Job にわたって開いたままになり、
+新しいバージョンが利用可能になると、バイナリは Job の合間に [自身を更新します][runner up]。
+
+デフォルトでは、Runner は [Sandbox][sandbox] のない Spec の Job をすべて拒否します。
+Runner にサンドボックスなしの Job をホスト上で直接実行させるには、
+[`--danger-allow-no-sandbox` フラグ][danger allow no sandbox] を付けて起動します。
+
+<ul>
+  <li>
+    <details>
+      <summary><code>runner up</code></summary>
+      <br />
+      <div class="box">
+        <RunnerUp />
+      </div>
+    </details>
+  </li>
+</ul>
+
+すべてのオプションについては [`runner` CLI][runner reference] リファレンスを、
+サーバーとやり取りされるメッセージについては [Runner プロトコル][runner protocol] リファレンスを参照してください。
+
+[runner up]: /ja/docs/reference/runner/#runner-up
+[runner reference]: /ja/docs/reference/runner/
+[runner protocol]: /ja/docs/reference/runner-protocol/
+[sandbox]: /ja/docs/explanation/bare-metal/#sandbox
+[danger allow no sandbox]: /ja/docs/reference/runner/#--danger-allow-no-sandbox

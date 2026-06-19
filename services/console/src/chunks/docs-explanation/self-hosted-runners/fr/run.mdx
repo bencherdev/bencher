@@ -1,0 +1,52 @@
+import RunnerUp from "../../../docs-reference/runner/fr/runner-up.mdx";
+
+## Démarrer le Runner
+
+Avec un Runner créé et au moins un Spec assigné,
+démarrez le binaire `runner` sur votre matériel avec [`runner up`][runner up].
+Fournissez l'hôte du serveur API, l'UUID ou le slug du Runner, et la clé du Runner,
+soit en tant que drapeaux, soit en tant que variables d'environnement :
+
+```sh
+runner up \
+  --host https://api.bencher.example.com \
+  --runner my-runner \
+  --key bencher_runner_...
+```
+
+```sh
+export BENCHER_HOST=https://api.bencher.example.com
+export BENCHER_RUNNER=my-runner
+export BENCHER_RUNNER_KEY=bencher_runner_...
+runner up
+```
+
+Le binaire `runner` ouvre une unique [connexion WebSocket][runner protocol] vers le serveur API,
+interroge les Jobs correspondant à ses Specs, exécute chacun d'eux, et renvoie les résultats.
+La connexion reste ouverte d'un Job à l'autre,
+et le binaire [se met à jour lui-même][runner up] entre les Jobs lorsqu'une nouvelle version est disponible.
+
+Par défaut, un Runner rejette tout Job dont le Spec n'a pas de [Sandbox][sandbox].
+Pour permettre à un Runner d'exécuter directement des Jobs sans sandbox sur l'hôte,
+démarrez-le avec [le drapeau `--danger-allow-no-sandbox`][danger allow no sandbox].
+
+<ul>
+  <li>
+    <details>
+      <summary><code>runner up</code></summary>
+      <br />
+      <div class="box">
+        <RunnerUp />
+      </div>
+    </details>
+  </li>
+</ul>
+
+Consultez la référence de la [CLI `runner`][runner reference] pour chaque option,
+et la référence du [Protocole Runner][runner protocol] pour les messages échangés avec le serveur.
+
+[runner up]: /fr/docs/reference/runner/#runner-up
+[runner reference]: /fr/docs/reference/runner/
+[runner protocol]: /fr/docs/reference/runner-protocol/
+[sandbox]: /fr/docs/explanation/bare-metal/#sandbox
+[danger allow no sandbox]: /fr/docs/reference/runner/#--danger-allow-no-sandbox

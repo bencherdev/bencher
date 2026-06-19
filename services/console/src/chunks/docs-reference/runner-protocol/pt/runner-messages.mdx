@@ -1,0 +1,12 @@
+## Mensagens do Runner
+
+Mensagens enviadas do Runner para o servidor.
+
+| Event       | Descrição                                         | Payload                                                                 |
+| ----------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
+| `ready`     | O Runner está ocioso e solicitando um Job         | `poll_timeout` opcional (1-900s) e metadados do `runner` (`os`, `arch`, `version`) |
+| `running`   | A configuração do Job está concluída e o benchmark está iniciando | Nenhum                                                  |
+| `heartbeat` | Sinal periódico de atividade (cerca de uma vez por segundo) | Nenhum                                                       |
+| `completed` | O benchmark foi concluído com sucesso             | `job` (UUID do Job) e `results` (saída por iteração)                    |
+| `failed`    | O benchmark falhou                                | `job` (UUID do Job), `results` e `error`                                |
+| `canceled`  | Confirma um cancelamento vindo do servidor        | `job` (UUID do Job)                                                     |

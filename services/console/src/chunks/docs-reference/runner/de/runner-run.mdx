@@ -1,0 +1,115 @@
+import Tuning from "./tuning.mdx";
+
+## `runner run`
+
+Lädt ein [Image][images] herunter, erstellt ein rootfs und führt es einmal auf dem lokalen Host aus.
+Anders als [`runner up`][runner up] stellt dies keine Verbindung zu einem API-Server her und beansprucht keinen Job.
+Es führt ein einzelnes Image direkt aus, was zum Testen und Debuggen eines Runner-Hosts
+oder eines Image nützlich ist, bevor echte Jobs eingereicht werden.
+
+```
+runner run --image <IMAGE> [OPTIONS]
+```
+
+### Optionen
+
+### `--image <IMAGE>`
+
+Das auszuführende [OCI Image][images], als lokaler Pfad oder als Registry-Referenz.
+
+### `--token <TOKEN>`
+
+Ein JWT-Token für die Registry-Authentifizierung beim Herunterladen des Image.
+
+### `--sandbox <SANDBOX>`
+
+Der Sandbox-Modus für die Benchmark-Ausführung.
+Verwenden Sie `firecracker` für eine Firecracker-microVM (nur Linux).
+Lassen Sie es für die Ausführung auf dem Host ohne Sandbox weg.
+
+### `--timeout <TIMEOUT>`
+
+Das Ausführungs-Timeout in Sekunden.
+Standardmäßig wird `300` verwendet.
+
+### `--iter <ITER>`
+
+Die Anzahl der auszuführenden Benchmark-Iterationen.
+Standardmäßig wird `1` verwendet.
+
+### `--allow-failure`
+
+Erlaubt einen Benchmark-Fehlschlag, ohne die verbleibenden Iterationen kurzzuschließen.
+
+### `--entrypoint <ENTRYPOINT>`
+
+Überschreibt den Container-Entrypoint.
+Kann mehrfach angegeben werden.
+
+### `--cmd <CMD>`
+
+Überschreibt den Container-Befehl.
+Kann mehrfach angegeben werden.
+
+### `--env <ENV>`
+
+Setzt eine Umgebungsvariable im Format `KEY=VALUE`.
+Kann mehrfach angegeben werden.
+
+### `--network`
+
+Aktiviert Netzwerkzugriff innerhalb der VM.
+
+### `--output <OUTPUT>`
+
+Ein Ausgabedateipfad innerhalb des Gasts, der erfasst werden soll.
+Kann mehrfach angegeben werden.
+
+### `--vcpus <VCPUS>`
+
+Überschreibt die Anzahl der vCPUs (zum Testen).
+
+### `--memory <MEMORY>`
+
+Überschreibt den Arbeitsspeicher in MiB (zum Testen).
+
+### `--disk <DISK>`
+
+Überschreibt die Festplattengröße in MiB (zum Testen).
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+Die maximale Größe in Bytes für erfasstes `stdout` und `stderr`.
+Standardmäßig werden `25` MiB verwendet.
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+Die maximale Anzahl an Ausgabedateien, die dekodiert werden.
+Standardmäßig wird `255` verwendet.
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+Die maximale Anzahl an Symlinks, denen bei der Pfadauflösung gefolgt wird,
+entsprechend dem `MAXSYMLINKS`-Limit des Linux-Kernels.
+Standardmäßig wird `40` verwendet.
+Wird nur im Modus ohne Sandbox verwendet und steht daher im Konflikt mit `--sandbox`.
+
+### `--grace-period <GRACE_PERIOD>`
+
+Die Karenzzeit in Sekunden nach dem Beenden des Benchmarks vor der finalen Ausgabeerfassung.
+Standardmäßig wird `1` verwendet.
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+Das Log-Level für den Sandbox-Prozess.
+Erfordert `--sandbox`.
+Standardmäßig wird `warning` verwendet.
+
+<Tuning />
+
+### `--help`
+
+Hilfe ausgeben.
+
+[images]: /de/docs/explanation/images/
+[runner up]: #runner-up

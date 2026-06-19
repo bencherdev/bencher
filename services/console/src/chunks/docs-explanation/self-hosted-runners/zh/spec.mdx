@@ -1,0 +1,33 @@
+## 创建 Spec
+
+[Spec][spec] 描述 Runner 提供的硬件：
+操作系统、CPU 架构、[Sandbox][sandbox] 类型、CPU 数量、内存、磁盘和网络访问。
+Job 声明它所需的 Spec，而 Runner 只认领其所支持的 Spec 对应的 Job。
+
+可以使用 [`bencher` CLI][bencher spec cli]、
+[Specs REST API][specs api]
+或 Bencher Console 创建 Spec：
+
+```sh
+bencher spec create \
+  --host https://api.bencher.example.com \
+  --name "Intel v1" \
+  --os linux \
+  --architecture x86_64 \
+  --sandbox firecracker \
+  --cpu 4 \
+  --memory 51539607552 \
+  --disk 137438953472
+```
+
+省略 `--sandbox` 可定义一个非沙箱化的 Spec，
+如果允许该 Spec 上的 Job 进行网络访问，则传入 `--network`。
+内存和磁盘以字节为单位指定。
+关于 Spec 以及 [Testbed][testbeds] 如何记录每个 Report 所使用的 Spec 的更多信息，
+请参阅 [Testbed 与 Spec][testbeds]。
+
+[spec]: /zh/docs/explanation/bare-metal/#spec
+[sandbox]: /zh/docs/explanation/bare-metal/#sandbox
+[bencher spec cli]: /zh/docs/api/server/specs/
+[specs api]: /zh/docs/api/server/specs/#post-v0specs
+[testbeds]: /zh/docs/explanation/testbeds/

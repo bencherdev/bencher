@@ -1,0 +1,21 @@
+## Eine Spec einem Runner zuweisen
+
+Eine Runner Spec verknüpft eine [Spec][spec] mit einem Runner.
+Ein Runner kann mehrere Specs unterstützen, und eine Spec kann von mehreren Runnern unterstützt werden.
+Ein Runner beansprucht nur Jobs, deren Spec ihm zugewiesen wurde.
+
+Fügen Sie eine Spec zu einem Runner mit der [`bencher` CLI][bencher runner spec cli]
+oder der [Runner Specs REST-API][runner specs api] hinzu:
+
+```sh
+bencher runner spec add my-runner \
+  --host https://api.bencher.example.com \
+  --spec intel-v1
+```
+
+Entfernen Sie die Verknüpfung später mit der [`DELETE /v0/runners/{runner}/specs/{spec}`-API][delete runner spec api].
+
+[spec]: /de/docs/explanation/bare-metal/#spec
+[bencher runner spec cli]: /de/docs/api/server/runner-specs/
+[runner specs api]: /de/docs/api/server/runner-specs/#post-v0runnersrunnerspecs
+[delete runner spec api]: /de/docs/api/server/runner-specs/#delete-v0runnersrunnerspecsspec

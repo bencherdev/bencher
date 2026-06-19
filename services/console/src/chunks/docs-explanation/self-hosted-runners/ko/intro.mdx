@@ -1,0 +1,24 @@
+Self-Hosted Runner는 Bencher가 관리하는 On-Demand 또는 Dedicated Runner를 사용하는 대신
+직접 실행하고 관리하는 [Bare Metal Runner][bare metal]입니다.
+`runner` 바이너리를 Bencher API 서버로 향하게 하면,
+자체 하드웨어에서 [Job][job]을 청구(claim)하고 실행합니다.
+
+Runner를 셀프 호스팅하는 것은 다음과 같은 경우에 적합합니다:
+
+- Bencher Cloud가 제공하지 않는 특정 하드웨어에서 벤치마크를 실행하려는 경우
+- 벤치마크 워크로드를 자체 네트워크나 에어 갭(air-gapped) 환경 안에 유지하려는 경우
+- [Bencher Self-Hosted][bencher self hosted]를 처음부터 끝까지 실행하려는 경우
+
+이 가이드는 Runner를 등록하고, [Spec][spec]으로 그 하드웨어를 설명하고,
+둘을 함께 연결한 다음, `runner` 바이너리를 시작하는 과정을 안내합니다.
+Runner, Spec, Sandbox, Job이 어떻게 맞물리는지에 대한 개념적 개요는
+[Bare Metal 개요][bare metal]를 참고하세요.
+
+> 🐰 Firecracker 샌드박싱에는 [KVM][kvm]이 활성화된 Linux가 필요합니다.
+> 샌드박스가 없는 Spec만 제공하는 Runner는 지원되는 모든 호스트에서 실행할 수 있습니다.
+
+[bare metal]: /ko/docs/explanation/bare-metal/
+[job]: /ko/docs/explanation/bare-metal/#job
+[spec]: /ko/docs/explanation/bare-metal/#spec
+[bencher self hosted]: /ko/docs/explanation/bencher-self-hosted/
+[kvm]: https://www.linux-kvm.org/

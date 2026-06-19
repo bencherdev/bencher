@@ -1,0 +1,115 @@
+import Tuning from "./tuning.mdx";
+
+## `runner run`
+
+Pull an [Image][images], create a rootfs, and execute it once on the local host.
+Unlike [`runner up`][runner up], this does not connect to an API server or claim a Job.
+It runs a single Image directly, which is useful for testing and debugging a Runner host
+or an Image before submitting real Jobs.
+
+```
+runner run --image <IMAGE> [OPTIONS]
+```
+
+### Options
+
+### `--image <IMAGE>`
+
+The [OCI Image][images] to run, as a local path or a registry reference.
+
+### `--token <TOKEN>`
+
+A JWT token for registry authentication when pulling the Image.
+
+### `--sandbox <SANDBOX>`
+
+The sandbox mode for benchmark execution.
+Use `firecracker` for a Firecracker microVM (Linux only).
+Omit for non-sandboxed host execution.
+
+### `--timeout <TIMEOUT>`
+
+The execution timeout in seconds.
+By default, `300` is used.
+
+### `--iter <ITER>`
+
+The number of benchmark iterations to execute.
+By default, `1` is used.
+
+### `--allow-failure`
+
+Allow a benchmark failure without short-circuiting the remaining iterations.
+
+### `--entrypoint <ENTRYPOINT>`
+
+Override the container entrypoint.
+May be specified multiple times.
+
+### `--cmd <CMD>`
+
+Override the container command.
+May be specified multiple times.
+
+### `--env <ENV>`
+
+Set an environment variable in `KEY=VALUE` format.
+May be specified multiple times.
+
+### `--network`
+
+Enable network access inside the VM.
+
+### `--output <OUTPUT>`
+
+An output file path inside the guest to collect.
+May be specified multiple times.
+
+### `--vcpus <VCPUS>`
+
+Override the number of vCPUs (for testing).
+
+### `--memory <MEMORY>`
+
+Override the memory in MiB (for testing).
+
+### `--disk <DISK>`
+
+Override the disk size in MiB (for testing).
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+The maximum size in bytes for collected `stdout` and `stderr`.
+By default, `25` MiB is used.
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+The maximum number of output files to decode.
+By default, `255` is used.
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+The maximum number of symlinks to follow during path resolution,
+matching the Linux kernel `MAXSYMLINKS` limit.
+By default, `40` is used.
+Only used in non-sandboxed mode, so it conflicts with `--sandbox`.
+
+### `--grace-period <GRACE_PERIOD>`
+
+The grace period in seconds after the benchmark exits before final output collection.
+By default, `1` is used.
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+The log level for the sandbox process.
+Requires `--sandbox`.
+By default, `warning` is used.
+
+<Tuning />
+
+### `--help`
+
+Print help.
+
+[images]: /docs/explanation/images/
+[runner up]: #runner-up

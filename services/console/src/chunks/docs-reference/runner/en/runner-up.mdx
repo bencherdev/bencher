@@ -1,0 +1,92 @@
+import Tuning from "./tuning.mdx";
+
+## `runner up`
+
+Start the runner, polling for and executing benchmark Jobs.
+This is the long-running command used to operate a [Self-Hosted Runner][self hosted runners].
+The runner opens a single [WebSocket connection][runner protocol] to the API server,
+claims Jobs that match its Specs, executes them, and reports the results back.
+
+```
+runner up [OPTIONS]
+```
+
+### Options
+
+### `--host <HOST>`
+
+The Bencher API server to connect to.
+By default, `https://api.bencher.dev` is used.
+Can also be set with the `BENCHER_HOST` environment variable.
+
+### `--runner <RUNNER>`
+
+The UUID or slug of the Runner to operate as.
+Can also be set with the `BENCHER_RUNNER` environment variable.
+
+### `--key <KEY>`
+
+The Runner authentication key (`bencher_runner_...`)
+returned when the [Runner was created][create a runner].
+Can also be set with the `BENCHER_RUNNER_KEY` environment variable.
+
+### `--poll-timeout <POLL_TIMEOUT>`
+
+The long-poll timeout in seconds while waiting for a Job, between `1` and `900`.
+By default, `55` is used.
+
+### `--danger-allow-no-sandbox`
+
+Allow executing Jobs without a [Sandbox][sandbox].
+Without this flag, a Job whose Spec has no Sandbox is rejected at runtime.
+Non-sandboxed Jobs run directly on the host, so only enable this for trusted workloads.
+Can also be set with the `BENCHER_DANGER_ALLOW_NO_SANDBOX` environment variable.
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+The log level for the sandbox process.
+By default, `warning` is used.
+
+### `--no-auto-update`
+
+Disable automatic updates from the server.
+By default, the runner updates itself between Jobs when the server offers a new version.
+Can also be set with the `BENCHER_NO_AUTO_UPDATE` environment variable.
+
+### `--max-download-size <MAX_DOWNLOAD_SIZE>`
+
+The maximum download size in bytes for self-update binaries.
+By default, `500` MiB is used.
+Conflicts with `--no-auto-update`.
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+The maximum size in bytes for collected `stdout` and `stderr`.
+By default, `25` MiB is used.
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+The maximum number of output files to decode.
+By default, `255` is used.
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+The maximum number of symlinks to follow during path resolution,
+matching the Linux kernel `MAXSYMLINKS` limit.
+By default, `40` is used.
+Only used in non-sandboxed mode.
+
+### `--grace-period <GRACE_PERIOD>`
+
+The grace period in seconds after the benchmark exits before final output collection.
+
+<Tuning />
+
+### `--help`
+
+Print help.
+
+[self hosted runners]: /docs/explanation/self-hosted-runners/
+[create a runner]: /docs/explanation/self-hosted-runners/
+[runner protocol]: /docs/reference/runner-protocol/
+[sandbox]: /docs/explanation/bare-metal/#sandbox

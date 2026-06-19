@@ -1,0 +1,91 @@
+import Tuning from "./tuning.mdx";
+
+## `runner up`
+
+启动 runner，轮询并执行基准测试 Job。
+这是用于操作 [Self-Hosted Runner][self hosted runners] 的长时间运行命令。
+runner 向 API 服务器打开单个 [WebSocket 连接][runner protocol]，
+认领与其 Spec 匹配的 Job，执行它们，并将结果报告回去。
+
+```
+runner up [OPTIONS]
+```
+
+### 选项
+
+### `--host <HOST>`
+
+要连接的 Bencher API 服务器。
+默认使用 `https://api.bencher.dev`。
+也可以通过 `BENCHER_HOST` 环境变量设置。
+
+### `--runner <RUNNER>`
+
+要作为其运行的 Runner 的 UUID 或 slug。
+也可以通过 `BENCHER_RUNNER` 环境变量设置。
+
+### `--key <KEY>`
+
+[创建 Runner][create a runner] 时返回的 Runner 认证密钥（`bencher_runner_...`）。
+也可以通过 `BENCHER_RUNNER_KEY` 环境变量设置。
+
+### `--poll-timeout <POLL_TIMEOUT>`
+
+等待 Job 时的长轮询超时（秒），介于 `1` 和 `900` 之间。
+默认使用 `55`。
+
+### `--danger-allow-no-sandbox`
+
+允许在没有 [Sandbox][sandbox] 的情况下执行 Job。
+如果没有此标志，其 Spec 没有 Sandbox 的 Job 会在运行时被拒绝。
+非沙箱化的 Job 直接在主机上运行，因此仅对受信任的工作负载启用此项。
+也可以通过 `BENCHER_DANGER_ALLOW_NO_SANDBOX` 环境变量设置。
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+沙箱进程的日志级别。
+默认使用 `warning`。
+
+### `--no-auto-update`
+
+禁用来自服务器的自动更新。
+默认情况下，当服务器提供新版本时，runner 会在 Job 之间自我更新。
+也可以通过 `BENCHER_NO_AUTO_UPDATE` 环境变量设置。
+
+### `--max-download-size <MAX_DOWNLOAD_SIZE>`
+
+自我更新二进制文件的最大下载大小（字节）。
+默认使用 `500` MiB。
+与 `--no-auto-update` 冲突。
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+收集的 `stdout` 和 `stderr` 的最大大小（字节）。
+默认使用 `25` MiB。
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+要解码的输出文件的最大数量。
+默认使用 `255`。
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+路径解析期间要跟随的符号链接的最大数量，
+与 Linux 内核的 `MAXSYMLINKS` 限制相匹配。
+默认使用 `40`。
+仅在非沙箱化模式下使用。
+
+### `--grace-period <GRACE_PERIOD>`
+
+基准测试退出后、最终输出收集前的宽限期（秒）。
+
+<Tuning />
+
+### `--help`
+
+打印帮助。
+
+[self hosted runners]: /zh/docs/explanation/self-hosted-runners/
+[create a runner]: /zh/docs/explanation/self-hosted-runners/
+[runner protocol]: /zh/docs/reference/runner-protocol/
+[sandbox]: /zh/docs/explanation/bare-metal/#sandbox

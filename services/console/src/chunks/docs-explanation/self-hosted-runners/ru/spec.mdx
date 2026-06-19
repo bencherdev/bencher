@@ -1,0 +1,33 @@
+## Создание Spec
+
+[Spec][spec] описывает оборудование, которое предоставляет Runner:
+операционную систему, архитектуру CPU, тип [Sandbox][sandbox], количество CPU, память, диск и сетевой доступ.
+Job объявляет нужный ему Spec, а Runner берёт только те Job, чьи Spec он поддерживает.
+
+Создайте Spec с помощью [CLI `bencher`][bencher spec cli],
+[REST API для Specs][specs api]
+или Bencher Console:
+
+```sh
+bencher spec create \
+  --host https://api.bencher.example.com \
+  --name "Intel v1" \
+  --os linux \
+  --architecture x86_64 \
+  --sandbox firecracker \
+  --cpu 4 \
+  --memory 51539607552 \
+  --disk 137438953472
+```
+
+Опустите `--sandbox`, чтобы определить не изолированный Spec,
+и передайте `--network`, если Job на этом Spec разрешён сетевой доступ.
+Память и диск указываются в байтах.
+Подробнее о Spec и о том, как [Testbed][testbeds] записывает Spec, использованный для каждого Report,
+смотрите в [Testbeds и Specs][testbeds].
+
+[spec]: /ru/docs/explanation/bare-metal/#spec
+[sandbox]: /ru/docs/explanation/bare-metal/#sandbox
+[bencher spec cli]: /ru/docs/api/server/specs/
+[specs api]: /ru/docs/api/server/specs/#post-v0specs
+[testbeds]: /ru/docs/explanation/testbeds/

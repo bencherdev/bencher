@@ -1,0 +1,27 @@
+import LifecycleDiagram from "../lifecycle-diagram.mdx";
+
+## Job Lifecycle
+
+Each Job moves through a fixed set of states as it is claimed, executed, and processed.
+
+| From      | To          | Trigger                                                                |
+| --------- | ----------- | ---------------------------------------------------------------------- |
+| pending   | claimed     | A Runner claims the Job                                                 |
+| pending   | canceled    | A user cancels the Job                                                  |
+| claimed   | running     | The Runner sends `running`                                              |
+| claimed   | failed      | The Runner sends `failed`, or the heartbeat times out                  |
+| claimed   | canceled    | A user cancels the Job                                                  |
+| running   | completed   | The Runner sends `completed`                                            |
+| running   | failed      | The Runner sends `failed`, or the heartbeat times out                  |
+| running   | canceled    | A user cancels the Job, or the hard Job timeout is exceeded             |
+| completed | processed   | The server successfully processes the results                          |
+| failed    | completed   | The Runner resends `completed`, overriding a heartbeat-timeout failure  |
+
+`processed` and `canceled` are terminal.
+`completed` and `failed` are quasi-terminal:
+`completed` transitions to `processed` once the results are parsed,
+and `failed` transitions to `completed` if the Runner resends `completed`.
+Every transition uses a status filter on its database update,
+so a Job that was concurrently modified is re-read rather than overwritten.
+
+<LifecycleDiagram />
