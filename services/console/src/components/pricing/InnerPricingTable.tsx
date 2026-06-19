@@ -2,6 +2,7 @@ import { For, Show } from "solid-js";
 import { PlanLevel } from "../../types/bencher";
 
 interface Props {
+	hideFree?: boolean;
 	handleFree: () => void;
 	handlePro: () => void;
 	handleEnterprise: () => void;
@@ -130,9 +131,13 @@ const handlerFor = (plan: PlanLevel, props: Props): (() => void) => {
 };
 
 const InnerPricingTable = (props: Props) => {
+	const tiers = () =>
+		props.hideFree
+			? TIERS.filter((tier) => tier.plan !== PlanLevel.Free)
+			: TIERS;
 	return (
-		<div class="pricing-grid">
-			<For each={TIERS}>
+		<div class={`pricing-grid${props.hideFree ? " is-two-up" : ""}`}>
+			<For each={tiers()}>
 				{(tier) => (
 					<div class={`pricing-card${tier.popular ? " is-popular" : ""}`}>
 						<Show when={tier.popular}>

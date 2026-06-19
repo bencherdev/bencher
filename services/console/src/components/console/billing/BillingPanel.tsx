@@ -29,9 +29,9 @@ import {
 	planLevel,
 	planLevelPrice,
 	runnerMinutePrice,
-	suggestedMetrics,
 } from "../../../util/convert";
-import { httpDelete, httpGet, httpPatch } from "../../../util/http";
+import { BENCHER_CALENDLY_URL } from "../../../util/ext";
+import { httpGet, httpPatch } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { type InitValid, init_valid, validJwt } from "../../../util/valid";
 import Field from "../../field/Field";
@@ -210,7 +210,9 @@ const CancelPlanButton = (props: {
 			return;
 		}
 		setCanceling(true);
-		httpDelete(props.apiUrl, `/v0/organizations/${organization}/plan`, token)
+		httpPatch(props.apiUrl, `/v0/organizations/${organization}/plan`, token, {
+			cancel_at_period_end: true,
+		})
 			.then((_resp) => {
 				setCanceling(false);
 				setClicked(false);
@@ -385,11 +387,15 @@ const CloudMeteredPanel = (props: {
 				<h4>Estimated Credit Remaining: {fmtUsd(creditRemaining())}</h4>
 				<br />
 			</Show>
-			<h4>Cost per Metric: {fmtUsd(metricPrice())}</h4>
+			<h4>Cost per Private Metric: {fmtUsd(metricPrice())}</h4>
 			<h4>
-				Estimated Metrics Used: {props.usage()?.metrics?.toLocaleString() ?? 0}
+				Estimated Private Metrics Used:{" "}
+				{props.usage()?.metrics?.toLocaleString() ?? 0}
 			</h4>
-			<h4>Estimated Metrics Cost: {fmtUsd(estMetricsCost())}</h4>
+			<h4>Estimated Private Metrics Cost: {fmtUsd(estMetricsCost())}</h4>
+			<p class="has-text-grey">
+				Public project metrics are free and not billed.
+			</p>
 			<br />
 			<h4>Cost per Runner Minute: {fmtUsdPrecise(minutePrice())} / min</h4>
 			<h4>
@@ -585,31 +591,13 @@ const SelfHostedFreePanel = (props: {
 			<h4>
 				<ol>
 					<li>
-						Create an account on{" "}
-						<a href="https://bencher.dev" target="_blank" rel="noreferrer">
-							Bencher Cloud
+						<a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">
+							Contact us
 						</a>{" "}
-						if you don't already have one
-					</li>
-					{props.onboard ? (
-						<li>
-							Navigate to the Organization Billing page in your Bencher Cloud
-							account
-						</li>
-					) : (
-						<li>
-							Navigate to this same page on your Bencher Cloud account,
-							Organization Billing
-						</li>
-					)}
-					<li>Select either the "Team" or "Enterprise" plan</li>
-					<li>Select "Self-Hosted License"</li>
-					<li>
-						Enter your desired number of metrics for the <i>year</i> (Suggested:{" "}
-						{suggestedMetrics(props.usage()?.metrics).toLocaleString()})
+						to set up a Bencher Plus Enterprise (On-Prem) license
 					</li>
 					<li>
-						Enter your "Self-Hosted Organization UUID":{" "}
+						Share your "Self-Hosted Organization UUID":{" "}
 						<code style="word-break: break-word;">
 							{/* biome-ignore lint/a11y/useValidAnchor: copy to clipboard */}
 							<a
@@ -624,8 +612,7 @@ const SelfHostedFreePanel = (props: {
 							</a>
 						</code>
 					</li>
-					<li>Click "Activate" and enter your billing information</li>
-					<li>Copy the Self-Hosted license key that is generated</li>
+					<li>We will provision your license and send you your license key</li>
 					<li>
 						Back on <i>this</i> server, enter your license key below ⬇️
 					</li>

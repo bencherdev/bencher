@@ -1,14 +1,5 @@
 import type { Params } from "astro";
-import {
-	type Accessor,
-	For,
-	type Resource,
-	type Setter,
-	Show,
-	createEffect,
-	createMemo,
-	createSignal,
-} from "solid-js";
+import { type Resource, Show, createEffect, createMemo } from "solid-js";
 import {
 	type JsonAuthUser,
 	type JsonUsage,
@@ -17,22 +8,9 @@ import {
 import { fmtDate } from "../../../../util/convert";
 import { BENCHER_CALENDLY_URL } from "../../../../util/ext";
 import { useSearchParams } from "../../../../util/url";
-import {
-	type InitValid,
-	validPlanLevel,
-	validUuid,
-} from "../../../../util/valid";
+import { type InitValid, validPlanLevel } from "../../../../util/valid";
 import { PLAN_PARAM } from "../../../auth/auth";
-import Field from "../../../field/Field";
-import FieldKind from "../../../field/kind";
-import Pricing from "./Pricing";
-
-import { getThemeColor } from "../../../navbar/theme/util";
-import {
-	ENTERPRISE_TEXT,
-	FREE_TEXT,
-	PRO_TEXT,
-} from "../../../pricing/ConsoleFallbackPricingTable";
+import InnerPricingTable from "../../../pricing/InnerPricingTable";
 import Checkout from "./Checkout";
 
 interface Props {
@@ -45,76 +23,15 @@ interface Props {
 	handleRefresh: () => void;
 }
 
-enum PlanKind {
-	Metered = "metered",
-	SelfHosted = "self-hosted",
-}
-
+// Only Cloud Pro self-serves. Enterprise (and Self-Hosted) go through a sales
+// conversation, so the Enterprise call to action opens "Contact us".
 const BillingForm = (props: Props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
-	const themeColor = getThemeColor;
 
 	const setPlanLevel = (planLevel: PlanLevel) => {
 		setSearchParams({ [PLAN_PARAM]: planLevel });
 	};
 	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
-
-	const [planKind, setPlanKind] = createSignal(PlanKind.Metered);
-	const [entitlements, setEntitlements] = createSignal<number>(6);
-	const entitlementsAnnual = createMemo(() => {
-		switch (plan()) {
-			case PlanLevel.Free:
-				return null;
-			case PlanLevel.Team:
-			case PlanLevel.Pro:
-			case PlanLevel.Enterprise:
-				return entitlements() * 10_000;
-		}
-	});
-	const entitlementsAnnualCost = createMemo(() => {
-		switch (plan()) {
-			case PlanLevel.Free:
-				return 0.0;
-			case PlanLevel.Team:
-			case PlanLevel.Pro:
-				return (entitlementsAnnual() ?? 0.0) * 0.01;
-			case PlanLevel.Enterprise:
-				return (entitlementsAnnual() ?? 0.0) * 0.05;
-		}
-	});
-	const entitlementsAnnualJson = createMemo(() => {
-		switch (planKind()) {
-			case PlanKind.Metered:
-				return null;
-			case PlanKind.SelfHosted:
-				return entitlementsAnnual();
-		}
-	});
-	const [organizationUuid, setOrganizationUuid] = createSignal("");
-	const organizationUuidJson = createMemo(() => {
-		switch (planKind()) {
-			case PlanKind.Metered:
-				return null;
-			case PlanKind.SelfHosted:
-				return organizationUuid();
-		}
-	});
-	const organizationUuidValid = createMemo(() => {
-		switch (planKind()) {
-			case PlanKind.Metered:
-				return true;
-			case PlanKind.SelfHosted: {
-				const uuid = organizationUuid();
-				if (uuid) {
-					return validUuid(uuid) && uuid !== props.usage()?.organization;
-				}
-				return null;
-			}
-		}
-	});
-	const organizationUuidValidJson = createMemo(
-		() => organizationUuidValid() === true,
-	);
 
 	createEffect(() => {
 		if (!props.bencher_valid()) {
@@ -129,95 +46,33 @@ const BillingForm = (props: Props) => {
 
 	return (
 		<>
-			<Pricing
-				themeColor={themeColor()}
-				plan={plan()}
-				freeText={FREE_TEXT}
-				handleFree={() => setPlanLevel(PlanLevel.Free)}
+			<InnerPricingTable
 				hideFree={props.onboard}
-				proText={PRO_TEXT}
+				handleFree={() => setPlanLevel(PlanLevel.Free)}
 				handlePro={() => setPlanLevel(PlanLevel.Pro)}
-				enterpriseText={ENTERPRISE_TEXT}
-				handleEnterprise={() => setPlanLevel(PlanLevel.Enterprise)}
+				handleEnterprise={() =>
+					window.open(BENCHER_CALENDLY_URL, "_blank", "noreferrer")
+				}
 			/>
-			<Show
-				when={plan() !== PlanLevel.Free}
-				fallback={<FreeUsage usage={props.usage} />}
-			>
-				<PlanLocality
-					plan={plan}
-					planKind={planKind}
-					handlePlanKind={setPlanKind}
-					entitlements={entitlements}
-					handleEntitlements={setEntitlements}
-					entitlementsAnnual={entitlementsAnnual}
-					entitlementsAnnualCost={entitlementsAnnualCost}
-					organizationUuid={organizationUuid}
-					handleOrganizationUuid={setOrganizationUuid}
-					organizationUuidValid={organizationUuidValid}
-				/>
-				{/* <PaymentCard
+			<Show when={plan() === PlanLevel.Pro}>
+				<Checkout
 					apiUrl={props.apiUrl}
 					params={props.params}
+					onboard={props.onboard}
 					bencher_valid={props.bencher_valid}
 					user={props.user}
-					path={`/v0/organizations/${props.params.organization}/plan`}
+					organization={props.usage()?.organization}
 					plan={plan}
-					entitlements={entitlementsAnnualJson}
-					organizationUuid={organizationUuidJson}
-					organizationUuidValid={organizationUuidValidJson}
+					entitlements={() => null}
+					organizationUuid={() => null}
+					organizationUuidValid={() => true}
 					handleRefresh={props.handleRefresh}
-				/> */}
-				<Show
-					when={
-						plan() === PlanLevel.Enterprise && planKind() === PlanKind.Metered
-					}
-					fallback={
-						<Checkout
-							apiUrl={props.apiUrl}
-							params={props.params}
-							onboard={props.onboard}
-							bencher_valid={props.bencher_valid}
-							user={props.user}
-							organization={props.usage()?.organization}
-							plan={plan}
-							entitlements={entitlementsAnnualJson}
-							organizationUuid={organizationUuidJson}
-							organizationUuidValid={organizationUuidValidJson}
-							handleRefresh={props.handleRefresh}
-						/>
-					}
-				>
-					<ContactUs onboard={props.onboard} />
-				</Show>
+				/>
+			</Show>
+			<Show when={plan() === PlanLevel.Free}>
+				<FreeUsage usage={props.usage} />
 			</Show>
 		</>
-	);
-};
-
-// Metered (Cloud) Enterprise is not self-serve (custom hardware/contract), so
-// the API rejects a checkout for it. Route to a sales conversation instead,
-// matching the marketing pricing table. The self-hosted licensed Enterprise
-// path still uses the normal checkout.
-const ContactUs = (props: { onboard: boolean }) => {
-	return (
-		<div class="columns is-centered" style="margin-top: 1rem;">
-			<div class={`column ${props.onboard ? "" : "is-half"}`}>
-				<a
-					class="button is-primary is-fullwidth"
-					href={BENCHER_CALENDLY_URL}
-					target="_blank"
-					rel="noreferrer"
-				>
-					<span class="icon-text">
-						<span>Contact us</span>
-						<span class="icon">
-							<i class="fas fa-chevron-right" />
-						</span>
-					</span>
-				</a>
-			</div>
-		</div>
 	);
 };
 
@@ -237,100 +92,6 @@ const FreeUsage = (props: { usage: Resource<null | JsonUsage> }) => {
 						{props.usage()?.runner_minutes?.toLocaleString() ?? 0}
 					</h4>
 				</div>
-			</div>
-		</div>
-	);
-};
-
-const PlanLocality = (props: {
-	plan: Accessor<PlanLevel>;
-	planKind: Accessor<PlanKind>;
-	handlePlanKind: Setter<PlanKind>;
-	entitlements: Accessor<number>;
-	handleEntitlements: Setter<number>;
-	entitlementsAnnual: Accessor<null | number>;
-	entitlementsAnnualCost: Accessor<number>;
-	organizationUuid: Accessor<string>;
-	handleOrganizationUuid: Setter<string>;
-	organizationUuidValid: Accessor<null | boolean>;
-}) => {
-	return (
-		<div class="columns is-centered">
-			<div class="column">
-				<div class="buttons has-addons is-centered" style="margin-top: 4rem">
-					<For
-						each={[
-							["Monthly Metered", PlanKind.Metered],
-							["Self-Hosted License", PlanKind.SelfHosted],
-						]}
-					>
-						{([name, kind]) => (
-							<button
-								class={`button ${
-									props.planKind() === kind && "is-primary is-selected"
-								}`}
-								type="button"
-								onMouseDown={(_e) => props.handlePlanKind(kind as PlanKind)}
-							>
-								{name}
-							</button>
-						)}
-					</For>
-				</div>
-				<Show
-					when={props.planKind() === PlanKind.Metered}
-					fallback={
-						<div class="content has-text-centered">
-							<p>
-								Annual Metrics:{" "}
-								{props.entitlementsAnnual()?.toLocaleString() ?? 0}
-							</p>
-							<p>
-								Annual Cost: ${props.entitlementsAnnualCost().toLocaleString()}
-							</p>
-							<input
-								class="slider"
-								type="range"
-								min="1"
-								max="100"
-								value={props.entitlements()}
-								style="width: 50%"
-								onChange={(_e) => {
-									props.handleEntitlements(Number(_e.currentTarget.value));
-								}}
-							/>
-						</div>
-					}
-				>
-					<div class="content has-text-centered">
-						<p>Annual Metrics: Metered (∞)</p>
-						<p>Annual Cost: $0.00</p>
-					</div>
-				</Show>
-				<Show when={props.planKind() === PlanKind.SelfHosted}>
-					<div class="columns is-centered">
-						<div class="column is-half">
-							<Field
-								kind={FieldKind.INPUT}
-								fieldKey="organization-uuid"
-								label="Self-Hosted Organization UUID"
-								value={props.organizationUuid()}
-								valid={props.organizationUuidValid()}
-								config={{
-									label: "UUID",
-									type: "text",
-									placeholder: "00000000-0000-0000-0000-000000000000",
-									icon: "fas fa-laptop-house",
-									help: "Must be a valid UUID for a Self-Hosted Organization",
-									validate: validUuid,
-								}}
-								handleField={(_key, value, _valid) => {
-									props.handleOrganizationUuid(value as string);
-								}}
-							/>
-						</div>
-					</div>
-				</Show>
 			</div>
 		</div>
 	);

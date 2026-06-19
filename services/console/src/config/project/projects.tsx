@@ -237,6 +237,12 @@ const projectsConfig = {
 						config: PROJECT_FIELDS.visibility,
 					},
 				},
+				{
+					kind: Card.FIELD,
+					label: "Billing",
+					key: "organization",
+					display: Display.BILLING,
+				},
 			],
 			buttons: [
 				{

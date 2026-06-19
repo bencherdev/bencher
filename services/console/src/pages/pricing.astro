@@ -143,7 +143,7 @@ const description =
           </FaqItem>
           <FaqItem id="faq-self-hosted-license" q="How does the Bencher License work for Self-Hosted?">
             <p>The <a href="/legal/license/">Bencher License</a> is heavily inspired by the <a href="https://gitlab.com/gitlab-org/gitlab/-/blob/master/LICENSE" target="_blank" rel="noreferrer">GitLab License</a>. You can use Bencher Self-Hosted in development, testing, and production without a Bencher Plus license, equivalent to Bencher Cloud on the Free plan.</p>
-            <p>For Bencher Plus features (Team or Enterprise), you need to purchase a Bencher Plus license.</p>
+            <p>Bencher Plus features for Self-Hosted are available on the Enterprise (On-Prem) plan. <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">Contact us</a> to set up a license.</p>
           </FaqItem>
           <FaqItem id="faq-license-quantity-limit" q="What happens if I reach my licensed quantity on Self-Hosted?">
             On Bencher Self-Hosted, new Metrics stop being accepted once you hit your licensed quantity limit. You can increase your licensed quantity at any time. We recommend setting your quantity with an extra margin to avoid interruption.
@@ -164,7 +164,7 @@ const description =
           </FaqItem>
           <FaqItem id="faq-bare-metal-hardware" q="What hardware do Bencher Bare Metal runners use?">
             <p>Bencher Cloud On-Demand runners use the <code>intel-v1</code> Spec: Linux on x86_64 with 4 CPUs, 48 GiB of memory, and 128 GiB of disk. Code runs in a Firecracker microVM sandbox for isolation. See the full <a href="/docs/explanation/testbeds/#--spec-spec">Spec reference</a> for details. Bencher Cloud Enterprise customers can request Dedicated and Custom runners. <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">Contact us</a> for more details.</p>
-            <p>On Bencher Self-Hosted, Free and Team users can create server-scoped Bare Metal runners, and Enterprise users can also create organization-scoped runners.</p>
+            <p>On Bencher Self-Hosted, you can create server-scoped Bare Metal runners, and Enterprise (On-Prem) users can also create organization-scoped runners.</p>
           </FaqItem>
           <FaqItem id="faq-bare-metal-os" q="What OSes and architectures does Bencher Bare Metal support?">
             <p>Bencher Cloud On-Demand runners support Linux x86_64 and (coming soon) ARM64, sandboxed in Firecracker. Dedicated and Custom runners can run without the Firecracker sandbox on Linux (x86_64 or ARM64), macOS, and Windows. <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">Contact us</a> for more details.</p>

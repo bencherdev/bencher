@@ -17,6 +17,12 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
   }
+
+  // Onboarding hides the Free tier, leaving two cards: keep them centered.
+  .pricing-grid.is-two-up {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 800px;
+  }
 }
 
 .pricing-card {

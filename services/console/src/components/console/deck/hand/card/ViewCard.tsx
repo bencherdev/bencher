@@ -212,6 +212,11 @@ const ViewCard = (props: Props) => {
 											View Plot Page
 										</a>
 									</Match>
+									<Match when={props.card?.display === Display.BILLING}>
+										<a href={`/console/organizations/${props.value}/billing`}>
+											View Billing
+										</a>
+									</Match>
 									<Match when={props.card?.display === Display.START_POINT}>
 										<StartPointCard {...props} />
 									</Match>

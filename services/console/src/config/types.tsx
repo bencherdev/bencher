@@ -172,6 +172,7 @@ export enum Display {
 	ADAPTER = "adapter",
 	THRESHOLD = "threshold",
 	MODEL_TEST = "model_test",
+	BILLING = "billing",
 }
 
 export enum ReportDimension {
