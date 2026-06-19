@@ -4,12 +4,13 @@
 операционную систему, архитектуру CPU, тип [Sandbox][sandbox], количество CPU, память, диск и сетевой доступ.
 Job объявляет нужный ему Spec, а Runner берёт только те Job, чьи Spec он поддерживает.
 
-Создайте Spec с помощью [CLI `bencher`][specs api],
+Создайте Spec с помощью [CLI `bencher`][bencher spec cli],
 [REST API для Specs][specs api]
 или Bencher Console:
 
 ```sh
 bencher spec create \
+  --host https://api.bencher.example.com \
   --name "Intel v1" \
   --os linux \
   --architecture x86_64 \
@@ -27,5 +28,6 @@ bencher spec create \
 
 [spec]: /ru/docs/explanation/bare-metal/#spec
 [sandbox]: /ru/docs/explanation/bare-metal/#sandbox
-[specs api]: /ru/docs/api/server/specs/
+[bencher spec cli]: /ru/docs/api/server/specs/
+[specs api]: /ru/docs/api/server/specs/#post-v0specs
 [testbeds]: /ru/docs/explanation/testbeds/

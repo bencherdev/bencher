@@ -17,8 +17,10 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 | completed | processed   | サーバーが結果を正常に処理する                                          |
 | failed    | completed   | Runner が `completed` を再送し、ハートビートタイムアウトによる失敗を上書きする |
 
-`processed`、`failed`、`canceled` は終端状態です。
-`completed` は準終端状態です。結果が解析されると `processed` に遷移します。
+`processed` と `canceled` は終端状態です。
+`completed` と `failed` は準終端状態です。
+`completed` は結果が解析されると `processed` に遷移し、
+`failed` は Runner が `completed` を再送すると `completed` に遷移します。
 すべての遷移は、データベース更新時にステータスフィルターを使用するため、
 並行して変更された Job は上書きされるのではなく、再読み込みされます。
 

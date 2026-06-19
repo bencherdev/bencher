@@ -7,9 +7,12 @@ en la ruta `{project}/output/v0/jobs/{job}`.
 La salida almacenada contiene un array `results` por iteración y, en caso de fallo, una cadena `error`.
 Cada iteración registra su `exit_code`, `stdout`, `stderr`,
 y un mapa de cualquier archivo de salida recolectado con su contenido.
-Después de que la salida se almacena, el servidor ejecuta el adaptador del harness de benchmark sobre los resultados
+Después de que la salida se almacena, el servidor ejecuta el [adaptador del harness de benchmark][adapters] sobre los resultados
 para analizar Metrics y Alerts en el Report, transicionando el Job a `processed`.
 
-La salida se devuelve cuando se consulta un Job con `GET /v0/projects/{project}/jobs/{job}`.
+La salida se devuelve cuando se consulta un Job con la [API `GET /v0/projects/{project}/jobs/{job}`][job query api].
 El mismo límite `request_body_max_bytes` que acota los mensajes WebSocket
 limita el tamaño de la salida que un Runner puede entregar.
+
+[adapters]: /es/docs/explanation/adapters/
+[job query api]: /es/docs/api/projects/jobs/#get-v0projectsprojectjobsjob

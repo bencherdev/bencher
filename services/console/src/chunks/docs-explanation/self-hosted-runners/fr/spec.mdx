@@ -4,12 +4,13 @@ Un [Spec][spec] décrit le matériel qu'un Runner fournit :
 système d'exploitation, architecture du CPU, type de [Sandbox][sandbox], nombre de CPU, mémoire, disque et accès réseau.
 Un Job déclare le Spec dont il a besoin, et un Runner ne réclame que les Jobs des Specs qu'il prend en charge.
 
-Créez un Spec avec la [CLI `bencher`][specs api],
+Créez un Spec avec la [CLI `bencher`][bencher spec cli],
 l'[API REST Specs][specs api],
 ou la Bencher Console :
 
 ```sh
 bencher spec create \
+  --host https://api.bencher.example.com \
   --name "Intel v1" \
   --os linux \
   --architecture x86_64 \
@@ -27,5 +28,6 @@ consultez [Testbeds & Specs][testbeds].
 
 [spec]: /fr/docs/explanation/bare-metal/#spec
 [sandbox]: /fr/docs/explanation/bare-metal/#sandbox
-[specs api]: /fr/docs/api/server/specs/
+[bencher spec cli]: /fr/docs/api/server/specs/
+[specs api]: /fr/docs/api/server/specs/#post-v0specs
 [testbeds]: /fr/docs/explanation/testbeds/

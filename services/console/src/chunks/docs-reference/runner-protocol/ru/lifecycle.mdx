@@ -17,8 +17,10 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 | completed | processed   | Сервер успешно обрабатывает результаты                                 |
 | failed    | completed   | Runner повторно отправляет `completed`, переопределяя сбой по тайм-ауту heartbeat |
 
-`processed`, `failed` и `canceled` являются терминальными.
-`completed` является квази-терминальным: оно переходит в `processed`, как только результаты разобраны.
+`processed` и `canceled` являются терминальными.
+`completed` и `failed` являются квази-терминальными:
+`completed` переходит в `processed`, как только результаты разобраны,
+а `failed` переходит в `completed`, если Runner повторно отправляет `completed`.
 Каждый переход использует фильтр по статусу в своём обновлении базы данных,
 поэтому Job, изменённая конкурентно, перечитывается, а не перезаписывается.
 

@@ -17,8 +17,10 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 | completed | processed   | 服务器成功处理结果                          |
 | failed    | completed   | Runner 重新发送 `completed`，覆盖心跳超时导致的失败  |
 
-`processed`、`failed` 和 `canceled` 是终止状态。
-`completed` 是准终止状态：一旦结果被解析，它就转换为 `processed`。
+`processed` 和 `canceled` 是终止状态。
+`completed` 和 `failed` 是准终止状态：
+`completed` 在结果被解析后转换为 `processed`，
+而 `failed` 在 Runner 重新发送 `completed` 时转换为 `completed`。
 每次转换在其数据库更新上都使用状态过滤器，
 因此被并发修改的 Job 会被重新读取而不是被覆盖。
 

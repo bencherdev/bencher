@@ -7,9 +7,12 @@ Runner が `completed` または `failed` を送信すると、
 保存された出力には、反復ごとの `results` 配列と、失敗時には `error` 文字列が含まれます。
 各反復は、その `exit_code`、`stdout`、`stderr`、
 そして収集された出力ファイルとその内容のマップを記録します。
-出力が保存された後、サーバーは結果に対してベンチマークハーネスアダプターを実行し、
+出力が保存された後、サーバーは結果に対して [ベンチマークハーネスアダプター][adapters] を実行し、
 Metric と Alert を解析して Report に取り込み、Job を `processed` へ遷移させます。
 
-出力は、`GET /v0/projects/{project}/jobs/{job}` で Job を照会したときに返されます。
+出力は、[`GET /v0/projects/{project}/jobs/{job}` API][job query api] で Job を照会したときに返されます。
 WebSocket メッセージの上限を定めるのと同じ `request_body_max_bytes` 制限が、
 Runner が配信できる出力のサイズを制限します。
+
+[adapters]: /ja/docs/explanation/adapters/
+[job query api]: /ja/docs/api/projects/jobs/#get-v0projectsprojectjobsjob

@@ -17,8 +17,10 @@ Cada Job recorre un conjunto fijo de estados a medida que es reclamado, ejecutad
 | completed | processed   | El servidor procesa correctamente los resultados                       |
 | failed    | completed   | El Runner reenvía `completed`, anulando un fallo por timeout de heartbeat |
 
-`processed`, `failed` y `canceled` son terminales.
-`completed` es cuasi-terminal: pasa a `processed` una vez que se analizan los resultados.
+`processed` y `canceled` son terminales.
+`completed` y `failed` son cuasi-terminales:
+`completed` pasa a `processed` una vez que se analizan los resultados,
+y `failed` pasa a `completed` si el Runner reenvía `completed`.
 Cada transición usa un filtro de estado en su actualización de base de datos,
 de modo que un Job que fue modificado de forma concurrente se vuelve a leer en lugar de sobrescribirse.
 

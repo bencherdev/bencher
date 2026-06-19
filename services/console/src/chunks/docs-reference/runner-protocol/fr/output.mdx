@@ -7,9 +7,12 @@ au chemin `{project}/output/v0/jobs/{job}`.
 La sortie stockée contient un tableau `results` par itération et, en cas d'échec, une chaîne `error`.
 Chaque itération enregistre son `exit_code`, son `stdout`, son `stderr`,
 ainsi qu'une carte de tous les fichiers de sortie collectés avec leur contenu.
-Une fois la sortie stockée, le serveur exécute l'adaptateur du harnais de benchmark sur les résultats
+Une fois la sortie stockée, le serveur exécute l'[adaptateur du harnais de benchmark][adapters] sur les résultats
 pour analyser les Metrics et les Alerts dans le Report, faisant passer le Job à `processed`.
 
-La sortie est renvoyée lorsqu'un Job est interrogé avec `GET /v0/projects/{project}/jobs/{job}`.
+La sortie est renvoyée lorsqu'un Job est interrogé avec l'[API `GET /v0/projects/{project}/jobs/{job}`][job query api].
 La même limite `request_body_max_bytes` qui borne les messages WebSocket
 plafonne la taille de la sortie qu'un Runner peut livrer.
+
+[adapters]: /fr/docs/explanation/adapters/
+[job query api]: /fr/docs/api/projects/jobs/#get-v0projectsprojectjobsjob

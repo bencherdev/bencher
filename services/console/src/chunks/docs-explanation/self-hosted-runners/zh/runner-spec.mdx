@@ -4,15 +4,18 @@ Runner Spec 将一个 [Spec][spec] 关联到一个 Runner。
 一个 Runner 可以支持多个 Spec，一个 Spec 也可以由多个 Runner 支持。
 Runner 只认领其被分配的 Spec 对应的 Job。
 
-可以使用 [`bencher` CLI][runner specs api]
+可以使用 [`bencher` CLI][bencher runner spec cli]
 或 [Runner Specs REST API][runner specs api] 将 Spec 添加到 Runner：
 
 ```sh
-bencher runner spec add my-runner --spec intel-v1
+bencher runner spec add my-runner \
+  --host https://api.bencher.example.com \
+  --spec intel-v1
 ```
 
-之后可使用 `bencher runner spec remove <RUNNER> <SPEC>`
-（即 [`DELETE /v0/runners/{runner}/specs/{spec}`][runner specs api] 端点）移除该关联。
+之后可使用 [`DELETE /v0/runners/{runner}/specs/{spec}` API][delete runner spec api] 移除该关联。
 
 [spec]: /zh/docs/explanation/bare-metal/#spec
-[runner specs api]: /zh/docs/api/server/runner-specs/
+[bencher runner spec cli]: /zh/docs/api/server/runner-specs/
+[runner specs api]: /zh/docs/api/server/runner-specs/#post-v0runnersrunnerspecs
+[delete runner spec api]: /zh/docs/api/server/runner-specs/#delete-v0runnersrunnerspecsspec

@@ -9,13 +9,13 @@ entweder als Flags oder als Umgebungsvariablen:
 
 ```sh
 runner up \
-  --host https://api.bencher.dev \
+  --host https://api.bencher.example.com \
   --runner my-runner \
   --key bencher_runner_...
 ```
 
 ```sh
-export BENCHER_HOST=https://api.bencher.dev
+export BENCHER_HOST=https://api.bencher.example.com
 export BENCHER_RUNNER=my-runner
 export BENCHER_RUNNER_KEY=bencher_runner_...
 runner up
@@ -28,7 +28,7 @@ und das Binary [aktualisiert sich selbst][runner up] zwischen Jobs, wenn eine ne
 
 Standardmäßig lehnt ein Runner jeden Job ab, dessen Spec keine [Sandbox][sandbox] hat.
 Um einem Runner zu erlauben, Jobs ohne Sandbox direkt auf dem Host auszuführen,
-starten Sie ihn mit `--danger-allow-no-sandbox`.
+starten Sie ihn mit [dem `--danger-allow-no-sandbox`-Flag][danger allow no sandbox].
 
 <ul>
   <li>
@@ -49,3 +49,4 @@ und die [Runner Protocol][runner protocol]-Referenz beschreibt die mit dem Serve
 [runner reference]: /de/docs/reference/runner/
 [runner protocol]: /de/docs/reference/runner-protocol/
 [sandbox]: /de/docs/explanation/bare-metal/#sandbox
+[danger allow no sandbox]: /de/docs/reference/runner/#--danger-allow-no-sandbox

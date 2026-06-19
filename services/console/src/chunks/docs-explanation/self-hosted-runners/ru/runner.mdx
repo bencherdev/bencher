@@ -6,7 +6,9 @@ Runner — это ресурс, который аутентифицирует б
 или Bencher Console.
 
 ```sh
-bencher runner create --name "My Runner"
+bencher runner create \
+  --host https://api.bencher.example.com \
+  --name "My Runner"
 ```
 
 Bencher возвращает новый Runner вместе с его ключом:
@@ -20,9 +22,9 @@ Bencher возвращает новый Runner вместе с его ключо
 
 Ключ показывается только один раз, поэтому сохраните его в надёжном месте.
 Вы передадите его бинарному файлу `runner` при запуске Runner.
-Если ключ когда-либо потерян или скомпрометирован, замените его с помощью `bencher runner key <RUNNER>`
-(эндпоинт [`POST /v0/runners/{runner}/key`][runners api]),
+Если ключ когда-либо потерян или скомпрометирован, замените его с помощью [API `POST /v0/runners/{runner}/key`][runner key api],
 что немедленно делает предыдущий ключ недействительным.
 
 [bencher runner cli]: /ru/docs/api/server/runners/
-[runners api]: /ru/docs/api/server/runners/
+[runners api]: /ru/docs/api/server/runners/#post-v0runners
+[runner key api]: /ru/docs/api/server/runners/#post-v0runnersrunnerkey

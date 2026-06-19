@@ -17,8 +17,10 @@ Each Job moves through a fixed set of states as it is claimed, executed, and pro
 | completed | processed   | The server successfully processes the results                          |
 | failed    | completed   | The Runner resends `completed`, overriding a heartbeat-timeout failure  |
 
-`processed`, `failed`, and `canceled` are terminal.
-`completed` is quasi-terminal: it transitions to `processed` once the results are parsed.
+`processed` and `canceled` are terminal.
+`completed` and `failed` are quasi-terminal:
+`completed` transitions to `processed` once the results are parsed,
+and `failed` transitions to `completed` if the Runner resends `completed`.
 Every transition uses a status filter on its database update,
 so a Job that was concurrently modified is re-read rather than overwritten.
 

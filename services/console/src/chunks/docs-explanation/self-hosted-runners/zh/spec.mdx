@@ -4,12 +4,13 @@
 操作系统、CPU 架构、[Sandbox][sandbox] 类型、CPU 数量、内存、磁盘和网络访问。
 Job 声明它所需的 Spec，而 Runner 只认领其所支持的 Spec 对应的 Job。
 
-可以使用 [`bencher` CLI][specs api]、
+可以使用 [`bencher` CLI][bencher spec cli]、
 [Specs REST API][specs api]
 或 Bencher Console 创建 Spec：
 
 ```sh
 bencher spec create \
+  --host https://api.bencher.example.com \
   --name "Intel v1" \
   --os linux \
   --architecture x86_64 \
@@ -27,5 +28,6 @@ bencher spec create \
 
 [spec]: /zh/docs/explanation/bare-metal/#spec
 [sandbox]: /zh/docs/explanation/bare-metal/#sandbox
-[specs api]: /zh/docs/api/server/specs/
+[bencher spec cli]: /zh/docs/api/server/specs/
+[specs api]: /zh/docs/api/server/specs/#post-v0specs
 [testbeds]: /zh/docs/explanation/testbeds/

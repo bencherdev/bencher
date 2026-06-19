@@ -4,15 +4,18 @@ A Runner Spec links a [Spec][spec] to a Runner.
 A Runner can support multiple Specs, and a Spec can be supported by multiple Runners.
 A Runner only claims Jobs whose Spec it has been assigned.
 
-Add a Spec to a Runner with the [`bencher` CLI][runner specs api]
+Add a Spec to a Runner with the [`bencher` CLI][bencher runner spec cli]
 or the [Runner Specs REST API][runner specs api]:
 
 ```sh
-bencher runner spec add my-runner --spec intel-v1
+bencher runner spec add my-runner \
+  --host https://api.bencher.example.com \
+  --spec intel-v1
 ```
 
-Remove the link later with `bencher runner spec remove <RUNNER> <SPEC>`
-(the [`DELETE /v0/runners/{runner}/specs/{spec}`][runner specs api] endpoint).
+Remove the link later with [the `DELETE /v0/runners/{runner}/specs/{spec}` API][delete runner spec api].
 
 [spec]: /docs/explanation/bare-metal/#spec
-[runner specs api]: /docs/api/server/runner-specs/
+[bencher runner spec cli]: /docs/api/server/runner-specs/
+[runner specs api]: /docs/api/server/runner-specs/#post-v0runnersrunnerspecs
+[delete runner spec api]: /docs/api/server/runner-specs/#delete-v0runnersrunnerspecsspec

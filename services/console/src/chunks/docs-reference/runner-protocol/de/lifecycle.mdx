@@ -17,8 +17,10 @@ Jeder Job durchläuft eine feste Menge von Zuständen, während er beansprucht, 
 | completed | processed   | Der Server verarbeitet die Ergebnisse erfolgreich                      |
 | failed    | completed   | Der Runner sendet `completed` erneut und überschreibt einen Fehlschlag durch Heartbeat-Timeout |
 
-`processed`, `failed` und `canceled` sind terminal.
-`completed` ist quasi-terminal: Es geht in `processed` über, sobald die Ergebnisse geparst sind.
+`processed` und `canceled` sind terminal.
+`completed` und `failed` sind quasi-terminal:
+`completed` geht in `processed` über, sobald die Ergebnisse geparst sind,
+und `failed` geht in `completed` über, wenn der Runner `completed` erneut sendet.
 Jeder Übergang verwendet einen Statusfilter bei seinem Datenbank-Update,
 sodass ein Job, der gleichzeitig geändert wurde, neu eingelesen statt überschrieben wird.
 

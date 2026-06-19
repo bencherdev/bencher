@@ -9,13 +9,13 @@ import RunnerUp from "../../../docs-reference/runner/ru/runner-up.mdx";
 
 ```sh
 runner up \
-  --host https://api.bencher.dev \
+  --host https://api.bencher.example.com \
   --runner my-runner \
   --key bencher_runner_...
 ```
 
 ```sh
-export BENCHER_HOST=https://api.bencher.dev
+export BENCHER_HOST=https://api.bencher.example.com
 export BENCHER_RUNNER=my-runner
 export BENCHER_RUNNER_KEY=bencher_runner_...
 runner up
@@ -28,7 +28,7 @@ runner up
 
 По умолчанию Runner отклоняет любую Job, чей Spec не имеет [Sandbox][sandbox].
 Чтобы разрешить Runner выполнять не изолированные Job напрямую на хосте,
-запустите его с флагом `--danger-allow-no-sandbox`.
+запустите его с [флагом `--danger-allow-no-sandbox`][danger allow no sandbox].
 
 <ul>
   <li>
@@ -49,3 +49,4 @@ runner up
 [runner reference]: /ru/docs/reference/runner/
 [runner protocol]: /ru/docs/reference/runner-protocol/
 [sandbox]: /ru/docs/explanation/bare-metal/#sandbox
+[danger allow no sandbox]: /ru/docs/reference/runner/#--danger-allow-no-sandbox

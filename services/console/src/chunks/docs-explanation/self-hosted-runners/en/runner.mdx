@@ -6,7 +6,9 @@ the [Runners REST API][runners api],
 or the Bencher Console.
 
 ```sh
-bencher runner create --name "My Runner"
+bencher runner create \
+  --host https://api.bencher.example.com \
+  --name "My Runner"
 ```
 
 Bencher returns the new Runner along with its key:
@@ -20,9 +22,9 @@ Bencher returns the new Runner along with its key:
 
 The key is only shown once, so store it securely.
 You will pass it to the `runner` binary when you start the Runner.
-If a key is ever lost or leaked, rotate it with `bencher runner key <RUNNER>`
-(the [`POST /v0/runners/{runner}/key`][runners api] endpoint),
+If a key is ever lost or leaked, rotate it with [the `POST /v0/runners/{runner}/key` API][runner key api],
 which immediately invalidates the previous key.
 
 [bencher runner cli]: /docs/api/server/runners/
-[runners api]: /docs/api/server/runners/
+[runners api]: /docs/api/server/runners/#post-v0runners
+[runner key api]: /docs/api/server/runners/#post-v0runnersrunnerkey

@@ -4,15 +4,18 @@ Runner Spec は、[Spec][spec] を Runner に紐付けます。
 1 つの Runner は複数の Spec をサポートでき、1 つの Spec は複数の Runner からサポートされ得ます。
 Runner は、割り当てられた Spec の Job のみを要求します。
 
-[`bencher` CLI][runner specs api]
+[`bencher` CLI][bencher runner spec cli]
 または [Runner Specs REST API][runner specs api] で Spec を Runner に追加します。
 
 ```sh
-bencher runner spec add my-runner --spec intel-v1
+bencher runner spec add my-runner \
+  --host https://api.bencher.example.com \
+  --spec intel-v1
 ```
 
-後で紐付けを解除するには、`bencher runner spec remove <RUNNER> <SPEC>`
-([`DELETE /v0/runners/{runner}/specs/{spec}`][runner specs api] エンドポイント) を使用します。
+後で紐付けを解除するには、[`DELETE /v0/runners/{runner}/specs/{spec}` API][delete runner spec api] を使用します。
 
 [spec]: /ja/docs/explanation/bare-metal/#spec
-[runner specs api]: /ja/docs/api/server/runner-specs/
+[bencher runner spec cli]: /ja/docs/api/server/runner-specs/
+[runner specs api]: /ja/docs/api/server/runner-specs/#post-v0runnersrunnerspecs
+[delete runner spec api]: /ja/docs/api/server/runner-specs/#delete-v0runnersrunnerspecsspec

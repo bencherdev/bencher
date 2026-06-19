@@ -9,13 +9,13 @@ import RunnerUp from "../../../docs-reference/runner/zh/runner-up.mdx";
 
 ```sh
 runner up \
-  --host https://api.bencher.dev \
+  --host https://api.bencher.example.com \
   --runner my-runner \
   --key bencher_runner_...
 ```
 
 ```sh
-export BENCHER_HOST=https://api.bencher.dev
+export BENCHER_HOST=https://api.bencher.example.com
 export BENCHER_RUNNER=my-runner
 export BENCHER_RUNNER_KEY=bencher_runner_...
 runner up
@@ -28,7 +28,7 @@ runner up
 
 默认情况下，Runner 会拒绝任何其 Spec 没有 [Sandbox][sandbox] 的 Job。
 要让 Runner 直接在主机上执行非沙箱化的 Job，
-请使用 `--danger-allow-no-sandbox` 启动它。
+请使用 [`--danger-allow-no-sandbox` 标志][danger allow no sandbox] 启动它。
 
 <ul>
   <li>
@@ -49,3 +49,4 @@ runner up
 [runner reference]: /zh/docs/reference/runner/
 [runner protocol]: /zh/docs/reference/runner-protocol/
 [sandbox]: /zh/docs/explanation/bare-metal/#sandbox
+[danger allow no sandbox]: /zh/docs/reference/runner/#--danger-allow-no-sandbox

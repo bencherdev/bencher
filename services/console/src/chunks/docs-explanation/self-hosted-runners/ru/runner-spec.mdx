@@ -4,15 +4,18 @@ Runner Spec связывает [Spec][spec] с Runner.
 Runner может поддерживать несколько Spec, а Spec может поддерживаться несколькими Runner.
 Runner берёт только те Job, чей Spec ему назначен.
 
-Добавьте Spec к Runner с помощью [CLI `bencher`][runner specs api]
+Добавьте Spec к Runner с помощью [CLI `bencher`][bencher runner spec cli]
 или [REST API для Runner Specs][runner specs api]:
 
 ```sh
-bencher runner spec add my-runner --spec intel-v1
+bencher runner spec add my-runner \
+  --host https://api.bencher.example.com \
+  --spec intel-v1
 ```
 
-Удалить связь позже можно с помощью `bencher runner spec remove <RUNNER> <SPEC>`
-(эндпоинт [`DELETE /v0/runners/{runner}/specs/{spec}`][runner specs api]).
+Удалить связь позже можно с помощью [API `DELETE /v0/runners/{runner}/specs/{spec}`][delete runner spec api].
 
 [spec]: /ru/docs/explanation/bare-metal/#spec
-[runner specs api]: /ru/docs/api/server/runner-specs/
+[bencher runner spec cli]: /ru/docs/api/server/runner-specs/
+[runner specs api]: /ru/docs/api/server/runner-specs/#post-v0runnersrunnerspecs
+[delete runner spec api]: /ru/docs/api/server/runner-specs/#delete-v0runnersrunnerspecsspec
