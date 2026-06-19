@@ -1,0 +1,41 @@
+### Host-Tuning
+
+Vor jedem Benchmark wendet der `runner` Host-Tuning an, um Messrauschen zu reduzieren.
+Standardmäßig deaktiviert er ASLR, den NMI-Watchdog, SMT / Hyper-Threading und Turbo Boost;
+setzt den CPU-Scaling-Governor auf `performance`, Swappiness auf `10` und `perf_event_paranoid` auf `-1`.
+Die folgenden Flags belassen einzelne Optimierungen stattdessen bei ihren Host-Standardwerten.
+
+### `--no-tuning`
+
+Deaktiviert alle Host-Tuning-Optimierungen.
+
+### `--aslr`
+
+Belässt ASLR aktiviert (Standard: für Benchmarks deaktiviert).
+
+### `--nmi-watchdog`
+
+Belässt den NMI-Watchdog aktiviert (Standard: für Benchmarks deaktiviert).
+
+### `--smt`
+
+Belässt SMT / Hyper-Threading aktiviert (Standard: für Benchmarks deaktiviert).
+
+### `--turbo`
+
+Belässt Turbo Boost aktiviert (Standard: für Benchmarks deaktiviert).
+
+### `--swappiness <SWAPPINESS>`
+
+Setzt den Swappiness-Wert.
+Standardmäßig wird `10` verwendet.
+
+### `--governor <GOVERNOR>`
+
+Setzt den CPU-Scaling-Governor.
+Standardmäßig wird `performance` verwendet.
+
+### `--perf-event-paranoid <PERF_EVENT_PARANOID>`
+
+Setzt den `perf_event_paranoid`-Wert.
+Standardmäßig wird `-1` verwendet.

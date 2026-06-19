@@ -1,0 +1,25 @@
+import LifecycleDiagram from "../lifecycle-diagram.mdx";
+
+## Job のライフサイクル
+
+各 Job は、要求、実行、処理される過程で、決まった一連の状態を遷移します。
+
+| 遷移元    | 遷移先      | トリガー                                                               |
+| --------- | ----------- | ---------------------------------------------------------------------- |
+| pending   | claimed     | Runner が Job を要求する                                                |
+| pending   | canceled    | ユーザーが Job をキャンセルする                                         |
+| claimed   | running     | Runner が `running` を送信する                                          |
+| claimed   | failed      | Runner が `failed` を送信する、またはハートビートがタイムアウトする     |
+| claimed   | canceled    | ユーザーが Job をキャンセルする                                         |
+| running   | completed   | Runner が `completed` を送信する                                        |
+| running   | failed      | Runner が `failed` を送信する、またはハートビートがタイムアウトする     |
+| running   | canceled    | ユーザーが Job をキャンセルする、またはハードな Job タイムアウトを超過する |
+| completed | processed   | サーバーが結果を正常に処理する                                          |
+| failed    | completed   | Runner が `completed` を再送し、ハートビートタイムアウトによる失敗を上書きする |
+
+`processed`、`failed`、`canceled` は終端状態です。
+`completed` は準終端状態です。結果が解析されると `processed` に遷移します。
+すべての遷移は、データベース更新時にステータスフィルターを使用するため、
+並行して変更された Job は上書きされるのではなく、再読み込みされます。
+
+<LifecycleDiagram />

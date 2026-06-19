@@ -1,0 +1,15 @@
+## Server Messages
+
+Messages sent from the server to the Runner.
+
+| Event    | Description                                       | Payload                                                          |
+| -------- | ------------------------------------------------- | ---------------------------------------------------------------- |
+| `ack`    | Acknowledges a received message                   | Optional `job` (Job UUID)                                        |
+| `job`    | Assigns a claimed Job to the Runner               | The claimed Job: its Spec, Job config, and a short-lived OCI pull token |
+| `no_job` | The poll timeout expired with no Job available    | None                                                             |
+| `cancel` | The Job was canceled or timed out; stop execution | None                                                             |
+| `update` | The Runner should self-update to a new version    | `version`, `url` (download URL), and `checksum` (SHA-256)        |
+
+The OCI pull token in a `job` message is generated when the Job is claimed and is never stored.
+It is scoped to the single project the Job belongs to, is pull only, and is short-lived,
+so a compromised Runner can only pull Images for the project of the Job it claimed.

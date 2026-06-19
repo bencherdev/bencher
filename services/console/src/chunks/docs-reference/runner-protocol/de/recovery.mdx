@@ -1,0 +1,45 @@
+## Timeouts & Wiederherstellung
+
+Drei sich ergänzende Mechanismen stellen sicher, dass ein Job niemals hängen bleibt,
+selbst wenn ein Runner abstürzt oder seine Verbindung verliert.
+
+### Heartbeat-Timeout
+
+Während die Verbindung offen ist, erkennt ein Read-Timeout einen Runner, der verbunden, aber stumm ist.
+Nur gültige Protokollnachrichten setzen den Timer zurück;
+ungültiges JSON, Ping/Pong-Frames und Binärnachrichten tun dies nicht.
+Bei einem Timeout wird ein Job, der länger als sein Timeout plus eine Karenzzeit gelaufen ist, als `canceled` markiert,
+andernfalls als `failed` (der Kontakt zum Runner ging verloren).
+
+### Hartes Job-Timeout
+
+Der Server erzwingt unabhängig vom Verhalten des Runner eine harte maximale Ausführungsdauer,
+sodass ein fehlerhafter oder kompromittierter Runner nicht durch das Senden von Heartbeats unbegrenzt laufen kann.
+Wird das Limit (das Job-Timeout plus eine Karenzzeit) überschritten,
+wird der Job als `canceled` markiert und der Runner erhält eine `cancel`-Nachricht.
+
+### Wiederherstellung bei Verbindungsabbruch
+
+Bricht die Verbindung ab, während ein Job noch in Bearbeitung ist,
+plant der Server nach dem Heartbeat-Timeout eine Prüfung ein.
+Hat sich der Runner erneut verbunden und die Heartbeats wieder aufgenommen, läuft der Job weiter;
+andernfalls wird der Job als `failed` markiert, oder als `canceled`, falls er das harte Timeout überschritten hatte.
+Beim Start stellt der Server außerdem verwaiste `claimed`-Jobs wieder her,
+plant Timeouts für in Bearbeitung befindliche Jobs neu
+und verarbeitet `completed`-Jobs erneut, deren Ergebnisse gespeichert, aber noch nicht geparst wurden.
+
+### Wiederverbindung & Ergebniszustellung
+
+Wiederverbindung wird unterstützt und ist idempotent.
+Das erneute Senden von `running` für einen bereits laufenden Job aktualisiert nur dessen Lebenszeichen,
+und das erneute Senden einer terminalen `completed`-, `failed`- oder `canceled`-Nachricht ist immer sicher.
+Terminale Nachrichten tragen die Job-UUID und erhalten ein `ack`;
+bricht die Verbindung ab, bevor das `ack` eintrifft,
+speichert der Runner das Ergebnis und sendet es bei der nächsten Verbindung erneut, bevor er in den Leerlauf geht.
+Das tatsächliche `completed`-Ergebnis eines Runner kann sogar einen `failed`-Status durch Heartbeat-Timeout überschreiben.
+
+### Kein automatischer erneuter Versuch
+
+Ein `failed`-Job wird nicht automatisch wiederholt.
+Ein fehlgeschlagener Benchmark ist ein Signal, kein zu verbergender Fehler,
+sodass das erneute Ausführen Ihnen überlassen bleibt.

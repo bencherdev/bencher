@@ -1,6 +1,9 @@
 ---
 import architectureSvg from "../../../diagrams/output/architecture.svg?raw";
 import bareMetalSvg from "../../../diagrams/output/bare-metal.svg?raw";
+import jobStatusSvg from "../../../diagrams/output/job-status.svg?raw";
+import runnerProtocolSvg from "../../../diagrams/output/runner-protocol.svg?raw";
+import runnerSetupSvg from "../../../diagrams/output/runner-setup.svg?raw";
 import schemaSvg from "../../../diagrams/output/schema.svg?raw";
 import { Diagram } from "./diagram";
 
@@ -15,6 +18,9 @@ const svgs: Record<Diagram, string> = {
 	[Diagram.BareMetal]: bareMetalSvg,
 	[Diagram.Architecture]: architectureSvg,
 	[Diagram.Schema]: schemaSvg,
+	[Diagram.RunnerSetup]: runnerSetupSvg,
+	[Diagram.RunnerProtocol]: runnerProtocolSvg,
+	[Diagram.JobStatus]: jobStatusSvg,
 };
 
 const escapeAttr = (value: string) =>

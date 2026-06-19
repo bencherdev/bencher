@@ -1,0 +1,11 @@
+import SetupDiagram from "../setup-diagram.mdx";
+
+## Self-Hosted Runner 工作流
+
+一旦 Runner 连接好，你提交基准测试的方式与任何 Bare Metal Runner 相同：
+构建并推送一个 [Image][images]，然后使用匹配的 Spec 运行 [`bencher run --image`][images]。
+下图展示了从注册 Runner 到执行 Job 的完整路径。
+
+<SetupDiagram />
+
+[images]: /zh/docs/explanation/images/

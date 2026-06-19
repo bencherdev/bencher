@@ -1,0 +1,40 @@
+---
+title: "CLI Runner"
+description: "Référence du binaire runner de Bencher utilisé pour exploiter un Bare Metal Runner auto-hébergé"
+heading: "CLI `runner`"
+published: "2026-06-19T08:00:00Z"
+modified: "2026-06-19T08:00:00Z"
+sortOrder: 8
+---
+
+import RunnerUp from "../../../chunks/docs-reference/runner/fr/runner-up.mdx";
+import RunnerRun from "../../../chunks/docs-reference/runner/fr/runner-run.mdx";
+
+Le binaire `runner` est l'agent qui exécute les Jobs de benchmark Bare Metal.
+Il constitue la référence détaillée pour la mise en place d'un [Runner auto-hébergé][self hosted runners].
+Le binaire fournit deux sous-commandes :
+
+- [`runner up`][runner up] : Démarre le runner, en interrogeant et en exécutant les Jobs de benchmark.
+- [`runner run`][runner run] : Récupère une Image et l'exécute une seule fois sur l'hôte local, à des fins de test.
+
+> 🐰 Le binaire `runner` est distinct des sous-commandes `bencher runner`.
+> Le binaire `runner` exploite un hôte Runner, tandis que
+> [`bencher runner`][runners api] gère les ressources Runner via l'API REST.
+
+[self hosted runners]: /fr/docs/explanation/self-hosted-runners/
+[runners api]: /fr/docs/api/server/runners/
+
+[runner up]: #runner-up
+[runner run]: #runner-run
+
+<hr />
+
+<div class="box">
+  <RunnerUp />
+</div>
+
+<hr />
+
+<div class="box">
+  <RunnerRun />
+</div>

@@ -1,0 +1,28 @@
+## 创建 Runner
+
+Runner 是用于向你的 Bencher API 服务器认证 `runner` 二进制文件的资源。
+可以使用 [`bencher` CLI][bencher runner cli]、
+[Runners REST API][runners api]
+或 Bencher Console 创建一个。
+
+```sh
+bencher runner create --name "My Runner"
+```
+
+Bencher 会返回新的 Runner 及其密钥：
+
+```json
+{
+  "uuid": "...",
+  "key": "bencher_runner_..."
+}
+```
+
+该密钥只显示一次，因此请妥善保管。
+你将在启动 Runner 时把它传给 `runner` 二进制文件。
+如果密钥丢失或泄露，请使用 `bencher runner key <RUNNER>`
+（即 [`POST /v0/runners/{runner}/key`][runners api] 端点）轮换它，
+这会立即使之前的密钥失效。
+
+[bencher runner cli]: /zh/docs/api/server/runners/
+[runners api]: /zh/docs/api/server/runners/

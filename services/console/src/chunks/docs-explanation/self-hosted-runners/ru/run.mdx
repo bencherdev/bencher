@@ -1,0 +1,51 @@
+import RunnerUp from "../../../docs-reference/runner/ru/runner-up.mdx";
+
+## Запуск Runner
+
+После того как Runner создан и назначен хотя бы один Spec,
+запустите бинарный файл `runner` на вашем оборудовании с помощью [`runner up`][runner up].
+Укажите хост API-сервера, UUID или slug Runner и ключ Runner,
+либо в виде флагов, либо в виде переменных окружения:
+
+```sh
+runner up \
+  --host https://api.bencher.dev \
+  --runner my-runner \
+  --key bencher_runner_...
+```
+
+```sh
+export BENCHER_HOST=https://api.bencher.dev
+export BENCHER_RUNNER=my-runner
+export BENCHER_RUNNER_KEY=bencher_runner_...
+runner up
+```
+
+Бинарный файл `runner` открывает одно [WebSocket-соединение][runner protocol] с API-сервером,
+опрашивает на наличие Job, соответствующих его Spec, выполняет каждую и сообщает результаты обратно.
+Соединение остаётся открытым между Job,
+и бинарный файл [обновляет себя][runner up] между Job, когда доступна новая версия.
+
+По умолчанию Runner отклоняет любую Job, чей Spec не имеет [Sandbox][sandbox].
+Чтобы разрешить Runner выполнять не изолированные Job напрямую на хосте,
+запустите его с флагом `--danger-allow-no-sandbox`.
+
+<ul>
+  <li>
+    <details>
+      <summary><code>runner up</code></summary>
+      <br />
+      <div class="box">
+        <RunnerUp />
+      </div>
+    </details>
+  </li>
+</ul>
+
+Все опции смотрите в справочнике по [CLI `runner`][runner reference],
+а сообщения, которыми обмениваются с сервером, — в справочнике по [Runner Protocol][runner protocol].
+
+[runner up]: /ru/docs/reference/runner/#runner-up
+[runner reference]: /ru/docs/reference/runner/
+[runner protocol]: /ru/docs/reference/runner-protocol/
+[sandbox]: /ru/docs/explanation/bare-metal/#sandbox

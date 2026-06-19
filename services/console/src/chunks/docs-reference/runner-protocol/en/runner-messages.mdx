@@ -1,0 +1,12 @@
+## Runner Messages
+
+Messages sent from the Runner to the server.
+
+| Event       | Description                                       | Payload                                                                 |
+| ----------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
+| `ready`     | The Runner is idle and requesting a Job           | Optional `poll_timeout` (1-900s) and `runner` metadata (`os`, `arch`, `version`) |
+| `running`   | Job setup is complete and the benchmark is starting | None                                                                  |
+| `heartbeat` | Periodic liveness signal (about once per second)  | None                                                                    |
+| `completed` | The benchmark completed successfully              | `job` (Job UUID) and `results` (per-iteration output)                   |
+| `failed`    | The benchmark failed                              | `job` (Job UUID), `results`, and `error`                                |
+| `canceled`  | Acknowledges a cancellation from the server       | `job` (Job UUID)                                                        |

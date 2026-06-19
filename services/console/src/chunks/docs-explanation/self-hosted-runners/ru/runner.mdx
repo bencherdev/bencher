@@ -1,0 +1,28 @@
+## Создание Runner
+
+Runner — это ресурс, который аутентифицирует бинарный файл `runner` на вашем API-сервере Bencher.
+Создайте его с помощью [CLI `bencher`][bencher runner cli],
+[REST API для Runners][runners api]
+или Bencher Console.
+
+```sh
+bencher runner create --name "My Runner"
+```
+
+Bencher возвращает новый Runner вместе с его ключом:
+
+```json
+{
+  "uuid": "...",
+  "key": "bencher_runner_..."
+}
+```
+
+Ключ показывается только один раз, поэтому сохраните его в надёжном месте.
+Вы передадите его бинарному файлу `runner` при запуске Runner.
+Если ключ когда-либо потерян или скомпрометирован, замените его с помощью `bencher runner key <RUNNER>`
+(эндпоинт [`POST /v0/runners/{runner}/key`][runners api]),
+что немедленно делает предыдущий ключ недействительным.
+
+[bencher runner cli]: /ru/docs/api/server/runners/
+[runners api]: /ru/docs/api/server/runners/

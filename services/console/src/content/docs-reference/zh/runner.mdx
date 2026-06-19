@@ -1,0 +1,40 @@
+---
+title: "Runner CLI"
+description: "用于操作 Self-Hosted Bare Metal Runner 的 Bencher runner 二进制文件参考"
+heading: "`runner` CLI"
+published: "2026-06-19T08:00:00Z"
+modified: "2026-06-19T08:00:00Z"
+sortOrder: 8
+---
+
+import RunnerUp from "../../../chunks/docs-reference/runner/zh/runner-up.mdx";
+import RunnerRun from "../../../chunks/docs-reference/runner/zh/runner-run.mdx";
+
+`runner` 二进制文件是执行 Bare Metal 基准测试 Job 的代理。
+它是设置 [Self-Hosted Runner][self hosted runners] 的深入参考。
+该二进制文件提供两个子命令：
+
+- [`runner up`][runner up]：启动 runner，轮询并执行基准测试 Job。
+- [`runner run`][runner run]：拉取 Image 并在本地主机上执行一次，用于测试。
+
+> 🐰 `runner` 二进制文件不同于 `bencher runner` 子命令。
+> `runner` 二进制文件操作 Runner 主机，而
+> [`bencher runner`][runners api] 通过 REST API 管理 Runner 资源。
+
+[self hosted runners]: /zh/docs/explanation/self-hosted-runners/
+[runners api]: /zh/docs/api/server/runners/
+
+[runner up]: #runner-up
+[runner run]: #runner-run
+
+<hr />
+
+<div class="box">
+  <RunnerUp />
+</div>
+
+<hr />
+
+<div class="box">
+  <RunnerRun />
+</div>

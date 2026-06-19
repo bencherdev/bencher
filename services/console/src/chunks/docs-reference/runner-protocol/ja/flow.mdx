@@ -1,0 +1,18 @@
+import FlowDiagram from "../flow-diagram.mdx";
+
+## 接続フロー
+
+接続後、Runner はアイドルのポーリングループに入り、
+サーバーが `job` を割り当てる
+(またはポーリングがタイムアウトすると `no_job` を、新しいバージョンが利用可能になると `update` を返す)
+まで `ready` を送信し続けます。
+Job を取得すると、Runner は `running` を送信し、
+ベンチマークの実行中は `heartbeat` メッセージをストリーミングし、
+最終的に終端メッセージである `completed` または `failed` で終了します。
+サーバーは各メッセージを `ack` で確認応答し、
+接続は開いたままになるため、Runner は次の Job のためにアイドルループへ戻ります。
+
+Job がキャンセルされると、サーバーは `heartbeat` に対して `cancel` で応答します。
+Runner はベンチマークを停止して `canceled` で応答し、サーバーはそれを確認応答します。
+
+<FlowDiagram />

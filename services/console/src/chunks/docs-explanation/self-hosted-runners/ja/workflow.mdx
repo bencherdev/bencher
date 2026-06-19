@@ -1,0 +1,11 @@
+import SetupDiagram from "../setup-diagram.mdx";
+
+## セルフホスト型 Runner のワークフロー
+
+Runner が接続されると、他の Bare Metal Runner と同じ方法でベンチマークを送信します。
+[Image][images] をビルドしてプッシュし、一致する Spec で [`bencher run --image`][images] を実行します。
+以下の図は、Runner の登録から Job の実行までの全体の流れを示しています。
+
+<SetupDiagram />
+
+[images]: /ja/docs/explanation/images/

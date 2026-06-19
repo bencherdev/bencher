@@ -1,0 +1,15 @@
+## Job 输出
+
+当 Runner 发送 `completed` 或 `failed` 时，
+完整的输出会存储在与容器 Image 相同的 OCI 存储后端中，
+路径为 `{project}/output/v0/jobs/{job}`。
+
+存储的输出包含一个按迭代划分的 `results` 数组，并在失败时包含一个 `error` 字符串。
+每次迭代都记录其 `exit_code`、`stdout`、`stderr`，
+以及任何收集到的输出文件到其内容的映射。
+在输出被存储后，服务器对结果运行基准测试工具适配器，
+将 Metric 和 Alert 解析到 Report 中，并将 Job 转换为 `processed`。
+
+当使用 `GET /v0/projects/{project}/jobs/{job}` 查询 Job 时会返回该输出。
+约束 WebSocket 消息的同一个 `request_body_max_bytes` 限制
+也限定了 Runner 可以交付的输出大小。

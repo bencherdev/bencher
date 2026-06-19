@@ -1,0 +1,15 @@
+## Mensagens do Servidor
+
+Mensagens enviadas do servidor para o Runner.
+
+| Event    | Descrição                                         | Payload                                                          |
+| -------- | ------------------------------------------------- | ---------------------------------------------------------------- |
+| `ack`    | Confirma uma mensagem recebida                    | `job` opcional (UUID do Job)                                     |
+| `job`    | Atribui um Job reivindicado ao Runner             | O Job reivindicado: sua Spec, a configuração do Job e um token de pull OCI de curta duração |
+| `no_job` | O timeout de polling expirou sem nenhum Job disponível | Nenhum                                                      |
+| `cancel` | O Job foi cancelado ou expirou; pare a execução   | Nenhum                                                           |
+| `update` | O Runner deve se auto-atualizar para uma nova versão | `version`, `url` (URL de download) e `checksum` (SHA-256)     |
+
+O token de pull OCI em uma mensagem `job` é gerado quando o Job é reivindicado e nunca é armazenado.
+Ele é restrito ao único projeto ao qual o Job pertence, é somente para pull e é de curta duração,
+de modo que um Runner comprometido só pode baixar Images do projeto do Job que reivindicou.

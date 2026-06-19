@@ -1,0 +1,45 @@
+## Tiempos de Espera y Recuperación
+
+Tres mecanismos complementarios aseguran que un Job nunca se quede bloqueado,
+incluso si un Runner se cae o pierde su conexión.
+
+### Timeout de Heartbeat
+
+Mientras la conexión está abierta, un timeout de lectura detecta un Runner que está conectado pero en silencio.
+Solo los mensajes válidos del protocolo reinician el temporizador;
+el JSON inválido, los frames ping/pong, y los mensajes binarios no lo hacen.
+Al agotarse el tiempo, un Job que ha corrido más tiempo que su timeout más un periodo de gracia se marca como `canceled`,
+y de lo contrario se marca como `failed` (se perdió el contacto con el Runner).
+
+### Timeout Duro del Job
+
+El servidor impone una duración máxima de ejecución dura independiente del comportamiento del Runner,
+de modo que un Runner defectuoso o comprometido no pueda correr indefinidamente enviando heartbeats.
+Cuando se excede el límite (el timeout del Job más un periodo de gracia),
+el Job se marca como `canceled` y el Runner recibe un mensaje `cancel`.
+
+### Recuperación de Desconexión
+
+Si la conexión se cae mientras un Job sigue en curso,
+el servidor programa una comprobación tras el timeout de heartbeat.
+Si el Runner se ha reconectado y reanudado los heartbeats, el Job continúa;
+de lo contrario, el Job se marca como `failed`, o `canceled` si había excedido el timeout duro.
+Al arrancar, el servidor también recupera Jobs `claimed` huérfanos,
+reprograma los timeouts de los Jobs en curso,
+y vuelve a procesar los Jobs `completed` cuyos resultados se almacenaron pero aún no se analizaron.
+
+### Reconexión y Entrega de Resultados
+
+La reconexión es compatible e idempotente.
+Reenviar `running` para un Job que ya está en ejecución solo refresca su señal de vida,
+y reenviar un mensaje terminal `completed`, `failed` o `canceled` siempre es seguro.
+Los mensajes terminales transportan el UUID del Job y reciben un `ack`;
+si la conexión se cae antes de que llegue el `ack`,
+el Runner almacena el resultado y lo reenvía en la siguiente conexión antes de pasar a inactivo.
+El resultado `completed` real de un Runner puede incluso anular un estado `failed` por timeout de heartbeat.
+
+### Sin Reintento Automático
+
+Un Job `failed` no se reintenta automáticamente.
+Un benchmark fallido es una señal, no un error que ocultar,
+así que volver a ejecutarlo queda en tus manos.

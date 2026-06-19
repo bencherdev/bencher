@@ -1,0 +1,12 @@
+## Runner-Nachrichten
+
+Nachrichten, die vom Runner an den Server gesendet werden.
+
+| Event       | Beschreibung                                       | Payload                                                                 |
+| ----------- | -------------------------------------------------- | ----------------------------------------------------------------------- |
+| `ready`     | Der Runner ist im Leerlauf und fordert einen Job an | Optionales `poll_timeout` (1-900s) und `runner`-Metadaten (`os`, `arch`, `version`) |
+| `running`   | Job-Setup ist abgeschlossen und der Benchmark startet | Keine                                                                |
+| `heartbeat` | Periodisches Lebenszeichen (etwa einmal pro Sekunde) | Keine                                                                   |
+| `completed` | Der Benchmark wurde erfolgreich abgeschlossen      | `job` (Job-UUID) und `results` (Ausgabe pro Iteration)                  |
+| `failed`    | Der Benchmark ist fehlgeschlagen                   | `job` (Job-UUID), `results` und `error`                                 |
+| `canceled`  | Bestätigt eine Abbruchanforderung vom Server       | `job` (Job-UUID)                                                        |

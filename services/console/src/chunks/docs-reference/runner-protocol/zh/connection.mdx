@@ -1,0 +1,11 @@
+## 连接
+
+Runner 在其整个生命周期内与 API 服务器保持单个 WebSocket 连接。
+同一连接同时处理 Job 分配和 Job 执行，
+并且它在多个 Job 之间保持打开，从而避免为每个 Job 重连和握手。
+
+- **端点：** `/v0/runners/{runner}/channel`
+- **认证：** 建立连接时，Runner 密钥以 `Authorization: Bearer bencher_runner_<key>` 头的形式发送。
+- **消息大小：** 每条消息都受服务器 `request_body_max_bytes` 限制的约束（同时应用于最大消息和帧大小）。超过此限制的消息，例如携带大量 `stdout`、`stderr` 或输出文件的 `completed` 负载，会在 WebSocket 协议层被拒绝。
+
+每条消息都是一个带有 `event` 字段的 JSON 对象，该字段标识其类型。

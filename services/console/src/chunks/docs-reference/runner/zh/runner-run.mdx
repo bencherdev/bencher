@@ -1,0 +1,115 @@
+import Tuning from "./tuning.mdx";
+
+## `runner run`
+
+拉取一个 [Image][images]，创建 rootfs，并在本地主机上执行一次。
+与 [`runner up`][runner up] 不同，它不会连接到 API 服务器，也不认领 Job；
+它直接运行单个 Image，这对于在提交真实 Job 之前测试和调试 Runner 主机
+或 Image 很有用。
+
+```
+runner run --image <IMAGE> [OPTIONS]
+```
+
+### 选项
+
+### `--image <IMAGE>`
+
+要运行的 [OCI Image][images]，以本地路径或注册表引用的形式给出。
+
+### `--token <TOKEN>`
+
+拉取 Image 时用于注册表认证的 JWT 令牌。
+
+### `--sandbox <SANDBOX>`
+
+基准测试执行的沙箱模式。
+使用 `firecracker` 表示 Firecracker microVM（仅限 Linux）。
+省略表示非沙箱化的主机执行。
+
+### `--timeout <TIMEOUT>`
+
+执行超时（秒）。
+默认使用 `300`。
+
+### `--iter <ITER>`
+
+要执行的基准测试迭代次数。
+默认使用 `1`。
+
+### `--allow-failure`
+
+允许基准测试失败而不会短路剩余的迭代。
+
+### `--entrypoint <ENTRYPOINT>`
+
+覆盖容器入口点。
+可以多次指定。
+
+### `--cmd <CMD>`
+
+覆盖容器命令。
+可以多次指定。
+
+### `--env <ENV>`
+
+以 `KEY=VALUE` 格式设置环境变量。
+可以多次指定。
+
+### `--network`
+
+启用 VM 内部的网络访问。
+
+### `--output <OUTPUT>`
+
+guest 内部要收集的输出文件路径。
+可以多次指定。
+
+### `--vcpus <VCPUS>`
+
+覆盖 vCPU 数量（用于测试）。
+
+### `--memory <MEMORY>`
+
+覆盖内存（MiB）（用于测试）。
+
+### `--disk <DISK>`
+
+覆盖磁盘大小（MiB）（用于测试）。
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+收集的 `stdout` 和 `stderr` 的最大大小（字节）。
+默认使用 `25` MiB。
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+要解码的输出文件的最大数量。
+默认使用 `255`。
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+路径解析期间要跟随的符号链接的最大数量，
+与 Linux 内核的 `MAXSYMLINKS` 限制相匹配。
+默认使用 `40`。
+仅在非沙箱化模式下使用，因此与 `--sandbox` 冲突。
+
+### `--grace-period <GRACE_PERIOD>`
+
+基准测试退出后、最终输出收集前的宽限期（秒）。
+默认使用 `1`。
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+沙箱进程的日志级别。
+需要 `--sandbox`。
+默认使用 `warning`。
+
+<Tuning />
+
+### `--help`
+
+打印帮助。
+
+[images]: /zh/docs/explanation/images/
+[runner up]: #runner-up

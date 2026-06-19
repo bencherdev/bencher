@@ -1,0 +1,18 @@
+## Назначение Spec для Runner
+
+Runner Spec связывает [Spec][spec] с Runner.
+Runner может поддерживать несколько Spec, а Spec может поддерживаться несколькими Runner.
+Runner берёт только те Job, чей Spec ему назначен.
+
+Добавьте Spec к Runner с помощью [CLI `bencher`][runner specs api]
+или [REST API для Runner Specs][runner specs api]:
+
+```sh
+bencher runner spec add my-runner --spec intel-v1
+```
+
+Удалить связь позже можно с помощью `bencher runner spec remove <RUNNER> <SPEC>`
+(эндпоинт [`DELETE /v0/runners/{runner}/specs/{spec}`][runner specs api]).
+
+[spec]: /ru/docs/explanation/bare-metal/#spec
+[runner specs api]: /ru/docs/api/server/runner-specs/

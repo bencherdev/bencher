@@ -1,0 +1,41 @@
+### Réglage de l'hôte
+
+Avant chaque benchmark, le `runner` applique un réglage de l'hôte pour réduire le bruit de mesure.
+Par défaut, il désactive l'ASLR, le NMI watchdog, le SMT / hyper-threading et le turbo boost ;
+règle le gouverneur de mise à l'échelle du CPU sur `performance`, la swappiness sur `10`, et `perf_event_paranoid` sur `-1`.
+Les drapeaux ci-dessous conservent au contraire les optimisations individuelles à leurs valeurs par défaut de l'hôte.
+
+### `--no-tuning`
+
+Désactive toutes les optimisations de réglage de l'hôte.
+
+### `--aslr`
+
+Conserve l'ASLR activé (par défaut : désactivé pour les benchmarks).
+
+### `--nmi-watchdog`
+
+Conserve le NMI watchdog activé (par défaut : désactivé pour les benchmarks).
+
+### `--smt`
+
+Conserve le SMT / hyper-threading activé (par défaut : désactivé pour les benchmarks).
+
+### `--turbo`
+
+Conserve le turbo boost activé (par défaut : désactivé pour les benchmarks).
+
+### `--swappiness <SWAPPINESS>`
+
+Définit la valeur de swappiness.
+Par défaut, `10` est utilisé.
+
+### `--governor <GOVERNOR>`
+
+Définit le gouverneur de mise à l'échelle du CPU.
+Par défaut, `performance` est utilisé.
+
+### `--perf-event-paranoid <PERF_EVENT_PARANOID>`
+
+Définit la valeur de `perf_event_paranoid`.
+Par défaut, `-1` est utilisé.

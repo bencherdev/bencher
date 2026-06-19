@@ -1,0 +1,92 @@
+import Tuning from "./tuning.mdx";
+
+## `runner up`
+
+Startet den Runner und fragt Benchmark-Jobs ab und führt sie aus.
+Dies ist der langlaufende Befehl zum Betrieb eines [Self-Hosted Runner][self hosted runners].
+Der Runner öffnet eine einzige [WebSocket-Verbindung][runner protocol] zum API-Server,
+beansprucht Jobs, die zu seinen Specs passen, führt sie aus und meldet die Ergebnisse zurück.
+
+```
+runner up [OPTIONS]
+```
+
+### Optionen
+
+### `--host <HOST>`
+
+Der Bencher API-Server, zu dem eine Verbindung hergestellt werden soll.
+Standardmäßig wird `https://api.bencher.dev` verwendet.
+Kann auch mit der Umgebungsvariable `BENCHER_HOST` gesetzt werden.
+
+### `--runner <RUNNER>`
+
+Die UUID oder der Slug des Runner, als der agiert werden soll.
+Kann auch mit der Umgebungsvariable `BENCHER_RUNNER` gesetzt werden.
+
+### `--key <KEY>`
+
+Der Runner-Authentifizierungsschlüssel (`bencher_runner_...`),
+der zurückgegeben wurde, als der [Runner erstellt wurde][create a runner].
+Kann auch mit der Umgebungsvariable `BENCHER_RUNNER_KEY` gesetzt werden.
+
+### `--poll-timeout <POLL_TIMEOUT>`
+
+Das Long-Poll-Timeout in Sekunden beim Warten auf einen Job, zwischen `1` und `900`.
+Standardmäßig wird `55` verwendet.
+
+### `--danger-allow-no-sandbox`
+
+Erlaubt das Ausführen von Jobs ohne [Sandbox][sandbox].
+Ohne dieses Flag wird ein Job, dessen Spec keine Sandbox hat, zur Laufzeit abgelehnt.
+Jobs ohne Sandbox laufen direkt auf dem Host, aktivieren Sie dies also nur für vertrauenswürdige Workloads.
+Kann auch mit der Umgebungsvariable `BENCHER_DANGER_ALLOW_NO_SANDBOX` gesetzt werden.
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+Das Log-Level für den Sandbox-Prozess.
+Standardmäßig wird `warning` verwendet.
+
+### `--no-auto-update`
+
+Deaktiviert automatische Updates vom Server.
+Standardmäßig aktualisiert sich der Runner zwischen Jobs selbst, wenn der Server eine neue Version anbietet.
+Kann auch mit der Umgebungsvariable `BENCHER_NO_AUTO_UPDATE` gesetzt werden.
+
+### `--max-download-size <MAX_DOWNLOAD_SIZE>`
+
+Die maximale Download-Größe in Bytes für Self-Update-Binaries.
+Standardmäßig werden `500` MiB verwendet.
+Steht im Konflikt mit `--no-auto-update`.
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+Die maximale Größe in Bytes für erfasstes `stdout` und `stderr`.
+Standardmäßig werden `25` MiB verwendet.
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+Die maximale Anzahl an Ausgabedateien, die dekodiert werden.
+Standardmäßig wird `255` verwendet.
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+Die maximale Anzahl an Symlinks, denen bei der Pfadauflösung gefolgt wird,
+entsprechend dem `MAXSYMLINKS`-Limit des Linux-Kernels.
+Standardmäßig wird `40` verwendet.
+Wird nur im Modus ohne Sandbox verwendet.
+
+### `--grace-period <GRACE_PERIOD>`
+
+Die Karenzzeit in Sekunden nach dem Beenden des Benchmarks vor der finalen Ausgabeerfassung.
+
+<Tuning />
+
+### `--help`
+
+Hilfe ausgeben.
+
+[self hosted runners]: /de/docs/explanation/self-hosted-runners/
+[create a runner]: /de/docs/explanation/self-hosted-runners/
+[runner protocol]: /de/docs/reference/runner-protocol/
+[sandbox]: /de/docs/explanation/bare-metal/#sandbox

@@ -1,0 +1,17 @@
+import FlowDiagram from "../flow-diagram.mdx";
+
+## Connection Flow
+
+After connecting, the Runner enters an idle polling loop,
+sending `ready` until the server assigns a `job`
+(or returns `no_job` when the poll times out, or `update` when a new version is available).
+Once it has a Job, the Runner sends `running`,
+streams `heartbeat` messages while the benchmark executes,
+and finishes with a terminal `completed` or `failed` message.
+The server acknowledges each message with `ack`,
+and the connection stays open so the Runner returns to the idle loop for the next Job.
+
+If a Job is canceled, the server replies to a `heartbeat` with `cancel`.
+The Runner stops the benchmark and replies with `canceled`, which the server acknowledges.
+
+<FlowDiagram />

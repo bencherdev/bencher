@@ -1,0 +1,25 @@
+%%{init: {'theme': 'base'}}%%
+sequenceDiagram
+    participant Runner
+    participant Server as API Server
+
+    Runner->>Server: Connect with runner key
+    Server-->>Runner: Connected
+    loop Idle / polling
+        Runner->>Server: ready (os, arch, version)
+        alt Job available
+            Server-->>Runner: job (Spec, config, OCI token)
+        else Poll timeout
+            Server-->>Runner: no_job
+        else Update available
+            Server-->>Runner: update (version, url, checksum)
+        end
+    end
+    Runner->>Server: running
+    Server-->>Runner: ack
+    loop Benchmark executes
+        Runner->>Server: heartbeat
+        Server-->>Runner: ack (or cancel)
+    end
+    Runner->>Server: completed (job, results)
+    Server-->>Runner: ack

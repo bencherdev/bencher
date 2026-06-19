@@ -1,0 +1,17 @@
+import FlowDiagram from "../flow-diagram.mdx";
+
+## 연결 흐름
+
+연결 후, Runner는 유휴 폴링 루프에 진입하여,
+서버가 `job`을 할당할 때까지 `ready`를 보냅니다
+(또는 폴이 타임아웃되면 `no_job`을, 새 버전이 있으면 `update`를 반환합니다).
+Job을 받으면, Runner는 `running`을 보내고,
+벤치마크가 실행되는 동안 `heartbeat` 메시지를 스트리밍하며,
+종단(terminal) 메시지인 `completed` 또는 `failed`로 마무리합니다.
+서버는 각 메시지를 `ack`로 확인하며,
+연결은 열린 상태로 유지되어 Runner는 다음 Job을 위해 유휴 루프로 돌아갑니다.
+
+Job이 취소되면, 서버는 `heartbeat`에 `cancel`로 응답합니다.
+Runner는 벤치마크를 중지하고 `canceled`로 응답하며, 서버는 이를 확인합니다.
+
+<FlowDiagram />

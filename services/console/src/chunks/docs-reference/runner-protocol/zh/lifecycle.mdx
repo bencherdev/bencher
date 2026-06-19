@@ -1,0 +1,25 @@
+import LifecycleDiagram from "../lifecycle-diagram.mdx";
+
+## Job 生命周期
+
+每个 Job 在被认领、执行和处理时，会经过一组固定的状态。
+
+| 从        | 到          | 触发条件                                                               |
+| --------- | ----------- | ---------------------------------------------------------------------- |
+| pending   | claimed     | Runner 认领该 Job                                                 |
+| pending   | canceled    | 用户取消该 Job                                                  |
+| claimed   | running     | Runner 发送 `running`                                              |
+| claimed   | failed      | Runner 发送 `failed`，或心跳超时                  |
+| claimed   | canceled    | 用户取消该 Job                                                  |
+| running   | completed   | Runner 发送 `completed`                                            |
+| running   | failed      | Runner 发送 `failed`，或心跳超时                  |
+| running   | canceled    | 用户取消该 Job，或超过了硬性 Job 超时             |
+| completed | processed   | 服务器成功处理结果                          |
+| failed    | completed   | Runner 重新发送 `completed`，覆盖心跳超时导致的失败  |
+
+`processed`、`failed` 和 `canceled` 是终止状态。
+`completed` 是准终止状态：一旦结果被解析，它就转换为 `processed`。
+每次转换在其数据库更新上都使用状态过滤器，
+因此被并发修改的 Job 会被重新读取而不是被覆盖。
+
+<LifecycleDiagram />

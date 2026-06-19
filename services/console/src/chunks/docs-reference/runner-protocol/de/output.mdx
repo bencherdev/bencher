@@ -1,0 +1,15 @@
+## Job-Ausgabe
+
+Wenn ein Runner `completed` oder `failed` sendet,
+wird die vollständige Ausgabe im selben OCI-Storage-Backend gespeichert, das auch für Container-Images verwendet wird,
+unter dem Pfad `{project}/output/v0/jobs/{job}`.
+
+Die gespeicherte Ausgabe enthält ein `results`-Array pro Iteration und, im Fehlerfall, einen `error`-String.
+Jede Iteration zeichnet ihren `exit_code`, `stdout`, `stderr`
+und eine Zuordnung aller erfassten Ausgabedateien zu ihren Inhalten auf.
+Nachdem die Ausgabe gespeichert ist, führt der Server den Benchmark-Harness-Adapter auf den Ergebnissen aus,
+um Metrics und Alerts in den Report zu parsen, wodurch der Job in `processed` übergeht.
+
+Die Ausgabe wird zurückgegeben, wenn ein Job mit `GET /v0/projects/{project}/jobs/{job}` abgefragt wird.
+Dasselbe `request_body_max_bytes`-Limit, das WebSocket-Nachrichten begrenzt,
+deckelt die Größe der Ausgabe, die ein Runner zustellen kann.

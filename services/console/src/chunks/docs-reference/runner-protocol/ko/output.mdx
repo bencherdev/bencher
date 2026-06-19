@@ -1,0 +1,15 @@
+## Job 출력
+
+Runner가 `completed` 또는 `failed`를 보내면,
+전체 출력은 컨테이너 Image에 사용되는 것과 동일한 OCI 스토리지 백엔드의
+`{project}/output/v0/jobs/{job}` 경로에 저장됩니다.
+
+저장된 출력은 반복별 `results` 배열을 포함하고, 실패 시에는 `error` 문자열을 포함합니다.
+각 반복은 `exit_code`, `stdout`, `stderr`,
+그리고 수집된 출력 파일과 그 내용의 맵을 기록합니다.
+출력이 저장된 후, 서버는 결과에 대해 벤치마크 하니스 어댑터를 실행하여
+Metric과 Alert를 Report로 파싱하고, Job을 `processed`로 전환합니다.
+
+출력은 `GET /v0/projects/{project}/jobs/{job}`로 Job을 조회할 때 반환됩니다.
+WebSocket 메시지를 제한하는 동일한 `request_body_max_bytes` 제한이
+Runner가 전달할 수 있는 출력의 크기를 제한합니다.

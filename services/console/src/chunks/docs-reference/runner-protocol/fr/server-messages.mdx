@@ -1,0 +1,15 @@
+## Messages du serveur
+
+Messages envoyés du serveur vers le Runner.
+
+| Event    | Description                                       | Charge utile                                                     |
+| -------- | ------------------------------------------------- | ---------------------------------------------------------------- |
+| `ack`    | Accuse réception d'un message reçu                | `job` optionnel (UUID du Job)                                    |
+| `job`    | Assigne un Job réclamé au Runner                  | Le Job réclamé : son Spec, la configuration du Job, et un jeton de récupération OCI à courte durée de vie |
+| `no_job` | Le délai d'attente du poll a expiré sans Job disponible | Aucune                                                     |
+| `cancel` | Le Job a été annulé ou a expiré ; arrêter l'exécution | Aucune                                                      |
+| `update` | Le Runner doit se mettre à jour vers une nouvelle version | `version`, `url` (URL de téléchargement) et `checksum` (SHA-256) |
+
+Le jeton de récupération OCI dans un message `job` est généré lorsque le Job est réclamé et n'est jamais stocké.
+Il est limité au seul projet auquel le Job appartient, est en lecture seule (pull only), et a une courte durée de vie,
+de sorte qu'un Runner compromis ne peut récupérer que les Images du projet du Job qu'il a réclamé.

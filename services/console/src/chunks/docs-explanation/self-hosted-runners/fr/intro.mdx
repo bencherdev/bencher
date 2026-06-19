@@ -1,0 +1,24 @@
+Un Runner auto-hébergé est un [Bare Metal Runner][bare metal] que vous exécutez et gérez vous-même,
+au lieu d'utiliser un Runner On-Demand ou Dedicated géré par Bencher.
+Vous pointez le binaire `runner` vers un serveur API Bencher,
+et il réclame et exécute des [Jobs][job] sur votre propre matériel.
+
+L'auto-hébergement d'un Runner est un bon choix lorsque vous souhaitez :
+
+- Exécuter des benchmarks sur du matériel spécifique que Bencher Cloud ne propose pas
+- Conserver les charges de travail de benchmark à l'intérieur de votre propre réseau ou d'un environnement isolé (air-gapped)
+- Exécuter [Bencher Self-Hosted][bencher self hosted] de bout en bout
+
+Ce guide vous accompagne dans l'enregistrement d'un Runner, la description de son matériel avec un [Spec][spec],
+la liaison des deux ensemble, et le démarrage du binaire `runner`.
+Pour un aperçu conceptuel de la façon dont les Runners, Specs, Sandboxes et Jobs s'articulent,
+consultez l'[Aperçu Bare Metal][bare metal].
+
+> 🐰 Le sandboxing Firecracker nécessite Linux avec [KVM][kvm] activé.
+> Un Runner qui ne sert que des Specs sans sandbox peut s'exécuter sur n'importe quel hôte pris en charge.
+
+[bare metal]: /fr/docs/explanation/bare-metal/
+[job]: /fr/docs/explanation/bare-metal/#job
+[spec]: /fr/docs/explanation/bare-metal/#spec
+[bencher self hosted]: /fr/docs/explanation/bencher-self-hosted/
+[kvm]: https://www.linux-kvm.org/

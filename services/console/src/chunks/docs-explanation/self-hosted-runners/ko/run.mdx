@@ -1,0 +1,51 @@
+import RunnerUp from "../../../docs-reference/runner/ko/runner-up.mdx";
+
+## Runner 시작
+
+Runner를 생성하고 Spec을 하나 이상 할당했다면,
+[`runner up`][runner up]으로 자체 하드웨어에서 `runner` 바이너리를 시작하세요.
+API 서버 호스트, Runner UUID 또는 슬러그, 그리고 Runner 키를
+플래그나 환경 변수로 제공합니다:
+
+```sh
+runner up \
+  --host https://api.bencher.dev \
+  --runner my-runner \
+  --key bencher_runner_...
+```
+
+```sh
+export BENCHER_HOST=https://api.bencher.dev
+export BENCHER_RUNNER=my-runner
+export BENCHER_RUNNER_KEY=bencher_runner_...
+runner up
+```
+
+`runner` 바이너리는 API 서버로 단일 [WebSocket 연결][runner protocol]을 열고,
+자신의 Spec과 일치하는 Job을 폴링하고, 각 Job을 실행한 후, 결과를 다시 보고합니다.
+연결은 여러 Job에 걸쳐 열린 상태로 유지되며,
+새 버전이 있을 때 바이너리는 Job 사이에 [스스로 업데이트][runner up]합니다.
+
+기본적으로 Runner는 [Sandbox][sandbox]가 없는 Spec의 Job을 거부합니다.
+Runner가 샌드박스 없는 Job을 호스트에서 직접 실행하도록 하려면,
+`--danger-allow-no-sandbox`로 시작하세요.
+
+<ul>
+  <li>
+    <details>
+      <summary><code>runner up</code></summary>
+      <br />
+      <div class="box">
+        <RunnerUp />
+      </div>
+    </details>
+  </li>
+</ul>
+
+모든 옵션은 [`runner` CLI][runner reference] 참조를,
+서버와 주고받는 메시지는 [Runner Protocol][runner protocol] 참조를 확인하세요.
+
+[runner up]: /ko/docs/reference/runner/#runner-up
+[runner reference]: /ko/docs/reference/runner/
+[runner protocol]: /ko/docs/reference/runner-protocol/
+[sandbox]: /ko/docs/explanation/bare-metal/#sandbox

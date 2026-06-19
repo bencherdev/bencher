@@ -1,0 +1,56 @@
+---
+title: "Runner 协议"
+description: "Bencher Bare Metal Runner 与 API 服务器之间 WebSocket 协议的参考"
+heading: "Runner 协议"
+published: "2026-06-19T08:00:00Z"
+modified: "2026-06-19T08:00:00Z"
+sortOrder: 9
+---
+
+import Connection from "../../../chunks/docs-reference/runner-protocol/zh/connection.mdx";
+import RunnerMessages from "../../../chunks/docs-reference/runner-protocol/zh/runner-messages.mdx";
+import ServerMessages from "../../../chunks/docs-reference/runner-protocol/zh/server-messages.mdx";
+import Flow from "../../../chunks/docs-reference/runner-protocol/zh/flow.mdx";
+import Lifecycle from "../../../chunks/docs-reference/runner-protocol/zh/lifecycle.mdx";
+import Recovery from "../../../chunks/docs-reference/runner-protocol/zh/recovery.mdx";
+import Output from "../../../chunks/docs-reference/runner-protocol/zh/output.mdx";
+
+[`runner` 二进制文件][runner cli] 和 API 服务器通过单个 WebSocket 连接通信。
+本参考描述该协议：交换的消息、它们驱动的 Job 生命周期，
+以及超时和重连如何防止 Job 卡住。它是 [Self-Hosted Runner][self hosted runners]
+指南的深入补充。
+
+使用 [`runner up`][runner up] 操作 Runner 并不需要了解这些内容；
+提供它们是为了透明，也是为了任何围绕 API 构建工具的人。
+
+[runner cli]: /zh/docs/reference/runner/
+[runner up]: /zh/docs/reference/runner/#runner-up
+[self hosted runners]: /zh/docs/explanation/self-hosted-runners/
+
+<hr />
+
+<Connection />
+
+<hr />
+
+<RunnerMessages />
+
+<hr />
+
+<ServerMessages />
+
+<hr />
+
+<Flow />
+
+<hr />
+
+<Lifecycle />
+
+<hr />
+
+<Recovery />
+
+<hr />
+
+<Output />

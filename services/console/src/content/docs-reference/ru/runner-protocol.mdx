@@ -1,0 +1,56 @@
+---
+title: "Runner Protocol"
+description: "Справочник по протоколу WebSocket между Bencher Bare Metal Runner и API-сервером"
+heading: "Runner Protocol"
+published: "2026-06-19T08:00:00Z"
+modified: "2026-06-19T08:00:00Z"
+sortOrder: 9
+---
+
+import Connection from "../../../chunks/docs-reference/runner-protocol/ru/connection.mdx";
+import RunnerMessages from "../../../chunks/docs-reference/runner-protocol/ru/runner-messages.mdx";
+import ServerMessages from "../../../chunks/docs-reference/runner-protocol/ru/server-messages.mdx";
+import Flow from "../../../chunks/docs-reference/runner-protocol/ru/flow.mdx";
+import Lifecycle from "../../../chunks/docs-reference/runner-protocol/ru/lifecycle.mdx";
+import Recovery from "../../../chunks/docs-reference/runner-protocol/ru/recovery.mdx";
+import Output from "../../../chunks/docs-reference/runner-protocol/ru/output.mdx";
+
+[Бинарный файл `runner`][runner cli] и API-сервер обмениваются данными через одно
+WebSocket-соединение. В этом справочнике описан этот протокол: передаваемые сообщения, жизненный цикл Job,
+который они приводят в движение, а также то, как тайм-ауты и переподключение не дают Job застрять. Это подробное
+дополнение к руководству по [Self-Hosted Runner][self hosted runners].
+
+Вам не нужно знать ничего из этого, чтобы управлять Runner с помощью [`runner up`][runner up];
+это приведено для прозрачности и для всех, кто создаёт инструментарий вокруг API.
+
+[runner cli]: /ru/docs/reference/runner/
+[runner up]: /ru/docs/reference/runner/#runner-up
+[self hosted runners]: /ru/docs/explanation/self-hosted-runners/
+
+<hr />
+
+<Connection />
+
+<hr />
+
+<RunnerMessages />
+
+<hr />
+
+<ServerMessages />
+
+<hr />
+
+<Flow />
+
+<hr />
+
+<Lifecycle />
+
+<hr />
+
+<Recovery />
+
+<hr />
+
+<Output />

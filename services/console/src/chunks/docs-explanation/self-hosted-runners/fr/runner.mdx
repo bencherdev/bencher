@@ -1,0 +1,28 @@
+## Créer un Runner
+
+Un Runner est la ressource qui authentifie le binaire `runner` auprès de votre serveur API Bencher.
+Créez-en un avec la [CLI `bencher`][bencher runner cli],
+l'[API REST Runners][runners api],
+ou la Bencher Console.
+
+```sh
+bencher runner create --name "My Runner"
+```
+
+Bencher renvoie le nouveau Runner accompagné de sa clé :
+
+```json
+{
+  "uuid": "...",
+  "key": "bencher_runner_..."
+}
+```
+
+La clé n'est affichée qu'une seule fois, conservez-la donc en lieu sûr.
+Vous la transmettrez au binaire `runner` lorsque vous démarrerez le Runner.
+Si une clé est perdue ou divulguée, faites-la tourner avec `bencher runner key <RUNNER>`
+(le point de terminaison [`POST /v0/runners/{runner}/key`][runners api]),
+ce qui invalide immédiatement la clé précédente.
+
+[bencher runner cli]: /fr/docs/api/server/runners/
+[runners api]: /fr/docs/api/server/runners/

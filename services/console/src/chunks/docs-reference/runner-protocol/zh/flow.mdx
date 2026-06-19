@@ -1,0 +1,17 @@
+import FlowDiagram from "../flow-diagram.mdx";
+
+## 连接流程
+
+连接后，Runner 进入空闲轮询循环，
+持续发送 `ready` 直到服务器分配一个 `job`
+（或在轮询超时时返回 `no_job`，或在有新版本可用时返回 `update`）。
+一旦拿到 Job，Runner 发送 `running`，
+在基准测试执行期间流式发送 `heartbeat` 消息，
+并以终止性的 `completed` 或 `failed` 消息结束。
+服务器用 `ack` 确认每条消息，
+连接保持打开，因此 Runner 会返回空闲循环以处理下一个 Job。
+
+如果 Job 被取消，服务器会用 `cancel` 回复某个 `heartbeat`。
+Runner 停止基准测试并回复 `canceled`，服务器随后确认它。
+
+<FlowDiagram />

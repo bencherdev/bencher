@@ -1,0 +1,24 @@
+Um Self-Hosted Runner é um [Bare Metal Runner][bare metal] que você executa e gerencia por conta própria,
+em vez de usar um Runner On-Demand ou Dedicated gerenciado pela Bencher.
+Você aponta o binário `runner` para um servidor de API Bencher,
+e ele reivindica e executa [Jobs][job] no seu próprio hardware.
+
+Auto-hospedar um Runner é uma boa escolha quando você quer:
+
+- Executar benchmarks em hardware específico que a Bencher Cloud não oferece
+- Manter as cargas de trabalho de benchmark dentro da sua própria rede ou em um ambiente isolado (air-gapped)
+- Executar o [Bencher Self-Hosted][bencher self hosted] de ponta a ponta
+
+Este guia mostra como registrar um Runner, descrever seu hardware com uma [Spec][spec],
+vincular os dois e iniciar o binário `runner`.
+Para uma visão conceitual de como Runners, Specs, Sandboxes e Jobs se encaixam,
+consulte a [Visão Geral de Bare Metal][bare metal].
+
+> 🐰 O sandboxing com Firecracker requer Linux com [KVM][kvm] habilitado.
+> Um Runner que atende apenas Specs sem sandbox pode rodar em qualquer host suportado.
+
+[bare metal]: /pt/docs/explanation/bare-metal/
+[job]: /pt/docs/explanation/bare-metal/#job
+[spec]: /pt/docs/explanation/bare-metal/#spec
+[bencher self hosted]: /pt/docs/explanation/bencher-self-hosted/
+[kvm]: https://www.linux-kvm.org/

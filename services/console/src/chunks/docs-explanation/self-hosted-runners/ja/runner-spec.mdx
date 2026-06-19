@@ -1,0 +1,18 @@
+## Spec を Runner に割り当てる
+
+Runner Spec は、[Spec][spec] を Runner に紐付けます。
+1 つの Runner は複数の Spec をサポートでき、1 つの Spec は複数の Runner からサポートされ得ます。
+Runner は、割り当てられた Spec の Job のみを要求します。
+
+[`bencher` CLI][runner specs api]
+または [Runner Specs REST API][runner specs api] で Spec を Runner に追加します。
+
+```sh
+bencher runner spec add my-runner --spec intel-v1
+```
+
+後で紐付けを解除するには、`bencher runner spec remove <RUNNER> <SPEC>`
+([`DELETE /v0/runners/{runner}/specs/{spec}`][runner specs api] エンドポイント) を使用します。
+
+[spec]: /ja/docs/explanation/bare-metal/#spec
+[runner specs api]: /ja/docs/api/server/runner-specs/

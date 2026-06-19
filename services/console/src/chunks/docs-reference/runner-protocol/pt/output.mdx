@@ -1,0 +1,15 @@
+## Saída do Job
+
+Quando um Runner envia `completed` ou `failed`,
+a saída completa é armazenada no mesmo backend de armazenamento OCI usado para as Images de contêiner,
+no caminho `{project}/output/v0/jobs/{job}`.
+
+A saída armazenada contém um array `results` por iteração e, em caso de falha, uma string `error`.
+Cada iteração registra seu `exit_code`, `stdout`, `stderr`
+e um mapa de quaisquer arquivos de saída coletados para seus conteúdos.
+Após a saída ser armazenada, o servidor executa o adaptador de harness de benchmark sobre os resultados
+para analisar Metrics e Alerts no Report, transicionando o Job para `processed`.
+
+A saída é retornada quando um Job é consultado com `GET /v0/projects/{project}/jobs/{job}`.
+O mesmo limite `request_body_max_bytes` que limita as mensagens WebSocket
+restringe o tamanho da saída que um Runner pode entregar.

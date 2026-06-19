@@ -1,0 +1,92 @@
+import Tuning from "./tuning.mdx";
+
+## `runner up`
+
+Runner를 시작하여 벤치마크 Job을 폴링하고 실행합니다.
+[Self-Hosted Runner][self hosted runners]를 운영하는 데 사용하는 장기 실행 명령입니다.
+Runner는 API 서버로 단일 [WebSocket 연결][runner protocol]을 열고,
+자신의 Spec과 일치하는 Job을 청구(claim)하고, 실행한 후, 결과를 다시 보고합니다.
+
+```
+runner up [OPTIONS]
+```
+
+### 옵션
+
+### `--host <HOST>`
+
+연결할 Bencher API 서버입니다.
+기본적으로 `https://api.bencher.dev`가 사용됩니다.
+`BENCHER_HOST` 환경 변수로도 설정할 수 있습니다.
+
+### `--runner <RUNNER>`
+
+운영할 Runner의 UUID 또는 슬러그입니다.
+`BENCHER_RUNNER` 환경 변수로도 설정할 수 있습니다.
+
+### `--key <KEY>`
+
+[Runner를 생성][create a runner]할 때 반환된
+Runner 인증 키(`bencher_runner_...`)입니다.
+`BENCHER_RUNNER_KEY` 환경 변수로도 설정할 수 있습니다.
+
+### `--poll-timeout <POLL_TIMEOUT>`
+
+Job을 기다리는 동안의 롱 폴(long-poll) 타임아웃(초)으로, `1`에서 `900` 사이입니다.
+기본적으로 `55`가 사용됩니다.
+
+### `--danger-allow-no-sandbox`
+
+[Sandbox][sandbox] 없이 Job 실행을 허용합니다.
+이 플래그가 없으면, Sandbox가 없는 Spec의 Job은 런타임에 거부됩니다.
+샌드박스 없는 Job은 호스트에서 직접 실행되므로, 신뢰할 수 있는 워크로드에만 활성화하세요.
+`BENCHER_DANGER_ALLOW_NO_SANDBOX` 환경 변수로도 설정할 수 있습니다.
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+샌드박스 프로세스의 로그 레벨입니다.
+기본적으로 `warning`이 사용됩니다.
+
+### `--no-auto-update`
+
+서버로부터의 자동 업데이트를 비활성화합니다.
+기본적으로, 서버가 새 버전을 제공하면 Runner는 Job 사이에 스스로 업데이트합니다.
+`BENCHER_NO_AUTO_UPDATE` 환경 변수로도 설정할 수 있습니다.
+
+### `--max-download-size <MAX_DOWNLOAD_SIZE>`
+
+자체 업데이트 바이너리의 최대 다운로드 크기(바이트)입니다.
+기본적으로 `500` MiB가 사용됩니다.
+`--no-auto-update`와 충돌합니다.
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+수집된 `stdout` 및 `stderr`의 최대 크기(바이트)입니다.
+기본적으로 `25` MiB가 사용됩니다.
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+디코딩할 출력 파일의 최대 개수입니다.
+기본적으로 `255`가 사용됩니다.
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+경로 확인 중 따라갈 심볼릭 링크의 최대 개수로,
+Linux 커널의 `MAXSYMLINKS` 제한과 일치합니다.
+기본적으로 `40`이 사용됩니다.
+샌드박스 없는 모드에서만 사용됩니다.
+
+### `--grace-period <GRACE_PERIOD>`
+
+벤치마크 종료 후 최종 출력 수집 전까지의 유예 기간(초)입니다.
+
+<Tuning />
+
+### `--help`
+
+도움말을 출력합니다.
+
+[self hosted runners]: /ko/docs/explanation/self-hosted-runners/
+[create a runner]: /ko/docs/explanation/self-hosted-runners/
+[runner protocol]: /ko/docs/reference/runner-protocol/
+[sandbox]: /ko/docs/explanation/bare-metal/#sandbox

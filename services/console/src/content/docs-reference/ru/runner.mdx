@@ -1,0 +1,40 @@
+---
+title: "Runner CLI"
+description: "Справочник по бинарному файлу runner Bencher, используемому для работы с Self-Hosted Bare Metal Runner"
+heading: "CLI `runner`"
+published: "2026-06-19T08:00:00Z"
+modified: "2026-06-19T08:00:00Z"
+sortOrder: 8
+---
+
+import RunnerUp from "../../../chunks/docs-reference/runner/ru/runner-up.mdx";
+import RunnerRun from "../../../chunks/docs-reference/runner/ru/runner-run.mdx";
+
+Бинарный файл `runner` — это агент, который выполняет benchmark Job на Bare Metal.
+Это подробный справочник по настройке [Self-Hosted Runner][self hosted runners].
+Бинарный файл предоставляет две подкоманды:
+
+- [`runner up`][runner up]: Запускает runner, который опрашивает сервер и выполняет benchmark Job.
+- [`runner run`][runner run]: Загружает Image и запускает его один раз на локальном хосте, для тестирования.
+
+> 🐰 Бинарный файл `runner` отличается от подкоманд `bencher runner`.
+> Бинарный файл `runner` управляет хостом Runner, тогда как
+> [`bencher runner`][runners api] управляет ресурсами Runner через REST API.
+
+[self hosted runners]: /ru/docs/explanation/self-hosted-runners/
+[runners api]: /ru/docs/api/server/runners/
+
+[runner up]: #runner-up
+[runner run]: #runner-run
+
+<hr />
+
+<div class="box">
+  <RunnerUp />
+</div>
+
+<hr />
+
+<div class="box">
+  <RunnerRun />
+</div>

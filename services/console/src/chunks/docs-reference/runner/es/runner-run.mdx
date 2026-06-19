@@ -1,0 +1,115 @@
+import Tuning from "./tuning.mdx";
+
+## `runner run`
+
+Descarga una [Image][images], crea un rootfs, y la ejecuta una vez en el host local.
+A diferencia de [`runner up`][runner up], esto no se conecta a un servidor API ni reclama un Job;
+ejecuta una única Image directamente, lo cual es útil para probar y depurar un host Runner
+o una Image antes de enviar Jobs reales.
+
+```
+runner run --image <IMAGE> [OPTIONS]
+```
+
+### Opciones
+
+### `--image <IMAGE>`
+
+La [Image OCI][images] a ejecutar, como una ruta local o una referencia de registro.
+
+### `--token <TOKEN>`
+
+Un token JWT para autenticación de registro al descargar la Image.
+
+### `--sandbox <SANDBOX>`
+
+El modo de sandbox para la ejecución del benchmark.
+Usa `firecracker` para una microVM de Firecracker (solo Linux).
+Omítelo para ejecución en el host sin sandbox.
+
+### `--timeout <TIMEOUT>`
+
+El tiempo de espera de ejecución en segundos.
+Por defecto, se usa `300`.
+
+### `--iter <ITER>`
+
+El número de iteraciones de benchmark a ejecutar.
+Por defecto, se usa `1`.
+
+### `--allow-failure`
+
+Permite un fallo de benchmark sin cortocircuitar las iteraciones restantes.
+
+### `--entrypoint <ENTRYPOINT>`
+
+Sobrescribe el entrypoint del contenedor.
+Puede especificarse múltiples veces.
+
+### `--cmd <CMD>`
+
+Sobrescribe el comando del contenedor.
+Puede especificarse múltiples veces.
+
+### `--env <ENV>`
+
+Establece una variable de entorno en formato `KEY=VALUE`.
+Puede especificarse múltiples veces.
+
+### `--network`
+
+Habilita el acceso a la red dentro de la VM.
+
+### `--output <OUTPUT>`
+
+Una ruta de archivo de salida dentro del guest a recolectar.
+Puede especificarse múltiples veces.
+
+### `--vcpus <VCPUS>`
+
+Sobrescribe el número de vCPUs (para pruebas).
+
+### `--memory <MEMORY>`
+
+Sobrescribe la memoria en MiB (para pruebas).
+
+### `--disk <DISK>`
+
+Sobrescribe el tamaño de disco en MiB (para pruebas).
+
+### `--max-output-size <MAX_OUTPUT_SIZE>`
+
+El tamaño máximo en bytes para `stdout` y `stderr` recolectados.
+Por defecto, se usan `25` MiB.
+
+### `--max-file-count <MAX_FILE_COUNT>`
+
+El número máximo de archivos de salida a decodificar.
+Por defecto, se usa `255`.
+
+### `--max-symlinks <MAX_SYMLINKS>`
+
+El número máximo de symlinks a seguir durante la resolución de rutas,
+coincidiendo con el límite `MAXSYMLINKS` del kernel de Linux.
+Por defecto, se usa `40`.
+Solo se usa en modo sin sandbox, así que entra en conflicto con `--sandbox`.
+
+### `--grace-period <GRACE_PERIOD>`
+
+El periodo de gracia en segundos después de que el benchmark termina antes de la recolección final de salida.
+Por defecto, se usa `1`.
+
+### `--sandbox-log-level <SANDBOX_LOG_LEVEL>`
+
+El nivel de log para el proceso del sandbox.
+Requiere `--sandbox`.
+Por defecto, se usa `warning`.
+
+<Tuning />
+
+### `--help`
+
+Imprime la ayuda.
+
+[images]: /es/docs/explanation/images/
+[runner up]: #runner-up

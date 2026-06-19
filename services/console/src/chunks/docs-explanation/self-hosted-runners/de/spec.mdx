@@ -1,0 +1,31 @@
+## Eine Spec erstellen
+
+Eine [Spec][spec] beschreibt die Hardware, die ein Runner bereitstellt:
+Betriebssystem, CPU-Architektur, [Sandbox][sandbox]-Typ, CPU-Anzahl, Arbeitsspeicher, Festplatte und Netzwerkzugriff.
+Ein Job deklariert die Spec, die er benötigt, und ein Runner beansprucht nur Jobs für Specs, die er unterstützt.
+
+Erstellen Sie eine Spec mit der [`bencher` CLI][specs api],
+der [Specs REST-API][specs api]
+oder der Bencher Console:
+
+```sh
+bencher spec create \
+  --name "Intel v1" \
+  --os linux \
+  --architecture x86_64 \
+  --sandbox firecracker \
+  --cpu 4 \
+  --memory 51539607552 \
+  --disk 137438953472
+```
+
+Lassen Sie `--sandbox` weg, um eine Spec ohne Sandbox zu definieren,
+und übergeben Sie `--network`, wenn Jobs auf dieser Spec Netzwerkzugriff erhalten dürfen.
+Arbeitsspeicher und Festplatte werden in Bytes angegeben.
+Mehr zu Specs und wie ein [Testbed][testbeds] die für jeden Report verwendete Spec aufzeichnet,
+finden Sie unter [Testbeds & Specs][testbeds].
+
+[spec]: /de/docs/explanation/bare-metal/#spec
+[sandbox]: /de/docs/explanation/bare-metal/#sandbox
+[specs api]: /de/docs/api/server/specs/
+[testbeds]: /de/docs/explanation/testbeds/

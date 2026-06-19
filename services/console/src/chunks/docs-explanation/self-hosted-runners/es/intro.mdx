@@ -1,0 +1,24 @@
+Un Runner Autoalojado es un [Bare Metal Runner][bare metal] que ejecutas y gestionas tú mismo,
+en lugar de usar un Runner On-Demand o Dedicated gestionado por Bencher.
+Apuntas el binario `runner` a un servidor API de Bencher,
+y este reclama y ejecuta [Jobs][job] en tu propio hardware.
+
+Autoalojar un Runner es una buena opción cuando quieres:
+
+- Ejecutar benchmarks en hardware específico que Bencher Cloud no ofrece
+- Mantener las cargas de trabajo de benchmark dentro de tu propia red o un entorno aislado (air-gapped)
+- Ejecutar [Bencher Self-Hosted][bencher self hosted] de principio a fin
+
+Esta guía recorre el registro de un Runner, la descripción de su hardware con un [Spec][spec],
+la vinculación de ambos, y el inicio del binario `runner`.
+Para una visión general conceptual de cómo encajan Runners, Specs, Sandboxes y Jobs,
+consulta la [Visión General de Bare Metal][bare metal].
+
+> 🐰 El sandboxing con Firecracker requiere Linux con [KVM][kvm] habilitado.
+> Un Runner que solo sirve Specs sin sandbox puede ejecutarse en cualquier host compatible.
+
+[bare metal]: /es/docs/explanation/bare-metal/
+[job]: /es/docs/explanation/bare-metal/#job
+[spec]: /es/docs/explanation/bare-metal/#spec
+[bencher self hosted]: /es/docs/explanation/bencher-self-hosted/
+[kvm]: https://www.linux-kvm.org/

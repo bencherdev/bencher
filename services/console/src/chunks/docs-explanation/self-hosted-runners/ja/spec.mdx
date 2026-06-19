@@ -1,0 +1,30 @@
+## Spec を作成する
+
+[Spec][spec] は、Runner が提供するハードウェアを記述します。
+オペレーティングシステム、CPU アーキテクチャ、[Sandbox][sandbox] の種類、CPU 数、メモリ、ディスク、ネットワークアクセスです。
+Job は必要とする Spec を宣言し、Runner はサポートする Spec の Job のみを要求します。
+
+[`bencher` CLI][specs api]、[Specs REST API][specs api]、
+または Bencher Console で Spec を作成します。
+
+```sh
+bencher spec create \
+  --name "Intel v1" \
+  --os linux \
+  --architecture x86_64 \
+  --sandbox firecracker \
+  --cpu 4 \
+  --memory 51539607552 \
+  --disk 137438953472
+```
+
+サンドボックスなしの Spec を定義するには `--sandbox` を省略し、
+この Spec の Job にネットワークアクセスを許可する場合は `--network` を渡します。
+メモリとディスクはバイト単位で指定します。
+Spec の詳細と、[Testbed][testbeds] が各 Report で使用された Spec をどのように記録するかについては、
+[Testbed と Spec][testbeds] を参照してください。
+
+[spec]: /ja/docs/explanation/bare-metal/#spec
+[sandbox]: /ja/docs/explanation/bare-metal/#sandbox
+[specs api]: /ja/docs/api/server/specs/
+[testbeds]: /ja/docs/explanation/testbeds/

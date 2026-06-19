@@ -1,0 +1,41 @@
+### Ajuste del Host
+
+Antes de cada benchmark, el `runner` aplica ajustes al host para reducir el ruido de medición.
+Por defecto, desactiva ASLR, el watchdog NMI, SMT / hyper-threading, y turbo boost;
+establece el governor de escalado de CPU a `performance`, swappiness a `10`, y `perf_event_paranoid` a `-1`.
+Los flags de abajo mantienen las optimizaciones individuales en sus valores por defecto del host en su lugar.
+
+### `--no-tuning`
+
+Desactiva todas las optimizaciones de ajuste del host.
+
+### `--aslr`
+
+Mantiene ASLR habilitado (por defecto: desactivado para benchmarks).
+
+### `--nmi-watchdog`
+
+Mantiene el watchdog NMI habilitado (por defecto: desactivado para benchmarks).
+
+### `--smt`
+
+Mantiene SMT / hyper-threading habilitado (por defecto: desactivado para benchmarks).
+
+### `--turbo`
+
+Mantiene turbo boost habilitado (por defecto: desactivado para benchmarks).
+
+### `--swappiness <SWAPPINESS>`
+
+Establece el valor de swappiness.
+Por defecto, se usa `10`.
+
+### `--governor <GOVERNOR>`
+
+Establece el governor de escalado de CPU.
+Por defecto, se usa `performance`.
+
+### `--perf-event-paranoid <PERF_EVENT_PARANOID>`
+
+Establece el valor de `perf_event_paranoid`.
+Por defecto, se usa `-1`.

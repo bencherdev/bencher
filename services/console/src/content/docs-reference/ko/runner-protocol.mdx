@@ -1,0 +1,56 @@
+---
+title: "Runner Protocol"
+description: "Bencher Bare Metal Runner와 API 서버 간의 WebSocket 프로토콜 참조"
+heading: "Runner Protocol"
+published: "2026-06-19T08:00:00Z"
+modified: "2026-06-19T08:00:00Z"
+sortOrder: 9
+---
+
+import Connection from "../../../chunks/docs-reference/runner-protocol/ko/connection.mdx";
+import RunnerMessages from "../../../chunks/docs-reference/runner-protocol/ko/runner-messages.mdx";
+import ServerMessages from "../../../chunks/docs-reference/runner-protocol/ko/server-messages.mdx";
+import Flow from "../../../chunks/docs-reference/runner-protocol/ko/flow.mdx";
+import Lifecycle from "../../../chunks/docs-reference/runner-protocol/ko/lifecycle.mdx";
+import Recovery from "../../../chunks/docs-reference/runner-protocol/ko/recovery.mdx";
+import Output from "../../../chunks/docs-reference/runner-protocol/ko/output.mdx";
+
+[`runner` 바이너리][runner cli]와 API 서버는 단일 WebSocket 연결을 통해
+통신합니다. 이 참조 자료는 그 프로토콜을 설명합니다: 주고받는 메시지, 그 메시지가 이끄는
+Job 수명 주기, 그리고 타임아웃과 재연결이 어떻게 Job이 멈추지 않도록 하는지를 다룹니다. 이는
+[Self-Hosted Runner][self hosted runners] 가이드의 심층 보충 자료입니다.
+
+[`runner up`][runner up]으로 Runner를 운영하는 데 이 내용을 전혀 알 필요는 없습니다.
+투명성을 위해, 그리고 API를 중심으로 도구를 만드는 사람을 위해 제공됩니다.
+
+[runner cli]: /ko/docs/reference/runner/
+[runner up]: /ko/docs/reference/runner/#runner-up
+[self hosted runners]: /ko/docs/explanation/self-hosted-runners/
+
+<hr />
+
+<Connection />
+
+<hr />
+
+<RunnerMessages />
+
+<hr />
+
+<ServerMessages />
+
+<hr />
+
+<Flow />
+
+<hr />
+
+<Lifecycle />
+
+<hr />
+
+<Recovery />
+
+<hr />
+
+<Output />

@@ -1,0 +1,15 @@
+%%{init: {'theme': 'base'}}%%
+stateDiagram-v2
+    [*] --> pending
+    pending --> claimed: runner claims
+    pending --> canceled: user cancels
+    claimed --> running: running
+    claimed --> failed: failed / timeout
+    claimed --> canceled: user cancels
+    running --> completed: completed
+    running --> failed: failed / timeout
+    running --> canceled: cancel / hard timeout
+    failed --> completed: results recovered
+    completed --> processed: results parsed
+    processed --> [*]
+    canceled --> [*]

@@ -1,0 +1,41 @@
+### Host Tuning
+
+Before each benchmark, the `runner` applies host tuning to reduce measurement noise.
+By default it disables ASLR, the NMI watchdog, SMT / hyper-threading, and turbo boost;
+sets the CPU scaling governor to `performance`, swappiness to `10`, and `perf_event_paranoid` to `-1`.
+The flags below keep individual optimizations at their host defaults instead.
+
+### `--no-tuning`
+
+Disable all host tuning optimizations.
+
+### `--aslr`
+
+Keep ASLR enabled (default: disabled for benchmarks).
+
+### `--nmi-watchdog`
+
+Keep the NMI watchdog enabled (default: disabled for benchmarks).
+
+### `--smt`
+
+Keep SMT / hyper-threading enabled (default: disabled for benchmarks).
+
+### `--turbo`
+
+Keep turbo boost enabled (default: disabled for benchmarks).
+
+### `--swappiness <SWAPPINESS>`
+
+Set the swappiness value.
+By default, `10` is used.
+
+### `--governor <GOVERNOR>`
+
+Set the CPU scaling governor.
+By default, `performance` is used.
+
+### `--perf-event-paranoid <PERF_EVENT_PARANOID>`
+
+Set the `perf_event_paranoid` value.
+By default, `-1` is used.
