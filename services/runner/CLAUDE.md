@@ -12,7 +12,10 @@ please alert the developer working with you and indicate that this is the case b
 
 ## Design
 
-See [services/runner/DESIGN.md](services/runner/DESIGN.md) for design documentation.
+The runner is documented in the published docs:
+- [Self-Hosted Runners](https://bencher.dev/docs/explanation/self-hosted-runners/) (explanation)
+- [`runner` CLI](https://bencher.dev/docs/reference/runner/) (reference)
+- [Runner Protocol](https://bencher.dev/docs/reference/runner-protocol/) (reference)
 
 ## Operations
 
