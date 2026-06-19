@@ -75,6 +75,7 @@ pub enum ApiCounter {
 
     OrganizationCreate,
     OrganizationDelete,
+    OrganizationPlanUpdateBlocked,
 
     ProjectCreate,
     ProjectDelete,
@@ -197,7 +198,8 @@ impl ApiCounter {
             | Self::UserKeyCreateBlocked
             | Self::UserKeyViewBlocked
             | Self::UserKeyUpdateBlocked
-            | Self::UserKeyRevokeBlocked => "{attempt}",
+            | Self::UserKeyRevokeBlocked
+            | Self::OrganizationPlanUpdateBlocked => "{attempt}",
             Self::UserCredentialMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
             Self::UserKeyCreate | Self::UserKeyRevoke | Self::RunnerKeyRotate => "{key}",
             Self::ProjectKeyAuthFailed(_) | Self::UserKeyAuthFailed(_) => "{auth_failure}",
@@ -224,6 +226,7 @@ impl ApiCounter {
 
             Self::OrganizationCreate => "organization.create",
             Self::OrganizationDelete => "organization.delete",
+            Self::OrganizationPlanUpdateBlocked => "organization.plan.update.blocked",
 
             Self::ProjectCreate => "project.create",
             Self::ProjectDelete => "project.delete",
@@ -315,6 +318,9 @@ impl ApiCounter {
 
             Self::OrganizationCreate => "Counts the number of organization creations",
             Self::OrganizationDelete => "Counts the number of organization deletions",
+            Self::OrganizationPlanUpdateBlocked => {
+                "Counts the number of organization plan update attempts blocked because the caller authenticated with a user API key"
+            },
 
             Self::ProjectCreate => "Counts the number of project creations",
             Self::ProjectDelete => "Counts the number of project deletions",
@@ -429,6 +435,7 @@ impl ApiCounter {
             Self::ServerStartup
             | Self::OrganizationCreate
             | Self::OrganizationDelete
+            | Self::OrganizationPlanUpdateBlocked
             | Self::ProjectCreate
             | Self::ProjectDelete
             | Self::ReportCreate

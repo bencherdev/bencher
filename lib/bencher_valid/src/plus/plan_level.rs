@@ -10,9 +10,11 @@ use serde::{Deserialize, Serialize};
 use crate::ValidError;
 
 const FREE: &str = "free";
+const PRO: &str = "pro";
 const TEAM: &str = "team";
 const ENTERPRISE: &str = "enterprise";
 // These are the Stripe product names
+const BENCHER_PRO: &str = "Bencher Pro";
 const BENCHER_TEAM: &str = "Bencher Team";
 const BENCHER_ENTERPRISE: &str = "Bencher Enterprise";
 
@@ -36,6 +38,9 @@ const BENCHER_ENTERPRISE: &str = "Bencher Enterprise";
 pub enum PlanLevel {
     #[default]
     Free,
+    Pro,
+    // Legacy self-serve paid tier, retained for grandfathered customers.
+    // New self-serve signups use `Pro`.
     Team,
     Enterprise,
 }
@@ -46,6 +51,7 @@ impl TryFrom<String> for PlanLevel {
     fn try_from(plan_level: String) -> Result<Self, Self::Error> {
         match plan_level.as_str() {
             FREE => Ok(Self::Free),
+            PRO | BENCHER_PRO => Ok(Self::Pro),
             TEAM | BENCHER_TEAM => Ok(Self::Team),
             ENTERPRISE | BENCHER_ENTERPRISE => Ok(Self::Enterprise),
             _ => Err(ValidError::PlanLevel(plan_level)),
@@ -65,6 +71,7 @@ impl AsRef<str> for PlanLevel {
     fn as_ref(&self) -> &str {
         match self {
             Self::Free => FREE,
+            Self::Pro => PRO,
             Self::Team => TEAM,
             Self::Enterprise => ENTERPRISE,
         }
@@ -85,7 +92,7 @@ impl From<PlanLevel> for String {
 pub fn is_valid_plan_level(plan_level: &str) -> bool {
     matches!(
         plan_level,
-        FREE | TEAM | ENTERPRISE | BENCHER_TEAM | BENCHER_ENTERPRISE
+        FREE | PRO | TEAM | ENTERPRISE | BENCHER_PRO | BENCHER_TEAM | BENCHER_ENTERPRISE
     )
 }
 
@@ -97,8 +104,10 @@ mod tests {
     #[test]
     fn plan_level() {
         assert_eq!(true, is_valid_plan_level("free"));
+        assert_eq!(true, is_valid_plan_level("pro"));
         assert_eq!(true, is_valid_plan_level("team"));
         assert_eq!(true, is_valid_plan_level("enterprise"));
+        assert_eq!(true, is_valid_plan_level("Bencher Pro"));
         assert_eq!(true, is_valid_plan_level("Bencher Team"));
         assert_eq!(true, is_valid_plan_level("Bencher Enterprise"));
 
@@ -118,6 +127,11 @@ mod tests {
         assert_eq!(level, PlanLevel::Team);
         let json = serde_json::to_string(&level).unwrap();
         assert_eq!(json, "\"team\"");
+
+        let level: PlanLevel = serde_json::from_str("\"pro\"").unwrap();
+        assert_eq!(level, PlanLevel::Pro);
+        let json = serde_json::to_string(&level).unwrap();
+        assert_eq!(json, "\"pro\"");
 
         serde_json::from_str::<PlanLevel>("\"invalid\"").unwrap_err();
     }

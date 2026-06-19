@@ -538,6 +538,7 @@ export interface JsonCustomer {
 
 export enum PlanLevel {
 	Free = "free",
+	Pro = "pro",
 	Team = "team",
 	Enterprise = "enterprise",
 }
@@ -936,6 +937,11 @@ export interface JsonPlan {
 	current_period_start: string;
 	current_period_end: string;
 	status: PlanStatus;
+	/**
+	 * Whether the subscription is set to cancel at the end of the current period
+	 * (the org keeps access until `current_period_end`, then downgrades to Free).
+	 */
+	cancel_at_period_end: boolean;
 	license?: JsonLicense;
 }
 
@@ -1076,6 +1082,16 @@ export enum UpdateAlertStatus {
 export interface JsonUpdateAlert {
 	/** The new status of the alert. */
 	status?: UpdateAlertStatus;
+}
+
+export interface JsonUpdatePlan {
+	/**
+	 * Update the subscription's scheduled cancellation. Set to `false` to resume
+	 * a plan scheduled to cancel at period end, or `true` to schedule it to
+	 * cancel at the end of the current period. Only applies to metered
+	 * subscriptions, not licensed (Self-Hosted) plans.
+	 */
+	cancel_at_period_end: boolean;
 }
 
 export interface JsonUpdateProjectKey {

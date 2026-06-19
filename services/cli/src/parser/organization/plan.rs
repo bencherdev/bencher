@@ -1,7 +1,7 @@
 #![cfg(feature = "plus")]
 
 use bencher_json::{Entitlements, NonEmpty, OrganizationResourceId, OrganizationUuid};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{ArgGroup, Parser, Subcommand, ValueEnum};
 
 use crate::parser::CliBackend;
 
@@ -13,6 +13,9 @@ pub enum CliOrganizationPlan {
     /// View a subscription plan
     #[clap(alias = "get")]
     View(CliPlanView),
+    /// Update a subscription plan
+    #[clap(alias = "edit")]
+    Update(CliPlanUpdate),
     /// Delete a subscription plan
     #[clap(alias = "rm")]
     Delete(CliPlanDelete),
@@ -57,6 +60,29 @@ pub struct CliPlanView {
 }
 
 #[derive(Parser, Debug)]
+#[clap(group(
+    ArgGroup::new("cancellation")
+        .multiple(false)
+        .required(true)
+        .args(&["cancel", "resume"]),
+))]
+pub struct CliPlanUpdate {
+    /// Organization slug or UUID
+    pub organization: OrganizationResourceId,
+
+    /// Schedule the metered subscription to cancel at the end of the current billing period
+    #[clap(long)]
+    pub cancel: bool,
+
+    /// Resume a metered subscription scheduled to cancel at the end of the current billing period
+    #[clap(long)]
+    pub resume: bool,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
 pub struct CliPlanDelete {
     /// Organization slug or UUID
     pub organization: OrganizationResourceId,
@@ -74,6 +100,8 @@ pub struct CliPlanDelete {
 pub enum CliPlanLevel {
     /// Free
     Free,
+    /// Pro
+    Pro,
     /// Team
     Team,
     /// Enterprise

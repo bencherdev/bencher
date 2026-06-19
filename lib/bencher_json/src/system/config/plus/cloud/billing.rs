@@ -21,6 +21,8 @@ impl Sanitize for JsonBilling {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProducts {
+    pub pro: JsonProduct,
+    // Legacy self-serve paid tier, retained for grandfathered customers.
     pub team: JsonProduct,
     pub enterprise: JsonProduct,
     pub bare_metal: JsonProduct,
@@ -30,6 +32,52 @@ pub struct JsonProducts {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProduct {
     pub id: String,
+    #[serde(default)]
     pub metered: HashMap<String, String>,
+    #[serde(default)]
     pub licensed: HashMap<String, String>,
+    // Flat recurring base prices.
+    // Empty for products with no flat base fee.
+    #[serde(default)]
+    pub base: HashMap<String, String>,
+    #[serde(default)]
+    pub trial_coupon: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{JsonProduct, JsonProducts};
+
+    // Existing team/enterprise/bare_metal config has no `base` key; it must still
+    // deserialize, defaulting `base` to an empty map (backward compatibility).
+    #[test]
+    fn product_without_base_defaults_empty() {
+        let json =
+            r#"{"id":"prod_x","metered":{"default":"price_m"},"licensed":{"default":"price_l"}}"#;
+        let product: JsonProduct = serde_json::from_str(json).unwrap();
+        assert!(product.base.is_empty());
+        assert!(product.trial_coupon.is_none());
+        assert_eq!(
+            product.metered.get("default").map(String::as_str),
+            Some("price_m"),
+        );
+    }
+
+    #[test]
+    fn products_with_pro_base_and_trial_coupon() {
+        let json = r#"{
+            "team": {"id":"t","metered":{},"licensed":{}},
+            "pro": {"id":"p","metered":{"default":"price_m"},"base":{"default":"price_b"},"trial_coupon":"coupon_x"},
+            "enterprise": {"id":"e","metered":{},"licensed":{}},
+            "bare_metal": {"id":"bm","metered":{},"licensed":{}}
+        }"#;
+        let products: JsonProducts = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            products.pro.base.get("default").map(String::as_str),
+            Some("price_b"),
+        );
+        assert_eq!(products.pro.trial_coupon.as_deref(), Some("coupon_x"));
+        assert!(products.team.base.is_empty());
+        assert!(products.team.trial_coupon.is_none());
+    }
 }
