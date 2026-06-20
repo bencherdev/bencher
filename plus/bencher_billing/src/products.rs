@@ -1,9 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use bencher_json::{
-    organization::plan::DEFAULT_PRICE_NAME,
-    system::config::{JsonProduct, JsonProducts},
-};
+use bencher_json::system::config::{JsonProduct, JsonProducts};
 use stripe::Client as StripeClient;
 use stripe_product::{
     Price as StripePrice, PriceId, Product as StripeProduct, ProductId, price::RetrievePrice,
@@ -43,27 +40,17 @@ impl Products {
         })
     }
 
-    // Returns the price IDs that identify a subscription's main plan item
-    // (excluding flat base fees and bare_metal), used by `get_plan` to filter
-    // subscription items down to that one item. These are the Team and Enterprise
-    // metered/licensed prices and the Pro plan's metered metrics price, which
-    // lives on the `metrics` product rather than the `pro` product.
-    //
-    // During the metered billing migration, a subscription may temporarily have
-    // multiple subscription items (old metered + new metered). The config holds
-    // both price IDs under different keys: the currently-active price under
-    // "default" and the upcoming price under "metrics".
-    //
-    // This method returns only the price IDs for the given `preferred` key,
-    // falling back to "default" if the preferred key is not found.
-    // Once the migration cutover is complete and the old subscription items are
-    // removed, this filtering becomes a no-op (one item in, one item out).
-    pub fn plan_price_ids(&self, preferred: &str) -> HashSet<&PriceId> {
-        self.metrics
-            .preferred_price_ids(preferred)
+    // The price IDs that identify a subscription's plan item (excluding flat base
+    // fees and bare_metal), used by `get_plan` to filter subscription items down to
+    // that one item. These are the metered + licensed prices across the `metrics`
+    // (shared metered metrics), `team`, and `enterprise` products. The Team and
+    // Enterprise metered prices are retained so a subscription still on its own
+    // product (not yet moved to `metrics`) continues to resolve.
+    pub fn plan_price_ids(&self) -> HashSet<&PriceId> {
+        [&self.metrics, &self.team, &self.enterprise]
             .into_iter()
-            .chain(self.team.preferred_price_ids(preferred))
-            .chain(self.enterprise.preferred_price_ids(preferred))
+            .flat_map(|product| product.metered.values().chain(product.licensed.values()))
+            .map(|price| &price.id)
             .collect()
     }
 
@@ -90,9 +77,9 @@ pub struct Product {
     // Stripe coupon ID for this product's free trial (waives the first month's
     // base fee). `None` if the product has no trial.
     pub trial_coupon: Option<String>,
-    // Flat recurring base prices. Deliberately excluded from `preferred_price_ids`
-    // so it is never treated as the metered "plan item" when resolving a
-    // subscription's plan level.
+    // Flat recurring base prices. Excluded from `plan_price_ids` (never the metered
+    // "plan item"), but used by `get_plan` to detect the Pro base fee and so resolve
+    // the plan level.
     pub base: HashMap<String, StripePrice>,
     pub metered: HashMap<String, StripePrice>,
     pub licensed: HashMap<String, StripePrice>,
@@ -121,23 +108,6 @@ impl Product {
             metered,
             licensed,
         })
-    }
-
-    // Returns the price IDs for the given `preferred` key, falling back to
-    // "default" if the preferred key is not found.
-    // See `Products::plan_price_ids` for migration context.
-    fn preferred_price_ids(&self, preferred: &str) -> Vec<&PriceId> {
-        let metered_id = self
-            .metered
-            .get(preferred)
-            .or_else(|| self.metered.get(DEFAULT_PRICE_NAME))
-            .map(|p| &p.id);
-        let licensed_id = self
-            .licensed
-            .get(preferred)
-            .or_else(|| self.licensed.get(DEFAULT_PRICE_NAME))
-            .map(|p| &p.id);
-        metered_id.into_iter().chain(licensed_id).collect()
     }
 
     async fn pricing(

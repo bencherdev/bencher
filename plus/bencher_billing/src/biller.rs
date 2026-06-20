@@ -208,9 +208,12 @@ impl PlusPlan {
                 None,
             ),
             PlusPlan::Team(plus_usage) => match plus_usage {
+                // Metered metrics bill on the shared `metrics` ("Bencher Metrics")
+                // product across paid tiers; only the licensed price stays on the
+                // tier's own product.
                 PlusUsage::Metered(price_name) => (
                     products
-                        .team
+                        .metrics
                         .metered
                         .get(price_name.as_str())
                         .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?,
@@ -226,9 +229,10 @@ impl PlusPlan {
                 ),
             },
             PlusPlan::Enterprise(plus_usage) => match plus_usage {
+                // Metered metrics bill on the shared `metrics` product (see Team).
                 PlusUsage::Metered(price_name) => (
                     products
-                        .enterprise
+                        .metrics
                         .metered
                         .get(price_name.as_str())
                         .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?,
@@ -583,7 +587,6 @@ impl Biller {
                     "customer".into(),
                     "default_payment_method".into(),
                     "items".into(),
-                    "items.data.price.product".into(),
                 ],
             )
             .await?;
@@ -595,7 +598,22 @@ impl Biller {
             .parse()
             .map_err(|e| BillingError::BadOrganizationUuid(organization.clone(), e))?;
 
-        let plan_price_ids = self.products.plan_price_ids(METRICS_METER_NAME);
+        // Pro is the only paid tier with a flat base fee, so a Pro base-fee item
+        // identifies the plan level without relying on the metered product.
+        let pro_base_price_ids: HashSet<&PriceId> = self
+            .products
+            .pro
+            .base
+            .values()
+            .map(|price| &price.id)
+            .collect();
+        let has_base_fee = subscription
+            .items
+            .data
+            .iter()
+            .any(|item| pro_base_price_ids.contains(&item.price.id));
+
+        let plan_price_ids = self.products.plan_price_ids();
         let subscription_items = Self::filter_subscription_items(
             subscription_id,
             subscription.items.data,
@@ -634,7 +652,8 @@ impl Biller {
             subscription_id,
             subscription.default_payment_method.as_ref(),
         )?;
-        let (level, unit_amount) = Self::get_plan_price(&subscription_item)?;
+        let unit_amount = Self::get_plan_unit_amount(&subscription_item)?;
+        let level = plan_level_from_base_fee(has_base_fee);
 
         let status = Self::map_status(&subscription.status);
 
@@ -725,25 +744,12 @@ impl Biller {
         })
     }
 
-    fn get_plan_price(
-        subscription_item: &SubscriptionItem,
-    ) -> Result<(PlanLevel, u64), BillingError> {
+    fn get_plan_unit_amount(subscription_item: &SubscriptionItem) -> Result<u64, BillingError> {
         let price = &subscription_item.price;
-
         let Some(unit_amount) = price.unit_amount else {
             return Err(BillingError::NoUnitAmount(price.id.clone()));
         };
-        let unit_amount = u64::try_from(unit_amount)?;
-
-        let Some(product_info) = price.product.as_object() else {
-            return Err(BillingError::NoProductInfo(price.product.id().clone()));
-        };
-        // The metered plan item's product name maps to a `PlanLevel`:
-        // `Bencher Team`/`Bencher Enterprise`, or `Bencher Metrics` for the Pro
-        // plan (whose metered metrics item lives on the `metrics` product).
-        let plan_level = product_info.name.parse()?;
-
-        Ok((plan_level, unit_amount))
+        u64::try_from(unit_amount).map_err(Into::into)
     }
 
     fn get_subscription_item(
@@ -1064,6 +1070,18 @@ impl Biller {
     }
 }
 
+/// A paid subscription's plan level. Pro is the only paid tier that carries a flat
+/// base fee (see `PlusPlan::base_price`), so a subscription with a configured
+/// base-fee item is Pro; any other paid metered subscription is Team. This is
+/// independent of which Stripe product the metered-metrics item sits on.
+fn plan_level_from_base_fee(has_base_fee: bool) -> PlanLevel {
+    if has_base_fee {
+        PlanLevel::Pro
+    } else {
+        PlanLevel::Team
+    }
+}
+
 /// The included-credit amount (the matched flat base price's cents) for a
 /// subscription, given a map of configured base price ID to cents. `None` if the
 /// subscription carries no configured base fee. Gates the included-usage credit to
@@ -1123,7 +1141,10 @@ mod tests {
 
     use crate::{Biller, PeriodCredit};
 
-    use super::{METER_CUSTOMER_KEY, METER_VALUE_KEY, matched_base_cents, period_already_granted};
+    use super::{
+        METER_CUSTOMER_KEY, METER_VALUE_KEY, matched_base_cents, period_already_granted,
+        plan_level_from_base_fee,
+    };
 
     #[test]
     fn matched_base_cents_returns_base_fee() {
@@ -1169,6 +1190,29 @@ mod tests {
             std::iter::empty::<(Option<&str>, Option<&str>)>(),
             "100",
         ));
+    }
+
+    #[test]
+    fn plan_level_from_base_fee_resolves_tier() {
+        // Pro is the only paid tier with a base fee, so it resolves to Pro; any
+        // other paid metered subscription resolves to Team.
+        assert_eq!(plan_level_from_base_fee(true), PlanLevel::Pro);
+        assert_eq!(plan_level_from_base_fee(false), PlanLevel::Team);
+    }
+
+    #[test]
+    fn get_plan_unit_amount_reads_price() {
+        let mut item = make_subscription_item("price_metrics");
+        item.price.unit_amount = Some(1);
+        assert_eq!(Biller::get_plan_unit_amount(&item).unwrap(), 1);
+    }
+
+    #[test]
+    fn get_plan_unit_amount_missing_errors() {
+        // `make_subscription_item` builds a price with `unit_amount: None`.
+        let item = make_subscription_item("price_metrics");
+        let err = Biller::get_plan_unit_amount(&item).unwrap_err();
+        assert!(matches!(err, crate::BillingError::NoUnitAmount(_)));
     }
 
     const TEST_BILLING_KEY: &str = "TEST_BILLING_KEY";
@@ -1307,10 +1351,14 @@ mod tests {
 
         let metered_plan_id = &subscription_id.as_ref().parse().unwrap();
         let json_plan = biller.get_metered_plan(metered_plan_id).await.unwrap();
-        // The plan level is derived from the metered plan item's Stripe product
-        // name. For Pro that item lives on the `metrics` product, exercising the
-        // "Bencher Metrics" -> PlanLevel::Pro mapping.
-        assert_eq!(json_plan.level, plan_level);
+        // The plan level is derived from base-fee presence: Pro carries a flat base
+        // fee and resolves to Pro; tiers without a base fee resolve to Team.
+        let expected_level = if plan_level == PlanLevel::Pro {
+            PlanLevel::Pro
+        } else {
+            PlanLevel::Team
+        };
+        assert_eq!(json_plan.level, expected_level);
 
         let (plan_status, customer_id) = biller
             .get_metered_plan_status(metered_plan_id)
