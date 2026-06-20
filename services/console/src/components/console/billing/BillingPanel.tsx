@@ -147,12 +147,12 @@ const BillingPanelSwitch = (props: {
 	handleRefresh: () => void;
 }) => {
 	const [searchParams] = useSearchParams();
-	// During onboarding with ?plan=pro the checkout activates automatically.
-	// While the usage resource loads, show the redirect loader instead of the
-	// pricing table so the visitor sees one calm loading state, not a flash of
-	// plans before being sent to checkout.
+	// With ?plan=pro the checkout activates automatically (onboarding, or a
+	// /pricing deep link to billing). While the usage resource loads, show the
+	// redirect loader instead of the pricing table so the visitor sees one calm
+	// loading state, not a flash of plans before being sent to checkout.
 	const autoActivatePro = createMemo(
-		() => props.onboard && searchParams[PLAN_PARAM] === PlanLevel.Pro,
+		() => searchParams[PLAN_PARAM] === PlanLevel.Pro,
 	);
 	return (
 		<Switch

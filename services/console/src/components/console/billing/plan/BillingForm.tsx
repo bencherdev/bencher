@@ -40,22 +40,30 @@ const BillingForm = (props: Props) => {
 	};
 	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
 
+	// The onboarding plan step and the billing page both auto-activate checkout
+	// when arriving with ?plan=pro (e.g. from /pricing). The signal is initialized
+	// from the URL so the loader shows right away with no pricing-table flash.
+	const [checkingOut, setCheckingOut] = createSignal(
+		searchParams[PLAN_PARAM] === PlanLevel.Pro,
+	);
+
 	createEffect(() => {
 		if (!props.bencher_valid()) {
 			return;
 		}
-		// The billing panel defaults to the Free view. Onboarding instead shows
-		// all three plans until one is chosen, or auto-activates Pro checkout
-		// below when the visitor arrives with ?plan=pro.
-		if (!props.onboard && !validPlanLevel(searchParams[PLAN_PARAM])) {
+		const param = searchParams[PLAN_PARAM];
+		// The ?plan=pro deep link starts checkout via the signal above. Drop the
+		// param (replace, not push) so returning from Stripe lands on the plan
+		// page instead of starting checkout again.
+		if (param === PlanLevel.Pro) {
+			setSearchParams({ [PLAN_PARAM]: PlanLevel.Free }, { replace: true });
+			return;
+		}
+		// The billing page defaults to the Free view (onboarding shows all plans).
+		if (!props.onboard && !validPlanLevel(param)) {
 			setPlanLevel(PlanLevel.Free);
 		}
 	});
-
-	// Billing page: clicking Pro starts checkout immediately. Tracked with a
-	// local signal rather than the URL so returning from Stripe shows the
-	// pricing table again instead of re-triggering checkout.
-	const [checkingOut, setCheckingOut] = createSignal(false);
 
 	const checkout = (planLevel: () => PlanLevel) => (
 		<Checkout
@@ -102,12 +110,12 @@ const BillingForm = (props: Props) => {
 			{/* Onboarding: ?plan=pro (or choosing Pro) auto-activates checkout;
 			    otherwise show all three plans with onboard-specific actions. */}
 			<Show
-				when={plan() === PlanLevel.Pro}
+				when={checkingOut()}
 				fallback={
 					<InnerPricingTable
 						freeCtaText="Continue with Free"
 						handleFree={() => navigate("/console")}
-						handlePro={() => setPlanLevel(PlanLevel.Pro)}
+						handlePro={() => setCheckingOut(true)}
 						handleEnterprise={() => {
 							window.open(BENCHER_CALENDLY_URL, "_blank", "noreferrer");
 							navigate("/console");
@@ -115,7 +123,7 @@ const BillingForm = (props: Props) => {
 					/>
 				}
 			>
-				{checkout(plan)}
+				{checkout(() => PlanLevel.Pro)}
 			</Show>
 		</Show>
 	);
