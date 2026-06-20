@@ -26,6 +26,7 @@ import {
 	fmtDate,
 	fmtUsd,
 	fmtUsdPrecise,
+	isFirstBillingPeriod,
 	planLevel,
 	planLevelPrice,
 	runnerMinutePrice,
@@ -366,6 +367,17 @@ const CloudMeteredPanel = (props: {
 	const estProBill = createMemo(
 		() => PRO_BASE_USD + Math.max(0, estTotalCost() - PRO_INCLUDED_CREDIT_USD),
 	);
+	const firstPeriod = createMemo(() =>
+		isFirstBillingPeriod(
+			props.usage()?.plan?.created,
+			props.usage()?.plan?.current_period_start,
+		),
+	);
+	// Pro waives the flat base for the first month via a one-time 100%-off coupon.
+	// Cap at the bill so it never goes negative.
+	const trialDiscount = createMemo(() =>
+		isPro() && firstPeriod() ? Math.min(PRO_BASE_USD, estProBill()) : 0,
+	);
 
 	return (
 		<div class="content">
@@ -408,6 +420,13 @@ const CloudMeteredPanel = (props: {
 				Current Estimated Total:{" "}
 				{fmtUsd(isPro() ? estProBill() : estTotalCost())}
 			</h4>
+			<Show when={isPro() && firstPeriod()}>
+				<h4>First Month Free Trial: -{fmtUsd(trialDiscount())}</h4>
+				<h4>
+					Estimated Total This Period:{" "}
+					{fmtUsd(Math.max(0, estProBill() - trialDiscount()))}
+				</h4>
+			</Show>
 			<Show when={isPro()}>
 				<p>
 					$20/mo base includes $20 of usage. Overage bills at the same rates

@@ -117,6 +117,19 @@ export const PRO_BASE_USD = 20;
 // metrics and bare metal; expires at month end.
 export const PRO_INCLUDED_CREDIT_USD = 20;
 
+// The first billing period is the one containing the subscription's creation time,
+// i.e. created falls on/after the current period start.
+export const isFirstBillingPeriod = (
+	created: undefined | string,
+	currentPeriodStart: undefined | string,
+): boolean => {
+	const createdMs = dateTimeMillis(created);
+	const periodStartMs = dateTimeMillis(currentPeriodStart);
+	return (
+		createdMs !== null && periodStartMs !== null && createdMs >= periodStartMs
+	);
+};
+
 export const planLevel = (level: undefined | PlanLevel) => {
 	switch (level) {
 		case PlanLevel.Free:
@@ -156,9 +169,6 @@ export const runnerMinutePrice = (level: undefined | PlanLevel) => {
 			return 0.0;
 	}
 };
-
-export const suggestedMetrics = (metrics: undefined | number) =>
-	(Math.round((metrics ?? 1) / 1_000) + 1) * 12_000;
 
 export const fmtUsd = (usd: undefined | number) => {
 	const numberFmt = new Intl.NumberFormat("en-US", {
