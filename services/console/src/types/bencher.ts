@@ -934,6 +934,11 @@ export interface JsonPlan {
 	card: JsonCardDetails;
 	level: PlanLevel;
 	unit_amount: number;
+	/**
+	 * When the metered subscription was created. The first (free-trial) billing
+	 * period is the one that contains this timestamp.
+	 */
+	created: string;
 	current_period_start: string;
 	current_period_end: string;
 	status: PlanStatus;

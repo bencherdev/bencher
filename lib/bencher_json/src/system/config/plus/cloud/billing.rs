@@ -25,6 +25,7 @@ pub struct JsonProducts {
     // Legacy self-serve paid tier, retained for grandfathered customers.
     pub team: JsonProduct,
     pub enterprise: JsonProduct,
+    pub metrics: JsonProduct,
     pub bare_metal: JsonProduct,
 }
 
@@ -66,9 +67,10 @@ mod tests {
     #[test]
     fn products_with_pro_base_and_trial_coupon() {
         let json = r#"{
+            "pro": {"id":"p","base":{"default":"price_b"},"trial_coupon":"coupon_x"},
             "team": {"id":"t","metered":{},"licensed":{}},
-            "pro": {"id":"p","metered":{"default":"price_m"},"base":{"default":"price_b"},"trial_coupon":"coupon_x"},
             "enterprise": {"id":"e","metered":{},"licensed":{}},
+            "metrics": {"id":"m","metered":{"default":"price_mm"},"licensed":{"default":"price_ml"}},
             "bare_metal": {"id":"bm","metered":{},"licensed":{}}
         }"#;
         let products: JsonProducts = serde_json::from_str(json).unwrap();
@@ -77,6 +79,11 @@ mod tests {
             Some("price_b"),
         );
         assert_eq!(products.pro.trial_coupon.as_deref(), Some("coupon_x"));
+        assert!(products.pro.metered.is_empty());
+        assert_eq!(
+            products.metrics.metered.get("default").map(String::as_str),
+            Some("price_mm"),
+        );
         assert!(products.team.base.is_empty());
         assert!(products.team.trial_coupon.is_none());
     }

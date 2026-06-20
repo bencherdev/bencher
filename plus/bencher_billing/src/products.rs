@@ -18,6 +18,9 @@ pub struct Products {
     // Legacy self-serve paid tier, retained for grandfathered customers.
     pub team: Product,
     pub enterprise: Product,
+    // Holds the Pro plan's metered metrics price (its own product so checkout
+    // shows a distinct "Bencher Metrics" line item).
+    pub metrics: Product,
     pub bare_metal: Product,
 }
 
@@ -27,6 +30,7 @@ impl Products {
             pro,
             team,
             enterprise,
+            metrics,
             bare_metal,
         } = products;
 
@@ -34,13 +38,16 @@ impl Products {
             pro: Product::new(client, pro).await?,
             team: Product::new(client, team).await?,
             enterprise: Product::new(client, enterprise).await?,
+            metrics: Product::new(client, metrics).await?,
             bare_metal: Product::new(client, bare_metal).await?,
         })
     }
 
-    // Returns the price IDs for the Pro, Team, and Enterprise plans only
-    // (excluding bare_metal), used by `get_plan` to filter subscription items to
-    // the main plan item.
+    // Returns the price IDs that identify a subscription's main plan item
+    // (excluding flat base fees and bare_metal), used by `get_plan` to filter
+    // subscription items down to that one item. These are the Team and Enterprise
+    // metered/licensed prices and the Pro plan's metered metrics price, which
+    // lives on the `metrics` product rather than the `pro` product.
     //
     // During the metered billing migration, a subscription may temporarily have
     // multiple subscription items (old metered + new metered). The config holds
@@ -52,7 +59,7 @@ impl Products {
     // Once the migration cutover is complete and the old subscription items are
     // removed, this filtering becomes a no-op (one item in, one item out).
     pub fn plan_price_ids(&self, preferred: &str) -> HashSet<&PriceId> {
-        self.pro
+        self.metrics
             .preferred_price_ids(preferred)
             .into_iter()
             .chain(self.team.preferred_price_ids(preferred))

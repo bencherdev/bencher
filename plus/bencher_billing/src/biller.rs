@@ -114,8 +114,10 @@ impl fmt::Display for PriceName {
 enum PlusPlan {
     Free,
     // Bencher Cloud metered tier with a flat monthly base fee and an included
-    // usage credit. Carries the metered metrics price name; the base price is
-    // looked up separately. This tier has no licensed (Self-Hosted) form.
+    // usage credit. Carries the metered metrics price name, which resolves
+    // against the `metrics` product; the base price and trial coupon come from
+    // the `pro` product and are looked up separately. This tier has no licensed
+    // (Self-Hosted) form.
     Pro(PriceName),
     Team(PlusUsage),
     Enterprise(PlusUsage),
@@ -199,7 +201,7 @@ impl PlusPlan {
             PlusPlan::Free => return Err(BillingError::ProductLevelFree),
             PlusPlan::Pro(price_name) => (
                 products
-                    .pro
+                    .metrics
                     .metered
                     .get(price_name.as_str())
                     .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?,
@@ -623,6 +625,10 @@ impl Biller {
                 )
             })?;
 
+        let created = subscription.created.try_into().map_err(|e| {
+            BillingError::DateTime(subscription_id.clone(), subscription.created, e)
+        })?;
+
         let customer = Self::get_plan_customer(&subscription.customer)?;
         let card = Self::get_plan_card(
             subscription_id,
@@ -638,6 +644,7 @@ impl Biller {
             card,
             level,
             unit_amount: unit_amount.into(),
+            created,
             current_period_start,
             current_period_end,
             status,
@@ -731,7 +738,9 @@ impl Biller {
         let Some(product_info) = price.product.as_object() else {
             return Err(BillingError::NoProductInfo(price.product.id().clone()));
         };
-        // `Bencher Team` or `Bencher Enterprise`
+        // The metered plan item's product name maps to a `PlanLevel`:
+        // `Bencher Team`/`Bencher Enterprise`, or `Bencher Metrics` for the Pro
+        // plan (whose metered metrics item lives on the `metrics` product).
         let plan_level = product_info.name.parse()?;
 
         Ok((plan_level, unit_amount))
@@ -986,12 +995,16 @@ impl Biller {
         // The list-check above handles dedup across periods (beyond the key's TTL).
         let idempotency_key =
             IdempotencyKey::new(format!("bencher-credit:{customer_id}:{period_start}"))?;
+        // Do not set `effective_at`. Stripe rejects a timestamp before its server
+        // "now", and `period_start` is in the past for an already-active
+        // subscription. Omitting it defaults to Stripe's "now" (also sidestepping
+        // clock skew between us and Stripe). The credit still covers this period's
+        // metered usage, which is invoiced at `expires_at` (period end).
         CreateBillingCreditGrant::new(
             amount,
             CreateBillingCreditGrantApplicabilityConfig { scope },
         )
         .customer(customer_id.to_string())
-        .effective_at(period_start)
         .expires_at(period_end)
         .metadata(metadata)
         .name(CREDIT_NAME)
@@ -1108,7 +1121,7 @@ mod tests {
 
     use rustls::crypto::aws_lc_rs::default_provider;
 
-    use crate::Biller;
+    use crate::{Biller, PeriodCredit};
 
     use super::{METER_CUSTOMER_KEY, METER_VALUE_KEY, matched_base_cents, period_already_granted};
 
@@ -1168,9 +1181,7 @@ mod tests {
         JsonProducts {
             pro: JsonProduct {
                 id: "prod_UizgEJP4gIENBi".into(),
-                metered: hmap! {
-                    "default".to_owned() => "price_1TjXq8Kal5vzTlmhBD8plpc7".to_owned(),
-                },
+                metered: HashMap::new(),
                 licensed: HashMap::new(),
                 base: hmap! {
                     "default".to_owned() => "price_1TjXgeKal5vzTlmhZzr88bki".to_owned(),
@@ -1199,6 +1210,17 @@ mod tests {
                 base: HashMap::new(),
                 trial_coupon: None,
             },
+            metrics: JsonProduct {
+                id: "prod_UjlAPYSw7n3RDq".into(),
+                metered: hmap! {
+                    "default".to_owned() => "price_1TkHeSKal5vzTlmhijDCkWDe".to_owned(),
+                },
+                licensed: hmap! {
+                    "default".to_owned() => "price_1TkHeSKal5vzTlmhPKXPOW7c".to_owned(),
+                },
+                base: HashMap::new(),
+                trial_coupon: None,
+            },
             bare_metal: JsonProduct {
                 id: "prod_U6a28ecwqRZHYz".into(),
                 metered: hmap! {
@@ -1211,6 +1233,50 @@ mod tests {
                 trial_coupon: None,
             },
         }
+    }
+
+    async fn setup_customer_payment_method(biller: &Biller) -> (CustomerId, PaymentMethodId) {
+        // Customer
+        let name = "Muriel Bagge".parse().unwrap();
+        let email = format!("muriel.bagge.{}@nowhere.com", rand::random::<u64>())
+            .parse()
+            .unwrap();
+        let json_customer = JsonCustomer {
+            uuid: UserUuid::new(),
+            name,
+            email,
+        };
+        assert!(
+            biller
+                .get_customer(&json_customer.email)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        let create_customer_id = biller.create_customer(&json_customer).await.unwrap();
+        let get_customer_id = biller
+            .get_customer(&json_customer.email)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(create_customer_id, get_customer_id);
+        let customer_id = create_customer_id;
+        let get_or_create_customer_id =
+            biller.get_or_create_customer(&json_customer).await.unwrap();
+        assert_eq!(customer_id, get_or_create_customer_id);
+
+        // Payment Method
+        let json_card = JsonCard {
+            number: "3530111333300000".parse().unwrap(),
+            exp_year: (Utc::now().year() + 1).try_into().unwrap(),
+            exp_month: 1.try_into().unwrap(),
+            cvc: "123".parse().unwrap(),
+        };
+        let payment_method_id = biller
+            .create_payment_method(customer_id.clone(), json_card.clone())
+            .await
+            .unwrap();
+        (customer_id, payment_method_id)
     }
 
     #[expect(clippy::too_many_arguments, reason = "test helper")]
@@ -1240,13 +1306,30 @@ mod tests {
         assert_eq!(create_subscription.id, get_subscription.id);
 
         let metered_plan_id = &subscription_id.as_ref().parse().unwrap();
-        biller.get_metered_plan(metered_plan_id).await.unwrap();
+        let json_plan = biller.get_metered_plan(metered_plan_id).await.unwrap();
+        // The plan level is derived from the metered plan item's Stripe product
+        // name. For Pro that item lives on the `metrics` product, exercising the
+        // "Bencher Metrics" -> PlanLevel::Pro mapping.
+        assert_eq!(json_plan.level, plan_level);
 
         let (plan_status, customer_id) = biller
             .get_metered_plan_status(metered_plan_id)
             .await
             .unwrap();
         assert_eq!(plan_status, PlanStatus::Active);
+
+        // Only Pro carries a flat base fee, so only Pro grants an included-usage
+        // credit; the call is a no-op for Team/Enterprise. Granting twice must be
+        // idempotent (regression: a past `effective_at` was rejected by Stripe).
+        let first_credit = biller.ensure_period_credit(metered_plan_id).await.unwrap();
+        let second_credit = biller.ensure_period_credit(metered_plan_id).await.unwrap();
+        if plan_level == PlanLevel::Pro {
+            assert_eq!(first_credit, PeriodCredit::Granted);
+            assert_eq!(second_credit, PeriodCredit::AlreadyGranted);
+        } else {
+            assert_eq!(first_credit, PeriodCredit::NotApplicable);
+            assert_eq!(second_credit, PeriodCredit::NotApplicable);
+        }
 
         record_runner_usage(biller, &customer_id, runner_minutes).await;
         record_metrics_usage(biller, &customer_id, metrics_quantity).await;
@@ -1552,46 +1635,21 @@ mod tests {
         };
         let biller = Biller::new(json_billing).await.unwrap();
 
-        // Customer
-        let name = "Muriel Bagge".parse().unwrap();
-        let email = format!("muriel.bagge.{}@nowhere.com", rand::random::<u64>())
-            .parse()
-            .unwrap();
-        let json_customer = JsonCustomer {
-            uuid: UserUuid::new(),
-            name,
-            email,
-        };
-        assert!(
-            biller
-                .get_customer(&json_customer.email)
-                .await
-                .unwrap()
-                .is_none()
-        );
-        let create_customer_id = biller.create_customer(&json_customer).await.unwrap();
-        let get_customer_id = biller
-            .get_customer(&json_customer.email)
-            .await
-            .unwrap()
-            .unwrap();
-        assert_eq!(create_customer_id, get_customer_id);
-        let customer_id = create_customer_id;
-        let get_or_create_customer_id =
-            biller.get_or_create_customer(&json_customer).await.unwrap();
-        assert_eq!(customer_id, get_or_create_customer_id);
+        let (customer_id, payment_method_id) = setup_customer_payment_method(&biller).await;
 
-        // Payment Method
-        let json_card = JsonCard {
-            number: "3530111333300000".parse().unwrap(),
-            exp_year: (Utc::now().year() + 1).try_into().unwrap(),
-            exp_month: 1.try_into().unwrap(),
-            cvc: "123".parse().unwrap(),
-        };
-        let payment_method_id = biller
-            .create_payment_method(customer_id.clone(), json_card.clone())
-            .await
-            .unwrap();
+        // Pro Metered Plan
+        let organization = OrganizationUuid::new();
+        metered_subscription(
+            &biller,
+            organization,
+            customer_id.clone(),
+            payment_method_id.clone(),
+            PlanLevel::Pro,
+            DEFAULT_PRICE_NAME.into(),
+            3,
+            7,
+        )
+        .await;
 
         // Team Metered Plan
         let organization = OrganizationUuid::new();
