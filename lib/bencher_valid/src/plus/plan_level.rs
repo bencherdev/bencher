@@ -13,13 +13,6 @@ const FREE: &str = "free";
 const PRO: &str = "pro";
 const TEAM: &str = "team";
 const ENTERPRISE: &str = "enterprise";
-// These are the Stripe product names
-const BENCHER_PRO: &str = "Bencher Pro";
-const BENCHER_TEAM: &str = "Bencher Team";
-const BENCHER_ENTERPRISE: &str = "Bencher Enterprise";
-// The Pro plan's metered metrics usage is billed via its own "Bencher Metrics"
-// product, so that product name also resolves to `PlanLevel::Pro`.
-const BENCHER_METRICS: &str = "Bencher Metrics";
 
 #[typeshare::typeshare]
 #[derive(
@@ -54,9 +47,9 @@ impl TryFrom<String> for PlanLevel {
     fn try_from(plan_level: String) -> Result<Self, Self::Error> {
         match plan_level.as_str() {
             FREE => Ok(Self::Free),
-            PRO | BENCHER_PRO | BENCHER_METRICS => Ok(Self::Pro),
-            TEAM | BENCHER_TEAM => Ok(Self::Team),
-            ENTERPRISE | BENCHER_ENTERPRISE => Ok(Self::Enterprise),
+            PRO => Ok(Self::Pro),
+            TEAM => Ok(Self::Team),
+            ENTERPRISE => Ok(Self::Enterprise),
             _ => Err(ValidError::PlanLevel(plan_level)),
         }
     }
@@ -93,16 +86,7 @@ impl From<PlanLevel> for String {
     expect(dead_code, reason = "exported only for wasm and tests")
 )]
 pub fn is_valid_plan_level(plan_level: &str) -> bool {
-    matches!(
-        plan_level,
-        FREE | PRO
-            | TEAM
-            | ENTERPRISE
-            | BENCHER_PRO
-            | BENCHER_TEAM
-            | BENCHER_ENTERPRISE
-            | BENCHER_METRICS
-    )
+    matches!(plan_level, FREE | PRO | TEAM | ENTERPRISE)
 }
 
 #[cfg(test)]
@@ -116,10 +100,15 @@ mod tests {
         assert_eq!(true, is_valid_plan_level("pro"));
         assert_eq!(true, is_valid_plan_level("team"));
         assert_eq!(true, is_valid_plan_level("enterprise"));
-        assert_eq!(true, is_valid_plan_level("Bencher Pro"));
-        assert_eq!(true, is_valid_plan_level("Bencher Team"));
-        assert_eq!(true, is_valid_plan_level("Bencher Enterprise"));
-        assert_eq!(true, is_valid_plan_level("Bencher Metrics"));
+
+        // Stripe product names are no longer valid plan levels: the plan level is
+        // resolved authoritatively, not by parsing a product name. These guard
+        // against re-introducing that conflation.
+        assert_eq!(false, is_valid_plan_level("Bencher Pro"));
+        assert_eq!(false, is_valid_plan_level("Bencher Team"));
+        assert_eq!(false, is_valid_plan_level("Bencher Enterprise"));
+        assert_eq!(false, is_valid_plan_level("Bencher Metrics"));
+        assert_eq!(false, is_valid_plan_level("Bencher Bare Metal"));
 
         assert_eq!(false, is_valid_plan_level(""));
         assert_eq!(false, is_valid_plan_level("one"));
@@ -144,30 +133,5 @@ mod tests {
         assert_eq!(json, "\"pro\"");
 
         serde_json::from_str::<PlanLevel>("\"invalid\"").unwrap_err();
-    }
-
-    #[test]
-    fn plan_level_from_product_name() {
-        use super::PlanLevel;
-
-        assert_eq!(
-            PlanLevel::try_from("Bencher Pro".to_owned()).unwrap(),
-            PlanLevel::Pro,
-        );
-        // The Pro plan's metered metrics item lives on the "Bencher Metrics"
-        // product, which must resolve back to `PlanLevel::Pro`.
-        assert_eq!(
-            PlanLevel::try_from("Bencher Metrics".to_owned()).unwrap(),
-            PlanLevel::Pro,
-        );
-        assert_eq!(
-            PlanLevel::try_from("Bencher Team".to_owned()).unwrap(),
-            PlanLevel::Team,
-        );
-        assert_eq!(
-            PlanLevel::try_from("Bencher Enterprise".to_owned()).unwrap(),
-            PlanLevel::Enterprise,
-        );
-        PlanLevel::try_from("Bencher Bare Metal".to_owned()).unwrap_err();
     }
 }

@@ -2,7 +2,7 @@ use stripe_billing::{Subscription, SubscriptionId, SubscriptionItem};
 use stripe_checkout::CheckoutSession;
 use stripe_payment::PaymentMethodId;
 use stripe_product::PriceId;
-use stripe_shared::{Customer, CustomerId, ProductId};
+use stripe_shared::{Customer, CustomerId};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -59,6 +59,4 @@ pub enum BillingError {
     NoCardDetails(PaymentMethodId),
     #[error("No unit amount for {0}")]
     NoUnitAmount(PriceId),
-    #[error("No product info for {0}")]
-    NoProductInfo(ProductId),
 }
