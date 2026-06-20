@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 import { PlanLevel } from "../../types/bencher";
 
 interface Props {
-	hideFree?: boolean;
+	freeCtaText?: string;
 	handleFree: () => void;
 	handlePro: () => void;
 	handleEnterprise: () => void;
@@ -15,11 +15,16 @@ interface Feature {
 	label: string;
 }
 
+interface HighlightLine {
+	label: string;
+	value?: string;
+}
+
 interface RunnerSpec {
 	concurrentJobs: string;
 	jobTimeout: string;
 	queuePriority: string;
-	runnerRate: string;
+	runnerTypes: HighlightLine[];
 }
 
 interface Tier {
@@ -28,14 +33,11 @@ interface Tier {
 	tagline: string;
 	price: string;
 	priceUnit: string;
-	projectsNote: string;
-	// Decodability note: what the included credit buys, shown under the price.
-	creditNote?: string;
 	popular?: boolean;
 	ctaStyle: "primary" | "outlined";
 	features: Feature[];
+	metrics: HighlightLine[];
 	runners: RunnerSpec;
-	billingFooter?: string;
 }
 
 const TIERS: Tier[] = [
@@ -45,77 +47,78 @@ const TIERS: Tier[] = [
 		tagline: "For open source projects",
 		price: "$0",
 		priceUnit: " / month",
-		projectsNote: "Public projects only",
 		ctaStyle: "outlined",
 		features: [
 			{ mark: "check", label: "Public projects" },
 			{ mark: "dash", label: "Private projects" },
 			{ mark: "check", label: "Community support" },
 		],
+		metrics: [{ label: "Public Metrics", value: "Free" }],
 		runners: {
 			concurrentJobs: "1",
 			jobTimeout: "5 min",
 			queuePriority: "Standard",
-			runnerRate: "Free",
+			runnerTypes: [{ label: "On-Demand Runners", value: "Free" }],
 		},
 	},
 	{
 		plan: PlanLevel.Pro,
 		title: "Pro",
-		tagline: "For teams shipping fast",
+		tagline: "For performance-critical projects",
 		price: "$20",
-		priceUnit: " / month + usage",
-		projectsNote: "Public & private projects",
-		creditNote:
-			"Includes $20 of usage: ~2,000 metrics or 20 runner-hours, mixed freely",
+		priceUnit: " / month + additional usage",
 		popular: true,
 		ctaStyle: "primary",
 		features: [
 			{ mark: "check", label: "$20 of included usage credit" },
-			{ mark: "check", label: "Public & private projects" },
-			{ mark: "check", label: "No per-seat pricing" },
-			{ mark: "check", label: "Customer support" },
+			{ mark: "check", label: "Public & Private projects" },
+			{ mark: "check", label: "Priority support" },
+		],
+		metrics: [
+			{ label: "Public Metrics", value: "Free" },
+			{ label: "Private Metrics", value: "$0.01 / result" },
 		],
 		runners: {
 			concurrentJobs: "Unlimited",
 			jobTimeout: "Unlimited",
 			queuePriority: "Priority",
-			runnerRate: "$1.00 / hr",
+			runnerTypes: [{ label: "On-Demand Runners", value: "$1.00 / hr" }],
 		},
-		billingFooter:
-			"Private metrics $0.01 each. Overage billed at the same rates. First month free.",
 	},
 	{
 		plan: PlanLevel.Enterprise,
 		title: "Enterprise",
 		tagline: "For performance-critical organizations",
-		price: "Contact us",
+		price: "Custom",
 		priceUnit: "",
-		projectsNote: "Public & private projects",
 		ctaStyle: "outlined",
 		features: [
-			{ mark: "check", label: "Everything in Pro" },
-			{ mark: "check", label: "Priority support" },
 			{ mark: "check", label: "Single sign-on (SSO)" },
+			{ mark: "check", label: "On-premise deployment" },
 			{ mark: "check", label: "Dedicated onboarding" },
 		],
+		metrics: [{ label: "Public Metrics" }, { label: "Private Metrics" }],
 		runners: {
 			concurrentJobs: "Unlimited",
 			jobTimeout: "Unlimited",
 			queuePriority: "Priority",
-			runnerRate: "Custom hardware",
+			runnerTypes: [
+				{ label: "On-Demand Runners" },
+				{ label: "Dedicated Runners" },
+				{ label: "Custom Runners" },
+			],
 		},
 	},
 ];
 
-const ctaTextFor = (plan: PlanLevel): string => {
+const ctaTextFor = (plan: PlanLevel, freeCtaText?: string): string => {
 	switch (plan) {
 		case PlanLevel.Pro:
 			return "Start 1-month free trial";
 		case PlanLevel.Enterprise:
-			return "Contact us";
+			return "Contact Us";
 		default:
-			return "Sign up for Free";
+			return freeCtaText ?? "Sign up for Free";
 	}
 };
 
@@ -130,14 +133,27 @@ const handlerFor = (plan: PlanLevel, props: Props): (() => void) => {
 	}
 };
 
+const HighlightBox = (props: { lines: HighlightLine[]; popular?: boolean }) => (
+	<dl class={`pricing-highlight${props.popular ? " is-popular" : ""}`}>
+		<For each={props.lines}>
+			{(line) => (
+				<div class="pricing-highlight-row">
+					<dt>{line.label}</dt>
+					{line.value ? (
+						<dd>{line.value}</dd>
+					) : (
+						<dd class="pricing-highlight-check">✓</dd>
+					)}
+				</div>
+			)}
+		</For>
+	</dl>
+);
+
 const InnerPricingTable = (props: Props) => {
-	const tiers = () =>
-		props.hideFree
-			? TIERS.filter((tier) => tier.plan !== PlanLevel.Free)
-			: TIERS;
 	return (
-		<div class={`pricing-grid${props.hideFree ? " is-two-up" : ""}`}>
-			<For each={tiers()}>
+		<div class="pricing-grid">
+			<For each={TIERS}>
 				{(tier) => (
 					<div class={`pricing-card${tier.popular ? " is-popular" : ""}`}>
 						<Show when={tier.popular}>
@@ -151,18 +167,13 @@ const InnerPricingTable = (props: Props) => {
 							<span class="pricing-price">{tier.price}</span>
 							<span class="pricing-price-unit">{tier.priceUnit}</span>
 						</div>
-						<div class="pricing-projects">{tier.projectsNote}</div>
-						<Show when={tier.creditNote}>
-							<div class="pricing-billing-footer">{tier.creditNote}</div>
-						</Show>
 						<button
 							type="button"
 							class={`pricing-cta pricing-cta-${tier.ctaStyle}`}
 							onClick={() => handlerFor(tier.plan, props)()}
 						>
-							{ctaTextFor(tier.plan)}
+							{ctaTextFor(tier.plan, props.freeCtaText)}
 						</button>
-						<div class="pricing-section-label">BENCHMARK METRICS</div>
 						<ul class="pricing-feature-list">
 							<For each={tier.features}>
 								{(f) => (
@@ -178,6 +189,11 @@ const InnerPricingTable = (props: Props) => {
 								)}
 							</For>
 						</ul>
+						<div class="pricing-section-label">BENCHMARK METRICS</div>
+						<HighlightBox
+							lines={tier.metrics}
+							popular={tier.popular ?? false}
+						/>
 						<div class="pricing-section-label">BARE METAL RUNNERS</div>
 						<dl class="pricing-specs">
 							<div class="pricing-spec-row">
@@ -192,18 +208,11 @@ const InnerPricingTable = (props: Props) => {
 								<dt>Queue priority</dt>
 								<dd>{tier.runners.queuePriority}</dd>
 							</div>
-							<div
-								class={`pricing-spec-row pricing-spec-highlight${
-									tier.popular ? " is-popular" : ""
-								}`}
-							>
-								<dt>On-Demand Runners</dt>
-								<dd>{tier.runners.runnerRate}</dd>
-							</div>
 						</dl>
-						<Show when={tier.billingFooter}>
-							<div class="pricing-billing-footer">{tier.billingFooter}</div>
-						</Show>
+						<HighlightBox
+							lines={tier.runners.runnerTypes}
+							popular={tier.popular ?? false}
+						/>
 					</div>
 				)}
 			</For>

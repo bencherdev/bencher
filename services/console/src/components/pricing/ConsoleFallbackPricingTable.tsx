@@ -1,9 +1,9 @@
 import InnerPricingTable from "./InnerPricingTable";
 
-const ConsoleFallbackPricingTable = (props: { hideFree: boolean }) => {
+const ConsoleFallbackPricingTable = (props: { freeCtaText: string }) => {
 	return (
 		<InnerPricingTable
-			hideFree={props.hideFree}
+			freeCtaText={props.freeCtaText}
 			handleFree={() => {}}
 			handlePro={() => {}}
 			handleEnterprise={() => {}}

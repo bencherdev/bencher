@@ -22,20 +22,11 @@ import ThemeScript from "../../../components/navbar/theme/ThemeScript.astro";
     <div slot="fallback">
       <OnboardStepsFallback step={OnboardStep.PLAN} />
       <section class="section">
-        <div class="container">
-          <div class="columns is-centered">
-            <div class="column is-half">
-              <div class="content has-text-centered">
-                <h1 class="title is-1">Activate your account</h1>
-                <h2 class="subtitle is-4">
-                  All plans come with a 30-day money-back guarantee.
-                </h2>
-              </div>
-              <br />
-              <ConsoleFallbackPricingTable hideFree={true} />
-            </div>
-          </div>
+        <div class="content has-text-centered">
+          <h1 class="title is-1">Activate your account</h1>
         </div>
+        <br />
+        <ConsoleFallbackPricingTable freeCtaText="Continue with Free" />
       </section>
     </div>
   </OnboardPlan>

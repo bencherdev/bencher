@@ -144,7 +144,15 @@ const BillingPanelSwitch = (props: {
 	handleRefresh: () => void;
 }) => {
 	return (
-		<Switch fallback={<ConsoleFallbackPricingTable hideFree={props.onboard} />}>
+		<Switch
+			fallback={
+				<ConsoleFallbackPricingTable
+					freeCtaText={
+						props.onboard ? "Continue with Free" : "Sign up for Free"
+					}
+				/>
+			}
+		>
 			{/* Bencher Cloud */}
 			<Match when={props.usage()?.kind === UsageKind.CloudFree}>
 				<BillingForm

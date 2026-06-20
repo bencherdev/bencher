@@ -7,7 +7,7 @@ import {
 } from "../../../../types/bencher";
 import { fmtDate } from "../../../../util/convert";
 import { BENCHER_CALENDLY_URL } from "../../../../util/ext";
-import { useSearchParams } from "../../../../util/url";
+import { useNavigate, useSearchParams } from "../../../../util/url";
 import { type InitValid, validPlanLevel } from "../../../../util/valid";
 import { PLAN_PARAM } from "../../../auth/auth";
 import InnerPricingTable from "../../../pricing/InnerPricingTable";
@@ -26,6 +26,7 @@ interface Props {
 // Only Cloud Pro self-serves. Enterprise (and Self-Hosted) go through a sales
 // conversation, so the Enterprise call to action opens "Contact us".
 const BillingForm = (props: Props) => {
+	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	const setPlanLevel = (planLevel: PlanLevel) => {
@@ -37,42 +38,69 @@ const BillingForm = (props: Props) => {
 		if (!props.bencher_valid()) {
 			return;
 		}
-		if (!validPlanLevel(searchParams[PLAN_PARAM])) {
-			setPlanLevel(props.onboard ? PlanLevel.Pro : PlanLevel.Free);
-		} else if (props.onboard && plan() === PlanLevel.Free) {
-			setPlanLevel(PlanLevel.Pro);
+		// The billing panel defaults to the Free view. Onboarding instead shows
+		// all three plans until one is chosen, or auto-activates Pro checkout
+		// below when the visitor arrives with ?plan=pro.
+		if (!props.onboard && !validPlanLevel(searchParams[PLAN_PARAM])) {
+			setPlanLevel(PlanLevel.Free);
 		}
 	});
 
+	const checkout = (autoSubmit: boolean) => (
+		<Checkout
+			apiUrl={props.apiUrl}
+			params={props.params}
+			onboard={props.onboard}
+			autoSubmit={autoSubmit}
+			bencher_valid={props.bencher_valid}
+			user={props.user}
+			organization={props.usage()?.organization}
+			plan={plan}
+			entitlements={() => null}
+			organizationUuid={() => null}
+			organizationUuidValid={() => true}
+			handleRefresh={props.handleRefresh}
+		/>
+	);
+
 	return (
-		<>
-			<InnerPricingTable
-				hideFree={props.onboard}
-				handleFree={() => setPlanLevel(PlanLevel.Free)}
-				handlePro={() => setPlanLevel(PlanLevel.Pro)}
-				handleEnterprise={() =>
-					window.open(BENCHER_CALENDLY_URL, "_blank", "noreferrer")
+		<Show
+			when={props.onboard}
+			fallback={
+				<>
+					<InnerPricingTable
+						handleFree={() => setPlanLevel(PlanLevel.Free)}
+						handlePro={() => setPlanLevel(PlanLevel.Pro)}
+						handleEnterprise={() =>
+							window.open(BENCHER_CALENDLY_URL, "_blank", "noreferrer")
+						}
+					/>
+					<Show when={plan() === PlanLevel.Pro}>{checkout(false)}</Show>
+					<Show when={plan() === PlanLevel.Free}>
+						<FreeUsage usage={props.usage} />
+					</Show>
+				</>
+			}
+		>
+			{/* Onboarding: ?plan=pro (or choosing Pro) auto-activates checkout;
+			    otherwise show all three plans with onboard-specific actions. */}
+			<Show
+				when={plan() === PlanLevel.Pro}
+				fallback={
+					<InnerPricingTable
+						freeCtaText="Continue with Free"
+						handleFree={() => navigate("/console")}
+						handlePro={() => setPlanLevel(PlanLevel.Pro)}
+						handleEnterprise={() => {
+							window.open(BENCHER_CALENDLY_URL, "_blank", "noreferrer");
+							navigate("/console");
+						}}
+					/>
 				}
-			/>
-			<Show when={plan() === PlanLevel.Pro}>
-				<Checkout
-					apiUrl={props.apiUrl}
-					params={props.params}
-					onboard={props.onboard}
-					bencher_valid={props.bencher_valid}
-					user={props.user}
-					organization={props.usage()?.organization}
-					plan={plan}
-					entitlements={() => null}
-					organizationUuid={() => null}
-					organizationUuidValid={() => true}
-					handleRefresh={props.handleRefresh}
-				/>
+			>
+				{checkout(true)}
 			</Show>
-			<Show when={plan() === PlanLevel.Free}>
-				<FreeUsage usage={props.usage} />
-			</Show>
-		</>
+		</Show>
 	);
 };
 

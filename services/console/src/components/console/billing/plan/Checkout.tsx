@@ -1,6 +1,11 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import { type Accessor, type Resource, createSignal } from "solid-js";
+import {
+	type Accessor,
+	type Resource,
+	createEffect,
+	createSignal,
+} from "solid-js";
 import type {
 	JsonAuthUser,
 	JsonNewCheckout,
@@ -15,6 +20,7 @@ interface Props {
 	apiUrl: string;
 	params: Params;
 	onboard: boolean;
+	autoSubmit?: boolean;
 	bencher_valid: Resource<InitValid>;
 	user: JsonAuthUser;
 	organization: undefined | string;
@@ -69,11 +75,30 @@ const Checkout = (props: Props) => {
 			});
 	};
 
+	// When arriving with the plan preselected (e.g. ?plan=pro), start checkout
+	// automatically so the visitor lands on Stripe with no extra click.
+	let autoSubmitted = false;
+	createEffect(() => {
+		if (!props.autoSubmit || autoSubmitted) {
+			return;
+		}
+		if (!props.bencher_valid() || !props.organization) {
+			return;
+		}
+		if (!validJwt(props.user?.token)) {
+			return;
+		}
+		autoSubmitted = true;
+		sendForm();
+	});
+
 	return (
 		<div class="columns is-centered" style="margin-top: 1rem;">
 			<div class={`column ${props.onboard ? "" : "is-half"}`}>
 				<button
-					class="button is-primary is-fullwidth"
+					class={`button is-primary is-fullwidth${
+						submitting() ? " is-loading" : ""
+					}`}
 					type="submit"
 					disabled={!isSendable()}
 					onMouseDown={(e) => {

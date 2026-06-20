@@ -95,29 +95,16 @@ const OnboardPlan = (props: Props) => {
 			<OnboardSteps step={OnboardStep.PLAN} plan={plan} />
 
 			<section class="section">
-				<div class="container">
-					<div class="columns is-centered">
-						<div class="column is-half">
-							<div class="content has-text-centered">
-								<h1 class="title is-1">Activate your account</h1>
-							</div>
-							<br />
-							<BillingPanel
-								apiUrl={props.apiUrl}
-								isBencherCloud={props.isBencherCloud}
-								params={{ organization: organization()?.slug ?? "" }}
-								onboard={true}
-							/>
-							<br />
-							<div class="content has-text-centered">
-								<a class="button" href="/console">
-									I want to use the free plan for now
-								</a>
-							</div>
-							<br />
-						</div>
-					</div>
+				<div class="content has-text-centered">
+					<h1 class="title is-1">Activate your account</h1>
 				</div>
+				<br />
+				<BillingPanel
+					apiUrl={props.apiUrl}
+					isBencherCloud={props.isBencherCloud}
+					params={{ organization: organization()?.slug ?? "" }}
+					onboard={true}
+				/>
 			</section>
 		</>
 	);
