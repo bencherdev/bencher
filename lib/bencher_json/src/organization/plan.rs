@@ -45,6 +45,9 @@ pub struct JsonPlan {
     pub card: JsonCardDetails,
     pub level: PlanLevel,
     pub unit_amount: BigInt,
+    /// When the metered subscription was created. The first (free-trial) billing
+    /// period is the one that contains this timestamp.
+    pub created: DateTime,
     pub current_period_start: DateTime,
     pub current_period_end: DateTime,
     pub status: PlanStatus,

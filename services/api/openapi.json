@@ -14913,6 +14913,14 @@
           "card": {
             "$ref": "#/components/schemas/JsonCardDetails"
           },
+          "created": {
+            "description": "When the metered subscription was created. The first (free-trial) billing period is the one that contains this timestamp.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
           "current_period_end": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -14946,6 +14954,7 @@
         "required": [
           "cancel_at_period_end",
           "card",
+          "created",
           "current_period_end",
           "current_period_start",
           "customer",

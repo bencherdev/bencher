@@ -623,6 +623,10 @@ impl Biller {
                 )
             })?;
 
+        let created = subscription.created.try_into().map_err(|e| {
+            BillingError::DateTime(subscription_id.clone(), subscription.created, e)
+        })?;
+
         let customer = Self::get_plan_customer(&subscription.customer)?;
         let card = Self::get_plan_card(
             subscription_id,
@@ -638,6 +642,7 @@ impl Biller {
             card,
             level,
             unit_amount: unit_amount.into(),
+            created,
             current_period_start,
             current_period_end,
             status,
