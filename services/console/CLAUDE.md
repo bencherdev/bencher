@@ -22,6 +22,15 @@ please alert the developer working with you and indicate that this is the case b
 - When there are significant page-specific styles, extract them to a dedicated partial (e.g., `_pricing.scss`) in `src/styles/` and `@use` it from `styles.scss`.
 - Do NOT use emdashes (`—`) in UI copy
 
+## Design System
+
+The visual design language (tokens, layout rhythm, component patterns) is
+documented in [`DESIGN.md`](./DESIGN.md). It is derived from the redesigned
+landing and pricing pages and is the reference for restyling the Docs, Console,
+and Perf surfaces. Read it before building or restyling a UI surface, and reuse
+the existing tokens (`--brand-*`, `--landing-*` in [`src/styles/_landing.scss`](./src/styles/_landing.scss))
+rather than introducing new colors or spacing values.
+
 
 ## Building & Running
 
