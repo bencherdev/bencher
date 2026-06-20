@@ -1,5 +1,11 @@
 import type { Params } from "astro";
-import { type Resource, Show, createEffect, createMemo } from "solid-js";
+import {
+	type Resource,
+	Show,
+	createEffect,
+	createMemo,
+	createSignal,
+} from "solid-js";
 import {
 	type JsonAuthUser,
 	type JsonUsage,
@@ -46,16 +52,21 @@ const BillingForm = (props: Props) => {
 		}
 	});
 
-	const checkout = (autoSubmit: boolean) => (
+	// Billing page: clicking Pro starts checkout immediately. Tracked with a
+	// local signal rather than the URL so returning from Stripe shows the
+	// pricing table again instead of re-triggering checkout.
+	const [checkingOut, setCheckingOut] = createSignal(false);
+
+	const checkout = (planLevel: () => PlanLevel) => (
 		<Checkout
 			apiUrl={props.apiUrl}
 			params={props.params}
 			onboard={props.onboard}
-			autoSubmit={autoSubmit}
+			autoSubmit={true}
 			bencher_valid={props.bencher_valid}
 			user={props.user}
 			organization={props.usage()?.organization}
-			plan={plan}
+			plan={planLevel}
 			entitlements={() => null}
 			organizationUuid={() => null}
 			organizationUuidValid={() => true}
@@ -67,19 +78,25 @@ const BillingForm = (props: Props) => {
 		<Show
 			when={props.onboard}
 			fallback={
-				<>
-					<InnerPricingTable
-						handleFree={() => setPlanLevel(PlanLevel.Free)}
-						handlePro={() => setPlanLevel(PlanLevel.Pro)}
-						handleEnterprise={() =>
-							window.open(BENCHER_CALENDLY_URL, "_blank", "noreferrer")
-						}
-					/>
-					<Show when={plan() === PlanLevel.Pro}>{checkout(false)}</Show>
-					<Show when={plan() === PlanLevel.Free}>
-						<FreeUsage usage={props.usage} />
-					</Show>
-				</>
+				<Show
+					when={checkingOut()}
+					fallback={
+						<>
+							<InnerPricingTable
+								handleFree={() => setPlanLevel(PlanLevel.Free)}
+								handlePro={() => setCheckingOut(true)}
+								handleEnterprise={() =>
+									window.open(BENCHER_CALENDLY_URL, "_blank", "noreferrer")
+								}
+							/>
+							<Show when={plan() === PlanLevel.Free}>
+								<FreeUsage usage={props.usage} />
+							</Show>
+						</>
+					}
+				>
+					{checkout(() => PlanLevel.Pro)}
+				</Show>
 			}
 		>
 			{/* Onboarding: ?plan=pro (or choosing Pro) auto-activates checkout;
@@ -98,7 +115,7 @@ const BillingForm = (props: Props) => {
 					/>
 				}
 			>
-				{checkout(true)}
+				{checkout(plan)}
 			</Show>
 		</Show>
 	);

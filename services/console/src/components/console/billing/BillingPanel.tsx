@@ -20,6 +20,7 @@ import {
 	UsageKind,
 } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
+import { useSearchParams } from "../../../util/url";
 import {
 	PRO_BASE_USD,
 	PRO_INCLUDED_CREDIT_USD,
@@ -35,12 +36,14 @@ import { BENCHER_CALENDLY_URL } from "../../../util/ext";
 import { httpGet, httpPatch } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { type InitValid, init_valid, validJwt } from "../../../util/valid";
+import { PLAN_PARAM } from "../../auth/auth";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
 import ConsoleFallbackPricingTable from "../../pricing/ConsoleFallbackPricingTable";
 import type { BillingHeaderConfig } from "./BillingHeader";
 import BillingHeader from "./BillingHeader";
 import BillingForm from "./plan/BillingForm";
+import CheckoutLoading from "./plan/CheckoutLoading";
 import PaymentMethod from "./plan/PaymentMethod";
 
 interface Props {
@@ -143,14 +146,29 @@ const BillingPanelSwitch = (props: {
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }) => {
+	const [searchParams] = useSearchParams();
+	// During onboarding with ?plan=pro the checkout activates automatically.
+	// While the usage resource loads, show the redirect loader instead of the
+	// pricing table so the visitor sees one calm loading state, not a flash of
+	// plans before being sent to checkout.
+	const autoActivatePro = createMemo(
+		() => props.onboard && searchParams[PLAN_PARAM] === PlanLevel.Pro,
+	);
 	return (
 		<Switch
 			fallback={
-				<ConsoleFallbackPricingTable
-					freeCtaText={
-						props.onboard ? "Continue with Free" : "Sign up for Free"
+				<Show
+					when={autoActivatePro()}
+					fallback={
+						<ConsoleFallbackPricingTable
+							freeCtaText={
+								props.onboard ? "Continue with Free" : "Sign up for Free"
+							}
+						/>
 					}
-				/>
+				>
+					<CheckoutLoading onboard={props.onboard} />
+				</Show>
 			}
 		>
 			{/* Bencher Cloud */}
