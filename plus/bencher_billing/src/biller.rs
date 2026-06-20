@@ -995,16 +995,16 @@ impl Biller {
         // The list-check above handles dedup across periods (beyond the key's TTL).
         let idempotency_key =
             IdempotencyKey::new(format!("bencher-credit:{customer_id}:{period_start}"))?;
-        CreateBillingCreditGrant::new(
-            amount,
-            CreateBillingCreditGrantApplicabilityConfig { scope },
-        )
-        .customer(customer_id.to_string())
         // Do not set `effective_at`. Stripe rejects a timestamp before its server
         // "now", and `period_start` is in the past for an already-active
         // subscription. Omitting it defaults to Stripe's "now" (also sidestepping
         // clock skew between us and Stripe). The credit still covers this period's
         // metered usage, which is invoiced at `expires_at` (period end).
+        CreateBillingCreditGrant::new(
+            amount,
+            CreateBillingCreditGrantApplicabilityConfig { scope },
+        )
+        .customer(customer_id.to_string())
         .expires_at(period_end)
         .metadata(metadata)
         .name(CREDIT_NAME)

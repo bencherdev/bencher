@@ -44,33 +44,7 @@ impl QueryMetric {
         start_time: bencher_json::DateTime,
         end_time: bencher_json::DateTime,
     ) -> Result<u32, HttpError> {
-        schema::metric::table
-            .inner_join(
-                schema::report_benchmark::table
-                    .inner_join(schema::benchmark::table.inner_join(schema::project::table))
-                    .inner_join(schema::report::table),
-            )
-            .filter(schema::report::project_id.eq(schema::project::id))
-            .filter(schema::project::organization_id.eq(organization_id))
-            .filter(schema::report::end_time.ge(start_time))
-            .filter(schema::report::end_time.le(end_time))
-            .count()
-            .get_result::<i64>(conn)
-            .map_err(|e| {
-                crate::error::issue_error(
-                    "Failed to count metric usage",
-                    &format!("Failed to count metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
-                    e,
-                )
-            })?
-            .try_into()
-            .map_err(|e| {
-                crate::error::issue_error(
-                    "Failed to count metric usage",
-                    &format!("Failed to count metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
-                    e,
-                )
-            })
+        Self::usage_inner(conn, organization_id, start_time, end_time, None)
     }
 
     /// Count the billable metric usage for an organization over a time window.
@@ -85,7 +59,26 @@ impl QueryMetric {
         start_time: bencher_json::DateTime,
         end_time: bencher_json::DateTime,
     ) -> Result<u32, HttpError> {
-        schema::metric::table
+        Self::usage_inner(
+            conn,
+            organization_id,
+            start_time,
+            end_time,
+            Some(Visibility::Private),
+        )
+    }
+
+    /// Count metric usage for an organization over a time window, optionally
+    /// restricted to projects of a given `visibility`.
+    #[cfg(feature = "plus")]
+    fn usage_inner(
+        conn: &mut DbConnection,
+        organization_id: OrganizationId,
+        start_time: bencher_json::DateTime,
+        end_time: bencher_json::DateTime,
+        visibility: Option<Visibility>,
+    ) -> Result<u32, HttpError> {
+        let mut query = schema::metric::table
             .inner_join(
                 schema::report_benchmark::table
                     .inner_join(schema::benchmark::table.inner_join(schema::project::table))
@@ -93,23 +86,27 @@ impl QueryMetric {
             )
             .filter(schema::report::project_id.eq(schema::project::id))
             .filter(schema::project::organization_id.eq(organization_id))
-            .filter(schema::project::visibility.eq(Visibility::Private))
             .filter(schema::report::end_time.ge(start_time))
             .filter(schema::report::end_time.le(end_time))
-            .count()
+            .select(diesel::dsl::count_star())
+            .into_boxed();
+        if let Some(visibility) = visibility {
+            query = query.filter(schema::project::visibility.eq(visibility));
+        }
+        query
             .get_result::<i64>(conn)
             .map_err(|e| {
                 crate::error::issue_error(
-                    "Failed to count private metric usage",
-                    &format!("Failed to count private metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
+                    "Failed to count metric usage",
+                    &format!("Failed to count metric usage (visibility: {visibility:?}) for organization ({organization_id}) between {start_time} and {end_time}."),
                     e,
                 )
             })?
             .try_into()
             .map_err(|e| {
                 crate::error::issue_error(
-                    "Failed to count private metric usage",
-                    &format!("Failed to count private metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
+                    "Failed to count metric usage",
+                    &format!("Failed to count metric usage (visibility: {visibility:?}) for organization ({organization_id}) between {start_time} and {end_time}."),
                     e,
                 )
             })
@@ -168,7 +165,7 @@ impl InsertMetric {
 // `private_usage` and `Visibility::Private` are `plus`-only, so this module
 // compiles with the `plus` feature (as the rest of the test target already does).
 #[cfg(test)]
-mod test {
+mod tests {
     use bencher_json::{DateTime, project::Visibility};
     use diesel::{ExpressionMethods as _, RunQueryDsl as _};
 

@@ -25,9 +25,6 @@ pub struct JsonProducts {
     // Legacy self-serve paid tier, retained for grandfathered customers.
     pub team: JsonProduct,
     pub enterprise: JsonProduct,
-    // Holds the Pro plan's metered metrics price. Kept as its own product so
-    // checkout shows a distinct "Bencher Metrics" line item instead of a second
-    // "Bencher Pro".
     pub metrics: JsonProduct,
     pub bare_metal: JsonProduct,
 }
@@ -82,7 +79,6 @@ mod tests {
             Some("price_b"),
         );
         assert_eq!(products.pro.trial_coupon.as_deref(), Some("coupon_x"));
-        // The Pro plan's metered metrics price now lives on the `metrics` product.
         assert!(products.pro.metered.is_empty());
         assert_eq!(
             products.metrics.metered.get("default").map(String::as_str),
