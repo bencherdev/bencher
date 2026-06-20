@@ -72,6 +72,17 @@ Otherwise, you will see:
 use of undeclared type `Regex`
 ```
 
+Plus-only crates are gated behind `#![cfg(feature = "plus")]` (e.g. `bencher_billing`), and some
+modules in shared crates are too (e.g. `bencher_json`'s billing config, `bencher_valid`'s
+`plan_level`). Running their tests without the feature compiles an empty target and reports
+`0 tests run` (no error). Pass the `plus` feature (alongside `server` where `Regex` is needed):
+
+```bash
+cargo nextest run -p bencher_billing --features plus
+cargo nextest run -p bencher_json --features "server plus"
+cargo nextest run -p bencher_valid --features "server plus"
+```
+
 ## Formatting
 
 ```bash

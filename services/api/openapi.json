@@ -15230,6 +15230,9 @@
           "enterprise": {
             "$ref": "#/components/schemas/JsonProduct"
           },
+          "metrics": {
+            "$ref": "#/components/schemas/JsonProduct"
+          },
           "pro": {
             "$ref": "#/components/schemas/JsonProduct"
           },
@@ -15240,6 +15243,7 @@
         "required": [
           "bare_metal",
           "enterprise",
+          "metrics",
           "pro",
           "team"
         ]

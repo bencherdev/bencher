@@ -114,8 +114,10 @@ impl fmt::Display for PriceName {
 enum PlusPlan {
     Free,
     // Bencher Cloud metered tier with a flat monthly base fee and an included
-    // usage credit. Carries the metered metrics price name; the base price is
-    // looked up separately. This tier has no licensed (Self-Hosted) form.
+    // usage credit. Carries the metered metrics price name, which resolves
+    // against the `metrics` product; the base price and trial coupon come from
+    // the `pro` product and are looked up separately. This tier has no licensed
+    // (Self-Hosted) form.
     Pro(PriceName),
     Team(PlusUsage),
     Enterprise(PlusUsage),
@@ -199,7 +201,7 @@ impl PlusPlan {
             PlusPlan::Free => return Err(BillingError::ProductLevelFree),
             PlusPlan::Pro(price_name) => (
                 products
-                    .pro
+                    .metrics
                     .metered
                     .get(price_name.as_str())
                     .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?,
@@ -736,7 +738,9 @@ impl Biller {
         let Some(product_info) = price.product.as_object() else {
             return Err(BillingError::NoProductInfo(price.product.id().clone()));
         };
-        // `Bencher Team` or `Bencher Enterprise`
+        // The metered plan item's product name maps to a `PlanLevel`:
+        // `Bencher Team`/`Bencher Enterprise`, or `Bencher Metrics` for the Pro
+        // plan (whose metered metrics item lives on the `metrics` product).
         let plan_level = product_info.name.parse()?;
 
         Ok((plan_level, unit_amount))
@@ -1173,9 +1177,7 @@ mod tests {
         JsonProducts {
             pro: JsonProduct {
                 id: "prod_UizgEJP4gIENBi".into(),
-                metered: hmap! {
-                    "default".to_owned() => "price_1TjXq8Kal5vzTlmhBD8plpc7".to_owned(),
-                },
+                metered: HashMap::new(),
                 licensed: HashMap::new(),
                 base: hmap! {
                     "default".to_owned() => "price_1TjXgeKal5vzTlmhZzr88bki".to_owned(),
@@ -1200,6 +1202,17 @@ mod tests {
                 },
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4Xo1Kal5vzTlmh1KrcEbq0".to_owned(),
+                },
+                base: HashMap::new(),
+                trial_coupon: None,
+            },
+            metrics: JsonProduct {
+                id: "prod_UjlAPYSw7n3RDq".into(),
+                metered: hmap! {
+                    "default".to_owned() => "price_1TkHeSKal5vzTlmhijDCkWDe".to_owned(),
+                },
+                licensed: hmap! {
+                    "default".to_owned() => "price_1TkHeSKal5vzTlmhPKXPOW7c".to_owned(),
                 },
                 base: HashMap::new(),
                 trial_coupon: None,

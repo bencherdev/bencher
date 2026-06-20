@@ -100,7 +100,7 @@ async fn get_inner(
         if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
             let start_time = json_plan.current_period_start;
             let end_time = json_plan.current_period_end;
-            let (metrics, runner_minutes) = query_metered_usage(
+            let (metrics, runner_minutes) = metered_plan_usage(
                 auth_conn!(context),
                 query_organization.id,
                 start_time,
@@ -193,23 +193,6 @@ fn query_usage(
     Ok((metrics, runner_minutes))
 }
 
-/// Estimate billable usage for a metered (Bencher Cloud) plan.
-///
-/// Only Private Project metrics are metered; Public Project metrics are free and
-/// unlimited (see `PlanKind::check_usage`). Bare metal runner minutes are metered
-/// regardless of visibility.
-fn query_metered_usage(
-    conn: &mut DbConnection,
-    organization_id: OrganizationId,
-    start_time: DateTime,
-    end_time: DateTime,
-) -> Result<(u32, u32), HttpError> {
-    let metrics = QueryMetric::private_usage(conn, organization_id, start_time, end_time)?;
-    let runner_minutes =
-        QueryJob::runner_minutes_usage(conn, organization_id, start_time, end_time)?;
-    Ok((metrics, runner_minutes))
-}
-
 fn free_plan_usage(
     conn: &mut DbConnection,
     query_organization: &QueryOrganization,
@@ -228,4 +211,21 @@ fn free_plan_usage(
         metrics: Some(metrics),
         runner_minutes: Some(runner_minutes),
     })
+}
+
+/// Estimate billable usage for a metered (Bencher Cloud) plan.
+///
+/// Only Private Project metrics are metered; Public Project metrics are free and
+/// unlimited (see `PlanKind::check_usage`). Bare metal runner minutes are metered
+/// regardless of visibility.
+fn metered_plan_usage(
+    conn: &mut DbConnection,
+    organization_id: OrganizationId,
+    start_time: DateTime,
+    end_time: DateTime,
+) -> Result<(u32, u32), HttpError> {
+    let metrics = QueryMetric::private_usage(conn, organization_id, start_time, end_time)?;
+    let runner_minutes =
+        QueryJob::runner_minutes_usage(conn, organization_id, start_time, end_time)?;
+    Ok((metrics, runner_minutes))
 }
