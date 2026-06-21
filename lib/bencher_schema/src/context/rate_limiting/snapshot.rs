@@ -299,4 +299,31 @@ mod tests {
             .expect("org_uuid present");
         assert_eq!(entries.len(), 1);
     }
+
+    #[test]
+    fn load_legacy_format_errs() {
+        use crate::context::RateLimiting;
+
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("bencher.db");
+        let snapshot_path = dir.path().join("rate_limiting.json");
+
+        // Regression for the production failure: a snapshot written by the pre-bucketing format stored
+        // raw second timestamps in a flat array, but the current code expects `Vec<(EpochBucket, u32)>`
+        // (arrays of `[bucket, count]`). Deserializing `[1778809249, 1]` as a list of tuples yields:
+        // "invalid type: integer `1778809249`, expected a tuple of size 2".
+        let legacy = r#"{"public":{"requests":{"minute":{"events":{"1.2.3.4":[1778809249,1]}}}}}"#;
+        std::fs::write(&snapshot_path, legacy).unwrap();
+
+        let log = slog::Logger::root(slog::Discard, slog::o!());
+        let limiter = RateLimiting::default();
+        let err = limiter.load(&db_path, &log).unwrap_err();
+
+        assert!(matches!(
+            err,
+            super::super::RateLimitingPersistError::Deserialize(_)
+        ));
+        // The bad file is left in place; the next successful save overwrites it.
+        assert!(snapshot_path.exists());
+    }
 }

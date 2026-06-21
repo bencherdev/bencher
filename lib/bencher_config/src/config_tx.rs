@@ -368,6 +368,8 @@ async fn into_context(
         job_timeout_grace_period,
         #[cfg(feature = "plus")]
         heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
+        #[cfg(feature = "plus")]
+        shutdown: bencher_schema::context::CancellationToken::new(),
     })
 }
 

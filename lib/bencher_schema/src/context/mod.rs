@@ -45,6 +45,8 @@ pub use rate_limiting::{HeaderMap, RateLimiting, RateLimitingError};
 pub use rbac::{Rbac, RbacError};
 #[cfg(feature = "plus")]
 pub use stats::StatsSettings;
+#[cfg(feature = "plus")]
+pub use tokio_util::sync::CancellationToken;
 
 pub struct ApiContext {
     pub console_url: Url,
@@ -82,6 +84,10 @@ pub struct ApiContext {
     pub job_timeout_grace_period: std::time::Duration,
     #[cfg(feature = "plus")]
     pub heartbeat_tasks: HeartbeatTasks,
+    /// Cancellation signal tripped on graceful shutdown so long-lived handlers (the runner WebSocket
+    /// channel) can wind down and let `server.close()` complete.
+    #[cfg(feature = "plus")]
+    pub shutdown: CancellationToken,
 }
 
 #[macro_export]
