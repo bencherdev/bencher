@@ -1,7 +1,6 @@
-## Pending `v0.6.8`
+## `v0.6.8`
+- **BREAKING CHANGE** Change the default self-hosted API server port from `61016` to the newly [IANA-registered](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=6610) `6610`. Deployments relying on the default now serve the API on `6610`. Update clients, reverse proxies, and `--host`/`BENCHER_HOST` references (Docker Compose, devcontainer, and docs are updated to match). To stay on `61016`, set `server.bind_address` to `0.0.0.0:61016` (or run `bencher up --api-port 61016`).
 - Mark the remaining user API token REST endpoints (list, view, update, and revoke) as deprecated in the OpenAPI spec and API docs; they continue to work for existing tokens
-- Add Self-Hosted Runners documentation: a [Self-Hosted Runners](/docs/explanation/self-hosted-runners/) explanation guide, plus [`runner` CLI](/docs/reference/runner/) and [Runner Protocol](/docs/reference/runner-protocol/) reference pages
-- **BREAKING CHANGE** Change the default self-hosted API server port from `61016` to the newly [IANA-registered](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=6610) `6610`. Deployments relying on the default now serve the API on `6610`; update clients, reverse proxies, and `--host`/`BENCHER_HOST` references (Docker Compose, devcontainer, and docs are updated to match). To stay on `61016`, set `server.bind_address` to `0.0.0.0:61016` (or run `bencher up --api-port 61016`).
 
 ## `v0.6.7`
 - Fix the OCI registry token endpoint for the Docker 29+ containerd image store, which sends multiple `scope` query parameters and an `OAuth2` POST token exchange (Thank you [@travishathaway](https://github.com/travishathaway))
