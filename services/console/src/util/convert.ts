@@ -111,12 +111,33 @@ export const isBoolParam = (param: undefined | string): boolean => {
 	return param === "false" || param === "true";
 };
 
+// The flat monthly Pro base fee (USD), which includes an equal amount of usage credit.
+export const PRO_BASE_USD = 20;
+// The fungible usage credit included with Pro each month (USD). Drawn down across
+// metrics and bare metal; expires at month end.
+export const PRO_INCLUDED_CREDIT_USD = 20;
+
+// The first billing period is the one containing the subscription's creation time,
+// i.e. created falls on/after the current period start.
+export const isFirstBillingPeriod = (
+	created: undefined | string,
+	currentPeriodStart: undefined | string,
+): boolean => {
+	const createdMs = dateTimeMillis(created);
+	const periodStartMs = dateTimeMillis(currentPeriodStart);
+	return (
+		createdMs !== null && periodStartMs !== null && createdMs >= periodStartMs
+	);
+};
+
 export const planLevel = (level: undefined | PlanLevel) => {
 	switch (level) {
 		case PlanLevel.Free:
 			return "Free";
 		case PlanLevel.Team:
 			return "Team";
+		case PlanLevel.Pro:
+			return "Pro";
 		case PlanLevel.Enterprise:
 			return "Enterprise";
 		default:
@@ -129,6 +150,7 @@ export const planLevelPrice = (level: undefined | PlanLevel) => {
 		case PlanLevel.Free:
 			return 0.0;
 		case PlanLevel.Team:
+		case PlanLevel.Pro:
 			return 0.01;
 		case PlanLevel.Enterprise:
 			return 0.05;
@@ -140,15 +162,13 @@ export const planLevelPrice = (level: undefined | PlanLevel) => {
 export const runnerMinutePrice = (level: undefined | PlanLevel) => {
 	switch (level) {
 		case PlanLevel.Team:
+		case PlanLevel.Pro:
 		case PlanLevel.Enterprise:
 			return 0.01666;
 		default:
 			return 0.0;
 	}
 };
-
-export const suggestedMetrics = (metrics: undefined | number) =>
-	(Math.round((metrics ?? 1) / 1_000) + 1) * 12_000;
 
 export const fmtUsd = (usd: undefined | number) => {
 	const numberFmt = new Intl.NumberFormat("en-US", {

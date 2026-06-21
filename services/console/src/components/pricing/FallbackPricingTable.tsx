@@ -4,7 +4,7 @@ const FallbackPricingTable = () => {
 	return (
 		<InnerPricingTable
 			handleFree={() => {}}
-			handleTeam={() => {}}
+			handlePro={() => {}}
 			handleEnterprise={() => {}}
 		/>
 	);

@@ -9,7 +9,15 @@ import OnboardPlan from "../../../components/console/onboard/OnboardPlan";
 import OnboardStepsFallback from "../../../components/console/onboard/OnboardStepsFallback";
 import { OnboardStep } from "../../../components/console/onboard/OnboardStepsInner";
 import ConsoleFallbackPricingTable from "../../../components/pricing/ConsoleFallbackPricingTable";
+import CheckoutLoading from "../../../components/console/billing/plan/CheckoutLoading";
+import { PlanLevel } from "../../../types/bencher";
 import ThemeScript from "../../../components/navbar/theme/ThemeScript.astro";
+
+// With ?plan=pro the plan step auto-activates Stripe checkout, so the pre-hydration
+// fallback shows the redirect loader rather than the pricing table. The "plan" query
+// key is inlined (it equals PLAN_PARAM) because importing it from components/auth would
+// pull the client-only bencher_valid WASM into this server-rendered file.
+const autoActivatePro = Astro.url.searchParams.get("plan") === PlanLevel.Pro;
 ---
 
 <BaseLayout
@@ -22,20 +30,15 @@ import ThemeScript from "../../../components/navbar/theme/ThemeScript.astro";
     <div slot="fallback">
       <OnboardStepsFallback step={OnboardStep.PLAN} />
       <section class="section">
-        <div class="container">
-          <div class="columns is-centered">
-            <div class="column is-half">
-              <div class="content has-text-centered">
-                <h1 class="title is-1">Activate your account</h1>
-                <h2 class="subtitle is-4">
-                  All plans come with a 30-day money-back guarantee.
-                </h2>
-              </div>
-              <br />
-              <ConsoleFallbackPricingTable hideFree={true} />
-            </div>
-          </div>
+        <div class="content has-text-centered">
+          <h1 class="title is-1">Activate your account</h1>
         </div>
+        <br />
+        {autoActivatePro ? (
+          <CheckoutLoading onboard={true} />
+        ) : (
+          <ConsoleFallbackPricingTable freeCtaText="Continue with Free" />
+        )}
       </section>
     </div>
   </OnboardPlan>

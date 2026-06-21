@@ -16,27 +16,34 @@ import {
 	type JsonAuthUser,
 	type JsonUsage,
 	type Jwt,
+	PlanLevel,
 	UsageKind,
 } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
+import { useSearchParams } from "../../../util/url";
 import {
+	PRO_BASE_USD,
+	PRO_INCLUDED_CREDIT_USD,
 	fmtDate,
 	fmtUsd,
 	fmtUsdPrecise,
+	isFirstBillingPeriod,
 	planLevel,
 	planLevelPrice,
 	runnerMinutePrice,
-	suggestedMetrics,
 } from "../../../util/convert";
+import { BENCHER_CALENDLY_URL } from "../../../util/ext";
 import { httpGet, httpPatch } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { type InitValid, init_valid, validJwt } from "../../../util/valid";
+import { PLAN_PARAM } from "../../auth/auth";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
 import ConsoleFallbackPricingTable from "../../pricing/ConsoleFallbackPricingTable";
 import type { BillingHeaderConfig } from "./BillingHeader";
 import BillingHeader from "./BillingHeader";
 import BillingForm from "./plan/BillingForm";
+import CheckoutLoading from "./plan/CheckoutLoading";
 import PaymentMethod from "./plan/PaymentMethod";
 
 interface Props {
@@ -139,8 +146,31 @@ const BillingPanelSwitch = (props: {
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }) => {
+	const [searchParams] = useSearchParams();
+	// With ?plan=pro the checkout activates automatically (onboarding, or a
+	// /pricing deep link to billing). While the usage resource loads, show the
+	// redirect loader instead of the pricing table so the visitor sees one calm
+	// loading state, not a flash of plans before being sent to checkout.
+	const autoActivatePro = createMemo(
+		() => searchParams[PLAN_PARAM] === PlanLevel.Pro,
+	);
 	return (
-		<Switch fallback={<ConsoleFallbackPricingTable hideFree={props.onboard} />}>
+		<Switch
+			fallback={
+				<Show
+					when={autoActivatePro()}
+					fallback={
+						<ConsoleFallbackPricingTable
+							freeCtaText={
+								props.onboard ? "Continue with Free" : "Sign up for Free"
+							}
+						/>
+					}
+				>
+					<CheckoutLoading onboard={props.onboard} />
+				</Show>
+			}
+		>
 			{/* Bencher Cloud */}
 			<Match when={props.usage()?.kind === UsageKind.CloudFree}>
 				<BillingForm
@@ -154,7 +184,12 @@ const BillingPanelSwitch = (props: {
 				/>
 			</Match>
 			<Match when={props.usage()?.kind === UsageKind.CloudMetered}>
-				<CloudMeteredPanel usage={props.usage} />
+				<CloudMeteredPanel
+					apiUrl={props.apiUrl}
+					user={props.user}
+					usage={props.usage}
+					handleRefresh={props.handleRefresh}
+				/>
 			</Match>
 			<Match when={props.usage()?.kind === UsageKind.CloudSelfHostedLicensed}>
 				<CloudSelfHostedLicensedPanel
@@ -186,8 +221,156 @@ const manageSubscription = (
 	</a>
 );
 
+const CancelPlanButton = (props: {
+	apiUrl: string;
+	user: JsonAuthUser;
+	organization: undefined | string;
+	handleRefresh: () => void;
+}) => {
+	const [clicked, setClicked] = createSignal(false);
+	const [canceling, setCanceling] = createSignal(false);
+
+	const sendCancel = () => {
+		const token = props.user?.token;
+		const organization = props.organization;
+		if (!validJwt(token) || !organization) {
+			return;
+		}
+		setCanceling(true);
+		httpPatch(props.apiUrl, `/v0/organizations/${organization}/plan`, token, {
+			cancel_at_period_end: true,
+		})
+			.then((_resp) => {
+				setCanceling(false);
+				setClicked(false);
+				props.handleRefresh();
+				pageNotify(
+					NotifyKind.OK,
+					"Your Pro plan will cancel at the end of the current billing period. You keep access until then.",
+				);
+			})
+			.catch((error) => {
+				setCanceling(false);
+				console.error(error);
+				Sentry.captureException(error);
+				pageNotify(
+					NotifyKind.ERROR,
+					"Lettuce romaine calm! Failed to cancel your plan. Please, try again.",
+				);
+			});
+	};
+
+	return (
+		<Switch>
+			<Match when={!clicked()}>
+				<button
+					class="button is-small"
+					type="button"
+					onMouseDown={(e) => {
+						e.preventDefault();
+						setClicked(true);
+					}}
+				>
+					Cancel plan
+				</button>
+			</Match>
+			<Match when={clicked()}>
+				<div class="content">
+					<p>
+						Cancel your plan? It stays active until the end of the current
+						billing period, then downgrades to Free. Private projects will no
+						longer be accessible after that.
+					</p>
+				</div>
+				<div class="columns">
+					<div class="column">
+						<button
+							class="button is-fullwidth"
+							type="submit"
+							disabled={canceling()}
+							onMouseDown={(e) => {
+								e.preventDefault();
+								sendCancel();
+							}}
+						>
+							Yes, cancel at period end
+						</button>
+					</div>
+					<div class="column">
+						<button
+							class="button is-primary is-fullwidth"
+							type="button"
+							onMouseDown={(e) => {
+								e.preventDefault();
+								setClicked(false);
+							}}
+						>
+							Keep plan
+						</button>
+					</div>
+				</div>
+			</Match>
+		</Switch>
+	);
+};
+
+const ResumePlanButton = (props: {
+	apiUrl: string;
+	user: JsonAuthUser;
+	organization: undefined | string;
+	handleRefresh: () => void;
+}) => {
+	const [resuming, setResuming] = createSignal(false);
+
+	const sendResume = () => {
+		const token = props.user?.token;
+		const organization = props.organization;
+		if (!validJwt(token) || !organization) {
+			return;
+		}
+		setResuming(true);
+		httpPatch(props.apiUrl, `/v0/organizations/${organization}/plan`, token, {
+			cancel_at_period_end: false,
+		})
+			.then((_resp) => {
+				setResuming(false);
+				props.handleRefresh();
+				pageNotify(
+					NotifyKind.OK,
+					"Your Pro plan has been resumed. It will keep renewing each billing period.",
+				);
+			})
+			.catch((error) => {
+				setResuming(false);
+				console.error(error);
+				Sentry.captureException(error);
+				pageNotify(
+					NotifyKind.ERROR,
+					"Lettuce romaine calm! Failed to resume your plan. Please, try again.",
+				);
+			});
+	};
+
+	return (
+		<button
+			class="button is-primary is-small"
+			type="button"
+			disabled={resuming()}
+			onMouseDown={(e) => {
+				e.preventDefault();
+				sendResume();
+			}}
+		>
+			Resume plan
+		</button>
+	);
+};
+
 const CloudMeteredPanel = (props: {
+	apiUrl: string;
+	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
+	handleRefresh: () => void;
 }) => {
 	const metricPrice = createMemo(() =>
 		planLevelPrice(props.usage()?.plan?.level),
@@ -202,6 +385,25 @@ const CloudMeteredPanel = (props: {
 		() => (props.usage()?.runner_minutes ?? 0) * minutePrice(),
 	);
 	const estTotalCost = createMemo(() => estMetricsCost() + estRunnerCost());
+	const isPro = createMemo(() => props.usage()?.plan?.level === PlanLevel.Pro);
+	const creditRemaining = createMemo(() =>
+		Math.max(0, PRO_INCLUDED_CREDIT_USD - estTotalCost()),
+	);
+	// Pro bill = $20 base + overage at the same rates = max($20, usage).
+	const estProBill = createMemo(
+		() => PRO_BASE_USD + Math.max(0, estTotalCost() - PRO_INCLUDED_CREDIT_USD),
+	);
+	const firstPeriod = createMemo(() =>
+		isFirstBillingPeriod(
+			props.usage()?.plan?.created,
+			props.usage()?.plan?.current_period_start,
+		),
+	);
+	// Pro waives the flat base for the first month via a one-time 100%-off coupon.
+	// Cap at the bill so it never goes negative.
+	const trialDiscount = createMemo(() =>
+		isPro() && firstPeriod() ? Math.min(PRO_BASE_USD, estProBill()) : 0,
+	);
 
 	return (
 		<div class="content">
@@ -212,11 +414,26 @@ const CloudMeteredPanel = (props: {
 				{fmtDate(props.usage()?.start_time)} -{" "}
 				{fmtDate(props.usage()?.end_time)}
 			</h3>
-			<h4>Cost per Metric: {fmtUsd(metricPrice())}</h4>
+			<Show when={isPro()}>
+				<h4>
+					Included Usage Credit: {fmtUsd(PRO_INCLUDED_CREDIT_USD)} / month
+				</h4>
+				<h4>
+					Estimated Credit Used:{" "}
+					{fmtUsd(Math.min(estTotalCost(), PRO_INCLUDED_CREDIT_USD))}
+				</h4>
+				<h4>Estimated Credit Remaining: {fmtUsd(creditRemaining())}</h4>
+				<br />
+			</Show>
+			<h4>Cost per Private Metric: {fmtUsd(metricPrice())}</h4>
 			<h4>
-				Estimated Metrics Used: {props.usage()?.metrics?.toLocaleString() ?? 0}
+				Estimated Private Metrics Used:{" "}
+				{props.usage()?.metrics?.toLocaleString() ?? 0}
 			</h4>
-			<h4>Estimated Metrics Cost: {fmtUsd(estMetricsCost())}</h4>
+			<h4>Estimated Private Metrics Cost: {fmtUsd(estMetricsCost())}</h4>
+			<p class="has-text-grey">
+				Public project metrics are free and not billed.
+			</p>
 			<br />
 			<h4>Cost per Runner Minute: {fmtUsdPrecise(minutePrice())} / min</h4>
 			<h4>
@@ -225,11 +442,52 @@ const CloudMeteredPanel = (props: {
 			</h4>
 			<h4>Estimated Runner Cost: {fmtUsd(estRunnerCost())}</h4>
 			<br />
-			<h4>Current Estimated Total: {fmtUsd(estTotalCost())}</h4>
+			<h4>
+				Current Estimated Total:{" "}
+				{fmtUsd(isPro() ? estProBill() : estTotalCost())}
+			</h4>
+			<Show when={isPro() && firstPeriod()}>
+				<h4>First Month Free Trial: -{fmtUsd(trialDiscount())}</h4>
+				<h4>
+					Estimated Total This Period:{" "}
+					{fmtUsd(Math.max(0, estProBill() - trialDiscount()))}
+				</h4>
+			</Show>
+			<Show when={isPro()}>
+				<p>
+					$20/mo base includes $20 of usage. Overage bills at the same rates
+					once the included credit is used.
+				</p>
+			</Show>
 			<br />
 			<PaymentMethod usage={props.usage} />
 			<br />
 			{manageSubscription}
+			<br />
+			<br />
+			<Show
+				when={props.usage()?.plan?.cancel_at_period_end}
+				fallback={
+					<CancelPlanButton
+						apiUrl={props.apiUrl}
+						user={props.user}
+						organization={props.usage()?.organization}
+						handleRefresh={props.handleRefresh}
+					/>
+				}
+			>
+				<p class="has-text-grey">
+					Your plan is scheduled to cancel on{" "}
+					{fmtDate(props.usage()?.plan?.current_period_end)}. You keep access
+					until then.
+				</p>
+				<ResumePlanButton
+					apiUrl={props.apiUrl}
+					user={props.user}
+					organization={props.usage()?.organization}
+					handleRefresh={props.handleRefresh}
+				/>
+			</Show>
 		</div>
 	);
 };
@@ -378,31 +636,13 @@ const SelfHostedFreePanel = (props: {
 			<h4>
 				<ol>
 					<li>
-						Create an account on{" "}
-						<a href="https://bencher.dev" target="_blank" rel="noreferrer">
-							Bencher Cloud
+						<a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">
+							Contact us
 						</a>{" "}
-						if you don't already have one
-					</li>
-					{props.onboard ? (
-						<li>
-							Navigate to the Organization Billing page in your Bencher Cloud
-							account
-						</li>
-					) : (
-						<li>
-							Navigate to this same page on your Bencher Cloud account,
-							Organization Billing
-						</li>
-					)}
-					<li>Select either the "Team" or "Enterprise" plan</li>
-					<li>Select "Self-Hosted License"</li>
-					<li>
-						Enter your desired number of metrics for the <i>year</i> (Suggested:{" "}
-						{suggestedMetrics(props.usage()?.metrics).toLocaleString()})
+						to set up a Bencher Plus Enterprise (On-Prem) license
 					</li>
 					<li>
-						Enter your "Self-Hosted Organization UUID":{" "}
+						Share your "Self-Hosted Organization UUID":{" "}
 						<code style="word-break: break-word;">
 							{/* biome-ignore lint/a11y/useValidAnchor: copy to clipboard */}
 							<a
@@ -417,8 +657,7 @@ const SelfHostedFreePanel = (props: {
 							</a>
 						</code>
 					</li>
-					<li>Click "Activate" and enter your billing information</li>
-					<li>Copy the Self-Hosted license key that is generated</li>
+					<li>We will provision your license and send you your license key</li>
 					<li>
 						Back on <i>this</i> server, enter your license key below ⬇️
 					</li>

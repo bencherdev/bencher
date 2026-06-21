@@ -1,25 +1,32 @@
-import { useNavigate } from "../../util/url";
 import { PlanLevel } from "../../types/bencher";
+import { authUser } from "../../util/auth";
+import { BENCHER_CALENDLY_URL } from "../../util/ext";
+import { useNavigate } from "../../util/url";
+import { PLAN_PARAM } from "../auth/auth";
 import InnerPricingTable from "./InnerPricingTable";
 
 const PricingTable = () => {
 	const navigate = useNavigate();
 
-	const URL = "/auth/signup";
-	const url = (plan: PlanLevel) => {
-		return `${URL}?plan=${plan}`;
+	// Logged-in visitors are routed through the console to their organization
+	// billing page to sign up for the plan. Logged-out visitors sign up first.
+	const handlePlan = (plan: PlanLevel) => {
+		if (authUser()?.token) {
+			navigate(`/console?${PLAN_PARAM}=${plan}`);
+		} else if (plan === PlanLevel.Free) {
+			navigate("/auth/signup");
+		} else {
+			navigate(`/auth/signup?${PLAN_PARAM}=${plan}`);
+		}
 	};
 
 	return (
 		<InnerPricingTable
-			handleFree={() => {
-				navigate(URL);
-			}}
-			handleTeam={() => {
-				navigate(url(PlanLevel.Team));
-			}}
+			handleFree={() => handlePlan(PlanLevel.Free)}
+			handlePro={() => handlePlan(PlanLevel.Pro)}
 			handleEnterprise={() => {
-				navigate(url(PlanLevel.Enterprise));
+				// Enterprise is "Contact us" (custom hardware), not self-serve.
+				navigate(BENCHER_CALENDLY_URL);
 			}}
 		/>
 	);

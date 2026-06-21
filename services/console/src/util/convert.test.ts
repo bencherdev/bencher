@@ -14,13 +14,13 @@ import {
 	fmtUsd,
 	fmtUsdPrecise,
 	isBoolParam,
+	isFirstBillingPeriod,
 	planLevel,
 	planLevelPrice,
 	prettyPrintFloat,
 	removeFromArray,
 	runnerMinutePrice,
 	sizeArray,
-	suggestedMetrics,
 	timeToDate,
 	timeToDateIso,
 	timeToDateOnlyIso,
@@ -216,6 +216,7 @@ describe("planLevel", () => {
 	test("returns correct name for each level", () => {
 		expect(planLevel(PlanLevel.Free)).toBe("Free");
 		expect(planLevel(PlanLevel.Team)).toBe("Team");
+		expect(planLevel(PlanLevel.Pro)).toBe("Pro");
 		expect(planLevel(PlanLevel.Enterprise)).toBe("Enterprise");
 	});
 
@@ -228,6 +229,7 @@ describe("planLevelPrice", () => {
 	test("returns correct price for each level", () => {
 		expect(planLevelPrice(PlanLevel.Free)).toBe(0.0);
 		expect(planLevelPrice(PlanLevel.Team)).toBe(0.01);
+		expect(planLevelPrice(PlanLevel.Pro)).toBe(0.01);
 		expect(planLevelPrice(PlanLevel.Enterprise)).toBe(0.05);
 	});
 
@@ -239,6 +241,7 @@ describe("planLevelPrice", () => {
 describe("runnerMinutePrice", () => {
 	test("returns price for paid plans", () => {
 		expect(runnerMinutePrice(PlanLevel.Team)).toBe(0.01666);
+		expect(runnerMinutePrice(PlanLevel.Pro)).toBe(0.01666);
 		expect(runnerMinutePrice(PlanLevel.Enterprise)).toBe(0.01666);
 	});
 
@@ -248,21 +251,28 @@ describe("runnerMinutePrice", () => {
 	});
 });
 
-describe("suggestedMetrics", () => {
-	test("returns 12000 for undefined", () => {
-		expect(suggestedMetrics(undefined)).toBe(12000);
+describe("isFirstBillingPeriod", () => {
+	test("true when created equals the current period start", () => {
+		expect(
+			isFirstBillingPeriod("2026-06-01T00:00:00Z", "2026-06-01T00:00:00Z"),
+		).toBe(true);
 	});
 
-	test("rounds up for small values", () => {
-		expect(suggestedMetrics(500)).toBe(24000);
+	test("true when created is within the current period", () => {
+		expect(
+			isFirstBillingPeriod("2026-06-01T00:00:05Z", "2026-06-01T00:00:00Z"),
+		).toBe(true);
 	});
 
-	test("scales for larger values", () => {
-		expect(suggestedMetrics(5000)).toBe(72000);
+	test("false for a later period (created before the period start)", () => {
+		expect(
+			isFirstBillingPeriod("2026-06-01T00:00:00Z", "2026-07-01T00:00:00Z"),
+		).toBe(false);
 	});
 
-	test("handles zero", () => {
-		expect(suggestedMetrics(0)).toBe(12000);
+	test("false when either timestamp is undefined", () => {
+		expect(isFirstBillingPeriod(undefined, "2026-06-01T00:00:00Z")).toBe(false);
+		expect(isFirstBillingPeriod("2026-06-01T00:00:00Z", undefined)).toBe(false);
 	});
 });
 

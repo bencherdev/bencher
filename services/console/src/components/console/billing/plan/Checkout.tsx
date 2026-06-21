@@ -1,6 +1,12 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import { type Accessor, type Resource, createSignal } from "solid-js";
+import {
+	type Accessor,
+	type Resource,
+	Show,
+	createEffect,
+	createSignal,
+} from "solid-js";
 import type {
 	JsonAuthUser,
 	JsonNewCheckout,
@@ -10,11 +16,13 @@ import { httpPost } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { useNavigate } from "../../../../util/url";
 import { type InitValid, validJwt } from "../../../../util/valid";
+import CheckoutLoading from "./CheckoutLoading";
 
 interface Props {
 	apiUrl: string;
 	params: Params;
 	onboard: boolean;
+	autoSubmit?: boolean;
 	bencher_valid: Resource<InitValid>;
 	user: JsonAuthUser;
 	organization: undefined | string;
@@ -27,6 +35,7 @@ interface Props {
 
 const Checkout = (props: Props) => {
 	const [submitting, setSubmitting] = createSignal(false);
+	const [failed, setFailed] = createSignal(false);
 	const navigate = useNavigate();
 
 	const isSendable = (): boolean => {
@@ -53,6 +62,7 @@ const Checkout = (props: Props) => {
 		};
 
 		setSubmitting(true);
+		setFailed(false);
 		httpPost(props.apiUrl, "/v0/checkout", token, newCheckout)
 			.then((checkout) => {
 				navigate(checkout.data.url);
@@ -60,6 +70,7 @@ const Checkout = (props: Props) => {
 			})
 			.catch((error) => {
 				setSubmitting(false);
+				setFailed(true);
 				console.error(error);
 				Sentry.captureException(error);
 				pageNotify(
@@ -69,27 +80,56 @@ const Checkout = (props: Props) => {
 			});
 	};
 
+	// When arriving with the plan preselected (e.g. ?plan=pro), start checkout
+	// automatically so the visitor lands on Stripe with no extra click.
+	let autoSubmitted = false;
+	createEffect(() => {
+		if (!props.autoSubmit || autoSubmitted) {
+			return;
+		}
+		if (!props.bencher_valid() || !props.organization) {
+			return;
+		}
+		if (!validJwt(props.user?.token)) {
+			return;
+		}
+		autoSubmitted = true;
+		sendForm();
+	});
+
+	// Auto-activation (e.g. onboarding with ?plan=pro) shows a redirect loader
+	// instead of the Activate button, so the visitor never needs to click. If the
+	// checkout request fails, fall back to the button so they can retry.
 	return (
-		<div class="columns is-centered" style="margin-top: 1rem;">
-			<div class={`column ${props.onboard ? "" : "is-half"}`}>
-				<button
-					class="button is-primary is-fullwidth"
-					type="submit"
-					disabled={!isSendable()}
-					onMouseDown={(e) => {
-						e.preventDefault();
-						sendForm();
-					}}
-				>
-					<span class="icon-text">
-						<span>Activate</span>
-						<span class="icon">
-							<i class="fas fa-chevron-right" />
-						</span>
-					</span>
-				</button>
-			</div>
-		</div>
+		<Show
+			when={props.autoSubmit && !failed()}
+			fallback={
+				<div class="columns is-centered" style="margin-top: 1rem;">
+					<div class={`column ${props.onboard ? "" : "is-half"}`}>
+						<button
+							class={`button is-primary is-fullwidth${
+								submitting() ? " is-loading" : ""
+							}`}
+							type="submit"
+							disabled={!isSendable()}
+							onMouseDown={(e) => {
+								e.preventDefault();
+								sendForm();
+							}}
+						>
+							<span class="icon-text">
+								<span>Activate</span>
+								<span class="icon">
+									<i class="fas fa-chevron-right" />
+								</span>
+							</span>
+						</button>
+					</div>
+				</div>
+			}
+		>
+			<CheckoutLoading onboard={props.onboard} />
+		</Show>
 	);
 };
 

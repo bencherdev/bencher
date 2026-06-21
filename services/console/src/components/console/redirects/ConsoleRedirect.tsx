@@ -16,8 +16,13 @@ import {
 	removeOrganization,
 	setOrganization,
 } from "../../../util/organization";
-import { useNavigate } from "../../../util/url";
-import { type InitValid, init_valid, validJwt } from "../../../util/valid";
+import { useNavigate, useSearchParams } from "../../../util/url";
+import {
+	type InitValid,
+	init_valid,
+	validJwt,
+	validPlanLevel,
+} from "../../../util/valid";
 import { PLAN_PARAM } from "../../auth/auth";
 
 export interface Props {
@@ -29,6 +34,24 @@ const ConsoleRedirect = (props: Props) => {
 	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+
+	// Arriving with a plan selected (e.g. from /pricing) means the visitor wants
+	// to sign up for that plan, so route them to organization billing instead of
+	// projects. New users with no projects still go through onboarding below,
+	// which forwards the plan param to its final plan step.
+	const orgDestination = (slug: string) =>
+		validPlanLevel(searchParams[PLAN_PARAM])
+			? forwardParams(
+					`/console/organizations/${slug}/billing`,
+					[PLAN_PARAM],
+					[],
+				)
+			: forwardParams(
+					`/console/organizations/${slug}/projects`,
+					[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM],
+					null,
+				);
 
 	const logout = () => {
 		removeUser();
@@ -58,14 +81,7 @@ const ConsoleRedirect = (props: Props) => {
 	}) => {
 		const cachedOrganization = getOrganization();
 		if (cachedOrganization) {
-			navigate(
-				forwardParams(
-					`/console/organizations/${cachedOrganization?.slug}/projects`,
-					[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM],
-					null,
-				),
-				{ replace: true },
-			);
+			navigate(orgDestination(cachedOrganization.slug), { replace: true });
 		}
 		if (!fetcher.bencher_valid) {
 			return;
@@ -140,7 +156,8 @@ const ConsoleRedirect = (props: Props) => {
 		) {
 			return;
 		}
-		const path = `/v0/organizations/${fetcher.organization?.slug}/projects?per_page=1`;
+		const org = fetcher.organization;
+		const path = `/v0/organizations/${org.slug}/projects?per_page=1`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				const projects = resp?.data;
@@ -152,14 +169,7 @@ const ConsoleRedirect = (props: Props) => {
 						);
 						break;
 					default:
-						navigate(
-							forwardParams(
-								`/console/organizations/${fetcher.organization?.slug}/projects`,
-								[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM],
-								null,
-							),
-							{ replace: true },
-						);
+						navigate(orgDestination(org.slug), { replace: true });
 				}
 				return projects;
 			})
