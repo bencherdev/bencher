@@ -1,7 +1,7 @@
 ### `--api-port <PORT>`
 
 为 API 服务器容器指定端口号。
-默认使用端口 `61016`。
+默认使用端口 `6610`。
 类似于 `docker run` 的 [仅端口形式的 `--expose` 选项][docker run expose]。
 
 如果您指定了 `--api-port` 选项，您还必须更新 [控制台服务的 `BENCHER_API_URL` 环境变量][console server] 以匹配新的端口，并使用 [ `--console-env` 选项][console env]。

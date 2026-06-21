@@ -11,7 +11,7 @@ else
     export BENCHER_API_TOKEN=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4
 fi
 
-export BENCHER_HOST=http://localhost:61016
+export BENCHER_HOST=http://localhost:6610
 export BENCHER_PROJECT=the-computer
 export BENCHER_BRANCH=master
 export BENCHER_TESTBED=base

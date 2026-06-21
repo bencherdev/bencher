@@ -32,7 +32,7 @@
 use std::net::TcpStream;
 
 const API_HOST: &str = "localhost";
-const API_PORT: u16 = 61016;
+const API_PORT: u16 = 6610;
 
 /// Check if the API server is running
 fn is_api_running() -> bool {

@@ -6,6 +6,6 @@ describe("apiHost fallback", () => {
 	test("falls back to window.location when hostname is empty", () => {
 		const result = apiHost("");
 		expect(result).toContain("://");
-		expect(result).toContain(":61016");
+		expect(result).toContain(":6610");
 	});
 });

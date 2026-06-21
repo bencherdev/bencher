@@ -434,8 +434,8 @@ mod tests {
     #[test]
     fn validate_registry_custom_port_ok() {
         // A self-hosted registry on a non-default port accepts the host:port form
-        let ref_ = ImageReference::parse("localhost:61016/my-project:v1").unwrap();
-        ref_.validate_registry("localhost", Some(61016)).unwrap();
+        let ref_ = ImageReference::parse("localhost:6610/my-project:v1").unwrap();
+        ref_.validate_registry("localhost", Some(6610)).unwrap();
     }
 
     #[test]

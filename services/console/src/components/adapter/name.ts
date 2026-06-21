@@ -42,7 +42,7 @@ export const adapterName = (adapter: Adapter): string => {
 };
 
 export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
-	const host = isConsole ? "" : " --host https://localhost:61016";
+	const host = isConsole ? "" : " --host http://localhost:6610";
 
 	switch (adapter) {
 		case Adapter.RustBench:

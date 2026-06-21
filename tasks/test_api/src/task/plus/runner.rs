@@ -866,7 +866,7 @@ fn run_project_key_runner_test(url: &Url, admin_token: &Jwt, spec: &str) -> anyh
     // the project is derived from the registry-qualified image repository
     // and verified against the project key. The image uses the same registry
     // reference it was pushed to (with its port locally, e.g.
-    // `localhost:61016/...`; the bare host on the deployed registries, e.g.
+    // `localhost:6610/...`; the bare host on the deployed registries, e.g.
     // `dev.registry.bencher.dev/...`).
     println!("Step 6: Submitting job via bencher run --key without --project...");
     let image_ref = format!("{registry}/{PROJECT_SLUG}:{IMAGE_TAG}");

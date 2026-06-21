@@ -34,7 +34,7 @@ pub const MAX_CHUNK_SIZE: u64 = 5 * 1024 * 1024 * 1024;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonRegistry {
     /// The externally-reachable URL of the API server for OCI registry access.
-    /// Defaults to `http://localhost:61016`.
+    /// Defaults to `http://localhost:6610`.
     pub url: Option<Url>,
     /// Storage configuration for the container registry.
     /// Defaults to local filesystem storage if not provided.

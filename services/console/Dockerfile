@@ -116,7 +116,7 @@ COPY --from=packager /usr/src/bencher/services/console /usr/src/bencher
 
 ENV HOST=0.0.0.0
 ENV PORT=3000
-ENV BENCHER_API_URL=http://localhost:61016
+ENV BENCHER_API_URL=http://localhost:6610
 EXPOSE 3000
 
 CMD ["/usr/src/bencher/dist/server/entry.mjs"]

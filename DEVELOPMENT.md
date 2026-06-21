@@ -63,7 +63,7 @@ Once the application is running, you can access it by visiting
 
 ### Accessing the API
 
-The API is accessible at [http://localhost:61016](http://localhost:61016).
+The API is accessible at [http://localhost:6610](http://localhost:6610).
 
 ### Seeding the Database
 

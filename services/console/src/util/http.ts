@@ -76,7 +76,7 @@ export const apiHost = (hostname: string): string => {
 		return hostname;
 	}
 	const location = window.location;
-	return `${location.protocol}//${location.hostname}:61016`;
+	return `${location.protocol}//${location.hostname}:6610`;
 };
 
 export const apiUrl = (hostname: string, pathname: string): string =>
