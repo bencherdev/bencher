@@ -704,6 +704,13 @@ const SelfHostedFreePanel = (props: {
 					</div>
 				</div>
 			</div>
+			<Show when={props.onboard}>
+				<div class="has-text-centered">
+					<a class="button" href="/console">
+						Continue Unlicensed
+					</a>
+				</div>
+			</Show>
 		</div>
 	);
 };
