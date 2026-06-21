@@ -579,6 +579,26 @@ impl Biller {
         self.get_plan(&subscription_id).await
     }
 
+    /// Derive a paid subscription's plan level from its line items. Pro is the only
+    /// paid tier with a flat base fee, so a Pro base-fee item identifies the plan
+    /// level without relying on which Stripe product the metered item sits on.
+    /// Requires the subscription to have its `items` expanded.
+    fn subscription_plan_level(&self, subscription: &Subscription) -> PlanLevel {
+        let pro_base_price_ids: HashSet<&PriceId> = self
+            .products
+            .pro
+            .base
+            .values()
+            .map(|price| &price.id)
+            .collect();
+        let has_base_fee = subscription
+            .items
+            .data
+            .iter()
+            .any(|item| pro_base_price_ids.contains(&item.price.id));
+        plan_level_from_base_fee(has_base_fee)
+    }
+
     async fn get_plan(&self, subscription_id: &SubscriptionId) -> Result<JsonPlan, BillingError> {
         let subscription = self
             .get_subscription_expand(
@@ -598,20 +618,7 @@ impl Biller {
             .parse()
             .map_err(|e| BillingError::BadOrganizationUuid(organization.clone(), e))?;
 
-        // Pro is the only paid tier with a flat base fee, so a Pro base-fee item
-        // identifies the plan level without relying on the metered product.
-        let pro_base_price_ids: HashSet<&PriceId> = self
-            .products
-            .pro
-            .base
-            .values()
-            .map(|price| &price.id)
-            .collect();
-        let has_base_fee = subscription
-            .items
-            .data
-            .iter()
-            .any(|item| pro_base_price_ids.contains(&item.price.id));
+        let level = self.subscription_plan_level(&subscription);
 
         let plan_price_ids = self.products.plan_price_ids();
         let subscription_items = Self::filter_subscription_items(
@@ -653,7 +660,6 @@ impl Biller {
             subscription.default_payment_method.as_ref(),
         )?;
         let unit_amount = Self::get_plan_unit_amount(&subscription_item)?;
-        let level = plan_level_from_base_fee(has_base_fee);
 
         let status = Self::map_status(&subscription.status);
 
@@ -802,12 +808,17 @@ impl Biller {
     pub async fn get_metered_plan_status(
         &self,
         metered_plan_id: &MeteredPlanId,
-    ) -> Result<(PlanStatus, CustomerId), BillingError> {
+    ) -> Result<(PlanStatus, CustomerId, PlanLevel), BillingError> {
         let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
-        let subscription = self.get_subscription(&subscription_id).await?;
+        // Expand `items` so the plan level (Pro vs Team) can be derived from the
+        // subscription's line items via `subscription_plan_level`.
+        let subscription = self
+            .get_subscription_expand(&subscription_id, vec!["items".into()])
+            .await?;
         Ok((
             Self::map_status(&subscription.status),
             subscription.customer.id().clone(),
+            self.subscription_plan_level(&subscription),
         ))
     }
 
@@ -1323,7 +1334,11 @@ mod tests {
         (customer_id, payment_method_id)
     }
 
-    #[expect(clippy::too_many_arguments, reason = "test helper")]
+    #[expect(
+        clippy::too_many_arguments,
+        clippy::cognitive_complexity,
+        reason = "test helper exercising the full metered subscription lifecycle"
+    )]
     async fn metered_subscription(
         biller: &Biller,
         organization: OrganizationUuid,
@@ -1360,11 +1375,13 @@ mod tests {
         };
         assert_eq!(json_plan.level, expected_level);
 
-        let (plan_status, customer_id) = biller
+        let (plan_status, customer_id, status_level) = biller
             .get_metered_plan_status(metered_plan_id)
             .await
             .unwrap();
         assert_eq!(plan_status, PlanStatus::Active);
+        // The status path derives the same level as the full plan fetch.
+        assert_eq!(status_level, expected_level);
 
         // Only Pro carries a flat base fee, so only Pro grants an included-usage
         // credit; the call is a no-op for Team/Enterprise. Granting twice must be
@@ -1400,7 +1417,7 @@ mod tests {
             .cancel_metered_subscription(&subscription_id.parse().unwrap())
             .await
             .unwrap();
-        let (plan_status, _) = biller
+        let (plan_status, _, _) = biller
             .get_metered_plan_status(metered_plan_id)
             .await
             .unwrap();

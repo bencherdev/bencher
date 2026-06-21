@@ -469,7 +469,7 @@ fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed:
     }
     match plan_kind {
         PlanKind::None => requested.map_or(Timeout::FREE_MAX, |t| t.clamp_max(Timeout::FREE_MAX)),
-        PlanKind::Metered(_) | PlanKind::Licensed(_) => requested.unwrap_or(Timeout::PLUS_DEFAULT),
+        PlanKind::Metered(..) | PlanKind::Licensed(_) => requested.unwrap_or(Timeout::PLUS_DEFAULT),
     }
 }
 
@@ -511,7 +511,7 @@ mod tests {
     };
 
     fn metered_plan() -> PlanKind {
-        PlanKind::Metered("cus_test".into())
+        PlanKind::Metered("cus_test".into(), PlanLevel::Pro)
     }
 
     fn licensed_plan(level: PlanLevel) -> PlanKind {

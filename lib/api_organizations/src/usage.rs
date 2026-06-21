@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
-    DateTime, OrganizationResourceId,
+    DateTime, OrganizationResourceId, PlanLevel,
     organization::usage::{JsonUsage, UsageKind},
 };
 use bencher_rbac::organization::Permission;
@@ -13,7 +13,10 @@ use bencher_schema::{
     context::{ApiContext, DbConnection},
     error::{forbidden_error, issue_error, payment_required_error, resource_not_found_err},
     model::{
-        organization::{OrganizationId, QueryOrganization, plan::QueryPlan},
+        organization::{
+            OrganizationId, QueryOrganization,
+            plan::{QueryPlan, metered_bills_public_metrics},
+        },
         project::metric::QueryMetric,
         runner::job::QueryJob,
         user::auth::{AuthUser, BearerToken},
@@ -103,6 +106,7 @@ async fn get_inner(
             let (metrics, runner_minutes) = metered_plan_usage(
                 auth_conn!(context),
                 query_organization.id,
+                json_plan.level,
                 start_time,
                 end_time,
             )?;
@@ -215,16 +219,25 @@ fn free_plan_usage(
 
 /// Estimate billable usage for a metered (Bencher Cloud) plan.
 ///
-/// Only Private Project metrics are metered; Public Project metrics are free and
-/// unlimited (see `PlanKind::check_usage`). Bare metal runner minutes are metered
-/// regardless of visibility.
+/// On Pro, only Private Project metrics are metered; Public Project metrics are free
+/// and unlimited. On legacy Team (and metered Enterprise) plans, both Public and
+/// Private Project metrics are metered. This mirrors `PlanKind::check_usage` so the
+/// estimate matches what is actually billed. Bare metal runner minutes are metered
+/// regardless of visibility and plan level.
 fn metered_plan_usage(
     conn: &mut DbConnection,
     organization_id: OrganizationId,
+    level: PlanLevel,
     start_time: DateTime,
     end_time: DateTime,
 ) -> Result<(u32, u32), HttpError> {
-    let metrics = QueryMetric::private_usage(conn, organization_id, start_time, end_time)?;
+    let metrics = if metered_bills_public_metrics(level) {
+        // Team (and metered Enterprise): public metrics are billed, so count all.
+        QueryMetric::usage(conn, organization_id, start_time, end_time)?
+    } else {
+        // Pro: public metrics are free, so count only private metrics.
+        QueryMetric::private_usage(conn, organization_id, start_time, end_time)?
+    };
     let runner_minutes =
         QueryJob::runner_minutes_usage(conn, organization_id, start_time, end_time)?;
     Ok((metrics, runner_minutes))
