@@ -425,15 +425,11 @@ const CloudMeteredPanel = (props: {
 				<h4>Estimated Credit Remaining: {fmtUsd(creditRemaining())}</h4>
 				<br />
 			</Show>
-			<h4>Cost per Private Metric: {fmtUsd(metricPrice())}</h4>
+			<h4>Cost per Metric: {fmtUsd(metricPrice())}</h4>
 			<h4>
-				Estimated Private Metrics Used:{" "}
-				{props.usage()?.metrics?.toLocaleString() ?? 0}
+				Estimated Metrics Used: {props.usage()?.metrics?.toLocaleString() ?? 0}
 			</h4>
-			<h4>Estimated Private Metrics Cost: {fmtUsd(estMetricsCost())}</h4>
-			<p class="has-text-grey">
-				Public project metrics are free and not billed.
-			</p>
+			<h4>Estimated Metrics Cost: {fmtUsd(estMetricsCost())}</h4>
 			<br />
 			<h4>Cost per Runner Minute: {fmtUsdPrecise(minutePrice())} / min</h4>
 			<h4>
