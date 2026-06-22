@@ -455,11 +455,14 @@ impl PlanKind {
 /// Private Project Metrics are always billed regardless of level, so this only
 /// governs the public case.
 pub fn metered_bills_public_metrics(level: PlanLevel) -> bool {
-    // Free for Pro only; every other level is billed for public metrics.
-    if let PlanLevel::Pro = level {
-        return false;
+    // Public metrics are free on Free and Pro (Pro is the self-serve tier that
+    // includes them); only the legacy Team tier (and metered Enterprise, which the
+    // base-fee heuristic resolves to `Team`) is billed for public metrics.
+    // Matched exhaustively so a new `PlanLevel` variant forces a decision here.
+    match level {
+        PlanLevel::Free | PlanLevel::Pro => false,
+        PlanLevel::Team | PlanLevel::Enterprise => true,
     }
-    true
 }
 
 pub struct LicenseUsage {
