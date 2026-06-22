@@ -91,7 +91,7 @@ impl QueryPlan {
         biller: Option<&Biller>,
         api_actor: &ApiActor,
         query_organization: &QueryOrganization,
-    ) -> Result<Option<CustomerId>, HttpError> {
+    ) -> Result<Option<(CustomerId, PlanLevel)>, HttpError> {
         let Some(biller) = biller else {
             return Ok(None);
         };
@@ -106,7 +106,7 @@ impl QueryPlan {
             return Ok(None);
         };
 
-        let (plan_status, customer_id) = biller
+        let (plan_status, customer_id, level) = biller
             .get_metered_plan_status(&metered_plan_id)
             .await
             .map_err(not_found_error)?;
@@ -115,7 +115,7 @@ impl QueryPlan {
         // Free: return `None` so the caller falls through to the public/no-plan
         // logic instead of hard-erroring.
         if plan_status.is_active() {
-            Ok(Some(customer_id))
+            Ok(Some((customer_id, level)))
         } else {
             Ok(None)
         }
@@ -227,7 +227,7 @@ impl InsertPlan {
 }
 
 pub enum PlanKind {
-    Metered(CustomerId),
+    Metered(CustomerId, PlanLevel),
     Licensed(LicenseUsage),
     None,
 }
@@ -260,7 +260,7 @@ impl PlanKind {
         }
         match self {
             Self::None => Priority::Free,
-            Self::Metered(_) => Priority::Plus,
+            Self::Metered(_, _) => Priority::Plus,
             Self::Licensed(license_usage) => match license_usage.level {
                 PlanLevel::Free => Priority::Free,
                 PlanLevel::Pro | PlanLevel::Team | PlanLevel::Enterprise => Priority::Plus,
@@ -276,11 +276,11 @@ impl PlanKind {
         query_organization: &QueryOrganization,
         visibility: Visibility,
     ) -> Result<Self, HttpError> {
-        if let Some(customer_id) =
+        if let Some((customer_id, level)) =
             QueryPlan::get_active_metered_plan(context, biller, api_actor, query_organization)
                 .await?
         {
-            Ok(Self::Metered(customer_id))
+            Ok(Self::Metered(customer_id, level))
         } else if let Some(license_usage) = LicenseUsage::get(
             actor_conn!(context, api_actor),
             licensor,
@@ -396,7 +396,7 @@ impl PlanKind {
         usage: u32,
     ) -> Result<(), HttpError> {
         match self {
-            Self::Metered(customer_id) => {
+            Self::Metered(customer_id, level) => {
                 let Some(biller) = biller else {
                     return Err(issue_error(
                         "No Biller when checking usage",
@@ -404,10 +404,12 @@ impl PlanKind {
                         PlanKindError::NoBiller,
                     ));
                 };
-                // Public Project Metrics are free and unlimited; only Private
-                // Project Metrics are metered. Bare metal runner time is metered
-                // separately (regardless of visibility) via the runner channel.
-                if project.visibility.is_public() {
+                // Private Project Metrics are always metered. Public Project Metrics
+                // are free only on Pro; legacy Team (and metered Enterprise) plans
+                // are billed for public metrics too. Bare metal runner time is
+                // metered separately (regardless of visibility) via the runner
+                // channel.
+                if project.visibility.is_public() && !metered_bills_public_metrics(level) {
                     return Ok(());
                 }
                 if let Err(e) = biller.record_metrics_usage(&customer_id, usage).await {
@@ -442,6 +444,24 @@ impl PlanKind {
         }
 
         Ok(())
+    }
+}
+
+/// Whether a metered (Stripe) subscription is billed for *public* project metrics.
+///
+/// Public Project Metrics are free only on Pro (the new self-serve tier, the only
+/// paid tier with a flat base fee). Legacy Team (and metered Enterprise, which the
+/// base-fee heuristic resolves to `Team`) plans are billed for public metrics too.
+/// Private Project Metrics are always billed regardless of level, so this only
+/// governs the public case.
+pub fn metered_bills_public_metrics(level: PlanLevel) -> bool {
+    // Public metrics are free on Free and Pro (Pro is the self-serve tier that
+    // includes them); only the legacy Team tier (and metered Enterprise, which the
+    // base-fee heuristic resolves to `Team`) is billed for public metrics.
+    // Matched exhaustively so a new `PlanLevel` variant forces a decision here.
+    match level {
+        PlanLevel::Free | PlanLevel::Pro => false,
+        PlanLevel::Team | PlanLevel::Enterprise => true,
     }
 }
 
@@ -505,5 +525,28 @@ impl LicenseUsage {
                 }
             })
             .collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::PlanLevel;
+
+    use super::metered_bills_public_metrics;
+
+    #[test]
+    fn does_not_bill_public_metrics() {
+        assert!(!metered_bills_public_metrics(PlanLevel::Free));
+        // Pro is the only metered tier whose public metrics are free.
+        assert!(!metered_bills_public_metrics(PlanLevel::Pro));
+    }
+
+    #[test]
+    fn bills_public_metrics() {
+        // Legacy Team and metered Enterprise are billed for public metrics. Free is
+        // included for completeness even though metered plans only resolve to
+        // Pro/Team via the base-fee heuristic.
+        assert!(metered_bills_public_metrics(PlanLevel::Team));
+        assert!(metered_bills_public_metrics(PlanLevel::Enterprise));
     }
 }

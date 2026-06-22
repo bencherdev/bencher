@@ -94,7 +94,7 @@ pub fn spawn_credit_grants(log: Logger, db_path: PathBuf, busy_timeout: u32, bil
                 };
                 let plan_id = plan.id;
                 match biller.get_metered_plan_status(&metered_plan_id).await {
-                    Ok((status, _)) => match credit_sweep_action(status) {
+                    Ok((status, _, _)) => match credit_sweep_action(status) {
                         // Active (or trialing): ensure this period's included credit.
                         // Idempotent, and a no-op for metered plans without a base fee.
                         CreditSweepAction::EnsureCredit => {

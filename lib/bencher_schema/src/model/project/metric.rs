@@ -47,11 +47,12 @@ impl QueryMetric {
         Self::usage_inner(conn, organization_id, start_time, end_time, None)
     }
 
-    /// Count the billable metric usage for an organization over a time window.
+    /// Count private-project metric usage for an organization over a time window.
     ///
-    /// Only Private Project Metrics are metered; Public Project Metrics are free
-    /// and unlimited. This mirrors the `visibility.is_public()` skip in
-    /// `PlanKind::check_usage`, so the figure matches what is actually billed.
+    /// This is the billable figure only for plan levels where Public Project Metrics
+    /// are free (see `metered_bills_public_metrics`); levels that bill public metrics
+    /// use `usage` (all visibilities) instead. The selection lives in the metered
+    /// usage estimate and mirrors the skip in `PlanKind::check_usage`.
     #[cfg(feature = "plus")]
     pub fn private_usage(
         conn: &mut DbConnection,
