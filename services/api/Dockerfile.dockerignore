@@ -1,14 +1,19 @@
 # Ignore all
 *
 
-# Except
+# Except the Rust workspace: every member's manifest + source must be present so that
+# `cargo chef prepare` can resolve the full workspace.
 !.cargo/
 !Cargo.toml
 !Cargo.lock
 !lib/
 !plus/
-!services/api/migrations/
-!services/api/src/
-!services/api/Cargo.toml
-!services/api/diesel.toml
-!services/api/openapi.json
+!services/api/
+!services/cli/
+!services/runner/
+!tasks/
+!xtask/
+
+# Re-exclude build artifacts and the local database (never needed to build the API).
+services/api/data/
+**/target/

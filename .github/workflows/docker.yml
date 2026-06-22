@@ -9,6 +9,20 @@ on:
       litestream-version:
         type: string
         required: true
+      cargo-chef-version:
+        type: string
+        required: true
+      sccache-version:
+        type: string
+        required: true
+      is-fork:
+        type: boolean
+        required: true
+    secrets:
+      R2_ACCESS_KEY_ID:
+        required: false
+      R2_SECRET_ACCESS_KEY:
+        required: false
 
 env:
   GITHUB_REGISTRY: ghcr.io
@@ -19,6 +33,10 @@ env:
 jobs:
   build_api_docker:
     name: Build API Docker (${{ matrix.suffix }})
+    # `Cloudflare` environment provides the sccache cache vars (SCCACHE_BUCKET/ENDPOINT).
+    # The S3 credentials arrive as repo secrets via `secrets:` below; reusable workflows
+    # receive environment variables but NOT environment secrets.
+    environment: Cloudflare
     strategy:
       fail-fast: false
       matrix:
@@ -42,9 +60,32 @@ jobs:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set cache name
-        id: cache-name
-        run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
+      # Trusted builds (not a fork PR) use the shared registry cache + sccache; fork builds
+      # get neither (cold but correct) so untrusted code can never poison the shared cache.
+      - name: Set cache config
+        id: cache
+        env:
+          IS_FORK: ${{ inputs.is-fork }}
+          IMAGE_REF: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}
+          SUFFIX: ${{ matrix.suffix }}
+        run: |
+          if [ "${IS_FORK}" = "true" ]; then
+            {
+              echo "wrapper="
+              echo "cache_from="
+              echo "cache_to="
+            } >> "$GITHUB_OUTPUT"
+          else
+            CACHE_NAME="${GITHUB_REF_NAME//\//-}"
+            {
+              echo "wrapper=sccache"
+              echo "cache_from<<EOF"
+              echo "type=registry,ref=${IMAGE_REF}:cache-${CACHE_NAME}-${SUFFIX}"
+              echo "type=registry,ref=${IMAGE_REF}:cache-devel-${SUFFIX}"
+              echo "EOF"
+              echo "cache_to=type=registry,ref=${IMAGE_REF}:cache-${CACHE_NAME}-${SUFFIX},mode=max"
+            } >> "$GITHUB_OUTPUT"
+          fi
       - name: Build & Push API Docker Image (${{ matrix.suffix }})
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
@@ -55,15 +96,23 @@ jobs:
           build-args: |
             MOLD_VERSION=${{ inputs.mold-version }}
             LITESTREAM_VERSION=${{ inputs.litestream-version }}
-          cache-from: |
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }}
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-devel-${{ matrix.suffix }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }},mode=max
-          push: true
+            CARGO_CHEF_VERSION=${{ inputs.cargo-chef-version }}
+            SCCACHE_VERSION=${{ inputs.sccache-version }}
+            SCCACHE_BUCKET=${{ vars.SCCACHE_BUCKET }}
+            SCCACHE_ENDPOINT=${{ vars.SCCACHE_ENDPOINT }}
+            RUSTC_WRAPPER=${{ steps.cache.outputs.wrapper }}
+          cache-from: ${{ steps.cache.outputs.cache_from }}
+          cache-to: ${{ steps.cache.outputs.cache_to }}
+          secrets: |
+            s3_access_key_id=${{ secrets.R2_ACCESS_KEY_ID }}
+            s3_secret_access_key=${{ secrets.R2_SECRET_ACCESS_KEY }}
+          push: ${{ !inputs.is-fork }}
 
   create_api_docker_manifest:
     name: Create API Docker Manifest
     needs: build_api_docker
+    # Fork builds do not push per-arch images, so there is nothing to assemble.
+    if: ${{ !inputs.is-fork }}
     runs-on: ubuntu-22.04
     steps:
       - name: Setup Docker buildx
@@ -106,9 +155,30 @@ jobs:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set cache name
-        id: cache-name
-        run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
+      # Trusted builds (not a fork PR) use the shared registry cache; fork builds get neither
+      # (a read-only token cannot export cache or push), so they build cold and push nothing.
+      - name: Set cache config
+        id: cache
+        env:
+          IS_FORK: ${{ inputs.is-fork }}
+          IMAGE_REF: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}
+          SUFFIX: ${{ matrix.suffix }}
+        run: |
+          if [ "${IS_FORK}" = "true" ]; then
+            {
+              echo "cache_from="
+              echo "cache_to="
+            } >> "$GITHUB_OUTPUT"
+          else
+            CACHE_NAME="${GITHUB_REF_NAME//\//-}"
+            {
+              echo "cache_from<<EOF"
+              echo "type=registry,ref=${IMAGE_REF}:cache-${CACHE_NAME}-${SUFFIX}"
+              echo "type=registry,ref=${IMAGE_REF}:cache-devel-${SUFFIX}"
+              echo "EOF"
+              echo "cache_to=type=registry,ref=${IMAGE_REF}:cache-${CACHE_NAME}-${SUFFIX},mode=max"
+            } >> "$GITHUB_OUTPUT"
+          fi
       - name: Build & Push Console Docker Image (${{ matrix.suffix }})
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
@@ -116,15 +186,15 @@ jobs:
           file: ./services/console/Dockerfile
           platforms: ${{ matrix.platform }}
           tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:${{ github.sha }}-${{ matrix.suffix }}
-          cache-from: |
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }}
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-devel-${{ matrix.suffix }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }},mode=max
-          push: true
+          cache-from: ${{ steps.cache.outputs.cache_from }}
+          cache-to: ${{ steps.cache.outputs.cache_to }}
+          push: ${{ !inputs.is-fork }}
 
   create_console_docker_manifest:
     name: Create Console Docker Manifest
     needs: build_console_docker
+    # Fork builds do not push per-arch images, so there is nothing to assemble.
+    if: ${{ !inputs.is-fork }}
     runs-on: ubuntu-22.04
     steps:
       - name: Setup Docker buildx
@@ -167,9 +237,30 @@ jobs:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set cache name
-        id: cache-name
-        run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
+      # Trusted builds (not a fork PR) use the shared registry cache; fork builds get neither
+      # (a read-only token cannot export cache or push), so they build cold and push nothing.
+      - name: Set cache config
+        id: cache
+        env:
+          IS_FORK: ${{ inputs.is-fork }}
+          IMAGE_REF: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}
+          SUFFIX: ${{ matrix.suffix }}
+        run: |
+          if [ "${IS_FORK}" = "true" ]; then
+            {
+              echo "cache_from="
+              echo "cache_to="
+            } >> "$GITHUB_OUTPUT"
+          else
+            CACHE_NAME="${GITHUB_REF_NAME//\//-}"
+            {
+              echo "cache_from<<EOF"
+              echo "type=registry,ref=${IMAGE_REF}:cache-${CACHE_NAME}-${SUFFIX}"
+              echo "type=registry,ref=${IMAGE_REF}:cache-devel-${SUFFIX}"
+              echo "EOF"
+              echo "cache_to=type=registry,ref=${IMAGE_REF}:cache-${CACHE_NAME}-${SUFFIX},mode=max"
+            } >> "$GITHUB_OUTPUT"
+          fi
       - name: Build & Push CLI Docker Image (${{ matrix.suffix }})
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
@@ -179,15 +270,15 @@ jobs:
           tags: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:${{ github.sha }}-${{ matrix.suffix }}
           build-args: |
             MOLD_VERSION=${{ inputs.mold-version }}
-          cache-from: |
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }}
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-devel-${{ matrix.suffix }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CLI_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-${{ matrix.suffix }},mode=max
-          push: true
+          cache-from: ${{ steps.cache.outputs.cache_from }}
+          cache-to: ${{ steps.cache.outputs.cache_to }}
+          push: ${{ !inputs.is-fork }}
 
   create_cli_docker_manifest:
     name: Create CLI Docker Manifest
     needs: build_cli_docker
+    # Fork builds do not push per-arch images, so there is nothing to assemble.
+    if: ${{ !inputs.is-fork }}
     runs-on: ubuntu-22.04
     steps:
       - name: Setup Docker buildx

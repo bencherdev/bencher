@@ -1,5 +1,8 @@
+# syntax=docker/dockerfile:1
 # https://hub.docker.com/_/rust
-FROM rust:1.95.0-bookworm@sha256:503651ea31e66ecb74623beabde781059a5978df1595a9e8ed03974d5fec1bf0 AS builder
+FROM rust:1.95.0-bookworm@sha256:503651ea31e66ecb74623beabde781059a5978df1595a9e8ed03974d5fec1bf0 AS base
+
+FROM base AS chef
 
 RUN apt-get update \
     && apt-get install -y \
@@ -7,9 +10,31 @@ RUN apt-get update \
     clang \
     # Plot
     pkg-config libfreetype6-dev libfontconfig1-dev \
-    # Stipe
+    # Stripe
     ca-certificates
 
+WORKDIR /tmp/mold
+ARG MOLD_VERSION
+RUN curl -L --retry 10 --silent --show-error https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-$(uname -m)-linux.tar.gz | tar -C /usr/local --strip-components=1 -xzf -
+RUN "$(realpath /usr/bin/ld)" != /usr/local/bin/mold && sudo ln -sf /usr/local/bin/mold "$(realpath /usr/bin/ld)"; true
+
+# cargo-chef caches the dependency build as its own layer; sccache caches each crate's
+# compilation in S3-compatible object storage so only changed first-party crates are rebuilt.
+ARG CARGO_CHEF_VERSION
+ARG SCCACHE_VERSION
+RUN cargo install cargo-chef --locked --version ${CARGO_CHEF_VERSION} \
+    && cargo install sccache --locked --version ${SCCACHE_VERSION}
+
+WORKDIR /usr/src/bencher
+
+# Compute the dependency recipe from the workspace manifests + lockfile.
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# Litestream is a runtime-only binary; keep it in its own stage so its version is decoupled
+# from the build layers (a Litestream bump never invalidates the dependency cache).
+FROM base AS litestream
 WORKDIR /tmp/litestream
 ARG LITESTREAM_VERSION
 ARG TARGETARCH
@@ -18,89 +43,46 @@ RUN LITESTREAM_ARCH=$(case "${TARGETARCH}" in amd64) echo "x86_64" ;; arm64) ech
     wget "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/${LITESTREAM_BIN}.tar.gz" && \
     tar -xzf "${LITESTREAM_BIN}.tar.gz"
 
-WORKDIR /tmp/mold
-ARG MOLD_VERSION
-RUN curl -L --retry 10 --silent --show-error https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-$(uname -m)-linux.tar.gz | tar -C /usr/local --strip-components=1 -xzf -
-RUN "$(realpath /usr/bin/ld)" != /usr/local/bin/mold && sudo ln -sf /usr/local/bin/mold "$(realpath /usr/bin/ld)"; true
+FROM chef AS builder
+# "sccache" for trusted builds; empty for untrusted (fork) builds, which disables sccache
+# entirely so the absent S3 credentials are never needed (a cold but correct build).
+ARG RUSTC_WRAPPER=""
+ENV RUSTC_WRAPPER=${RUSTC_WRAPPER}
+ENV CARGO_INCREMENTAL=0
+# sccache S3-compatible object storage backend.
+ARG SCCACHE_BUCKET
+ARG SCCACHE_ENDPOINT
+ENV SCCACHE_BUCKET=${SCCACHE_BUCKET}
+ENV SCCACHE_ENDPOINT=${SCCACHE_ENDPOINT}
+ENV SCCACHE_REGION=auto
 
+# `.cargo/config.toml` (mold linker + v0 symbol mangling) must be identical during `cook`
+# and the final build, or cargo treats the cooked artifacts as stale and rebuilds them.
 WORKDIR /usr/src/bencher/.cargo
 COPY .cargo/config.toml config.toml
-
-WORKDIR /usr/src/bencher/lib
-RUN cargo init --lib bencher_api_tests
-RUN cargo init --lib bencher_client
-RUN cargo init --lib bencher_comment
-RUN cargo init --lib bencher_parser
-COPY lib/api_auth api_auth
-COPY lib/api_checkout api_checkout
-COPY lib/api_organizations api_organizations
-COPY lib/api_projects api_projects
-COPY lib/api_run api_run
-COPY lib/api_server api_server
-COPY lib/api_users api_users
-COPY lib/bencher_adapter bencher_adapter
-COPY lib/bencher_boundary bencher_boundary
-COPY lib/bencher_config bencher_config
-COPY lib/bencher_context bencher_context
-COPY lib/bencher_endpoint bencher_endpoint
-COPY lib/bencher_json bencher_json
-COPY lib/bencher_logger bencher_logger
-COPY lib/bencher_noise bencher_noise
-COPY lib/bencher_plot bencher_plot
-COPY lib/bencher_rank bencher_rank
-COPY lib/bencher_rbac bencher_rbac
-COPY lib/bencher_schema bencher_schema
-COPY lib/bencher_token bencher_token
-COPY lib/bencher_valid bencher_valid
-
-WORKDIR /usr/src/bencher/plus
-RUN cargo init --lib bencher_init
-RUN cargo init --lib bencher_oci
-RUN cargo init --lib bencher_output_protocol
-RUN cargo init --lib bencher_rootfs
-RUN cargo init --lib bencher_runner
-COPY plus/api_oci api_oci
-COPY plus/api_runners api_runners
-COPY plus/api_specs api_specs
-COPY plus/bencher_billing bencher_billing
-COPY plus/bencher_bing_index bencher_bing_index
-COPY plus/bencher_github_client bencher_github_client
-COPY plus/bencher_google_client bencher_google_client
-COPY plus/bencher_google_index bencher_google_index
-COPY plus/bencher_license bencher_license
-COPY plus/bencher_oci_storage bencher_oci_storage
-COPY plus/bencher_otel bencher_otel
-COPY plus/bencher_otel_provider bencher_otel_provider
-COPY plus/bencher_rate_limiter bencher_rate_limiter
-COPY plus/bencher_recaptcha bencher_recaptcha
-
-WORKDIR /usr/src/bencher/tasks
-RUN cargo init --bin bin_version
-RUN cargo init --bin gen_installer
-RUN cargo init --bin gen_pkg
-RUN cargo init --bin gen_notes
-RUN cargo init --bin gen_types
-RUN cargo init --bin test_api
-RUN cargo init --bin test_netlify
-RUN cargo init --bin test_runner
-RUN cargo init --bin runner_ops
-RUN cargo init --bin update_sandbox
-
 WORKDIR /usr/src/bencher
-COPY Cargo.toml Cargo.toml
-COPY Cargo.lock Cargo.lock
-RUN cargo init xtask
 
-WORKDIR /usr/src/bencher/services
-RUN cargo init cli
-RUN cargo init runner
+# Cook only the `api` binary's dependency graph. This layer is keyed on `recipe.json`
+# (derived from `Cargo.lock` + the manifests), so it is reused whenever dependencies are
+# unchanged. The S3 credential mounts are `required=false`: absent for untrusted builds,
+# where `RUSTC_WRAPPER` is empty so sccache (and thus object storage) is never invoked.
+COPY --from=planner /usr/src/bencher/recipe.json recipe.json
+RUN --mount=type=secret,id=s3_access_key_id,required=false \
+    --mount=type=secret,id=s3_secret_access_key,required=false \
+    AWS_ACCESS_KEY_ID="$(cat /run/secrets/s3_access_key_id 2>/dev/null || true)" \
+    AWS_SECRET_ACCESS_KEY="$(cat /run/secrets/s3_secret_access_key 2>/dev/null || true)" \
+    cargo chef cook --release --bin api --recipe-path recipe.json \
+    && (sccache --show-stats || true)
 
-WORKDIR /usr/src/bencher/services/api
-COPY services/api/src src
-COPY services/api/Cargo.toml Cargo.toml
-COPY services/api/openapi.json openapi.json
-
-RUN cargo build --release
+# Build the first-party code. Dependencies are already compiled above; sccache restores any
+# unchanged first-party crates so only what actually changed is recompiled.
+COPY . .
+RUN --mount=type=secret,id=s3_access_key_id,required=false \
+    --mount=type=secret,id=s3_secret_access_key,required=false \
+    AWS_ACCESS_KEY_ID="$(cat /run/secrets/s3_access_key_id 2>/dev/null || true)" \
+    AWS_SECRET_ACCESS_KEY="$(cat /run/secrets/s3_secret_access_key 2>/dev/null || true)" \
+    cargo build --release --bin api \
+    && (sccache --show-stats || true)
 
 WORKDIR /usr/local/bencher-deps
 RUN cp /usr/lib/$(uname -m)-linux-gnu/libexpat.so.1 libexpat.so.1
@@ -117,7 +99,7 @@ WORKDIR /var/lib/bencher/data
 
 # https://github.com/GoogleContainerTools/distroless/blob/main/cc/README.md
 FROM gcr.io/distroless/cc-debian12@sha256:0c8eac8ea42a167255d03c3ba6dfad2989c15427ed93d16c53ef9706ea4691df
-COPY --from=builder /tmp/litestream/litestream /usr/bin/litestream
+COPY --from=litestream /tmp/litestream/litestream /usr/bin/litestream
 
 COPY --from=builder /etc/fonts /etc/fonts
 COPY --from=builder /usr/include/fontconfig /usr/include/fontconfig
