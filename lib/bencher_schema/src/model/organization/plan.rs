@@ -535,18 +535,18 @@ mod tests {
     use super::metered_bills_public_metrics;
 
     #[test]
-    fn pro_does_not_bill_public_metrics() {
+    fn does_not_bill_public_metrics() {
+        assert!(!metered_bills_public_metrics(PlanLevel::Free));
         // Pro is the only metered tier whose public metrics are free.
         assert!(!metered_bills_public_metrics(PlanLevel::Pro));
     }
 
     #[test]
-    fn non_pro_bills_public_metrics() {
+    fn bills_public_metrics() {
         // Legacy Team and metered Enterprise are billed for public metrics. Free is
         // included for completeness even though metered plans only resolve to
         // Pro/Team via the base-fee heuristic.
         assert!(metered_bills_public_metrics(PlanLevel::Team));
         assert!(metered_bills_public_metrics(PlanLevel::Enterprise));
-        assert!(metered_bills_public_metrics(PlanLevel::Free));
     }
 }
