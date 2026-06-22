@@ -469,7 +469,9 @@ fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed:
     }
     match plan_kind {
         PlanKind::None => requested.map_or(Timeout::FREE_MAX, |t| t.clamp_max(Timeout::FREE_MAX)),
-        PlanKind::Metered(..) | PlanKind::Licensed(_) => requested.unwrap_or(Timeout::PLUS_DEFAULT),
+        PlanKind::Metered(_, _) | PlanKind::Licensed(_) => {
+            requested.unwrap_or(Timeout::PLUS_DEFAULT)
+        },
     }
 }
 
