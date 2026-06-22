@@ -582,7 +582,6 @@ impl Biller {
     /// Derive a paid subscription's plan level from its line items. Pro is the only
     /// paid tier with a flat base fee, so a Pro base-fee item identifies the plan
     /// level without relying on which Stripe product the metered item sits on.
-    /// Requires the subscription to have its `items` expanded.
     fn subscription_plan_level(&self, subscription: &Subscription) -> PlanLevel {
         let pro_base_price_ids: HashSet<&PriceId> = self
             .products
@@ -603,11 +602,7 @@ impl Biller {
         let subscription = self
             .get_subscription_expand(
                 subscription_id,
-                vec![
-                    "customer".into(),
-                    "default_payment_method".into(),
-                    "items".into(),
-                ],
+                vec!["customer".into(), "default_payment_method".into()],
             )
             .await?;
 
@@ -810,11 +805,7 @@ impl Biller {
         metered_plan_id: &MeteredPlanId,
     ) -> Result<(PlanStatus, CustomerId, PlanLevel), BillingError> {
         let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
-        // Expand `items` so the plan level (Pro vs Team) can be derived from the
-        // subscription's line items via `subscription_plan_level`.
-        let subscription = self
-            .get_subscription_expand(&subscription_id, vec!["items".into()])
-            .await?;
+        let subscription = self.get_subscription(&subscription_id).await?;
         Ok((
             Self::map_status(&subscription.status),
             subscription.customer.id().clone(),
