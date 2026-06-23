@@ -11,6 +11,7 @@ default = []
 plus = [
     "dep:bencher_github_client",
     "dep:bencher_google_client",
+    "dep:bencher_litestream",
     "dep:bencher_oci_storage",
     "bencher_billing/plus",
     "bencher_endpoint/plus",
@@ -30,6 +31,7 @@ bencher_github_client = { workspace = true, optional = true }
 bencher_google_client = { workspace = true, optional = true }
 bencher_json.workspace = true
 bencher_license = { workspace = true, optional = true }
+bencher_litestream = { workspace = true, optional = true }
 bencher_oci_storage = { workspace = true, optional = true }
 bencher_rbac.workspace = true
 bencher_recaptcha = { workspace = true, optional = true }

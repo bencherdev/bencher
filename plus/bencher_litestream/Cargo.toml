@@ -1,0 +1,31 @@
+[package]
+name = "bencher_litestream"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+server = ["bencher_valid/server"]
+client = ["bencher_valid/client"]
+schema = ["dep:schemars", "bencher_valid/schema"]
+yaml = ["dep:serde_yaml", "dep:camino"]
+runtime = ["yaml", "dep:tokio", "dep:slog", "dep:thiserror"]
+
+[dependencies]
+bencher_valid.workspace = true
+camino = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true }
+serde.workspace = true
+serde_yaml = { workspace = true, optional = true }
+slog = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["process", "rt", "sync"] }
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+
+[lints]
+workspace = true

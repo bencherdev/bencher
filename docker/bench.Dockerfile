@@ -63,6 +63,7 @@ RUN cargo init --lib bencher_recaptcha
 RUN cargo init --lib bencher_rootfs
 RUN cargo init --lib bencher_runner
 RUN cargo init --lib bencher_init
+COPY plus/bencher_litestream bencher_litestream
 
 WORKDIR /usr/src/bencher/tasks
 RUN cargo init --bin bin_version
@@ -90,7 +91,7 @@ RUN cargo init runner
 COPY services/api/openapi.json /usr/src/bencher/services/api/openapi.json
 
 WORKDIR /usr/src/bencher
-RUN cargo bench --package bencher_adapter --no-run --message-format=json \
+RUN cargo bench --package bencher_adapter --no-run --features server --message-format=json \
     | jq -r 'select(.executable != null and .target.kind == ["bench"]) | .executable' \
     | xargs -I {} cp {} /usr/local/bin/bench-adapter
 

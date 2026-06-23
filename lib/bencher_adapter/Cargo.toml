@@ -8,10 +8,12 @@ publish = false
 
 [features]
 default = []
+client = ["bencher_json/client"]
+server = ["bencher_json/server"]
 plus = ["bencher_json/plus"]
 
 [dependencies]
-bencher_json = { workspace = true, features = ["server"] }
+bencher_json.workspace = true
 literally.workspace = true
 nom.workspace = true
 ordered-float.workspace = true

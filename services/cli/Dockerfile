@@ -63,6 +63,7 @@ RUN cargo init --lib bencher_recaptcha
 RUN cargo init --lib bencher_rootfs
 RUN cargo init --lib bencher_runner
 RUN cargo init --lib bencher_init
+COPY plus/bencher_litestream bencher_litestream
 
 WORKDIR /usr/src/bencher/tasks
 RUN cargo init --bin bin_version

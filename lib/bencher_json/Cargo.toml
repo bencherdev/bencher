@@ -8,16 +8,22 @@ publish = false
 
 [features]
 default = []
-client = ["bencher_context/client", "bencher_valid/client"]
+client = ["bencher_context/client", "bencher_valid/client", "bencher_litestream?/client"]
 table = ["dep:tabled"]
-server = ["bencher_context/server", "bencher_valid/server"]
-schema = ["dep:schemars", "bencher_context/schema", "ordered-float/schemars"]
-db = ["dep:diesel", "dep:serde_yaml", "bencher_valid/db"]
-plus = ["dep:camino", "bencher_valid/plus"]
+server = ["bencher_context/server", "bencher_valid/server", "bencher_litestream?/server"]
+schema = [
+    "dep:schemars",
+    "bencher_context/schema",
+    "ordered-float/schemars",
+    "bencher_litestream?/schema",
+]
+db = ["dep:diesel", "bencher_valid/db", "bencher_litestream?/yaml"]
+plus = ["dep:camino", "dep:bencher_litestream", "bencher_valid/plus"]
 test-clock = ["bencher_valid/test-clock"]
 
 [dependencies]
 bencher_context.workspace = true
+bencher_litestream = { workspace = true, optional = true }
 bencher_valid = { workspace = true, features = ["schema"] }
 camino = { workspace = true, features = ["serde1"], optional = true }
 derive_more.workspace = true
@@ -28,15 +34,11 @@ schemars = { workspace = true, optional = true, features = ["chrono", "url"] }
 serde.workspace = true
 serde_json.workspace = true
 serde_urlencoded.workspace = true
-serde_yaml = { workspace = true, optional = true }
 tabled = { workspace = true, optional = true }
 thiserror.workspace = true
 typeshare.workspace = true
 url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["v4", "serde"] }
-
-[dev-dependencies]
-pretty_assertions.workspace = true
 
 [lints]
 workspace = true

@@ -435,7 +435,7 @@ fn run_litestream(database: &mut DbConnection) -> Result<(), ConfigTxError> {
     // https://litestream.io/tips/#disable-autocheckpoints-for-high-write-load-servers
     // https://sqlite.org/wal.html#automatic_checkpoint
     database
-        .batch_execute("PRAGMA wal_autocheckpoint = 0")
+        .batch_execute(bencher_litestream::DISABLE_AUTOCHECKPOINT_PRAGMA)
         .map_err(ConfigTxError::Pragma)?;
 
     Ok(())

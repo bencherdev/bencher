@@ -37,6 +37,7 @@ RUN cargo init --lib bencher_github_client
 RUN cargo init --lib bencher_google_client
 RUN cargo init --lib bencher_google_index
 RUN cargo init --lib bencher_license
+RUN cargo init --lib bencher_litestream
 RUN cargo init --lib bencher_oci
 RUN cargo init --lib bencher_oci_storage
 RUN cargo init --lib bencher_output_protocol
