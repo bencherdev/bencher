@@ -219,10 +219,11 @@ fn free_plan_usage(
 
 /// Estimate billable usage for a metered (Bencher Cloud) plan.
 ///
-/// On Pro, only Private Project metrics are metered; Public Project metrics are free
-/// and unlimited. On legacy Team (and metered Enterprise) plans, both Public and
-/// Private Project metrics are metered. This mirrors `PlanKind::check_usage` so the
-/// estimate matches what is actually billed. Bare metal runner minutes are metered
+/// Legacy Team (and metered Enterprise) plans are metered on both Public and Private
+/// Project metrics, so the returned metrics figure matches their bill. Pro now bills on
+/// active series rather than metrics, so for Pro this returns only its Private Project
+/// metrics as an informational figure that no longer matches the bill; surfacing the
+/// active-series count here is a follow-up. Bare metal runner minutes are metered
 /// regardless of visibility and plan level.
 fn metered_plan_usage(
     conn: &mut DbConnection,

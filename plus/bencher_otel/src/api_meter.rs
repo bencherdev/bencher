@@ -88,6 +88,8 @@ pub enum ApiCounter {
     MetricsCreate(Priority),
     MetricsBilled,
     MetricsBilledFailed,
+    ActiveSeriesBilled,
+    ActiveSeriesBilledFailed,
 
     UserIp,
     UserIpNotFound,
@@ -176,6 +178,8 @@ impl ApiCounter {
 
             Self::MetricsCreate(_) | Self::MetricsBilled | Self::MetricsBilledFailed => "{metric}",
 
+            Self::ActiveSeriesBilled | Self::ActiveSeriesBilledFailed => "{series}",
+
             Self::UserIp
             | Self::UserIpNotFound
             | Self::RequestMax(_, _)
@@ -239,6 +243,8 @@ impl ApiCounter {
             Self::MetricsCreate(_) => "metrics.create",
             Self::MetricsBilled => "metrics.billed",
             Self::MetricsBilledFailed => "metrics.billed.failed",
+            Self::ActiveSeriesBilled => "active_series.billed",
+            Self::ActiveSeriesBilledFailed => "active_series.billed.failed",
 
             Self::UserIp => "user.ip",
             Self::UserIpNotFound => "user.ip.not_found",
@@ -333,6 +339,8 @@ impl ApiCounter {
             Self::MetricsCreate(_) => "Counts the number of metrics created",
             Self::MetricsBilled => "Counts the number of metrics successfully billed",
             Self::MetricsBilledFailed => "Counts the number of metrics billing failures",
+            Self::ActiveSeriesBilled => "Counts the number of active series successfully billed",
+            Self::ActiveSeriesBilledFailed => "Counts the number of active series billing failures",
 
             Self::UserIp => "Counts the number of user IP address found occurrences",
             Self::UserIpNotFound => "Counts the number of user IP address not found occurrences",
@@ -458,6 +466,8 @@ impl ApiCounter {
             | Self::UserKeyRevokeBlocked
             | Self::MetricsBilled
             | Self::MetricsBilledFailed
+            | Self::ActiveSeriesBilled
+            | Self::ActiveSeriesBilledFailed
             | Self::EmailSend
             | Self::OciBlobPush
             | Self::OciBlobPull
