@@ -6,6 +6,8 @@ services:
       args:
         MOLD_VERSION: 2.34.1
         LITESTREAM_VERSION: 0.5.10
+        CARGO_CHEF_VERSION: 0.1.77
+        SCCACHE_VERSION: 0.16.0
     image: bencher-api
     container_name: bencher_api
     ports:

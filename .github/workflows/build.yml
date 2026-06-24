@@ -12,6 +12,15 @@ on:
       litestream-version:
         type: string
         required: true
+      cargo-chef-version:
+        type: string
+        required: true
+      sccache-version:
+        type: string
+        required: true
+      is-fork:
+        type: boolean
+        required: true
       build-action:
         type: boolean
         required: true
@@ -21,6 +30,11 @@ on:
       deploy-only:
         type: boolean
         required: true
+    secrets:
+      R2_ACCESS_KEY_ID:
+        required: false
+      R2_SECRET_ACCESS_KEY:
+        required: false
     outputs:
       wasm-artifact-name:
         description: "WASM artifact name"
@@ -143,6 +157,10 @@ jobs:
   build_api_docker:
     name: Build API Docker
     runs-on: ubuntu-22.04
+    # `Cloudflare` environment provides the sccache cache vars (SCCACHE_BUCKET/ENDPOINT).
+    # The S3 credentials arrive as repo secrets via `secrets:` below; reusable workflows
+    # receive environment variables but NOT environment secrets.
+    environment: Cloudflare
     if: ${{ inputs.build-docker }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -156,9 +174,31 @@ jobs:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set cache name
-        id: cache-name
-        run: echo "value=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
+      # Trusted builds (not a fork PR) use the shared registry cache + sccache; fork builds
+      # get neither (cold but correct) so untrusted code can never poison the shared cache.
+      - name: Set cache config
+        id: cache
+        env:
+          IS_FORK: ${{ inputs.is-fork }}
+          IMAGE_REF: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}
+        run: |
+          if [ "${IS_FORK}" = "true" ]; then
+            {
+              echo "wrapper="
+              echo "cache_from="
+              echo "cache_to="
+            } >> "$GITHUB_OUTPUT"
+          else
+            CACHE_NAME="${GITHUB_REF_NAME//\//-}"
+            {
+              echo "wrapper=sccache"
+              echo "cache_from<<EOF"
+              echo "type=registry,ref=${IMAGE_REF}:cache-${CACHE_NAME}-amd64"
+              echo "type=registry,ref=${IMAGE_REF}:cache-devel-amd64"
+              echo "EOF"
+              echo "cache_to=type=registry,ref=${IMAGE_REF}:cache-${CACHE_NAME}-amd64,mode=max"
+            } >> "$GITHUB_OUTPUT"
+          fi
       - name: Build & Push API Docker Image (amd64)
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
@@ -169,8 +209,14 @@ jobs:
           build-args: |
             MOLD_VERSION=${{ inputs.mold-version }}
             LITESTREAM_VERSION=${{ inputs.litestream-version }}
-          cache-from: |
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-amd64
-            type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-devel-amd64
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ steps.cache-name.outputs.value }}-amd64,mode=max
-          push: true
+            CARGO_CHEF_VERSION=${{ inputs.cargo-chef-version }}
+            SCCACHE_VERSION=${{ inputs.sccache-version }}
+            SCCACHE_BUCKET=${{ vars.SCCACHE_BUCKET }}
+            SCCACHE_ENDPOINT=${{ vars.SCCACHE_ENDPOINT }}
+            RUSTC_WRAPPER=${{ steps.cache.outputs.wrapper }}
+          cache-from: ${{ steps.cache.outputs.cache_from }}
+          cache-to: ${{ steps.cache.outputs.cache_to }}
+          secrets: |
+            s3_access_key_id=${{ secrets.R2_ACCESS_KEY_ID }}
+            s3_secret_access_key=${{ secrets.R2_SECRET_ACCESS_KEY }}
+          push: ${{ !inputs.is-fork }}
