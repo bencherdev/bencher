@@ -4,39 +4,33 @@ use std::{
 };
 
 use bencher_json::{
-    Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
+    DateTime, Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel,
+    PlanStatus,
     organization::plan::{
-        JsonCardDetails, JsonPlan, METRICS_METER_NAME, RUNNER_MINUTES_METER_NAME,
+        ACTIVE_SERIES_METER_NAME, JsonCardDetails, JsonPlan, METRICS_METER_NAME,
+        RUNNER_MINUTES_METER_NAME,
     },
     system::{
         config::JsonBilling,
         payment::{JsonCard, JsonCheckout, JsonCustomer},
     },
 };
-use stripe::{Client as StripeClient, IdempotencyKey, RequestStrategy, StripeRequest as _};
+use stripe::Client as StripeClient;
 use stripe_billing::{
     BillingMeterEvent, Subscription, SubscriptionId, SubscriptionItem, SubscriptionStatus,
-    billing_credit_grant::{
-        CreateBillingCreditGrant, CreateBillingCreditGrantAmount,
-        CreateBillingCreditGrantAmountMonetary, CreateBillingCreditGrantAmountType,
-        CreateBillingCreditGrantApplicabilityConfig,
-        CreateBillingCreditGrantApplicabilityConfigScope,
-        CreateBillingCreditGrantApplicabilityConfigScopePrices, ListBillingCreditGrant,
-    },
     billing_meter_event::CreateBillingMeterEvent,
     subscription::{
-        CancelSubscription, CreateSubscription, CreateSubscriptionItems, DiscountsDataParam,
-        RetrieveSubscription, UpdateSubscription,
+        CancelSubscription, CreateSubscription, CreateSubscriptionItems, RetrieveSubscription,
+        UpdateSubscription,
     },
 };
 use stripe_checkout::{
     CheckoutSessionId, CheckoutSessionMode, CheckoutSessionUiMode,
     checkout_session::{
         CreateCheckoutSession, CreateCheckoutSessionConsentCollection,
-        CreateCheckoutSessionConsentCollectionTermsOfService, CreateCheckoutSessionDiscounts,
-        CreateCheckoutSessionLineItems, CreateCheckoutSessionLineItemsAdjustableQuantity,
-        CreateCheckoutSessionPaymentMethodTypes, CreateCheckoutSessionSubscriptionData,
-        RetrieveCheckoutSession,
+        CreateCheckoutSessionConsentCollectionTermsOfService, CreateCheckoutSessionLineItems,
+        CreateCheckoutSessionLineItemsAdjustableQuantity, CreateCheckoutSessionPaymentMethodTypes,
+        CreateCheckoutSessionSubscriptionData, RetrieveCheckoutSession,
     },
 };
 use stripe_core::customer::{CreateCustomer, ListCustomer};
@@ -62,13 +56,12 @@ const METER_CUSTOMER_KEY: &str = "stripe_customer_id";
 /// Stripe meter event payload key for the usage value.
 const METER_VALUE_KEY: &str = "value";
 
-/// Credit grant metadata key marking a grant as set by Bencher Cloud.
-const CREDIT_BENCHER_CLOUD_KEY: &str = "bencher_cloud";
-/// Credit grant metadata key holding the billing-period start, used to
-/// idempotently grant exactly one included-usage credit per period.
-const CREDIT_PERIOD_KEY: &str = "period_start";
-/// Descriptive name shown in the Stripe Dashboard for the included usage credit.
-const CREDIT_NAME: &str = "Bencher Cloud included usage credit";
+/// Free-trial length (in days) for a new Pro subscription. Set per subscription and per
+/// Checkout Session (a subscription-level trial), not as a per-price default (which is
+/// incompatible with Checkout). A native trial generates no invoice for the period, so
+/// all usage (active series and bare-metal runner minutes) is free during the trial, not
+/// just the base fee.
+const PRO_TRIAL_PERIOD_DAYS: u32 = 30;
 
 #[derive(Clone)]
 pub struct Biller {
@@ -76,15 +69,17 @@ pub struct Biller {
     products: Products,
 }
 
-/// Outcome of [`Biller::ensure_period_credit`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PeriodCredit {
-    /// A new included-usage credit was granted for the current period.
-    Granted,
-    /// This period's credit already existed; no new grant was created.
-    AlreadyGranted,
-    /// The subscription has no flat base fee, so no credit applies.
-    NotApplicable,
+/// A metered subscription's current billing snapshot, fetched in one call: its
+/// [`PlanStatus`] (the active/lapsed gate), the Stripe [`CustomerId`] to post usage
+/// for, the [`PlanLevel`], and the current period bounds (the active-series count
+/// window).
+#[derive(Debug, Clone)]
+pub struct MeteredPlanBilling {
+    pub status: PlanStatus,
+    pub customer_id: CustomerId,
+    pub level: PlanLevel,
+    pub current_period_start: DateTime,
+    pub current_period_end: DateTime,
 }
 
 /// The configuration price-name key (e.g. `default`) selecting which configured
@@ -113,11 +108,10 @@ impl fmt::Display for PriceName {
 #[derive(Debug, Clone)]
 enum PlusPlan {
     Free,
-    // Bencher Cloud metered tier with a flat monthly base fee and an included
-    // usage credit. Carries the metered metrics price name, which resolves
-    // against the `metrics` product; the base price and trial coupon come from
-    // the `pro` product and are looked up separately. This tier has no licensed
-    // (Self-Hosted) form.
+    // Bencher Cloud self-serve tier. Carries the price name for the single tiered
+    // active-series price (on the `pro` product) that bills both the flat monthly base
+    // fee (tier 1) and the per-series step-ups. Gets a native free trial. This tier has
+    // no licensed (Self-Hosted) form.
     Pro(PriceName),
     Team(PlusUsage),
     Enterprise(PlusUsage),
@@ -166,29 +160,11 @@ impl PlusPlan {
             .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))
     }
 
-    // The flat recurring base fee for this plan, if any.
-    fn base_price<'a>(&self, products: &'a Products) -> Result<Option<&'a Price>, BillingError> {
+    // The native free-trial length (in days) for this plan, if any. Only the Pro
+    // self-serve tier gets a trial.
+    fn trial_period_days(&self) -> Option<u32> {
         match self {
-            Self::Pro(price_name) => products
-                .pro
-                .base
-                .get(price_name.as_str())
-                .map(Some)
-                .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string())),
-            Self::Free | Self::Team(_) | Self::Enterprise(_) => Ok(None),
-        }
-    }
-
-    // Whether this plan carries a flat recurring base fee (and so receives the
-    // free-trial coupon and the monthly included-usage credit).
-    fn has_base_fee(&self) -> bool {
-        matches!(self, Self::Pro(_))
-    }
-
-    // The configured free-trial coupon for this plan's product, if any.
-    fn trial_coupon<'a>(&self, products: &'a Products) -> Option<&'a str> {
-        match self {
-            Self::Pro(_) => products.pro.trial_coupon.as_deref(),
+            Self::Pro(_) => Some(PRO_TRIAL_PERIOD_DAYS),
             Self::Free | Self::Team(_) | Self::Enterprise(_) => None,
         }
     }
@@ -199,9 +175,11 @@ impl PlusPlan {
     ) -> Result<(&Price, Option<Entitlements>), BillingError> {
         Ok(match self {
             PlusPlan::Free => return Err(BillingError::ProductLevelFree),
+            // Pro bills on its own tiered active-series price (base fee + step-ups),
+            // which lives on the `pro` product, not the shared `metrics` product.
             PlusPlan::Pro(price_name) => (
                 products
-                    .metrics
+                    .pro
                     .metered
                     .get(price_name.as_str())
                     .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?,
@@ -316,8 +294,7 @@ impl Biller {
             PlusPlan::metered(plan_level, price_name)
         };
         let bare_metal_price = plus_plan.bare_metal_price(&self.products)?;
-        let base_price = plus_plan.base_price(&self.products)?;
-        let trial_coupon = self.trial_coupon(&plus_plan);
+        let trial_period_days = plus_plan.trial_period_days();
         let (plus_price, entitlements) = plus_plan.into_plus_price(&self.products)?;
 
         let mut plus_line_item = CreateCheckoutSessionLineItems {
@@ -337,17 +314,9 @@ impl Biller {
             ..Default::default()
         };
 
-        // Flat monthly base fee billed alongside the metered usage.
-        let mut line_items = Vec::new();
-        if let Some(base_price) = base_price {
-            line_items.push(CreateCheckoutSessionLineItems {
-                price: Some(base_price.id.to_string()),
-                quantity: Some(1),
-                ..Default::default()
-            });
-        }
-        line_items.push(plus_line_item);
-        line_items.push(bare_metal_line_item);
+        // Pro's tiered active-series price carries the base fee, so there is no
+        // separate base line item.
+        let line_items = vec![plus_line_item, bare_metal_line_item];
 
         let mut consent = CreateCheckoutSessionConsentCollection::new();
         // https://bencher.dev/legal/subscription/
@@ -360,8 +329,11 @@ impl Biller {
                 .into_iter()
                 .collect(),
         );
+        // Native free trial set at the subscription level (Checkout-compatible), not as
+        // a per-price default. No charge during the trial; billing starts at trial end.
+        sub_data.trial_period_days = trial_period_days;
 
-        let mut create_checkout_session = CreateCheckoutSession::new()
+        let create_checkout_session = CreateCheckoutSession::new()
             .ui_mode(CheckoutSessionUiMode::HostedPage)
             .customer(customer.to_string())
             .payment_method_types(vec![CreateCheckoutSessionPaymentMethodTypes::Card])
@@ -371,15 +343,6 @@ impl Biller {
             .consent_collection(consent)
             .subscription_data(sub_data)
             .success_url(return_url);
-        // Free trial: waive the first month's base fee via a one-time coupon.
-        // Metered usage still bills, offset by the monthly included-usage credit.
-        if let Some(coupon) = trial_coupon {
-            create_checkout_session =
-                create_checkout_session.discounts(vec![CreateCheckoutSessionDiscounts {
-                    coupon: Some(coupon),
-                    promotion_code: None,
-                }]);
-        }
         let mut checkout_session = create_checkout_session.send(&self.client).await?;
 
         Ok(JsonCheckout {
@@ -520,25 +483,17 @@ impl Biller {
         plus_plan: PlusPlan,
     ) -> Result<Subscription, BillingError> {
         let bare_metal_price = plus_plan.bare_metal_price(&self.products)?;
-        let base_price = plus_plan.base_price(&self.products)?;
-        let trial_coupon = self.trial_coupon(&plus_plan);
+        let trial_period_days = plus_plan.trial_period_days();
         let (plus_price, entitlements) = plus_plan.into_plus_price(&self.products)?;
 
-        // Flat monthly base fee billed alongside the metered usage.
-        let mut items = Vec::new();
-        if let Some(base_price) = base_price {
-            let mut base_item = CreateSubscriptionItems::new();
-            base_item.price = Some(base_price.id.to_string());
-            base_item.quantity = Some(1);
-            items.push(base_item);
-        }
+        // Pro's tiered active-series price carries the base fee, so there is no
+        // separate base item.
         let mut plus_item = CreateSubscriptionItems::new();
         plus_item.price = Some(plus_price.id.to_string());
         plus_item.quantity = entitlements.map(Into::into);
-        items.push(plus_item);
         let mut bare_metal_item = CreateSubscriptionItems::new();
         bare_metal_item.price = Some(bare_metal_price.id.to_string());
-        items.push(bare_metal_item);
+        let items = vec![plus_item, bare_metal_item];
 
         let mut create_subscription = CreateSubscription::new()
             .customer(customer_id.to_string())
@@ -549,13 +504,10 @@ impl Biller {
                     .into_iter()
                     .collect::<HashMap<String, String>>(),
             );
-        // Free trial: waive the first month's base fee via a one-time coupon.
-        if let Some(coupon) = trial_coupon {
-            create_subscription = create_subscription.discounts(vec![DiscountsDataParam {
-                coupon: Some(coupon),
-                discount: None,
-                promotion_code: None,
-            }]);
+        // Native free trial (subscription-level): no charge during the trial; billing
+        // starts at trial end.
+        if let Some(days) = trial_period_days {
+            create_subscription = create_subscription.trial_period_days(days);
         }
         create_subscription
             .send(&self.client)
@@ -580,22 +532,23 @@ impl Biller {
     }
 
     /// Derive a paid subscription's plan level from its line items. Pro is the only
-    /// paid tier with a flat base fee, so a Pro base-fee item identifies the plan
-    /// level without relying on which Stripe product the metered item sits on.
+    /// paid tier that carries the tiered active-series price (on the `pro` product), so
+    /// a Pro active-series item identifies the plan level; any other paid metered
+    /// subscription is Team.
     fn subscription_plan_level(&self, subscription: &Subscription) -> PlanLevel {
-        let pro_base_price_ids: HashSet<&PriceId> = self
+        let pro_price_ids: HashSet<&PriceId> = self
             .products
             .pro
-            .base
+            .metered
             .values()
             .map(|price| &price.id)
             .collect();
-        let has_base_fee = subscription
+        let is_pro = subscription
             .items
             .data
             .iter()
-            .any(|item| pro_base_price_ids.contains(&item.price.id));
-        plan_level_from_base_fee(has_base_fee)
+            .any(|item| pro_price_ids.contains(&item.price.id));
+        plan_level_from_pro_price(is_pro)
     }
 
     async fn get_plan(&self, subscription_id: &SubscriptionId) -> Result<JsonPlan, BillingError> {
@@ -654,7 +607,11 @@ impl Biller {
             subscription_id,
             subscription.default_payment_method.as_ref(),
         )?;
-        let unit_amount = Self::get_plan_unit_amount(&subscription_item)?;
+        let unit_amount = Self::get_plan_unit_amount(
+            &subscription_item,
+            self.products
+                .tier_base_fee_cents(&subscription_item.price.id),
+        )?;
 
         let status = Self::map_status(&subscription.status);
 
@@ -745,12 +702,20 @@ impl Biller {
         })
     }
 
-    fn get_plan_unit_amount(subscription_item: &SubscriptionItem) -> Result<u64, BillingError> {
+    /// The plan's displayed per-period unit amount (cents). For a flat price this is the
+    /// price's `unit_amount`. A tiered price (the Pro active-series price) exposes no
+    /// flat `unit_amount`, so the caller passes `fallback_cents` (the base monthly fee,
+    /// tier 1 `flat_amount`) to use instead.
+    fn get_plan_unit_amount(
+        subscription_item: &SubscriptionItem,
+        fallback_cents: Option<i64>,
+    ) -> Result<u64, BillingError> {
         let price = &subscription_item.price;
-        let Some(unit_amount) = price.unit_amount else {
-            return Err(BillingError::NoUnitAmount(price.id.clone()));
-        };
-        u64::try_from(unit_amount).map_err(Into::into)
+        let cents = price
+            .unit_amount
+            .or(fallback_cents)
+            .ok_or_else(|| BillingError::NoUnitAmount(price.id.clone()))?;
+        u64::try_from(cents).map_err(Into::into)
     }
 
     fn get_subscription_item(
@@ -800,17 +765,70 @@ impl Biller {
         }
     }
 
-    pub async fn get_metered_plan_status(
+    /// One-fetch billing snapshot: status, the Stripe customer to post usage for, the
+    /// plan level, and the current period bounds. Expands the subscription's items
+    /// because the period bounds live on them (all items share one period). Used on the
+    /// report path to gate access and to supply the active-series count window.
+    pub async fn get_metered_plan_billing(
         &self,
         metered_plan_id: &MeteredPlanId,
-    ) -> Result<(PlanStatus, CustomerId, PlanLevel), BillingError> {
+    ) -> Result<MeteredPlanBilling, BillingError> {
         let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
-        let subscription = self.get_subscription(&subscription_id).await?;
-        Ok((
+        let subscription = self
+            .get_subscription_expand(&subscription_id, vec!["items".into()])
+            .await?;
+        let (status, customer_id, level) = self.subscription_status_snapshot(&subscription);
+        // All subscription items share the same billing period.
+        let item = subscription
+            .items
+            .data
+            .first()
+            .ok_or_else(|| BillingError::NoSubscriptionItem(subscription_id.clone()))?;
+        let current_period_start = item.current_period_start.try_into().map_err(|e| {
+            BillingError::DateTime(subscription_id.clone(), item.current_period_start, e)
+        })?;
+        let current_period_end = item.current_period_end.try_into().map_err(|e| {
+            BillingError::DateTime(subscription_id.clone(), item.current_period_end, e)
+        })?;
+        Ok(MeteredPlanBilling {
+            status,
+            customer_id,
+            level,
+            current_period_start,
+            current_period_end,
+        })
+    }
+
+    /// Resolve a metered subscription's live status for re-subscription gating:
+    /// `Some(status)` when the subscription exists, and `None` when Stripe reports it no
+    /// longer exists (a definitive 404, safe to treat as gone). Returns an error only for
+    /// indeterminate failures (network, 5xx, rate limit), so a transient outage is never
+    /// mistaken for "gone" (which would risk pruning a still-live subscription). The
+    /// caller distinguishes terminal from recoverable (dunning) statuses.
+    pub async fn metered_plan_status(
+        &self,
+        metered_plan_id: &MeteredPlanId,
+    ) -> Result<Option<PlanStatus>, BillingError> {
+        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
+        match self.get_subscription(&subscription_id).await {
+            Ok(subscription) => Ok(Some(Self::map_status(&subscription.status))),
+            Err(BillingError::Stripe(stripe::StripeError::Stripe(_, 404))) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Derive a subscription's status, customer, and plan level for
+    /// [`Self::get_metered_plan_billing`]. Deriving the level does not require the
+    /// subscription's items to be expanded (item price ids are present without it).
+    fn subscription_status_snapshot(
+        &self,
+        subscription: &Subscription,
+    ) -> (PlanStatus, CustomerId, PlanLevel) {
+        (
             Self::map_status(&subscription.status),
             subscription.customer.id().clone(),
-            self.subscription_plan_level(&subscription),
-        ))
+            self.subscription_plan_level(subscription),
+        )
     }
 
     pub async fn get_licensed_plan_status(
@@ -840,8 +858,31 @@ impl Biller {
         customer_id: &CustomerId,
         quantity: u32,
     ) -> Result<BillingMeterEvent, BillingError> {
-        self.record_metered_usage(METRICS_METER_NAME, customer_id, quantity)
+        self.record_metered_usage(METRICS_METER_NAME, customer_id, quantity, None)
             .await
+    }
+
+    /// Post an organization's cumulative period-to-date active-series count to the
+    /// `active_series` meter (which backs the Pro tiered price), stamped with `when` (the
+    /// time the count was taken). Billed with `last` aggregation: the explicit timestamp
+    /// orders concurrent posts by `when` (to one-second granularity) rather than by
+    /// Stripe's receipt order, so reports more than a second apart bill the later count
+    /// deterministically; a same-second tie self-heals on the next report. Posting after
+    /// each report makes the final post of the period the period total, and a missed post
+    /// self-heals on the next report. Mirrors [`Self::record_metrics_usage`].
+    pub async fn record_series_usage(
+        &self,
+        customer_id: &CustomerId,
+        quantity: u32,
+        when: DateTime,
+    ) -> Result<BillingMeterEvent, BillingError> {
+        self.record_metered_usage(
+            ACTIVE_SERIES_METER_NAME,
+            customer_id,
+            quantity,
+            Some(when.timestamp()),
+        )
+        .await
     }
 
     pub async fn record_runner_usage(
@@ -849,179 +890,32 @@ impl Biller {
         customer_id: &CustomerId,
         minutes: u32,
     ) -> Result<BillingMeterEvent, BillingError> {
-        self.record_metered_usage(RUNNER_MINUTES_METER_NAME, customer_id, minutes)
+        self.record_metered_usage(RUNNER_MINUTES_METER_NAME, customer_id, minutes, None)
             .await
     }
 
+    /// `timestamp` (Unix seconds) is set on the meter event only for `last`-aggregation
+    /// meters (the `active_series` meter), where it makes ordering deterministic; the
+    /// `sum`-aggregation meters (metrics, runner minutes) pass `None` and use Stripe's
+    /// receipt time.
     async fn record_metered_usage(
         &self,
         meter_name: &str,
         customer_id: &CustomerId,
         quantity: u32,
+        timestamp: Option<i64>,
     ) -> Result<BillingMeterEvent, BillingError> {
-        CreateBillingMeterEvent::new(
+        let mut event = CreateBillingMeterEvent::new(
             meter_name,
             HashMap::from([
                 (METER_CUSTOMER_KEY.to_owned(), customer_id.to_string()),
                 (METER_VALUE_KEY.to_owned(), quantity.to_string()),
             ]),
-        )
-        .send(&self.client)
-        .await
-        .map_err(Into::into)
-    }
-
-    // The first-period base-fee waiver coupon for this plan: returned only when
-    // the plan has a base fee and its product configures a trial coupon.
-    fn trial_coupon(&self, plus_plan: &PlusPlan) -> Option<String> {
-        if !plus_plan.has_base_fee() {
-            return None;
+        );
+        if let Some(timestamp) = timestamp {
+            event = event.timestamp(timestamp);
         }
-        plus_plan
-            .trial_coupon(&self.products)
-            .map(ToOwned::to_owned)
-    }
-
-    /// Idempotently grant the current billing period's included usage credit for a
-    /// metered subscription that carries a flat base fee. The credit equals that
-    /// base fee and forms a single fungible pool scoped to the subscription's
-    /// metered usage prices, expiring at period end (use-it-or-lose-it). A no-op if
-    /// the subscription has no base fee or this period's grant already exists.
-    pub async fn ensure_period_credit(
-        &self,
-        metered_plan_id: &MeteredPlanId,
-    ) -> Result<PeriodCredit, BillingError> {
-        let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
-        let subscription = self
-            .get_subscription_expand(&subscription_id, vec!["items".into()])
-            .await?;
-
-        // The included credit equals the subscription's flat base fee. A metered
-        // plan without a configured base price (e.g. a grandfathered Team plan) is
-        // a safe no-op.
-        let base_cents: HashMap<&PriceId, i64> = self
-            .products
-            .all_base_prices()
-            .filter_map(|price| price.unit_amount.map(|cents| (&price.id, cents)))
-            .collect();
-        let Some(value_cents) = matched_base_cents(
-            subscription.items.data.iter().map(|item| &item.price.id),
-            &base_cents,
-        ) else {
-            return Ok(PeriodCredit::NotApplicable);
-        };
-
-        let customer_id = subscription.customer.id().clone();
-        // All subscription items share the same billing period.
-        let item = subscription
-            .items
-            .data
-            .first()
-            .ok_or_else(|| BillingError::NoSubscriptionItem(subscription_id.clone()))?;
-        let period_start = item.current_period_start;
-        let period_end = item.current_period_end;
-
-        // The credit applies to the metered usage prices (every item except the
-        // flat base fee), forming a single fungible pool.
-        let credit_price_ids: Vec<String> = subscription
-            .items
-            .data
-            .iter()
-            .map(|item| &item.price.id)
-            .filter(|id| !base_cents.contains_key(*id))
-            .map(ToString::to_string)
-            .collect();
-
-        // Dedup: skip if a Bencher-managed grant for this period already exists.
-        // Stripe lists grants newest-first by `created` and cannot filter by
-        // metadata, and a customer may have unrelated grants (manual dashboard
-        // credits, refunds), so scan a page of recent grants for our marker plus
-        // period rather than trusting the single newest. Our current-period grant
-        // is recent, so it sits well within one page. The idempotency key guards
-        // concurrent attempts; this guards across the sweep's daily cadence.
-        let marker = period_start.to_string();
-        let grants = ListBillingCreditGrant::new()
-            .customer(customer_id.to_string())
-            .limit(100)
-            .send(&self.client)
-            .await?;
-        if period_already_granted(
-            grants.data.iter().map(|grant| {
-                (
-                    grant
-                        .metadata
-                        .get(CREDIT_BENCHER_CLOUD_KEY)
-                        .map(String::as_str),
-                    grant.metadata.get(CREDIT_PERIOD_KEY).map(String::as_str),
-                )
-            }),
-            &marker,
-        ) {
-            return Ok(PeriodCredit::AlreadyGranted);
-        }
-
-        self.create_credit_grant(
-            &customer_id,
-            value_cents,
-            credit_price_ids,
-            period_start,
-            period_end,
-        )
-        .await?;
-        Ok(PeriodCredit::Granted)
-    }
-
-    async fn create_credit_grant(
-        &self,
-        customer_id: &CustomerId,
-        value_cents: i64,
-        credit_price_ids: Vec<String>,
-        period_start: stripe_types::Timestamp,
-        period_end: stripe_types::Timestamp,
-    ) -> Result<(), BillingError> {
-        let prices = credit_price_ids
-            .into_iter()
-            .map(CreateBillingCreditGrantApplicabilityConfigScopePrices::new)
-            .collect();
-        let scope = CreateBillingCreditGrantApplicabilityConfigScope {
-            price_type: None,
-            prices: Some(prices),
-        };
-        let amount = CreateBillingCreditGrantAmount {
-            monetary: Some(CreateBillingCreditGrantAmountMonetary::new(
-                Currency::USD,
-                value_cents,
-            )),
-            type_: CreateBillingCreditGrantAmountType::Monetary,
-        };
-        let metadata = HashMap::from([
-            (CREDIT_BENCHER_CLOUD_KEY.to_owned(), "true".to_owned()),
-            (CREDIT_PERIOD_KEY.to_owned(), period_start.to_string()),
-        ]);
-        // Idempotency key from customer + period so concurrent grant attempts
-        // (e.g. plan creation overlapping the daily sweep) collapse to one grant.
-        // The list-check above handles dedup across periods (beyond the key's TTL).
-        let idempotency_key =
-            IdempotencyKey::new(format!("bencher-credit:{customer_id}:{period_start}"))?;
-        // Do not set `effective_at`. Stripe rejects a timestamp before its server
-        // "now", and `period_start` is in the past for an already-active
-        // subscription. Omitting it defaults to Stripe's "now" (also sidestepping
-        // clock skew between us and Stripe). The credit still covers this period's
-        // metered usage, which is invoiced at `expires_at` (period end).
-        CreateBillingCreditGrant::new(
-            amount,
-            CreateBillingCreditGrantApplicabilityConfig { scope },
-        )
-        .customer(customer_id.to_string())
-        .expires_at(period_end)
-        .metadata(metadata)
-        .name(CREDIT_NAME)
-        .customize()
-        .request_strategy(RequestStrategy::Idempotent(idempotency_key))
-        .send(&self.client)
-        .await
-        .map(|_grant| ())
-        .map_err(Into::into)
+        event.send(&self.client).await.map_err(Into::into)
     }
 
     /// Immediately cancel a metered subscription. Used by the admin-only DELETE
@@ -1037,7 +931,7 @@ impl Biller {
     /// Schedule (`true`) or clear (`false`) a metered subscription's
     /// cancel-at-period-end. With `true` the customer keeps access through the
     /// period they have already paid for; the subscription stays active until it
-    /// then lapses (reconciled lazily on read and by the daily sweep). With
+    /// then lapses (reconciled lazily on read). With
     /// `false` a scheduled cancellation is cleared, resuming the subscription.
     /// Used by the self-service PATCH path.
     pub async fn set_metered_cancel_at_period_end(
@@ -1072,39 +966,15 @@ impl Biller {
     }
 }
 
-/// A paid subscription's plan level. Pro is the only paid tier that carries a flat
-/// base fee (see `PlusPlan::base_price`), so a subscription with a configured
-/// base-fee item is Pro; any other paid metered subscription is Team. This is
-/// independent of which Stripe product the metered-metrics item sits on.
-fn plan_level_from_base_fee(has_base_fee: bool) -> PlanLevel {
-    if has_base_fee {
+/// A paid subscription's plan level. Pro is the only paid tier that carries the tiered
+/// active-series price (on the `pro` product), so a subscription with that item is Pro;
+/// any other paid metered subscription is Team.
+fn plan_level_from_pro_price(is_pro: bool) -> PlanLevel {
+    if is_pro {
         PlanLevel::Pro
     } else {
         PlanLevel::Team
     }
-}
-
-/// The included-credit amount (the matched flat base price's cents) for a
-/// subscription, given a map of configured base price ID to cents. `None` if the
-/// subscription carries no configured base fee. Gates the included-usage credit to
-/// base-fee subscriptions and sizes it to the base fee.
-fn matched_base_cents<'a>(
-    mut item_price_ids: impl Iterator<Item = &'a PriceId>,
-    base_cents: &HashMap<&'a PriceId, i64>,
-) -> Option<i64> {
-    item_price_ids.find_map(|id| base_cents.get(id).copied())
-}
-
-/// Whether a Bencher-managed credit grant for the given billing-period marker
-/// already exists. Each item is `(bencher_cloud_marker, period_start)`; only
-/// grants carrying our marker count, so unrelated grants (manual credits,
-/// refunds) are ignored even when newer. (Per-period dedup for
-/// `ensure_period_credit`.)
-fn period_already_granted<'a>(
-    mut grants: impl Iterator<Item = (Option<&'a str>, Option<&'a str>)>,
-    marker: &'a str,
-) -> bool {
-    grants.any(|(managed, period)| managed == Some("true") && period == Some(marker))
 }
 
 fn into_payment_card(card: JsonCard) -> CreatePaymentMethodCardDetailsParams {
@@ -1128,7 +998,10 @@ mod tests {
 
     use bencher_json::{
         Entitlements, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
-        organization::plan::{DEFAULT_PRICE_NAME, METRICS_METER_NAME, RUNNER_MINUTES_METER_NAME},
+        organization::plan::{
+            ACTIVE_SERIES_METER_NAME, DEFAULT_PRICE_NAME, METRICS_METER_NAME,
+            RUNNER_MINUTES_METER_NAME,
+        },
         system::{
             config::{JsonBilling, JsonProduct, JsonProducts},
             payment::{JsonCard, JsonCustomer},
@@ -1141,80 +1014,42 @@ mod tests {
 
     use rustls::crypto::aws_lc_rs::default_provider;
 
-    use crate::{Biller, PeriodCredit};
+    use crate::Biller;
 
-    use super::{
-        METER_CUSTOMER_KEY, METER_VALUE_KEY, matched_base_cents, period_already_granted,
-        plan_level_from_base_fee,
-    };
+    use super::{METER_CUSTOMER_KEY, METER_VALUE_KEY, plan_level_from_pro_price};
 
     #[test]
-    fn matched_base_cents_returns_base_fee() {
-        let base: stripe_product::PriceId = "price_base".parse().unwrap();
-        let metered: stripe_product::PriceId = "price_metered".parse().unwrap();
-        let other: stripe_product::PriceId = "price_other".parse().unwrap();
-        let base_cents: HashMap<&stripe_product::PriceId, i64> = HashMap::from([(&base, 2_000)]);
-        // A subscription carrying the base price yields that base price's cents.
-        assert_eq!(
-            matched_base_cents([&metered, &base].into_iter(), &base_cents),
-            Some(2_000),
-        );
-        // A subscription without a configured base price yields nothing.
-        assert_eq!(
-            matched_base_cents([&metered, &other].into_iter(), &base_cents),
-            None,
-        );
-    }
-
-    #[test]
-    fn period_already_granted_matches_marker() {
-        // A Bencher-managed grant for the period counts.
-        assert!(period_already_granted(
-            [(Some("true"), Some("100")), (None, None)].into_iter(),
-            "100",
-        ));
-        // A non-Bencher grant on top does not hide a real Bencher grant deeper down.
-        assert!(period_already_granted(
-            [(None, Some("100")), (Some("true"), Some("100"))].into_iter(),
-            "100",
-        ));
-        // A non-Bencher grant for the period (no marker) is not counted as ours.
-        assert!(!period_already_granted(
-            [(None, Some("100"))].into_iter(),
-            "100",
-        ));
-        // A different period does not match.
-        assert!(!period_already_granted(
-            [(Some("true"), Some("100"))].into_iter(),
-            "200",
-        ));
-        assert!(!period_already_granted(
-            std::iter::empty::<(Option<&str>, Option<&str>)>(),
-            "100",
-        ));
-    }
-
-    #[test]
-    fn plan_level_from_base_fee_resolves_tier() {
-        // Pro is the only paid tier with a base fee, so it resolves to Pro; any
-        // other paid metered subscription resolves to Team.
-        assert_eq!(plan_level_from_base_fee(true), PlanLevel::Pro);
-        assert_eq!(plan_level_from_base_fee(false), PlanLevel::Team);
+    fn plan_level_from_pro_price_resolves_tier() {
+        // Pro is the only paid tier carrying the tiered active-series price, so it
+        // resolves to Pro; any other paid metered subscription resolves to Team.
+        assert_eq!(plan_level_from_pro_price(true), PlanLevel::Pro);
+        assert_eq!(plan_level_from_pro_price(false), PlanLevel::Team);
     }
 
     #[test]
     fn get_plan_unit_amount_reads_price() {
         let mut item = make_subscription_item("price_metrics");
         item.price.unit_amount = Some(1);
-        assert_eq!(Biller::get_plan_unit_amount(&item).unwrap(), 1);
+        assert_eq!(Biller::get_plan_unit_amount(&item, None).unwrap(), 1);
     }
 
     #[test]
     fn get_plan_unit_amount_missing_errors() {
-        // `make_subscription_item` builds a price with `unit_amount: None`.
+        // `make_subscription_item` builds a price with `unit_amount: None` and no tier
+        // fallback, so the amount is unresolved.
         let item = make_subscription_item("price_metrics");
-        let err = Biller::get_plan_unit_amount(&item).unwrap_err();
+        let err = Biller::get_plan_unit_amount(&item, None).unwrap_err();
         assert!(matches!(err, crate::BillingError::NoUnitAmount(_)));
+    }
+
+    #[test]
+    fn get_plan_unit_amount_tiered_uses_fallback() {
+        // A tiered price exposes no flat `unit_amount`; the base-tier fee is used.
+        let item = make_subscription_item("price_pro_tiered");
+        assert_eq!(
+            Biller::get_plan_unit_amount(&item, Some(2_000)).unwrap(),
+            2_000,
+        );
     }
 
     const TEST_BILLING_KEY: &str = "TEST_BILLING_KEY";
@@ -1227,12 +1062,10 @@ mod tests {
         JsonProducts {
             pro: JsonProduct {
                 id: "prod_UizgEJP4gIENBi".into(),
-                metered: HashMap::new(),
-                licensed: HashMap::new(),
-                base: hmap! {
-                    "default".to_owned() => "price_1TjXgeKal5vzTlmhZzr88bki".to_owned(),
+                metered: hmap! {
+                    "default".to_owned() => "price_1Tmo29Kal5vzTlmh9Qk5vtLi".to_owned(),
                 },
-                trial_coupon: Some("m8uHY6oa".to_owned()),
+                licensed: HashMap::new(),
             },
             team: JsonProduct {
                 id: "prod_NKz5B9dGhDiSY1".into(),
@@ -1242,8 +1075,6 @@ mod tests {
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4XlwKal5vzTlmh0n0wtplQ".to_owned(),
                 },
-                base: HashMap::new(),
-                trial_coupon: None,
             },
             enterprise: JsonProduct {
                 id: "prod_NLC7fDet2C8Nmk".into(),
@@ -1253,8 +1084,6 @@ mod tests {
                 licensed: hmap! {
                     "default".to_owned() => "price_1O4Xo1Kal5vzTlmh1KrcEbq0".to_owned(),
                 },
-                base: HashMap::new(),
-                trial_coupon: None,
             },
             metrics: JsonProduct {
                 id: "prod_UjlAPYSw7n3RDq".into(),
@@ -1264,8 +1093,6 @@ mod tests {
                 licensed: hmap! {
                     "default".to_owned() => "price_1TkHeSKal5vzTlmhPKXPOW7c".to_owned(),
                 },
-                base: HashMap::new(),
-                trial_coupon: None,
             },
             bare_metal: JsonProduct {
                 id: "prod_U6a28ecwqRZHYz".into(),
@@ -1275,8 +1102,6 @@ mod tests {
                 licensed: hmap! {
                     "default".to_owned() => "price_1TCWdkKal5vzTlmh9fdahWqY".to_owned(),
                 },
-                base: HashMap::new(),
-                trial_coupon: None,
             },
         }
     }
@@ -1327,7 +1152,6 @@ mod tests {
 
     #[expect(
         clippy::too_many_arguments,
-        clippy::cognitive_complexity,
         reason = "test helper exercising the full metered subscription lifecycle"
     )]
     async fn metered_subscription(
@@ -1357,8 +1181,8 @@ mod tests {
 
         let metered_plan_id = &subscription_id.as_ref().parse().unwrap();
         let json_plan = biller.get_metered_plan(metered_plan_id).await.unwrap();
-        // The plan level is derived from base-fee presence: Pro carries a flat base
-        // fee and resolves to Pro; tiers without a base fee resolve to Team.
+        // The plan level is derived from the tiered active-series price: Pro carries it
+        // and resolves to Pro; tiers without it resolve to Team.
         let expected_level = if plan_level == PlanLevel::Pro {
             PlanLevel::Pro
         } else {
@@ -1366,29 +1190,25 @@ mod tests {
         };
         assert_eq!(json_plan.level, expected_level);
 
-        let (plan_status, customer_id, status_level) = biller
-            .get_metered_plan_status(metered_plan_id)
+        let billing = biller
+            .get_metered_plan_billing(metered_plan_id)
             .await
             .unwrap();
-        assert_eq!(plan_status, PlanStatus::Active);
-        // The status path derives the same level as the full plan fetch.
-        assert_eq!(status_level, expected_level);
-
-        // Only Pro carries a flat base fee, so only Pro grants an included-usage
-        // credit; the call is a no-op for Team/Enterprise. Granting twice must be
-        // idempotent (regression: a past `effective_at` was rejected by Stripe).
-        let first_credit = biller.ensure_period_credit(metered_plan_id).await.unwrap();
-        let second_credit = biller.ensure_period_credit(metered_plan_id).await.unwrap();
-        if plan_level == PlanLevel::Pro {
-            assert_eq!(first_credit, PeriodCredit::Granted);
-            assert_eq!(second_credit, PeriodCredit::AlreadyGranted);
+        // Pro starts in a native free trial, so it is `Trialing`; the other tiers have no
+        // trial and are `Active` immediately.
+        let expected_status = if plan_level == PlanLevel::Pro {
+            PlanStatus::Trialing
         } else {
-            assert_eq!(first_credit, PeriodCredit::NotApplicable);
-            assert_eq!(second_credit, PeriodCredit::NotApplicable);
-        }
+            PlanStatus::Active
+        };
+        assert_eq!(billing.status, expected_status);
+        // The billing path derives the same level as the full plan fetch.
+        assert_eq!(billing.level, expected_level);
+        let customer_id = billing.customer_id;
 
-        record_runner_usage(biller, &customer_id, runner_minutes).await;
         record_metrics_usage(biller, &customer_id, metrics_quantity).await;
+        record_series_usage(biller, &customer_id, metrics_quantity).await;
+        record_runner_usage(biller, &customer_id, runner_minutes).await;
 
         // PATCH path: schedule cancel-at-period-end, then clear it (resume). The
         // subscription stays active throughout.
@@ -1408,11 +1228,11 @@ mod tests {
             .cancel_metered_subscription(&subscription_id.parse().unwrap())
             .await
             .unwrap();
-        let (plan_status, _, _) = biller
-            .get_metered_plan_status(metered_plan_id)
+        let billing = biller
+            .get_metered_plan_billing(metered_plan_id)
             .await
             .unwrap();
-        assert_eq!(plan_status, PlanStatus::Canceled);
+        assert_eq!(billing.status, PlanStatus::Canceled);
     }
 
     async fn licensed_subscription(
@@ -1479,6 +1299,24 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(event.event_name, METRICS_METER_NAME);
+        assert_eq!(
+            event.payload.get(METER_CUSTOMER_KEY),
+            Some(&customer_id.to_string()),
+        );
+        assert_eq!(
+            event.payload.get(METER_VALUE_KEY),
+            Some(&quantity.to_string()),
+        );
+    }
+
+    async fn record_series_usage(biller: &Biller, customer_id: &CustomerId, quantity: u32) {
+        // Live Stripe test: a meter event needs a real, recent timestamp (a fixed
+        // `DateTime::TEST` would be rejected as outside Stripe's accepted window).
+        let event = biller
+            .record_series_usage(customer_id, quantity, bencher_json::DateTime::now())
+            .await
+            .unwrap();
+        assert_eq!(event.event_name, ACTIVE_SERIES_METER_NAME);
         assert_eq!(
             event.payload.get(METER_CUSTOMER_KEY),
             Some(&customer_id.to_string()),

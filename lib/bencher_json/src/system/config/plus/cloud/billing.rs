@@ -25,6 +25,8 @@ pub struct JsonProducts {
     // Legacy self-serve paid tier, retained for grandfathered customers.
     pub team: JsonProduct,
     pub enterprise: JsonProduct,
+    // Shared metered metrics product for legacy Team/Enterprise plans. Pro bills on
+    // its own tiered active-series price (its `metered` map), not on this meter.
     pub metrics: JsonProduct,
     pub bare_metal: JsonProduct,
 }
@@ -37,37 +39,28 @@ pub struct JsonProduct {
     pub metered: HashMap<String, String>,
     #[serde(default)]
     pub licensed: HashMap<String, String>,
-    // Flat recurring base prices.
-    // Empty for products with no flat base fee.
-    #[serde(default)]
-    pub base: HashMap<String, String>,
-    #[serde(default)]
-    pub trial_coupon: Option<String>,
 }
 
 #[cfg(test)]
 mod tests {
     use super::{JsonProduct, JsonProducts};
 
-    // Existing team/enterprise/bare_metal config has no `base` key; it must still
-    // deserialize, defaulting `base` to an empty map (backward compatibility).
+    // A product given only an `id` still deserializes, defaulting `metered` and
+    // `licensed` to empty maps (backward compatibility).
     #[test]
-    fn product_without_base_defaults_empty() {
-        let json =
-            r#"{"id":"prod_x","metered":{"default":"price_m"},"licensed":{"default":"price_l"}}"#;
+    fn product_without_pricing_defaults_empty() {
+        let json = r#"{"id":"prod_x"}"#;
         let product: JsonProduct = serde_json::from_str(json).unwrap();
-        assert!(product.base.is_empty());
-        assert!(product.trial_coupon.is_none());
-        assert_eq!(
-            product.metered.get("default").map(String::as_str),
-            Some("price_m"),
-        );
+        assert!(product.metered.is_empty());
+        assert!(product.licensed.is_empty());
     }
 
+    // Pro carries a single tiered metered price (base fee plus per-series step-ups);
+    // the shared metrics product carries the legacy Team/Enterprise metered price.
     #[test]
-    fn products_with_pro_base_and_trial_coupon() {
+    fn products_with_pro_tiered_price() {
         let json = r#"{
-            "pro": {"id":"p","base":{"default":"price_b"},"trial_coupon":"coupon_x"},
+            "pro": {"id":"p","metered":{"default":"price_pro_tiered"}},
             "team": {"id":"t","metered":{},"licensed":{}},
             "enterprise": {"id":"e","metered":{},"licensed":{}},
             "metrics": {"id":"m","metered":{"default":"price_mm"},"licensed":{"default":"price_ml"}},
@@ -75,16 +68,14 @@ mod tests {
         }"#;
         let products: JsonProducts = serde_json::from_str(json).unwrap();
         assert_eq!(
-            products.pro.base.get("default").map(String::as_str),
-            Some("price_b"),
+            products.pro.metered.get("default").map(String::as_str),
+            Some("price_pro_tiered"),
         );
-        assert_eq!(products.pro.trial_coupon.as_deref(), Some("coupon_x"));
-        assert!(products.pro.metered.is_empty());
+        assert!(products.pro.licensed.is_empty());
         assert_eq!(
             products.metrics.metered.get("default").map(String::as_str),
             Some("price_mm"),
         );
-        assert!(products.team.base.is_empty());
-        assert!(products.team.trial_coupon.is_none());
+        assert!(products.team.metered.is_empty());
     }
 }

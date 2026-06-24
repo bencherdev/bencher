@@ -12,8 +12,13 @@ use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
 
+#[cfg(feature = "plus")]
+use bencher_json::DateTime;
+
 use crate::macros::sql::last_insert_rowid;
 use crate::model::spec::SpecId;
+#[cfg(feature = "plus")]
+use crate::model::{organization::OrganizationId, project::series::upsert_series_last_seen};
 use crate::{
     auth_conn,
     context::ApiContext,
@@ -44,9 +49,25 @@ pub struct ReportResults {
     pub testbed_id: TestbedId,
     pub spec_id: Option<SpecId>,
     pub report_id: ReportId,
+    // The owning organization and report end time written into the active-series cache
+    // on ingest. Bundled so they travel together and the constructor stays within its
+    // argument count.
+    #[cfg(feature = "plus")]
+    pub series_cache: SeriesCacheContext,
     pub benchmark_cache: HashMap<BenchmarkNameId, BenchmarkId>,
     pub measure_cache: HashMap<MeasureNameId, MeasureId>,
     pub detector_cache: HashMap<MeasureId, Option<Detector>>,
+}
+
+/// The report context the active-series cache write needs: the owning organization
+/// (denormalized into each `series_last_seen` row so a billing read is a single index
+/// scan) and the report's server-side creation time (written as each ingested series'
+/// `last_seen`). Creation time, not the user-supplied `end_time`, is used so a report
+/// cannot dodge active-series billing by claiming a far-future `end_time`.
+#[cfg(feature = "plus")]
+pub struct SeriesCacheContext {
+    pub organization_id: OrganizationId,
+    pub report_created: DateTime,
 }
 
 impl ReportResults {
@@ -57,6 +78,7 @@ impl ReportResults {
         testbed_id: TestbedId,
         spec_id: Option<SpecId>,
         report_id: ReportId,
+        #[cfg(feature = "plus")] series_cache: SeriesCacheContext,
     ) -> Self {
         Self {
             project_id,
@@ -65,6 +87,8 @@ impl ReportResults {
             testbed_id,
             spec_id,
             report_id,
+            #[cfg(feature = "plus")]
+            series_cache,
             benchmark_cache: HashMap::new(),
             measure_cache: HashMap::new(),
             detector_cache: HashMap::new(),
@@ -165,6 +189,11 @@ impl ReportResults {
         let write_start = context.clock.now();
 
         write_transaction!(context, |conn| {
+            // Series (testbed x benchmark x measure) seen in this iteration, upserted
+            // into the active-series cache in this same transaction so the cache cannot
+            // drift from the metrics it bills.
+            #[cfg(feature = "plus")]
+            let mut series_keys: Vec<(BenchmarkId, MeasureId)> = Vec::new();
             for prepared in prepared_benchmarks {
                 // Insert report_benchmark
                 diesel::insert_into(schema::report_benchmark::table)
@@ -172,9 +201,13 @@ impl ReportResults {
                     .execute(conn)?;
                 let report_benchmark_id: ReportBenchmarkId =
                     diesel::select(last_insert_rowid()).get_result(conn)?;
+                #[cfg(feature = "plus")]
+                let benchmark_id = prepared.insert_report_benchmark.benchmark_id;
 
                 // Insert all metrics for this benchmark
                 for prepared_metric in prepared.metrics {
+                    #[cfg(feature = "plus")]
+                    series_keys.push((benchmark_id, prepared_metric.measure_id));
                     let insert_metric = InsertMetric::from_json(
                         report_benchmark_id,
                         prepared_metric.measure_id,
@@ -194,6 +227,22 @@ impl ReportResults {
 
             // Upsert metric count summary (count computed before acquiring write lock)
             super::upsert_metric_count(conn, self.report_id, iteration_metric_count)?;
+
+            // Refresh each seen series' last_seen to this report's creation time, in the
+            // same transaction as the metric inserts above. The (benchmark, measure) pairs
+            // are distinct within an iteration; repeats across iterations are idempotent.
+            #[cfg(feature = "plus")]
+            for (benchmark_id, measure_id) in series_keys {
+                upsert_series_last_seen(
+                    conn,
+                    self.series_cache.organization_id,
+                    self.project_id,
+                    self.testbed_id,
+                    benchmark_id,
+                    measure_id,
+                    self.series_cache.report_created,
+                )?;
+            }
 
             diesel::QueryResult::Ok(())
         })

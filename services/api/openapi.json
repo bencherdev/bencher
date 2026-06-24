@@ -15187,13 +15187,6 @@
       "JsonProduct": {
         "type": "object",
         "properties": {
-          "base": {
-            "default": {},
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
           "id": {
             "type": "string"
           },
@@ -15210,11 +15203,6 @@
             "additionalProperties": {
               "type": "string"
             }
-          },
-          "trial_coupon": {
-            "nullable": true,
-            "default": null,
-            "type": "string"
           }
         },
         "required": [

@@ -505,11 +505,10 @@ impl BillingState {
                         self.customer = CachedCustomer::None;
                         return Ok(None);
                     };
-                    let (status, customer_id, _level) =
-                        biller.get_metered_plan_status(&metered_plan_id).await?;
-                    if status.is_active() {
-                        self.customer = CachedCustomer::Some(customer_id.clone());
-                        Ok(Some(customer_id))
+                    let billing = biller.get_metered_plan_billing(&metered_plan_id).await?;
+                    if billing.status.is_active() {
+                        self.customer = CachedCustomer::Some(billing.customer_id.clone());
+                        Ok(Some(billing.customer_id))
                     } else {
                         self.customer = CachedCustomer::None;
                         Ok(None)
