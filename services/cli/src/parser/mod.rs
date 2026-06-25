@@ -151,12 +151,12 @@ pub struct CliBackend {
 
     /// User API token (JWT). Deprecated: prefer `--key`/`BENCHER_API_KEY` with a
     /// `bencher_user_*` API key.
-    #[clap(long, env = "BENCHER_API_TOKEN")]
+    #[clap(long, env = "BENCHER_API_TOKEN", value_parser = parse_token)]
     pub token: Option<Jwt>,
 
     /// Bencher API key. Either a user-scoped key (`bencher_user_*`) or a
     /// project-scoped key (`bencher_run_*`).
-    #[clap(long, env = "BENCHER_API_KEY")]
+    #[clap(long, env = "BENCHER_API_KEY", value_parser = parse_key)]
     pub key: Option<BencherKey>,
 
     /// Allow insecure connections to an HTTPS host
@@ -186,6 +186,38 @@ pub struct CliBackend {
     /// Strictly parse JSON responses
     #[clap(long)]
     pub strict: bool,
+}
+
+/// Parse a `--token` value, suggesting `--key` if a Bencher API key was supplied.
+///
+/// JWTs and Bencher API keys are structurally disjoint, so a value that fails to
+/// parse as a `Jwt` but parses as a `BencherKey` is unambiguously the wrong flag.
+fn parse_token(value: &str) -> Result<Jwt, String> {
+    value.parse::<Jwt>().map_err(|err| {
+        if value.parse::<BencherKey>().is_ok() {
+            "You supplied a Bencher API key to `--token`/`BENCHER_API_TOKEN`. \
+             Use `--key`/`BENCHER_API_KEY` instead."
+                .to_owned()
+        } else {
+            err.to_string()
+        }
+    })
+}
+
+/// Parse a `--key` value, suggesting `--token` if a JWT API token was supplied.
+///
+/// JWTs and Bencher API keys are structurally disjoint, so a value that fails to
+/// parse as a `BencherKey` but parses as a `Jwt` is unambiguously the wrong flag.
+fn parse_key(value: &str) -> Result<BencherKey, String> {
+    value.parse::<BencherKey>().map_err(|err| {
+        if value.parse::<Jwt>().is_ok() {
+            "You supplied a JWT API token to `--key`/`BENCHER_API_KEY`. \
+             Use `--token`/`BENCHER_API_TOKEN` instead."
+                .to_owned()
+        } else {
+            err.to_string()
+        }
+    })
 }
 
 #[derive(Args, Debug)]
@@ -278,5 +310,64 @@ where
 impl<T> From<ElidedOption<T>> for Option<T> {
     fn from(elided: ElidedOption<T>) -> Option<T> {
         elided.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_key, parse_token};
+
+    const VALID_USER_KEY: &str = "bencher_user_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh";
+    const VALID_PROJECT_KEY: &str = "bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh";
+    const VALID_JWT: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhdXRoIiwiZXhwIjoxNjY5Mjk5NjExLCJpYXQiOjE2NjkyOTc4MTEsImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoiYUBhLmNvIiwib3JnIjpudWxsfQ.jJmb_nCVJYLD5InaIxsQfS7x87fUsnCYpQK9SrWrKTc";
+
+    #[test]
+    fn parse_token_accepts_jwt() {
+        assert_eq!(parse_token(VALID_JWT).unwrap().as_ref(), VALID_JWT);
+    }
+
+    #[test]
+    fn parse_token_suggests_key_for_user_key() {
+        let err = parse_token(VALID_USER_KEY).unwrap_err();
+        assert!(err.contains("Use `--key`/`BENCHER_API_KEY`"), "{err}");
+    }
+
+    #[test]
+    fn parse_token_suggests_key_for_project_key() {
+        let err = parse_token(VALID_PROJECT_KEY).unwrap_err();
+        assert!(err.contains("Use `--key`/`BENCHER_API_KEY`"), "{err}");
+    }
+
+    #[test]
+    fn parse_token_rejects_garbage_without_hint() {
+        let err = parse_token("garbage").unwrap_err();
+        assert!(!err.contains("Use `--key`"), "{err}");
+        assert!(err.contains("JWT"), "{err}");
+    }
+
+    #[test]
+    fn parse_key_accepts_user_key() {
+        assert_eq!(parse_key(VALID_USER_KEY).unwrap().as_ref(), VALID_USER_KEY);
+    }
+
+    #[test]
+    fn parse_key_accepts_project_key() {
+        assert_eq!(
+            parse_key(VALID_PROJECT_KEY).unwrap().as_ref(),
+            VALID_PROJECT_KEY
+        );
+    }
+
+    #[test]
+    fn parse_key_suggests_token_for_jwt() {
+        let err = parse_key(VALID_JWT).unwrap_err();
+        assert!(err.contains("Use `--token`/`BENCHER_API_TOKEN`"), "{err}");
+    }
+
+    #[test]
+    fn parse_key_rejects_garbage_without_hint() {
+        let err = parse_key("garbage").unwrap_err();
+        assert!(!err.contains("Use `--token`"), "{err}");
+        assert!(err.contains("Bencher API key"), "{err}");
     }
 }
