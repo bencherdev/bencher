@@ -53,6 +53,8 @@ Test a single package:
 cargo nextest run -p my_package
 ```
 
+`bencher_schema` tests require the `plus` feature (`cargo nextest run -p bencher_schema --features plus`); some `#[cfg(test)]` modules (e.g., `model/project/metric.rs`) use `plus`-only items without a feature gate, so the default-feature test build fails to compile.
+
 `nextest` does not support doctests, so also run:
 
 ```bash
@@ -183,6 +185,11 @@ Rust is the single source of truth for types:
 2. `cargo gen-types` generates OpenAPI spec (`services/api/openapi.json`) and TypeScript types (`services/console/src/types/bencher.ts`)
 3. `bencher_valid` is compiled to WASM for browser-side validation
 4. `bencher_client` is auto-generated from the OpenAPI spec via progenitor
+
+If `cargo gen-types` fails with `Failed to read input: .ts` and `No such file or directory`,
+look for a dangling symlink in the repo (for example `lib/bencher_client/codegen.rs`,
+a gitignored convenience symlink into `target/` that dangles after the build dir is cleaned).
+Typeshare walks the whole repo and errors on dangling symlinks; delete the symlink.
 
 ## Docker
 

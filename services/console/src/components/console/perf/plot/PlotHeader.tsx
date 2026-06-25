@@ -17,6 +17,7 @@ import {
 	type JsonMeasure,
 	type JsonProject,
 	XAxis,
+	YAxis,
 } from "../../../../types/bencher";
 import { httpGet } from "../../../../util/http";
 import { BACK_PARAM, encodePath } from "../../../../util/url";
@@ -39,6 +40,7 @@ export interface Props {
 	end_date: Accessor<undefined | string>;
 	refresh: () => void;
 	x_axis: Accessor<XAxis>;
+	y_axis: Accessor<YAxis>;
 	clear: Accessor<boolean>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -51,6 +53,7 @@ export interface Props {
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
 	handleXAxis: (x_axis: XAxis) => void;
+	handleYAxis: (y_axis: YAxis) => void;
 	handleClear: (clear: boolean) => void;
 	handleLowerValue: (lower_value: boolean) => void;
 	handleUpperValue: (upper_value: boolean) => void;
@@ -334,6 +337,17 @@ const SharedPlot = (props: Props) => {
 		}
 	});
 
+	const yAxisIcon = createMemo(() => {
+		switch (props.y_axis()) {
+			case YAxis.Auto:
+				return <i class="fas fa-magic" />;
+			case YAxis.Linear:
+				return <i class="fas fa-chart-line" />;
+			case YAxis.Log:
+				return <i class="fas fa-chart-area" />;
+		}
+	});
+
 	return (
 		<>
 			<Show when={!props.isPlotInit()}>
@@ -419,6 +433,46 @@ const SharedPlot = (props: Props) => {
 						}}
 					>
 						<span class="icon">{xAxisIcon()}</span>
+					</button>
+				</div>
+				<div class="column is-narrow">
+					<div class="level is-mobile" style="margin-bottom: 0;">
+						<div
+							class="level-item"
+							title="Cycle Y-Axis scale between Auto, Linear, and Log"
+						>
+							Y-Axis
+						</div>
+					</div>
+					<button
+						class="button is-fullwidth"
+						type="button"
+						title={(() => {
+							switch (props.y_axis()) {
+								case YAxis.Auto:
+									return "Switch Y-Axis to Linear scale";
+								case YAxis.Linear:
+									return "Switch Y-Axis to Log scale (falls back to Auto when the data includes zero or negative values)";
+								case YAxis.Log:
+									return "Switch Y-Axis to Auto scale";
+							}
+						})()}
+						onMouseDown={(e) => {
+							e.preventDefault();
+							switch (props.y_axis()) {
+								case YAxis.Auto:
+									props.handleYAxis(YAxis.Linear);
+									break;
+								case YAxis.Linear:
+									props.handleYAxis(YAxis.Log);
+									break;
+								case YAxis.Log:
+									props.handleYAxis(YAxis.Auto);
+									break;
+							}
+						}}
+					>
+						<span class="icon">{yAxisIcon()}</span>
 					</button>
 				</div>
 			</Show>

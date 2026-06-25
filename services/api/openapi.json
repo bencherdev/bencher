@@ -13733,6 +13733,15 @@
                 "$ref": "#/components/schemas/XAxis"
               }
             ]
+          },
+          "y_axis": {
+            "description": "The y-axis scale to use for the plot. Defaults to `auto` when omitted.",
+            "default": "auto",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/YAxis"
+              }
+            ]
           }
         },
         "required": [
@@ -15053,6 +15062,9 @@
           },
           "x_axis": {
             "$ref": "#/components/schemas/XAxis"
+          },
+          "y_axis": {
+            "$ref": "#/components/schemas/YAxis"
           }
         },
         "required": [
@@ -15069,7 +15081,8 @@
           "upper_value",
           "uuid",
           "window",
-          "x_axis"
+          "x_axis",
+          "y_axis"
         ]
       },
       "JsonPlotPatch": {
@@ -15162,6 +15175,15 @@
                 "$ref": "#/components/schemas/XAxis"
               }
             ]
+          },
+          "y_axis": {
+            "nullable": true,
+            "description": "The y-axis scale to use for the plot.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/YAxis"
+              }
+            ]
           }
         }
       },
@@ -15239,6 +15261,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/XAxis"
+              }
+            ]
+          },
+          "y_axis": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/YAxis"
               }
             ]
           }
@@ -18779,6 +18809,31 @@
         "enum": [
           "date_time",
           "version"
+        ]
+      },
+      "YAxis": {
+        "oneOf": [
+          {
+            "description": "Automatically adapt the y-axis scale to the data spread.",
+            "type": "string",
+            "enum": [
+              "auto"
+            ]
+          },
+          {
+            "description": "A linear y-axis scale that shows true magnitudes.",
+            "type": "string",
+            "enum": [
+              "linear"
+            ]
+          },
+          {
+            "description": "A logarithmic y-axis scale.",
+            "type": "string",
+            "enum": [
+              "log"
+            ]
+          }
         ]
       },
       "JsonDirection": {

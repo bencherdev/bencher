@@ -14,6 +14,7 @@ import type {
 	JsonPlot,
 	JsonProject,
 	XAxis,
+	YAxis,
 } from "../../../../types/bencher";
 import { httpGet, httpPatch } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
@@ -36,6 +37,7 @@ export interface Props {
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
 	x_axis: Accessor<XAxis>;
+	y_axis: Accessor<YAxis>;
 	branches: Accessor<string[]>;
 	testbeds: Accessor<string[]>;
 	benchmarks: Accessor<string[]>;
@@ -182,6 +184,7 @@ const UpdateModal = (props: Props) => {
 			lower_boundary: props.lower_boundary(),
 			upper_boundary: props.upper_boundary(),
 			x_axis: props.x_axis(),
+			y_axis: props.y_axis(),
 			branches: props.branches(),
 			testbeds: props.testbeds(),
 			benchmarks: props.benchmarks(),

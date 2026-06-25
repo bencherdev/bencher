@@ -1,13 +1,14 @@
 use bencher_client::types::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot};
 use bencher_json::{
     BenchmarkUuid, BranchUuid, Index, MeasureUuid, PlotUuid, ProjectResourceId, ResourceName,
-    TestbedUuid, Window, project::plot::XAxis,
+    TestbedUuid, Window,
+    project::plot::{XAxis, YAxis},
 };
 
 use crate::{
     CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::project::plot::{CliPlotUpdate, CliXAxis},
+    parser::project::plot::{CliPlotUpdate, CliXAxis, CliYAxis},
 };
 
 #[derive(Debug, Clone)]
@@ -25,6 +26,7 @@ pub struct Update {
     pub lower_boundary: Option<bool>,
     pub upper_boundary: Option<bool>,
     pub x_axis: Option<XAxis>,
+    pub y_axis: Option<YAxis>,
     pub window: Option<Window>,
     pub branches: Option<Vec<BranchUuid>>,
     pub testbeds: Option<Vec<TestbedUuid>>,
@@ -47,6 +49,7 @@ impl TryFrom<CliPlotUpdate> for Update {
             lower_boundary,
             upper_boundary,
             x_axis,
+            y_axis,
             window,
             branches,
             testbeds,
@@ -66,6 +69,11 @@ impl TryFrom<CliPlotUpdate> for Update {
             x_axis: x_axis.map(|x_axis| match x_axis {
                 CliXAxis::DateTime => XAxis::DateTime,
                 CliXAxis::Version => XAxis::Version,
+            }),
+            y_axis: y_axis.map(|y_axis| match y_axis {
+                CliYAxis::Auto => YAxis::Auto,
+                CliYAxis::Linear => YAxis::Linear,
+                CliYAxis::Log => YAxis::Log,
             }),
             window,
             branches,
@@ -87,6 +95,7 @@ impl From<Update> for JsonUpdatePlot {
             lower_boundary,
             upper_boundary,
             x_axis,
+            y_axis,
             window,
             branches,
             testbeds,
@@ -98,6 +107,11 @@ impl From<Update> for JsonUpdatePlot {
         let x_axis = x_axis.map(|x_axis| match x_axis {
             XAxis::DateTime => bencher_client::types::XAxis::DateTime,
             XAxis::Version => bencher_client::types::XAxis::Version,
+        });
+        let y_axis = y_axis.map(|y_axis| match y_axis {
+            YAxis::Auto => bencher_client::types::YAxis::Auto,
+            YAxis::Linear => bencher_client::types::YAxis::Linear,
+            YAxis::Log => bencher_client::types::YAxis::Log,
         });
         let window = window.map(Into::into);
         let branches = branches.map(|branches| branches.into_iter().map(Into::into).collect());
@@ -115,6 +129,7 @@ impl From<Update> for JsonUpdatePlot {
                     lower_boundary,
                     upper_boundary,
                     x_axis,
+                    y_axis,
                     window,
                     branches,
                     testbeds,
@@ -133,6 +148,7 @@ impl From<Update> for JsonUpdatePlot {
                     lower_boundary,
                     upper_boundary,
                     x_axis,
+                    y_axis,
                     window,
                     branches,
                     testbeds,
@@ -149,6 +165,7 @@ impl From<Update> for JsonUpdatePlot {
                     lower_boundary,
                     upper_boundary,
                     x_axis,
+                    y_axis,
                     window,
                     branches,
                     testbeds,

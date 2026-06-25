@@ -197,6 +197,7 @@ diesel::table! {
         lower_boundary -> Bool,
         upper_boundary -> Bool,
         x_axis -> Integer,
+        y_axis -> Integer,
         window -> BigInt,
         created -> BigInt,
         modified -> BigInt,

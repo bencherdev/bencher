@@ -9,7 +9,7 @@ import {
 	createSignal,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { PerfTab, isPerfTab, isXAxis } from "../../../config/types";
+import { PerfTab, isPerfTab, isXAxis, isYAxis } from "../../../config/types";
 import {
 	type JsonBenchmark,
 	type JsonBranch,
@@ -21,6 +21,7 @@ import {
 	PerfQueryKey,
 	PlotKey,
 	XAxis,
+	YAxis,
 } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
 import {
@@ -91,6 +92,7 @@ const UPPER_VALUE_PARAM = PlotKey.UpperValue;
 const LOWER_BOUNDARY_PARAM = PlotKey.LowerBoundary;
 const UPPER_BOUNDARY_PARAM = PlotKey.UpperBoundary;
 const X_AXIS_PARAM = PlotKey.XAxis;
+const Y_AXIS_PARAM = PlotKey.YAxis;
 // TODO remove in due time
 const RANGE_PARAM = "range";
 const CLEAR_PARAM = "clear";
@@ -136,6 +138,7 @@ export const PERF_PLOT_PARAMS = [
 	TAB_PARAM,
 	KEY_PARAM,
 	X_AXIS_PARAM,
+	Y_AXIS_PARAM,
 	CLEAR_PARAM,
 	LOWER_VALUE_PARAM,
 	UPPER_VALUE_PARAM,
@@ -163,6 +166,7 @@ export const PERF_PLOT_PIN_PARAMS = [
 const DEFAULT_PERF_TAB = PerfTab.REPORTS;
 const DEFAULT_PERF_KEY = true;
 const DEFAULT_X_AXIS = XAxis.DateTime;
+const DEFAULT_Y_AXIS = YAxis.Auto;
 const DEFAULT_PERF_CLEAR = false;
 const DEFAULT_PERF_END_VALUE = false;
 const DEFAULT_PERF_BOUNDARY = false;
@@ -265,6 +269,9 @@ const PerfPanel = (props: Props) => {
 			}
 		} else {
 			initParams[RANGE_PARAM] = null;
+		}
+		if (!isYAxis(searchParams[Y_AXIS_PARAM])) {
+			initParams[Y_AXIS_PARAM] = null;
 		}
 		if (!isBoolParam(searchParams[CLEAR_PARAM])) {
 			initParams[CLEAR_PARAM] = null;
@@ -420,6 +427,16 @@ const PerfPanel = (props: Props) => {
 			return r as XAxis;
 		}
 		return DEFAULT_X_AXIS;
+	});
+
+	const y_axis = createMemo(() => {
+		// This check is required for the initial load
+		// before the query params have been sanitized
+		const y = searchParams[Y_AXIS_PARAM];
+		if (y && isYAxis(y)) {
+			return y as YAxis;
+		}
+		return DEFAULT_Y_AXIS;
 	});
 
 	// Ironically, a better name for the `clear` param would actually be `dirty`.
@@ -1171,6 +1188,8 @@ const PerfPanel = (props: Props) => {
 			[UPPER_VALUE_PARAM]: plot?.upper_value,
 			[LOWER_BOUNDARY_PARAM]: plot?.lower_boundary,
 			[UPPER_BOUNDARY_PARAM]: plot?.upper_boundary,
+			[X_AXIS_PARAM]: plot?.x_axis,
+			[Y_AXIS_PARAM]: plot?.y_axis,
 			[CLEAR_PARAM]: true,
 		});
 	};
@@ -1204,6 +1223,12 @@ const PerfPanel = (props: Props) => {
 		}
 	};
 
+	const handleYAxis = (y_axis: YAxis) => {
+		if (isYAxis(y_axis)) {
+			setSearchParams({ [Y_AXIS_PARAM]: y_axis });
+		}
+	};
+
 	const handleClear = (clear: boolean) => {
 		if (typeof clear === "boolean") {
 			if (clear) {
@@ -1222,6 +1247,7 @@ const PerfPanel = (props: Props) => {
 					[LOWER_BOUNDARY_PARAM]: null,
 					[UPPER_BOUNDARY_PARAM]: null,
 					[X_AXIS_PARAM]: null,
+					[Y_AXIS_PARAM]: null,
 					[EMBED_LOGO_PARAM]: null,
 					[EMBED_TITLE_PARAM]: null,
 					[EMBED_HEADER_PARAM]: null,
@@ -1321,6 +1347,7 @@ const PerfPanel = (props: Props) => {
 					lower_boundary={lower_boundary}
 					upper_boundary={upper_boundary}
 					x_axis={x_axis}
+					y_axis={y_axis}
 					branches={branches}
 					testbeds={testbeds}
 					benchmarks={benchmarks}
@@ -1350,6 +1377,7 @@ const PerfPanel = (props: Props) => {
 				end_date={end_date}
 				key={key}
 				x_axis={x_axis}
+				y_axis={y_axis}
 				clear={clear}
 				lower_value={lower_value}
 				upper_value={upper_value}
@@ -1365,6 +1393,7 @@ const PerfPanel = (props: Props) => {
 				handleTab={handleTab}
 				handleKey={handleKey}
 				handleXAxis={handleXAxis}
+				handleYAxis={handleYAxis}
 				handleClear={handleClear}
 				handleLowerValue={handleLowerValue}
 				handleUpperValue={handleUpperValue}

@@ -19,11 +19,14 @@ import {
 	type JsonPerfAlert,
 	type JsonPerfMetrics,
 	XAxis,
+	type YAxis,
 } from "../../../../../types/bencher";
 import { prettyPrintFloat } from "../../../../../util/convert";
 import { scale_factor, scale_units } from "../../../../../util/scale";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { Theme } from "../../../../navbar/theme/theme";
+import { type YScale, get_y_scale } from "./scale";
+import { get_x_ticks } from "./ticks";
 import { addTooltips } from "./tooltip";
 
 // Source: https://twemoji.twitter.com
@@ -40,6 +43,7 @@ export interface Props {
 	perfData: Resource<JsonPerf>;
 	measures: Accessor<string[]>;
 	x_axis: Accessor<XAxis>;
+	y_axis: Accessor<YAxis>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
@@ -60,6 +64,7 @@ const LinePlot = (props: Props) => {
 	);
 
 	const [x_axis, setRange] = createSignal(props.x_axis());
+	const [y_axis, setYAxis] = createSignal(props.y_axis());
 	const [lower_value, setLowerValue] = createSignal(props.lower_value());
 	const [upper_value, setUpperValue] = createSignal(props.upper_value());
 	const [lower_boundary, setLowerBoundary] = createSignal(
@@ -94,6 +99,9 @@ const LinePlot = (props: Props) => {
 		// Therefore, we need to recalculate the plot's `marginLeft` to make sure the new y-axis labels fits.
 		if (props.x_axis() !== x_axis()) {
 			setRange(props.x_axis());
+			setIsPlotted(false);
+		} else if (props.y_axis() !== y_axis()) {
+			setYAxis(props.y_axis());
 			setIsPlotted(false);
 		} else if (props.lower_value() !== lower_value()) {
 			setLowerValue(props.lower_value());
@@ -137,6 +145,7 @@ const LinePlot = (props: Props) => {
 						Plot.plot({
 							x: {
 								type: linePlot()?.x_axis?.scale_type,
+								ticks: linePlot()?.x_axis?.ticks,
 								grid: true,
 								label: `${linePlot()?.x_axis?.label}`,
 								labelOffset: 36,
@@ -228,9 +237,27 @@ const line_plot = (props: Props) => {
 		right_measure,
 		right_has_data,
 		scale_props,
+		props.y_axis(),
 	);
 
 	const x_axis = get_x_axis(props.x_axis());
+	// The version axis is a point scale, which renders one tick label per
+	// distinct version, so thin the labels to fit the plot width.
+	// The time scale thins its own ticks.
+	const x_ticks =
+		x_axis.scale_type === "point"
+			? get_x_ticks(
+					active_data
+						.filter((data) => {
+							const uuid = data?.result?.measure?.uuid;
+							return uuid !== undefined && scales?.[uuid] !== undefined;
+						})
+						.flatMap(
+							(data) => data?.line_data?.map((datum) => datum?.number) ?? [],
+						),
+					props.width(),
+				)
+			: undefined;
 
 	const axis_marks = [];
 
@@ -257,7 +284,7 @@ const line_plot = (props: Props) => {
 
 	return {
 		metrics_found,
-		x_axis,
+		x_axis: { ...x_axis, ticks: x_ticks?.length ? x_ticks : undefined },
 		marks,
 		hoverStyles: hover_styles(props.theme()),
 	};
@@ -439,7 +466,7 @@ type Scale = {
 	measure: JsonMeasure;
 	factor: number;
 	units: string;
-	yScale: d3.ScalePower<number, number, never>;
+	yScale: YScale;
 };
 
 const scale_data = (
@@ -454,9 +481,22 @@ const scale_data = (
 		lower_boundary: Accessor<boolean>;
 		upper_boundary: Accessor<boolean>;
 	},
+	y_axis: YAxis,
 ): [object[], Scales?] => {
-	const left_scale = get_scale(data, left_measure, left_has_data, props);
-	const right_scale = get_scale(data, right_measure, right_has_data, props);
+	const left_scale = get_scale(
+		data,
+		left_measure,
+		left_has_data,
+		props,
+		y_axis,
+	);
+	const right_scale = get_scale(
+		data,
+		right_measure,
+		right_has_data,
+		props,
+		y_axis,
+	);
 	const scaled_data = scale_data_by_factor(data, left_scale, right_scale);
 	return [
 		scaled_data,
@@ -478,6 +518,7 @@ const get_scale = (
 		lower_boundary: Accessor<boolean>;
 		upper_boundary: Accessor<boolean>;
 	},
+	y_axis: YAxis,
 ): undefined | Scale => {
 	if (!measure || !has_data) {
 		return;
@@ -490,18 +531,7 @@ const get_scale = (
 	const factor = scale_factor(min, raw_units);
 	const units = scale_units(min, raw_units);
 
-	// Use pow scaling to allow users to more easily reason on graphs with
-	// highly differentiated values. If the min is less than 10 times smaller
-	// than the max, use a linear scale.
-	//
-	// See: https://observablehq.com/plot/features/scales#continuous-scales
-	const relativeDifference = max / min;
-	const exponent =
-		relativeDifference < 10
-			? 1
-			: Math.max(1 / Math.log10(relativeDifference), 1 / 3);
-	const domain = [min / factor, max / factor];
-	const yScale = d3.scalePow().exponent(exponent).domain(domain).nice();
+	const yScale = get_y_scale(y_axis, min / factor, max / factor);
 
 	return {
 		measure,

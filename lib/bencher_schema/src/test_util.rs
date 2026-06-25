@@ -11,7 +11,11 @@
 
 use bencher_json::{
     DateTime,
-    project::{alert::AlertStatus, boundary::BoundaryLimit},
+    project::{
+        alert::AlertStatus,
+        boundary::BoundaryLimit,
+        plot::{XAxis, YAxis},
+    },
 };
 use diesel::{
     Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SqliteConnection,
@@ -704,7 +708,8 @@ pub fn create_plot(
             schema::plot::upper_value.eq(true),
             schema::plot::lower_boundary.eq(false),
             schema::plot::upper_boundary.eq(false),
-            schema::plot::x_axis.eq(0),
+            schema::plot::x_axis.eq(XAxis::DateTime),
+            schema::plot::y_axis.eq(YAxis::Auto),
             schema::plot::window.eq(2_592_000i64),
             schema::plot::created.eq(DateTime::TEST),
             schema::plot::modified.eq(DateTime::TEST),

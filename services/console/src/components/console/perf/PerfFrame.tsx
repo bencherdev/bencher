@@ -12,6 +12,7 @@ import type {
 	JsonPerfQuery,
 	JsonProject,
 	XAxis,
+	YAxis,
 } from "../../../types/bencher";
 import { httpGet } from "../../../util/http";
 import {
@@ -46,6 +47,7 @@ export interface Props {
 	end_date: Accessor<string | undefined>;
 	key: Accessor<boolean>;
 	x_axis: Accessor<XAxis>;
+	y_axis: Accessor<YAxis>;
 	clear: Accessor<boolean>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -61,6 +63,7 @@ export interface Props {
 	handleTab: (tab: PerfTab) => void;
 	handleKey: (key: boolean) => void;
 	handleXAxis: (x_axis: XAxis) => void;
+	handleYAxis: (y_axis: YAxis) => void;
 	handleClear: (clear: boolean) => void;
 	handleLowerValue: (end: boolean) => void;
 	handleUpperValue: (end: boolean) => void;
@@ -159,6 +162,7 @@ const PerfFrame = (props: Props) => {
 			end_date={props.end_date}
 			key={props.key}
 			x_axis={props.x_axis}
+			y_axis={props.y_axis}
 			clear={props.clear}
 			lower_value={props.lower_value}
 			upper_value={props.upper_value}
@@ -174,6 +178,7 @@ const PerfFrame = (props: Props) => {
 			handleTab={props.handleTab}
 			handleKey={props.handleKey}
 			handleXAxis={props.handleXAxis}
+			handleYAxis={props.handleYAxis}
 			handleClear={props.handleClear}
 			handleLowerValue={props.handleLowerValue}
 			handleUpperValue={props.handleUpperValue}
