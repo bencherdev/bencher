@@ -146,6 +146,10 @@ async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {
     #[cfg(feature = "plus")]
     let save_rate_limiting = {
         let ctx = server.app_private();
+        // Signal long-lived handlers (the runner WebSocket channel) to wind down so the in-flight
+        // connection drain in `server.close()` can complete instead of hanging until the platform
+        // escalates to SIGKILL (which would skip the rate limiting save below entirely).
+        ctx.shutdown.cancel();
         let rate_limiting = ctx.rate_limiting.clone();
         let database_path = ctx.database.path.clone();
         rate_limiting.prune();

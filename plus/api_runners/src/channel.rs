@@ -14,7 +14,7 @@ use bencher_json::{
 use bencher_oci_storage::OciStorageError;
 use bencher_schema::{
     auth_conn,
-    context::ApiContext,
+    context::{ApiContext, CancellationToken},
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         organization::OrganizationId,
@@ -997,6 +997,34 @@ enum ExecuteResult {
     JobDone,
     /// Runner disconnected or heartbeat timed out.
     Disconnected,
+    /// The server is shutting down; close the channel so `server.close()` can complete.
+    ShuttingDown,
+}
+
+/// Spawn a heartbeat timeout for a job whose channel ended (client disconnect, execute error, or
+/// server shutdown) before the job finished, so the in-flight job is not orphaned: the runner can
+/// reconnect to another instance and resume within the grace period. `reason` is logged for context.
+async fn spawn_inflight_heartbeat_timeout(
+    log: &slog::Logger,
+    context: &ApiContext,
+    heartbeat_timeout: Duration,
+    job_id: JobId,
+    reason: &str,
+) -> Result<(), ChannelError> {
+    let job = QueryJob::get(auth_conn!(context), job_id)?;
+    if !job.status.has_run() {
+        slog::info!(log, "Channel ended ({reason}) for in-flight job, spawning heartbeat timeout"; "job_id" => ?job.id);
+        spawn_heartbeat_timeout(
+            log.clone(),
+            heartbeat_timeout,
+            context.database.connection.clone(),
+            job.id,
+            &context.heartbeat_tasks,
+            context.job_timeout_grace_period,
+            context.clock.clone(),
+        );
+    }
+    Ok(())
 }
 
 /// Path parameters for the runner channel endpoint.
@@ -1053,9 +1081,13 @@ pub async fn runner_channel(
 
     let (mut tx, mut rx) = ws_stream.split();
     let heartbeat_timeout = context.heartbeat_timeout;
+    let shutdown = &context.shutdown;
 
     #[cfg(feature = "otel")]
     let mut state_guard = RunnerStateGuard::new(bencher_otel::RunnerStateKind::Idle);
+
+    // Set when graceful shutdown is signalled so we send a Close frame after leaving the loop.
+    let mut shutting_down = false;
 
     // State machine: Idle -> Executing -> Idle -> ...
     loop {
@@ -1068,6 +1100,7 @@ pub async fn runner_channel(
             &mut tx,
             &mut rx,
             heartbeat_timeout,
+            shutdown,
         )
         .await
         {
@@ -1075,6 +1108,10 @@ pub async fn runner_channel(
             Ok(ReadyOutcome::UpdateSent) => {
                 #[cfg(feature = "otel")]
                 state_guard.transition(bencher_otel::RunnerStateKind::Updating);
+                break;
+            },
+            Ok(ReadyOutcome::ShuttingDown) => {
+                shutting_down = true;
                 break;
             },
             Err(_) => {
@@ -1087,11 +1124,20 @@ pub async fn runner_channel(
         let deadline = tokio::time::Instant::now() + Duration::from_secs(u64::from(poll_timeout));
 
         // Poll for a job, checking for WS disconnect between polls
-        let claimed_job =
-            poll_for_job(&log, context, &runner_key, deadline, &mut tx, &mut rx).await;
+        let claimed_job = poll_for_job(
+            &log,
+            context,
+            &runner_key,
+            deadline,
+            &mut tx,
+            &mut rx,
+            shutdown,
+        )
+        .await;
 
         match claimed_job {
-            Ok(Some((query_job, claimed_job))) => {
+            Ok(PollOutcome::Claimed(claimed)) => {
+                let (query_job, claimed_job) = *claimed;
                 // Send Job to runner
                 let job_msg = ServerMessage::Job(Box::new(claimed_job));
                 let text = serde_json::to_string(&job_msg)
@@ -1113,6 +1159,7 @@ pub async fn runner_channel(
                     &mut tx,
                     &mut rx,
                     heartbeat_timeout,
+                    shutdown,
                 )
                 .await
                 {
@@ -1125,20 +1172,24 @@ pub async fn runner_channel(
                         bencher_otel::ApiMeter::increment(
                             bencher_otel::ApiCounter::RunnerDisconnect,
                         );
-                        // Spawn heartbeat timeout for in-flight jobs
-                        let job = QueryJob::get(auth_conn!(context), query_job.id)?;
-                        if !job.status.has_run() {
-                            slog::info!(log, "Channel disconnected for in-flight job, spawning heartbeat timeout"; "job_id" => ?job.id);
-                            spawn_heartbeat_timeout(
-                                log,
-                                heartbeat_timeout,
-                                context.database.connection.clone(),
-                                job.id,
-                                &context.heartbeat_tasks,
-                                context.job_timeout_grace_period,
-                                context.clock.clone(),
-                            );
-                        }
+                        spawn_inflight_heartbeat_timeout(
+                            &log,
+                            context,
+                            heartbeat_timeout,
+                            query_job.id,
+                            "client disconnect",
+                        )
+                        .await?;
+                        break;
+                    },
+                    Ok(ExecuteResult::ShuttingDown) => {
+                        // Server shutting down mid-job: leave the job Running and close the channel.
+                        // Unlike the disconnect branch we do NOT spawn a heartbeat timeout here: the
+                        // process is exiting, so the runtime would abort that task before it could
+                        // fire. Recovery is resume-on-another-instance: the runner reconnects and
+                        // re-sends its terminal result (`wait_for_ready` handles the retry), with
+                        // billing continuing from the persisted `last_billed_minute` watermark.
+                        shutting_down = true;
                         break;
                     },
                     Err(e) => {
@@ -1147,25 +1198,19 @@ pub async fn runner_channel(
                             bencher_otel::ApiCounter::RunnerDisconnect,
                         );
                         slog::error!(log, "Execute loop error"; "error" => %e, "job_id" => ?query_job.id);
-                        // Spawn heartbeat timeout for in-flight jobs
-                        let job = QueryJob::get(auth_conn!(context), query_job.id)?;
-                        if !job.status.has_run() {
-                            slog::info!(log, "Channel error for in-flight job, spawning heartbeat timeout"; "job_id" => ?job.id);
-                            spawn_heartbeat_timeout(
-                                log,
-                                heartbeat_timeout,
-                                context.database.connection.clone(),
-                                job.id,
-                                &context.heartbeat_tasks,
-                                context.job_timeout_grace_period,
-                                context.clock.clone(),
-                            );
-                        }
+                        spawn_inflight_heartbeat_timeout(
+                            &log,
+                            context,
+                            heartbeat_timeout,
+                            query_job.id,
+                            "execute error",
+                        )
+                        .await?;
                         break;
                     },
                 }
             },
-            Ok(None) => {
+            Ok(PollOutcome::Deadline) => {
                 // No job available, send NoJob and stay in Idle
                 let text = serde_json::to_string(&ServerMessage::NoJob)
                     .map_err(|e| HttpError::for_internal_error(e.to_string()))?;
@@ -1175,12 +1220,27 @@ pub async fn runner_channel(
                     break;
                 }
             },
+            Ok(PollOutcome::ShuttingDown) => {
+                shutting_down = true;
+                break;
+            },
             Err(_) => {
                 #[cfg(feature = "otel")]
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerDisconnect);
                 break;
             },
         }
+    }
+
+    // Tell the runner we're going away so it reconnects to the next instance, then return so
+    // `server.close()` can complete instead of hanging on this persistent connection.
+    if shutting_down {
+        slog::info!(log, "Closing runner channel for server shutdown");
+        let close_frame = CloseFrame {
+            code: CloseCode::Away,
+            reason: "server shutting down".into(),
+        };
+        drop(tx.send(Message::Close(Some(close_frame))).await);
     }
 
     Ok(())
@@ -1192,6 +1252,8 @@ enum ReadyOutcome {
     Ready(u32),
     /// Runner version is outdated; `Update` message was sent.
     UpdateSent,
+    /// The server is shutting down; close the channel so `server.close()` can complete.
+    ShuttingDown,
 }
 
 #[cfg(feature = "otel")]
@@ -1287,20 +1349,25 @@ async fn wait_for_ready<S, R>(
     tx: &mut S,
     rx: &mut R,
     idle_timeout: Duration,
+    shutdown: &CancellationToken,
 ) -> Result<ReadyOutcome, ChannelError>
 where
     S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
     loop {
-        let msg = match tokio::time::timeout(idle_timeout, rx.next()).await {
-            Ok(Some(msg)) => msg,
-            Ok(None) => {
+        let msg = match shutdown
+            .run_until_cancelled(tokio::time::timeout(idle_timeout, rx.next()))
+            .await
+        {
+            None => return Ok(ReadyOutcome::ShuttingDown),
+            Some(Ok(Some(msg))) => msg,
+            Some(Ok(None)) => {
                 return Err(ChannelError::WebSocket(
                     tokio_tungstenite::tungstenite::Error::ConnectionClosed,
                 ));
             },
-            Err(_elapsed) => {
+            Some(Err(_elapsed)) => {
                 slog::warn!(log, "Idle timeout waiting for Ready message");
                 return Err(ChannelError::WebSocket(
                     tokio_tungstenite::tungstenite::Error::ConnectionClosed,
@@ -1454,10 +1521,20 @@ async fn lookup_runner_job(
     Ok(Some(job))
 }
 
+/// Outcome of polling for a job during the idle state.
+enum PollOutcome {
+    /// A job was claimed for this runner.
+    Claimed(Box<(QueryJob, JsonClaimedJob)>),
+    /// The poll deadline elapsed without claiming a job.
+    Deadline,
+    /// The server is shutting down; close the channel so `server.close()` can complete.
+    ShuttingDown,
+}
+
 /// Poll for a job, checking for WS disconnect between polls.
 ///
-/// Returns `Ok(Some(job))` if claimed, `Ok(None)` if deadline expired,
-/// or `Err` on WS disconnect.
+/// Returns `Ok(PollOutcome::Claimed)` if claimed, `Ok(PollOutcome::Deadline)` if the deadline
+/// expired, `Ok(PollOutcome::ShuttingDown)` if the server is shutting down, or `Err` on WS disconnect.
 async fn poll_for_job<S, R>(
     log: &slog::Logger,
     context: &ApiContext,
@@ -1465,14 +1542,17 @@ async fn poll_for_job<S, R>(
     deadline: tokio::time::Instant,
     tx: &mut S,
     rx: &mut R,
-) -> Result<Option<(QueryJob, JsonClaimedJob)>, ChannelError>
+    shutdown: &CancellationToken,
+) -> Result<PollOutcome, ChannelError>
 where
     S: futures::Sink<Message> + Unpin,
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
     loop {
         match try_claim_job(context, runner_key).await {
-            Ok(Some(job)) => return Ok(Some(job)),
+            Ok(Some((query_job, claimed_job))) => {
+                return Ok(PollOutcome::Claimed(Box::new((query_job, claimed_job))));
+            },
             Ok(None) => {},
             Err(e) => {
                 slog::error!(log, "Error claiming job"; "error" => %e);
@@ -1481,29 +1561,33 @@ where
         }
 
         if tokio::time::Instant::now() >= deadline {
-            return Ok(None);
+            return Ok(PollOutcome::Deadline);
         }
 
-        // Wait POLL_INTERVAL, but check WS for disconnect
-        match tokio::time::timeout(POLL_INTERVAL, rx.next()).await {
-            Ok(Some(Ok(Message::Close(_))) | None) => {
+        // Wait POLL_INTERVAL, but check the WS for disconnect and the server for shutdown
+        match shutdown
+            .run_until_cancelled(tokio::time::timeout(POLL_INTERVAL, rx.next()))
+            .await
+        {
+            None => return Ok(PollOutcome::ShuttingDown),
+            Some(Ok(Some(Ok(Message::Close(_))) | None)) => {
                 return Err(ChannelError::WebSocket(
                     tokio_tungstenite::tungstenite::Error::ConnectionClosed,
                 ));
             },
-            Ok(Some(Ok(Message::Ping(data)))) => {
+            Some(Ok(Some(Ok(Message::Ping(data))))) => {
                 if tx.send(Message::Pong(data)).await.is_err() {
                     slog::warn!(log, "Failed to send pong during polling");
                 }
             },
-            Ok(Some(Err(e))) => return Err(ChannelError::WebSocket(e)),
-            Ok(Some(Ok(Message::Text(text)))) => {
+            Some(Ok(Some(Err(e)))) => return Err(ChannelError::WebSocket(e)),
+            Some(Ok(Some(Ok(Message::Text(text))))) => {
                 slog::warn!(log, "Unexpected text message during polling"; "text" => %text);
             },
-            Ok(Some(Ok(Message::Binary(data)))) => {
+            Some(Ok(Some(Ok(Message::Binary(data))))) => {
                 slog::warn!(log, "Unexpected binary message during polling"; "len" => data.len());
             },
-            Ok(Some(Ok(Message::Pong(_) | Message::Frame(_)))) | Err(_) => {},
+            Some(Ok(Some(Ok(Message::Pong(_) | Message::Frame(_)))) | Err(_)) => {},
         }
     }
 }
@@ -1519,6 +1603,7 @@ async fn execute_loop<S, R>(
     tx: &mut S,
     rx: &mut R,
     heartbeat_timeout: Duration,
+    shutdown: &CancellationToken,
 ) -> Result<ExecuteResult, ChannelError>
 where
     S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
@@ -1532,14 +1617,26 @@ where
             .checked_sub(last_heartbeat.elapsed())
             .unwrap_or(Duration::ZERO);
 
-        let msg_result = match tokio::time::timeout(remaining, rx.next()).await {
-            Ok(Some(msg_result)) => msg_result,
-            Ok(None) => {
+        let msg_result = match shutdown
+            .run_until_cancelled(tokio::time::timeout(remaining, rx.next()))
+            .await
+        {
+            None => {
+                // Server shutting down: return promptly. Unlike the disconnect and timeout branches,
+                // we deliberately do NOT call `bill_final_minutes` here: it awaits a Stripe call, and
+                // the whole point of this cancellation path is to drain `server.close()` fast (a slow
+                // Stripe round-trip would risk the SIGKILL-before-save hang this fix prevents). The job
+                // resumes on another instance, which re-bills the elapsed minutes from the persisted
+                // `last_billed_minute` watermark (`BillingDelta` is job-age-based).
+                return Ok(ExecuteResult::ShuttingDown);
+            },
+            Some(Ok(Some(msg_result))) => msg_result,
+            Some(Ok(None)) => {
                 // Stream ended (client disconnected) — best-effort bill any remaining partial minute
                 bill_final_minutes(log, context, job.id, &mut billing_state).await;
                 return Ok(ExecuteResult::Disconnected);
             },
-            Err(_elapsed) => {
+            Some(Err(_elapsed)) => {
                 // Heartbeat timeout — best-effort bill any remaining partial minute before marking job
                 bill_final_minutes(log, context, job.id, &mut billing_state).await;
                 let reason = handle_timeout(log, context, job.id).await?;

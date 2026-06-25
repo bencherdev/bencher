@@ -147,6 +147,7 @@ impl TestServer {
             heartbeat_timeout: std::time::Duration::from_secs(5),
             job_timeout_grace_period: std::time::Duration::from_mins(1),
             heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
+            shutdown: bencher_schema::context::CancellationToken::new(),
         };
 
         Self::start_server(context, &log, token_key, db_path, db_file)

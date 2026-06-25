@@ -1,4 +1,4 @@
-use std::{net::IpAddr, path::Path, time::Duration};
+use std::{io::Write as _, net::IpAddr, path::Path, time::Duration};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -385,11 +385,28 @@ impl RateLimiting {
         let snapshot_path = Self::snapshot_path(db_path)?;
         let partial_path = snapshot_path.with_extension("json.partial");
         let json = serde_json::to_string(&snapshot).map_err(RateLimitingPersistError::Serialize)?;
-        std::fs::write(&partial_path, json)
+        // Write to a temp file and fsync it before the atomic rename, so a saved snapshot is durable
+        // across an abrupt VM stop rather than lingering in the page cache.
+        let mut file = std::fs::File::create(&partial_path)
             .map_err(|e| RateLimitingPersistError::Write(e, partial_path.clone()))?;
+        file.write_all(json.as_bytes())
+            .map_err(|e| RateLimitingPersistError::Write(e, partial_path.clone()))?;
+        file.sync_all()
+            .map_err(|e| RateLimitingPersistError::Write(e, partial_path.clone()))?;
+        drop(file);
         std::fs::rename(&partial_path, &snapshot_path).map_err(|e| {
             RateLimitingPersistError::Rename(e, partial_path, snapshot_path.clone())
         })?;
+        // Best-effort fsync of the parent directory so the rename itself is durable. The data file is
+        // already fsynced and the rename is atomic, so a directory-sync failure must not fail the save.
+        if let Some(parent) = snapshot_path.parent()
+            && let Err(e) = std::fs::File::open(parent).and_then(|dir| dir.sync_all())
+        {
+            slog::debug!(
+                log,
+                "Non-fatal: failed to fsync snapshot directory {parent}: {e}"
+            );
+        }
         slog::info!(log, "Saved rate limiting snapshot to {snapshot_path}");
         Ok(())
     }
@@ -401,8 +418,21 @@ impl RateLimiting {
         }
         let json = std::fs::read_to_string(&snapshot_path)
             .map_err(|e| RateLimitingPersistError::Read(e, snapshot_path.clone()))?;
-        let snapshot: RateLimitingSnapshot =
-            serde_json::from_str(&json).map_err(RateLimitingPersistError::Deserialize)?;
+        let snapshot: RateLimitingSnapshot = match serde_json::from_str(&json) {
+            Ok(snapshot) => snapshot,
+            Err(e) => {
+                // Log the full raw content so an incompatible/old on-disk format can be diagnosed
+                // from the logs (the file is left in place for the next save to overwrite).
+                slog::error!(
+                    log,
+                    "Failed to deserialize rate limiting snapshot from {snapshot_path} ({} bytes)",
+                    json.len();
+                    "error" => %e,
+                    "content" => json.as_str(),
+                );
+                return Err(RateLimitingPersistError::Deserialize(e));
+            },
+        };
         let RateLimitingSnapshot {
             public,
             user,

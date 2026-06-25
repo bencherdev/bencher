@@ -15,7 +15,9 @@ use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
 use http::StatusCode;
 use tokio_tungstenite::tungstenite::{
-    Message, client::IntoClientRequest as _, protocol::WebSocketConfig,
+    Message,
+    client::IntoClientRequest as _,
+    protocol::{WebSocketConfig, frame::coding::CloseCode},
 };
 
 /// Full setup: create user, org, project, runner, job, then connect channel,
@@ -77,6 +79,72 @@ fn get_job_status(server: &TestServer, job_uuid: JobUuid) -> JobStatus {
         .select(schema::job::status)
         .first(&mut conn)
         .expect("Failed to get job status")
+}
+
+// =============================================================================
+// Graceful Shutdown Tests
+// =============================================================================
+
+/// When the server begins graceful shutdown, the persistent runner channel must wind down: the
+/// handler sends a Close frame and returns so `server.close()` can complete instead of hanging on
+/// this long-lived connection.
+#[tokio::test]
+async fn channel_closes_on_server_shutdown() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-shutdown@example.com").await;
+    let runner = create_runner(&server, &admin.token, "Runner shutdown").await;
+    let runner_key = runner.key.to_string();
+
+    // Connect the channel; the handler is now idle, waiting for a Ready message.
+    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
+
+    // Signal graceful shutdown.
+    server.context().shutdown.cancel();
+
+    // The idle handler should send a Close(Away) frame and return.
+    let next = tokio::time::timeout(std::time::Duration::from_secs(5), ws.next())
+        .await
+        .expect("runner channel did not close after shutdown was signalled");
+    assert!(
+        matches!(
+            &next,
+            Some(Ok(Message::Close(Some(frame)))) if frame.code == CloseCode::Away
+        ),
+        "expected a Close(Away) frame on shutdown, got: {next:?}"
+    );
+}
+
+/// Graceful shutdown mid-execution closes the channel gracefully and leaves the in-flight job Running
+/// so it can resume on another instance (the runner reconnects and re-sends its result). No local
+/// heartbeat timeout is spawned, since the process is exiting.
+#[tokio::test]
+async fn channel_shutdown_midjob_preserves_job() {
+    let server = TestServer::new().await;
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
+        setup_claimed_job(&server, "shutdown-midjob").await;
+
+    // Drive the job into the executing state.
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    assert!(matches!(recv_msg(&mut ws).await, ServerMessage::Ack { .. }));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
+
+    // Signal graceful shutdown while the job is in flight.
+    server.context().shutdown.cancel();
+
+    // The handler sends a Close(Away) frame and returns.
+    let next = tokio::time::timeout(std::time::Duration::from_secs(5), ws.next())
+        .await
+        .expect("runner channel did not close after shutdown was signalled");
+    assert!(
+        matches!(
+            &next,
+            Some(Ok(Message::Close(Some(frame)))) if frame.code == CloseCode::Away
+        ),
+        "expected a Close(Away) frame on shutdown, got: {next:?}"
+    );
+
+    // The in-flight job is left Running (not failed or dropped) so it can resume on another instance.
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 }
 
 // =============================================================================
