@@ -51,6 +51,9 @@ pub struct JsonPlan {
     pub card: JsonCardDetails,
     pub level: PlanLevel,
     pub unit_amount: BigInt,
+    /// The tiered price ladder for this plan, ordered ascending by `up_to`. Populated
+    /// for the Pro tiered active-series price; `None` for flat-priced or licensed plans.
+    pub tiers: Option<Vec<JsonPriceTier>>,
     /// When the metered subscription was created. The first (free-trial) billing
     /// period is the one that contains this timestamp.
     pub created: DateTime,
@@ -83,6 +86,26 @@ pub struct JsonLicense {
     pub entitlements: Entitlements,
     pub issued_at: DateTime,
     pub expiration: DateTime,
+}
+
+/// One tier of a Stripe tiered price, surfaced so the Console can render the price
+/// ladder from the billed source of truth instead of hardcoding it.
+///
+/// Field order mirrors Stripe's tier shape: `up_to`, then `unit_amount`, then
+/// `flat_amount`. A tier may carry both a `unit_amount` and a `flat_amount` (Stripe
+/// allows it); the two are independent and additive, not mutually exclusive. Today the
+/// Pro price sets only `flat_amount`.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPriceTier {
+    /// Inclusive upper bound (active-series count) for this tier. `None` is the
+    /// unbounded top tier, presented as "Get in Touch".
+    pub up_to: Option<u32>,
+    /// Per-series price (cents) charged within this tier. May coexist with `flat_amount`.
+    pub unit_amount: Option<BigInt>,
+    /// Flat price (cents) for the whole tier. May coexist with `unit_amount`.
+    pub flat_amount: Option<BigInt>,
 }
 
 #[cfg(test)]

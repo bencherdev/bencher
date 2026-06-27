@@ -612,6 +612,7 @@ impl Biller {
             self.products
                 .tier_base_fee_cents(&subscription_item.price.id),
         )?;
+        let tiers = self.products.price_tiers(&subscription_item.price.id);
 
         let status = Self::map_status(&subscription.status);
 
@@ -621,6 +622,7 @@ impl Biller {
             card,
             level,
             unit_amount: unit_amount.into(),
+            tiers,
             created,
             current_period_start,
             current_period_end,
