@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use bencher_billing::Biller;
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
     DateTime, OrganizationResourceId, PlanLevel,
@@ -15,9 +16,9 @@ use bencher_schema::{
     model::{
         organization::{
             OrganizationId, QueryOrganization,
-            plan::{QueryPlan, metered_bills_public_metrics},
+            plan::{QueryPlan, metered_bills_active_series},
         },
-        project::metric::QueryMetric,
+        project::{metric::QueryMetric, series},
         runner::job::QueryJob,
         user::auth::{AuthUser, BearerToken},
     },
@@ -87,71 +88,7 @@ async fn get_inner(
 
     // Bencher Cloud
     if let Ok(biller) = context.biller() {
-        let Ok(query_plan) = QueryPlan::belonging_to(&query_organization)
-            .first::<QueryPlan>(auth_conn!(context))
-            .map_err(resource_not_found_err!(Plan, query_organization))
-        // Cloud Free
-        else {
-            return free_plan_usage(
-                auth_conn!(context),
-                &query_organization,
-                UsageKind::CloudFree,
-            );
-        };
-
-        // Metered plan
-        if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
-            let start_time = json_plan.current_period_start;
-            let end_time = json_plan.current_period_end;
-            let (metrics, runner_minutes) = metered_plan_usage(
-                auth_conn!(context),
-                query_organization.id,
-                json_plan.level,
-                start_time,
-                end_time,
-            )?;
-            Ok(JsonUsage {
-                organization: query_organization.uuid,
-                kind: UsageKind::CloudMetered,
-                plan: Some(json_plan),
-                license: None,
-                start_time,
-                end_time,
-                metrics: Some(metrics),
-                runner_minutes: Some(runner_minutes),
-            })
-        // Licensed plan
-        } else if let Some(json_plan) = query_plan.to_licensed_plan(biller, licensor).await? {
-            let Some(json_license) = json_plan.license.clone() else {
-                return Err(issue_error(
-                    "No license JSON found for licensed plan",
-                    &format!(
-                        "Failed to find license for licensed plan ({query_plan:?}) as JSON ({json_plan:?})",
-                    ),
-                    "License JSON not found",
-                ));
-            };
-            let start_time = json_license.issued_at;
-            let end_time = json_license.expiration;
-            Ok(JsonUsage {
-                organization: query_organization.uuid,
-                kind: UsageKind::CloudSelfHostedLicensed,
-                plan: Some(json_plan),
-                license: Some(json_license),
-                start_time,
-                end_time,
-                metrics: None,
-                runner_minutes: None,
-            })
-        } else {
-            Err(issue_error(
-                "Failed to find subscription for plan usage",
-                &format!(
-                    "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."
-                ),
-                "Failed to find subscription for plan usage",
-            ))
-        }
+        cloud_plan_usage(context, biller, &query_organization).await
     // Self-Hosted Licensed
     } else if let Some(license) = query_organization.license.clone() {
         let json_license = licensor
@@ -173,6 +110,7 @@ async fn get_inner(
             start_time,
             end_time,
             metrics: Some(metrics),
+            active_series: None,
             runner_minutes: Some(runner_minutes),
         })
     // Self-Hosted Free
@@ -182,6 +120,88 @@ async fn get_inner(
             &query_organization,
             UsageKind::SelfHostedFree,
         )
+    }
+}
+
+/// Usage for a Bencher Cloud organization: a metered plan, a licensed plan managed via
+/// Bencher Cloud, or Cloud Free when the organization has no plan.
+async fn cloud_plan_usage(
+    context: &ApiContext,
+    biller: &Biller,
+    query_organization: &QueryOrganization,
+) -> Result<JsonUsage, HttpError> {
+    let licensor = &context.licensor;
+
+    let Ok(query_plan) = QueryPlan::belonging_to(query_organization)
+        .first::<QueryPlan>(auth_conn!(context))
+        .map_err(resource_not_found_err!(Plan, query_organization))
+    // Cloud Free
+    else {
+        return free_plan_usage(
+            auth_conn!(context),
+            query_organization,
+            UsageKind::CloudFree,
+        );
+    };
+
+    // Metered plan
+    if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
+        let start_time = json_plan.current_period_start;
+        let end_time = json_plan.current_period_end;
+        let MeteredUsage {
+            metrics,
+            active_series,
+            runner_minutes,
+        } = metered_plan_usage(
+            auth_conn!(context),
+            query_organization.id,
+            json_plan.level,
+            start_time,
+            end_time,
+        )?;
+        Ok(JsonUsage {
+            organization: query_organization.uuid,
+            kind: UsageKind::CloudMetered,
+            plan: Some(json_plan),
+            license: None,
+            start_time,
+            end_time,
+            metrics,
+            active_series,
+            runner_minutes: Some(runner_minutes),
+        })
+    // Licensed plan
+    } else if let Some(json_plan) = query_plan.to_licensed_plan(biller, licensor).await? {
+        let Some(json_license) = json_plan.license.clone() else {
+            return Err(issue_error(
+                "No license JSON found for licensed plan",
+                &format!(
+                    "Failed to find license for licensed plan ({query_plan:?}) as JSON ({json_plan:?})",
+                ),
+                "License JSON not found",
+            ));
+        };
+        let start_time = json_license.issued_at;
+        let end_time = json_license.expiration;
+        Ok(JsonUsage {
+            organization: query_organization.uuid,
+            kind: UsageKind::CloudSelfHostedLicensed,
+            plan: Some(json_plan),
+            license: Some(json_license),
+            start_time,
+            end_time,
+            metrics: None,
+            active_series: None,
+            runner_minutes: None,
+        })
+    } else {
+        Err(issue_error(
+            "Failed to find subscription for plan usage",
+            &format!(
+                "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."
+            ),
+            "Failed to find subscription for plan usage",
+        ))
     }
 }
 
@@ -213,33 +233,46 @@ fn free_plan_usage(
         start_time,
         end_time,
         metrics: Some(metrics),
+        active_series: None,
         runner_minutes: Some(runner_minutes),
     })
 }
 
-/// Estimate billable usage for a metered (Bencher Cloud) plan.
+/// The billable usage figures for a metered plan: exactly one of `metrics` (legacy
+/// Team/Enterprise) or `active_series` (Pro) is set, plus bare metal `runner_minutes`.
+struct MeteredUsage {
+    metrics: Option<u32>,
+    active_series: Option<u32>,
+    runner_minutes: u32,
+}
+
+/// Billable usage for a metered (Bencher Cloud) plan.
 ///
-/// Legacy Team (and metered Enterprise) plans are metered on both Public and Private
-/// Project metrics, so the returned metrics figure matches their bill. Pro now bills on
-/// active series rather than metrics, so for Pro this returns only its Private Project
-/// metrics as an informational figure that no longer matches the bill; surfacing the
-/// active-series count here is a follow-up. Bare metal runner minutes are metered
-/// regardless of visibility and plan level.
+/// Pro bills on monthly-active series (all visibilities), so `active_series` is populated
+/// and `metrics` is left `None`. Legacy Team (and metered Enterprise) plans bill on both
+/// Public and Private Project metrics, so `metrics` is populated and `active_series` is
+/// `None`. Bare metal runner minutes are metered regardless of visibility and plan level.
 fn metered_plan_usage(
     conn: &mut DbConnection,
     organization_id: OrganizationId,
     level: PlanLevel,
     start_time: DateTime,
     end_time: DateTime,
-) -> Result<(u32, u32), HttpError> {
-    let metrics = if metered_bills_public_metrics(level) {
-        // Team (and metered Enterprise): public metrics are billed, so count all.
-        QueryMetric::usage(conn, organization_id, start_time, end_time)?
+) -> Result<MeteredUsage, HttpError> {
+    let (metrics, active_series) = if metered_bills_active_series(level) {
+        // Pro: billed on monthly-active series, not metrics.
+        let active_series = series::count_active(conn, organization_id, start_time, end_time)?;
+        (None, Some(active_series))
     } else {
-        // Pro: public metrics are free, so count only private metrics.
-        QueryMetric::private_usage(conn, organization_id, start_time, end_time)?
+        // Team (and metered Enterprise): billed on all (public + private) metrics.
+        let metrics = QueryMetric::usage(conn, organization_id, start_time, end_time)?;
+        (Some(metrics), None)
     };
     let runner_minutes =
         QueryJob::runner_minutes_usage(conn, organization_id, start_time, end_time)?;
-    Ok((metrics, runner_minutes))
+    Ok(MeteredUsage {
+        metrics,
+        active_series,
+        runner_minutes,
+    })
 }

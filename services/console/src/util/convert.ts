@@ -1,4 +1,4 @@
-import { ModelTest, PlanLevel } from "../types/bencher";
+import { type JsonPriceTier, ModelTest, PlanLevel } from "../types/bencher";
 
 export const dateTimeMillis = (date_str: undefined | string) => {
 	if (date_str === undefined) {
@@ -111,12 +111,6 @@ export const isBoolParam = (param: undefined | string): boolean => {
 	return param === "false" || param === "true";
 };
 
-// The flat monthly Pro base fee (USD), which includes an equal amount of usage credit.
-export const PRO_BASE_USD = 20;
-// The fungible usage credit included with Pro each month (USD). Drawn down across
-// metrics and bare metal; expires at month end.
-export const PRO_INCLUDED_CREDIT_USD = 20;
-
 // The first billing period is the one containing the subscription's creation time,
 // i.e. created falls on/after the current period start.
 export const isFirstBillingPeriod = (
@@ -210,4 +204,76 @@ export const prettyPrintFloat = (float: number | undefined) => {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2,
 	});
+};
+
+// Pro is billed on monthly-active series via a Stripe tiered price. The Console renders
+// the ladder from `usage.plan.tiers` (the billed source of truth) instead of hardcoding
+// it. A tier may carry a flat fee, a per-series fee, or both (additive); the unbounded top
+// tier (no `up_to`) is the "Get in Touch" contact-sales band.
+
+const tierCentsToUsd = (cents: number | undefined): number | null =>
+	cents === undefined ? null : cents / 100;
+
+// The flat monthly fee (USD) for a tier, or null if it has none.
+export const tierFlatUsd = (tier: JsonPriceTier | undefined): number | null =>
+	tierCentsToUsd(tier?.flat_amount);
+
+// The per-series fee (USD) for a tier, or null if it has none.
+export const tierUnitUsd = (tier: JsonPriceTier | undefined): number | null =>
+	tierCentsToUsd(tier?.unit_amount);
+
+// The unbounded top tier (no `up_to`) is presented as "Get in Touch" (enterprise/sales).
+export const isContactTier = (tier: JsonPriceTier | undefined): boolean =>
+	tier?.up_to === undefined;
+
+// The tier whose band contains `series`: the first tier with no upper bound or whose
+// `up_to` is >= series. Tiers are ordered ascending by `up_to`.
+export const currentSeriesTier = (
+	tiers: JsonPriceTier[] | undefined,
+	series: number,
+): JsonPriceTier | undefined =>
+	tiers?.find((tier) => tier.up_to === undefined || series <= tier.up_to);
+
+// The inclusive series range label for the tier at `index`, e.g. "0-250", "251-375",
+// "501+". The lower bound is the previous tier's `up_to` + 1 (0 for the first tier).
+export const seriesTierRange = (
+	tiers: JsonPriceTier[],
+	index: number,
+): string => {
+	const lower = index === 0 ? 0 : (tiers[index - 1]?.up_to ?? 0) + 1;
+	const upTo = tiers[index]?.up_to;
+	return upTo === undefined ? `${lower}+` : `${lower}-${upTo}`;
+};
+
+// A human label for a tier's price: "Get in Touch" for the contact tier, otherwise the
+// present components joined, e.g. "$100.00 / month", "$0.05 / series", or
+// "$100.00 / month + $0.05 / series".
+export const fmtTierPrice = (tier: JsonPriceTier | undefined): string => {
+	if (isContactTier(tier)) {
+		return "Get in Touch";
+	}
+	const parts: string[] = [];
+	const flat = tierFlatUsd(tier);
+	if (flat !== null) {
+		parts.push(`${fmtUsd(flat)} / month`);
+	}
+	const unit = tierUnitUsd(tier);
+	if (unit !== null) {
+		parts.push(`${fmtUsd(unit)} / series`);
+	}
+	return parts.length > 0 ? parts.join(" + ") : "Get in Touch";
+};
+
+// The estimated monthly charge (USD) for being in `tier` with `series` active series:
+// the flat fee plus the per-series fee times `series`. null for the contact tier (no
+// self-serve price). The per-series component is forward-compatible; today only the flat
+// fee is set.
+export const tierEstimateUsd = (
+	tier: JsonPriceTier | undefined,
+	series: number,
+): number | null => {
+	if (isContactTier(tier)) {
+		return null;
+	}
+	return (tierFlatUsd(tier) ?? 0) + (tierUnitUsd(tier) ?? 0) * series;
 };

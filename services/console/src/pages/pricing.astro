@@ -64,12 +64,11 @@ const description =
       <div class="pricing-callout">
         <span class="pricing-callout-icon" aria-hidden="true">💡</span>
         <p class="pricing-callout-body">
-          <strong>What counts as a benchmark result?</strong>
-          Each benchmark run produces one result called a Metric.
-          5 benchmarks × 10 runs = 50 Metrics.
-          Even if your harness runs each benchmark 1,000 times internally for accuracy,
-          that's still 1 Metric per run.
-          On Pro, private Metrics and Bencher Bare Metal runner time both draw from one shared monthly usage credit.
+          <strong>What is a benchmark series?</strong>
+          A series is a unique combination of testbed, benchmark, and measure.
+          5 benchmarks × 2 measures on 1 testbed = 10 series,
+          no matter how many times you run them.
+          Pro is a flat monthly fee based on how many series are active that month, across both public and private projects.
         </p>
       </div>
     </section>
@@ -78,22 +77,25 @@ const description =
       <h2 id="faq" class="pricing-faq-title">FAQ</h2>
 
       <div class="pricing-faq-category">
-        <div class="pricing-faq-eyebrow">METRICS & BILLING</div>
+        <div class="pricing-faq-eyebrow">SERIES & BILLING</div>
         <div class="pricing-faq-grid">
           <FaqItem id="faq-benchmark-result" q="What is a benchmark result?">
             A benchmark result (called a Metric) is a single point-in-time measurement. Each benchmark run produces one Metric, so 5 benchmarks × 10 runs = 50 Metrics. Even if your harness samples a benchmark 1,000 times internally for accuracy, that still counts as 1 Metric per run. A benchmark with multiple measures (like latency and throughput) creates one Metric per measure per run, so 5 benchmarks × 2 measures × 10 runs = 100 Metrics.
           </FaqItem>
+          <FaqItem id="faq-benchmark-series" q="What is a benchmark series?">
+            A benchmark series is a unique combination of testbed, benchmark, and measure. It is the unit the Pro plan is billed on. A series is active in a month if it reports at least one result that month, no matter how many results or runs. So 5 benchmarks × 2 measures on 1 testbed is 10 series whether you run them once or a thousand times. Active series are counted across both public and private projects.
+          </FaqItem>
           <FaqItem id="faq-public-private" q="What is a Public vs. Private Project?">
             A Public Project is visible to anyone who can reach your Bencher instance. On Bencher Cloud, <a href="/perf" target="_blank" rel="noreferrer">all Public Projects are listed here</a>. A Private Project is only visible to members of your organization and requires a paid plan (Pro or Enterprise).
           </FaqItem>
-          <FaqItem id="faq-billing" q="How are benchmark results billed?">
-            On Bencher Cloud, the Pro plan is $20/month and includes $20 of usage credit. Private Metrics ($0.01 each) and Bencher Bare Metal runner time ($1.00/hour) both draw from this single monthly credit, so most teams pay exactly $20. If you go past the included credit, additional usage is billed at the same rates, with no spend cliff. Credit is granted fresh each month and does not roll over. Bencher Self-Hosted Metrics are billed annually based on a licensed quantity.
+          <FaqItem id="faq-billing" q="How is the Pro plan billed?">
+            On Bencher Cloud, the Pro plan is a flat monthly fee based on your active benchmark series: $100/month for up to 250 series, $150/month for 251 to 375, and $200/month for 376 to 500. Above 500 series, <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">get in touch</a> and we will set up a plan that fits. Bencher Bare Metal runner time ($1.00/hour) is billed separately on top, except during your first month free trial. Bencher Self-Hosted is billed annually based on a licensed quantity.
           </FaqItem>
           <FaqItem id="faq-trial" q="Is there a free trial for Pro?">
-            Yes. Pro starts with a 1-month free trial: your first month's $20 base fee is waived and you get $20 of usage credit to spend across Metrics and Bare Metal. A credit card is required to start the trial. After 30 days it converts to the standard $20/month. There is no per-seat pricing on any plan.
+            Yes. Pro starts with a 1-month free trial: your first month's base fee is waived and Bencher Bare Metal runner minutes are included, so your first month is free. A credit card is required to start the trial. After 30 days it converts to the standard monthly fee for your active series. There is no per-seat pricing on any plan.
           </FaqItem>
-          <FaqItem id="faq-public-projects" q="Are benchmark results for Public Projects counted?">
-            No. Metrics from Public Projects are always free and unlimited. Only Private Project Metrics draw from your Pro usage credit. The Free plan supports Public Projects only, with <a href="#faq-rate-limiting">daily rate limits</a>.
+          <FaqItem id="faq-public-projects" q="Do Public Projects count toward my plan?">
+            The Free plan supports Public Projects only, free of charge, with <a href="#faq-rate-limiting">daily rate limits</a>. On the Pro plan, your active benchmark series are counted across all your projects, both public and private.
           </FaqItem>
           <FaqItem id="faq-rate-limiting" q="Is there rate limiting?">
             <ul>
@@ -144,13 +146,13 @@ const description =
             <p>See the <a href="/docs/explanation/bare-metal/#runner">bare metal runner reference</a> for details.</p>
           </FaqItem>
           <FaqItem id="faq-bare-metal-billing" q="How is Bencher Bare Metal runner time billed?">
-            <p>On Bencher Cloud, Bare Metal On-Demand runner time costs $1.00/hr ($0.01666/min) and draws from the same monthly Pro usage credit as private Metrics. One credit pool covers both, so you reason about a single number. You're only billed for the minutes your benchmarks are actively running, and overage past the included credit is billed at the same rate.</p>
+            <p>On Bencher Cloud, Bare Metal On-Demand runner time costs $1.00/hr ($0.01666/min), billed separately on top of your Pro series fee. You're only billed for the minutes your benchmarks are actively running. During your first month free trial, runner minutes are included.</p>
             <p>Bencher Self-Hosted users do not pay for runner minutes.</p>
           </FaqItem>
           <FaqItem id="faq-bare-metal-minimums" q="Is there a minimum commitment for Bencher Bare Metal?">
-            <p>The Pro plan is $20/month and includes $20 of usage credit shared across Metrics and runner time. There is no per-seat pricing and no separate runner minimum.</p>
+            <p>The Pro plan starts at $100/month for your active benchmark series. There is no per-seat pricing and no separate runner minimum.</p>
             <ul>
-              <li><strong>On-Demand</strong> (Pro, Enterprise): billed for the minutes your benchmarks are actively running, drawn from your monthly credit</li>
+              <li><strong>On-Demand</strong> (Pro, Enterprise): billed for the minutes your benchmarks are actively running</li>
               <li><strong>Dedicated</strong> (Enterprise): flat monthly rate</li>
               <li><strong>Custom</strong> (Enterprise): usage-based</li>
             </ul>

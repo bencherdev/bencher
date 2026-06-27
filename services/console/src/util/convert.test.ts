@@ -1,26 +1,33 @@
 import { describe, expect, test } from "vitest";
-import { PlanLevel } from "../types/bencher";
+import { type JsonPriceTier, PlanLevel } from "../types/bencher";
 import {
 	addToArray,
 	arrayFromString,
 	arrayToString,
 	base64ToBytes,
 	bytesToBase64,
+	currentSeriesTier,
 	dateTimeMillis,
 	dateToTime,
 	decodeBase64,
 	encodeBase64,
 	fmtDate,
+	fmtTierPrice,
 	fmtUsd,
 	fmtUsdPrecise,
 	isBoolParam,
+	isContactTier,
 	isFirstBillingPeriod,
 	planLevel,
 	planLevelPrice,
 	prettyPrintFloat,
 	removeFromArray,
 	runnerMinutePrice,
+	seriesTierRange,
 	sizeArray,
+	tierEstimateUsd,
+	tierFlatUsd,
+	tierUnitUsd,
 	timeToDate,
 	timeToDateIso,
 	timeToDateOnlyIso,
@@ -335,5 +342,102 @@ describe("prettyPrintFloat", () => {
 
 	test("formats zero", () => {
 		expect(prettyPrintFloat(0)).toBe("0.00");
+	});
+});
+
+// A representative Pro ladder: 0-250 $100, 251-375 $150, 376-500 $200, 501+ Get in Touch.
+const SERIES_TIERS: JsonPriceTier[] = [
+	{ up_to: 250, flat_amount: 10_000 },
+	{ up_to: 375, flat_amount: 15_000 },
+	{ up_to: 500, flat_amount: 20_000 },
+	{},
+];
+
+describe("currentSeriesTier", () => {
+	test("selects the band containing the series count", () => {
+		expect(currentSeriesTier(SERIES_TIERS, 0)?.up_to).toBe(250);
+		expect(currentSeriesTier(SERIES_TIERS, 250)?.up_to).toBe(250);
+		expect(currentSeriesTier(SERIES_TIERS, 251)?.up_to).toBe(375);
+		expect(currentSeriesTier(SERIES_TIERS, 375)?.up_to).toBe(375);
+		expect(currentSeriesTier(SERIES_TIERS, 376)?.up_to).toBe(500);
+		expect(currentSeriesTier(SERIES_TIERS, 500)?.up_to).toBe(500);
+	});
+
+	test("returns the unbounded contact tier above the last bound", () => {
+		expect(currentSeriesTier(SERIES_TIERS, 501)?.up_to).toBeUndefined();
+		expect(currentSeriesTier(SERIES_TIERS, 10_000)?.up_to).toBeUndefined();
+	});
+
+	test("returns undefined when tiers are absent", () => {
+		expect(currentSeriesTier(undefined, 100)).toBeUndefined();
+	});
+});
+
+describe("seriesTierRange", () => {
+	test("formats inclusive ranges from tier bounds", () => {
+		expect(seriesTierRange(SERIES_TIERS, 0)).toBe("0-250");
+		expect(seriesTierRange(SERIES_TIERS, 1)).toBe("251-375");
+		expect(seriesTierRange(SERIES_TIERS, 2)).toBe("376-500");
+	});
+
+	test("formats the unbounded top tier with a plus", () => {
+		expect(seriesTierRange(SERIES_TIERS, 3)).toBe("501+");
+	});
+});
+
+describe("isContactTier", () => {
+	test("true only for the unbounded top tier", () => {
+		expect(isContactTier({})).toBe(true);
+		expect(isContactTier({ up_to: 250, flat_amount: 10_000 })).toBe(false);
+		expect(isContactTier(undefined)).toBe(true);
+	});
+});
+
+describe("tierFlatUsd / tierUnitUsd", () => {
+	test("convert cents to USD, or null when absent", () => {
+		const tier = { up_to: 250, flat_amount: 10_000, unit_amount: 5 };
+		expect(tierFlatUsd(tier)).toBe(100);
+		expect(tierUnitUsd(tier)).toBe(0.05);
+		expect(tierFlatUsd({ up_to: 250 })).toBeNull();
+		expect(tierUnitUsd({ up_to: 250 })).toBeNull();
+	});
+});
+
+describe("fmtTierPrice", () => {
+	test("flat-only tier", () => {
+		expect(fmtTierPrice({ up_to: 250, flat_amount: 10_000 })).toBe(
+			"$100.00 / month",
+		);
+	});
+
+	test("per-series-only tier", () => {
+		expect(fmtTierPrice({ up_to: 250, unit_amount: 5 })).toBe("$0.05 / series");
+	});
+
+	test("tier with both a flat fee and a per-series fee", () => {
+		expect(
+			fmtTierPrice({ up_to: 250, flat_amount: 10_000, unit_amount: 5 }),
+		).toBe("$100.00 / month + $0.05 / series");
+	});
+
+	test("unbounded contact tier", () => {
+		expect(fmtTierPrice({})).toBe("Get in Touch");
+		expect(fmtTierPrice(undefined)).toBe("Get in Touch");
+	});
+});
+
+describe("tierEstimateUsd", () => {
+	test("flat-only tier ignores the series count", () => {
+		expect(tierEstimateUsd({ up_to: 250, flat_amount: 10_000 }, 200)).toBe(100);
+	});
+
+	test("adds the per-series fee times the series count", () => {
+		expect(
+			tierEstimateUsd({ up_to: 500, flat_amount: 10_000, unit_amount: 5 }, 300),
+		).toBe(100 + 0.05 * 300);
+	});
+
+	test("returns null for the contact tier", () => {
+		expect(tierEstimateUsd({}, 600)).toBeNull();
 	});
 });

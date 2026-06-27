@@ -36,7 +36,7 @@ interface Tier {
 	popular?: boolean;
 	ctaStyle: "primary" | "outlined";
 	features: Feature[];
-	metrics: HighlightLine[];
+	series: HighlightLine[];
 	runners: RunnerSpec;
 }
 
@@ -53,7 +53,7 @@ const TIERS: Tier[] = [
 			{ mark: "dash", label: "Private projects" },
 			{ mark: "check", label: "Community support" },
 		],
-		metrics: [{ label: "Public Metrics", value: "Free" }],
+		series: [{ label: "Public Series", value: "Free" }],
 		runners: {
 			concurrentJobs: "1",
 			jobTimeout: "5 min",
@@ -65,18 +65,18 @@ const TIERS: Tier[] = [
 		plan: PlanLevel.Pro,
 		title: "Pro",
 		tagline: "For performance-critical projects",
-		price: "$20",
-		priceUnit: " / month + additional usage",
+		price: "$100",
+		priceUnit: " / month",
 		popular: true,
 		ctaStyle: "primary",
 		features: [
-			{ mark: "check", label: "$20 of included usage credit" },
+			{ mark: "check", label: "250 benchmark series included" },
 			{ mark: "check", label: "Public & Private projects" },
 			{ mark: "check", label: "Priority support" },
 		],
-		metrics: [
-			{ label: "Public Metrics", value: "Free" },
-			{ label: "Private Metrics", value: "$0.01 / result" },
+		series: [
+			{ label: "Included series", value: "250" },
+			{ label: "Additional series", value: "Tiered" },
 		],
 		runners: {
 			concurrentJobs: "Unlimited",
@@ -97,7 +97,7 @@ const TIERS: Tier[] = [
 			{ mark: "check", label: "On-premise deployment" },
 			{ mark: "check", label: "Dedicated onboarding" },
 		],
-		metrics: [{ label: "Public Metrics" }, { label: "Private Metrics" }],
+		series: [{ label: "Public Series" }, { label: "Private Series" }],
 		runners: {
 			concurrentJobs: "Unlimited",
 			jobTimeout: "Unlimited",
@@ -189,11 +189,8 @@ const InnerPricingTable = (props: Props) => {
 								)}
 							</For>
 						</ul>
-						<div class="pricing-section-label">BENCHMARK METRICS</div>
-						<HighlightBox
-							lines={tier.metrics}
-							popular={tier.popular ?? false}
-						/>
+						<div class="pricing-section-label">BENCHMARK SERIES</div>
+						<HighlightBox lines={tier.series} popular={tier.popular ?? false} />
 						<div class="pricing-section-label">BARE METAL RUNNERS</div>
 						<dl class="pricing-specs">
 							<div class="pricing-spec-row">

@@ -917,6 +917,27 @@ export interface JsonPerfQuery {
 	end_time?: string;
 }
 
+/**
+ * One tier of a Stripe tiered price, surfaced so the Console can render the price
+ * ladder from the billed source of truth instead of hardcoding it.
+ * 
+ * Field order mirrors Stripe's tier shape: `up_to`, then `unit_amount`, then
+ * `flat_amount`. A tier may carry both a `unit_amount` and a `flat_amount` (Stripe
+ * allows it); the two are independent and additive, not mutually exclusive. Today the
+ * Pro price sets only `flat_amount`.
+ */
+export interface JsonPriceTier {
+	/**
+	 * Inclusive upper bound (active-series count) for this tier. `None` is the
+	 * unbounded top tier, presented as "Get in Touch".
+	 */
+	up_to?: number;
+	/** Per-series price (cents) charged within this tier. May coexist with `flat_amount`. */
+	unit_amount?: number;
+	/** Flat price (cents) for the whole tier. May coexist with `unit_amount`. */
+	flat_amount?: number;
+}
+
 export enum PlanStatus {
 	Active = "active",
 	Canceled = "canceled",
@@ -934,6 +955,11 @@ export interface JsonPlan {
 	card: JsonCardDetails;
 	level: PlanLevel;
 	unit_amount: number;
+	/**
+	 * The tiered price ladder for this plan, ordered ascending by `up_to`. Populated
+	 * for the Pro tiered active-series price; `None` for flat-priced or licensed plans.
+	 */
+	tiers?: JsonPriceTier[];
 	/**
 	 * When the metered subscription was created. The first (free-trial) billing
 	 * period is the one that contains this timestamp.
@@ -1189,8 +1215,16 @@ export interface JsonUsage {
 	start_time: string;
 	/** The end time of the usage. */
 	end_time: string;
-	/** The metrics usage amount. */
+	/**
+	 * The metrics usage amount. Not populated for Pro metered plans, which bill on
+	 * active series (see `active_series`) rather than metrics.
+	 */
 	metrics?: number;
+	/**
+	 * The active series usage amount. Populated for Pro metered plans, whose bill is
+	 * based on monthly-active series (distinct testbed x benchmark x measure).
+	 */
+	active_series?: number;
 	/** The runner minutes usage amount. */
 	runner_minutes?: number;
 }

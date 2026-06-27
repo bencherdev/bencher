@@ -14947,6 +14947,14 @@
           "status": {
             "$ref": "#/components/schemas/PlanStatus"
           },
+          "tiers": {
+            "nullable": true,
+            "description": "The tiered price ladder for this plan, ordered ascending by `up_to`. Populated for the Pro tiered active-series price; `None` for flat-priced or licensed plans.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonPriceTier"
+            }
+          },
           "unit_amount": {
             "$ref": "#/components/schemas/BigInt"
           }
@@ -15181,6 +15189,37 @@
                 "$ref": "#/components/schemas/JsonStats"
               }
             ]
+          }
+        }
+      },
+      "JsonPriceTier": {
+        "description": "One tier of a Stripe tiered price, surfaced so the Console can render the price ladder from the billed source of truth instead of hardcoding it.\n\nField order mirrors Stripe's tier shape: `up_to`, then `unit_amount`, then `flat_amount`. A tier may carry both a `unit_amount` and a `flat_amount` (Stripe allows it); the two are independent and additive, not mutually exclusive. Today the Pro price sets only `flat_amount`.",
+        "type": "object",
+        "properties": {
+          "flat_amount": {
+            "nullable": true,
+            "description": "Flat price (cents) for the whole tier. May coexist with `unit_amount`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BigInt"
+              }
+            ]
+          },
+          "unit_amount": {
+            "nullable": true,
+            "description": "Per-series price (cents) charged within this tier. May coexist with `flat_amount`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BigInt"
+              }
+            ]
+          },
+          "up_to": {
+            "nullable": true,
+            "description": "Inclusive upper bound (active-series count) for this tier. `None` is the unbounded top tier, presented as \"Get in Touch\".",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
           }
         }
       },
@@ -17715,6 +17754,13 @@
       "JsonUsage": {
         "type": "object",
         "properties": {
+          "active_series": {
+            "nullable": true,
+            "description": "The active series usage amount. Populated for Pro metered plans, whose bill is based on monthly-active series (distinct testbed x benchmark x measure).",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
           "end_time": {
             "description": "The end time of the usage.",
             "allOf": [
@@ -17742,7 +17788,7 @@
           },
           "metrics": {
             "nullable": true,
-            "description": "The metrics usage amount.",
+            "description": "The metrics usage amount. Not populated for Pro metered plans, which bill on active series (see `active_series`) rather than metrics.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
