@@ -5,7 +5,7 @@ use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
 use bencher_json::{
-    DateTime, MeteredPlanId, OrganizationResourceId,
+    DateTime, OrganizationResourceId, PlanStatus,
     organization::plan::{JsonNewPlan, JsonPlan, JsonUpdatePlan},
 };
 use bencher_rbac::organization::Permission;
@@ -14,7 +14,7 @@ use bencher_schema::{
     context::ApiContext,
     error::{
         BencherResource, bad_request_error, forbidden_error, issue_error, resource_conflict_err,
-        resource_conflict_error, resource_not_found_err,
+        resource_conflict_error, resource_not_found_err, service_unavailable_error,
     },
     model::{
         organization::{
@@ -235,16 +235,9 @@ async fn post_inner(
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
         .map_err(forbidden_error)?;
-    // Check to make sure the organization doesn't already have a plan
-    if let Ok(query_plan) =
-        QueryPlan::belonging_to(&query_organization).first::<QueryPlan>(auth_conn!(context))
-    {
-        return Err(resource_conflict_error(
-            BencherResource::Plan,
-            (query_organization, query_plan),
-            "Organization already has a plan",
-        ));
-    }
+    // Block creating a plan when the organization still has an active plan; prune a
+    // stale lapsed metered plan row first so the organization can subscribe again.
+    prune_or_conflict_existing_plan(context, biller, &query_organization).await?;
 
     let JsonNewPlan {
         checkout,
@@ -311,10 +304,6 @@ async fn post_inner(
             .as_ref()
             .parse()
             .map_err(resource_not_found_err!(Plan, subscription_id))?;
-        // Grant the first period's included usage credit so a new metered org has
-        // its credit immediately (best-effort; the daily sweep handles later
-        // periods). A no-op for plans without a base fee.
-        grant_initial_credit(biller, &metered_plan_id).await;
         InsertPlan::metered_plan(write_conn!(context), metered_plan_id, &query_organization)?;
         QueryPlan::belonging_to(&query_organization)
             .first::<QueryPlan>(auth_conn!(context))
@@ -326,6 +315,87 @@ async fn post_inner(
             &format!("Failed to find metered plan for organization ({query_organization:?}) after creating it even though plan exists."),
           "Failed to find metered plan after creating it"
             )})
+    }
+}
+
+/// Block plan creation when the organization still has a plan that is active, trialing,
+/// or recoverable (a dunning `past_due`/`unpaid`/`incomplete`/`paused` subscription still
+/// exists in Stripe). Only a *terminal* metered subscription (canceled or
+/// incomplete-expired), or one Stripe reports as gone, leaves a stale local plan row safe
+/// to prune so the organization can subscribe again now that the daily reconciliation
+/// sweep is gone; pruning a still-live subscription would orphan it and let the org
+/// create a duplicate (double billing). Licensed (Self-Hosted) plan rows do not lapse on
+/// their own, so they always block.
+async fn prune_or_conflict_existing_plan(
+    context: &ApiContext,
+    biller: &Biller,
+    query_organization: &QueryOrganization,
+) -> Result<(), HttpError> {
+    let Ok(query_plan) =
+        QueryPlan::belonging_to(query_organization).first::<QueryPlan>(auth_conn!(context))
+    else {
+        return Ok(());
+    };
+
+    // A licensed (Self-Hosted) plan carries no metered subscription and always blocks.
+    let Some(metered_plan_id) = &query_plan.metered_plan else {
+        return Err(plan_conflict(query_organization, query_plan));
+    };
+
+    // Resolve the live metered subscription status (`None` => Stripe reports it gone). A
+    // transient Stripe error surfaces as 503 rather than being mistaken for "gone", so we
+    // never prune a subscription that might still be live.
+    let status = biller
+        .metered_plan_status(metered_plan_id)
+        .await
+        .map_err(service_unavailable_error)?;
+
+    match existing_plan_action(status) {
+        ExistingPlan::Conflict => Err(plan_conflict(query_organization, query_plan)),
+        ExistingPlan::Prune => {
+            diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
+                .execute(write_conn!(context))
+                .map_err(resource_conflict_err!(Plan, query_plan))?;
+            Ok(())
+        },
+    }
+}
+
+/// The conflict error returned when an organization already has a plan that blocks
+/// creating a new one.
+fn plan_conflict(query_organization: &QueryOrganization, query_plan: QueryPlan) -> HttpError {
+    resource_conflict_error(
+        BencherResource::Plan,
+        (query_organization.clone(), query_plan),
+        "Organization already has a plan",
+    )
+}
+
+/// Whether an organization's existing metered plan row blocks creating a new plan, or is
+/// a stale row to prune. `status` is `None` when Stripe reports the subscription gone
+/// (404), else its live status.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExistingPlan {
+    Conflict,
+    Prune,
+}
+
+/// Prune (allow re-subscribe) only when the subscription is gone or *terminal* (canceled
+/// / incomplete-expired). An active, trialing, or recoverable (dunning) subscription
+/// still exists in Stripe and must block, so we never orphan a live subscription and let
+/// the org create a duplicate. Matched exhaustively so a new `PlanStatus` forces a
+/// decision here.
+fn existing_plan_action(status: Option<PlanStatus>) -> ExistingPlan {
+    match status {
+        None | Some(PlanStatus::Canceled | PlanStatus::IncompleteExpired) => ExistingPlan::Prune,
+        Some(
+            PlanStatus::Active
+            | PlanStatus::Trialing
+            | PlanStatus::PastDue
+            | PlanStatus::Unpaid
+            | PlanStatus::Incomplete
+            | PlanStatus::Paused,
+        ) => ExistingPlan::Conflict,
     }
 }
 
@@ -400,21 +470,6 @@ async fn delete_inner(
     delete_plan_result
 }
 
-/// Best-effort grant of the first period's included usage credit for a new
-/// metered subscription. Idempotent and self-guarding (a no-op for plans without
-/// a base fee); never blocks plan creation.
-async fn grant_initial_credit(biller: &Biller, metered_plan_id: &MeteredPlanId) {
-    let _credit = biller
-        .ensure_period_credit(metered_plan_id)
-        .await
-        .inspect_err(|e| {
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(e);
-            #[cfg(not(feature = "sentry"))]
-            let _ = e;
-        });
-}
-
 async fn delete_plan(
     context: &ApiContext,
     biller: &Biller,
@@ -462,4 +517,37 @@ async fn delete_plan(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::PlanStatus;
+
+    use super::{ExistingPlan, existing_plan_action};
+
+    #[test]
+    fn existing_plan_action_decides() {
+        // Gone in Stripe (404) or terminal: prune the stale row.
+        assert_eq!(existing_plan_action(None), ExistingPlan::Prune);
+        assert_eq!(
+            existing_plan_action(Some(PlanStatus::Canceled)),
+            ExistingPlan::Prune,
+        );
+        assert_eq!(
+            existing_plan_action(Some(PlanStatus::IncompleteExpired)),
+            ExistingPlan::Prune,
+        );
+        // Active, trialing, or recoverable (dunning) still exists in Stripe: block, so we
+        // never orphan a live subscription and let the org create a duplicate.
+        for status in [
+            PlanStatus::Active,
+            PlanStatus::Trialing,
+            PlanStatus::PastDue,
+            PlanStatus::Unpaid,
+            PlanStatus::Incomplete,
+            PlanStatus::Paused,
+        ] {
+            assert_eq!(existing_plan_action(Some(status)), ExistingPlan::Conflict);
+        }
+    }
 }

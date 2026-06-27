@@ -25,3 +25,13 @@ diesel::define_sql_function! {
     /// (silent truncation).
     fn min(a: diesel::sql_types::Integer, b: diesel::sql_types::Integer) -> diesel::sql_types::Integer;
 }
+
+diesel::define_sql_function! {
+    /// `SQLite` scalar `MAX(a, b)`: returns the greater of two `BigInt` values.
+    ///
+    /// Used by the `series_last_seen` upsert to keep `last_seen` monotonic: reprocessing
+    /// an older report (an older `report.created`) must not lower a series' recorded
+    /// activity. `BigInt` matches the `DateTime` SQL representation (whole-second Unix
+    /// timestamps; see `DateTime`'s `ToSql`).
+    fn max(a: diesel::sql_types::BigInt, b: diesel::sql_types::BigInt) -> diesel::sql_types::BigInt;
+}

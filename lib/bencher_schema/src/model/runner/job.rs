@@ -469,9 +469,7 @@ fn resolve_timeout(requested: Option<Timeout>, plan_kind: &PlanKind, is_claimed:
     }
     match plan_kind {
         PlanKind::None => requested.map_or(Timeout::FREE_MAX, |t| t.clamp_max(Timeout::FREE_MAX)),
-        PlanKind::Metered(_, _) | PlanKind::Licensed(_) => {
-            requested.unwrap_or(Timeout::PLUS_DEFAULT)
-        },
+        PlanKind::Metered(_) | PlanKind::Licensed(_) => requested.unwrap_or(Timeout::PLUS_DEFAULT),
     }
 }
 
@@ -505,7 +503,7 @@ mod tests {
     use super::*;
     use crate::{
         macros::sql::last_insert_rowid,
-        model::organization::plan::LicenseUsage,
+        model::organization::plan::{LicenseUsage, MeteredPlan},
         test_util::{
             create_base_entities, create_branch_with_head, create_head_version, create_testbed,
             create_version, setup_test_db,
@@ -513,7 +511,12 @@ mod tests {
     };
 
     fn metered_plan() -> PlanKind {
-        PlanKind::Metered("cus_test".into(), PlanLevel::Pro)
+        PlanKind::Metered(MeteredPlan {
+            customer_id: "cus_test".into(),
+            level: PlanLevel::Pro,
+            current_period_start: DateTime::TEST,
+            current_period_end: DateTime::TEST,
+        })
     }
 
     fn licensed_plan(level: PlanLevel) -> PlanKind {
