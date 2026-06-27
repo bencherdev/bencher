@@ -25,8 +25,12 @@ pub struct JsonUsage {
     pub start_time: DateTime,
     /// The end time of the usage.
     pub end_time: DateTime,
-    /// The metrics usage amount.
+    /// The metrics usage amount. Not populated for Pro metered plans, which bill on
+    /// active series (see `active_series`) rather than metrics.
     pub metrics: Option<u32>,
+    /// The active series usage amount. Populated for Pro metered plans, whose bill is
+    /// based on monthly-active series (distinct testbed x benchmark x measure).
+    pub active_series: Option<u32>,
     /// The runner minutes usage amount.
     pub runner_minutes: Option<u32>,
 }

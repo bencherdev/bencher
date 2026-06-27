@@ -43,7 +43,15 @@ Runs at: http://localhost:3000
 ## Testing
 
 ```bash
-&& npm test
+npm test
+```
+
+`npm test` runs `npm run setup && vitest`, and `vitest` (without `run`) can start
+in watch mode and never exit, even when output is piped. For non-interactive or
+scripted runs (agents, CI-like checks), use a single run instead:
+
+```bash
+npx vitest run
 ```
 
 ## Formatting

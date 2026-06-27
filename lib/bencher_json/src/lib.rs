@@ -54,7 +54,7 @@ pub use organization::{
 };
 #[cfg(feature = "plus")]
 pub use organization::{
-    plan::JsonPlan,
+    plan::{JsonPlan, JsonPriceTier},
     sso::{JsonNewSso, JsonSso, JsonSsos, SsoUuid},
     usage::JsonUsage,
 };

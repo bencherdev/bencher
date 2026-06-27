@@ -405,6 +405,29 @@
   margin-bottom: 0.35rem;
 }
 
+.pricing-faq-answer table {
+  width: 100%;
+  margin: 0 0 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.pricing-faq-answer th,
+.pricing-faq-answer td {
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--landing-card-border);
+}
+
+.pricing-faq-answer thead th {
+  font-weight: 600;
+  border-bottom-width: 2px;
+}
+
+.pricing-faq-answer tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .pricing-faq-answer code {
   background: var(--landing-card-bg);
   border: 1px solid var(--landing-card-border);

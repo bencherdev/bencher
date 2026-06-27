@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
 import {
+	For,
 	Match,
 	type Resource,
 	Show,
@@ -22,15 +23,19 @@ import {
 import { authUser } from "../../../util/auth";
 import { useSearchParams } from "../../../util/url";
 import {
-	PRO_BASE_USD,
-	PRO_INCLUDED_CREDIT_USD,
+	currentSeriesTier,
+	currentSeriesTierIndex,
 	fmtDate,
+	fmtTierPrice,
 	fmtUsd,
 	fmtUsdPrecise,
+	isContactTier,
 	isFirstBillingPeriod,
 	planLevel,
 	planLevelPrice,
 	runnerMinutePrice,
+	seriesTierRange,
+	tierEstimateUsd,
 } from "../../../util/convert";
 import { BENCHER_CALENDLY_URL } from "../../../util/ext";
 import { httpGet, httpPatch } from "../../../util/http";
@@ -366,7 +371,74 @@ const ResumePlanButton = (props: {
 	);
 };
 
+// Shared cancel/resume control for any Bencher Cloud metered plan.
+const PlanCancelResume = (props: {
+	apiUrl: string;
+	user: JsonAuthUser;
+	usage: Resource<null | JsonUsage>;
+	handleRefresh: () => void;
+}) => {
+	return (
+		<Show
+			when={props.usage()?.plan?.cancel_at_period_end}
+			fallback={
+				<CancelPlanButton
+					apiUrl={props.apiUrl}
+					user={props.user}
+					organization={props.usage()?.organization}
+					handleRefresh={props.handleRefresh}
+				/>
+			}
+		>
+			<p class="has-text-grey">
+				Your plan is scheduled to cancel on{" "}
+				{fmtDate(props.usage()?.plan?.current_period_end)}. You keep access
+				until then.
+			</p>
+			<ResumePlanButton
+				apiUrl={props.apiUrl}
+				user={props.user}
+				organization={props.usage()?.organization}
+				handleRefresh={props.handleRefresh}
+			/>
+		</Show>
+	);
+};
+
+// Bencher Cloud metered plans. Pro bills on active series (its own panel); legacy Team and
+// metered Enterprise still bill on metrics.
 const CloudMeteredPanel = (props: {
+	apiUrl: string;
+	user: JsonAuthUser;
+	usage: Resource<null | JsonUsage>;
+	handleRefresh: () => void;
+}) => {
+	const isPro = createMemo(() => props.usage()?.plan?.level === PlanLevel.Pro);
+	return (
+		<Show
+			when={isPro()}
+			fallback={
+				<MeteredMetricsPanel
+					apiUrl={props.apiUrl}
+					user={props.user}
+					usage={props.usage}
+					handleRefresh={props.handleRefresh}
+				/>
+			}
+		>
+			<ProMeteredPanel
+				apiUrl={props.apiUrl}
+				user={props.user}
+				usage={props.usage}
+				handleRefresh={props.handleRefresh}
+			/>
+		</Show>
+	);
+};
+
+// Legacy metered metrics plans (Team and metered Enterprise): billed per metric plus bare
+// metal runner minutes.
+const MeteredMetricsPanel = (props: {
 	apiUrl: string;
 	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
@@ -385,25 +457,6 @@ const CloudMeteredPanel = (props: {
 		() => (props.usage()?.runner_minutes ?? 0) * minutePrice(),
 	);
 	const estTotalCost = createMemo(() => estMetricsCost() + estRunnerCost());
-	const isPro = createMemo(() => props.usage()?.plan?.level === PlanLevel.Pro);
-	const creditRemaining = createMemo(() =>
-		Math.max(0, PRO_INCLUDED_CREDIT_USD - estTotalCost()),
-	);
-	// Pro bill = $20 base + overage at the same rates = max($20, usage).
-	const estProBill = createMemo(
-		() => PRO_BASE_USD + Math.max(0, estTotalCost() - PRO_INCLUDED_CREDIT_USD),
-	);
-	const firstPeriod = createMemo(() =>
-		isFirstBillingPeriod(
-			props.usage()?.plan?.created,
-			props.usage()?.plan?.current_period_start,
-		),
-	);
-	// Pro waives the flat base for the first month via a one-time 100%-off coupon.
-	// Cap at the bill so it never goes negative.
-	const trialDiscount = createMemo(() =>
-		isPro() && firstPeriod() ? Math.min(PRO_BASE_USD, estProBill()) : 0,
-	);
 
 	return (
 		<div class="content">
@@ -414,17 +467,6 @@ const CloudMeteredPanel = (props: {
 				{fmtDate(props.usage()?.start_time)} -{" "}
 				{fmtDate(props.usage()?.end_time)}
 			</h3>
-			<Show when={isPro()}>
-				<h4>
-					Included Usage Credit: {fmtUsd(PRO_INCLUDED_CREDIT_USD)} / month
-				</h4>
-				<h4>
-					Estimated Credit Used:{" "}
-					{fmtUsd(Math.min(estTotalCost(), PRO_INCLUDED_CREDIT_USD))}
-				</h4>
-				<h4>Estimated Credit Remaining: {fmtUsd(creditRemaining())}</h4>
-				<br />
-			</Show>
 			<h4>Cost per Metric: {fmtUsd(metricPrice())}</h4>
 			<h4>
 				Estimated Metrics Used: {props.usage()?.metrics?.toLocaleString() ?? 0}
@@ -438,22 +480,158 @@ const CloudMeteredPanel = (props: {
 			</h4>
 			<h4>Estimated Runner Cost: {fmtUsd(estRunnerCost())}</h4>
 			<br />
-			<h4>
-				Current Estimated Total:{" "}
-				{fmtUsd(isPro() ? estProBill() : estTotalCost())}
-			</h4>
-			<Show when={isPro() && firstPeriod()}>
-				<h4>First Month Free Trial: -{fmtUsd(trialDiscount())}</h4>
+			<h4>Current Estimated Total: {fmtUsd(estTotalCost())}</h4>
+			<br />
+			<PaymentMethod usage={props.usage} />
+			<br />
+			{manageSubscription}
+			<br />
+			<br />
+			<PlanCancelResume
+				apiUrl={props.apiUrl}
+				user={props.user}
+				usage={props.usage}
+				handleRefresh={props.handleRefresh}
+			/>
+		</div>
+	);
+};
+
+// Pro plans: billed a flat monthly fee per active-series band, read from the Stripe price
+// tiers (`usage.plan.tiers`). Bare metal runner minutes bill separately on top, except
+// during the first-month free trial, when the base fee is waived and runner minutes are
+// included (the whole bill is $0).
+const ProMeteredPanel = (props: {
+	apiUrl: string;
+	user: JsonAuthUser;
+	usage: Resource<null | JsonUsage>;
+	handleRefresh: () => void;
+}) => {
+	const tiers = createMemo(() => props.usage()?.plan?.tiers);
+	const activeSeries = createMemo(() => props.usage()?.active_series ?? 0);
+	const currentTier = createMemo(() =>
+		currentSeriesTier(tiers(), activeSeries()),
+	);
+	const currentRange = createMemo(() => {
+		const tierList = tiers();
+		const index = currentSeriesTierIndex(tierList, activeSeries());
+		return tierList && index >= 0 ? seriesTierRange(tierList, index) : "";
+	});
+	const contactSales = createMemo(() => isContactTier(currentTier()));
+	const minutePrice = createMemo(() =>
+		runnerMinutePrice(props.usage()?.plan?.level),
+	);
+	const estRunnerCost = createMemo(
+		() => (props.usage()?.runner_minutes ?? 0) * minutePrice(),
+	);
+	const firstPeriod = createMemo(() =>
+		isFirstBillingPeriod(
+			props.usage()?.plan?.created,
+			props.usage()?.plan?.current_period_start,
+		),
+	);
+	// The standard estimate: the current band's flat fee plus runner cost. During the
+	// first-month trial the actual bill is $0 (base waived, runner minutes included);
+	// this estimate is still shown so trial users can see what a period will cost.
+	const estTotal = createMemo(
+		() =>
+			(tierEstimateUsd(currentTier(), activeSeries()) ?? 0) + estRunnerCost(),
+	);
+
+	return (
+		<div class="content">
+			<h2 class="title is-2">
+				Bencher Cloud {planLevel(props.usage()?.plan?.level)}
+			</h2>
+			<h3 class="subtitle is-3">
+				{fmtDate(props.usage()?.start_time)} -{" "}
+				{fmtDate(props.usage()?.end_time)}
+			</h3>
+			<h4>Active Benchmark Series: {activeSeries().toLocaleString()}</h4>
+			<Show when={currentTier()}>
 				<h4>
-					Estimated Total This Period:{" "}
-					{fmtUsd(Math.max(0, estProBill() - trialDiscount()))}
+					Series Tier: {currentRange()} ({fmtTierPrice(currentTier())})
 				</h4>
 			</Show>
-			<Show when={isPro()}>
+			<br />
+			<h4>
+				Bare Metal Runner Minutes Used:{" "}
+				{props.usage()?.runner_minutes?.toLocaleString() ?? 0}
+			</h4>
+			<Show
+				when={firstPeriod()}
+				fallback={
+					<>
+						<h4>
+							Cost per Runner Minute: {fmtUsdPrecise(minutePrice())} / min
+						</h4>
+						<h4>Estimated Runner Cost: {fmtUsd(estRunnerCost())}</h4>
+					</>
+				}
+			>
+				<h4>Runner minutes are included during your first month.</h4>
+			</Show>
+			<br />
+			<Show
+				when={!contactSales()}
+				fallback={
+					<p>
+						Your usage is beyond the self-serve tiers.{" "}
+						<a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">
+							Get in touch
+						</a>{" "}
+						to set up a plan that fits.
+					</p>
+				}
+			>
+				<h4>Current Estimated Total: {fmtUsd(estTotal())}</h4>
+				<Show when={firstPeriod()}>
+					<h4>
+						First Month Free Trial: base fee waived and runner minutes included
+					</h4>
+					<h4>Estimated Total This Period: {fmtUsd(0)}</h4>
+				</Show>
+			</Show>
+			<Show when={tiers()?.length}>
+				<br />
+				<h3 class="subtitle is-4">Pro pricing</h3>
 				<p>
-					$20/mo base includes $20 of usage. Overage bills at the same rates
-					once the included credit is used.
+					You are billed a flat monthly fee based on your number of active
+					benchmark series:
 				</p>
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Active series</th>
+							<th>Price</th>
+						</tr>
+					</thead>
+					<tbody>
+						<For each={tiers() ?? []}>
+							{(tier, index) => (
+								<tr>
+									<td>{seriesTierRange(tiers() ?? [], index())}</td>
+									<td>
+										<Show
+											when={!isContactTier(tier)}
+											fallback={
+												<a
+													href={BENCHER_CALENDLY_URL}
+													target="_blank"
+													rel="noreferrer"
+												>
+													Get in Touch
+												</a>
+											}
+										>
+											{fmtTierPrice(tier)}
+										</Show>
+									</td>
+								</tr>
+							)}
+						</For>
+					</tbody>
+				</table>
 			</Show>
 			<br />
 			<PaymentMethod usage={props.usage} />
@@ -461,29 +639,12 @@ const CloudMeteredPanel = (props: {
 			{manageSubscription}
 			<br />
 			<br />
-			<Show
-				when={props.usage()?.plan?.cancel_at_period_end}
-				fallback={
-					<CancelPlanButton
-						apiUrl={props.apiUrl}
-						user={props.user}
-						organization={props.usage()?.organization}
-						handleRefresh={props.handleRefresh}
-					/>
-				}
-			>
-				<p class="has-text-grey">
-					Your plan is scheduled to cancel on{" "}
-					{fmtDate(props.usage()?.plan?.current_period_end)}. You keep access
-					until then.
-				</p>
-				<ResumePlanButton
-					apiUrl={props.apiUrl}
-					user={props.user}
-					organization={props.usage()?.organization}
-					handleRefresh={props.handleRefresh}
-				/>
-			</Show>
+			<PlanCancelResume
+				apiUrl={props.apiUrl}
+				user={props.user}
+				usage={props.usage}
+				handleRefresh={props.handleRefresh}
+			/>
 		</div>
 	);
 };

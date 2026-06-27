@@ -99,7 +99,7 @@ pub fn count_active(
 /// restricted to private projects.
 ///
 /// Not currently used for billing (Pro bills all visibilities via [`count_active`]);
-/// kept for a private-only view. Mirrors `QueryMetric::private_usage`.
+/// kept for a private-only view.
 pub fn count_active_private(
     conn: &mut DbConnection,
     organization_id: OrganizationId,
