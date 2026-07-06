@@ -18,8 +18,8 @@ and detects regressions before they reach production.
 ## Quick Start
 
 Check if the CLI is installed:
-```
-`bencher --version 2>/dev/null || echo "bencher CLI not installed. See https://bencher.dev/docs/how-to/install-cli/"`
+```bash
+bencher --version 2>/dev/null || echo "bencher CLI not installed. See https://bencher.dev/docs/how-to/install-cli/"
 ```
 
 Choose your workflow:
@@ -45,7 +45,7 @@ The prefix selects one of two kinds.
 
 **Project key (`bencher_run_*`), preferred for CI:** scoped to a single existing
 project. Submits runs and reads that project's data; cannot create or claim a project,
-nor perform destructive operations (least privilege).
+nor perform manage-level operations such as renaming resources or managing keys (least privilege).
 ```bash
 export BENCHER_API_KEY=bencher_run_...
 bencher run --project my-project "cargo bench"

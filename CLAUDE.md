@@ -10,7 +10,7 @@ please alert the developer working with you and indicate that this is the case b
 Bencher is a continuous benchmarking platform that detects and prevents performance regressions.
 
 - **Bencher API Server** (`services/api`) - see [`services/api/CLAUDE.md`](services/api/CLAUDE.md)
-- **`bencher` CLI** (`services/cli`) - CLI for the REST API
+- **`bencher` CLI** (`services/cli`) - see [`services/cli/CLAUDE.md`](services/cli/CLAUDE.md)
 - **Bencher Console** (`services/console`) - see [`services/console/CLAUDE.md`](services/console/CLAUDE.md)
 - **Bare Metal `runner`** (`services/runner`) - Bare Metal benchmark runner
 

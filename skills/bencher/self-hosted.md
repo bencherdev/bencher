@@ -93,9 +93,9 @@ After `bencher up`:
 3. Create an organization and project
 4. Generate a project API key (or user API key) for CLI/CI use
 
-Or via CLI:
+Or via CLI (the email is a positional argument and `--i-agree` is required):
 ```bash
-bencher auth signup --name "Admin" --email admin@example.com --host http://localhost:6610
+bencher auth signup --name "Admin" --i-agree admin@example.com --host http://localhost:6610
 ```
 
 ## Full Documentation

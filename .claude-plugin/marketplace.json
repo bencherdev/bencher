@@ -1,0 +1,15 @@
+{
+  "name": "bencher",
+  "owner": { "name": "Bencher" },
+  "description": "Bencher continuous benchmarking CLI",
+  "plugins": [
+    {
+      "name": "bencher",
+      "source": "./",
+      "description": "Bencher continuous benchmarking CLI",
+      "author": { "name": "Bencher" },
+      "homepage": "https://bencher.dev",
+      "repository": "https://github.com/bencherdev/bencher"
+    }
+  ]
+}
