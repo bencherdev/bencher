@@ -1099,6 +1099,7 @@ dependencies = [
  "sentry",
  "serde_yaml",
  "slog",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "tokio-rustls",

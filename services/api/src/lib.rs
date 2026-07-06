@@ -17,6 +17,9 @@ use slog as _;
 use thiserror as _;
 use tokio as _;
 use tokio_rustls as _;
+// Needed for binary tests
+#[cfg(test)]
+use tempfile as _;
 // Needed for distroless builds
 use libsqlite3_sys as _;
 

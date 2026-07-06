@@ -231,6 +231,7 @@ fn run_litestream(
             .map_err(LitestreamError::Database)?
             .join(&config.database.file)
     };
+    cleanup_stale_litestream_files(log, &db_path);
     #[cfg(debug_assertions)]
     let config_path = PathBuf::from("etc/litestream.yml");
     #[cfg(not(debug_assertions))]
@@ -282,6 +283,56 @@ fn run_litestream(
     }))
 }
 
+// Remove stale Litestream files that current versions no longer read.
+// Litestream 0.3 kept its state in a `generations/` directory and a `generation`
+// pointer file; Litestream 0.5+ only reads `ltx/`, so 0.3 state left behind by an
+// upgrade is dead weight on the data volume. An interrupted `litestream restore`
+// can also leave `<db>.tmp*` output files behind. This runs before Litestream is
+// spawned, so nothing else has these files open. Failures are logged and ignored:
+// cleanup must never block server startup.
+#[cfg(feature = "plus")]
+fn cleanup_stale_litestream_files(log: &Logger, db_path: &std::path::Path) {
+    let Some(db_dir) = db_path.parent() else {
+        return;
+    };
+    let Some(db_file_name) = db_path.file_name().and_then(std::ffi::OsStr::to_str) else {
+        return;
+    };
+
+    let state_dir = db_dir.join(format!(".{db_file_name}-litestream"));
+    let generations_dir = state_dir.join("generations");
+    if generations_dir.is_dir() {
+        info!(
+            log,
+            "Removing legacy Litestream 0.3 state: {generations_dir:?}"
+        );
+        if let Err(e) = std::fs::remove_dir_all(&generations_dir) {
+            slog::warn!(
+                log,
+                "Failed to remove legacy Litestream 0.3 state ({generations_dir:?}): {e}"
+            );
+        }
+    }
+
+    let stale_files = [
+        state_dir.join("generation"),
+        db_dir.join(format!("{db_file_name}.tmp")),
+        db_dir.join(format!("{db_file_name}.tmp-wal")),
+        db_dir.join(format!("{db_file_name}.tmp-shm")),
+    ];
+    for stale_file in stale_files {
+        if stale_file.is_file() {
+            info!(log, "Removing stale Litestream file: {stale_file:?}");
+            if let Err(e) = std::fs::remove_file(&stale_file) {
+                slog::warn!(
+                    log,
+                    "Failed to remove stale Litestream file ({stale_file:?}): {e}"
+                );
+            }
+        }
+    }
+}
+
 async fn create_api_server(config: Config) -> Result<HttpServer<ApiContext>, ApiError> {
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ServerStartup);
@@ -291,4 +342,57 @@ async fn create_api_server(config: Config) -> Result<HttpServer<ApiContext>, Api
         .into_server::<Api>()
         .await
         .map_err(ApiError::ConfigTxError)
+}
+
+#[cfg(all(test, feature = "plus"))]
+mod tests {
+    fn discard_logger() -> slog::Logger {
+        slog::Logger::root(slog::Discard, slog::o!())
+    }
+
+    #[test]
+    fn cleanup_stale_litestream_files() {
+        let tmp_dir = tempfile::tempdir().unwrap();
+        let dir = tmp_dir.path();
+        let db_path = dir.join("bencher.db");
+        std::fs::write(&db_path, b"db").unwrap();
+
+        // Legacy Litestream 0.3 state
+        let state_dir = dir.join(".bencher.db-litestream");
+        let generation_dir = state_dir.join("generations/fa74c771d99d6b04/wal");
+        std::fs::create_dir_all(&generation_dir).unwrap();
+        std::fs::write(generation_dir.join("00000001.wal.lz4"), b"wal").unwrap();
+        std::fs::write(state_dir.join("generation"), b"fa74c771d99d6b04").unwrap();
+
+        // Live Litestream 0.5+ state
+        let ltx_dir = state_dir.join("ltx/0");
+        std::fs::create_dir_all(&ltx_dir).unwrap();
+        let ltx_file = ltx_dir.join("0000000000000001-0000000000000001.ltx");
+        std::fs::write(&ltx_file, b"ltx").unwrap();
+
+        // Interrupted restore leftovers
+        std::fs::write(dir.join("bencher.db.tmp-wal"), b"").unwrap();
+        std::fs::write(dir.join("bencher.db.tmp-shm"), b"shm").unwrap();
+
+        super::cleanup_stale_litestream_files(&discard_logger(), &db_path);
+
+        // Stale state is removed
+        assert!(!state_dir.join("generations").exists());
+        assert!(!state_dir.join("generation").exists());
+        assert!(!dir.join("bencher.db.tmp-wal").exists());
+        assert!(!dir.join("bencher.db.tmp-shm").exists());
+        // The database and live state are untouched
+        assert!(db_path.exists());
+        assert!(ltx_file.exists());
+    }
+
+    #[test]
+    fn cleanup_stale_litestream_files_noop() {
+        let tmp_dir = tempfile::tempdir().unwrap();
+        let db_path = tmp_dir.path().join("bencher.db");
+
+        super::cleanup_stale_litestream_files(&discard_logger(), &db_path);
+
+        assert!(!db_path.exists());
+    }
 }
