@@ -5,7 +5,7 @@ services:
       dockerfile: ./services/api/Dockerfile
       args:
         MOLD_VERSION: 2.34.1
-        LITESTREAM_VERSION: 0.5.10
+        LITESTREAM_VERSION: 0.5.13
         CARGO_CHEF_VERSION: 0.1.77
         SCCACHE_VERSION: 0.16.0
     image: bencher-api
