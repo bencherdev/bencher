@@ -16,6 +16,11 @@
 //! reset) recovers it. Two mechanisms self-heal by construction: the
 //! `/dev/cpu_dma_latency` fd releases its PM `QoS` constraint when the
 //! process dies, and per-run cgroups are removed by their own cleanup.
+//!
+//! Tuning also assumes a single runner process per host: the sysctls,
+//! IRQ affinities, THP mode, and cpuset partition are host-global, so a
+//! second concurrent runner's shutdown restores them out from under the
+//! first.
 
 #![cfg_attr(
     target_os = "linux",
